@@ -80,19 +80,19 @@ describe('coverageTrust', () => {
 });
 
 describe('formatCoveragePct', () => {
-  it('returns null (not "0.0%") when there is no measurement', () => {
+  it('returns null (not "0.00%") when there is no measurement', () => {
     expect(formatCoveragePct(null, 'unknown')).toBeNull();
     expect(formatCoveragePct(null, 'measured')).toBeNull();
     expect(formatCoveragePct(undefined)).toBeNull();
     expect(formatCoveragePct(Number.NaN, 'measured')).toBeNull();
   });
 
-  it('formats a measured zero as an explicit 0.0%', () => {
-    expect(formatCoveragePct(0, 'measured')).toBe('0.0%');
+  it('formats a measured zero at the selected precision', () => {
+    expect(formatCoveragePct(0, 'measured')).toBe('0.00%');
   });
 
   it('formats measured percentages at the requested precision', () => {
-    expect(formatCoveragePct(85, 'measured')).toBe('85.0%');
+    expect(formatCoveragePct(85, 'measured')).toBe('85.00%');
     expect(formatCoveragePct(85.456, 'measured', 2)).toBe('85.46%');
     expect(formatCoveragePct(100, 'measured', 0)).toBe('100%');
   });
@@ -211,9 +211,9 @@ describe('formatSeconds', () => {
 
 describe('formatDuplicateRatio', () => {
   it('converts a 0..1 ratio to a percentage string', () => {
-    expect(formatDuplicateRatio(0)).toBe('0.0%');
-    expect(formatDuplicateRatio(0.5)).toBe('50.0%');
-    expect(formatDuplicateRatio(1)).toBe('100.0%');
+    expect(formatDuplicateRatio(0)).toBe('0.00%');
+    expect(formatDuplicateRatio(0.5)).toBe('50.00%');
+    expect(formatDuplicateRatio(1)).toBe('100.00%');
   });
 
   it('returns null for an unmeasurable ratio', () => {

@@ -1,16 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Route, Gauge, TrendingUp, Wallet, SlidersHorizontal } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle, Input, HelpTooltip } from '@/components/ui';
+import { PageLayout, LayoutCard, ChartCard } from '@/components/layout';
+import { Input, HelpTooltip } from '@/components/ui';
 
-import { MetricCard, MetricBar } from '@/components/data-display';
-import { AlertBanner, Skeleton, QueryError } from '@/components/feedback';
+import { MetricBar } from '@/components/data-display';
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { deriveDataState } from '@/api/dataState';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
-  ChartContainer, ChartLegend, ChartTooltip,
+  ChartLegend, ChartTooltip,
   ComposedChart, Line, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -19,30 +19,43 @@ import { useDriveHistory } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
-import { convertDistanceToSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
+import { isFiniteNumber } from '@/lib/numberFormat';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { chartTokens } from '@/lib/tokens';
 import type { Drive } from '@/types/driving';
 
 import { computeMileageBudget } from '../lib/mileageBudget';
 import { useMileageBudget } from '../hooks/useMileageBudget';
+import { MileageBudgetBrief as MileageBudgetSummary } from '../components/operationalbrief-a-m/MileageBudgetBrief';
 
 /** km per statute mile, derived from the shared conversion lib. */
 const KM_PER_MILE = convertDistanceToSI(1, 'mi') / 1000;
 const HISTORY_LIMIT = 1_000;
 
+interface NumericDraft {
+  saved: number;
+  unit: string;
+  text: string;
+}
+
 export default function MileageBudgetPage() {
   const { t } = useTranslation();
-  usePageTitle(t('mileageBudget.title', 'Mileage Budget'));
+  usePageTitle(t('mileageBudget.title', 'Mileage budget'));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
   const { formatDistance, unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { config, update } = useMileageBudget();
-  const [nowMs] = useState(() => Date.now());
+  const nowMs = Date.now();
+  const [allowanceDraft, setAllowanceDraft] = useState<NumericDraft | null>(null);
+  const [overageDraft, setOverageDraft] = useState<NumericDraft | null>(null);
   const mileageHidden = useHiddenSeries('mileage-budget');
 
   const drivesQuery = useDriveHistory(vehicleIdStr, HISTORY_LIMIT);
@@ -60,50 +73,68 @@ export default function MileageBudgetPage() {
   const allowanceDisplay = Math.round(
     perMile ? config.annualAllowanceKm / KM_PER_MILE : config.annualAllowanceKm,
   );
+  const allowanceText = allowanceDraft?.saved === config.annualAllowanceKm &&
+    allowanceDraft.unit === unitPrefs.distance ? allowanceDraft.text : String(allowanceDisplay);
+  const allowanceInvalid = allowanceText === '' || !Number.isFinite(Number(allowanceText)) || Number(allowanceText) <= 0;
   function handleAllowanceChange(text: string): void {
-    if (text === '') return;
     const n = Number(text);
-    if (!Number.isFinite(n) || n <= 0) return;
-    update({ annualAllowanceKm: perMile ? n * KM_PER_MILE : n });
+    const valid = text !== '' && Number.isFinite(n) && n > 0;
+    const saved = valid ? perMile ? n * KM_PER_MILE : n : config.annualAllowanceKm;
+    setAllowanceDraft({ saved, unit: unitPrefs.distance, text });
+    if (valid) update({ annualAllowanceKm: saved });
   }
 
   const overageDisplay =
     Math.round((perMile ? config.overagePerKm * KM_PER_MILE : config.overagePerKm) * 10_000) / 10_000;
+  const overageText = overageDraft?.saved === config.overagePerKm &&
+    overageDraft.unit === unitPrefs.distance ? overageDraft.text : String(overageDisplay);
+  const overageInvalid = overageText === '' || !Number.isFinite(Number(overageText)) || Number(overageText) < 0;
   function handleOverageChange(text: string): void {
-    if (text === '') return;
     const n = Number(text);
-    if (!Number.isFinite(n) || n < 0) return;
-    update({ overagePerKm: perMile ? n / KM_PER_MILE : n });
+    const valid = text !== '' && Number.isFinite(n) && n >= 0;
+    const saved = valid ? perMile ? n / KM_PER_MILE : n : config.overagePerKm;
+    setOverageDraft({ saved, unit: unitPrefs.distance, text });
+    if (valid) update({ overagePerKm: saved });
   }
 
   // Chart series in the user's display unit.
+  const distanceUnit = unitPrefs.distance;
   const chartData = useMemo(
     () =>
       budget.monthly.map((m) => ({
         month: m.month,
-        used: Math.round(perMile ? m.usedKm / KM_PER_MILE : m.usedKm),
-        allowed: Math.round(perMile ? m.allowedKm / KM_PER_MILE : m.allowedKm),
+        used: isFiniteNumber(m.usedKm) ? convertDistanceFromSI(m.usedKm * 1000, distanceUnit) : null,
+        allowed: isFiniteNumber(m.allowedKm) ? convertDistanceFromSI(m.allowedKm * 1000, distanceUnit) : null,
       })),
-    [budget.monthly, perMile],
+    [budget.monthly, distanceUnit],
+  );
+  const formatChartDistance = useCallback(
+    (value: unknown) => isFiniteNumber(value) ? fmtNumber(value) : '—',
+    [fmtNumber],
   );
 
   const historyCapped = budget.historyCapReached;
+  const hasReturnedDrives = drives.length > 0;
+  const chartTick = { fill: 'var(--text-secondary)', fontFamily: getChartFontFamily(), fontSize: getChartFontSize() };
   const paceOver =
     !historyCapped && budget.paceRatio != null && budget.paceRatio > 1;
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('mileageBudget.title', 'Mileage Budget')} />;
+    return <NoVehicleSelected pageTitle={t('mileageBudget.title', 'Mileage budget')} />;
   }
 
-  const isLoading = drivesQuery.isLoading;
-  const isError = drivesQuery.isError;
+  const source = deriveDataState(drivesQuery, { provenance: 'historical' });
+  const isLoading = source.status === 'initial';
+  const isError = source.fatalError != null;
 
   return (
-    <PageContainer
-      title={t('mileageBudget.title', 'Mileage Budget')}
+    <PageLayout
+      title={t('mileageBudget.title', 'Mileage budget')}
       subtitle={t('mileageBudget.subtitle', 'Lease and warranty allowance pacing with overage forecast')}
       query={drivesQuery}
+      dataSources={[{ id: 'budget-drives', label: t('dataSources.labels.driveHistory', 'Drive history'), query: drivesQuery }]}
     >
+      <StaleRefreshWarning state={source} />
       {!isLoading && !isError && historyCapped ? (
         <AlertBanner
           variant="warning"
@@ -122,167 +153,59 @@ export default function MileageBudgetPage() {
 
       {/* 1 — KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('mileageBudget.kpis', 'Mileage budget summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={96} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={
-                  historyCapped
-                    ? t(
-                        'mileageBudget.usedObserved',
-                        'Observed in Returned Window',
-                      )
-                    : t('mileageBudget.used', 'Driven This Term')
-                }
-                value={formatDistance(budget.usedM, { precision: 0 })}
-                subtitle={
-                  historyCapped
-                    ? t(
-                        'mileageBudget.cap.observed',
-                        'At least this much is present; older term drives may be absent',
-                      )
-                    : t(
-                        'mileageBudget.allowedToDate',
-                        'allowed so far: {{allowed}}',
-                        {
-                          allowed: formatDistance(
-                            budget.allowedToDateM,
-                            { precision: 0 },
-                          ),
-                        },
-                      )
-                }
-                icon={<Route className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('mileageBudget.pace', 'Pace')}
-                value={
-                  !historyCapped && budget.paceRatio != null
-                    ? `${Math.round(budget.paceRatio * 100)}%`
-                    : '—'
-                }
-                subtitle={
-                  historyCapped
-                    ? t(
-                        'mileageBudget.cap.unavailable',
-                        'unavailable while history is capped',
-                      )
-                    : paceOver
-                    ? t('mileageBudget.overPace', 'over budget pace')
-                    : t('mileageBudget.underPace', 'within budget pace')
-                }
-                icon={<Gauge className="h-5 w-5" />}
-                color={historyCapped ? 'cyan' : paceOver ? 'red' : 'green'}
-              />
-              <MetricCard
-                label={t('mileageBudget.projected', 'Projected Term Total')}
-                value={
-                  !historyCapped && budget.projectedTotalM != null
-                    ? formatDistance(budget.projectedTotalM, { precision: 0 })
-                    : '—'
-                }
-                subtitle={
-                  historyCapped
-                    ? t(
-                        'mileageBudget.cap.unavailable',
-                        'unavailable while history is capped',
-                      )
-                    : t(
-                        'mileageBudget.ofAllowance',
-                        'allowance: {{total}}',
-                        {
-                          total: formatDistance(budget.totalAllowanceM, {
-                            precision: 0,
-                          }),
-                        },
-                      )
-                }
-                icon={<TrendingUp className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('mileageBudget.overageCost', 'Projected Overage')}
-                value={
-                  historyCapped
-                    ? '—'
-                    : budget.projectedOverageM > 0
-                      ? formatCurrency(budget.projectedOverageCost)
-                      : formatCurrency(0)
-                }
-                subtitle={
-                  historyCapped
-                    ? t(
-                        'mileageBudget.cap.unavailable',
-                        'unavailable while history is capped',
-                      )
-                    : budget.projectedOverageM > 0
-                    ? formatDistance(budget.projectedOverageM, { precision: 0 })
-                    : t('mileageBudget.noOverage', 'no overage projected')
-                }
-                icon={<Wallet className="h-5 w-5" />}
-                color={
-                  historyCapped
-                    ? 'cyan'
-                    : budget.projectedOverageM > 0
-                      ? 'amber'
-                      : 'green'
-                }
-              />
-            </>
-          )}
-        </section>
+        <MileageBudgetSummary
+          budget={budget}
+          source={source}
+          formatDistance={formatDistance}
+          formatCurrency={formatCurrency}
+          period={{
+            kind: 'event',
+            eventId: `mileage-budget:${config.termStartIso}`,
+            start: config.termStartIso,
+            end: Number.isFinite(budget.termEndMs) ? new Date(budget.termEndMs).toISOString() : null,
+            provenance: t('mileageBudget.termProvenance', 'Configured term; observed drive-history coverage may be incomplete.'),
+            label: t('mileageBudget.termPeriod', 'Term starting {{start}} · {{months}} months', { start: config.termStartIso, months: config.termMonths }),
+          }}
+        />
       </FadeIn>
 
       {/* 2 — Terms (1/3) + cumulative chart (2/3) */}
       <FadeIn delay={0.1}>
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <SlidersHorizontal className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('mileageBudget.terms', 'Allowance Terms')}
+        <section className="grid grid-cols-1 gap-4 @5xl:grid-cols-3">
+          <LayoutCard title={t('mileageBudget.terms', 'Allowance terms')} actions={
               <HelpTooltip
                 size="sm"
                 i18nKey="help.mileageBudget.body"
                 defaultValue="Enter your lease or warranty terms: yearly distance allowance, term start and length, and the per-distance overage fee. The projection extrapolates your average daily driving linearly to the end of the term."
                 ariaLabel={t('help.mileageBudget.iconLabel', 'More info about allowance terms')}
               />
-            </PanelTitle>
+          }>
 
             <div className="flex flex-col gap-4">
               <Input
+                className="min-h-11 md:min-h-10"
                 type="number"
                 inputMode="numeric"
                 min={1}
                 step={500}
                 label={t('mileageBudget.allowancePerYear', 'Allowance per year')}
-                key={`allowance-${unitPrefs.distance}`}
-                defaultValue={allowanceDisplay}
+                value={allowanceText}
+                error={allowanceInvalid ? t('common.invalidNumber', 'Enter a valid number') : undefined}
                 onChange={(e) => handleAllowanceChange(e.target.value)}
                 suffix={<span className="whitespace-nowrap">{distUnitLabel}</span>}
               />
               <Input
+                className="min-h-11 md:min-h-10"
                 type="date"
                 label={t('mileageBudget.termStart', 'Term start')}
                 value={config.termStartIso}
                 onChange={(e) => e.target.value && update({ termStartIso: e.target.value })}
               />
               <Input
+                className="min-h-11 md:min-h-10"
                 type="number"
                 inputMode="numeric"
                 min={1}
-                max={120}
                 step={1}
                 label={t('mileageBudget.termMonths', 'Term length (months)')}
                 value={config.termMonths}
@@ -292,13 +215,14 @@ export default function MileageBudgetPage() {
                 }}
               />
               <Input
+                className="min-h-11 md:min-h-10"
                 type="number"
                 inputMode="decimal"
                 min={0}
                 step={0.01}
                 label={t('mileageBudget.overageRate', 'Overage fee')}
-                key={`overage-${unitPrefs.distance}`}
-                defaultValue={overageDisplay}
+                value={overageText}
+                error={overageInvalid ? t('common.invalidNumber', 'Enter a valid number') : undefined}
                 onChange={(e) => handleOverageChange(e.target.value)}
                 suffix={
                   <span className="whitespace-nowrap">
@@ -312,6 +236,7 @@ export default function MileageBudgetPage() {
                   label={t('mileageBudget.termProgress', 'Term elapsed')}
                   value={budget.elapsedDays}
                   max={budget.totalDays}
+                  fill="solid"
                   color={chartTokens.series[0]}
                   sublabel={t('mileageBudget.daysLeft', '{{days}} days left', { days: budget.remainingDays })}
                 />
@@ -328,67 +253,83 @@ export default function MileageBudgetPage() {
                               'Allowance used',
                             )
                       }
-                    value={budget.usedM}
+                    value={source.hasData && hasReturnedDrives ? budget.usedM : null}
                     max={Math.max(budget.totalAllowanceM, 1)}
+                    fill="solid"
                     color={paceOver ? chartTokens.series[3] : chartTokens.series[1]}
-                    sublabel={formatDistance(budget.usedM, { precision: 0 })}
+                    sublabel={source.hasData && hasReturnedDrives ? formatDistance(budget.usedM) : '—'}
                   />
                 </div>
               </div>
             </div>
-          </GlassPanel>
+          </LayoutCard>
 
-          <ChartContainer
-            className="xl:col-span-2"
+          <div className="min-w-0 @5xl:col-span-2">
+          <ChartCard
             title={
               historyCapped
                 ? t(
                     'mileageBudget.chartObserved',
-                    'Observed Distance vs Allowance',
+                    'Observed distance vs allowance',
                   )
-                : t('mileageBudget.chart', 'Distance vs Allowance')
+                : t('mileageBudget.chart', 'Distance vs allowance')
             }
-            ariaLabel={
-              historyCapped
+            ariaLabel={`${historyCapped
                 ? t(
                     'mileageBudget.chartObservedAria',
                     'Cumulative distance in the capped returned history against the pro-rata allowance, by month',
                   )
                 : t(
-                    'mileageBudget.chart.aria',
+                    'mileageBudget.chartAria',
                     'Cumulative driven distance against the pro-rata allowance, by month',
-                  )
-            }
+                  )} (${distUnitLabel})`}
+            metadata={{ unitLabel: distUnitLabel }}
             loading={isLoading}
-            empty={chartData.length < 2}
+            error={source.fatalError}
+            onRetry={source.retry ?? undefined}
+            empty={!hasReturnedDrives || chartData.length < 2}
+            emptyMessage={t('common.noDataForPeriod', 'No data available for this period')}
             height={340}
+            size="standard"
+            exportable
             data={chartData}
+            exportData={chartData.map(({ month, used, allowed }) => ({
+              month,
+              [`${historyCapped
+                ? t('mileageBudget.col.observedUsed', 'Observed driven')
+                : t('mileageBudget.col.used', 'Driven')} (${distUnitLabel})`]: formatChartDistance(used),
+              [`${t('mileageBudget.col.allowed', 'Allowed')} (${distUnitLabel})`]: formatChartDistance(allowed),
+            }))}
             dataColumns={[
               { key: 'month', label: t('mileageBudget.col.month', 'Month') },
               {
                 key: 'used',
-                label: historyCapped
+                label: `${historyCapped
                   ? t('mileageBudget.col.observedUsed', 'Observed driven')
-                  : t('mileageBudget.col.used', 'Driven'),
+                  : t('mileageBudget.col.used', 'Driven')} (${distUnitLabel})`,
+                format: formatChartDistance,
               },
-              { key: 'allowed', label: t('mileageBudget.col.allowed', 'Allowed') },
+              { key: 'allowed', label: `${t('mileageBudget.col.allowed', 'Allowed')} (${distUnitLabel})`, format: formatChartDistance },
             ]}
             chartKey="mileage-budget"
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                <Tooltip content={<ChartTooltip />} />
+                <XAxis dataKey="month" tick={chartTick} />
+                <YAxis tick={chartTick} unit={` ${distUnitLabel}`} tickFormatter={formatChartDistance} />
+                <Tooltip content={<ChartTooltip valueFormatter={(value) =>
+                  isFiniteNumber(value) ? `${formatChartDistance(value)} ${distUnitLabel}` : '—'
+                } />} />
                 <ChartLegend state={mileageHidden} />
                 <Area
                   type="monotone"
                   dataKey="used"
                   name={t('mileageBudget.driven', 'Driven')}
+                  unit={distUnitLabel}
                   stroke={chartTokens.series[0]}
                   fill={chartTokens.series[0]}
-                  fillOpacity={0.15}
+                  fillOpacity={0.08}
                   strokeWidth={2}
                   hide={mileageHidden.isHidden('used')}
                 />
@@ -396,17 +337,19 @@ export default function MileageBudgetPage() {
                   type="monotone"
                   dataKey="allowed"
                   name={t('mileageBudget.allowed', 'Allowed')}
+                  unit={distUnitLabel}
                   stroke={chartTokens.series[2]}
-                  strokeWidth={2}
+                  strokeWidth={1}
                   strokeDasharray="6 4"
                   dot={false}
                   hide={mileageHidden.isHidden('allowed')}
                 />
               </ComposedChart>
             </ResponsiveContainer>
-          </ChartContainer>
+          </ChartCard>
+          </div>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

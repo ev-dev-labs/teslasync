@@ -1,0 +1,742 @@
+{
+  "item": "phase6-qa-charging-charging-detail",
+  "status": "DONE",
+  "auditMode": "SOURCE-ONLY current accepted route QA; no remigration and no closed Phase0/3 repeat",
+  "startedUTC": "2026-10-13T22:52:06.7722416Z",
+  "createdUTC": "2026-10-13T23:01:55.968512+00:00",
+  "page": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+  "routes": [
+    "/charging/:id"
+  ],
+  "writeScope": [
+    "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-charging-charging-detail.json",
+    "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charging-detail.log"
+  ],
+  "sourceWrites": [],
+  "testWrites": [],
+  "queueEdits": false,
+  "tasksCreated": [],
+  "pins": {
+    "currentHEAD": "88d4924cc1b9801f20c1845f53454c33c0b36a82",
+    "headEvidence": "Read .git/HEAD and its loose ref with filesystem only; no Git command or working-tree inspection. SHA pins, not HEAD alone, identify reviewed live files.",
+    "acceptedSourceCommit": "1ddc1bc4b5c7bd1ac3595c004ed00b4790acd310",
+    "sources": [
+      {
+        "file": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+        "sha256": "60463206ebca6439ab5ee1f6ee51ecc0ff90aba763c0f3f9ec2a6abf65abd0b3",
+        "physicalLines": 1276,
+        "splitLFEntries": 1277
+      },
+      {
+        "file": "web/src/features/charging/components/detail-modernization/DetailPlacement.tsx",
+        "sha256": "4b23168114bea213991a8f95dca8442f857ca805e4fe2caab121feee442abf37",
+        "physicalLines": 21,
+        "splitLFEntries": 22
+      },
+      {
+        "file": "web/src/features/charging/components/detail-modernization/DetailSessionStats.tsx",
+        "sha256": "86bb31163a9942e5605662de59cb55bcb4c242463d1bc874347fb970f6efa002",
+        "physicalLines": 142,
+        "splitLFEntries": 143
+      },
+      {
+        "file": "web/src/features/charging/components/detail-modernization/DetailSourceOutline.tsx",
+        "sha256": "448368aa8de3b0e24c8e86f324269542fe3c5f469d777a560fdbfaa5a9b3abca",
+        "physicalLines": 43,
+        "splitLFEntries": 44
+      },
+      {
+        "file": "web/src/features/charging/components/ChargePhysicsPanel.tsx",
+        "sha256": "2f1e6c1c92ad6f7c6260ce4cff79ce339e63d52486638d502f507dacaff05b23",
+        "physicalLines": 93,
+        "splitLFEntries": 94
+      },
+      {
+        "file": "web/src/features/charging/components/ChargeLedgerCompactPanel.tsx",
+        "sha256": "96b1b853ea491499fffdf555acbcccb8f95744a1bf184e1ebfb3eef0f110c00a",
+        "physicalLines": 50,
+        "splitLFEntries": 51
+      },
+      {
+        "file": "web/src/features/charging/components/ChargeBillTruthPanel.tsx",
+        "sha256": "5e59aab3e7718bc70ce1ef8f4ea319587ea73f4cf10257faf8c9355fd8466583",
+        "physicalLines": 125,
+        "splitLFEntries": 126
+      },
+      {
+        "file": "web/src/features/charging/components/ShareSessionDialog.tsx",
+        "sha256": "fcfc259ac0d4e2c82122afff2dd5badb01453bd6798937ec24dfcde2bd9a2231",
+        "physicalLines": 219,
+        "splitLFEntries": 220
+      },
+      {
+        "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+        "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+        "physicalLines": 73,
+        "splitLFEntries": 74
+      },
+      {
+        "file": "web/src/features/vehicles/components/physics-ledger/ChargeLedgerPanel.tsx",
+        "sha256": "be41e249810ea1282eb1b2dcf1bc7f2ee9d4738d0a850e6ccec8529081f2bfd9",
+        "physicalLines": 68,
+        "splitLFEntries": 69
+      },
+      {
+        "file": "web/src/features/vehicles/components/physics-ledger/TermRow.tsx",
+        "sha256": "db42e5f3c2b634f393d7662a5c973a9e746e3f4d4aa1486eb24da0530e7f3fe3",
+        "physicalLines": 41,
+        "splitLFEntries": 42
+      },
+      {
+        "file": "web/src/components/ai/AIChargingDiagnosis.tsx",
+        "sha256": "4ad098990837887dea06e71c9ee23229070ac679b49fc64f95d147ceee0a8672",
+        "physicalLines": 93,
+        "splitLFEntries": 94
+      }
+    ],
+    "receipts": [
+      {
+        "file": "logs/phase5-page-charging-charging-detail.log",
+        "sha256": "b358726a3562023e230617815bb922d74b3a7da6e7d1d4328a17c1cbcdedf6cf",
+        "physicalLines": 31,
+        "splitLFEntries": 32
+      },
+      {
+        "file": "logs/phase5-page-charging-charging-detail-originals.json",
+        "sha256": "6d7d17ce4be5683440073ac1ed54530f4cdfe2e97cd2135834b44e9b32e5fab3",
+        "physicalLines": 1774,
+        "splitLFEntries": 1775
+      },
+      {
+        "file": "logs/phase5-page-charging-charging-detail-preservation.log",
+        "sha256": "7bc3196d8c4de78be446562a26fadba1a16f6f41e0664db684db3a662a08ef46",
+        "physicalLines": 58,
+        "splitLFEntries": 59
+      },
+      {
+        "file": "logs/phase5-page-charging-charging-detail-capture.log",
+        "sha256": "244c0f004baac483e81f59dc06dfb5a9fda23b6da055eb0b49cdce0af85e1ee9",
+        "physicalLines": 259,
+        "splitLFEntries": 260
+      },
+      {
+        "file": "logs/phase5-page-charging-charging-detail-lint.log",
+        "sha256": "4e37b582a2a71ace7285ba18ab8663e8b91322febc555fbb78adad486c75eb81",
+        "physicalLines": 1,
+        "splitLFEntries": 2
+      },
+      {
+        "file": "logs/phase5-page-charging-charging-detail-scan.log",
+        "sha256": "a7e8f0c737190ee2b4ea0bb818e5c0a58283fd7e225c54f54ae2ac849f249534",
+        "physicalLines": 157,
+        "splitLFEntries": 158
+      },
+      {
+        "file": "logs/phase5-page-charging-charging-detail-scope.json",
+        "sha256": "872477cedefadc0ef54766380d96e560d553696ab1454471c1fb1a2c76d25321",
+        "physicalLines": 4,
+        "splitLFEntries": 5
+      }
+    ],
+    "layoutOwner": {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b"
+    },
+    "HEADAtRelease": "88d4924cc1b9801f20c1845f53454c33c0b36a82",
+    "scanned12SourcesUnchangedAtFinalVerification": true
+  },
+  "acceptedReceipt": {
+    "queueLines": [
+      338,
+      1767
+    ],
+    "actualReceipt": "logs/phase5-page-charging-charging-detail.log final delivery",
+    "scope": "Source acceptance only; statistics/SI-alias/specialist/share/workspace child needs remain unaccepted.",
+    "historicalOnly": {
+      "lines": "1277 vs1248",
+      "sections": 20,
+      "charts": 4,
+      "series": 9,
+      "originalAssertions": 113,
+      "currentAssertionsAtReceipt": 144,
+      "testExit": 1,
+      "executedTests": 0,
+      "testFailure": "external generated locale catalog startup",
+      "preservationExit": 1,
+      "preservationMeaning": "five intentional reviewed palette/nullable source deltas, NOT blanket pass",
+      "captureExit": 2,
+      "mobile": "375/768 BLOCKED private screenshot Error",
+      "desktop": "1440/1920 resource failures429/501/503/404 despite288/288 fragment coverage",
+      "lintExit": 0
+    },
+    "freshEvidenceReuse": "No historical test/lint/preservation/capture receipt promoted to a fresh pass."
+  },
+  "routeContract": {
+    "mountedAt": "web/src/App.tsx:644; routeRegistry.ts:78; routeLoaders.ts:15",
+    "sessionIdentity": "Page:167-168 Number(id); primary hook enabled with numeric id ornull; telemetry uses returned session.id; vehicle/latest use returned vehicle_id. Physics/ledger/share/AI use route string. Valid-route review, no real ID/API request.",
+    "businessDates": "Record started_at/ended_at own elapsed interval and event period; /charging/:id is NOT a RANGE_ENABLED_PATHS member. Workspace route returns range=false, vehicle=true. No requirement to add start/end bounds, selected vehicle filtering or another picker. SeeF08 for actual record-timezone dependency.",
+    "actions": [
+      "Back /charging",
+      "Share/create/copy/open/revoke/expiry/title/telemetry opt-in",
+      "Print",
+      "Source-specific session/telemetry/live/specialist fatal retry; retained session/telemetry/live warning retry",
+      "Chart full-resolution export/fullscreen, legend visibility, brush, synced cursors",
+      "Physics cockpit/full ledger navigation",
+      "Optional entitlement-controlled AI diagnosis"
+    ]
+  },
+  "dataSources": [
+    {
+      "hook": "useChargingSessionDetail",
+      "endpoint": "GET /charging/{sessionID}",
+      "hookLine": 99,
+      "routerLines": "3545-3551"
+    },
+    {
+      "hook": "useChargeTelemetry",
+      "endpoint": "GET /charging/{sessionID}/telemetry",
+      "hookLine": 112,
+      "routerLines": "3552"
+    },
+    {
+      "hook": "useVehicle",
+      "endpoint": "GET /vehicles/{id}",
+      "hookLine": 89,
+      "routerEvidence": "internal/api/router.go:3362 vehicles group,3372 vehicleHandler.Get registration; builtin Select-String verified, no runtime request."
+    },
+    {
+      "hook": "useChargingTelemetryLatest",
+      "endpoint": "GET /charging-telemetry/latest?vehicle_id=",
+      "hookLine": 476,
+      "routerLines": "4171-4173"
+    },
+    {
+      "hook": "useChargePhysics",
+      "endpoint": "GET /physics/charging/{sessionID}",
+      "hookLine": 35,
+      "routerLines": "3566"
+    },
+    {
+      "hook": "useChargeLedger",
+      "endpoint": "GET /physics/charging/{sessionID}/ledger",
+      "hookLine": 69,
+      "routerLines": "3570",
+      "decoder": "existing readPhysicsLedger call observed; decoder internals not re-audited"
+    },
+    {
+      "hook": "session sharing hooks",
+      "endpoint": "GET /charging/{id}/shares; POST /charging/{id}/share; DELETE /shares/{token}",
+      "hookLines": "57,73,85",
+      "routerLines": "3554-3555,3538"
+    },
+    {
+      "component": "AIChargingDiagnosis",
+      "endpoint": "POST /ai/charging/{id}/diagnose",
+      "source": "AIChargingDiagnosis.tsx:40-67",
+      "routerEvidence": "router.go wires ChargingDiagnosis handler at5061, exact delegated route not verified in this bounded review",
+      "exception": "Intentional feature/mode guard may returnnull; not a hidden-data section violation"
+    }
+  ],
+  "preservation": {
+    "currentPagePhysicalLines": 1276,
+    "currentPageSplitLFEntries": 1277,
+    "lineConvention": "Trailing LF creates an extra split entry; historical1277 is preserved under that convention, not a source deletion.",
+    "receiptOriginalSplitLFEntries": 1248,
+    "ratioUsingReceiptConvention": 1.0232371794871795,
+    "threshold": 0.7,
+    "sectionCount": 20,
+    "sections": [
+      "summary",
+      "diagnosis",
+      "metrics",
+      "bill-truth",
+      "physics",
+      "ledger",
+      "battery-heading",
+      "gauges",
+      "battery-progress",
+      "analysis-heading",
+      "charge-curve",
+      "charge-summary",
+      "session-timeline",
+      "temperature",
+      "voltage-current",
+      "details-heading",
+      "advanced",
+      "session-info",
+      "location",
+      "timestamps"
+    ],
+    "chartCount": 4,
+    "seriesCount": 9,
+    "layoutCards": 7,
+    "glassPanels": 1,
+    "pageLayoutBranches": 3,
+    "outline": "15 named dependent source shells remain for no-session/loading; valid page has20 CardGrid items.",
+    "limits": "Counts are source declarations, not mounted data/action parity or rerun preservation wrapper. Original113/current144 assertions retained as historical receipt, not freshly counted or executed."
+  },
+  "states": {
+    "session": "Initial source skeleton; fatal/list retry; retained data survives refresh warning; source historical provenance.",
+    "telemetry": "Separate timeline/temperature/electrical shells have loading/fatal retry/empty/chart branches; retained warning is independent of session. Modeled curve distinction stillF05.",
+    "latest": "Current vehicle values explicitly qualified as latest, cached provenance, null/unavailable/fatal/retained warning; does not overwrite record ended_status.",
+    "ledger": "Independent hook/key and truncation flag; nested missing-charge body, nullable energy/terms, method/missing signals/unknown flags preserve rawWh and signs. Retained trustF04.",
+    "statistics": "Existing StatMetric->ChargingSummaryBrief->useOperationalMetrics path, eventId/period and retained label; no new formatter/converter. Unknown-zeroF01, denominatorF02, zero deltaF03, source currencyF07.",
+    "sharing": "Success-only URL transition guards token; error toasts and no offline queue invented; retained listF06."
+  },
+  "preferencesAndSI": {
+    "observed": "Raw session W/Wh/m values and telemetry hook responses remain unchanged; display conversion via useUnits and current unitConversion helpers. Distance/temperature/locale/precision settings bridge inspected. Energy/power are centralized defaults kWh/kW, not an invented user preference. Duration specialist min vs shared duration h is an existing specialist presentation, not by itself a violation. SoC is percentage, energy denominators useWh/1000, invoice deltaPct guards positive invoice denominator.",
+    "unitUnknowns": "Optional historical aliases and live battery_range_mi actual wiremeaning not established; no assumption that old names mean miles/kWh and no adapter invented.",
+    "signs": "Bill delta/remainder subtraction retains signs; ledger TermRow passes raw signed value when known. Plotted power/current abs C02 remains candidate pending contract."
+  },
+  "responsive": {
+    "sourceDeclarations": [
+      "min-w-0 CardGrid/DetailPlacement",
+      "wrapping header/status/actions",
+      "container-query gauges/KV/grid reflow",
+      "mobileHeight256/288/224/224",
+      "44px page Back and Share declarations"
+    ],
+    "acceptance": "Not mounted; no mobile/theme/native proof. C03/C04 and historical blocked capture stay unpromoted."
+  },
+  "accessibility": {
+    "sourceDeclarations": [
+      "localized source/section labels and meaningful Badge text",
+      "decorative page icons and back focus classes",
+      "chart localized aria labels/dataColumns/full exportData",
+      "dense no-table cap/description",
+      "shared Modal/Input/Select/Toggle/Button ownership"
+    ],
+    "limits": "Keyboard/focus/restoration/touch geometry/contrast/forced-colors/reduced-motion/RTL/200% text/screen-reader behavior NOTRUN."
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "classification": "confirmed-source",
+      "rule": "unknown-as-zero",
+      "file": "web/src/features/charging/components/detail-modernization/DetailSessionStats.tsx",
+      "line": 87,
+      "additionalEvidence": [
+        "web/src/features/charging/components/detail-modernization/DetailSessionStats.tsx:80-95",
+        "web/src/features/charging/components/charging-curve/helpers.ts:19-24",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:317-322",
+        "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx:19-29"
+      ],
+      "mechanism": "Nullable peak power becomes raw numeric zero; nullable end SoC becomes a textual 0% endpoint. Ongoing/invalid elapsed intervals become zero duration before entering the statistic formatter. Numeric validation cannot recover the lost missingness.",
+      "sourceRepro": "Declared nullable peak_power_w=null and end_soc_pct=null render as 0W and an interval ending 0%; ended_at=null makes durationMinutes return0, then raw duration0. No backend nullability guess is required for these declared nullable fields.",
+      "runtimeReproduced": false,
+      "confidence": "high for source mechanism; no real payload/runtime claim",
+      "priority": "P1",
+      "guidance": "Pass missingness through the existing statistics owner; distinguish ongoing duration, genuine zero and unknown endpoints. Preserve every reading.",
+      "deduplication": "Existing audit-page-082 states unknown-zero root and actual Phase5 log DetailSessionStats child need; not accepted by source-only page receipt.",
+      "fixTaskCreated": false
+    },
+    {
+      "id": "F02",
+      "classification": "confirmed-source",
+      "rule": "rounded-denominator",
+      "file": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+      "line": 322,
+      "additionalEvidence": [
+        "web/src/features/charging/components/charging-curve/helpers.ts:19-24",
+        "web/src/features/charging/components/detail-modernization/DetailSessionStats.tsx:124-127"
+      ],
+      "mechanism": "The average charging rate divides energy by whole rounded minutes, not the unrounded session business interval. This alters rates and suppresses nonzero sub-30-second sessions.",
+      "sourceRepro": "1000Wh over45s -> durationMinutes1 ->60kWh/h; the same raw energy and45s imply80kWh/h.29s ->duration0 ->averageRate=null. Algebraic trace only, not an executed component/test.",
+      "runtimeReproduced": false,
+      "confidence": "high for source mechanism; no real payload/runtime claim",
+      "priority": "P1",
+      "guidance": "Keep source seconds/unrounded interval for the denominator; round only the presentation using existing conversion ownership. Do not invent duration or range bounds.",
+      "deduplication": "Existing statistics/denominator need, refined against current helper; no additional queue task.",
+      "fixTaskCreated": false
+    },
+    {
+      "id": "F03",
+      "classification": "confirmed-source",
+      "rule": "known-zero-discarded",
+      "file": "web/src/features/charging/components/charging-curve/helpers.ts",
+      "line": 30,
+      "additionalEvidence": [
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:318",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:524-527",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:620-623"
+      ],
+      "mechanism": "distanceAddedM returns null for equal known odometers. The page renders the resulting known0m delta as an unavailable dash. This is an odometer delta, not proof of battery rated-range gain.",
+      "sourceRepro": "start_odometer_m=end_odometer_m=10000 ->delta0 ->null ->both distance summary and range-gained presentation show a dash.",
+      "runtimeReproduced": false,
+      "confidence": "high for source mechanism; no real payload/runtime claim",
+      "priority": "P1",
+      "guidance": "Retain a valid zero delta distinctly from missing/invalid evidence within the existing helper contract; do not manufacture an alternate range measurement.",
+      "deduplication": "Existing SI/statistics unknown-zero root family; recorded as its distinct zero-loss mechanism, not an adapter or repair task.",
+      "fixTaskCreated": false
+    },
+    {
+      "id": "F04",
+      "classification": "confirmed-source",
+      "rule": "independent-source-trust",
+      "file": "web/src/features/charging/components/ChargePhysicsPanel.tsx",
+      "line": 31,
+      "additionalEvidence": [
+        "web/src/features/charging/components/ChargePhysicsPanel.tsx:19-35",
+        "web/src/features/charging/components/ChargeLedgerCompactPanel.tsx:14-29",
+        "web/src/api/dataState.ts:225-254"
+      ],
+      "mechanism": "Both specialist panels use fatalError correctly to keep retained data, but never expose refreshError/isRefreshBlocked/last-success or an individual retry alongside retained content. A failed or paused refresh silently looks healthy.",
+      "sourceRepro": "A query with a previously successful object and error, or fetchStatus=paused, produces state.status=stale and fatalError=null. Each panel takes the physics/ledger content branch; neither has a retained notice or retry in that branch.",
+      "runtimeReproduced": false,
+      "confidence": "high for source mechanism; no real payload/runtime claim",
+      "priority": "P1",
+      "guidance": "Reuse the existing source notice/retry next to each retained specialist; keep independent sources, honesty text, ledger unknowns and truncation.",
+      "deduplication": "Existing audit-page-082 specialist state root and actual Phase5 log shared need; still not accepted.",
+      "fixTaskCreated": false
+    },
+    {
+      "id": "F05",
+      "classification": "confirmed-source",
+      "rule": "modeled-vs-telemetry-trust",
+      "file": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+      "line": 238,
+      "additionalEvidence": [
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:74-94",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:647-689",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:56-57"
+      ],
+      "mechanism": "Missing telemetry includes pending, fatal and resolved-empty states. All take the same metadata-based modeled curve path. The curve has an inferred badge, but no local telemetry loading/fatal/retry distinction; its export has only soc/power columns. The shared stale notice intentionally does not cover initial failures.",
+      "sourceRepro": "With valid start/end SoC and peak power and telemetry undefined due to pending or error, hasTelemetry=false ->21 inferred points ->normal exportable curve branch. Other telemetry sections do show their own fatal/retry. This is not a claim that model inputs are fabricated.",
+      "runtimeReproduced": false,
+      "confidence": "high for source mechanism; no real payload/runtime claim",
+      "priority": "P1",
+      "guidance": "Preserve the modeled capability and inferred label; carry explicit telemetry outcome/input provenance alongside it and through specialist export semantics, using existing owners.",
+      "deduplication": "Existing audit-page-082 modeled-curve root and actual Phase5 log model input-provenance/error-copy need; the old default0/100/50kW fabrication is no longer present.",
+      "fixTaskCreated": false
+    },
+    {
+      "id": "F06",
+      "classification": "confirmed-source",
+      "rule": "retained-share-list-erased",
+      "file": "web/src/features/charging/components/ShareSessionDialog.tsx",
+      "line": 158,
+      "additionalEvidence": [
+        "web/src/features/charging/components/ShareSessionDialog.tsx:28",
+        "web/src/features/charging/components/ShareSessionDialog.tsx:151-163",
+        "web/src/api/hooks/useSharing.ts:70-76"
+      ],
+      "mechanism": "The existing-share section tests raw sharesError before its retained array. A background list error replaces previously loaded links/actions with a generic banner and offers no local refetch. Create/revoke success-only transitions remain intact.",
+      "sourceRepro": "existingShares=[valid share], isLoading=false, error=refreshError ->the sharesError branch wins over shares.length>0, removing the retained links and their copy/revoke controls.",
+      "runtimeReproduced": false,
+      "confidence": "high for source mechanism; no real payload/runtime claim",
+      "priority": "P1",
+      "guidance": "Use the existing fatal-versus-retained contract and individual list retry; preserve create/revoke errors and public-link consent.",
+      "deduplication": "Existing audit-page-082 sharing/list-retry and actual Phase5 ShareSessionDialog child need; no new task.",
+      "fixTaskCreated": false
+    },
+    {
+      "id": "F07",
+      "classification": "confirmed-source",
+      "rule": "currency-denomination",
+      "file": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+      "line": 333,
+      "additionalEvidence": [
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:323-333",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:521",
+        "web/src/hooks/useFormatting.ts:45-57",
+        "web/src/features/charging/components/ChargeBillTruthPanel.tsx:67-70",
+        "web/src/api/types.ts:180-199"
+      ],
+      "mechanism": "A billed/recorded cost and its per-kWh rate are formatted with the settings currencySymbol, without reading billed_currency/cost_currency or doing any conversion. Bill-vs-pack instead includes source currency, so the same amount can have inconsistent denominations.",
+      "sourceRepro": "Typed session cost_decimal=10, cost_currency=EUR (or billed currency EUR), settings currency_symbol=$ ->summary costText=$10; the bill panel can render EUR10. No source conversion or currency agreement check exists in this path.",
+      "runtimeReproduced": false,
+      "confidence": "high for source mechanism; no real payload/runtime claim",
+      "priority": "P1",
+      "guidance": "Retain the explicit source denomination for recorded money; do not infer an ISO currency from the settings symbol or invent exchange conversion. Configured estimates remain separately identified.",
+      "deduplication": "Existing source-currency/preservation contract and receipt specialist denomination/statistics needs; finding only, no invented fix task.",
+      "fixTaskCreated": false
+    },
+    {
+      "id": "F08",
+      "classification": "confirmed-source",
+      "rule": "record-date-identity",
+      "file": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+      "line": 1252,
+      "additionalEvidence": [
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:207-209",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:1258",
+        "web/src/components/data-display/format/DateTime.tsx:85-95",
+        "web/src/lib/timezone.ts:47-50",
+        "web/src/lib/workspaceScope.ts:158-170"
+      ],
+      "mechanism": "Session-owned start/end timestamps request in=vehicle, but DateTime resolves that mode from workspace useSelectedVehicle, not the session vehicle loaded by the page. Switching the independent header vehicle can change a historical session date/time. Plain chart/breadcrumb date helpers separately default to browser zone.",
+      "sourceRepro": "Session belongs to vehicleA; workspace selection is vehicleB with another timezone. DateTimeWithTz ->useTimezone(vehicle) ->selected vehicleB.timezone, while the page still requests recordA and its telemetry. A near-midnight source UTC instant can change calendar date. This does NOT imply the page should add a workspace query filter.",
+      "runtimeReproduced": false,
+      "confidence": "high for source mechanism; no real payload/runtime claim",
+      "priority": "P1",
+      "guidance": "Keep record-owned business dates anchored to the record vehicle/timezone through the existing date owner; retain raw UTC and disclose unresolved source timezone rather than silently substituting another vehicle.",
+      "deduplication": "Existing audit-page-082 workspace record-detail selector semantics root, refined to the current actual date dependency; no range-bound or global-vehicle-filter requirement.",
+      "fixTaskCreated": false
+    },
+    {
+      "id": "F09",
+      "classification": "confirmed-source",
+      "rule": "hardcoded-string",
+      "file": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+      "line": 1222,
+      "additionalEvidence": [
+        "web/src/features/charging/components/ChargePhysicsPanel.tsx:14",
+        "web/src/features/charging/components/ChargePhysicsPanel.tsx:16"
+      ],
+      "mechanism": "The missing vehicle-name fallback ID label bypasses i18n. The specialist duration helper has two direct English unit-template return expressions and bypasses locale-aware number/duration formatting. Three exact source occurrences are grouped in this localization root.",
+      "sourceRepro": "Missing vehicle name takes `ID ${session.vehicle_id}`; physics duration30s returns `1 min`, duration3600s returns `1 h 0 min`, independent of the selected language. Source branches only.",
+      "runtimeReproduced": false,
+      "confidence": "high for source mechanism; no real payload/runtime claim",
+      "priority": "P2",
+      "guidance": "Reuse the existing localized identifier/duration presentation owners; do not edit catalogs in this item.",
+      "deduplication": "Current source localization gaps within the existing date/i18n preservation contract; no catalog or fix task created.",
+      "fixTaskCreated": false
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "kind": "wire-contract-unverified",
+      "file": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+      "line": 255,
+      "additionalEvidence": [
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:241-258",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:267-279",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:1166-1175",
+        "web/src/api/types.ts:231-261,2186-2205",
+        "web/src/api/hooks/useCharging.ts:109-114"
+      ],
+      "mechanism": "Historical charts consume optional battery_level/power_w/energy_added/rated_range/temperature/voltage aliases rather than canonical AC/DC W/Wh/V/A fields; hooks return raw responses without an inspected adapter. Live battery_range_mi is fed to a meters converter.",
+      "sourceRepro": "A canonical-only typed telemetry row produces missing alias chart values; this proves reliance, not actual endpoint omission or an incorrect scale.",
+      "promotionRequirement": "Establish the current wire payload/semantic units with its actual type/backend owner; no real API or backend data exercised. Old names do not establish miles/kWh.",
+      "deduplication": "Existing SI-alias child need explicitly NOT accepted; no adapter proposed."
+    },
+    {
+      "id": "C02",
+      "kind": "sign-contract-unverified",
+      "file": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+      "line": 245,
+      "additionalEvidence": [
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:258",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:279"
+      ],
+      "mechanism": "Math.abs removes any negative power/current sign in plotted/exported telemetry. Live advanced current/power and ledger terms retain their input signs.",
+      "sourceRepro": "Input -1000W alias ->plotted +1kW; -5A alias ->+5A.",
+      "promotionRequirement": "Confirm valid signed charging telemetry semantics before treating sign normalization as a defect. No real signed charge was observed."
+    },
+    {
+      "id": "C03",
+      "kind": "native-mobile-a11y-unverified",
+      "file": "web/src/features/charging/components/ShareSessionDialog.tsx",
+      "line": 174,
+      "additionalEvidence": [
+        "web/src/features/charging/components/ShareSessionDialog.tsx:179-205"
+      ],
+      "mechanism": "Nonwrapping share metadata and trailing small icon actions may crowd narrow/RTL/long-label layouts; effective44px target/focus/pending reachability was not mounted.",
+      "promotionRequirement": "Authorized mobile/keyboard captures with existing shared owners; historical blocked mobile capture remains blocked."
+    },
+    {
+      "id": "C04",
+      "kind": "native-chart-a11y-unverified",
+      "file": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+      "line": 231,
+      "additionalEvidence": [
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:340-354",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:675-689",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:782-797"
+      ],
+      "mechanism": "Above2000 rows each chart omits its accessible table, retains full exportData and a spoken summary. Source presence of export does not prove an equivalent keyboard/screen-reader data alternative or acceptable dense rendering.",
+      "promotionRequirement": "Mounted assistive-technology/export review; do not remove the sample cap or silently downsample."
+    },
+    {
+      "id": "C05",
+      "kind": "response-nullability-unverified",
+      "file": "web/src/features/charging/components/ChargePhysicsPanel.tsx",
+      "line": 39,
+      "additionalEvidence": [
+        "web/src/features/charging/components/ChargePhysicsPanel.tsx:50-84",
+        "web/src/features/charging/components/ChargeLedgerCompactPanel.tsx:28-47"
+      ],
+      "mechanism": "Physics story/nested etiquette/schedule assume typed complete payloads; resolved null has no explanatory body in outer specialist shells. Nested ChargeLedgerPanel does have a missing-charge explanation.",
+      "promotionRequirement": "Verify real declared response/nullability before promoting a crash or authoritative-empty failure. Existing contract-hardening risk, not reproduced runtime failure."
+    },
+    {
+      "id": "C06",
+      "kind": "runtime-timeaxis-unverified",
+      "file": "web/src/features/charging/pages/ChargingDetailPage.tsx",
+      "line": 254,
+      "additionalEvidence": [
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:265",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:277",
+        "web/src/features/charging/pages/ChargingDetailPage.tsx:801-805",
+        "web/src/lib/dateFormat.ts:103-124"
+      ],
+      "mechanism": "Time-series x/sync/brush/export identity is a formatted browser-zone HH:mm/AM-PM label, not the raw timestamp. Multi-day or DST repeated wall times can collide; settings timezone/12-24h are not passed to these helpers.",
+      "promotionRequirement": "Verify mounted synchronized cursor/brush/export behavior for repeated times. Source demonstrates lost date identity, not an observed chart interaction failure."
+    }
+  ],
+  "summary": {
+    "confirmedSourceRoots": 9,
+    "unpromotedCandidates": 6,
+    "hardcodedStringOccurrences": 3,
+    "builtinRuleViolationsByRule": {
+      "hardcoded-string": 3,
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "missing-page-container": 0,
+      "fetch-useeffect": 0
+    },
+    "ruleCountLimits": "Zeroes are adjudicated bounded source scan observations, not full application acceptance. PageLayout is the current accepted modern layout, not a missing PageContainer defect; raw table match is a comment and shared capitalized components are not raw controls. Explicit entitlementAI guard is acceptable. Semantic roots counted separately and do not inflate the three i18n occurrence count. PageLayout.tsx:2,11 directly imports/wraps PageContainer, verified from current source.",
+    "priority": "Preserve missingness/denominators and record identity/denomination; expose independent retained source/share trust. No queue/fix tasks generated.",
+    "filesWithMostConfirmedRoots": {
+      "web/src/features/charging/pages/ChargingDetailPage.tsx": 5,
+      "web/src/features/charging/components/detail-modernization/DetailSessionStats.tsx": 1,
+      "web/src/features/charging/components/charging-curve/helpers.ts": 1,
+      "web/src/features/charging/components/ChargePhysicsPanel.tsx": 1,
+      "web/src/features/charging/components/ShareSessionDialog.tsx": 1
+    }
+  },
+  "checks": {
+    "sourceScanExit": 0,
+    "hookAndPinExit": 0,
+    "sourceMechanismMetadataExit": 0,
+    "rawLog": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charging-detail.log",
+    "rawHTMLFirstScan": "Case-insensitive Select-String produced10 lexical matches (capitalized shared components plus one table comment). Corrected -CaseSensitive scan produced1 comment-only match;0 rendered violations.",
+    "hardcodedRawMatches": 3,
+    "toolDiscoveryErrors": [
+      {
+        "shellId": "6195",
+        "exit": 1,
+        "raw": "Select-String of optional web/.gitignore did not find a readable file; errors suppressed in that discovery command; root logs/ rule subsequently read at .gitignore:80."
+      },
+      {
+        "shellId": "6216",
+        "exit": 0,
+        "raw": "Select-String: The file D:\\repos\\teslasync\\web\\src\\api\\hooks\\useSessionShareLinks.ts cannot be read: Could not find file. Nonterminating error despite shell exit0; resolved actual owner useSharing.ts."
+      },
+      {
+        "shellId": "6219",
+        "exit": 1,
+        "raw": "Select-String: Cannot find path D:\\repos\\teslasync\\web\\src\\routes because it does not exist. Resolved App.tsx, routeRegistry.ts, routeLoaders.ts."
+      },
+      {
+        "shellId": "6222",
+        "exit": 1,
+        "raw": "Get-Content: Cannot find path D:\\repos\\teslasync\\web\\src\\components\\data-display\\DateTime.tsx because it does not exist. Select-String: LedgerPanels.tsx cannot be read: Could not find file. Resolved format/DateTime.tsx and LedgerPanels.ts."
+      }
+    ],
+    "otherCompletedPowerShellDiscoveryExitCodes": {
+      "6190": 0,
+      "6194": 0,
+      "6198": 0,
+      "6201": 0,
+      "6203": 0,
+      "6208": 0,
+      "6209": 0,
+      "6212": 0,
+      "6225": 0,
+      "6226": 0,
+      "6229": 0,
+      "6232": 0,
+      "6233": 0,
+      "6234": 0,
+      "6240": 0,
+      "6241": 0
+    },
+    "largeOutputLimit": "Some instruction/discovery outputs exceeded tool display limits; relevant bounded reads/sections used. Original receipt byte/source serialization output not treated as a check pass.",
+    "reportCreateExit": 0,
+    "jsonSerializeReparseExit": 0,
+    "finalSourcePinVerificationExit": 0,
+    "finalReportValidationExit": 0,
+    "layoutVehicleRouteEvidenceExit": 0
+  },
+  "NOTRUN": [
+    "npx tsc --noEmit (explicitly prohibited globalTSC; no TypeScript pass claim)",
+    "all tests including source/regression tests",
+    "application source execution",
+    "API and real charge lookup",
+    "browser/native/Playwright/capture",
+    "fullsuite/build/full-lint/audit-wrapper",
+    "Git commands/working-tree status/commit",
+    "servers/installs/helpers/extensions/catalog/queue/health/dispatch/Discord/heartbeat"
+  ],
+  "evidenceLimits": "One registered route source-only QA. No application/test/backend/config/catalog/queue/otherdocs writes. Unknown wire units/nullability/backend authorization, real telemetry coverage, runtime/native/mobile acceptance remain unresolved. No closedPhase0/3 restart, no child-source repair, no historical failed gate promoted.",
+  "filesRead": [
+    "docs/orchestrator-loop.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-worker-conventions.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "migration-queue.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "docs/frontend-audits/audit-page-082.json",
+    "web/src/features/charging/pages/ChargingDetailPage.tsx",
+    "web/src/features/charging/components/detail-modernization/DetailPlacement.tsx",
+    "web/src/features/charging/components/detail-modernization/DetailSessionStats.tsx",
+    "web/src/features/charging/components/detail-modernization/DetailSourceOutline.tsx",
+    "web/src/features/charging/components/ChargePhysicsPanel.tsx",
+    "web/src/features/charging/components/ChargeLedgerCompactPanel.tsx",
+    "web/src/features/charging/components/ChargeBillTruthPanel.tsx",
+    "web/src/features/charging/components/ShareSessionDialog.tsx",
+    "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+    "web/src/features/vehicles/components/physics-ledger/ChargeLedgerPanel.tsx",
+    "web/src/features/vehicles/components/physics-ledger/TermRow.tsx",
+    "web/src/components/ai/AIChargingDiagnosis.tsx",
+    "web/src/api/hooks/useCharging.ts",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/api/hooks/useTeslaPhysics.ts",
+    "web/src/api/hooks/usePhysicsLedger.ts",
+    "web/src/api/hooks/useSharing.ts",
+    "web/src/api/types.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/timezone.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/components/data-display/format/DateTime.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/features/charging/components/charging-curve/helpers.ts",
+    "web/src/features/charging/lib/chargeBillTruth.ts",
+    "web/src/features/vehicles/components/physics-ledger/LedgerPanels.ts",
+    "web/src/App.tsx",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/lib/routeLoaders.ts",
+    "internal/api/router.go",
+    "logs/phase5-page-charging-charging-detail.log",
+    "logs/phase5-page-charging-charging-detail-originals.json",
+    "logs/phase5-page-charging-charging-detail-preservation.log",
+    "logs/phase5-page-charging-charging-detail-capture.log",
+    "logs/phase5-page-charging-charging-detail-lint.log",
+    "logs/phase5-page-charging-charging-detail-scan.log",
+    "logs/phase5-page-charging-charging-detail-scope.json",
+    "web/src/components/layout/layout-reference/PageLayout.tsx"
+  ],
+  "release": {
+    "state": "ALL CLAIMS RELEASED",
+    "releaseUTC": "2026-10-13T23:03:10.282858Z",
+    "claims": [
+      "source",
+      "report",
+      "log",
+      "JSON",
+      "browser",
+      "commands"
+    ],
+    "sourceClaim": "No application/test/backend source writes made; any inspection claim released.",
+    "browserClaim": "Never acquired; no browser/native action.",
+    "commandClaim": "All session commands synchronous, completed; no attached or detached work launched.",
+    "noPostReturnWrites": true,
+    "noPostReturnToolsOrWork": true
+  }
+}

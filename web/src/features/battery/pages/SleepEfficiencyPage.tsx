@@ -1,41 +1,42 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw } from 'lucide-react';
 
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
-import { AlertBanner } from '@/components/feedback';
-
-import { Grid, PageContainer } from '@/components/layout';
-import { FadeIn } from '@/components/motion';
+import { AlertBanner, QueryError, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { Button, Caption, HelpTooltip } from '@/components/ui';
+import { CardGrid, PageLayout } from '@/components/layout';
+import { useDataState } from '@/hooks/useDataState';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import {
   DataAvailabilityMatrix,
-  DrainEventDirectory,
   DrainEventProfile,
   DwellDurationChart,
   RangeSourceCoverage,
   SentryComparisonChart,
   SentryProjectionContext,
   SleepEfficiencyDiagnostics,
-  SleepEvidenceBand,
   SleepMethodologyPanel,
-  StateEvidenceDirectory,
   TransitionCompositionPanel,
   TransitionDestinationChart,
   TransitionDiversityDiagnostics,
   type SleepEfficiencyQueryState,
 } from '../components/sleep-efficiency';
 import {
+  DrainEventDirectory,
+  SleepEvidenceOverview,
+  SleepSectionPlacement,
+  StateEvidenceDirectory,
+} from '../components/sleep-efficiency-modernization';
+import {
   DEFAULT_SLEEP_RANGE_DAYS,
   analyzeSleepEfficiency,
   analyzeSleepRange,
 } from '../lib/sleepEfficiencyAnalysis';
-
-const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function SleepEfficiencyPage() {
   const { t } = useTranslation();
@@ -58,34 +59,53 @@ export default function SleepEfficiencyPage() {
     start,
     end,
   );
+  const sleepState = useDataState(sleepQuery, { provenance: 'historical' });
   const [frozenNowMs] = useState(() => Date.now());
+  const responseAsOfMs = Number.isFinite(sleepQuery.dataUpdatedAt)
+    && sleepQuery.dataUpdatedAt > 0
+    ? sleepQuery.dataUpdatedAt
+    : frozenNowMs;
+  // Calendar bounds are inclusive UTC dates in the sleep endpoint.
+  const analysisAsOfMs = requestedRange.status === 'valid'
+    && requestedRange.endMs != null
+    ? Math.min(responseAsOfMs, requestedRange.endMs + 86_400_000 - 1)
+    : responseAsOfMs;
   const analysis = useMemo(
     () =>
       analyzeSleepEfficiency(
         sleepQuery.data,
-        frozenNowMs,
+        analysisAsOfMs,
         start,
         end,
       ),
-    [end, frozenNowMs, sleepQuery.data, start],
+    [analysisAsOfMs, end, sleepQuery.data, start],
   );
 
   const { formatTemperature, formatEnergy } = useUnits();
-  const { formatCurrency } = useFormatting();
+  const { formatCurrency, pricingState } = useFormatting();
+  const { fmtNumber } = useNumberFormatting();
+  const configuredSymbol = pricingState.data?.currency_symbol;
+  const currencyKnown = pricingState.hasData
+    && typeof configuredSymbol === 'string'
+    && configuredSymbol.trim().length > 0;
+  const formatSleepCurrency = (amount: number) => {
+    if (!Number.isFinite(amount)) return '—';
+    return currencyKnown
+      ? formatCurrency(amount)
+      : `${fmtNumber(amount)} (${t('app.currency', 'Currency')}: ${t('sleep.common.unavailable', 'Unavailable')})`;
+  };
   const vehicleSelected = vehicleId != null;
-  const hasCachedData = sleepQuery.data !== undefined;
+  const hasCachedData = sleepState.hasData;
   const dataResolved =
-    vehicleSelected && (hasCachedData || sleepQuery.isSuccess);
+    vehicleSelected && hasCachedData;
   const isLoading =
     vehicleSelected
     && !dataResolved
+    && !sleepState.isRefreshBlocked
     && (sleepQuery.isLoading || sleepQuery.isFetching);
   const initialError =
-    vehicleSelected && !hasCachedData && sleepQuery.isError
-      ? sleepQuery.error
-      : null;
-  const refreshError =
-    hasCachedData && sleepQuery.isError ? sleepQuery.error : null;
+    vehicleSelected ? sleepState.fatalError : null;
+  const refreshError = sleepState.refreshError;
   const queryState: SleepEfficiencyQueryState = {
     vehicleSelected,
     isLoading,
@@ -99,87 +119,109 @@ export default function SleepEfficiencyPage() {
     },
   };
   const common = { analysis, state: queryState };
+  const sections: ComponentProps<typeof CardGrid>['items'] = [
+    { id: 'evidence', size: 'full', content: <SleepEvidenceOverview {...common} trust={sleepState} /> },
+    { id: 'transition-destinations', size: 'half', content: <TransitionDestinationChart {...common} /> },
+    { id: 'transition-composition', size: 'half', content: <TransitionCompositionPanel {...common} /> },
+    { id: 'dwell-duration', size: 'half', content: <DwellDurationChart {...common} /> },
+    { id: 'efficiency-diagnostics', size: 'half', content: <SleepEfficiencyDiagnostics {...common} /> },
+    { id: 'transition-diversity', size: 'half', content: <TransitionDiversityDiagnostics {...common} /> },
+    { id: 'sentry-comparison', size: 'half', content: <SentryComparisonChart {...common} /> },
+    { id: 'state-directory', size: 'full', content: <StateEvidenceDirectory {...common} /> },
+    {
+      id: 'sentry-projection', size: 'half',
+      content: <SentryProjectionContext {...common} formatCurrency={formatSleepCurrency} formatEnergy={formatEnergy} />,
+    },
+    { id: 'drain-profile', size: 'half', content: <DrainEventProfile {...common} /> },
+    {
+      id: 'event-directory', size: 'full',
+      content: <DrainEventDirectory {...common} formatTemperature={formatTemperature} />,
+    },
+    { id: 'availability', size: 'full', content: <DataAvailabilityMatrix {...common} /> },
+    { id: 'range-coverage', size: 'full', content: <RangeSourceCoverage {...common} /> },
+    { id: 'methodology', size: 'full', content: <SleepMethodologyPanel {...common} /> },
+  ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('sleep.title', 'Sleep Efficiency')}
       subtitle={t(
         'sleep.subtitle',
         'Inspect transition counts, withheld duration derivations, Sentry evidence, and exact source accounting',
       )}
       query={sleepQuery}
+      metadataActions={
+        <>
+          {hasCachedData && analysis.source.frozenNowIso && (
+            <Caption data-testid="sleep-analysis-as-of">
+              {t('operationalMode.asOf.label', 'As of {{when}}', {
+                when: analysis.source.frozenNowIso,
+              })}
+            </Caption>
+          )}
+          <HelpTooltip
+            i18nKey="sleep.methodology.transitionSemantics"
+            defaultValue="state_distribution.count records FSM transition destinations from fsm_transitions.to_state; it is not occupancy or duration."
+            ariaLabel={t('sleep.methodology.title', 'Methodology and interpretation limits')}
+          />
+        </>
+      }
     >
-      {refreshError && (
+      {pricingState.fatalError && (
+        <QueryError error={pricingState.fatalError} onRetry={pricingState.retry ?? undefined} />
+      )}
+      <StaleRefreshWarning
+        state={pricingState}
+        label={t('settings.title', 'Settings')}
+      />
+      {hasCachedData && sleepState.status !== 'ok' && (
+        <div data-testid={refreshError ? 'sleep-refresh-error' : undefined}>
+          <StaleRefreshWarning
+            state={sleepState}
+            label={t('sleep.title', 'Sleep Efficiency')}
+            message={refreshError
+              ? t(
+                'sleep.states.refreshError',
+                'Sleep evidence could not refresh. Showing the most recently loaded response and its existing evidence gates.',
+              )
+              : undefined}
+          />
+        </div>
+      )}
+      {vehicleSelected && !hasCachedData && sleepState.isRefreshBlocked && (
         <AlertBanner
-          data-testid="sleep-refresh-error"
-          variant="warning"
-          icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+          data-testid="sleep-initial-paused"
+          variant="info"
         >
           {t(
-            'sleep.states.refreshError',
-            'Sleep evidence could not refresh. Showing the most recently loaded response and its existing evidence gates.',
+            'sleep.modernization.states.initialPaused',
+            'Sleep evidence has not loaded because the request is paused. No drain or sleep-health conclusion is available.',
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
+            onClick={queryState.onRetry}
+          >
+            {t('common.refresh', 'Refresh')}
+          </Button>
         </AlertBanner>
       )}
 
-      <FadeIn>
-        <SleepEvidenceBand {...common} />
-      </FadeIn>
-
-      <FadeIn delay={0.04}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <TransitionDestinationChart {...common} />
-          <TransitionCompositionPanel {...common} />
-        </Grid>
-      </FadeIn>
-
-      <FadeIn delay={0.08}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <DwellDurationChart {...common} />
-          <SleepEfficiencyDiagnostics {...common} />
-        </Grid>
-      </FadeIn>
-
-      <FadeIn delay={0.12}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <TransitionDiversityDiagnostics {...common} />
-          <SentryComparisonChart {...common} />
-        </Grid>
-      </FadeIn>
-
-      <FadeIn delay={0.16}>
-        <StateEvidenceDirectory {...common} />
-      </FadeIn>
-
-      <FadeIn delay={0.2}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <SentryProjectionContext
-            {...common}
-            formatCurrency={formatCurrency}
-            formatEnergy={formatEnergy}
-          />
-          <DrainEventProfile {...common} />
-        </Grid>
-      </FadeIn>
-
-      <FadeIn delay={0.24}>
-        <DrainEventDirectory
-          {...common}
-          formatTemperature={formatTemperature}
-        />
-      </FadeIn>
-
-      <FadeIn delay={0.28}>
-        <DataAvailabilityMatrix {...common} />
-      </FadeIn>
-
-      <FadeIn delay={0.32}>
-        <RangeSourceCoverage {...common} />
-      </FadeIn>
-
-      <FadeIn delay={0.36}>
-        <SleepMethodologyPanel {...common} />
-      </FadeIn>
-    </PageContainer>
+      <CardGrid
+        label={t('sleep.modernization.layout.evidence', 'Sleep evidence sections')}
+        items={sections.map((section) => ({
+          ...section,
+          content: (
+            <SleepSectionPlacement>
+              <SectionErrorBoundary name={`SleepEfficiency:${section.id}`}>
+                {section.content}
+              </SectionErrorBoundary>
+            </SleepSectionPlacement>
+          ),
+        }))}
+      />
+    </PageLayout>
   );
 }

@@ -1,0 +1,224 @@
+{
+  "item": "audit-page-201",
+  "page": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx",
+  "routes": ["/mqtt-inspector"],
+  "purpose": "Inspect broker connectivity, returned vehicle counters, reported rates, local throughput observations, topic patterns and per-vehicle freshness, with an optional informational AI stream explanation.",
+  "primaryGoal": "Determine whether telemetry is arriving, identify stale vehicle streams, inspect/filter retained evidence, and recover unavailable sources without changing the broker.",
+  "dataSources": [
+    {
+      "name": "Broker status snapshot",
+      "hooks": ["useMQTTStatus", "useDataState"],
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "endpoints": ["GET /api/v1/telemetry"],
+      "citations": ["web\\src\\api\\hooks\\useTelemetry.ts:415-431", "web\\src\\lib\\constants.ts:32", "internal\\api\\router.go:4738-4742"],
+      "behavior": "Shared ['mqtt-status'] query polls every 5000ms and forwards AbortSignal to request. Normalizes vehicle array/map and alternate field shapes, preserves raw response fields and resolves uptime seconds. Page is broker-wide; it does not subscribe to raw MQTT or vehicle SSE, and does not apply workspace vehicle/date filtering. Retained query data survives background failures through the live-provenance DataState contract. Handler output and production broker behavior were not exercised."
+    },
+    {
+      "name": "Vehicle field normalization",
+      "owner": "web\\src\\types\\telemetry.ts",
+      "endpoints": [],
+      "citations": ["web\\src\\types\\telemetry.ts:47-74", "web\\src\\types\\telemetry.ts:111-162"],
+      "behavior": "Canonical camelCase reads fall back to snake_case; map keys supply row identity. Absent signal/batch counts normalize to zero; absent rate and last-received remain undefined. This is current source behavior, not proof that missing counters are measured zeros."
+    },
+    {
+      "name": "Local throughput observations",
+      "owner": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx",
+      "endpoints": [],
+      "citations": ["web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:149-179"],
+      "behavior": "In-memory, mount-local history of non-negative differences in totalSignals; retains last 60 points, labels sample time using useDateFormat, skips initial zero and negative reset delta. Effect depends on totalSignals and formatTime, not query completion. This is neither durable history nor reported signals/second, and equal-count successful polls do not necessarily create samples."
+    },
+    {
+      "name": "Operational summary and display preferences",
+      "hooks": ["useNumberFormatting", "useOperationalMetrics", "useDateFormat"],
+      "owner": "web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\mqttSummary.ts",
+      "endpoints": [],
+      "citations": ["web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\mqttSummary.ts:14-58", "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:139-146,195-202,226-241"],
+      "behavior": "Four raw numeric metrics: returned vehicle count, sum of signal counters, sum of batch counters and sum of reported rates. Snapshot provenance explicitly distinguishes reported rates from chart deltas. Missing entire snapshot produces null metrics; shared formatting uses saved precision/locale. Freshness uses query dataUpdatedAt, not broker event time. Formatting hook internals were not independently audited."
+    },
+    {
+      "name": "Opt-in AI explanation SSE",
+      "hooks": ["useAiStream", "useAiEnabled through withAiFeature"],
+      "owner": "web\\src\\components\\ai\\AIMqttSseInspectorExplanations.tsx",
+      "endpoints": ["POST /api/v1/ai/system/streams/explain"],
+      "citations": ["web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:184-193,353-359", "web\\src\\components\\ai\\AIMqttSseInspectorExplanations.tsx:117-183,198-201", "web\\src\\components\\ai\\withAiFeature.tsx:43-56", "web\\src\\hooks\\useAiStream.ts:257-354", "internal\\api\\ai_routes.go:490-494", "internal\\api\\router.go:2615-2623,5095"],
+      "behavior": "Explicit action only; finite positive from_unix/to_unix window fixed at mount to preceding 30 minutes. Stable request body and scopeKey; double-submit guard, POST SSE, authenticated connection helpers, unmount/scope abort and output reset are existing hook behavior. Feature gate returns null when disabled without replacing raw inspector sections. Router source comment describes a deterministic empty adapter envelope: UI narration claims about broker/SSE/job grounding must not be treated as verified backend capability. Provider redaction is asserted by UI copy, not independently proven here. No request or production action executed."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "kind": "shared layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "citation": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-16", "use": "Existing PageContainer adapter with w-full/min-w-0 container; existing shell owns navigation and scope."},
+    {"name": "OperationalBrief and mqttSummary", "kind": "shared composite plus domain adapter", "owner": "web\\src\\components\\data-display; web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\mqttSummary.ts", "citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:226-241", "use": "Compact four-metric summary with actual available/retained/unavailable labels, provenance and query freshness; no competing KPI pipeline."},
+    {"name": "GlassPanel, Badge and typography roles", "kind": "shared primitives", "owner": "web\\src\\components\\ui", "citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:69-128,209-221,253-257,297-345,364-381", "use": "Three direct panels, semantic textual badges, PanelTitle/Text/Caption and mono numeric/identifier cells."},
+    {"name": "EmbeddedChart", "kind": "shared chart frame", "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx", "citation": "web\\src\\components\\charts\\EmbeddedChart.tsx:18-43", "use": "Reuses ChartContainer embedded mode with fluid sizing and opt-in controls; this caller supplies localized title/ariaLabel, explicit data columns and collecting/loading state, not fullscreen/export flags."},
+    {"name": "AreaChart and chart helpers", "kind": "shared category exports", "owner": "web\\src\\components\\charts", "citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:261-292", "use": "One shared palette series, gradient, token grid, axes and ChartTooltip; no direct chart-library imports."},
+    {"name": "DataTable", "kind": "shared interaction/export pipeline", "owner": "web\\src\\components\\ui\\DataTable.tsx", "citations": ["web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:384-398", "web\\src\\components\\ui\\DataTable.tsx:235-248,715-725,907-908"], "use": "Seven columns, stable telemetry:mqtt-inspector ID, explicit value-filter accessors, keyExtractor row identity, compact virtualization, 36px row height, 640px maximum, 500 default page size. Existing table owns sorting/filtering/layout and eligible loaded-row exports; caller adds no server full-result export."},
+    {"name": "QueryError, StaleRefreshWarning, AlertBanner, Skeleton and EmptyState", "kind": "shared feedback", "owner": "web\\src\\components\\feedback", "citations": ["web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:224-225,258-259,303-308,335-345,384-390", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:56-112", "web\\src\\components\\feedback\\_StatusAwareError.tsx:45-72"], "use": "Fatal classification is distinct from retained warning; stale/offline warning has polite status and retry when state provides it. Initial QueryError instances do not receive onRetry."},
+    {"name": "AIMqttSseInspectorExplanations / AIFeatureCard / AiOutputPanel", "kind": "gated domain orchestration with shared AI presentation", "owner": "web\\src\\components\\ai", "citations": ["web\\src\\components\\ai\\AIFeatureCard.tsx:242-334", "web\\src\\components\\ai\\AiOutputPanel.tsx:63-133"], "use": "Contextual named Ask Helix action, disabled/busy streaming state, plain-text output, pending/empty/error states and evidence trail. Shared card does not expose hook cancel control."},
+    {"name": "FadeIn", "kind": "shared motion", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "citation": "web\\src\\components\\motion\\FadeIn.tsx:23-38", "use": "Staggered source sections; existing reduced-motion branch suppresses entrance motion."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "line": 258, "rule": "MDC-026/MDC-002", "detail": "One fatal status query generates top AlertBanner plus QueryError in three source panels. A single failing source is repeated, while none of those QueryError callers wires retry.", "fix": "Use existing recovery ownership consistently: one named actionable source failure plus contextual section states, preserving all sections and retained content. Do not build a new error engine.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:224-225,258-259,303-304,384-385"]}
+  ],
+  "responsive": {
+    "runtime": "unverified",
+    "sourceStrategy": [
+      {"citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:209-210,248-253", "detail": "Header metadata wraps; hero panels stack until xl, then chart spans two of three columns."},
+      {"citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:310-333", "detail": "Connection fields stack below sm; broker text breaks words, topic badges wrap."},
+      {"citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:365-398", "detail": "Vehicle header wraps and table is bounded/virtualized; mobile retains only identity, freshness badge and relative last receipt."},
+      {"citation": "web\\src\\components\\ai\\AIFeatureCard.tsx:313-334", "detail": "AI header/action wraps with min-w-0, break-words description and wrapped action label."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "line": 389, "rule": "MDC-023/MDC-043", "detail": "mobileColumns hides state, signal count, batch count and reported rate below md. DataTable implements hidden md:table-cell, and this caller provides neither mobilePresentation detail adapter nor expandable details. Main inspection measurements are not available as mobile row detail, despite remaining in underlying data/export.", "fix": "Use existing DataTable mobilePresentation with prioritized summary and full typed details, or a non-lossy scroll strategy. Preserve all seven fields, filters, ordering, stable tableId, export scope and virtualization behavior; do not hide metrics to simplify mobile.", "owner": "page", "confidence": "high", "citations": ["web\\src\\components\\ui\\DataTable.tsx:235-248,715-725"]},
+      {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "line": 393, "rule": "MDC-040/MDC-043", "detail": "36px virtual rows and compact controls need actual touch-target/spacing and long-identifier checks. Topic Badge has no page-level break-all strategy; long unbroken source strings need verification. Source does not prove actual overflow or target failure.", "fix": "Test constrained widths and long translated/source content using existing table density/mobile APIs and token spacing; retain all data and avoid arbitrary CSS row-height changes that desynchronize virtualization.", "owner": "page", "confidence": "medium", "citations": ["web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:332-334,392-395"]}
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "runtime": "unverified",
+    "sourceStrengths": [
+      "Localized page title and two named sections; PanelTitle role components retained (MQTTInspectorPage.tsx:142,226-227,248-257).",
+      "Decorative icons explicitly aria-hidden; connectivity and freshness badges include text, not color alone (MQTTInspectorPage.tsx:211-220,125-127,365-379).",
+      "Throughput passes explicit ariaLabel and underlying rows/columns to existing EmbeddedChart (MQTTInspectorPage.tsx:261-273).",
+      "Shared stale warning uses role=status, aria-live=polite, named refresh and disabled-during-refresh state (StaleRefreshWarning.tsx:91-112).",
+      "AI Button carries contextual accessible name and streaming aria-busy/disabled; output error has role=alert (AIFeatureCard.tsx:300-305; AiOutputPanel.tsx:88-103).",
+      "Shared FadeIn honors existing reduced-motion preference (FadeIn.tsx:23-38)."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "line": 388, "rule": "MDC-023/MDC-040", "detail": "DataTable caller supplies neither name nor caption; column labels alone do not explicitly name this table. Mobile hidden columns also remove those cell values from the ordinary accessibility tree below md.", "fix": "Supply existing localized DataTable naming API and non-lossy mobile details; verify filter focus, keyboard sort/pagination and chart data alternative with a screen reader.", "owner": "page", "confidence": "medium", "citations": ["web\\src\\components\\ui\\DataTable.tsx:235-248,287"]}
+    ],
+    "unverified": ["Keyboard/filter focus and restoration", "Screen-reader chart/table announcements", "Effective theme contrast", "Forced colors", "RTL", "200% text", "Touch target measurements", "Reduced-motion runtime"]
+  },
+  "states": {
+    "initialLoading": {"citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:145-148,235-238,264,306-308,386-390", "detail": "Summary null metrics/loading label; connection 160px skeleton; three vehicle row skeletons; chart loading while history absent. Header nevertheless defaults disconnected."},
+    "emptyUnavailable": {"citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:266-267,331-345,396-397", "detail": "Collecting chart state until more than two samples, no-topics/no-status copy, empty vehicle table. Missing optional uptime and row values use dash where normalizer has not already zero-filled."},
+    "fatalError": {"citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:146-148,224-225,258-259,303-304,384-385", "detail": "Only DataState fatalError drives fatal surfaces; all sections remain structurally present. Multiple QueryError surfaces rely on automatic polling because onRetry is omitted."},
+    "refreshErrorOffline": {"citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:225,237-240; web\\src\\components\\feedback\\StaleRefreshWarning.tsx:56-112", "detail": "Retains broker fields/table/history and marks retained summary; shared warning distinguishes offline blocked refresh from failed refresh and offers state.retry. Query time freshness is not vehicle freshness."},
+    "vehicleFreshness": {"citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:34,55-58,120-127,179,375-380", "detail": "Missing receipt or age greater than 120 seconds produces stale badge; same helper drives header count and filter. No independent time tick; filter/badge recomputation follows renders. Invalid date yields NaN comparison, so currently falls through as live."},
+    "brokerDisconnected": {"citation": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:195,216-221", "detail": "Fetched false gets danger Disconnected with WifiOff. Same fallback currently represents no snapshot and absent connected field, conflating unknown with verified disconnection."},
+    "AI": {"citation": "web\\src\\components\\ai\\withAiFeature.tsx:43-56; web\\src\\components\\ai\\AIFeatureCard.tsx:258-260,300-305; web\\src\\components\\ai\\AiOutputPanel.tsx:75-133", "detail": "Absent when feature disabled; idle has no output; invalid window disables action; streaming pending/busy and accumulated plain text; done-empty explicitly explained; error alert and evidence trail. Hook abort/reset is lifecycle safe; this card provides start/restart, not a cancel button."},
+    "issues": [
+      {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "line": 195, "rule": "MDC-025/MDC-026", "detail": "connected defaults to false before any trustworthy snapshot, so initial loading/fatal failure/absent field are presented as Disconnected rather than unknown/unavailable.", "fix": "Derive loading/unavailable/unknown independently of fetched true/false using existing Badge and DataState; retain last known connectivity with explicit retained warning, never invent a connection result.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\types\\telemetry.ts", "line": 120, "rule": "MDC-026/MDC-033", "detail": "Missing counts normalize to zero, and page sums absent rates with ?? 0. Available snapshot can therefore report zero aggregate values for incomplete measurements; no partial flag is passed into useDataState.", "fix": "Integration-owned review must establish actual payload completeness contract and preserve source missingness/partial trust before changing aggregate presentation. Do not silently alter a shared normalizer or fabricate counters.", "owner": "integration", "confidence": "high", "citations": ["web\\src\\types\\telemetry.ts:120-123", "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:146,152-155", "web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\mqttSummary.ts:25-54"]},
+      {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "line": 169, "rule": "MDC-026/MDC-034/MDC-045", "detail": "Effect is count-change driven, not successful-poll driven. Repeated equal totals omit zero intervals, and formatter identity changes can append an unearned zero observation. Chart empty copy can continue collecting indefinitely with static counters. It has no elapsed-time denominator and must not be relabeled as signals/sec.", "fix": "Preserve current local-delta provenance in modernization. If a behavior correction is authorized separately, key samples to trustworthy successful snapshots with explicit time/zero/reset semantics and focused tests; keep reported rate metrics separate.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:169-177,266-267", "web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\mqttSummary.ts:20-23"]},
+      {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "line": 58, "rule": "MDC-025/MDC-026", "detail": "Invalid lastReceived parses to NaN, which is not greater than threshold and therefore labels row Live. Negative/future ages also remain live; no timestamp validity policy is encoded.", "fix": "Treat invalid timestamp as unknown/unavailable freshness using existing semantics and keep one helper for row, count and filters; do not substitute inferred event times. Preserve 120-second threshold for valid timestamps.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "line": 258, "rule": "MDC-026", "detail": "Fatal QueryError calls omit onRetry; shared StatusAwareError only creates retry and online recovery callback when supplied. Stale warning does wire recovery, but initial failure has no equivalent explicit refresh action.", "fix": "Wire statusQuery.refetch or statusState.retry into existing fatal recovery surface while avoiding repeated competing action owners; preserve polling and retained-data warning.", "owner": "page", "confidence": "high", "citations": ["web\\src\\components\\feedback\\_StatusAwareError.tsx:55-72", "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:303-304,384-385"]}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "line": 255, "rule": "MDC-010/MDC-012/MDC-016", "detail": "Three neutral section icons always use text-cyan-300. This may overemphasize ordinary structure and has no light-theme-aware role; actual contrast is not measured. No direct neon/fixed-white/inline-style matches occurred in the page.", "fix": "Use existing muted/secondary icon tokens for non-semantic section labels; retain meaningful chart-series hue, warning/danger/success badges and saved theme choices.", "owner": "page", "confidence": "medium", "citations": ["web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx:299,367"]},
+    {"file": "web\\src\\components\\ai\\AIFeatureCard.tsx", "line": 298, "rule": "MDC-010/MDC-015", "detail": "Shared AI action requests cyan border/background/hover emphasis; AiOutputPanel also uses fixed white background and ad-hoc text sizing. These are shared-owner residuals, not permission for page-specific replacement chrome.", "fix": "Report restrained shared-token/typography review to existing AI presentation owner, retaining branding, action accessible name and output/evidence behavior. Validate themes before accepting contrast.", "owner": "shared", "confidence": "medium", "citations": ["web\\src\\components\\ai\\AiOutputPanel.tsx:84-89,114-120"]}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\components\\ai\\AIMqttSseInspectorExplanations.tsx", "line": 164, "rule": "MDC-002/MDC-026/MDC-046", "detail": "AI UI description asserts deterministic broker, SSE-client and job-state grounding and redaction. Its introductory comments cite /admin/mqtt/status, but actual mounted page hook requests /telemetry. Router comment explicitly calls StreamInspectorSource a deterministic empty envelope. Source contracts therefore disagree; current runtime grounding/redaction cannot be claimed.", "fix": "Integration owner must reconcile explanation copy/documentation and verified adapter evidence with actual telemetry baseline, preserving off-mode gating, informational-only action and provider privacy boundary. No new backend capabilities or broker mutations as part of presentation work.", "owner": "integration", "confidence": "high", "citations": ["web\\src\\components\\ai\\AIMqttSseInspectorExplanations.tsx:19-24,163-168", "web\\src\\api\\hooks\\useTelemetry.ts:419", "internal\\api\\router.go:2615-2623"]},
+    {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "line": 184, "rule": "MDC-026/MDC-046", "detail": "AI window intentionally remains fixed at mount while status keeps polling. After a long-lived inspector session, current snapshot and explanation window are different scopes; no visible from/to window is provided by this caller.", "fix": "Preserve stable-body/scope cancellation contract and deliberate mount-window behavior; expose existing actual window context without pretending it rolls. Changing window refresh semantics requires separate integration acceptance.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Operational source trust and mobile inspection completeness are more urgent than restyling an already shared-component-based page.",
+    "order": ["Preserve and clarify unknown/partial/retained source trust", "Restore complete mobile row access through existing DataTable contract", "Make fatal recovery actionable", "Reconcile AI grounding/window claims", "Validate keyboard, theme contrast and responsive behavior", "Subdue residual shared/icon decoration"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Non-lossy mobile vehicle evidence",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": ["Existing mobilePresentation<T> summary/details adapter", "name/caption", "Existing mobileColumns or scroll alternative", "Seven original row fields, value filters, compact virtualization, loaded-row export and persisted tableId"],
+      "usedBy": ["MQTTInspectorPage /mqtt-inspector"],
+      "dependsOn": ["Existing accepted DataTable mobile API", "Page-specific typed VehicleTelemetry adapter and long-content QA"],
+      "changeNeeded": "Page adoption of existing contract first; no new shared component justified by this single consumer."
+    },
+    {
+      "name": "Telemetry completeness and source trust",
+      "owner": "web\\src\\types\\telemetry.ts; web\\src\\api\\hooks\\useTelemetry.ts",
+      "propsVariantsStates": ["Absent versus measured-zero counters/rates", "Partial snapshot provenance", "Preserve array/map and dual-casing normalization", "Retained/fatal/offline states"],
+      "usedBy": ["MQTTInspectorPage /mqtt-inspector", "Other telemetry normalizer consumers not enumerated in this one-page audit"],
+      "dependsOn": ["Verified actual /telemetry response completeness contract", "Integration-owned compatibility tests before shared normalizer changes"],
+      "changeNeeded": "Integration review, not an unauthorized page-local normalizer or fake metric."
+    },
+    {
+      "name": "Shared AI presentation and truthful grounding",
+      "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx; web\\src\\components\\ai\\AiOutputPanel.tsx; web\\src\\components\\ai\\AIMqttSseInspectorExplanations.tsx",
+      "propsVariantsStates": ["canStart", "stream state/text/error/activity/usage", "Localized contextual action name", "Pending/done-empty/error/evidence output", "Existing off-mode feature gate and scope-safe stream", "Neutral theme-aware action/output styling"],
+      "usedBy": ["AIMqttSseInspectorExplanations mounted on /mqtt-inspector", "Other AIFeatureCard consumers not independently inspected"],
+      "dependsOn": ["Existing shared AI owner", "Verified grounding/privacy adapter contract", "No change to broker or signal pipeline"],
+      "changeNeeded": "Shared styling review and integration copy/grounding reconciliation; no new AI card, stream library or provider policy."
+    }
+  ],
+  "competingImplementations": {
+    "found": false,
+    "detail": "Page uses canonical layout, stats, table, chart, data-trust and AI stream paths. Local throughput history is a documented source-derived UI series, not a competing history API. Repeated fatal surfaces are presentation duplication; propose no new primitive, theme, overlay, formatter, query store or broker controller."
+  },
+  "preservation": {
+    "sourceHash": "6D9C0D5B07CC9C7C77B90319809C8D744E7CCF02817063C0D44F5C5C7765C986",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact bytes of repository-root-relative page file",
+    "currentLineCount": 402,
+    "sections": ["Stream metrics summary", "Signal throughput", "Connection: broker, uptime and topic patterns", "Opt-in Helix stream explainer", "Vehicle breakdown"],
+    "sectionCount": 5,
+    "sourceCounts": {"GlassPanel": 3, "EmbeddedChart": 1, "ChartContainerDirect": 0, "OperationalBrief": 1, "DataTable": 1, "namedSectionElements": 2, "vehicleColumns": 7, "summaryMetrics": 4},
+    "actions": [
+      "Five-second automatic snapshot refresh and existing query cancellation/retry policy.",
+      "Retained-warning Refresh action and disabled-during-refresh state.",
+      "DataTable value filters for identity, state, counters, rate and stale/live status; preserve existing sort, column/layout persistence, pagination, virtualization and eligible loaded-row export actions.",
+      "Existing chart data alternative using provided time/signals rows; do not invent fullscreen/export controls absent from this caller.",
+      "Opt-in named Ask Helix explanation, repeat after completion/error, valid-window/double-submit guard, accumulated SSE text and evidence trail.",
+      "Lifecycle unmount/scope abort; no broker subscription, reconnect mutation, payload editing, vehicle state write or raw MQTT publishing action exists here."
+    ],
+    "dataBehavior": [
+      "Broker-wide scope: do not introduce arbitrary selected-vehicle/date filtering or a duplicate selector.",
+      "Preserve ['mqtt-status'], 5000ms polling, forwarded AbortSignal and inherited cache/retry policy.",
+      "Preserve source shape compatibility and every returned field; review missingness separately rather than silently replacing normalizer behavior.",
+      "Preserve reported rate versus count-delta distinction, 60-point local history cap, valid counter-reset handling and mount-local nature.",
+      "Keep retained snapshot rows, broker/topic details and chart history alongside refresh warnings; fatal errors must not blank independent optional AI state.",
+      "Keep row identity private: no actual identifiers, broker addresses, topic values, payloads, tokens or model output copied into this report.",
+      "Keep raw counters/rates and uptime seconds in source; formatting is display-only and locale/time preferences remain existing mechanisms.",
+      "Preserve valid 120-second freshness threshold and one shared stale helper for row badges/count/filter semantics.",
+      "Preserve feature-disabled null rendering, stable mount-time 30-minute AI scope and informational-only baseline distinction.",
+      "Do not claim backend redaction/grounding or current stream health from comments, historical tests or UI labels."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendBehavior": "Matched router declarations and inspected narrowly scoped wiring comments only; no handler execution, broker subscription, stream request, provider redaction test or payload inspection. AI capability copy is not verified backend evidence.",
+    "commands": [
+      {"command": "Get-FileHash 'web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx' -Algorithm SHA256; (Get-Content 'web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx').Count", "exitCode": 0, "output": "SHA256 6D9C0D5B07CC9C7C77B90319809C8D744E7CCF02817063C0D44F5C5C7765C986; 402"},
+      {"command": "Bounded PowerShell regex counts on MQTTInspectorPage.tsx only", "exitCode": 0, "output": "GlassPanel=3; EmbeddedChart=1; DataTable=1; OperationalBrief=1; RawControls=0; InlineStyles=0; DirectLibraryImports=0; NeonOrFixedWhiteClasses=0"},
+      {"command": "Initial discovery PowerShell command attempted rg", "exitCode": 1, "output": "rg shell executable unavailable; subsequent scoped searches used functions.rg. No source changes or alternative restricted-file access."}
+    ],
+    "notRun": ["Git", "TypeScript", "Full violations script (includes whole frontend TypeScript)", "Lint/build/test suites", "Browser/runtime/viewport/keyboard/contrast testing", "Production AI requests", "Broker mutations", "Nested agents"],
+    "scope": "Read-only one-page Phase 0 inspection; only assigned JSON and heartbeat are writable. Static regex counts do not establish a complete violations or runtime pass."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-175.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx",
+    "web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\mqttSummary.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\types\\telemetry.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\components\\ai\\AIMqttSseInspectorExplanations.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\feedback\\QueryError.tsx",
+    "web\\src\\components\\feedback\\_StatusAwareError.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\aimqttsse\\handler.go",
+    "internal\\api\\aimqttsse\\handler_test.go"
+  ]
+}

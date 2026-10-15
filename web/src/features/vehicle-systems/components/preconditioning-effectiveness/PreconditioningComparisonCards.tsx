@@ -7,7 +7,7 @@ import {
   MetricValue,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { PreconditioningComparison } from '../../lib/preconditioningEffectiveness';
 import {
   preconditioningEvidenceLabel,
@@ -15,6 +15,7 @@ import {
   preconditioningRegimeLabel,
 } from './labels';
 import type { TemperatureDeltaFormatter } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningComparisonCardsProps {
   comparisons: readonly PreconditioningComparison[];
@@ -27,6 +28,7 @@ export function PreconditioningComparisonCards({
   metric,
   formatDelta,
 }: PreconditioningComparisonCardsProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -117,7 +119,7 @@ export function PreconditioningComparisonCards({
                   )}
                 </MetricLabel>
                 <MetricValue className="mt-1">
-                  {published ? fmtPercent(comparison.confidence * 100, 0) : '—'}
+                  {published ? fmtPercent(comparison.confidence * 100) : '—'}
                 </MetricValue>
               </div>
             </div>

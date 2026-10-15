@@ -583,6 +583,55 @@ describe('AINLGrafanaPanel — typed draft capture + Apply handoff', () => {
     expect(onApply).not.toHaveBeenCalled()
   })
 
+  it('keeps long RTL proposal identities intact in a neutral review and applies only on approval', async () => {
+    const data = validDraftData()
+    data.draft.panel.title = 'لوحة القيادة '.repeat(30)
+    data.draft.panel.datasource.uid = 'postgres-long-identifier-'.repeat(20)
+    data.draft.referenced_tables = ['drives', 'charging_sessions']
+    const response =
+      sseFrame('tool_result', {
+        id: 'long-proposal',
+        name: 'draft_grafana_panel',
+        ok: true,
+        data,
+      }) + sseFrame('done', { finish_reason: 'stop', usage: { in: 1, out: 1 } })
+    const fetchSpy = vi.fn(async () => new Response(makeReadableStream([response]), {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    }))
+    globalThis.fetch = fetchSpy
+    const onApply = vi.fn()
+    render(<AINLGrafanaPanel onApply={onApply} />)
+
+    const input = screen.getByLabelText('Grafana panel request', { selector: 'textarea' })
+    expect(input).toHaveAttribute('rows', '2')
+    expect(screen.getByText('Grafana panel request', { selector: 'label' })).toHaveAttribute('for', input.id)
+    fireEvent.change(input, { target: { value: '  اقترح لوحة  ' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', DRAFT_BUTTON))
+    })
+
+    const preview = await screen.findByRole('group', {
+      name: 'Proposed Grafana panel (review before applying)',
+    })
+    expect(preview).toHaveClass('min-w-0', 'bg-[var(--surface-2)]', 'border-[var(--border-default)]')
+    expect(preview.className).not.toMatch(/cyan|neon|glow/)
+    expect(preview).toHaveTextContent(data.draft.panel.title.trim())
+    expect(preview).toHaveTextContent(data.draft.panel.datasource.uid)
+    expect(preview).toHaveTextContent('Query targets: 1')
+    expect(preview).toHaveTextContent('Referenced tables: drives, charging_sessions')
+    expect(preview.querySelector('ul')).toHaveClass('break-words')
+    expect(onApply).not.toHaveBeenCalled()
+
+    const apply = screen.getByRole('button', { name: 'Apply to editor' })
+    expect(apply).toHaveClass('whitespace-normal', 'min-h-11')
+    expect(apply).toHaveAttribute('title', 'Copy the proposed panel JSON into the editor above. You can still edit it before clicking Copy to clipboard.')
+    fireEvent.click(apply)
+    expect(onApply).toHaveBeenCalledOnce()
+    expect(onApply).toHaveBeenCalledWith(data.draft)
+    expect(fetchSpy).toHaveBeenCalledOnce()
+  })
+
   it('ignores tool_result frames for a different tool name', async () => {
     const sseBody =
       sseFrame('tool_result', {

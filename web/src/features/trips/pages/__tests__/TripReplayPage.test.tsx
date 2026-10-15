@@ -35,7 +35,7 @@
  * consistent with the other page tests.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act, within, getDefaultNormalizer } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
@@ -68,12 +68,20 @@ const { captured, driveMock, unitsMock } = vi.hoisted(() => ({
 }));
 
 // i18n → return the developer fallback string.
+// Settings are seeded into a real query cache; use the real settings and timezone hooks.
+vi.unmock('@/hooks/useSettings');
+vi.unmock('@/lib/timezone');
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+        const text = typeof fallback === 'string' ? fallback : key;
+        return text.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+          options?.[name] != null ? String(options[name]) : match);
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -131,6 +139,16 @@ vi.mock('@/components/charts', async () => {
   };
 });
 
+vi.mock('@/features/trips/components/TripReplayElevation', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+  return {
+    TripReplayElevation: (props: CapturedElevation) => {
+      captured.elevation = props;
+      return React.createElement('div', { 'data-testid': 'elevation-profile' });
+    },
+  };
+});
+
 // Keep StatCard / MetricCard REAL (they render the summary + stat text we
 // assert on); stub only PlaybackControls (its scrubber DOM needs layout
 // measurements jsdom can't supply) and capture its transport props.
@@ -152,12 +170,15 @@ import {
   convertDistanceFromSI,
   convertSpeedFromSI,
   convertTempFromSI,
+  formatPower,
   type UnitPref,
 } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Drive, DriveDetail, DrivePosition } from '@/types/driving';
 import type { TripReplayChartPoint } from '@/features/trips/components/TripReplayCharts';
-import type { ElevationDataPoint } from '@/components/charts';
+import type { TripReplayElevationPoint } from '../../components/TripReplayElevation';
+import type { AppSettings } from '@/api/types';
+import { formatDateTime } from '@/lib/dateFormat';
 
 /* ── Captured-prop shapes ─────────────────────────────────────────── */
 
@@ -166,7 +187,7 @@ interface CapturedMap {
   currentIndex: number;
   onSeekToIndex: (i: number) => void;
   reduceMotion?: boolean;
-  height?: number;
+  height?: number | string;
 }
 interface CapturedCharts {
   data: TripReplayChartPoint[];
@@ -175,7 +196,7 @@ interface CapturedCharts {
   onSeekToIndex: (i: number) => void;
 }
 interface CapturedElevation {
-  data: ElevationDataPoint[];
+  data: TripReplayElevationPoint[];
   currentIndex: number;
   onClickIndex: (i: number) => void;
   distanceUnit: string;
@@ -188,6 +209,9 @@ interface CapturedPlayback {
   getPreviewAt: (n: number) => unknown;
   onSeek: (p: number) => void;
   onPlay: () => void;
+  onRestart: () => void;
+  onStop: () => void;
+  framed: boolean;
 }
 
 /* ── Unit-preference bags ─────────────────────────────────────────── */
@@ -231,12 +255,12 @@ function makePosition(i: number, over: Partial<DrivePosition> = {}): DrivePositi
   };
 }
 
-// SI values: speed m/s, ratedRange m, outsideTemp °C, elevation m, power kW.
+// SI values: speed m/s, ratedRange m, outsideTemp °C, elevation m, power W.
 const POSITIONS: DrivePosition[] = [
-  makePosition(0, { speed: 10, power: 5, elevation: 100, ratedRange: 300_000, outsideTemp: 20 }),
-  makePosition(1, { speed: 20, power: 15, elevation: 130, ratedRange: 295_000, outsideTemp: 19 }),
-  makePosition(2, { speed: 25, power: 30, elevation: 120, ratedRange: 290_000, outsideTemp: 18 }),
-  makePosition(3, { speed: 15, power: -8, elevation: 160, ratedRange: 285_000, outsideTemp: 17 }),
+  makePosition(0, { speed: 10, power: 5000, elevation: 100, ratedRange: 300_000, outsideTemp: 20 }),
+  makePosition(1, { speed: 20, power: 15000, elevation: 130, ratedRange: 295_000, outsideTemp: 19 }),
+  makePosition(2, { speed: 25, power: 30000, elevation: 120, ratedRange: 290_000, outsideTemp: 18 }),
+  makePosition(3, { speed: 15, power: -8000, elevation: 160, ratedRange: 285_000, outsideTemp: 17 }),
 ];
 
 function makeDrive(over: Partial<DriveDetail> = {}): DriveDetail {
@@ -284,8 +308,12 @@ function makeDriveQuery(over: { data?: DriveDetail; isLoading?: boolean; error?:
   };
 }
 
-function renderPage() {
+function renderPage(settings?: Pick<AppSettings, 'locale' | 'tz_display_default' | 'timezone_user'>) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  if (settings) {
+    client.setQueryDefaults(['settings'], { enabled: false });
+    client.setQueryData(['settings'], settings);
+  }
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/drives/7/replay']}>
@@ -310,7 +338,79 @@ afterEach(() => {
 
 /* ── Specs: pure helpers ──────────────────────────────────────────── */
 
+describe('Trip replay summary event bounds', () => {
+  const settings = {
+    locale: 'de-DE',
+    tz_display_default: 'user',
+    timezone_user: 'America/Los_Angeles',
+  } satisfies Pick<AppSettings, 'locale' | 'tz_display_default' | 'timezone_user'>;
+
+  it('formats both bounds using saved locale and timezone across a local day boundary without changing raw instants', () => {
+    const drive = makeDrive({
+      startTs: '2024-06-16T06:59:00Z',
+      endTs: '2024-06-16T07:01:00Z',
+    });
+    driveMock.mockReturnValue(makeDriveQuery({ data: drive }));
+    renderPage(settings);
+    const scope = screen.getByTitle('Drive #7 · 2024-06-16T06:59:00Z – 2024-06-16T07:01:00Z');
+    const opts = { locale: settings.locale, tz: settings.timezone_user };
+    expect(scope).toHaveTextContent(
+      `Drive #7 · ${formatDateTime(drive.startTs, opts)} – ${formatDateTime(drive.endTs, opts)} (${opts.tz})`,
+    );
+    expect(scope).toHaveTextContent('15. Juni 2024');
+    expect(scope).toHaveTextContent('16. Juni 2024');
+    expect(drive.startTs).toBe('2024-06-16T06:59:00Z');
+    expect(drive.endTs).toBe('2024-06-16T07:01:00Z');
+    // Positions keep every raw field; the page only adds per-field source origins.
+    expect((captured.map as CapturedMap).positions).toEqual(POSITIONS.map((position) => expect.objectContaining(position)));
+  });
+
+  it.each([
+    { startTs: 'invalid-start', endTs: 'invalid-end', endLabel: '—' },
+    { startTs: '', endTs: '', endLabel: '—' },
+    { startTs: '', endTs: null, endLabel: 'In progress' },
+  ])('keeps invalid or missing bounds explicit: $startTs / $endTs', ({ startTs, endTs, endLabel }) => {
+    driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive({ startTs, endTs }) }));
+    renderPage(settings);
+    // Empty raw bounds leave a double space in the title; match it verbatim.
+    const scope = screen.getByTitle(`Drive #7 · ${startTs} – ${endTs ?? 'In progress'}`, {
+      normalizer: getDefaultNormalizer({ trim: false, collapseWhitespace: false }),
+    });
+    expect(scope).toHaveTextContent(`Drive #7 · — – ${endLabel} (${settings.timezone_user})`);
+    expect(scope).not.toHaveTextContent('Invalid Date');
+  });
+
+  it('discloses UTC when the saved display mode overrides the user timezone', () => {
+    const drive = makeDrive();
+    renderPage({ ...settings, tz_display_default: 'utc' });
+    const scope = screen.getByTitle(`Drive #7 · ${drive.startTs} – ${drive.endTs}`);
+    const opts = { locale: settings.locale, tz: 'UTC' };
+    expect(scope).toHaveTextContent(
+      `Drive #7 · ${formatDateTime(drive.startTs, opts)} – ${formatDateTime(drive.endTs, opts)} (UTC)`,
+    );
+  });
+
+  it('does not invent event bounds when the drive record is missing', () => {
+    // A settled response without a drive record (not a still-pending request).
+    driveMock.mockReturnValue({ ...makeDriveQuery(), data: null, isSuccess: true, isPending: false });
+    renderPage(settings);
+    expect(screen.getByTitle('Drive record unavailable; event bounds unknown.'))
+      .toHaveTextContent('Drive record unavailable; event bounds unknown.');
+  });
+});
+
 describe('fmtDuration', () => {
+  it('localizes digits without changing flooring, rollover, padding or invalid semantics', () => {
+    expect(fmtDuration(59_999, 'ar-EG')).toBe('٠٠:٥٩');
+    expect(fmtDuration(60_000, 'ar-EG')).toBe('٠١:٠٠');
+    expect(fmtDuration(3_599_999, 'ar-EG')).toBe('٥٩:٥٩');
+    expect(fmtDuration(3_600_000, 'ar-EG')).toBe('١:٠٠:٠٠');
+    expect(fmtDuration(3_661_999, 'ar-EG')).toBe('١:٠١:٠١');
+    for (const value of [0, -1, NaN, Infinity, -Infinity]) {
+      expect(fmtDuration(value, 'ar-EG')).toBe('٠٠:٠٠');
+    }
+  });
+
   it('collapses non-finite / non-positive input to "00:00"', () => {
     expect(fmtDuration(Number.NaN)).toBe('00:00');
     expect(fmtDuration(Number.POSITIVE_INFINITY)).toBe('00:00');
@@ -331,6 +431,16 @@ describe('fmtDuration', () => {
 });
 
 describe('fmtDriveTime', () => {
+  it('localizes rounded minutes and hour rollover while preserving invalid placeholders', () => {
+    expect(fmtDriveTime(59.4, 'ar-EG')).toBe('٥٩m');
+    expect(fmtDriveTime(59.6, 'ar-EG')).toBe('١h ٠m');
+    expect(fmtDriveTime(119.7, 'ar-EG')).toBe('٢h ٠m');
+    expect(fmtDriveTime(90, 'ar-EG')).toBe('١h ٣٠m');
+    for (const value of [0, -1, NaN, Infinity, -Infinity]) {
+      expect(fmtDriveTime(value, 'ar-EG')).toBe('٠m');
+    }
+  });
+
   it('collapses non-finite / non-positive input to "0m"', () => {
     expect(fmtDriveTime(0)).toBe('0m');
     expect(fmtDriveTime(-5)).toBe('0m');
@@ -355,6 +465,46 @@ describe('fmtDriveTime', () => {
 /* ── Specs: page postures ─────────────────────────────────────────── */
 
 describe('TripReplayPage postures', () => {
+  it('keeps source identity independent of timestamps and refresh failure for retained completed drives', () => {
+    driveMock.mockReturnValue(makeDriveQuery({
+      data: makeDrive({ positions: [
+        makePosition(0, { ...POSITIONS[0], timestamp: 'invalid' }),
+        POSITIONS[1],
+      ] }),
+      error: new Error('refresh failed'),
+      isError: true,
+    }));
+    renderPage();
+    expect(screen.getByTestId('replay-summary-source')).toHaveAttribute('data-provenance', 'historical');
+    expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Source: Position · Historical');
+    expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Timestamp: Unknown · Age: Unknown');
+    expect(screen.getByTestId('replay-derived-source')).toHaveTextContent('Estimated');
+    expect(captured.map.positions).toHaveLength(2);
+    expect(captured.charts.data).toHaveLength(2);
+    expect(screen.queryByTestId('playback-controls')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled();
+  });
+
+  it('keeps populated quantities timestamped independently and leaves invalid timestamps unknown', () => {
+    driveMock.mockReturnValue(makeDriveQuery({
+      data: makeDrive({
+        positions: [
+          makePosition(0, { ...POSITIONS[0], timestamp: 'invalid' }),
+          POSITIONS[1],
+        ],
+      }),
+    }));
+    renderPage();
+    for (const field of ['speed', 'power', 'batteryLevel', 'elevation', 'ratedRange', 'outsideTemp']) {
+      expect(screen.getByTestId(`replay-source-${field}`)).toHaveTextContent('Timestamp: Unknown · Age: Unknown');
+    }
+    expect(captured.map.positions[0].speed).toBe(10);
+    act(() => captured.map.onSeekToIndex(1));
+    for (const field of ['speed', 'power', 'batteryLevel', 'elevation', 'ratedRange', 'outsideTemp']) {
+      expect(screen.getByTestId(`replay-source-${field}`)).toHaveTextContent('Timestamp: 2024-06-15T12:01:00.000Z · Age: 0.00 s');
+    }
+  });
+
   it('shows only the page spinner while the drive load is in flight', () => {
     driveMock.mockReturnValue(makeDriveQuery({ isLoading: true }));
     renderPage();
@@ -398,9 +548,25 @@ describe('TripReplayPage postures', () => {
         'No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.',
       ),
     ).toBeInTheDocument();
-    // The map / scrubber / charts are gated behind the empty branch.
+    // The unavailable route has no fabricated map, but retains every section shell.
     expect(screen.queryByTestId('trip-replay-map')).not.toBeInTheDocument();
     expect(captured.map).toBeUndefined();
+    expect(screen.getByRole('region', { name: 'Route map and live position' })).toBeInTheDocument();
+    const readouts = screen.getByTestId('replay-current-stats');
+    for (const label of ['Speed', 'Power', 'Battery', 'Elevation', 'Range', 'Temperature']) {
+      expect(within(readouts).getByText(label)).toBeInTheDocument();
+    }
+    expect(within(readouts).getAllByText('—')).toHaveLength(6);
+    expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled();
+    expect(screen.queryByTestId('playback-controls')).not.toBeInTheDocument();
+    expect(screen.getByTestId('elevation-profile')).toBeInTheDocument();
+    expect(screen.getByTestId('trip-replay-charts')).toBeInTheDocument();
+    expect(captured.elevation.data).toEqual([]);
+    expect(captured.charts.data).toEqual([]);
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    expect(summary).toHaveTextContent('12.00 km');
+    expect(summary).toHaveTextContent('1h 1m');
+    expect(summary).toHaveTextContent('250.00 Wh/km');
     // avg/max speed, efficiency, battery, elevation gain + loss → "—".
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
   });
@@ -409,14 +575,27 @@ describe('TripReplayPage postures', () => {
 /* ── Specs: populated page orchestration ──────────────────────────── */
 
 describe('TripReplayPage populated', () => {
+  it('keeps back navigation a single keyboard-reachable link rather than a nested button', () => {
+    renderPage();
+    const back = screen.getByRole('link', { name: 'Back to Drive' });
+    expect(back).toHaveAttribute('href', '/drives/7');
+    expect(back.querySelector('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Back to Drive' })).not.toBeInTheDocument();
+  });
+
   it('renders every summary + current-position section (no hidden panels)', () => {
     renderPage();
 
+    const context = screen.getByText(/Home → Office/);
+    expect(context).toBeVisible();
+    expect(context.closest('[data-action-group="metadata"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Refresh replay data' })
+      .closest('[data-action-group="secondary"]')).not.toBeNull();
     for (const label of ['Distance', 'Duration', 'Avg Speed', 'Max Speed', 'Efficiency', 'Elevation Gain', 'Elevation Loss']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     for (const label of ['Speed', 'Power', 'Elevation', 'Range', 'Temperature']) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
     // "Battery" labels both the summary tile and the live-stats card.
     expect(screen.getAllByText('Battery').length).toBeGreaterThanOrEqual(2);
@@ -430,9 +609,9 @@ describe('TripReplayPage populated', () => {
     renderPage();
 
     // distance 12000 m → 12 km ; avg 20 m/s → 72 km/h ; max 30 m/s → 108 km/h.
-    expect(screen.getByText(fmtNumber(convertDistanceFromSI(12_000, 'km')))).toBeInTheDocument();
-    expect(screen.getByText(fmtNumber(convertSpeedFromSI(20, 'km/h')))).toBeInTheDocument();
-    expect(screen.getByText(fmtNumber(convertSpeedFromSI(30, 'km/h')))).toBeInTheDocument();
+    expect(screen.getByText(`${fmtNumber(convertDistanceFromSI(12_000, 'km'))} km`)).toBeInTheDocument();
+    expect(screen.getByText(`${fmtNumber(convertSpeedFromSI(20, 'km/h'))} km/h`)).toBeInTheDocument();
+    expect(screen.getByText(`${fmtNumber(convertSpeedFromSI(30, 'km/h'))} km/h`)).toBeInTheDocument();
     // durationS 3660 → 61 min → "1h 1m" ; battery band "90% → 70%".
     expect(screen.getByText('1h 1m')).toBeInTheDocument();
     expect(screen.getByText('90% → 70%')).toBeInTheDocument();
@@ -441,8 +620,8 @@ describe('TripReplayPage populated', () => {
   it('sums positive/negative elevation deltas for the summary band', () => {
     renderPage();
     // 100→130 (+30), 130→120 (−10), 120→160 (+40) ⇒ gain 70, loss 10.
-    expect(screen.getByText('70')).toBeInTheDocument();
-    expect(screen.getByText('10')).toBeInTheDocument();
+    expect(screen.getByText('70 m')).toBeInTheDocument();
+    expect(screen.getByText('10 m')).toBeInTheDocument();
   });
 
   it('feeds SI-converted, timestamp-indexed series to the elevation + timeline charts', () => {
@@ -462,6 +641,58 @@ describe('TripReplayPage populated', () => {
     expect(elevation.data.map((d) => d.elevation)).toEqual([100, 130, 120, 160]);
     // Cumulative haversine distance is monotonically non-decreasing.
     expect(elevation.data[3].distance).toBeGreaterThan(elevation.data[1].distance);
+  });
+
+  it('keeps unobserved elevation, power and speed as gaps instead of invented zeros', () => {
+    driveMock.mockReturnValue(makeDriveQuery({
+      data: makeDrive({ positions: [makePosition(0), makePosition(1)] }),
+    }));
+    renderPage();
+    expect((captured.charts as CapturedCharts).data.map(point => point.power)).toEqual([null, null]);
+    expect((captured.charts as CapturedCharts).data.map(point => point.speed)).toEqual([null, null]);
+    expect((captured.elevation as CapturedElevation).data.map(point => point.elevation)).toEqual([null, null]);
+  });
+
+  it('uses measured drive energy for efficiency rather than a battery-percentage proxy', () => {
+    renderPage();
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    expect(summary).toHaveTextContent(`${fmtNumber(3000 / 12)} Wh/km`);
+  });
+
+  it('opens the real raw-source review without disrupting the replay stage or cursor', () => {
+    renderPage();
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText(`${fmtNumber(convertDistanceFromSI(12000, 'km'))} km`)).toBeInTheDocument();
+    expect(within(drawer).getByText('90% → 70%')).toBeInTheDocument();
+    expect(within(drawer).getByText('70 m')).toBeInTheDocument();
+    expect(within(drawer).getByText('10 m')).toBeInTheDocument();
+    expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
+    expect(screen.getByTestId('playback-controls')).toBeInTheDocument();
+    expect((captured.map as CapturedMap).currentIndex).toBe(0);
+  });
+
+  it('distinguishes a measured zero battery endpoint from missing or invalid paired endpoints', () => {
+    driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive({ startBatteryPct: 0, endBatteryPct: 0 }) }));
+    const view = renderPage();
+    expect(within(screen.getByRole('region', { name: 'Drive Summary' })).getByText('0% → 0%')).toBeInTheDocument();
+    view.unmount();
+    driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive({ startBatteryPct: 0, endBatteryPct: Number.NaN }) }));
+    renderPage();
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    expect(summary.querySelector('[data-operational-metric="battery"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(summary).not.toHaveTextContent('NaN');
+  });
+
+  it('places the live readouts and playback in the same outer map surface without metric panels', () => {
+    renderPage();
+    const stage = screen.getByRole('region', { name: 'Route map and live position' });
+    expect(stage).toContainElement(screen.getByTestId('trip-replay-map'));
+    expect(stage).toContainElement(screen.getByTestId('playback-controls'));
+    expect(stage).toContainElement(screen.getByTestId('replay-current-stats'));
+    expect(screen.getByTestId('replay-current-stats').querySelectorAll('[data-print-card]')).toHaveLength(0);
   });
 
   it('hands the map its SI trail + initial playhead + resolved motion preference', () => {
@@ -485,6 +716,56 @@ describe('TripReplayPage populated', () => {
     expect(Array.isArray(pb.markers)).toBe(true);
     expect(typeof pb.getPreviewAt).toBe('function');
     expect(typeof pb.onSeek).toBe('function');
+    expect(pb.framed).toBe(false);
+  });
+
+  it('rewinds without pausing on restart, while stop rewinds and pauses', () => {
+    renderPage();
+    act(() => {
+      (captured.playback as CapturedPlayback).onPlay();
+      (captured.playback as CapturedPlayback).onSeek(0.5);
+    });
+    expect((captured.playback as CapturedPlayback).isPlaying).toBe(true);
+    act(() => (captured.playback as CapturedPlayback).onRestart());
+    expect((captured.playback as CapturedPlayback).progress).toBe(0);
+    expect((captured.playback as CapturedPlayback).isPlaying).toBe(true);
+    act(() => {
+      (captured.playback as CapturedPlayback).onSeek(0.5);
+      (captured.playback as CapturedPlayback).onStop();
+    });
+    expect((captured.playback as CapturedPlayback).progress).toBe(0);
+    expect((captured.playback as CapturedPlayback).isPlaying).toBe(false);
+  });
+
+  it('keeps summary, map, transport and charts during a retained-data refresh failure', () => {
+    driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive(), error: new Error('refresh failed') }));
+    renderPage();
+    expect(screen.getByRole('region', { name: 'Drive Summary' })).toBeInTheDocument();
+    expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
+    expect(screen.getByTestId('playback-controls')).toBeInTheDocument();
+    expect(screen.getByTestId('trip-replay-charts')).toBeInTheDocument();
+    expect(screen.getByText('Cached · refresh failed')).toBeInTheDocument();
+  });
+
+  it('explains a paused refresh without inventing a failure and retains the successful update and replay', () => {
+    const refetch = vi.fn();
+    driveMock.mockReturnValue({
+      ...makeDriveQuery({ data: makeDrive(), refetch }),
+      fetchStatus: 'paused',
+      dataUpdatedAt: Date.now() - 120_000,
+    });
+    renderPage();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('Cached · refresh failed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Source failed')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Drive Summary' })).toBeInTheDocument();
+    expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
+    expect(screen.getByTestId('playback-controls')).toBeInTheDocument();
+    expect(screen.getByTestId('trip-replay-charts')).toBeInTheDocument();
+    expect(screen.getByText(`${fmtNumber(convertDistanceFromSI(12_000, 'km'))} km`)).toBeInTheDocument();
+    expect(screen.getByLabelText('Data freshness: Stale · 2m ago')).toHaveAttribute('title', expect.stringContaining('Last updated:'));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Drive Summary' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it('re-derives every figure when the unit preference flips to mph / mi', () => {
@@ -499,7 +780,7 @@ describe('TripReplayPage populated', () => {
     expect(elevation.distanceUnit).toBe('mi');
 
     // Summary distance now reads in miles (12000 m → ~7.46 mi).
-    expect(screen.getByText(fmtNumber(convertDistanceFromSI(12_000, 'mi')))).toBeInTheDocument();
+    expect(screen.getByText(`${fmtNumber(convertDistanceFromSI(12_000, 'mi'))} mi`)).toBeInTheDocument();
   });
 
   it('shares one seek handler so a map click moves the charts + live stats in lockstep', () => {
@@ -528,7 +809,7 @@ describe('TripReplayPage populated', () => {
 
     const p0 = POSITIONS[0];
     expect(screen.getByText(`${fmtNumber(convertSpeedFromSI(p0.speed!, 'km/h'))} km/h`)).toBeInTheDocument();
-    expect(screen.getByText(`${fmtNumber(p0.power!, 1)} kW`)).toBeInTheDocument();
+    expect(screen.getByText(formatPower(p0.power, UNIT_PREFS_KM))).toBeInTheDocument();
     expect(screen.getByText(`${fmtInt(p0.batteryLevel)}%`)).toBeInTheDocument();
     expect(screen.getByText(`${fmtInt(p0.elevation!)} m`)).toBeInTheDocument();
     expect(

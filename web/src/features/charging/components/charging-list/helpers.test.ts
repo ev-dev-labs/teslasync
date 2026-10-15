@@ -316,8 +316,8 @@ describe('computeAcDcBreakdown', () => {
       sessionMin(1, 60, { total_energy_added_wh: 10_000, cost_decimal: 3, peak_power_w: 7_000 }),
       // DC: charger_type present.
       sessionMin(2, 30, { total_energy_added_wh: 50_000, cost_decimal: 25, charger_type: 'Supercharger' }),
-      // DC: peak > 22 kW, free (no cost).
-      sessionMin(3, 20, { total_energy_added_wh: 20_000, cost_decimal: null, peak_power_w: 30_000 }),
+      // DC: peak > 22 kW, recorded free charging.
+      sessionMin(3, 20, { total_energy_added_wh: 20_000, cost_decimal: 0, peak_power_w: 30_000 }),
       // AC: free (cost exactly 0).
       sessionMin(4, 10, { total_energy_added_wh: 5_000, cost_decimal: 0, peak_power_w: 5_000 }),
     ]);

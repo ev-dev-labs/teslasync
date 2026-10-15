@@ -1,13 +1,13 @@
 /**
  * Centralized date/time formatting utilities.
  *
- * All timestamps from the backend are ISO 8601 UTC (ending in "Z").
- * These helpers convert to the user's local timezone for display,
- * keeping the source-of-truth as UTC.
+ * Instant helpers convert backend ISO 8601 UTC timestamps to the user's
+ * timezone. Calendar business dates use formatDayKey without timezone shifts.
  *
  * Every helper accepts an optional second
  * `FormatOptions` argument carrying an IANA timezone name and a BCP-47
- * locale. When omitted the helper preserves its prior behavior (browser
+ * locale, plus optional explicit clock fields (including seconds). When
+ * omitted the helper preserves its prior behavior (browser
  * locale + browser timezone) so existing callers stay byte-for-byte
  * identical. When `tz` is supplied the timestamp is rendered in that
  * zone via `Intl.DateTimeFormat`, which is what `<DateTime in="vehicle">`
@@ -21,7 +21,7 @@
  * like "NaN:NaN" or "Invalid Date". Callers should NOT pre-guard.
  */
 
-import { isFiniteNumber } from './numberFormat'
+import { fmtNumber, getGlobalLocale, isFiniteNumber } from './numberFormat'
 
 /** Universal placeholder returned by every formatter for unrenderable input. */
 const FALLBACK = '—'
@@ -32,13 +32,16 @@ export interface FormatOptions {
   tz?: string
   /** BCP-47 locale, e.g. 'en-US'. Defaults to browser locale. */
   locale?: string
+  /** Explicit clock fields for instants; date-only and business-day labels ignore these. */
+  clock?: Pick<Intl.DateTimeFormatOptions, 'hour' | 'minute' | 'second' | 'hour12' | 'hourCycle'>
 }
 
 function intlOpts(base: Intl.DateTimeFormatOptions, opts?: FormatOptions): Intl.DateTimeFormatOptions {
+  const fields = base.hour ? { ...base, ...opts?.clock } : base
   if (opts?.tz) {
-    return { ...base, timeZone: opts.tz }
+    return { ...fields, timeZone: opts.tz }
   }
-  return base
+  return fields
 }
 
 function intlLocale(opts?: FormatOptions): string | undefined {
@@ -82,7 +85,7 @@ export function formatDateShort(iso: string | Date | null | undefined, opts?: Fo
 }
 
 /**
- * Cached time-only Intl formatters keyed by locale + timezone.
+ * Cached time-only Intl formatters keyed by locale + timezone + clock fields.
  *
  * `Date#toLocaleTimeString` builds a new Intl formatter on every call
  * (~70µs) — chart datasets with hundreds of thousands of rows (a 48-100h
@@ -96,7 +99,7 @@ const timeFormatterCache = new Map<string, Intl.DateTimeFormat>()
 
 function cachedTimeFormatter(opts?: FormatOptions): Intl.DateTimeFormat {
   const locale = intlLocale(opts)
-  const key = `${locale ?? ''}|${opts?.tz ?? ''}`
+  const key = `${locale ?? ''}|${opts?.tz ?? ''}|${JSON.stringify(opts?.clock ?? {})}`
   let formatter = timeFormatterCache.get(key)
   if (!formatter) {
     formatter = new Intl.DateTimeFormat(
@@ -116,22 +119,42 @@ export function formatTime(iso: string | Date | null | undefined, opts?: FormatO
   return cachedTimeFormatter(opts).format(d)
 }
 
-/** Relative time: "3 min ago", "2 hours ago", "yesterday" */
+/**
+ * Locale-aware elapsed time: "3m ago" or "in 2h", then an absolute date
+ * after seven days. Uses the selected formatter locale unless overridden.
+ * English keeps its existing "just now" label for the first past minute.
+ */
 export function formatRelative(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
-  const now = Date.now()
-  const diff = now - d.getTime()
-  const seconds = Math.floor(diff / 1000)
-  if (seconds < 60) return 'just now'
+  const diff = d.getTime() - Date.now()
+  const seconds = Math.floor(Math.abs(diff) / 1000)
+  const locale = intlLocale(opts) ?? getGlobalLocale()
+  const relativeOptions = {
+    style: 'narrow',
+    numeric: seconds < 60 ? 'auto' : 'always',
+  } as const
+  let formatter: Intl.RelativeTimeFormat
+  try {
+    formatter = new Intl.RelativeTimeFormat(locale, relativeOptions)
+  } catch {
+    formatter = new Intl.RelativeTimeFormat('en-US', relativeOptions)
+  }
+  if (diff <= 0 && seconds < 60) {
+    if (formatter.resolvedOptions().locale.startsWith('en')) return 'just now'
+    return formatter.format(0, 'second')
+  }
+  // A future instant within the next second must not collapse to "now".
+  if (seconds < 60) return formatter.format(Math.max(1, seconds), 'second')
+  const direction = diff > 0 ? 1 : -1
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 60) return formatter.format(direction * minutes, 'minute')
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return formatter.format(direction * hours, 'hour')
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  return formatDate(iso, opts)
+  if (days < 7) return formatter.format(direction * days, 'day')
+  return formatDate(iso, { ...opts, locale: formatter.resolvedOptions().locale })
 }
 
 /**
@@ -246,28 +269,33 @@ export function ymdInTz(d: Date, tz?: string): string | null {
 }
 
 /**
- * Render a `YYYY-MM-DD` day key as a friendly date label without
- * round-tripping through a `Date` (which would re-introduce timezone
- * shift bugs at midnight boundaries). `style: 'long'` returns
+ * Render a valid `YYYY-MM-DD` business day without timezone conversion.
+ * Missing or invalid calendar keys return the universal placeholder.
+ * `style: 'long'` returns
  * "Apr 24, 2026", `style: 'short'` returns "Apr 24". Locale-aware via
  * `opts.locale`.
  */
 export function formatDayKey(
-  key: string,
+  key: string | null | undefined,
   opts?: FormatOptions & { style?: 'short' | 'long' },
 ): string {
+  if (typeof key !== 'string') return FALLBACK
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key)
   if (!m) return FALLBACK
   const [, ys, ms, ds] = m
   const year = Number(ys)
   const month = Number(ms)
   const day = Number(ds)
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return FALLBACK
   // Anchor at UTC noon of the requested calendar day, then format in UTC
   // so the formatter doesn't shift the wall-clock back into a previous
   // day in negative-offset zones. Noon-anchoring also avoids the
   // `new Date('2026-04-24')` UTC-midnight pitfall.
-  const noon = new Date(Date.UTC(year, month - 1, day, 12))
+  const noon = new Date(0)
+  noon.setUTCHours(12, 0, 0, 0)
+  noon.setUTCFullYear(year, month - 1, day)
+  if (noon.getUTCFullYear() !== year || noon.getUTCMonth() !== month - 1 || noon.getUTCDate() !== day) {
+    return FALLBACK
+  }
   const style = opts?.style ?? 'long'
   const fmtOpts: Intl.DateTimeFormatOptions = style === 'short'
     ? { timeZone: 'UTC', month: 'short', day: 'numeric' }
@@ -307,38 +335,38 @@ export function formatRelativeTime(iso: string | Date | null | undefined, opts?:
   return d.toLocaleDateString(intlLocale(opts), intlOpts({ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }, opts))
 }
 
-/** Millisecond duration for short activity entries: "250ms", "1.5s", or "—" for nullish/non-finite values. */
+/** Nonnegative measured duration uses selected precision; missing/invalid values remain unknown. */
 export function formatDurationMs(ms: number | null | undefined): string {
-  if (!isFiniteNumber(ms)) return FALLBACK
-  if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
+  if (!isFiniteNumber(ms) || ms < 0) return FALLBACK
+  if (ms < 1000) return `${fmtNumber(ms)}ms`
+  return `${fmtNumber(ms / 1000)}s`
 }
 
-/** Millisecond duration with decimal minute rollover: "250ms", "1.5s", "2.5m". */
+/** Measured duration with decimal minute rollover and selected precision. */
 export function formatDurationMsCompact(ms: number | null | undefined): string {
-  if (!isFiniteNumber(ms)) return FALLBACK
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`
-  return `${(ms / 60_000).toFixed(1)}m`
+  if (!isFiniteNumber(ms) || ms < 0) return FALLBACK
+  if (ms < 1000) return `${fmtNumber(ms)}ms`
+  if (ms < 60_000) return `${fmtNumber(ms / 1000)}s`
+  return `${fmtNumber(ms / 60_000)}m`
 }
 
 /** Millisecond duration with minute/second output for longer jobs: "1m 05s". */
 export function formatDurationMsLong(ms: number | null | undefined): string {
-  if (!isFiniteNumber(ms) || ms <= 0) return FALLBACK
-  if (ms < 1000) return `${ms}ms`
+  if (!isFiniteNumber(ms) || ms < 0) return FALLBACK
+  if (ms < 1000) return `${fmtNumber(ms)}ms`
   const sec = ms / 1000
-  if (sec < 60) return `${sec.toFixed(1)}s`
+  if (sec < 60) return `${fmtNumber(sec)}s`
   const min = Math.floor(sec / 60)
   return `${min}m ${formatRoundedInt(sec % 60)}s`
 }
 
-/** Seconds represented as rounded minutes/hours: "5m", "2h 10m", or "2h". */
+/** Locale-aware seconds represented as rounded minutes/hours: "5m", "2h 10m", or "2h". */
 export function formatDurationSecondsAsMinutes(seconds: number | null | undefined): string {
   if (!isFiniteNumber(seconds) || seconds < 0) return FALLBACK
   const h = Math.floor(seconds / 3600)
   const m = (seconds % 3600) / 60
-  if (h === 0) return `${formatRoundedInt(m)}m`
-  return m >= 0.5 ? `${h}h ${formatRoundedInt(m)}m` : `${h}h`
+  if (h === 0) return `${fmtNumber(m, 0)}m`
+  return m >= 0.5 ? `${fmtNumber(h, 0)}h ${fmtNumber(m, 0)}m` : `${fmtNumber(h, 0)}h`
 }
 
 /** Minute duration with rounded minute remainder: "5m" or "2h 05m". */
@@ -363,7 +391,7 @@ export function formatDurationRange(
   const e = new Date(end).getTime()
   if (!Number.isFinite(s) || !Number.isFinite(e)) return FALLBACK
   const ms = e - s
-  if (ms <= 0) return FALLBACK
+  if (ms < 0) return FALLBACK
   return formatDurationMinutes(Math.round(ms / 60_000))
 }
 

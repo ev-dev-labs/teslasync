@@ -1,24 +1,27 @@
 import { useTranslation } from 'react-i18next'
 
-import { PageContainer } from '@/components/layout'
-import { AlertBanner } from '@/components/feedback'
+import { PageLayout } from '@/components/layout'
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { Button } from '@/components/ui'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
+import { useDataState } from '@/hooks/useDataState'
 import { VehicleManagementWorkspace } from '../components/vehicle-management'
 
 export default function VehicleManagementPage() {
   const { t } = useTranslation()
-  usePageTitle(t('vehicleManagement.pageTitle', 'Vehicle Management'))
+  usePageTitle(t('vehicleManagement.pageTitle', 'Vehicle management'))
 
   const vehiclesQuery = useVehicles()
+  const vehiclesState = useDataState(vehiclesQuery)
   const {
     vehicleId,
     vehicle: selectedFromStore,
   } = useSelectedVehicle()
   const vehicles = vehiclesQuery.data ?? []
+  const rosterUnresolved = !vehiclesState.hasData && !vehiclesState.fatalError
   const selectedVehicle =
     selectedFromStore ??
     (vehicleId != null
@@ -28,8 +31,8 @@ export default function VehicleManagementPage() {
     null
 
   return (
-    <PageContainer
-      title={t('vehicleManagement.pageTitle', 'Vehicle Management')}
+    <PageLayout
+      title={t('vehicleManagement.pageTitle', 'Vehicle management')}
       subtitle={t(
         'vehicleManagement.pageSubtitle',
         'Review Tesla account metadata, paid specifications, pricing, and enterprise access separately from physical commands.',
@@ -51,7 +54,20 @@ export default function VehicleManagementPage() {
           </AlertBanner>
         )}
 
-        {vehiclesQuery.error && (
+        <StaleRefreshWarning state={vehiclesState} label={t('vehicleManagement.pageTitle', 'Vehicle management')} />
+        {rosterUnresolved && !vehiclesQuery.isLoading && (
+          <AlertBanner
+            variant="info"
+            title={vehiclesState.isRefreshBlocked
+              ? t('dataSources.status.paused', 'Refresh paused')
+              : t('operations.status.awaitingData', 'Awaiting data')}
+          >
+            {vehiclesState.isRefreshBlocked
+              ? t('system.outage.pausedSource', 'Waiting for a connection before this source can load. Missing evidence remains unknown.')
+              : t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.')}
+          </AlertBanner>
+        )}
+        {vehiclesState.fatalError && (
           <AlertBanner
             variant="danger"
             title={t(
@@ -79,7 +95,8 @@ export default function VehicleManagementPage() {
         )}
 
         {!vehiclesQuery.isLoading &&
-          !vehiclesQuery.error &&
+          vehiclesState.hasData &&
+          !vehiclesState.fatalError &&
           vehicles.length === 0 && (
             <AlertBanner
               variant="info"
@@ -102,6 +119,6 @@ export default function VehicleManagementPage() {
           />
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   )
 }

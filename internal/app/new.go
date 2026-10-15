@@ -142,6 +142,9 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initWebPush()
 	a.initStateReader()
 
+	if err := a.initLiveSignalStore(); err != nil {
+		return a, err
+	}
 	if err := a.initTelemetryHandler(ctx); err != nil {
 		return a, err
 	}
@@ -719,15 +722,16 @@ func (a *App) initStateReader() {
 }
 
 // initTelemetryHandler runs only when cfg.FleetTelemetry.Enabled. It
-// constructs the SignalStore + LiveSignalStore + warmup, starts the
+// reuses the App's SignalStore + LiveSignalStore, performs warmup, starts the
 // signal_history flush + cleanup loops, recovers active sessions,
 // hydrates AlertEvaluator prevSignals, starts the FSM reconcile loop,
 // optionally wires the MongoDB raw-telemetry capture, and starts the
 // MQTT PipelineSubscriber, its writers, and side-effects observer.
 // Returns an error for fatal misconfigurations or when the required MQTT
 // ingest path cannot be established
-// (invalid LIVE_SIGNAL_STORE_MODE, unavailable MQTT while Fleet Telemetry is
-// enabled, or router/pipeline construction failure).
+// (unavailable MQTT while Fleet Telemetry is enabled, an empty telemetry
+// topic base, or router/pipeline construction failure). Live mode validation
+// precedes this optional initialization in initLiveSignalStore.
 func (a *App) initTelemetryHandler(ctx context.Context) error {
 	if !a.Cfg.FleetTelemetry.Enabled {
 		return nil
@@ -752,27 +756,8 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		a.Cfg.FleetTelemetry.StaleSessionTimeout,
 	)
 
-	a.SignalStore = sigsvc.New()
-	a.TelemetryHandler.SetSignalStore(a.SignalStore)
-	a.TelemetryHandler.FSMHandler().SetSignalStore(a.SignalStore)
-
-	var redisSignalCache *sigsvc.RedisSignalCache
-	if rdb := a.Cache.Underlying(); rdb != nil {
-		redisSignalCache = sigsvc.NewRedisSignalCache(rdb)
-		a.TelemetryHandler.SetRedisCache(redisSignalCache)
-		log.Info().Msg("redis signal cache enabled")
-	}
-
-	liveSignalStore, err := sigsvc.NewLiveSignalStore(a.SignalStore, redisSignalCache, a.Cfg.FleetTelemetry.LiveSignalStoreMode)
-	if err != nil {
-		return fmt.Errorf("invalid LIVE_SIGNAL_STORE_MODE %q: %w", a.Cfg.FleetTelemetry.LiveSignalStoreMode, err)
-	}
-	a.LiveSignalStore = liveSignalStore
-	a.TelemetryHandler.SetLiveSignalStore(liveSignalStore)
-	log.Info().
-		Str("mode", a.Cfg.FleetTelemetry.LiveSignalStoreMode).
-		Bool("redis_l2", redisSignalCache != nil).
-		Msg("live signal store initialized")
+	a.wireTelemetryLiveStores()
+	liveSignalStore := a.LiveSignalStore
 
 	vehicleRepo := vehicledb.NewVehicleRepo(a.DB)
 	vehicles, err := vehicleRepo.GetAll(ctx)

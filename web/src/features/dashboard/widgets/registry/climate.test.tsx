@@ -98,9 +98,9 @@ const EXPECTED_IDS = [
 // runtime contract that proves the registry id maps to the right widget.
 const EXPECTED_TITLES: Record<string, string> = {
   'climate-status': 'Climate',
-  'climate-control-panel': 'Climate Control',
-  'weather-at-car': 'Weather at Car',
-  'climate-history': 'Climate History',
+  'climate-control-panel': 'Climate control',
+  'weather-at-car': 'Weather at car',
+  'climate-history': 'Climate history',
 };
 
 const REACT_LAZY = Symbol.for('react.lazy');

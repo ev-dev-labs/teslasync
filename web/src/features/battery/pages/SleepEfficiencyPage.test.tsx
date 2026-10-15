@@ -6,13 +6,17 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
+import i18n from 'i18next';
+import english from '@/i18n/en.json';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
 import type { SleepEfficiencyData } from '@/types/energy';
+import { deriveDataState } from '@/api/dataState';
+import type { AppSettings } from '@/api/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -47,6 +51,58 @@ vi.mock('react-i18next', () => ({
 }));
 
 const unitState = vi.hoisted(() => ({ fahrenheit: false }));
+const widgetState = vi.hoisted(() => ({ failDestination: false }));
+const chartPreference = vi.hoisted(() => ({ palette: 'cb_safe' }));
+vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isLoading: false, isFetching: false, isError: false }),
+  useCreateAnnotation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteAnnotation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock('@/hooks/useChartPalette', async (importActual) => {
+  const actual = await importActual<typeof import('@/hooks/useChartPalette')>();
+  return {
+    ...actual,
+    useChartPalette: () => actual.resolveChartPalette(chartPreference.palette),
+  };
+});
+
+// Keep the real frame/legend state while making series observable without layout.
+vi.mock('@/components/charts', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    BarChart: ({ children, data }: { children?: ReactNode; data?: unknown }) =>
+      <div data-testid="sleep-chart-bars" data-rows={JSON.stringify(data)}>{children}</div>,
+    Bar: ({ dataKey, fill, hide, yAxisId }: {
+      dataKey: string; fill?: string; hide?: boolean; yAxisId?: string;
+    }) => <div data-testid={`sleep-series-${dataKey}`} data-fill={fill} data-hidden={String(hide)} data-axis={yAxisId} />,
+    XAxis: () => null,
+    YAxis: () => null,
+    Tooltip: () => null,
+    ChartLegend: () => null,
+    chartGrid: null,
+  };
+});
+const pricingFixture = vi.hoisted(() => ({
+  symbol: '$' as string | null | undefined,
+  available: true,
+  error: null as Error | null,
+  paused: false,
+  retry: vi.fn(),
+}));
+
+vi.mock('../components/sleep-efficiency', async (importActual) => {
+  const actual = await importActual<typeof import('../components/sleep-efficiency')>();
+  const Destination = actual.TransitionDestinationChart;
+  return {
+    ...actual,
+    TransitionDestinationChart: (props: ComponentProps<typeof Destination>) => {
+      if (widgetState.failDestination) throw new Error('Synthetic transition widget failure');
+      return <Destination {...props} />;
+    },
+  };
+});
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -78,10 +134,19 @@ vi.mock('@/hooks/useUnits', () => ({
 
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({
+    pricingState: deriveDataState({
+      data: pricingFixture.available
+        ? { currency_symbol: pricingFixture.symbol } as AppSettings
+        : undefined,
+      isError: pricingFixture.error != null,
+      error: pricingFixture.error,
+      fetchStatus: pricingFixture.paused ? 'paused' : 'idle',
+      refetch: pricingFixture.retry,
+    }),
     costPerKwh: 0.12,
     currencySymbol: '$',
     formatEnergyCost: (value: number) => `$${value.toFixed(2)}`,
-    formatCurrency: (value: number) => `$${value.toFixed(2)}`,
+    formatCurrency: (value: number) => `${pricingFixture.symbol}${value.toFixed(2)}`,
     costPerDistanceUnit: () => null,
     estimateGasCost: () => null,
   }),
@@ -115,6 +180,16 @@ if (typeof window.matchMedia !== 'function') {
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import SleepEfficiencyPage from './SleepEfficiencyPage';
+import { resolveChartPalette } from '@/hooks/useChartPalette';
+
+it('offers keyboard-accessible transition interpretation help without duration evidence', () => {
+  mockSleep.mockReturnValue(queryResult({ data: transitionOnlyData() }));
+  renderPage();
+  const help = screen.getByRole('button', { name: 'Methodology and interpretation limits' });
+  help.focus();
+  expect(help).toHaveFocus();
+  expect(help).toHaveAccessibleDescription(english.sleep.methodology.transitionSemantics);
+});
 
 type SleepQueryResult = ReturnType<typeof useSleepEfficiency>;
 
@@ -125,9 +200,12 @@ function queryResult(
   overrides: Partial<{
     data: SleepEfficiencyData | undefined;
     isLoading: boolean;
+    isPending: boolean;
     isFetching: boolean;
     isError: boolean;
     isSuccess: boolean;
+    dataUpdatedAt: number;
+    fetchStatus: 'fetching' | 'paused' | 'idle';
     error: Error | null;
     refetch: ReturnType<typeof vi.fn>;
   }> = {},
@@ -141,7 +219,7 @@ function queryResult(
     isPending: false,
     isStale: false,
     error: null,
-    dataUpdatedAt: 1,
+    dataUpdatedAt: Date.now(),
     refetch: vi.fn(),
     ...overrides,
   };
@@ -208,8 +286,8 @@ function fullyPopulatedData(): SleepEfficiencyData {
     recent_events: [
       {
         id: 10,
-        start_date: '2026-08-06T01:00:00Z',
-        end_date: '2026-08-06T05:00:00Z',
+        start_date: '2026-07-16T01:00:00Z',
+        end_date: '2026-07-16T05:00:00Z',
         duration_hours: 4,
         battery_lost: 2,
         drain_rate: 0.5,
@@ -254,7 +332,7 @@ function renderPage(
       mutations: { retry: false },
     },
   });
-  return render(
+  const page = () => (
     <MemoryRouter initialEntries={entries}>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -262,8 +340,10 @@ function renderPage(
           <HeaderRangeControl />
         </ToastProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const rendered = render(page());
+  return { ...rendered, rerenderPage: () => rendered.rerender(page()) };
 }
 
 const SECTION_TEST_IDS = [
@@ -283,10 +363,23 @@ const SECTION_TEST_IDS = [
   'sleep-efficiency-methodology',
 ] as const;
 
+beforeAll(async () => {
+  await i18n.init({
+    lng: 'en',
+    resources: { en: { translation: english } },
+  });
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   unitState.fahrenheit = false;
+  widgetState.failDestination = false;
+  chartPreference.palette = 'cb_safe';
+  pricingFixture.symbol = '$';
+  pricingFixture.available = true;
+  pricingFixture.error = null;
+  pricingFixture.paused = false;
   vi.spyOn(Date, 'now').mockReturnValue(
     Date.parse('2026-08-08T12:00:00Z'),
   );
@@ -301,6 +394,126 @@ afterEach(() => {
 });
 
 describe('SleepEfficiencyPage persistent workspace', () => {
+  it('updates restrained palette presentation without resetting saved IDs, hidden keys, or raw series', () => {
+    const data = fullyPopulatedData();
+    mockSleep.mockReturnValue(queryResult({ data }));
+    const original = structuredClone(data);
+    const { rerenderPage } = renderPage([
+      '/sleep-efficiency?from=2026-06-17&to=2026-07-16&hidden_sleep-efficiency-sentry-comparison=drainRate',
+    ]);
+    const dwell = within(screen.getByTestId('sleep-efficiency-dwell-distribution'));
+    const sentry = within(screen.getByTestId('sleep-efficiency-sentry-comparison'));
+    const dwellRows = dwell.getByTestId('sleep-chart-bars').getAttribute('data-rows');
+    const sentryRows = sentry.getByTestId('sleep-chart-bars').getAttribute('data-rows');
+    expect(JSON.parse(dwellRows ?? '[]')).toEqual([
+      { state: 'Asleep', minutes: 90, share: 75 },
+      { state: 'Online', minutes: 30, share: 25 },
+      { state: 'mystery', minutes: 0, share: 0 },
+    ]);
+    expect(JSON.parse(sentryRows ?? '[]')).toEqual([
+      { mode: 'Sentry on', count: 4, drainRate: 0.1, batteryLost: 4, durationHours: 5 },
+      { mode: 'Sentry off', count: 5, drainRate: 0.025, batteryLost: 1, durationHours: 6 },
+    ]);
+    for (const savedId of ['cb_safe', 'neon', 'cb_safe']) {
+      chartPreference.palette = savedId;
+      rerenderPage();
+      const palette = resolveChartPalette(savedId);
+      expect(chartPreference.palette).toBe(savedId);
+      expect(dwell.getByTestId('sleep-series-minutes')).toHaveAttribute('data-fill', palette[3]);
+      expect(sentry.getByTestId('sleep-series-drainRate')).toHaveAttribute('data-fill', palette[2]);
+      expect(sentry.getByTestId('sleep-series-batteryLost')).toHaveAttribute('data-fill', palette[3]);
+      expect(sentry.getByTestId('sleep-series-drainRate')).toHaveAttribute('data-hidden', 'true');
+      expect(sentry.getByTestId('sleep-series-batteryLost')).toHaveAttribute('data-hidden', 'false');
+      expect(sentry.getByTestId('sleep-series-drainRate')).toHaveAttribute('data-axis', 'rate');
+      expect(sentry.getByTestId('sleep-series-batteryLost')).toHaveAttribute('data-axis', 'dose');
+      expect(dwell.getByTestId('sleep-chart-bars')).toHaveAttribute('data-rows', dwellRows);
+      expect(sentry.getByTestId('sleep-chart-bars')).toHaveAttribute('data-rows', sentryRows);
+      expect(data).toEqual(original);
+    }
+  });
+
+  it.each([undefined, null, '', '   '])('withholds missing currency identity (%s) without erasing numeric context', (symbol) => {
+    pricingFixture.symbol = symbol;
+    mockSleep.mockReturnValue(queryResult({ data: fullyPopulatedData() }));
+    renderPage();
+    const projection = within(screen.getByTestId('sleep-efficiency-sentry-projection'));
+    expect(projection.getByText('0.12 (Currency: Unavailable)/kWh')).toBeInTheDocument();
+    expect(projection.getByText('6.57 (Currency: Unavailable)')).toBeInTheDocument();
+    expect(projection.getByText('54.75 kWh')).toBeInTheDocument();
+    expect(screen.queryByText('$6.57')).not.toBeInTheDocument();
+  });
+
+  it.each(['loading', 'failed', 'paused'])('does not use default currency when settings are %s', (status) => {
+    pricingFixture.available = false;
+    pricingFixture.error = status === 'failed' ? new Error('settings failed') : null;
+    pricingFixture.paused = status === 'paused';
+    mockSleep.mockReturnValue(queryResult({ data: fullyPopulatedData() }));
+    renderPage();
+    expect(screen.getByText('6.57 (Currency: Unavailable)')).toBeInTheDocument();
+    expect(screen.getByText('4 on · 5 off')).toBeInTheDocument();
+    expect(screen.queryByText('$6.57')).not.toBeInTheDocument();
+  });
+
+  it.each(['failed', 'paused'])('retains the saved currency and discloses %s settings independently', (status) => {
+    pricingFixture.symbol = '€';
+    pricingFixture.error = status === 'failed' ? new Error('settings refresh failed') : null;
+    pricingFixture.paused = status === 'paused';
+    mockSleep.mockReturnValue(queryResult({ data: fullyPopulatedData() }));
+    renderPage();
+    expect(screen.getByText('€6.57')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Settings may be out of date');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(pricingFixture.retry).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity, -0.12])('keeps invalid or missing sleep price (%s) distinct from zero', (price) => {
+    const data = fullyPopulatedData();
+    data.base_cost_per_kwh = price;
+    mockSleep.mockReturnValue(queryResult({ data }));
+    renderPage();
+    const projection = within(screen.getByTestId('sleep-efficiency-sentry-projection'));
+    expect(projection.queryByText('$0.00/kWh')).not.toBeInTheDocument();
+    expect(projection.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(projection.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    expect(projection.getByText('54.75 kWh')).toBeInTheDocument();
+  });
+
+  it.each([true, false])('preserves measured zero price and signed fractional temperature with settings available=%s', (available) => {
+    pricingFixture.available = available;
+    const data = fullyPopulatedData();
+    data.base_cost_per_kwh = 0;
+    data.recent_events![0].outside_temp = -2.75;
+    mockSleep.mockReturnValue(queryResult({ data }));
+    renderPage();
+    expect(screen.getByText(available ? '$0.00/kWh' : '0.00 (Currency: Unavailable)/kWh')).toBeInTheDocument();
+    expect(screen.getByText(available ? '$0.00' : '0.00 (Currency: Unavailable)')).toBeInTheDocument();
+    expect(screen.getByText('-2.75 °C')).toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+  });
+
+  it('restores currency identity when existing settings recover without refetching sleep', () => {
+    pricingFixture.available = false;
+    mockSleep.mockReturnValue(queryResult({ data: fullyPopulatedData() }));
+    const page = renderPage();
+    expect(screen.getByText('6.57 (Currency: Unavailable)')).toBeInTheDocument();
+    pricingFixture.available = true;
+    pricingFixture.symbol = '£';
+    page.rerenderPage();
+    expect(screen.getByText('£6.57')).toBeInTheDocument();
+    expect(screen.queryByText('6.57 (Currency: Unavailable)')).not.toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+  });
+
+  it('keeps the scientific matrix columns fixed', () => {
+    renderPage();
+    const matrix = screen.getByTestId('sleep-efficiency-availability-matrix');
+    expect(within(matrix).getAllByRole('columnheader')).toHaveLength(3);
+    expect(within(matrix).queryByRole('button', { name: /columns/i })).not.toBeInTheDocument();
+    expect(within(matrix).queryAllByLabelText(/^Resize column/)).toHaveLength(0);
+    expect(matrix.querySelector('[draggable="true"]')).toBeNull();
+  });
+
   it('mounts all 14 section shells', () => {
     renderPage();
     for (const testId of SECTION_TEST_IDS) {
@@ -318,7 +531,9 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     );
     expect(screen.queryByTestId('sleep-efficiency-range')).not.toBeInTheDocument();
     expect(
-      screen.getByText('2026-06-17 to 2026-07-16 UTC'),
+      within(screen.getByTestId('sleep-efficiency-kpi-evidence')).getByText(
+        '2026-06-17 to 2026-07-16 UTC', { selector: '[data-battery-period]' },
+      ),
     ).toBeInTheDocument();
   });
 
@@ -344,6 +559,8 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.getByText('Source readings unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
   });
 
   it('keeps every shell mounted while the initial query loads', () => {
@@ -360,9 +577,11 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     for (const testId of SECTION_TEST_IDS) {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
     }
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
+    expect(container.querySelectorAll('[role="status"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(
       0,
     );
+    expect(screen.getByText('Loading source evidence')).toBeInTheDocument();
+    expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
   });
 
   it('shows exactly one retry surface for an initial query error', () => {
@@ -434,6 +653,8 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.getByText('Source readings unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
   });
 
   it('renders transition-only backend evidence as counts, never time or cost results', () => {
@@ -442,7 +663,9 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(screen.getAllByText('10').length).toBeGreaterThan(0);
     expect(screen.getAllByText('80.00%').length).toBeGreaterThan(0);
     expect(
-      screen.getByText('Count-based; not a time share'),
+      within(screen.getByTestId('sleep-efficiency-kpi-evidence')).getByText(
+        'Count-based; not a time share', { selector: '[data-battery-detail-context]' },
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText('Placeholder zero withheld'),
@@ -487,7 +710,68 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(screen.queryByText('20.00 °C')).not.toBeInTheDocument();
   });
 
-  it('freezes the analysis clock once for future-event classification', () => {
+  it('keeps historical recency and its as-of scope stable across refreshes and remounts', () => {
+    const data = fullyPopulatedData();
+    mockSleep.mockReturnValue(queryResult({ data }));
+    const page = renderPage();
+    const assertHistoricalScope = () => {
+      expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent(
+        'As of 2026-07-16T23:59:59.999Z',
+      );
+      const directory = within(screen.getByTestId('sleep-efficiency-event-directory'));
+      expect(directory.getByText('Last 24 hours')).toBeInTheDocument();
+      expect(directory.getByText('20.00 °C')).toBeInTheDocument();
+      expect(directory.queryByText('Older')).not.toBeInTheDocument();
+    };
+    assertHistoricalScope();
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-09-08T12:00:00Z'));
+    mockSleep.mockReturnValue(queryResult({ data: { ...data } }));
+    page.rerenderPage();
+    assertHistoricalScope();
+    page.unmount();
+    renderPage();
+    assertHistoricalScope();
+  });
+
+  it('anchors current-window analysis to accepted response time, including delayed loads and refreshes', () => {
+    const data = fullyPopulatedData();
+    data.recent_events = [{
+      ...data.recent_events![0],
+      start_date: '2026-08-08T13:00:00Z',
+      end_date: '2026-08-08T14:00:00Z',
+      duration_hours: 1,
+      drain_rate: 2,
+    }];
+    mockSleep.mockReturnValue(queryResult({ data: undefined, isLoading: true }));
+    const page = renderPage(['/sleep-efficiency?from=2026-08-08&to=2026-08-08']);
+    expect(screen.queryByTestId('sleep-analysis-as-of')).not.toBeInTheDocument();
+
+    const acceptedAt = Date.parse('2026-08-08T15:00:00Z');
+    mockSleep.mockReturnValue(queryResult({ data, dataUpdatedAt: acceptedAt }));
+    page.rerenderPage();
+    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('2026-08-08T15:00:00.000Z');
+    expect(screen.getByText('20.00 °C')).toBeInTheDocument();
+
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-08-10T12:00:00Z'));
+    mockSleep.mockReturnValue(queryResult({
+      data,
+      dataUpdatedAt: acceptedAt,
+      isError: true,
+      error: new Error('refresh failed'),
+    }));
+    page.rerenderPage();
+    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('2026-08-08T15:00:00.000Z');
+    expect(within(screen.getByTestId('sleep-efficiency-event-directory')).getByText('Last 24 hours')).toBeInTheDocument();
+
+    mockSleep.mockReturnValue(queryResult({
+      data,
+      dataUpdatedAt: Date.parse('2026-08-08T16:00:00Z'),
+    }));
+    page.rerenderPage();
+    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('2026-08-08T16:00:00.000Z');
+  });
+
+  it('caps future-event classification at the historical window even for a newer response', () => {
     let wallNow = Date.parse('2026-08-08T12:00:00Z');
     vi.mocked(Date.now).mockImplementation(() => wallNow);
     const futureData = fullyPopulatedData();
@@ -561,5 +845,160 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(oneDayCall?.[0]).toBe('1');
     expect(typeof oneDayCall?.[2]).toBe('string');
     expect(typeof oneDayCall?.[3]).toBe('string');
+  });
+
+  it('keeps all sections unknown during an initially paused request and refreshes on demand', () => {
+    const refetch = vi.fn();
+    mockSleep.mockReturnValue(queryResult({
+      data: undefined,
+      isSuccess: false,
+      isPending: true,
+      fetchStatus: 'paused',
+      refetch,
+    }));
+    renderPage();
+
+    for (const testId of SECTION_TEST_IDS) {
+      expect(screen.getByTestId(testId)).toBeInTheDocument();
+    }
+    const paused = screen.getByTestId('sleep-initial-paused');
+    expect(screen.getByText('Source readings unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Loading source evidence')).not.toBeInTheDocument();
+    expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
+    expect(paused).toHaveTextContent('No drain or sleep-health conclusion is available.');
+    const refresh = within(paused).getByRole('button', { name: 'Refresh' });
+    expect(refresh).toHaveClass('min-h-11', 'md:min-h-9');
+    expect(refresh).toBeEnabled();
+    fireEvent.click(refresh);
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('sleep-efficiency-kpi-evidence'))
+      .getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getAllByText(/request is paused/).length).toBeGreaterThan(0);
+    expect(within(screen.getByRole('dialog')).getAllByText(/2026-06-17 to 2026-07-16 UTC/).length).toBeGreaterThan(0);
+  });
+
+  it('retains duration and energy during a paused refresh without inventing a fetch error', () => {
+    const refetch = vi.fn();
+    mockSleep.mockReturnValue(queryResult({
+      data: fullyPopulatedData(),
+      fetchStatus: 'paused',
+      refetch,
+    }));
+    renderPage();
+
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).toHaveTextContent('Previously loaded data remains visible.');
+    expect(screen.getByText('Retained source evidence')).toBeInTheDocument();
+    expect(screen.queryByTestId('sleep-refresh-error')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sleep-initial-paused')).not.toBeInTheDocument();
+    expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0);
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('isolates a failed transition widget and retries without erasing neighboring evidence', () => {
+    widgetState.failDestination = true;
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mockSleep.mockReturnValue(queryResult({ data: fullyPopulatedData() }));
+    renderPage();
+
+    expect(screen.getByText('Synthetic transition widget failure')).toBeInTheDocument();
+    expect(screen.queryByTestId('sleep-efficiency-transition-distribution')).not.toBeInTheDocument();
+    for (const testId of SECTION_TEST_IDS.filter((id) => id !== 'sleep-efficiency-transition-distribution')) {
+      expect(screen.getByTestId(testId)).toBeInTheDocument();
+    }
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+    expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0);
+    widgetState.failDestination = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(screen.getByTestId('sleep-efficiency-transition-distribution')).toBeInTheDocument();
+    expect(screen.queryByText('Synthetic transition widget failure')).not.toBeInTheDocument();
+    expect(errorLog).toHaveBeenCalled();
+  });
+
+  it('keeps Sentry evidence independent when dwell evidence is absent', () => {
+    const data = fullyPopulatedData();
+    data.state_distribution = [{ state: 'asleep', count: 8, total_minutes: 0 }];
+    data.time_to_sleep_avg_min = 0;
+    mockSleep.mockReturnValue(queryResult({ data }));
+    renderPage();
+
+    expect(screen.getByText('Duration diagnostic withheld')).toBeInTheDocument();
+    expect(screen.getByText('Dwell reconstruction unavailable')).toBeInTheDocument();
+    expect(screen.getByText('4 on · 5 off')).toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+    expect(screen.getByText('$6.57')).toBeInTheDocument();
+    for (const testId of ['sleep-efficiency-kpi-evidence', 'sleep-efficiency-diagnostics']) {
+      expect(within(screen.getByTestId(testId)).queryByText('0.00%')).not.toBeInTheDocument();
+    }
+  });
+
+  it('preserves count-bearing measured zero without promoting missing Sentry evidence to zero', () => {
+    const data = fullyPopulatedData();
+    data.sentry_comparison = [
+      { sentry_mode: true, count: 4, avg_drain_rate: 0, avg_battery_lost: 0, avg_duration_hours: 5 },
+      { sentry_mode: false, count: 5, avg_drain_rate: 0, avg_battery_lost: 0, avg_duration_hours: 6 },
+    ];
+    mockSleep.mockReturnValue(queryResult({ data }));
+    renderPage();
+
+    const projection = screen.getByTestId('sleep-efficiency-sentry-projection');
+    expect(within(projection).getByText('0.00 kWh')).toBeInTheDocument();
+    expect(within(projection).getByText('$0.00')).toBeInTheDocument();
+    expect(within(projection).getByText('0.00%/hr')).toBeInTheDocument();
+    expect(within(projection).getByText('4 on · 5 off')).toBeInTheDocument();
+    expect(screen.queryByText('Sentry comparison unavailable')).not.toBeInTheDocument();
+    expect(screen.getByText('Available source readings')).toBeInTheDocument();
+  });
+
+  it('clears retained status after refresh recovery without losing source evidence or scope', () => {
+    const data = fullyPopulatedData();
+    mockSleep.mockReturnValue(queryResult({ data, isError: true, isSuccess: false, error: new Error('refresh failed') }));
+    const rendered = renderPage();
+    expect(screen.getByText('Retained source evidence')).toBeInTheDocument();
+    expect(screen.getByTestId('sleep-refresh-error')).toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+
+    mockSleep.mockReturnValue(queryResult({ data, isFetching: true, fetchStatus: 'fetching' }));
+    rendered.rerenderPage();
+    expect(screen.queryByText('Loading source evidence')).not.toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+
+    mockSleep.mockReturnValue(queryResult({ data }));
+    rendered.rerenderPage();
+    expect(screen.getByText('Available source readings')).toBeInTheDocument();
+    expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sleep-refresh-error')).not.toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+    expect(screen.getByText('2026-06-17 to 2026-07-16 UTC', { selector: '[data-battery-period]' })).toBeInTheDocument();
+  });
+
+  it('preserves dwell ratios, duplicate policy, and exact state exclusion accounting', () => {
+    const data = fullyPopulatedData();
+    data.state_distribution = [
+      { state: 'asleep', count: 8, total_minutes: 90 },
+      { state: 'online', count: 2, total_minutes: 30 },
+      { state: ' ASLEEP ', count: 99, total_minutes: 300 },
+      { state: null, count: 3, total_minutes: 5 },
+      { state: 'offline', count: -1, total_minutes: 10 },
+      { state: 'charging', count: 1, total_minutes: -1 },
+    ];
+    mockSleep.mockReturnValue(queryResult({ data }));
+    renderPage();
+
+    expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0);
+    const table = within(screen.getByTestId('sleep-efficiency-range-source-coverage')).getByRole('table');
+    for (const category of ['Duplicate state', 'Missing state', 'Invalid count', 'Invalid minutes']) {
+      const row = within(table).getByRole('row', { name: `State rows ${category} 1` });
+      expect(within(row).getByText('1')).toBeInTheDocument();
+    }
+    const included = within(table).getByRole('row', { name: 'State rows Included 2' });
+    expect(within(included).getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('20.00 °C')).toBeInTheDocument();
   });
 });

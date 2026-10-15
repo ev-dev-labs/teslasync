@@ -11,6 +11,11 @@ function renderWithClient(ui: ReactNode) {
 }
 
 describe('ComparisonHeader', () => {
+  it('preserves supplied title casing without visual transformations', () => {
+    renderWithClient(<ComparisonHeader title="Tesla API usage" currentLabel="Last 30 days" />);
+    expect(screen.getByRole('heading', { name: 'Tesla API usage' })).not.toHaveClass('uppercase', 'capitalize');
+  });
+
   it('renders the title as a heading', () => {
     renderWithClient(
       <ComparisonHeader

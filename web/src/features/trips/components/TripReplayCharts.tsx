@@ -1,29 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import {
-  ChartContainer,
-  ChartLegend,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ChartTooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  ChartTimeRangeProvider,
-  useSyncedCursor,
-  useSyncedReferenceLineX,
-  chartGrid,
-  axisTick,
-  fmt,
-  CHART_COLORS,
-  AREA_DEFAULTS,
-  areaGradient,
-} from '@/components/charts';
+import { ChartLegend, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ChartTooltip, ResponsiveContainer, ReferenceLine, ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX, chartGrid, axisTick, AREA_DEFAULTS, areaGradient } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useChartPalette } from '@/hooks/useChartPalette';
+import { chartTokens } from '@/lib/tokens';
 
 /* ------------------------------------------------------------------ */
 /*  Trip-replay charts with cursor sync                              */
@@ -37,9 +20,9 @@ export interface TripReplayChartPoint {
    *  store, so `syncMethod="value"` is required on the provider. */
   time: number;
   /** Speed in user-preferred units. */
-  speed: number;
-  /** Power in kW. */
-  power: number;
+  speed: number | null;
+  /** Power in user-preferred display units. */
+  power: number | null;
 }
 
 export interface TripReplayChartsProps {
@@ -48,6 +31,7 @@ export interface TripReplayChartsProps {
   currentIndex: number;
   /** Speed unit label, shown on the left Y-axis. */
   speedUnit: string;
+  powerUnit?: string;
   /** Called when the user clicks the chart OR the persistent cursor
    *  sync moves (e.g. from another synced chart, or from this chart's
    *  own hover). The receiver should call `controls.seekTo(index)`. */
@@ -72,6 +56,7 @@ export function TripReplayCharts({
   data,
   currentIndex,
   speedUnit,
+  powerUnit = 'kW',
   onSeekToIndex,
   syncId = 'trip-replay',
   height = 220,
@@ -86,6 +71,7 @@ export function TripReplayCharts({
         data={safeData}
         currentIndex={currentIndex}
         speedUnit={speedUnit}
+        powerUnit={powerUnit}
         onSeekToIndex={onSeekToIndex}
         height={height}
       />
@@ -100,6 +86,7 @@ interface TimelineChartProps {
   data: TripReplayChartPoint[];
   currentIndex: number;
   speedUnit: string;
+  powerUnit: string;
   onSeekToIndex: (index: number) => void;
   height: number;
 }
@@ -108,28 +95,56 @@ function TimelineChart({
   data,
   currentIndex,
   speedUnit,
+  powerUnit,
   onSeekToIndex,
   height,
 }: TimelineChartProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation();
   const syncProps = useSyncedCursor();
+  const palette = useChartPalette();
 
   const cursorTime = useMemo(() => {
     if (data.length === 0) return undefined;
     return data[currentIndex]?.time;
   }, [data, currentIndex]);
 
-  // chart-a11y:no-table dense per-sample replay timeline; per-segment summary appears in the trip overview panel
+  const tableData = useMemo(() => data.map(point => ({ ...point })), [data]);
+  const formatMeasurement = (value: unknown) =>
+    typeof value === 'number' && Number.isFinite(value) ? fmt(value) : '—';
+  const dataColumns = [
+    { key: 'index', label: `${t('dashboard.grid.positionHeading', 'Position')} (index)` },
+    {
+      key: 'time',
+      label: `${t('chart.col.time', 'Time')} (${t('common.min', 'min')})`,
+      format: formatMeasurement,
+    },
+    {
+      key: 'speed',
+      label: `${t('replay.timeline.speed', 'Speed')} (${speedUnit})`,
+      format: formatMeasurement,
+    },
+    {
+      key: 'power',
+      label: `${t('replay.timeline.power', 'Power')} (${powerUnit})`,
+      format: formatMeasurement,
+    },
+  ];
+
   return (
-    <ChartContainer
+    <ChartCard
       title={t('replay.timeline.title', 'Speed & Power Timeline')}
       subtitle={t('replay.timeline.subtitle', 'Click to seek replay position')}
       ariaLabel={t('replay.timeline.aria', 'Trip replay speed and power timeline area chart')}
       chartKey="trip-replay-speed-power"
+      size="standard"
+      exportable
       height={height}
+      data={tableData}
+      dataColumns={dataColumns}
     >
       {({ hiddenSeries }) => (
-        data.length > 0 ? (
+        data.some(point => point.speed != null || point.power != null) ? (
           <ResponsiveContainer width="100%" height={height}>
             <AreaChart
             data={data}
@@ -145,41 +160,41 @@ function TimelineChart({
               }
             }}
           >
-            {areaGradient('speedGrad', CHART_COLORS[0])}
-            {areaGradient('powerGrad', CHART_COLORS[1])}
+            {areaGradient('speedGrad', palette[0], 0.08)}
+            {areaGradient('powerGrad', palette[1], 0.08)}
             <CartesianGrid {...chartGrid} />
             <XAxis
               dataKey="time"
               type="number"
               domain={['dataMin', 'dataMax']}
               {...axisTick}
-              tickFormatter={(v: number) => `${fmt(v, 0)}m`}
+              tickFormatter={(v: number) => `${fmt(v)}m`}
             />
             <YAxis
               yAxisId="speed"
               {...axisTick}
-              tickFormatter={(v: number) => fmt(v, 0)}
+              tickFormatter={(v: number) => fmt(v)}
               label={{
                 value: speedUnit,
                 angle: -90,
                 position: 'insideLeft',
-                style: { fontSize: 10, fill: 'var(--text-muted)' },
+                style: axisTick,
               }}
             />
             <YAxis
               yAxisId="power"
               orientation="right"
               {...axisTick}
-              tickFormatter={(v: number) => fmt(v, 0)}
+              tickFormatter={(v: number) => fmt(v)}
               label={{
-                value: 'kW',
+                value: powerUnit,
                 angle: 90,
                 position: 'insideRight',
-                style: { fontSize: 10, fill: 'var(--text-muted)' },
+                style: axisTick,
               }}
             />
             <Tooltip
-              content={<ChartTooltip labelFormatter={(v) => `${fmt(v, 1)} min`} />}
+              content={<ChartTooltip labelFormatter={(v) => `${fmt(v)} min`} />}
             />
             <ChartLegend />
             <Area
@@ -187,9 +202,10 @@ function TimelineChart({
               yAxisId="speed"
               dataKey="speed"
               name={t('replay.timeline.speed', 'Speed')}
-              stroke={CHART_COLORS[0]}
+              stroke={palette[0]}
               fill="url(#speedGrad)"
               isAnimationActive={false}
+              connectNulls={false}
               hide={hiddenSeries?.isHidden('speed')}
             />
             <Area
@@ -197,17 +213,16 @@ function TimelineChart({
               yAxisId="power"
               dataKey="power"
               name={t('replay.timeline.power', 'Power')}
-              stroke={CHART_COLORS[1]}
+              stroke={palette[1]}
               fill="url(#powerGrad)"
               isAnimationActive={false}
+              connectNulls={false}
               hide={hiddenSeries?.isHidden('power')}
             />
             {cursorTime != null && (
               <ReferenceLine
                 x={cursorTime}
-                stroke="#00b4d8"
-                strokeWidth={2}
-                strokeDasharray="4 2"
+                {...chartTokens.cursor}
                 yAxisId="speed"
               />
             )}
@@ -220,7 +235,7 @@ function TimelineChart({
           />
         )
       )}
-    </ChartContainer>
+    </ChartCard>
   );
 }
 

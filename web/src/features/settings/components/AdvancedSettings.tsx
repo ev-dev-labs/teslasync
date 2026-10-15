@@ -64,7 +64,7 @@ export function AdvancedSettings() {
   return (
     <FadeIn delay={0.24}>
       <GlassPanel className="p-5 space-y-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <IconBox color="cyan">
             <ShieldQuestion className="h-5 w-5" />
           </IconBox>
@@ -82,6 +82,7 @@ export function AdvancedSettings() {
           {silenced.length > 0 && (
             <Button
               variant="ghost"
+              wrapLabel
               size="sm"
               onClick={handleRestoreAll}
               icon={<RotateCcw className="h-4 w-4" />}
@@ -99,14 +100,15 @@ export function AdvancedSettings() {
             )}
           />
         ) : (
-          <ul className="divide-y divide-white/[0.06] rounded-lg border border-white/[0.06] bg-white/[0.02]">
+          <ul className="divide-y divide-[var(--border-subtle)] rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)]">
             {silenced.map((key) => {
               const name = labelFor(key);
               return (
-                <li key={key} className="flex items-center justify-between gap-3 px-3 py-2">
-                  <Text variant="body" className="truncate">{name}</Text>
+                <li key={key} className="flex min-w-0 flex-wrap items-center justify-between gap-3 px-3 py-2">
+                  <Text variant="body" className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">{name}</Text>
                   <Button
                     variant="ghost"
+                    wrapLabel
                     size="sm"
                     onClick={() => handleRestore(key)}
                     icon={<RotateCcw className="h-3.5 w-3.5" />}

@@ -32,6 +32,7 @@ import type {
   OrderStats,
 } from './teslaOrderStats';
 import type { TeslaOrder } from '@/api/hooks/useUser';
+import { createInstance } from 'i18next';
 
 function makeOrder(overrides: Partial<TeslaOrder> = {}): TeslaOrder {
   return {
@@ -91,7 +92,7 @@ describe('bucketOfStatus', () => {
   });
 
   it('classifies cancellation and rejection ahead of everything else', () => {
-    expect(bucketOfStatus('CANCELLED')).toBe('cancelled');
+    expect(bucketOfStatus('Cancelled')).toBe('cancelled');
     expect(bucketOfStatus('order_rejected')).toBe('cancelled');
     // Cancel wins even when the raw status also mentions delivery.
     expect(bucketOfStatus('DELIVERY_CANCELLED')).toBe('cancelled');
@@ -104,8 +105,8 @@ describe('bucketOfStatus', () => {
   });
 
   it('classifies a plain delivered status as "delivered"', () => {
-    expect(bucketOfStatus('DELIVERED')).toBe('delivered');
-    expect(bucketOfStatus('delivered')).toBe('delivered');
+    expect(bucketOfStatus('Delivered')).toBe('delivered');
+    expect(bucketOfStatus('Delivered')).toBe('delivered');
   });
 
   it('classifies the early-lifecycle keywords as "inProgress"', () => {
@@ -122,16 +123,16 @@ describe('bucketOfStatus', () => {
   });
 
   it('is case-insensitive and defaults unknown statuses to "other"', () => {
-    expect(bucketOfStatus('cancelled')).toBe('cancelled');
+    expect(bucketOfStatus('Cancelled')).toBe('cancelled');
     expect(bucketOfStatus('SOMETHING_WEIRD')).toBe('other');
   });
 });
 
 describe('orderStatusVariant', () => {
   it('derives the Badge variant through the status bucket', () => {
-    expect(orderStatusVariant('DELIVERED')).toBe('success');
+    expect(orderStatusVariant('Delivered')).toBe('success');
     expect(orderStatusVariant('READY_FOR_DELIVERY')).toBe('info');
-    expect(orderStatusVariant('CANCELLED')).toBe('danger');
+    expect(orderStatusVariant('Cancelled')).toBe('danger');
     expect(orderStatusVariant('IN_PRODUCTION')).toBe('warning');
   });
 
@@ -142,6 +143,18 @@ describe('orderStatusVariant', () => {
 });
 
 describe('formatOrderStatus', () => {
+  it('localizes recognized statuses and retains unrecognized raw source text', async () => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'de',
+      resources: { de: { translation: { admin: { teslaOrders: { status: {
+        readyForDelivery: 'Bereit zur Auslieferung',
+      } } } } } },
+    });
+    expect(formatOrderStatus('READY_FOR_DELIVERY', i18n.t)).toBe('Bereit zur Auslieferung');
+    expect(formatOrderStatus('Future_Mixed_CASE', i18n.t)).toBe('Future_Mixed_CASE');
+    expect(formatOrderStatus('constructor', i18n.t)).toBe('constructor');
+  });
   it('returns the em-dash placeholder for an absent status', () => {
     expect(formatOrderStatus(null)).toBe('—');
     expect(formatOrderStatus(undefined)).toBe('—');
@@ -149,9 +162,9 @@ describe('formatOrderStatus', () => {
   });
 
   it('title-cases a SNAKE_CASE status into a human label', () => {
-    expect(formatOrderStatus('READY_FOR_DELIVERY')).toBe('Ready For Delivery');
-    expect(formatOrderStatus('IN_PRODUCTION')).toBe('In Production');
-    expect(formatOrderStatus('DELIVERED')).toBe('Delivered');
+    expect(formatOrderStatus('READY_FOR_DELIVERY')).toBe('Ready for delivery');
+    expect(formatOrderStatus('IN_PRODUCTION')).toBe('In production');
+    expect(formatOrderStatus('Delivered')).toBe('Delivered');
   });
 });
 
@@ -163,6 +176,41 @@ describe('computeOrderStats', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('excludes cancelled and rejected rows from next delivery without dropping their records', () => {
+    const orders = [
+      makeOrder({ status: 'CANCELLED', delivery_date: '2025-01-02T00:00:00Z' }),
+      makeOrder({ status: 'ORDER_REJECTED', delivery_date: '2025-01-03T00:00:00Z' }),
+      makeOrder({ status: 'PENDING', delivery_date: '2025-01-04T00:00:00Z' }),
+    ];
+    const stats = computeOrderStats(orders);
+    expect(stats.nextDelivery).toBe('2025-01-04T00:00:00Z');
+    expect(stats.total).toBe(3);
+    expect(stats.cancelled).toBe(2);
+    expect(orders[0].delivery_date).toBe('2025-01-02T00:00:00Z');
+  });
+
+  it('distinguishes unknown delivery facts from a known absence of future dates', () => {
+    for (const delivery_date of [null, '', 'not-a-date']) {
+      const stats = computeOrderStats([makeOrder({ delivery_date })]);
+      expect(stats.nextDelivery).toBeNull();
+      expect(stats.hasUnknownDelivery).toBe(true);
+    }
+    expect(computeOrderStats([makeOrder({ delivery_date: '2020-01-01T00:00:00Z' })])
+      .hasUnknownDelivery).toBe(false);
+    expect(computeOrderStats([makeOrder({ status: 'CANCELLED', delivery_date: null })])
+      .hasUnknownDelivery).toBe(false);
+    expect(computeOrderStats([]).hasUnknownDelivery).toBe(false);
+  });
+
+  it('retains the known next date even when another delivery date is unknown', () => {
+    const stats = computeOrderStats([
+      makeOrder({ delivery_date: null }),
+      makeOrder({ delivery_date: '2025-01-02T00:00:00Z' }),
+    ]);
+    expect(stats.nextDelivery).toBe('2025-01-02T00:00:00Z');
+    expect(stats.hasUnknownDelivery).toBe(true);
   });
 
   it('returns a fully-zeroed, null-safe shape for an empty array', () => {

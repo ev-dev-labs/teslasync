@@ -3,6 +3,7 @@ import { request, SudoCanceledError } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS } from '@/lib/constants';
+import { scopedPath } from '@/api/scope';
 import type {
   APIKey, APICallLog, APICallLogStats, BackupConfig, BackupRun,
   SystemHealth, AuditLogEntry, SecurityEvent, DBStats, MigrationStatus,
@@ -11,18 +12,37 @@ import type {
   RuntimeStatusSnapshot,
 } from '@/types/admin';
 import type { ExtendedHealthResponse } from '@/api/types';
+import { getAPICallLogs, getAPICallLogStats, getErrorStats } from '@/api/devtools';
+import type { APICallLogParams } from '@/api/devtools';
+
+export type APICallLogFilters = Pick<
+  APICallLogParams,
+  'method' | 'status' | 'endpoint' | 'service' | 'client' | 'key' | 'start' | 'endExclusive'
+>;
 
 export const adminKeys = {
   apiKeys: ['api-keys'] as const,
   apiLogs: (page: number) => ['api-logs', page] as const,
   apiLogStats: ['api-log-stats'] as const,
+  apiCallLogs: (page: number, filters: APICallLogFilters = {}, pageSize = 25) => [
+    'api-logs', page, filters.method || '', filters.status || '',
+    filters.endpoint || '', filters.service || '', filters.client || '',
+    filters.key || '', filters.start, filters.endExclusive, pageSize,
+  ] as const,
+  apiCallLogStats: (start?: string, endExclusive?: string) =>
+    ['api-log-stats', start, endExclusive] as const,
+  systemErrorStats: ['system-error-stats'] as const,
   backupConfigs: ['backup-configs'] as const,
   backupRuns: ['backup-runs'] as const,
   systemHealth: ['system-health'] as const,
   extendedHealth: ['system-status', 'extended-health'] as const,
   runtimeStatus: ['runtime-status'] as const,
   auditLogs: ['audit-logs'] as const,
-  securityEvents: (vehicleId: string) => ['security-events', vehicleId] as const,
+  securityEvents: (vehicleId: string, start?: string, endExclusive?: string) =>
+    start === undefined && endExclusive === undefined
+      ? ['security-events', vehicleId] as const
+      : ['security-events', vehicleId, start, endExclusive] as const,
+  latestSecurityEvent: (vehicleId: string) => ['security-latest', vehicleId] as const,
   dbStats: ['db-stats'] as const,
   migrations: ['migrations'] as const,
   connectionPool: ['connection-pool'] as const,
@@ -113,6 +133,35 @@ export function useApiLogStats() {
   return useQuery({
     queryKey: adminKeys.apiLogStats,
     queryFn: ({ signal }) => request<APICallLogStats>('/api-logs/stats', { signal }),
+    refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+/** Envelope-based evidence queries preserve the page's existing cache and polling semantics. */
+export function useAPICallLogs(page: number, filters: APICallLogFilters = {}, pageSize = 25) {
+  return useQuery({
+    queryKey: adminKeys.apiCallLogs(page, filters, pageSize),
+    queryFn: ({ signal }) => getAPICallLogs({
+      limit: pageSize,
+      offset: page * pageSize,
+      ...filters,
+    }, { signal }),
+    refetchInterval: INTERVALS.FAST,
+  });
+}
+
+export function useAPICallLogStats(start?: string, endExclusive?: string) {
+  return useQuery({
+    queryKey: adminKeys.apiCallLogStats(start, endExclusive),
+    queryFn: ({ signal }) => getAPICallLogStats(start, endExclusive, { signal }),
+    refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+export function useSystemErrorStats() {
+  return useQuery({
+    queryKey: adminKeys.systemErrorStats,
+    queryFn: ({ signal }) => getErrorStats({ signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }
@@ -242,11 +291,21 @@ export function useWebErrorsSummary() {
   });
 }
 
-export function useSecurityEvents(vehicleId: string) {
+export function useLatestSecurityEvent(vehicleId: string) {
   return useQuery({
-    queryKey: adminKeys.securityEvents(vehicleId),
+    queryKey: adminKeys.latestSecurityEvent(vehicleId),
     queryFn: ({ signal }) =>
-      request<SecurityEvent[]>(`/security?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
+      request<SecurityEvent>(scopedPath('/security/latest', { vehicleId }), { signal }),
+    enabled: !!vehicleId,
+    refetchInterval: 5000,
+  });
+}
+
+export function useSecurityEvents(vehicleId: string, start?: string, endExclusive?: string) {
+  return useQuery({
+    queryKey: adminKeys.securityEvents(vehicleId, start, endExclusive),
+    queryFn: ({ signal }) =>
+      request<SecurityEvent[]>(scopedPath('/security', { vehicleId, start, end: endExclusive }), { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });

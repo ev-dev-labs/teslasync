@@ -1,11 +1,10 @@
 /**
  * GasPriceAutoPollPage contract tests.
  *
- * The page is a thin orchestrator that fans three queries out to four
+ * The page is a thin orchestrator that fans two queries out to four
  * self-sufficient sub-components (KPI band, trend chart, control panel,
- * history table). These tests exercise the page end-to-end — the real hooks
- * run against a mocked `request()` — so every branch the user can hit is
- * covered:
+ * history table). The real hooks run against a mocked request() boundary;
+ * these are not transport-guard or provider-completion acceptance tests.
  *
  *   1. Full render: header, Poll-Now action, and all four sections with data.
  *   2. KPI band — enabled/"Running" state with formatted prices.
@@ -21,10 +20,25 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+
+const operational = vi.hoisted(() => ({
+  mode: 'live',
+  asOf: null,
+  online: true,
+  isReadOnly: false,
+  label: 'Live',
+  description: '',
+  canWrite: true,
+  writeBlockReason: null as string | null,
+}))
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => operational,
+}))
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -64,6 +78,7 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import GasPriceAutoPollPage from './GasPriceAutoPollPage'
 import type { GasPriceStatus, GasPriceHistory } from '@/api/types'
 
@@ -141,7 +156,7 @@ function install(opts: InstallOptions = {}) {
       return Promise.resolve(history)
     }
     if (path === '/gas-price/poll') {
-      return pollPending ? never() : Promise.resolve({ status: 'ok' })
+      return pollPending ? never() : Promise.resolve({ status: 'poll_triggered' })
     }
     if (path === '/gas-price/toggle') {
       const body = init?.body ? (JSON.parse(String(init.body)) as { enabled: boolean }) : { enabled: false }
@@ -165,39 +180,76 @@ function renderPage() {
       mutations: { retry: false },
     },
   })
-  return render(
+  const rendered = render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
-        <ToastProvider>
-          <GasPriceAutoPollPage />
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <GasPriceAutoPollPage />
+          </ToastProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...rendered, qc }
 }
 
 const statusCallCount = () =>
   mockedRequest.mock.calls.filter((c) => c[0] === '/gas-price/status').length
 
-const kpiRegion = () => screen.getByRole('region', { name: /gas price summary/i })
+const kpiRegion = () => screen.getByRole('region', { name: /Gas price summary/i })
 
 beforeEach(() => {
   mockedRequest.mockReset()
+  Object.assign(operational, {
+    mode: 'live', online: true, isReadOnly: false, canWrite: true, writeBlockReason: null,
+  })
+})
+
+describe('GasPriceAutoPollPage retained sources', () => {
+  it('keeps status, configuration, history and trend after both feeds fail to refresh', async () => {
+    install()
+    const { qc } = renderPage()
+    await screen.findByText('Configuration')
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Auto-poll' })).toBeInTheDocument())
+    install({ statusError: true, historyError: true })
+    await qc.invalidateQueries()
+    await waitFor(() => expect(qc.getQueryCache().getAll().some((query) => query.state.error !== null)).toBe(true))
+    expect(screen.getByRole('switch', { name: 'Auto-poll' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name: 'Price trend' }).filter(heading => heading.hasAttribute('data-card-title'))).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Poll now' })).toBeEnabled()
+  })
 })
 
 describe('GasPriceAutoPollPage — full render', () => {
+  it('uses a real price brief retaining source denominations, help and polling controls', async () => {
+    install()
+    renderPage()
+    const summary = screen.getByTestId('gas-price-summary')
+    await within(summary).findByText('Running')
+    expect(summary).toHaveAttribute('data-operational-brief')
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
+    expect(summary).toHaveTextContent('per gal')
+    expect(summary).toHaveTextContent('per kWh')
+    expect(summary).toHaveTextContent('Gasoline cost expressed as an equivalent price')
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('history chart is a separate source')
+    expect(screen.getByRole('button', { name: 'Poll now' })).toBeInTheDocument()
+  })
+
   it('renders the header, poll action, and all four sections from live data', async () => {
     install()
     renderPage()
 
     // Header + primary action.
     expect(
-      screen.getByRole('heading', { name: 'Gas Price Auto-Poll' }),
+      screen.getByRole('heading', { name: 'Gas price auto-poll' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText('Automatically fetch US average gas prices from EIA'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Poll Now' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Poll now' })).toBeInTheDocument()
 
     // KPI band resolves.
     await waitFor(() => expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument())
@@ -207,16 +259,16 @@ describe('GasPriceAutoPollPage — full render', () => {
     // Every section panel is present.
     expect(screen.getByText('Configuration')).toBeInTheDocument()
     expect(
-      screen.getAllByRole('heading', { name: 'Price Trend' }).length,
+      screen.getAllByRole('heading', { name: 'Price trend' }).length,
     ).toBeGreaterThan(0)
-    expect(screen.getByRole('heading', { name: 'Price History' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument()
 
     // Trend chart draws (role=img wrapper) and the table lists rows.
     expect(
-      screen.getByRole('img', { name: /line chart of historical gas prices/i }),
+      screen.getByRole('img', { name: /line chart of historical Gas prices/i }),
     ).toBeInTheDocument()
     const historyPanel = screen
-      .getByRole('heading', { name: 'Price History' })
+      .getByRole('heading', { name: 'Price history' })
       .closest('[data-print-card]')
     expect(historyPanel).not.toBeNull()
     expect(within(historyPanel as HTMLElement).getByRole('table')).toBeInTheDocument()
@@ -230,7 +282,7 @@ describe('GasPriceAutoPollPage — KPI band states', () => {
 
     await waitFor(() => expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument())
     // The control panel also mirrors the running state (aria-checked switch).
-    expect(screen.getByRole('switch', { name: 'Auto-Poll' })).toHaveAttribute(
+    expect(screen.getByRole('switch', { name: 'Auto-poll' })).toHaveAttribute(
       'aria-checked',
       'true',
     )
@@ -252,7 +304,7 @@ describe('GasPriceAutoPollPage — KPI band states', () => {
     expect(within(kpiRegion()).getAllByText('—').length).toBeGreaterThanOrEqual(2)
     // Never-polled sentinel is rendered, not a broken date.
     expect(within(kpiRegion()).getByText('Never')).toBeInTheDocument()
-    expect(screen.getByRole('switch', { name: 'Auto-Poll' })).toHaveAttribute(
+    expect(screen.getByRole('switch', { name: 'Auto-poll' })).toHaveAttribute(
       'aria-checked',
       'false',
     )
@@ -265,8 +317,16 @@ describe('GasPriceAutoPollPage — loading, error, empty', () => {
     const { container } = renderPage()
 
     // The page shell + action stay mounted; sections show skeletons.
-    expect(screen.getByRole('button', { name: 'Poll Now' })).toBeInTheDocument()
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4)
+    expect(screen.getByRole('button', { name: 'Poll now' })).toBeInTheDocument()
+    // Each source owns its loading geometry: metric values, panel boxes or chart bars.
+    // Match only those placeholders inside their source's loading announcement.
+    const loadingPlaceholders = container.querySelectorAll([
+      '[data-testid="gas-price-summary"][data-operational-brief][aria-busy="true"] [data-operational-metric] span[aria-hidden="true"][class~="bg-[var(--surface-3)]"]',
+      '[role="status"][aria-label="Loading Configuration"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+      '[role="status"][aria-label="Loading Price history"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+      'figure[data-chart-state="loading"][aria-busy="true"] [data-testid="chart-skeleton"][aria-busy="true"] > [aria-hidden="true"][class~="bg-white/[0.04]"]',
+    ].join(', '))
+    expect(loadingPlaceholders.length).toBeGreaterThanOrEqual(4)
     // No resolved data + no error surfaced yet.
     expect(screen.queryByText('Running')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
@@ -302,7 +362,7 @@ describe('GasPriceAutoPollPage — loading, error, empty', () => {
     expect(screen.getByText('No price history recorded yet.')).toBeInTheDocument()
     // With no rows the chart is NOT drawn.
     expect(
-      screen.queryByRole('img', { name: /line chart of historical gas prices/i }),
+      screen.queryByRole('img', { name: /line chart of historical Gas prices/i }),
     ).toBeNull()
   })
 })
@@ -313,12 +373,12 @@ describe('GasPriceAutoPollPage — interactions', () => {
     renderPage()
 
     await waitFor(() => expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'Poll Now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Poll now' }))
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
         '/gas-price/poll',
-        expect.objectContaining({ method: 'POST' }),
+        expect.objectContaining({ method: 'POST', requiresLiveMode: true }),
       ),
     )
   })
@@ -328,7 +388,7 @@ describe('GasPriceAutoPollPage — interactions', () => {
     renderPage()
 
     await waitFor(() => expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument())
-    const btn = screen.getByRole('button', { name: 'Poll Now' })
+    const btn = screen.getByRole('button', { name: 'Poll now' })
     fireEvent.click(btn)
 
     await waitFor(() => expect(btn).toBeDisabled())
@@ -339,13 +399,13 @@ describe('GasPriceAutoPollPage — interactions', () => {
     install({ status: makeStatus({ enabled: true }) })
     renderPage()
 
-    const toggle = await screen.findByRole('switch', { name: 'Auto-Poll' })
+    const toggle = await screen.findByRole('switch', { name: 'Auto-poll' })
     fireEvent.click(toggle)
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
         '/gas-price/toggle',
-        expect.objectContaining({ method: 'POST', body: JSON.stringify({ enabled: false }) }),
+        expect.objectContaining({ method: 'POST', requiresLiveMode: true, body: JSON.stringify({ enabled: false }) }),
       ),
     )
   })
@@ -356,7 +416,7 @@ describe('GasPriceAutoPollPage — interactions', () => {
 
     // The history table's pagination adds its own <select>, so target the
     // interval control by its accessible ("Poll Interval") name.
-    const select = await screen.findByRole('combobox', { name: /poll interval/i })
+    const select = await screen.findByRole('combobox', { name: /Poll interval/i })
     fireEvent.change(select, { target: { value: 'daily' } })
 
     await waitFor(() =>
@@ -364,6 +424,7 @@ describe('GasPriceAutoPollPage — interactions', () => {
         '/gas-price/config',
         expect.objectContaining({
           method: 'PUT',
+          requiresLiveMode: true,
           body: JSON.stringify({ poll_interval: 'daily' }),
         }),
       ),
@@ -371,12 +432,96 @@ describe('GasPriceAutoPollPage — interactions', () => {
   })
 })
 
+describe('GasPriceAutoPollPage polling lifecycle', () => {
+  const historyCalls = () => mockedRequest.mock.calls.filter(([path]) => path === '/gas-price/history').length
+
+  it('reports acknowledgement as triggered without refreshing history or claiming completion', async () => {
+    install()
+    renderPage()
+    await within(kpiRegion()).findByText('Running')
+    await screen.findByRole('img', { name: /line chart of historical Gas prices/i })
+    const before = historyCalls()
+    fireEvent.click(screen.getByRole('button', { name: 'Poll now' }))
+    await screen.findByText('Gas price poll triggered')
+    await waitFor(() => expect(statusCallCount()).toBe(2))
+    expect(historyCalls()).toBe(before)
+    expect(screen.queryByText('Gas prices updated')).not.toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('$3.45')).toBeInTheDocument()
+  })
+
+  it('refreshes mounted history only when the successful-poll timestamp advances', async () => {
+    install()
+    const { qc } = renderPage()
+    await within(kpiRegion()).findByText('Running')
+    await screen.findByRole('img', { name: /line chart of historical Gas prices/i })
+    const before = historyCalls()
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['gas-price-status'] }) })
+    expect(historyCalls()).toBe(before)
+
+    install({ status: makeStatus({ last_poll_time: '2026-01-16T12:00:00Z' }) })
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['gas-price-status'] }) })
+    await waitFor(() => expect(historyCalls()).toBe(before + 1))
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['gas-price-status'] }) })
+    expect(historyCalls()).toBe(before + 1)
+  })
+
+  it('keeps retained history when a status refresh fails or reports an invalid timestamp', async () => {
+    install()
+    const { qc } = renderPage()
+    await within(kpiRegion()).findByText('Running')
+    await screen.findByRole('img', { name: /line chart of historical Gas prices/i })
+    const before = historyCalls()
+    install({ statusError: true })
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['gas-price-status'] }) })
+    expect(historyCalls()).toBe(before)
+    install({ status: makeStatus({ last_poll_time: 'invalid' }) })
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['gas-price-status'] }) })
+    expect(historyCalls()).toBe(before)
+    expect(screen.getByRole('img', { name: /line chart of historical Gas prices/i })).toBeInTheDocument()
+  })
+
+  it.each([
+    ['as_of', 'Return to live mode before making operational changes.'],
+    ['cached', 'Reconnect before making operational changes.'],
+  ])('disables all gas controls in %s mode while keeping source sections visible', async (mode, reason) => {
+    Object.assign(operational, { mode, canWrite: false, isReadOnly: true, writeBlockReason: reason })
+    install()
+    renderPage()
+    await within(kpiRegion()).findByText('Running')
+    const poll = screen.getByRole('button', { name: 'Poll now' })
+    const toggle = screen.getByRole('switch', { name: 'Auto-poll' })
+    const interval = screen.getByRole('combobox', { name: /Poll interval/i })
+    expect(poll).toBeDisabled()
+    expect(toggle).toBeDisabled()
+    expect(interval).toBeDisabled()
+    expect(poll).toHaveAttribute('title', reason)
+    expect(screen.getByText(reason)).toBeInTheDocument()
+    fireEvent.click(poll)
+    fireEvent.click(toggle)
+    fireEvent.change(interval, { target: { value: 'daily' } })
+    expect(mockedRequest.mock.calls.filter(([, init]) => ['POST', 'PUT'].includes(init?.method))).toHaveLength(0)
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument()
+  })
+})
+
 describe('GasPriceAutoPollPage — history table', () => {
+  it('discloses the newest-50 bound for both history and trend without implying full history', async () => {
+    const history = Array.from({ length: 50 }, (_, index) => ({
+      ...makeHistory()[0],
+      id: 51 - index,
+    }))
+    install({ history })
+    renderPage()
+    await screen.findByRole('img', { name: /line chart of historical Gas prices/i })
+    expect(screen.getByText('Price trend / Price history: Bounded at 50 newest rows')).toBeInTheDocument()
+    expect(mockedRequest.mock.calls.filter(([path]) => path === '/gas-price/history')).toHaveLength(1)
+  })
+
   it('lists one row per record with its formatted price and unit', async () => {
     install()
     renderPage()
 
-    const historyHeading = await screen.findByRole('heading', { name: 'Price History' })
+    const historyHeading = await screen.findByRole('heading', { name: 'Price history' })
     const historyPanel = historyHeading.closest('[data-print-card]')
     expect(historyPanel).not.toBeNull()
     const table = await within(historyPanel as HTMLElement).findByRole('table')
@@ -385,5 +530,62 @@ describe('GasPriceAutoPollPage — history table', () => {
     expect(within(table).getByText('$3.10')).toBeInTheDocument()
     // The unit badge is rendered for each row.
     expect(within(table).getAllByText('gal').length).toBeGreaterThanOrEqual(2)
+  })
+})
+
+describe('GasPriceAutoPollPage semantic adoption', () => {
+  it('keeps the poll action mobile-sized with a wrapping label and decorative icon', async () => {
+    install()
+    renderPage()
+
+    await within(kpiRegion()).findByText('Running')
+    const poll = screen.getByRole('button', { name: 'Poll now' })
+    expect(poll).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'h-auto')
+    expect(poll).toBeEnabled()
+    const icon = poll.querySelector('svg')
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(icon).toHaveAttribute('focusable', 'false')
+    expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0')
+    expect(within(poll).getByText('Poll now')).toHaveClass('break-words')
+    expect(mockedRequest.mock.calls.filter(([, init]) =>
+      (init as RequestInit | undefined)?.method === 'POST' ||
+      (init as RequestInit | undefined)?.method === 'PUT',
+    )).toHaveLength(0)
+  })
+
+  it('keeps the retained trend visible with its own refresh warning and recovery', async () => {
+    install()
+    const { qc } = renderPage()
+
+    await within(kpiRegion()).findByText('Running')
+    await screen.findByRole('img', { name: /line chart of historical Gas prices/i })
+    expect(screen.queryByText('Price trend may be out of date')).not.toBeInTheDocument()
+
+    install({ historyError: true })
+    await qc.invalidateQueries({ queryKey: ['gas-price-history'] })
+
+    const warningTitle = await screen.findByText('Price trend may be out of date')
+    const warning = warningTitle.closest('[data-testid="stale-refresh-warning"]')
+    expect(warning).not.toBeNull()
+    const trendSection = (warning as HTMLElement).parentElement as HTMLElement
+    expect(within(trendSection).getByRole('img', {
+      name: /line chart of historical Gas prices/i,
+    })).toBeInTheDocument()
+    expect(warning).toHaveTextContent('Previously loaded data remains visible while affected sources recover.')
+    expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Auto-poll' })).toBeEnabled()
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument()
+
+    const historyCalls = mockedRequest.mock.calls.filter(([path]) => path === '/gas-price/history').length
+    const statusCalls = statusCallCount()
+    install()
+    fireEvent.click(within(warning as HTMLElement).getByRole('button', { name: 'Refresh' }))
+
+    await waitFor(() => expect(screen.queryByText('Price trend may be out of date')).not.toBeInTheDocument())
+    expect(mockedRequest.mock.calls.filter(([path]) => path === '/gas-price/history')).toHaveLength(historyCalls + 1)
+    expect(statusCallCount()).toBe(statusCalls)
+    expect(within(trendSection).getByRole('img', {
+      name: /line chart of historical Gas prices/i,
+    })).toBeInTheDocument()
   })
 })

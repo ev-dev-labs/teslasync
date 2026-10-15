@@ -1,0 +1,362 @@
+{
+  "item": "audit-page-220",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\GuardModePage.tsx",
+  "routes": ["/guard-mode"],
+  "purpose": "Vehicle-scoped guard policy, verified lock/Sentry/location observations, security event history, and explicit emergency commands.",
+  "primaryGoal": "Review actual security evidence, edit saved policy, and deliberately request arming, panic, or event acknowledgement without implying automatic theft detection.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle / useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 46,
+      "endpoints": ["GET /api/v1/vehicles"],
+      "ownership": "Existing workspace URL/store/fleet selection; the page does not own a second vehicle picker.",
+      "evidence": "URL vehicle_id, persisted selection, then first fleet vehicle; model consumes the selection at useGuardPageModel.ts:16."
+    },
+    {
+      "hook": "useGuardConfig",
+      "file": "web\\src\\api\\hooks\\useGuard.ts",
+      "line": 99,
+      "endpoints": ["GET /api/v1/vehicles/{vehicleID}/guard/config"],
+      "ownership": "Guard policy hook; router.go:3425 mounts Config, not observed Sentry Status.",
+      "behavior": "Positive vehicle enablement, cancellation signal, guard-config key, realtime staleTime and polling; null is unsaved policy, undefined is unresolved."
+    },
+    {
+      "hook": "useGuardEvents",
+      "file": "web\\src\\api\\hooks\\useGuard.ts",
+      "line": 118,
+      "endpoints": ["GET /api/v1/vehicles/{vehicleID}/guard/events"],
+      "ownership": "Guard event hook and security event response contract; router.go:3427.",
+      "behavior": "Cancellation, guard-events key, positive vehicle enablement, QUICK staleTime, safeArray select from envelope. No date bounds or pagination requested. Counts describe returned rows only; backend completeness and ordering not independently verified."
+    },
+    {
+      "hook": "useVehicleState / isVehicleStateFieldCurrent",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 260,
+      "endpoints": ["GET /api/v1/vehicles/{vehicleID}/state"],
+      "ownership": "Existing vehicle state normalization/live query policy; router.go:3333.",
+      "behavior": "Model requests 5-second polling for enabled policy, otherwise 30 seconds. Existing as-of reads suppress polling. Current-field predicate at useVehicles.ts:1117 requires fresh real observation and verified field identity. Coordinates must also be finite and bounded."
+    },
+    {
+      "hook": "useGeofences",
+      "file": "web\\src\\api\\hooks\\useLocations.ts",
+      "line": 85,
+      "endpoints": ["GET /api/v1/geofences"],
+      "ownership": "Existing locations hook; router.go:3614-3615.",
+      "behavior": "Shared geofences key, cancellation, safeArray; documented centroid latitude/longitude and radius in meters. Selected policy geofence supplies the map circle and dropdown."
+    },
+    {
+      "hook": "useSetGuardConfig / useGuardPanic / useAcknowledgeGuardEvent",
+      "file": "web\\src\\api\\hooks\\useGuard.ts",
+      "line": 131,
+      "endpoints": [
+        "POST /api/v1/vehicles/{vehicleID}/guard",
+        "POST /api/v1/vehicles/{vehicleID}/guard/panic",
+        "POST /api/v1/vehicles/{vehicleID}/guard/events/{eventID}/acknowledge"
+      ],
+      "ownership": "Existing guard mutations and router.go:3426,3428-3429.",
+      "behavior": "Explicit user actions only, requiresLiveMode, existing invalidation/broadcast and networkMode. Policy/panic are sudo-gated and limited to 5/min; acknowledgement limited to 60/min. Trailing slash route groups are source matches; HTTP behavior not exercised."
+    },
+    {
+      "hook": "MapTileLayer internal map-config query",
+      "file": "web\\src\\components\\maps\\MapTileLayer.tsx",
+      "line": 54,
+      "endpoints": [],
+      "ownership": "Existing map provider/settings owner, not a page fetch.",
+      "behavior": "getMapConfig, map-config key, five-minute staleTime, existing provider selection and data-saver policy. Configuration endpoint implementation was not traced; no invented endpoint."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / CardGrid / LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference",
+      "contract": "PageLayout forwards PageContainerProps; CardGrid uses stable id/size/content items and localized group label, measured container width and CardPlacementContext. Feature wrappers consume placement.className.",
+      "use": "Five grid items; map/controls/settings/status half, events full; full-width min-w-0 orchestration."
+    },
+    {
+      "name": "VehicleOperationalBrief / OperationalBrief",
+      "owner": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+      "contract": "Typed raw StatMetric[] and StatPeriod through useOperationalMetrics; optional loading, retained, available, error and footer; preserve per-metric missing reasons.",
+      "use": "Six overview metrics; mixed independent source evidence, not a fabricated theft score."
+    },
+    {
+      "name": "FormSection / Button / Select / Toggle / ConfirmDialog / Text / HelperText / Badge",
+      "owner": "Existing category barrels in components/forms and components/ui",
+      "contract": "Existing localized labels, pending/disabled controls, wrapping buttons, typography role/as overrides, danger confirmation. ConfirmDialog supports open/title/message/loading/onConfirm/onCancel and retains shared Modal behavior.",
+      "use": "Saved policy forms, panic action, event acknowledgement; no raw form controls."
+    },
+    {
+      "name": "useDataState / StaleRefreshWarning / QueryError / Skeleton / EmptyState",
+      "owner": "web\\src\\hooks\\useDataState.ts",
+      "contract": "Fatal errors without retained data are distinct from refresh errors; StaleRefreshWarning takes DataState, localized label and existing retry; source geometry stays within persistent shells.",
+      "use": "Four independent source states, per-panel recovery, missing vehicle navigation."
+    },
+    {
+      "name": "SourceContent",
+      "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "contract": "Existing ready/loading/error/empty/retained states, localized label/messages, loadingContent/emptyContent, errorRecovery/emptyRecovery and retainedMessage.",
+      "use": "Available reuse candidate for repeated source branching; not currently imported. Must not erase finer unknown/unavailable or verified-field rules."
+    },
+    {
+      "name": "MapContainer / Marker / Circle / Popup / MapTileLayer / MapInvalidator",
+      "owner": "web\\src\\components\\maps",
+      "contract": "Existing Leaflet category exports and provider/data-saver implementation; radius remains meters and resize invalidation remains animate:false.",
+      "use": "Verified coordinates, vehicle marker popup, selected home geofence. No fabricated event positions."
+    },
+    {
+      "name": "TimeStamp / formatDateTime / useNumberFormatting / FadeIn",
+      "owner": "Existing data-display, lib/dateFormat, hooks/useNumberFormatting and motion category owners",
+      "contract": "Preserve existing localized timestamps, numeric formatting, and shared motion preference pipeline.",
+      "use": "Alert/events/source observation/policy time and marker coordinates; shared motion implementation not independently exercised."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardControls.tsx",
+      "line": 30,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Policy stale/fatal/mutation-error and policy-effect copy are also shown in settings and overview. These are independent visible contexts, not evidence that a new universal component is needed.",
+      "fix": "Reuse existing source feedback and optionally SourceContent for compatible branches; retain contextual policy explanations and independent recovery. Do not extract a competing trust renderer.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "GuardModePage.tsx:20-26 uses shared CardGrid rather than viewport-only feature layout.",
+      "GuardSettings.tsx:25 stacks controls then uses @xl two columns; GuardEvents.tsx:48 uses container-query 1/2/3 columns.",
+      "GuardEvents.tsx:76 uses break-words and wrapping; acknowledgement at :96 has min-h-11.",
+      "GuardLiveMap.tsx:24 retains fixed 20rem height, 24rem at sm; no content is removed for mobile."
+    ],
+    "issues": [],
+    "verification": "All ten widths, allocated container widths, long translations, RTL, 200% text and overflow unverified. Source-responsive classes are not viewport acceptance."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Decorative icons are aria-hidden; controls use shared labeled primitives.",
+      "GuardEvents.tsx:95 has an accessible acknowledgement label and :96 a 44px minimum height.",
+      "GuardModePage.tsx:47-53 uses danger ConfirmDialog with explicit localized title/message/confirm/cancel.",
+      "GuardLiveMap.tsx:87-90 exposes formatted coordinates only inside a marker popup."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardLiveMap.tsx",
+        "line": 64,
+        "rule": "MDC-040 / mission 30",
+        "detail": "Live location's text alternative exists only in the marker popup; the panel has no always-visible location summary independent of the interactive map. Keyboard popup reachability and tile failure behavior are not verified.",
+        "fix": "Provide a localized source-backed coordinate/vehicle/home-area summary adjacent to the map using existing Text and numeric formatting. Keep the marker popup and map capabilities, and test keyboard access before claiming a11y.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Keyboard, focus restoration, screen reader, effective contrast, forced colors, touch and reduced-motion runtime unverified."
+  },
+  "states": {
+    "loading": "Local skeletons in map, config controls/settings and events; overview metric missing reasons say Updating. No page-wide loading gate.",
+    "empty": "Unsaved config null is editable; empty events get a real empty state; no current location and no vehicle have refresh/manage-vehicles recovery.",
+    "error": "Fatal source errors remain local; mutation failures retain explanations including possible policy persistence before arming failure.",
+    "retainedOffline": "Existing DataState and StaleRefreshWarning preserve usable data; current-field checks prevent stale vehicle fields from becoming live lock/Sentry/location observations.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardOverview.tsx",
+        "line": 76,
+        "rule": "MDC-026 / mission 22",
+        "detail": "Overview does not forward loading even though VehicleOperationalBrief has a loading contract and defaults it to false. Initial loading is classified as Evidence unresolved, while individual missing reasons say Updating.",
+        "fix": "Derive initial/no-retained source loading and use the existing brief loading contract without suppressing successful independent metrics during partial loading; test initial and mixed-source cases.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardLiveMap.tsx",
+        "line": 23,
+        "rule": "MDC-026",
+        "detail": "Map shows only vehicleState trust/recovery, although its selected home circle also depends on config and geofences. Those sources' retained/failed states are shown elsewhere, not beside the location overlay that uses them.",
+        "fix": "Add source-specific policy/geofence retained/unavailable context near the overlay using existing StaleRefreshWarning/QueryError, without blocking the verified vehicle marker or losing a retained home circle.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardLiveMap.tsx",
+      "line": 72,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Home-area pathOptions use page-owned rgba blue literals. EventTrail at :96 contains a fixed red hex, but its positions are always empty at :62, so that red is not evidence of a currently rendered trail.",
+      "fix": "Use existing subdued semantic/map palette tokens for the home boundary; preserve visibility against actual tiles and saved chart/theme preferences. Do not create a new palette or fabricate an event trail.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\useGuardPageModel.ts",
+      "line": 34,
+      "rule": "MDC-032 / MDC-046",
+      "detail": "Sensitivity, homeGeofenceId, autoPanic and panicDialogOpen are component-local states with no vehicle identity reset/keying. Header selection changes activeVehicleId without remounting the page. A draft or open panic confirmation for vehicle A can therefore apply to vehicle B through the callbacks at :85-115.",
+      "fix": "Scope drafts and confirmation target to vehicle identity, or reset them on identity change before allowing actions. Retain explicit false and empty-geofence semantics and protect against scope changes during confirmation. Add a two-vehicle behavioral regression.",
+      "owner": "page",
+      "confidence": "high",
+      "priority": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useGuard.ts",
+      "line": 149,
+      "rule": "MDC-044 / MDC-026",
+      "detail": "Six mutation toast messages at :149,155,173,176,197,200 are hardcoded English. Panic success at :173 says Panic alert triggered even though the page explains that the request does not create a guard event; this also weakens the page's carefully qualified command language.",
+      "fix": "Localize through the existing API toast/translation convention and describe requested command outcomes accurately. Preserve mutation rejection, live-mode protection, cache invalidation, raw error evidence and command sequencing; catalog edits belong to the integration owner.",
+      "owner": "integration",
+      "confidence": "high",
+      "priority": "medium"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\useGuardPageModel.ts",
+      "line": 71,
+      "rule": "MDC-045 / MDC-033",
+      "detail": "Sensitivity option labels embed 1 km and 200 m as fixed display strings rather than using saved display-unit preferences. These describe saved threshold policy, not measurements or proof of an automatic detector.",
+      "fix": "Retain the low/medium/high wire values and policy caveat; format the existing 1000m/200m threshold meanings at the display boundary using current useUnits conventions. Do not change backend thresholds or add legacy converters.",
+      "owner": "page",
+      "confidence": "high",
+      "priority": "medium"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardControls.tsx",
+      "line": 3,
+      "rule": "MDC-002 component-first category imports",
+      "detail": "GuardControls, GuardEvents, GuardLiveMap, GuardSettings and GuardStatus import useCardPlacement from the layout-reference implementation barrel while public layout components use the category barrel.",
+      "fix": "Confirm the canonical category export for useCardPlacement and consolidate imports only through the designated shared export owner. Do not add another placement provider or edit shared barrels from a page item.",
+      "owner": "shared",
+      "confidence": "medium",
+      "priority": "low"
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "reason": "Vehicle-bound draft and confirmation identity is the most consequential source-confirmed preservation risk; presentation is already mostly restrained and decomposed.",
+    "order": ["Vehicle draft/action identity", "Trust/loading locality", "Localized truthful mutation feedback", "Map text alternative and palette", "Display-only threshold formatting", "Canonical placement import"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Guard mutation feedback integration",
+      "owner": "web\\src\\api\\hooks\\useGuard.ts",
+      "propsVariantsStates": "Existing toast.success/toast.error on policy, panic and acknowledgement success/error. Localized success labels and error interpolation; panic text must describe commands, not a created event.",
+      "usedBy": ["GuardControls", "GuardSettings", "GuardEvents", "GuardModePage panic confirmation"],
+      "dependsOn": ["Existing translation/API toast convention and canonical catalog ownership", "Existing live-mode request protection", "Guard mutation response and partial-failure semantics"],
+      "scope": "Integration change; no new shared renderer needed."
+    },
+    {
+      "name": "Canonical card placement export reconciliation",
+      "owner": "web\\src\\components\\layout\\layout-reference\\CardPlacementContext.ts",
+      "propsVariantsStates": "Keep the same optional placement object, className, size/span/width and provider identity; expose through the existing layout category only if the shared owner confirms it is missing.",
+      "usedBy": ["GuardControls", "GuardEvents", "GuardLiveMap", "GuardSettings", "GuardStatus"],
+      "dependsOn": ["web\\src\\components\\layout\\layout-reference\\CardGrid.tsx", "Designated layout barrel owner"],
+      "scope": "Conditional export/import reconciliation; category export availability was not inspected and is not claimed missing."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "notes": [
+      "Page is already a thin orchestrator over guard-modernization presenters and existing shared contracts.",
+      "Local EventCard and StatusRow preserve guard-specific rendering; one consumer is not enough evidence for a new shared card/status implementation.",
+      "SourceContent already exists for compatible async branch reuse; do not establish a parallel source-state system.",
+      "Do not introduce a second vehicle/range picker. /guard-mode currently has header vehicle scope and no range scope; the event request does not accept range bounds in this page."
+    ]
+  },
+  "preservation": {
+    "sourceHash": "78132A8318DF46A62CFD7B41837044E496801C3DC82281C820ED316B6801B3C6",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashFile": "web\\src\\features\\vehicle-systems\\pages\\GuardModePage.tsx",
+    "currentLineCount": 56,
+    "pageAndGuardDependencyLineCount": 709,
+    "lineCountScope": "Page plus nine non-test files in guard-modernization, including index.ts and eventMetadata.ts; operational brief/shared owners excluded.",
+    "sections": [
+      {"name": "Guard status overview", "file": "GuardOverview.tsx", "line": 76, "count": 1, "metrics": 6},
+      {"name": "Live vehicle location", "file": "GuardLiveMap.tsx", "line": 21, "count": 1},
+      {"name": "Guard mode policy/arming", "file": "GuardControls.tsx", "line": 20, "count": 1},
+      {"name": "Emergency panic", "file": "GuardControls.tsx", "line": 46, "count": 1},
+      {"name": "Guard settings", "file": "GuardSettings.tsx", "line": 15, "count": 1},
+      {"name": "Status", "file": "GuardStatus.tsx", "line": 18, "count": 1},
+      {"name": "Event timeline", "file": "GuardEvents.tsx", "line": 24, "count": 1}
+    ],
+    "sectionCount": 7,
+    "conditionalSurfaces": ["Triggered-event banner", "Danger panic confirmation", "Source/mutation recovery and trust notices"],
+    "gridItemCount": 5,
+    "actions": [
+      "Header-owned selected vehicle/vehicle_id scope",
+      "Toggle saved guard policy",
+      "Choose home geofence, including explicit none",
+      "Choose low/medium/high sensitivity",
+      "Change auto-panic preference, retaining explicit false",
+      "Save settings with existing enabled policy and unchanged wire keys",
+      "Open/cancel/confirm panic with step-up/live-mode protections",
+      "Acknowledge an event using vehicle and event IDs",
+      "Source-local retry/refresh and manage-vehicles navigation",
+      "Existing map pan/zoom and vehicle coordinate popup"
+    ],
+    "data": [
+      "Six metrics: policy/event-trigger state, verified Sentry, verified lock, policy sensitivity including unsaved-draft context, unacknowledged count and total returned events.",
+      "Saved policy is not confirmed active monitoring; disabling does not imply doors unlock or Sentry off.",
+      "Triggered derives from latest returned unacknowledged non-test event, not confirmed theft; acknowledgement derives from acknowledged_at.",
+      "Event label fallback retains unknown event types; IDs, timestamp, state transition and acknowledged_by rendering remain.",
+      "No security-event coordinates exist in this frontend contract; empty eventPositions must not become a fabricated trail.",
+      "GuardEvent also carries details and acknowledged_at not currently displayed; preserve the wire/cache shape and do not treat their omission as permission to drop fields.",
+      "Raw geometry radius remains meters, coordinate validation/current-field checks survive, and display conversion never mutates saved/cache values.",
+      "Null unsaved policy, unresolved source, measured zero counts, empty feed, retained/offline data and current verified fields remain distinct.",
+      "Existing query keys, polling, cancellation, select, mutation invalidation/broadcast, requiresLiveMode, as-of read policy and authentication safeguards survive."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only source inspection and scoped lexical counts; only assigned report and heartbeat were written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Router mounts and hook contracts inspected; handlers/storage execution, server ordering/completeness, command results and actual HTTP slash normalization unverified.",
+    "tests": "Not run; no borrowed historical acceptance. No TypeScript, full audit script, lint, build, browser exercise or production mutation authorized.",
+    "auditScript": "Read audit.sh; did not execute because it unconditionally runs project TypeScript. Used bounded read-only pattern checks instead.",
+    "commands": [
+      {"command": "Get-FileHash -Algorithm SHA256 web\\src\\features\\vehicle-systems\\pages\\GuardModePage.tsx", "exitCode": 0, "output": "78132A8318DF46A62CFD7B41837044E496801C3DC82281C820ED316B6801B3C6; 56 lines"},
+      {"command": "Scoped PowerShell regex counts over page plus nine non-test guard-modernization files", "exitCode": 0, "output": "709 lines; static var inline styles 0; raw button/input/textarea/select/table 0; direct recharts/react-leaflet/framer-motion imports 0; neon/glow/fixed white/gray matches 0"},
+      {"command": "Initial scoped PowerShell regex-count attempt", "exitCode": 1, "output": "ParserError: Missing ')' in method call. Corrected quoting and reran successfully; no source writes."}
+    ],
+    "interpretation": "Zero lexical matches cover only the named patterns/files, not all engineering compliance or rendered acceptance. Reduced-noise tokens are source-observed, not contrast proof."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\GuardModePage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\index.ts",
+    "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\useGuardPageModel.ts",
+    "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardOverview.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardControls.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardSettings.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardStatus.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardEvents.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\GuardLiveMap.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\guard-modernization\\eventMetadata.ts",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\api\\hooks\\useGuard.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useLocations.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\maps\\MapTileLayer.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-220.json",
+    ".agent-status\\audit-page-220.txt"
+  ]
+}

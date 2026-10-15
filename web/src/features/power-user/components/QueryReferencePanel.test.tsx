@@ -1,10 +1,10 @@
 // Behavioural contract for <QueryReferencePanel>.
 //
 // The panel is a purely presentational, read-only helper shown beside the SQL
-// editor. It has no props, state, or data fetching, so the surface area under
+// editor. It has no data fetching or query execution, so the surface area under
 // test is: the guidance copy (routed through i18n), the four tips list, the
 // read-only status callout, the copy-ready SQL example, and the accessibility
-// invariants (decorative glyphs hidden, no interactive controls, a captioned
+// invariants (decorative glyphs hidden, only a copy control, a captioned
 // figure for the example).
 //
 // react-i18next is mocked so `t(key, fallback)` is deterministic: it returns a
@@ -13,7 +13,7 @@
 // English) without depending on the global i18n bundle.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
 
 const { translations } = vi.hoisted(() => ({
   translations: {} as Record<string, string>,
@@ -39,9 +39,35 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  delete (navigator as { clipboard?: unknown }).clipboard;
 });
 
 describe('QueryReferencePanel', () => {
+  it('keeps reference guidance neutral with secondary text and muted metadata', () => {
+    render(<QueryReferencePanel />);
+
+    const notice = screen.getByRole('status');
+    expect(notice).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'ring-[var(--border-subtle)]',
+    );
+    expect(notice).not.toHaveClass(
+      'bg-[var(--semantic-info-bg)]',
+      'ring-[var(--semantic-info-border)]',
+    );
+    expect(notice.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]');
+    expect(notice.querySelector('span.flex-1')).toHaveClass('text-[var(--text-secondary)]');
+
+    const tips = screen.getAllByRole('listitem');
+    expect(tips).toHaveLength(4);
+    for (const tip of tips) {
+      expect(tip.querySelector('p')).toHaveClass('text-[var(--text-secondary)]');
+      expect(tip.querySelector('[aria-hidden="true"]')).toHaveClass('bg-[var(--text-muted)]');
+    }
+    expect(screen.getByText('Example')).toHaveClass('text-[var(--text-muted)]');
+    expect(screen.getByRole('group')).toHaveClass('bg-[var(--surface-2)]');
+  });
+
   it('renders the titled read-only surface with every guidance tip', () => {
     render(<QueryReferencePanel />);
 
@@ -88,11 +114,10 @@ describe('QueryReferencePanel', () => {
     expect(pre?.textContent).toBe(EXPECTED_SQL);
   });
 
-  it('is a non-interactive surface with decorative glyphs hidden from AT', () => {
+  it('offers only the example copy action, never query execution, with decorative glyphs hidden from AT', () => {
     const { container } = render(<QueryReferencePanel />);
 
-    // "Nothing runs in the browser" — there are no controls on this surface.
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
 
@@ -100,12 +125,44 @@ describe('QueryReferencePanel', () => {
     const heading = screen.getByRole('heading', {
       name: /working with queries/i,
     });
+
     expect(heading.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
 
     // Title icon + four bullet markers (+ callout icon wrapper) are all hidden.
     expect(
       container.querySelectorAll('[aria-hidden="true"]').length,
     ).toBeGreaterThanOrEqual(5);
+  });
+
+  it('allocates a mobile touch target while restoring the compact desktop copy control', () => {
+    render(<QueryReferencePanel />);
+
+    expect(screen.getByRole('button', { name: 'Copy' })).toHaveClass(
+      'min-h-11',
+      'min-w-11',
+      'md:min-h-9',
+      'md:min-w-0',
+    );
+  });
+
+  it('keeps the complete SQL example selectable after denial and retries the exact payload', async () => {
+    const writeText = vi.fn()
+      .mockRejectedValueOnce(new Error('permission denied'))
+      .mockResolvedValueOnce(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    const { container } = render(<QueryReferencePanel />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(await screen.findByText(/Select the text manually/)).toBeInTheDocument();
+    expect(container.querySelector('pre')?.textContent).toBe(EXPECTED_SQL);
+    fireEvent.click(screen.getByRole('button'));
+    await waitFor(() => expect(screen.queryByText(/Select the text manually/)).toBeNull());
+    expect(writeText.mock.calls).toEqual([[EXPECTED_SQL], [EXPECTED_SQL]]);
+    expect(screen.getByRole('button', { name: 'Copied' })).toHaveClass(
+      'min-h-11',
+      'min-w-11',
+      'md:min-h-9',
+      'md:min-w-0',
+    );
   });
 
   it('routes visible copy through i18n so locale overrides win over the English fallback', () => {

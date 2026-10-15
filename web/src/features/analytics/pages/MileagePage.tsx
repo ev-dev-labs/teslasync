@@ -1,21 +1,20 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Gauge, TrendingUp, BarChart3, Route,
-  CalendarDays, CalendarRange, CalendarClock, Activity,
+  Gauge, BarChart3,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout, Section, CardGrid, LayoutCard, type CardGridItem } from '@/components/layout';
 
-import { GlassPanel, DataTable, PanelTitle, type Column } from '@/components/ui';
-import { MetricCard, MetricBar, KVList } from '@/components/data-display';
+import { DataTable, type Column } from '@/components/ui';
+import { MetricBar, KVList } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip, EmbeddedChart,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
-  AREA_DEFAULTS, areaGradient, axisTickSm,
+  AREA_DEFAULTS, axisTickSm,
 } from '@/components/charts';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -24,13 +23,17 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useChartPalette } from '@/hooks/useChartPalette';
-import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { formatDate, formatDayKey } from '@/lib/dateFormat';
+
 import {
   useMileageStats,
   useMonthlyMileage,
   useDailyMileage,
 } from '@/api/hooks/useAnalytics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { deriveDataState, knownNumber } from '@/api/dataState';
+import { MileageSourceNotice } from '../components/mileage-modernization';
+import { MileageBrief as MileageSummary } from '../components/operationalbrief-a-m/MileageBrief';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -38,9 +41,9 @@ import {
 
 interface MonthRow {
   month: string;
-  distance: number;
-  drives: number;
-  dailyAvg: number;
+  distance: number | null;
+  drives: number | null;
+  dailyAvg: number | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -48,6 +51,7 @@ interface MonthRow {
 /* ------------------------------------------------------------------ */
 
 export default function MileagePage() {
+  const { fmtInt, fmtNumber, locale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('mileage.title', 'Mileage'));
 
@@ -57,7 +61,10 @@ export default function MileagePage() {
   // SI-floor converter expects meters — scale km → m before converting to
   // the user's display unit at the render boundary.
   const fromKm = useCallback(
-    (km: number) => convertDistanceFromSI((km ?? 0) * 1000, distanceUnit),
+    (km: number | null | undefined) => {
+      const reading = knownNumber(km);
+      return reading == null ? null : convertDistanceFromSI(reading * 1000, distanceUnit);
+    },
     [distanceUnit],
   );
 
@@ -96,40 +103,39 @@ export default function MileagePage() {
   );
 
   const stats = statsQuery.data;
+  const statsSource = deriveDataState(statsQuery, { provenance: 'historical' });
+  const dailySource = deriveDataState(dailyQuery, { provenance: 'historical' });
+  const monthlySource = deriveDataState(monthlyQuery, { provenance: 'historical' });
   const dailyRows = useMemo(() => dailyQuery.data ?? [], [dailyQuery.data]);
   const monthlyData = useMemo(() => monthlyQuery.data ?? [], [monthlyQuery.data]);
 
-  /* Summary derivations from /mileage/stats. Daily avg uses the trailing
-     30-day window so it reflects recent activity rather than a lifetime-flat
-     average that understates current usage on long-tail histories. */
-  const dailyAvgKm = (stats?.last_30d_km ?? 0) / 30;
-  const totalDistance = fromKm(stats?.lifetime_km ?? 0);
-  const totalDrives = stats?.drive_count_lifetime ?? 0;
-  const dailyAvg = fromKm(dailyAvgKm);
-  const annualProjection = fromKm(dailyAvgKm * 365);
-  const last7d = fromKm(stats?.last_7d_km ?? 0);
-  const last30d = fromKm(stats?.last_30d_km ?? 0);
-  const last365d = fromKm(stats?.last_365d_km ?? 0);
+  /* Window derivations remain on the existing display boundary. Summary
+     average/projection operands are preserved in MileageSummary. */
+  const totalDistance = fromKm(stats?.lifetime_km);
+  const totalDrives = knownNumber(stats?.drive_count_lifetime);
+  const last7d = fromKm(stats?.last_7d_km);
+  const last30d = fromKm(stats?.last_30d_km);
+  const last365d = fromKm(stats?.last_365d_km);
 
   // Windowed distances vs lifetime, for the "Distance by Window" bento panel.
-  const lifetimeMax = totalDistance > 0 ? totalDistance : 1;
+  const lifetimeMax = totalDistance == null ? 0 : totalDistance > 0 ? totalDistance : 1;
   const windowRows = useMemo(
     () => [
-      { key: '7d', label: t('mileage.last7Days', 'Last 7 Days'), value: last7d, color: palette[0] },
-      { key: '30d', label: t('mileage.last30Days', 'Last 30 Days'), value: last30d, color: palette[1] },
-      { key: '365d', label: t('mileage.last365Days', 'Last 365 Days'), value: last365d, color: palette[2] },
+      { key: '7d', label: t('mileage.last7Days', 'Last 7 days'), value: last7d, color: palette[0] },
+      { key: '30d', label: t('mileage.last30Days', 'Last 30 days'), value: last30d, color: palette[0] },
+      { key: '365d', label: t('mileage.last365Days', 'Last 365 days'), value: last365d, color: palette[0] },
     ],
     [t, last7d, last30d, last365d, palette],
   );
 
   const activityItems = useMemo(
     () => [
-      { label: t('mileage.firstDrive', 'First Drive'), value: stats?.first_drive_at ? formatDate(stats.first_drive_at) : '—' },
-      { label: t('mileage.lastDrive', 'Last Drive'), value: stats?.last_drive_at ? formatDate(stats.last_drive_at) : '—' },
-      { label: t('mileage.lifetimeDrives', 'Lifetime Drives'), value: fmtInt(totalDrives) },
-      { label: t('mileage.drives30d', 'Drives (30d)'), value: fmtInt(stats?.drive_count_30d ?? 0) },
+      { label: t('mileage.firstDrive', 'First drive'), value: stats?.first_drive_at ? formatDate(stats.first_drive_at) : '—' },
+      { label: t('mileage.lastDrive', 'Last drive'), value: stats?.last_drive_at ? formatDate(stats.last_drive_at) : '—' },
+      { label: t('mileage.lifetimeDrives', 'Lifetime drives'), value: totalDrives != null ? fmtInt(totalDrives) : '—' },
+      { label: t('mileage.drives30d', 'Drives (30d)'), value: knownNumber(stats?.drive_count_30d) != null ? fmtInt(stats?.drive_count_30d) : '—' },
     ],
-    [t, stats?.first_drive_at, stats?.last_drive_at, stats?.drive_count_30d, totalDrives],
+    [t, stats?.first_drive_at, stats?.last_drive_at, stats?.drive_count_30d, totalDrives, fmtInt],
   );
 
   /* Odometer over time — end-of-day absolute reading (end_odometer_km).
@@ -138,14 +144,14 @@ export default function MileagePage() {
   const odometerData = useMemo(
     () =>
       dailyRows
-        .filter((d) => d.end_odometer_km != null)
-        .map((d) => ({ date: formatDate(d.date), odometer: fromKm(d.end_odometer_km ?? 0) })),
-    [dailyRows, fromKm],
+        .filter((d) => knownNumber(d.end_odometer_km) != null)
+        .map((d) => ({ date: formatDayKey(d.date, { locale }), odometer: fromKm(d.end_odometer_km) })),
+    [dailyRows, fromKm, locale],
   );
 
   const dailyData = useMemo(
-    () => dailyRows.map((d) => ({ date: formatDate(d.date), distance: fromKm(d.total_km ?? 0) })),
-    [dailyRows, fromKm],
+    () => dailyRows.map((d) => ({ date: formatDayKey(d.date, { locale }), distance: fromKm(d.total_km) })),
+    [dailyRows, fromKm, locale],
   );
 
   /* Monthly summary rows derive from /mileage/monthly which already groups
@@ -153,13 +159,13 @@ export default function MileagePage() {
   const monthlyRows: MonthRow[] = useMemo(
     () =>
       monthlyData.map((m) => {
-        const km = m.total_km ?? 0;
-        const drives = m.drive_count ?? 0;
+        const km = knownNumber(m.total_km);
+        const drives = knownNumber(m.drive_count);
         return {
           month: m.year_month ?? '',
           distance: fromKm(km),
           drives,
-          dailyAvg: drives > 0 ? fromKm(km / drives) : 0,
+          dailyAvg: km == null || drives == null ? null : drives > 0 ? fromKm(km / drives) : 0,
         };
       }),
     [monthlyData, fromKm],
@@ -171,12 +177,12 @@ export default function MileagePage() {
 
   const monthColumns: Column<MonthRow>[] = useMemo(
     () => [
-      { key: 'month', header: t('mileage.month', 'Month'), render: (r) => r.month, sortable: true },
-      { key: 'distance', header: `${t('mileage.distance', 'Distance')} (${distanceUnit})`, render: (r) => fmtNumber(r.distance), sortable: true },
-      { key: 'drives', header: t('mileage.drives', 'Drives'), render: (r) => fmtInt(r.drives), sortable: true },
-      { key: 'dailyAvg', header: `${t('mileage.distancePerDrive', 'Distance / Drive')} (${distanceUnit})`, render: (r) => fmtNumber(r.dailyAvg), sortable: true },
+      { key: 'month', header: t('mileage.month', 'Month'), render: (r) => r.month, sortable: true, filterValue: (r) => r.month },
+      { key: 'distance', header: `${t('mileage.distance', 'Distance')} (${distanceUnit})`, render: (r) => r.distance == null ? '—' : fmtNumber(r.distance), sortable: true, align: 'right' },
+      { key: 'drives', header: t('mileage.drives', 'Drives'), render: (r) => r.drives == null ? '—' : fmtInt(r.drives), sortable: true, align: 'right', filterValue: (r) => r.drives, filterValueLabel: (_value, r) => r.drives == null ? '—' : fmtInt(r.drives) },
+      { key: 'dailyAvg', header: `${t('mileage.distancePerDrive', 'Distance / drive')} (${distanceUnit})`, render: (r) => r.dailyAvg == null ? '—' : fmtNumber(r.dailyAvg), sortable: true, align: 'right' },
     ],
-    [t, distanceUnit],
+    [t, distanceUnit, fmtNumber, fmtInt],
   );
 
   // Defensive guard: no vehicle selected.
@@ -184,85 +190,38 @@ export default function MileagePage() {
     return <NoVehicleSelected pageTitle={t('mileage.title', 'Mileage')} />;
   }
 
-  return (
-    <PageContainer
-      title={t('mileage.title', 'Mileage')}
-      subtitle={t('mileage.subtitle', 'Daily and monthly distance tracking')}
-      query={[statsQuery, dailyQuery, monthlyQuery]}
-      dataSources={dataSources}
-    >
-      {/* §1 — KPI band: full-width responsive metric grid */}
-      <FadeIn>
-        <section aria-label={t('mileage.kpis', 'Mileage summary metrics')}>
-          {statsQuery.isError ? (
-            <GlassPanel className="p-4 sm:p-5">
+  // One shared CardGrid observes the allocated canvas and supplies placement
+  // to every card. No page-local canvas cap, observer or packing algorithm.
+  const cards: CardGridItem[] = [
+    {
+      id: 'mileage-summary-card',
+      size: 'full',
+      content: (
+        <LayoutCard title={t('mileage.kpis', 'Mileage summary metrics')}>
+          <section aria-label={t('mileage.kpis', 'Mileage summary metrics')} className="min-w-0 space-y-3">
+            <MileageSourceNotice source={statsSource} onRetry={() => statsQuery.refetch()} />
+            <MileageSummary stats={stats} loading={statsQuery.isLoading}
+              retained={statsSource.status === 'stale' || statsSource.isRefreshBlocked}
+              fatalError={!!statsSource.fatalError} />
+            {statsSource.fatalError && (
               <QueryError error={statsQuery.error} onRetry={() => statsQuery.refetch()} />
-            </GlassPanel>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
-              {statsQuery.isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} height={92} className="rounded-xl" />
-                ))
-              ) : (
-                <>
-                  <MetricCard
-                    label={t('mileage.totalDistance', 'Total Distance')}
-                    value={`${fmtInt(totalDistance)} ${distanceUnit}`}
-                    icon={<Gauge className="h-4 w-4" />}
-                    color="cyan"
-                  />
-                  <MetricCard
-                    label={t('mileage.totalDrives', 'Total Drives')}
-                    value={fmtInt(totalDrives)}
-                    icon={<Route className="h-4 w-4" />}
-                    color="green"
-                  />
-                  <MetricCard
-                    label={t('mileage.dailyAvg30d', 'Daily Avg (30d)')}
-                    value={`${fmtNumber(dailyAvg)} ${distanceUnit}`}
-                    icon={<CalendarDays className="h-4 w-4" />}
-                    color="purple"
-                  />
-                  <MetricCard
-                    label={t('mileage.annualProjection', 'Annual Projection')}
-                    value={`${fmtInt(annualProjection)} ${distanceUnit}`}
-                    icon={<TrendingUp className="h-4 w-4" />}
-                    color="amber"
-                  />
-                  <MetricCard
-                    label={t('mileage.last7Days', 'Last 7 Days')}
-                    value={`${fmtNumber(last7d)} ${distanceUnit}`}
-                    icon={<CalendarClock className="h-4 w-4" />}
-                    color="blue"
-                  />
-                  <MetricCard
-                    label={t('mileage.last365Days', 'Last 365 Days')}
-                    value={`${fmtInt(last365d)} ${distanceUnit}`}
-                    icon={<CalendarRange className="h-4 w-4" />}
-                    color="cyan"
-                  />
-                </>
-              )}
-            </div>
-          )}
-        </section>
-      </FadeIn>
-
-      {/* §2 — Primary bento: odometer hero + distance-by-window context */}
-      <FadeIn delay={0.1}>
-        <section
-          aria-label={t('mileage.odometerSection', 'Odometer and distance windows')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+            )}
+          </section>
+        </LayoutCard>
+      ),
+    },
+    {
+      id: 'mileage-odometer-card',
+      size: 'half',
+      content: (
+        <LayoutCard
+          title={t('mileage.odometerOverTime', 'Odometer over time')}
+          description={t('mileage.source.odometerPeriod', 'Daily source: trailing 90 days. Absolute end-of-day odometer readings; days without a reading are omitted. Recording completeness is unknown.')}
         >
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('mileage.odometerOverTime', 'Odometer Over Time')}
-            </PanelTitle>
-            {dailyQuery.isError ? (
+            <MileageSourceNotice source={dailySource} onRetry={() => dailyQuery.refetch()} />
+            {dailySource.fatalError ? (
               <QueryError error={dailyQuery.error} onRetry={() => dailyQuery.refetch()} />
-            ) : dailyQuery.isLoading ? (
+            ) : dailyQuery.isLoading && !dailySource.hasData ? (
               <Skeleton height={288} />
             ) : odometerData.length === 0 ? (
               <EmptyState /* no-action: transient empty state — no odometer readings in the window */
@@ -271,7 +230,7 @@ export default function MileagePage() {
               />
             ) : (
               <EmbeddedChart
-                title={t('mileage.odometerOverTime', 'Odometer Over Time')}
+                title={t('mileage.odometerOverTime', 'Odometer over time')}
                 ariaLabel={t('mileage.odometerOverTimeAria', 'Odometer readings over time')}
                 data={odometerData}
                 dataColumns={[
@@ -279,7 +238,7 @@ export default function MileagePage() {
                   {
                     key: 'odometer',
                     label: `${t('mileage.odometer', 'Odometer')} (${distanceUnit})`,
-                    format: (value) => fmtNumber(Number(value ?? 0)),
+                    format: (value) => knownNumber(value) == null ? '—' : fmtNumber(Number(value)),
                   },
                 ]}
                 height={288}
@@ -288,7 +247,6 @@ export default function MileagePage() {
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={odometerData}>
-                    {areaGradient('odoGrad', palette[2])}
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis dataKey="date" tick={axisTickSm} minTickGap={24} />
                     <YAxis tick={axisTickSm} domain={['auto', 'auto']} width={48} />
@@ -297,25 +255,31 @@ export default function MileagePage() {
                       {...AREA_DEFAULTS}
                       dataKey="odometer"
                       stroke={palette[2]}
-                      fill="url(#odoGrad)"
+                      fill={palette[2]}
+                      fillOpacity={0.08}
                       name={`${t('mileage.odometer', 'Odometer')} (${distanceUnit})`}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               </EmbeddedChart>
             )}
-          </GlassPanel>
-
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('mileage.distanceByWindow', 'Distance by Window')}
-            </PanelTitle>
-            {statsQuery.isError ? (
+        </LayoutCard>
+      ),
+    },
+    {
+      id: 'mileage-windows-card',
+      size: 'half',
+      content: (
+        <LayoutCard
+          title={t('mileage.distanceByWindow', 'Distance by window')}
+          description={t('mileage.windows.method', 'Fixed trailing 7 / 30 / 365-day distances, scaled against recorded lifetime distance. First and last drive dates describe recorded activity, not guaranteed vehicle lifetime coverage.')}
+        >
+            <MileageSourceNotice source={statsSource} onRetry={() => statsQuery.refetch()} />
+            {statsSource.fatalError ? (
               <QueryError error={statsQuery.error} onRetry={() => statsQuery.refetch()} />
-            ) : statsQuery.isLoading ? (
+            ) : statsQuery.isLoading && !statsSource.hasData ? (
               <Skeleton height={220} />
-            ) : (
+            ) : stats ? (
               <div className="space-y-4">
                 <div className="space-y-3">
                   {windowRows.map((row) => (
@@ -325,31 +289,34 @@ export default function MileagePage() {
                       value={row.value}
                       max={lifetimeMax}
                       color={row.color}
-                      sublabel={`${fmtNumber(row.value)} ${distanceUnit}`}
+                      fill="solid"
+                      sublabel={row.value == null ? '—' : `${fmtNumber(row.value)} ${distanceUnit}`}
                     />
                   ))}
                 </div>
                 <KVList items={activityItems} />
               </div>
+            ) : (
+              <EmptyState
+                message={t('mileage.summary.unavailable', 'Mileage summary has not been supplied.')}
+                action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void statsQuery.refetch(); } }}
+              />
             )}
-          </GlassPanel>
-        </section>
-      </FadeIn>
-
-      {/* §3 — Secondary bento: daily + monthly distance side-by-side on wide screens */}
-      <FadeIn delay={0.2}>
-        <section
-          aria-label={t('mileage.distanceCharts', 'Daily and monthly distance')}
-          className="grid grid-cols-1 gap-4 2xl:grid-cols-2 xl:gap-5"
+        </LayoutCard>
+      ),
+    },
+    {
+      id: 'mileage-daily-card',
+      size: 'half',
+      content: (
+        <LayoutCard
+          title={t('mileage.dailyDistance', 'Daily distance')}
+          description={t('mileage.daily.period', 'Recorded daily drive distance from the trailing 90-day source. Dates use the existing date formatter. Recording completeness is unknown.')}
         >
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('mileage.dailyDistance', 'Daily Distance')}
-            </PanelTitle>
-            {dailyQuery.isError ? (
+            <MileageSourceNotice source={dailySource} onRetry={() => dailyQuery.refetch()} />
+            {dailySource.fatalError ? (
               <QueryError error={dailyQuery.error} onRetry={() => dailyQuery.refetch()} />
-            ) : dailyQuery.isLoading ? (
+            ) : dailyQuery.isLoading && !dailySource.hasData ? (
               <Skeleton height={288} />
             ) : dailyData.length === 0 ? (
               <EmptyState /* no-action: transient empty state — no daily distance in the window */
@@ -358,7 +325,7 @@ export default function MileagePage() {
               />
             ) : (
               <EmbeddedChart
-                title={t('mileage.dailyDistance', 'Daily Distance')}
+                title={t('mileage.dailyDistance', 'Daily distance')}
                 ariaLabel={t('mileage.dailyDistanceAria', 'Daily distance traveled over time')}
                 data={dailyData}
                 dataColumns={[
@@ -366,7 +333,7 @@ export default function MileagePage() {
                   {
                     key: 'distance',
                     label: `${t('mileage.distance', 'Distance')} (${distanceUnit})`,
-                    format: (value) => fmtNumber(Number(value ?? 0)),
+                    format: (value) => knownNumber(value) == null ? '—' : fmtNumber(Number(value)),
                   },
                 ]}
                 height={288}
@@ -389,16 +356,21 @@ export default function MileagePage() {
                 </ResponsiveContainer>
               </EmbeddedChart>
             )}
-          </GlassPanel>
-
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('mileage.monthlyDistance', 'Monthly Distance')}
-            </PanelTitle>
-            {monthlyQuery.isError ? (
+        </LayoutCard>
+      ),
+    },
+    {
+      id: 'mileage-monthly-card',
+      size: 'half',
+      content: (
+        <LayoutCard
+          title={t('mileage.monthlyDistance', 'Monthly distance')}
+          description={t('mileage.monthly.period', 'UTC calendar-month buckets from the server’s default 24-month window. This is not a full-history total; recording completeness is unknown.')}
+        >
+            <MileageSourceNotice source={monthlySource} onRetry={() => monthlyQuery.refetch()} />
+            {monthlySource.fatalError ? (
               <QueryError error={monthlyQuery.error} onRetry={() => monthlyQuery.refetch()} />
-            ) : monthlyQuery.isLoading ? (
+            ) : monthlyQuery.isLoading && !monthlySource.hasData ? (
               <Skeleton height={288} />
             ) : monthlyRows.length === 0 ? (
               <EmptyState /* no-action: transient empty state — no monthly distance in the window */
@@ -407,7 +379,7 @@ export default function MileagePage() {
               />
             ) : (
               <EmbeddedChart
-                title={t('mileage.monthlyDistance', 'Monthly Distance')}
+                title={t('mileage.monthlyDistance', 'Monthly distance')}
                 ariaLabel={t('mileage.monthlyDistanceAria', 'Monthly distance traveled over time')}
                 data={monthlyChartRows}
                 dataColumns={[
@@ -415,7 +387,7 @@ export default function MileagePage() {
                   {
                     key: 'distance',
                     label: `${t('mileage.distance', 'Distance')} (${distanceUnit})`,
-                    format: (value) => fmtNumber(Number(value ?? 0)),
+                    format: (value) => knownNumber(value) == null ? '—' : fmtNumber(Number(value)),
                   },
                 ]}
                 height={288}
@@ -438,26 +410,28 @@ export default function MileagePage() {
                 </ResponsiveContainer>
               </EmbeddedChart>
             )}
-          </GlassPanel>
-        </section>
-      </FadeIn>
-
-      {/* §4 — Detail band: full-width monthly summary table */}
-      <FadeIn delay={0.3}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <CalendarRange className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('mileage.monthlySummary', 'Monthly Summary')}
-          </PanelTitle>
-          {monthlyQuery.isError ? (
+        </LayoutCard>
+      ),
+    },
+    {
+      id: 'mileage-monthly-table-card',
+      size: 'full',
+      content: (
+        <LayoutCard
+          title={t('mileage.monthlySummary', 'Monthly summary')}
+          description={t('mileage.monthly.method', 'The same UTC monthly source as the chart. Distance / drive divides monthly recorded distance by monthly drive count; a zero drive count yields zero. No totals are inferred from these limited rows.')}
+        >
+          <MileageSourceNotice source={monthlySource} onRetry={() => monthlyQuery.refetch()} />
+          {monthlySource.fatalError ? (
             <QueryError error={monthlyQuery.error} onRetry={() => monthlyQuery.refetch()} />
-          ) : monthlyQuery.isLoading ? (
+          ) : monthlyQuery.isLoading && !monthlySource.hasData ? (
             <Skeleton height={240} />
           ) : (
             <DataTable<MonthRow>
+              enableValueFilters
               tableId="analytics:mileage-monthly"
+              caption={t('mileage.monthlySummary', 'Monthly summary')}
               columns={monthColumns}
-              mobileColumns={['month', 'distance', 'drives']}
               data={monthlyRows}
               keyExtractor={(r) => r.month}
               emptyMessage={t('mileage.noMonthly', 'No monthly distance yet')}
@@ -465,8 +439,27 @@ export default function MileagePage() {
               pagination
             />
           )}
-        </GlassPanel>
+        </LayoutCard>
+      ),
+    },
+  ];
+
+  return (
+    <PageLayout
+      title={t('mileage.title', 'Mileage')}
+      subtitle={t('mileage.subtitle', 'Daily and monthly distance tracking')}
+      query={[statsQuery, dailyQuery, monthlyQuery]}
+      dataSources={dataSources}
+    >
+      <FadeIn>
+        <Section
+          id="mileage-analysis"
+          title={t('mileage.analysis.title', 'Recorded mileage')}
+          description={t('mileage.analysis.scope', 'Vehicle scope comes from the workspace header. Mileage sources use their own fixed periods; they do not accept workspace date bounds.')}
+        >
+          <CardGrid items={cards} label={t('mileage.analysis.cards', 'Mileage metrics, charts and monthly detail')} />
+        </Section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

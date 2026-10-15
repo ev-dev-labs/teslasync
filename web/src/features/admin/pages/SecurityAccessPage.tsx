@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { ShieldAlert } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { AlertBanner } from '@/components/feedback';
+import { PageLayout } from '@/components/layout';
+import { AlertBanner, DataStateNotice } from '@/components/feedback';
 
 import { FadeIn } from '@/components/motion';
 
@@ -12,14 +11,12 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useSecurityEvents } from '@/api/hooks/useAdmin';
+import { useLatestSecurityEvent, useSecurityEvents } from '@/api/hooks/useAdmin';
 import { buildTwinStateFromAdmin } from '@/lib/vehicleState';
-import { request } from '@/api/client';
-import type { SecurityEvent } from '@/types/admin';
+import { deriveDataState } from '@/api/dataState';
 
 import {
-  doorClosed,
-  allWindowsClosed,
+  securityPosture,
   isSentryActive,
   computeSentryUptime,
   findLastLockChange,
@@ -30,15 +27,15 @@ import {
 
 import {
   DigitalTwinPanel,
-  SummaryStatsRow,
   SecurityStatusCards,
   WindowStatusDetail,
   LiveVehicleState,
   SentryModeChart,
-  SecurityStatistics,
   EventHistoryTable,
   EventTimeline,
 } from '../components/security-access';
+import { SecurityOperationalBrief } from '../components/operationalbrief-r-z/SecurityOperationalBrief';
+import { SecurityStatisticsBrief } from '../components/operationalbrief-r-z/SecurityStatisticsBrief';
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -46,7 +43,7 @@ import {
 
 export default function SecurityAccessPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.security.title', 'Security & Access'));
+  usePageTitle(t('admin.security.title', 'Security & access'));
 
   /* ---- Vehicle selection (persisted across pages) ---- */
   const { vehicleId } = useSelectedVehicle();
@@ -57,22 +54,27 @@ export default function SecurityAccessPage() {
   const vehiclesQuery = useVehicles();
 
   /* ---- Latest security state (polled) ---- */
-  const latestQuery = useQuery({
-    queryKey: ['security-latest', activeId],
-    queryFn: ({ signal }) => request<SecurityEvent>(`/security/latest?vehicle_id=${activeId}`, { signal }),
-    enabled: !!activeId,
-    refetchInterval: 5000,
+  const latestQuery = useLatestSecurityEvent(activeId);
+  const { data: latest, isLoading: loadingLatest, refetch: refetchLatest } = latestQuery;
+  const hasLatestReadings = latest != null && Object.entries(latest).some(
+    ([key, value]) => key !== 'id' && key !== 'createdAt' && value != null,
+  );
+  const latestState = deriveDataState(latestQuery, {
+    provenance: hasLatestReadings ? 'live' : 'unknown',
+    unavailable: !hasLatestReadings,
   });
-  const { data: latest, isLoading: loadingLatest, error: latestError, refetch: refetchLatest } = latestQuery;
+  const latestError = latestState.fatalError;
 
   /* ---- Security event history ---- */
-  const historyQuery = useSecurityEvents(activeId);
+  const { startInstant, endInstantExclusive, timezone } = useRangeState();
+  const historyQuery = useSecurityEvents(activeId, startInstant, endInstantExclusive);
   const {
     data: rawHistory = [],
     isLoading: loadingHistory,
-    error: historyError,
     refetch: refetchHistory,
   } = historyQuery;
+  const historyState = deriveDataState(historyQuery, { provenance: 'historical' });
+  const historyError = historyState.fatalError;
   const dataSources = useMemo(
     () => [
       {
@@ -96,31 +98,24 @@ export default function SecurityAccessPage() {
     [activeId, historyQuery, latestQuery, t, vehiclesQuery],
   );
 
-  /* ---- Range filter (client-side on history) ---- */
-  const { start, end } = useRangeState({
-    persistKey: 'security-access.range',
-    defaultPresetId: 'all',
-  });
+  /* ---- Guard historical rows against the exact workspace interval ---- */
   const history = useMemo(() => {
     if (!rawHistory.length) return rawHistory;
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    const startMs = new Date(startInstant).getTime();
+    const endMs = new Date(endInstantExclusive).getTime();
     return rawHistory.filter((e) => {
       if (!e.createdAt) return false;
       const ts = new Date(e.createdAt).getTime();
-      return ts >= startMs && ts <= endMs;
+      return ts >= startMs && ts < endMs;
     });
-  }, [rawHistory, start, end]);
+  }, [rawHistory, startInstant, endInstantExclusive]);
 
   /* ---- Computed stats ---- */
-  const isSecure = useMemo(() => {
-    if (!latest) return true;
-    return !!latest.locked && doorClosed(latest.doorState) && allWindowsClosed(latest);
-  }, [latest]);
+  const isSecure = useMemo(() => securityPosture(latest), [latest]);
 
   const sentryUptime = useMemo(() => computeSentryUptime(history), [history]);
   const lastLockChange = useMemo(() => findLastLockChange(history), [history]);
-  const sentryBuckets = useMemo(() => buildSentryBuckets(history), [history]);
+  const sentryBuckets = useMemo(() => buildSentryBuckets(history, timezone), [history, timezone]);
   const securityStats = useMemo(() => computeSecurityStats(history), [history]);
   const twinState = useMemo(
     () => buildTwinStateFromAdmin(latest ? { ...latest, sentryMode: isSentryActive(latest.sentryMode) } : null),
@@ -129,20 +124,29 @@ export default function SecurityAccessPage() {
   const timelineEvents = useMemo(() => deriveTimeline(history), [history]);
 
   const twinVehicleId = activeId ? Number(activeId) : undefined;
+  const summarySource = {
+    known: hasLatestReadings && historyState.hasData,
+    loading: loadingLatest && loadingHistory,
+    retained: [latestState, historyState].some(state => state.hasData && (state.isRefreshing || state.isRefreshBlocked || state.status === 'stale')),
+    failed: latestState.fatalError != null || historyState.fatalError != null,
+  };
+  const historyScope = t('admin.security.brief.historyScope', 'Returned security events for vehicle {{vehicle}}, {{start}} to {{end}} (exclusive); statistics describe event samples, not a complete time-weighted history.', {
+    vehicle: activeId || '—', start: startInstant, end: endInstantExclusive,
+  });
 
   /* ---------------------------------------------------------------- */
   /*  Render                                                          */
   /* ---------------------------------------------------------------- */
 
   return (
-    <PageContainer
-      title={t('admin.security.title', 'Security & Access')}
-      subtitle={t('admin.security.subtitle', 'Lock status, sentry mode, doors, and windows')}
+    <PageLayout
+      title={t('admin.security.title', 'Security & access')}
+      subtitle={t('admin.security.subtitle', 'Lock status, sentry mode, doors, and Windows')}
       query={[vehiclesQuery, latestQuery, historyQuery]}
       dataSources={dataSources}
     >
       {/* Contextual insecure-vehicle warning */}
-      {!isSecure && latest && (
+      {isSecure === false && latest && (
         <FadeIn>
           <AlertBanner
             variant="warning"
@@ -157,12 +161,15 @@ export default function SecurityAccessPage() {
       {/* 1 — KPI band */}
       <FadeIn>
         <section aria-label={t('admin.security.section.summary', 'Summary metrics')}>
-          <SummaryStatsRow
-            isSecure={isSecure}
+          <SecurityOperationalBrief
+            isSecure={latest ? isSecure : null}
             lastLockChange={lastLockChange}
-            sentryUptime={sentryUptime}
-            totalEvents={history.length}
-            isLoading={loadingLatest || loadingHistory}
+            sentryUptime={historyState.hasData ? sentryUptime : null}
+            totalEvents={historyState.hasData ? history.length : null}
+            latestLoading={loadingLatest}
+            historyLoading={loadingHistory}
+            source={summarySource}
+            start={startInstant} endExclusive={endInstantExclusive} vehicleId={activeId}
           />
         </section>
       </FadeIn>
@@ -200,6 +207,7 @@ export default function SecurityAccessPage() {
         >
           <LiveVehicleState
             latest={latest}
+            sourceState={latestState}
             isLoading={loadingLatest}
             error={latestError}
             onRetry={refetchLatest}
@@ -223,19 +231,31 @@ export default function SecurityAccessPage() {
         >
           <SentryModeChart
             sentryBuckets={sentryBuckets}
+            sourceState={historyState}
             isLoading={loadingHistory}
             error={historyError}
             onRetry={refetchHistory}
             className="xl:col-span-2"
           />
-          <SecurityStatistics
-            securityStats={securityStats}
-            sentryUptime={sentryUptime}
-            isLoading={loadingHistory}
-            error={historyError}
-            onRetry={refetchHistory}
-            className="xl:col-span-1"
-          />
+          <div className="xl:col-span-1">
+            {historyState.isRefreshBlocked && !historyState.hasData && (
+              <DataStateNotice state="partial" title={t('dataSources.status.paused', 'Refresh paused')} />
+            )}
+            <SecurityStatisticsBrief
+              securityStats={securityStats}
+              sentryUptime={sentryUptime}
+              isLoading={loadingHistory || historyState.status === 'initial'}
+              error={historyError}
+              onRetry={refetchHistory}
+              source={{
+                known: historyState.hasData,
+                loading: loadingHistory || historyState.status === 'initial',
+                retained: historyState.hasData && (historyState.isRefreshing || historyState.isRefreshBlocked || historyState.status === 'stale'),
+                failed: historyState.fatalError != null,
+              }}
+              scope={historyScope}
+            />
+          </div>
         </section>
       </FadeIn>
 
@@ -247,18 +267,20 @@ export default function SecurityAccessPage() {
         >
           <EventHistoryTable
             history={history}
+            sourceState={historyState}
             isLoading={loadingHistory}
             error={historyError}
             onRetry={refetchHistory}
           />
           <EventTimeline
             timelineEvents={timelineEvents}
+            sourceState={historyState}
             isLoading={loadingHistory}
             error={historyError}
             onRetry={refetchHistory}
           />
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

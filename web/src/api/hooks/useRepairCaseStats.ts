@@ -1,5 +1,5 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { useRepairScopedQuery } from './useDataRepair';
 
 export interface RepairCaseStats {
   total: number;
@@ -19,15 +19,17 @@ export interface RepairCaseStats {
 export const repairCaseStatsKey = (vehicleId?: number) =>
   ['data-repair', 'cases', 'stats', vehicleId ?? 'fleet'] as const;
 
+const statsScope = (vehicleId: unknown) =>
+  `/data-repair/cases/stats${vehicleId === 'fleet' || vehicleId == null ? '' : `?vehicle_id=${vehicleId}`}`;
+
 /** Lightweight durable-case summary suitable for app chrome and workspaces. */
 export function useRepairCaseStats(vehicleId?: number) {
   const query = vehicleId != null ? `?vehicle_id=${vehicleId}` : '';
-  return useQuery({
-    queryKey: repairCaseStatsKey(vehicleId),
-    queryFn: ({ signal }) =>
+  return useRepairScopedQuery(
+    repairCaseStatsKey(vehicleId),
+    ({ signal }) =>
       request<RepairCaseStats>(`/data-repair/cases/stats${query}`, { signal }),
-    placeholderData: keepPreviousData,
-    refetchInterval: 30_000,
-    staleTime: 15_000,
-  });
+    statsScope(vehicleId),
+    (key) => statsScope(key[3]),
+  );
 }

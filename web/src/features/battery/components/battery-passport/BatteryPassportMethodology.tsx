@@ -15,11 +15,10 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import {
-  GlassPanel,
   Heading,
-  PanelTitle,
   Text,
 } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 
 export function BatteryPassportMethodology() {
   const { t } = useTranslation();
@@ -172,23 +171,13 @@ export function BatteryPassportMethodology() {
 
   return (
     <section data-testid="battery-passport-methodology">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <FileWarning
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.method.title',
             'Methodology and interpretation limits',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.method.subtitle',
             'Server rules, frontend diagnostics, UTC semantics, persistence behavior, and explicit non-claims.',
-          )}
-        </Text>
+          )} actions={<FileWarning className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {items.map((item) => (
             <article
@@ -213,7 +202,7 @@ export function BatteryPassportMethodology() {
             )}
           </Text>
         </AlertBanner>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

@@ -16,11 +16,9 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { TrueCostSectionBody } from './TrueCostSectionBody';
 import type { TrueCostSectionProps } from './types';
-
-const COST_COLOR = '#22d3ee';
-const ENERGY_COLOR = '#a78bfa';
 
 export function TrueCostEnergyCostTrend({
   analysis,
@@ -28,6 +26,7 @@ export function TrueCostEnergyCostTrend({
   display,
 }: TrueCostSectionProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const rows = useMemo(
     () => analysis.eligibleMonthly
       .filter((row) =>
@@ -98,7 +97,7 @@ export function TrueCostEnergyCostTrend({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatCurrency(value, 0)}
+                    tickFormatter={(value: number) => display.formatCurrency(value)}
                   />
                   <YAxis
                     yAxisId="energy"
@@ -106,12 +105,12 @@ export function TrueCostEnergyCostTrend({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatNumber(value, 0)}
+                    tickFormatter={(value: number) => display.formatNumber(value)}
                   />
                   <Tooltip
                     content={<ChartTooltip valueFormatter={(value, name) =>
                       name === energySeries
-                        ? `${display.formatNumber(Number(value), 2)} ${display.energyUnit}`
+                        ? `${display.formatNumber(Number(value))} ${display.energyUnit}`
                         : display.formatCurrency(Number(value))} />}
                   />
                   <ChartLegend />
@@ -119,7 +118,7 @@ export function TrueCostEnergyCostTrend({
                     yAxisId="cost"
                     dataKey="evCost"
                     name={t('tco.charts.energy.costSeries', 'Recorded EV cost')}
-                    fill={COST_COLOR}
+                    fill={palette[0]}
                     radius={[4, 4, 0, 0]}
                     hide={hiddenSeries?.isHidden('evCost')}
                   />
@@ -127,7 +126,7 @@ export function TrueCostEnergyCostTrend({
                     yAxisId="energy"
                     dataKey="energy"
                     name={energySeries}
-                    stroke={ENERGY_COLOR}
+                    stroke={palette[2]}
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     hide={hiddenSeries?.isHidden('energy')}

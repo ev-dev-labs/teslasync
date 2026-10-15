@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useLocation, useMatch, useNavigate, useSearchParams } from 'react-router-dom';
 import { useVehicles } from '@/api/hooks/useVehicles';
+import type { DataState } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicleStore } from '@/store/selectedVehicle';
 import type { Vehicle } from '@/types/vehicle';
 
@@ -29,12 +31,14 @@ import type { Vehicle } from '@/types/vehicle';
  */
 
 export interface SelectedVehicleResult {
-  /** Effective vehicle id (URL > store > first vehicle). `null` only when the fleet is empty. */
+  /** Effective vehicle id (URL > store > first vehicle), or `null` if none is known. */
   vehicleId: number | null;
   /** Vehicle record matching {@link vehicleId}, or `null` if not yet loaded / not found. */
   vehicle: Vehicle | null;
   /** Full vehicles list (always an array — empty when not loaded). */
   vehicles: Vehicle[];
+  /** Actual fleet prerequisite trust/retry; unresolved data is distinct from a resolved empty fleet. */
+  vehiclesState: DataState<Vehicle[]>;
   /** Update the persisted selection and current URL vehicle scope. */
   setVehicleId: (id: number | null) => void;
 }
@@ -47,7 +51,11 @@ function parseId(raw: string | null | undefined): number | null {
 
 export function useSelectedVehicle(): SelectedVehicleResult {
   const { vehicleId: stored, setVehicleId: setStoredVehicleId } = useSelectedVehicleStore();
-  const { data: vehicles } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const { data: vehicles } = vehiclesQuery;
+  const vehiclesState = useDataState(vehiclesQuery, {
+    unavailable: vehiclesQuery.isSuccess && vehicles?.length === 0,
+  });
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -169,6 +177,7 @@ export function useSelectedVehicle(): SelectedVehicleResult {
     vehicleId: effectiveId,
     vehicle,
     vehicles: vehicles ?? [],
+    vehiclesState,
     setVehicleId,
   };
 }

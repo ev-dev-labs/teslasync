@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Navigation2 } from 'lucide-react';
 import {
@@ -14,7 +14,7 @@ import {
   type LatLngExpression,
   type MapStyle,
 } from '@/components/maps';
-import { GlassPanel } from '@/components/ui';
+import { Badge, GlassPanel } from '@/components/ui';
 import { EmptyState, AlertBanner } from '@/components/feedback';
 import {
   haversineDistance,
@@ -22,6 +22,8 @@ import {
   firstValidIndex,
 } from '@/lib/geo';
 import type { DrivePosition } from '@/types/driving';
+import { convertSpeedFromSI } from '@/lib/unitConversion';
+import { resolveMapRendererColor } from '@/lib/colors';
 
 /**
  * Thin wrapper around the trip-replay leaflet map.
@@ -46,15 +48,17 @@ export interface TripReplayMapProps {
   initialMapStyle?: MapStyle;
   className?: string;
   height?: number | string;
+  /** The page owns the section surface when the map shares a playback stage. */
+  embedded?: boolean;
 }
 
 /* ── helpers ───────────────────────────────────────────────────── */
 
 function speedColor(kmh: number): string {
-  if (kmh < 30) return '#10b981';
-  if (kmh < 60) return '#22d3ee';
-  if (kmh < 100) return '#f59e0b';
-  return '#ef4444';
+  if (kmh < 30) return 'var(--semantic-success)';
+  if (kmh < 60) return 'var(--semantic-info)';
+  if (kmh < 100) return 'var(--semantic-warning)';
+  return 'var(--semantic-danger)';
 }
 
 function computeHeading(p1: DrivePosition, p2: DrivePosition): number {
@@ -91,7 +95,7 @@ export function nearestSampleIndex(
 
 function FitBounds({ trail, fallbackCenter }: { trail: LatLngExpression[]; fallbackCenter?: [number, number] }) {
   const map = useMap();
-  useMemo(() => {
+  useEffect(() => {
     if (trail.length > 1) {
       const bounds = latLngBounds(
         trail.map((p) =>
@@ -120,7 +124,7 @@ function FitBounds({ trail, fallbackCenter }: { trail: LatLngExpression[]; fallb
     } else if (fallbackCenter) {
       map.setView(fallbackCenter, 15);
     }
-  }, [trail.length, fallbackCenter?.[0], fallbackCenter?.[1]]);
+  }, [map, trail, fallbackCenter]);
   return null;
 }
 
@@ -134,9 +138,39 @@ export function TripReplayMap({
   initialMapStyle = 'dark',
   className,
   height = 450,
+  embedded = false,
 }: TripReplayMapProps) {
   const { t } = useTranslation();
   const [mapStyle, setMapStyle] = useState<MapStyle>(initialMapStyle);
+  const [paintContext, setPaintContext] = useState<HTMLDivElement | null>(null);
+  const [paint, setPaint] = useState<Record<string, string | null>>({});
+
+  useEffect(() => {
+    if (!paintContext) return;
+    const refresh = () => {
+      const roles = ['var(--semantic-success)', 'var(--semantic-info)',
+        'var(--semantic-warning)', 'var(--semantic-danger)', 'var(--text-secondary)'];
+      const next = Object.fromEntries(roles.map(role =>
+        [role, resolveMapRendererColor(role, paintContext)]));
+      setPaint(previous => roles.every(role => previous[role] === next[role]) ? previous : next);
+    };
+    refresh();
+    const view = paintContext.ownerDocument.defaultView;
+    const observer = view?.MutationObserver ? new view.MutationObserver(refresh) : null;
+    // Resolve inherited roles for both SVG and Canvas; never pass CSS vars to Canvas.
+    for (let node: HTMLElement | null = paintContext; node; node = node.parentElement) {
+      observer?.observe(node, {
+        attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-mode'],
+      });
+    }
+    const media = ['(prefers-color-scheme: dark)', '(forced-colors: active)']
+      .map(query => view?.matchMedia?.(query));
+    media.forEach(query => query?.addEventListener('change', refresh));
+    return () => {
+      observer?.disconnect();
+      media.forEach(query => query?.removeEventListener('change', refresh));
+    };
+  }, [paintContext]);
 
   /* Stationary-GPS detection: positions exist but every recorded coord is
    * within ~10 m of the first. Surfaces a banner instead of a bogus polyline
@@ -162,17 +196,21 @@ export function TripReplayMap({
 
   /* Speed-coloured segments — only when we have a real route. */
   const speedSegments = useMemo(() => {
-    if (!hasRoute) return [] as { positions: LatLngExpression[]; color: string }[];
-    const segs: { positions: LatLngExpression[]; color: string }[] = [];
+    const segs: { positions: LatLngExpression[]; color: string; unknown: boolean }[] = [];
+    if (!hasRoute) return segs;
     for (let i = 1; i < positions.length; i++) {
       const prev = positions[i - 1];
       const curr = positions[i];
+      const unknown = curr.speed == null || !Number.isFinite(curr.speed);
       segs.push({
         positions: [
           [prev.latitude, prev.longitude],
           [curr.latitude, curr.longitude],
         ],
-        color: speedColor(curr.speed ?? 0),
+        color: curr.speed != null && Number.isFinite(curr.speed)
+          ? speedColor(convertSpeedFromSI(curr.speed, 'km/h'))
+          : 'var(--text-secondary)',
+        unknown,
       });
     }
     return segs;
@@ -209,12 +247,14 @@ export function TripReplayMap({
   );
 
   const heightStyle = typeof height === 'number' ? `${height}px` : height;
+  const Surface = embedded ? 'div' : GlassPanel;
 
   return (
-    <GlassPanel
+    <Surface
+      ref={setPaintContext}
       role="region"
       aria-label={t('replay.map.ariaLabel', 'Trip route map')}
-      className={`relative overflow-hidden rounded-xl ${className ?? ''}`}
+      className={`relative overflow-hidden ${className ?? ''}`}
       style={{ height: heightStyle }}
       data-testid="trip-replay-map"
     >
@@ -236,35 +276,35 @@ export function TripReplayMap({
 
             {/* Speed-coloured route — only when GPS varies. Stationary case
                 renders a single anchor marker below instead. */}
-            {hasRoute && speedSegments.map((seg, i) => (
+            {hasRoute && speedSegments.map((seg, i) => paint[seg.color] && (
               <Polyline
                 key={i}
                 positions={seg.positions}
-                pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }}
+                pathOptions={{ color: paint[seg.color]!, weight: 4, opacity: 0.8, dashArray: seg.unknown ? '6 6' : undefined }}
                 eventHandlers={{ click: handlePolylineClick }}
               />
             ))}
 
-            {hasRoute && startPos && (
+            {hasRoute && startPos && paint['var(--semantic-success)'] && (
               <CircleMarker
                 center={startPos}
                 radius={6}
                 pathOptions={{
-                  color: '#10b981',
-                  fillColor: '#10b981',
+                  color: paint['var(--semantic-success)']!,
+                  fillColor: paint['var(--semantic-success)']!,
                   fillOpacity: 1,
                   weight: 2,
                 }}
               />
             )}
 
-            {hasRoute && endPos && (
+            {hasRoute && endPos && paint['var(--semantic-danger)'] && (
               <CircleMarker
                 center={endPos}
                 radius={6}
                 pathOptions={{
-                  color: '#ef4444',
-                  fillColor: '#ef4444',
+                  color: paint['var(--semantic-danger)']!,
+                  fillColor: paint['var(--semantic-danger)']!,
                   fillOpacity: 1,
                   weight: 2,
                 }}
@@ -273,13 +313,13 @@ export function TripReplayMap({
 
             {/* Single anchor marker for the stationary-GPS case so the user
                 still sees where the drive happened. */}
-            {!hasRoute && anchorPoint && (
+            {!hasRoute && anchorPoint && paint['var(--semantic-info)'] && (
               <CircleMarker
                 center={anchorPoint}
                 radius={8}
                 pathOptions={{
-                  color: '#22d3ee',
-                  fillColor: '#22d3ee',
+                  color: paint['var(--semantic-info)']!,
+                  fillColor: paint['var(--semantic-info)']!,
                   fillOpacity: 0.9,
                   weight: 2,
                 }}
@@ -293,16 +333,16 @@ export function TripReplayMap({
               <AnimatedMarker
                 position={[currentPosition.latitude, currentPosition.longitude]}
                 heading={heading}
-                color="#00b4d8"
+                color="var(--semantic-info)"
               />
             )}
-            {hasRoute && currentPosition && reduceMotion && (
+            {hasRoute && currentPosition && reduceMotion && paint['var(--semantic-info)'] && (
               <CircleMarker
                 center={[currentPosition.latitude, currentPosition.longitude]}
                 radius={8}
                 pathOptions={{
-                  color: '#00b4d8',
-                  fillColor: '#00b4d8',
+                  color: paint['var(--semantic-info)']!,
+                  fillColor: paint['var(--semantic-info)']!,
                   fillOpacity: 1,
                   weight: 2,
                 }}
@@ -311,6 +351,14 @@ export function TripReplayMap({
 
             <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
           </MapContainer>
+
+          {speedSegments.some((segment) => segment.unknown) && (
+            <div className="pointer-events-none absolute left-3 top-3 z-[400]">
+              <Badge variant="neutral">
+                {t('common.speed', 'Speed')}: {t('common.unknown', 'Unknown')} (- -)
+              </Badge>
+            </div>
+          )}
 
           {/* Stationary-GPS banner — overlaid above the map so the route
               panel still feels like a map (not an empty state) but the user
@@ -341,6 +389,6 @@ export function TripReplayMap({
           )}
         />
       )}
-    </GlassPanel>
+    </Surface>
   );
 }

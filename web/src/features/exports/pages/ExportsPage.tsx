@@ -1,37 +1,43 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { PageContainer } from '@/components/layout';
+import { LayoutCard, PageLayout } from '@/components/layout';
 import {
-  GlassPanel,
   Badge,
   Button,
+  BUTTON_BASE,
+  BUTTON_VARIANTS,
   DataTable,
-  PanelTitle,
+  useSortToggle,
   Text,
   ConfirmDialog,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
-import { AIPiiRedactionSharedExports } from '@/components/ai/AIPiiRedactionSharedExports';
+import { AlertBanner, EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { AIPiiRedactionSharedExports } from '@/components/ai';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useDataState } from '@/hooks/useDataState';
+import { StaleRefreshWarning } from '@/components/feedback';
 
 import {
   useExportJobs,
   useBulkExportsDelete,
   exportDownloadUrl,
+  type ExportBulkResult,
   type ExportJobSummary,
 } from '@/api/hooks/useExports';
 import { Icons } from '@/lib/icons';
-import { formatDateTime } from '@/lib/dateFormat';
-import { formatBytes } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { cn } from '@/lib/cn';
 
 import { ExportKpiBand } from '../components/ExportKpiBand';
 import { ExportStatusBreakdown } from '../components/ExportStatusBreakdown';
 import { deriveExportStats, statusBadgeVariant } from '../components/exportStats';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * ExportsPage — full-width command view over past export jobs.
@@ -43,15 +49,42 @@ import { deriveExportStats, statusBadgeVariant } from '../components/exportStats
  * `POST /export/jobs/bulk` for bulk deletion.
  */
 export default function ExportsPage() {
+  const { formatBytes } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('exportsList.title', 'Exports'));
 
   const jobsQuery = useExportJobs();
-  const { data: jobsRaw, isLoading, error, refetch } = jobsQuery;
+  const jobsState = useDataState(jobsQuery);
+  const { data: jobsRaw, refetch } = jobsQuery;
+  const isLoading = !jobsState.hasData && jobsQuery.isLoading;
+  const error = jobsState.fatalError;
+  const unresolvedMessage = !jobsState.hasData && !isLoading && !error
+    ? jobsQuery.fetchStatus === 'paused'
+      ? t('exportsList.source.paused', 'The export-job query is paused; no empty result is inferred.')
+      : t('exportsList.source.unresolved', 'Export-job availability has not resolved yet.')
+    : undefined;
   const jobs: ExportJobSummary[] = useMemo(() => jobsRaw ?? [], [jobsRaw]);
   const stats = useMemo(() => deriveExportStats(jobs), [jobs]);
+  const { sortKey, sortDir, onSort, sortFn } = useSortToggle();
+  const sortedJobs = useMemo(() => sortFn(jobs, (job, key) => {
+    switch (key) {
+      case 'type': return job.type ?? '';
+      case 'format': return job.format ?? '';
+      case 'status': return job.status ?? '';
+      case 'file_size':
+        return job.file_size != null && Number.isFinite(job.file_size)
+          ? job.file_size : Number.NEGATIVE_INFINITY;
+      case 'created_at': {
+        const timestamp = Date.parse(job.created_at);
+        return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
+      }
+      default: return '';
+    }
+  }), [jobs, sortFn]);
 
   const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
+  const [deleteFailures, setDeleteFailures] = useState<ExportBulkResult['failed']>([]);
   const bulkDelete = useBulkExportsDelete();
   const { confirm, dialogProps } = useConfirm();
 
@@ -69,12 +102,18 @@ export default function ExportsPage() {
           'Selected jobs and their downloadable artifacts will be permanently removed.',
         ),
         confirmLabel: t('common.delete', 'Delete'),
+        cancelLabel: t('common.cancel', 'Cancel'),
         variant: 'danger',
       });
       if (!ok) return;
       try {
-        await bulkDelete.mutateAsync(ids.map((i) => String(i)));
-        setSelectedKeys([]);
+        const submitted = new Set(ids.map(String));
+        const result = await bulkDelete.mutateAsync([...submitted]);
+        const failed = result.failed ?? [];
+        setDeleteFailures(failed);
+        const failedIds = new Set(failed.map(({ id }) => id));
+        setSelectedKeys((current) => current.filter((id) =>
+          !submitted.has(String(id)) || failedIds.has(String(id))));
       } catch {
         // The mutation's onError handler surfaces a toast; keep the current
         // selection intact so the user can retry the failed bulk deletion
@@ -88,6 +127,7 @@ export default function ExportsPage() {
     () => [
       {
         key: 'type',
+        filterValue: (j) => j.type || null,
         header: t('exportsList.col.type', 'Type'),
         sortable: true,
         visibleOnMobile: true,
@@ -99,16 +139,21 @@ export default function ExportsPage() {
       },
       {
         key: 'format',
+        filterValue: (j) => j.format || null,
+        filterValueLabel: (_value, j) => j.format?.toUpperCase() || '—',
         header: t('exportsList.col.format', 'Format'),
         sortable: true,
         render: (j) => (
-          <Text color="secondary" className="uppercase">
+          <Text color="secondary">
             {j.format || '—'}
           </Text>
         ),
       },
       {
         key: 'file_size',
+        filterValue: (j) => j.file_size ?? null,
+        filterValueLabel: (_value, j) => j.file_size == null ? '—' : formatBytes(j.file_size),
+        groupStart: true,
         header: t('exportsList.col.size', 'Size'),
         align: 'right',
         sortable: true,
@@ -120,6 +165,8 @@ export default function ExportsPage() {
       },
       {
         key: 'created_at',
+        filterValue: (j) => j.created_at ?? null,
+        filterValueLabel: (_value, j) => formatDateTime(j.created_at),
         header: t('exportsList.col.created', 'Created'),
         sortable: true,
         render: (j) => (
@@ -128,6 +175,8 @@ export default function ExportsPage() {
       },
       {
         key: 'status',
+        filterValue: (j) => j.status ?? null,
+        filterValueLabel: (_value, j) => t(`exportsList.status.${j.status}`, j.status),
         header: t('exportsList.col.status', 'Status'),
         sortable: true,
         visibleOnMobile: true,
@@ -150,17 +199,35 @@ export default function ExportsPage() {
               aria-label={t('exportsList.downloadAria', 'Download export {{id}}', {
                 id: j.id,
               })}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm text-cyan-300 transition-colors hover:bg-white/[0.04] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+              className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, 'min-h-11 min-w-11 px-2')}
             >
               <Icons.download className="h-4 w-4" aria-hidden="true" />
-              {t('exportsList.download', 'Download')}
+              <Text size="sm">{t('exportsList.download', 'Download')}</Text>
             </a>
           ) : (
             <Text color="muted">—</Text>
           ),
       },
     ],
-    [t],
+    [t, formatBytes, formatDateTime],
+  );
+
+  const mobilePresentation = useMemo<MobileDataTablePresentation<ExportJobSummary>>(
+    () => ({
+      roles: { type: 'title', status: 'badge', format: 'meta', file_size: 'meta', created_at: 'meta' },
+      displayValue: (job, key) => {
+        switch (key) {
+          case 'type': return job.type || '—';
+          case 'format': return job.format || '—';
+          case 'file_size': return job.file_size == null ? '—' : formatBytes(job.file_size);
+          case 'created_at': return formatDateTime(job.created_at);
+          case 'status': return t(`exportsList.status.${job.status}`, job.status);
+          default: return null;
+        }
+      },
+      inlineActions: (job) => columns.find((column) => column.key === 'actions')?.render(job),
+    }),
+    [columns, formatBytes, formatDateTime, t],
   );
 
   const actions = (
@@ -168,25 +235,27 @@ export default function ExportsPage() {
       variant="ghost"
       onClick={onRetry}
       aria-label={t('common.refresh', 'Refresh')}
+      className="min-h-11 min-w-11"
     >
       <Icons.refresh className="h-4 w-4" aria-hidden="true" />
     </Button>
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('exportsList.title', 'Exports')}
       subtitle={t(
         'exportsList.subtitle',
         'Manage your past export jobs. Select rows to delete in bulk.',
       )}
-      actions={actions}
+      secondaryActions={actions}
       query={jobsQuery}
     >
       <div className="space-y-6">
-        {/* 1 — KPI band: full-width, reflows up to 5 columns on wide screens. */}
+        <StaleRefreshWarning state={jobsState} />
+        {/* 1 — Loaded-list summary; independent of table filters and selection. */}
         <FadeIn>
-          <ExportKpiBand stats={stats} isLoading={isLoading} />
+          <ExportKpiBand stats={stats} isLoading={isLoading} hasData={jobsState.hasData} retained={jobsState.status === 'stale'} sourceState={jobsState} />
         </FadeIn>
 
         {/* 2 — Opt-in Helix PII-redaction advisor. Renders null when AI is off,
@@ -195,13 +264,18 @@ export default function ExportsPage() {
 
         {/* 3 — Detail bento: jobs table (hero, spans 2 cols) + status breakdown. */}
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-          <FadeIn delay={0.1} className="xl:col-span-2">
-            <GlassPanel className="flex h-full flex-col overflow-hidden p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <Icons.package className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('exportsList.jobs.title', 'Export Jobs')}
-              </PanelTitle>
-
+          <FadeIn delay={0.1} className="min-w-0 xl:col-span-2">
+            <LayoutCard title={t('exportsList.jobs.title', 'Export jobs')}>
+              {deleteFailures.length > 0 && (
+                <AlertBanner variant="warning" role="status"
+                  title={t('toast.export.bulkDelete.error', 'Failed to delete exports')}>
+                  <ul className="space-y-1">
+                    {deleteFailures.map(({ id, reason }) => (
+                      <li key={id}><Text variant="bodySm" className="break-words">{id}: {reason}</Text></li>
+                    ))}
+                  </ul>
+                </AlertBanner>
+              )}
               {isLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-11 w-full" />
@@ -214,6 +288,8 @@ export default function ExportsPage() {
                   onRetry={onRetry}
                   resourceName={t('exportsList.resource', 'Exports')}
                 />
+              ) : unresolvedMessage ? (
+                <Text as="p" variant="bodySm" role="status">{unresolvedMessage}</Text>
               ) : jobs.length === 0 ? (
                 <EmptyState /* no-action: stale-list view — exports appear automatically once generated; nothing for the user to do here */
                   icon={<Icons.package className="h-8 w-8" aria-hidden="true" />}
@@ -226,10 +302,17 @@ export default function ExportsPage() {
               ) : (
                 <DataTable
                   tableId="exports:jobs"
+                  variant="embedded"
+                  caption={t('exportsList.jobs.title', 'Export jobs')}
                   columns={columns}
-                  data={jobs}
+                  data={sortedJobs}
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={onSort}
+                  enableValueFilters
                   keyExtractor={(j) => j.id}
                   mobileColumns={['type', 'status', 'actions']}
+                  mobilePresentation={mobilePresentation}
                   pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
                   stickyHeader
                   maxHeight={640}
@@ -249,6 +332,7 @@ export default function ExportsPage() {
                     <Button
                       size="sm"
                       variant="danger"
+                      className="min-h-11 min-w-11"
                       icon={<Icons.delete className="h-3.5 w-3.5" aria-hidden="true" />}
                       loading={bulkDelete.isPending}
                       onClick={() => void handleBulkDelete(rows.map((r) => r.id))}
@@ -258,7 +342,7 @@ export default function ExportsPage() {
                   )}
                 />
               )}
-            </GlassPanel>
+            </LayoutCard>
           </FadeIn>
 
           <FadeIn delay={0.15}>
@@ -267,12 +351,13 @@ export default function ExportsPage() {
               isLoading={isLoading}
               error={error}
               onRetry={onRetry}
+              unresolvedMessage={unresolvedMessage ?? undefined}
             />
           </FadeIn>
         </section>
       </div>
 
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

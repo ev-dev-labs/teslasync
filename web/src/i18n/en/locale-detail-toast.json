@@ -1,5 +1,11 @@
 {
   "toast": {
+    "user": {
+      "teslaProfile": {
+        "success": "Tesla profile refreshed",
+        "error": "Failed to refresh Tesla profile"
+      }
+    },
     "common": {
       "error": "Something went wrong"
     },
@@ -166,6 +172,9 @@
         "success": "Export started",
         "error": "Failed to start export"
       },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
       "account": {
         "success": "Account export queued — track progress in the floating widget",
         "error": "Failed to queue account export"
@@ -263,6 +272,11 @@
       }
     },
     "geofence": {
+      "bulkDelete": {
+        "error": "Failed to delete geofences",
+        "partial": "{{deleted}} geofences deleted; some deletions did not complete",
+        "success": "Geofences deleted"
+      },
       "archive": {
         "success": "Place archived",
         "error": "Failed to archive place"
@@ -379,6 +393,22 @@
       }
     },
     "admin": {
+      "operationalBrief": {
+        "retained": "Retained evidence",
+        "snapshot": "Source snapshot",
+        "unmeasured": "Not measured",
+        "periodUnknown": "Observation time and complete analysis bounds are not supplied by this source."
+      },
+      "diagnostics": {
+        "brief": {
+          "selectVehicle": "No vehicle selected",
+          "retained": "Retained measurements",
+          "loading": "Loading measurements",
+          "failed": "Read failed",
+          "loaded": "Source loaded",
+          "missing": "No measurements supplied"
+        }
+      },
       "apiKey": {
         "create": {
           "success": "API key created",

@@ -116,11 +116,13 @@ export function shouldRecordPath(path: string): boolean {
   return true
 }
 
-function hasStorage(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.localStorage !== 'undefined'
-  )
+function safeLocalStorage(): Storage | null {
+  try {
+    if (typeof window === 'undefined') return null
+    return window.localStorage ?? null
+  } catch {
+    return null
+  }
 }
 
 function isValidEntry(e: unknown): e is RecentEntry {
@@ -136,10 +138,11 @@ function isValidEntry(e: unknown): e is RecentEntry {
 }
 
 function load(): RecentEntry[] {
-  if (!hasStorage()) return []
+  const storage = safeLocalStorage()
+  if (!storage) return []
   let raw: string | null
   try {
-    raw = window.localStorage.getItem(STORAGE_KEY)
+    raw = storage.getItem(STORAGE_KEY)
   } catch {
     return []
   }
@@ -159,9 +162,10 @@ function load(): RecentEntry[] {
 }
 
 function save(entries: RecentEntry[]): void {
-  if (!hasStorage()) return
+  const storage = safeLocalStorage()
+  if (!storage) return
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries))
+    storage.setItem(STORAGE_KEY, JSON.stringify(entries))
   } catch {
     // Quota exceeded / disabled storage — fail silently. Recents is
     // additive UX; dropping a write degrades gracefully.
@@ -228,18 +232,22 @@ export function getRecentPages(limit?: number): RecentEntry[] {
   return all
 }
 
-/** Wipe all recent-page history. Fires a same-tab change event. */
-export function clearRecentPages(): void {
-  if (!hasStorage()) {
+/** Wipe all recent-page history, returning success. Fires a same-tab change event. */
+export function clearRecentPages(): boolean {
+  const storage = safeLocalStorage()
+  if (!storage) {
     notify()
-    return
+    return false
   }
+  let persisted = false
   try {
-    window.localStorage.removeItem(STORAGE_KEY)
+    storage.removeItem(STORAGE_KEY)
+    persisted = true
   } catch {
     // ignore — same rationale as save()
   }
   notify()
+  return persisted
 }
 
 /**
@@ -295,9 +303,10 @@ export function resolvePageLabel(path: string): string | null {
 
 /** Test-only helper: wipe the entire list without firing events. */
 export function __resetRecentPagesForTests(): void {
-  if (!hasStorage()) return
+  const storage = safeLocalStorage()
+  if (!storage) return
   try {
-    window.localStorage.removeItem(STORAGE_KEY)
+    storage.removeItem(STORAGE_KEY)
   } catch {
     // ignore
   }

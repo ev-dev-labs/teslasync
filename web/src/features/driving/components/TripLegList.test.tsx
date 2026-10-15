@@ -161,15 +161,15 @@ describe('TripLegList — leg metrics + duration regression', () => {
 
     // 3660 s ÷ 60 = 61 min — NOT "3660 min" (the pre-fix bug).
     const duration = cellText(screen.getByText('Duration'))
-    expect(duration).toContain('61 min')
+    expect(duration).toContain('61.00 min')
     expect(duration).not.toContain('3660')
 
     // Sibling metrics convert SI → display too.
-    expect(cellText(screen.getByText('Distance'))).toContain('45.0 km')
-    expect(cellText(screen.getByText('Energy'))).toContain('12.0 kWh')
+    expect(cellText(screen.getByText('Distance'))).toContain('45.00 km')
+    expect(cellText(screen.getByText('Energy'))).toContain('12.00 kWh')
     const battery = cellText(screen.getByText('Battery'))
-    expect(battery).toContain('88%')
-    expect(battery).toContain('17%')
+    expect(battery).toContain('88.00%')
+    expect(battery).toContain('17.00%')
   })
 
   it('renders the charge stop after its leg with minutes, kWh, currency, SOC and the recommended caption', () => {
@@ -177,9 +177,9 @@ describe('TripLegList — leg metrics + duration regression', () => {
 
     const stop = screen.getByText('Buttonwillow Supercharger').parentElement
     const stopText = stop?.textContent ?? ''
-    expect(stopText).toContain('25 min') // 1500 s ÷ 60
-    expect(stopText).toContain('17% → 82%')
-    expect(stopText).toContain('38.0 kWh')
+    expect(stopText).toContain('25.00 min') // 1500 s ÷ 60
+    expect(stopText).toContain('17.00% → 82.00%')
+    expect(stopText).toContain('38.00 kWh')
     expect(stopText).toContain('$9.40') // formatCurrency
     expect(
       screen.getByText(/Recommended stop point/i),
@@ -210,10 +210,10 @@ describe('TripLegList — SOC threshold colouring', () => {
       />,
     )
 
-    expect(screen.getByText('12%').className).toContain('text-rose-400')
-    expect(screen.getByText('45%').className).toContain('text-amber-400')
-    expect(screen.getByText('90%').className).toContain('text-emerald-400')
-    expect(screen.getByText('60%').className).toContain('text-emerald-400')
+    expect(screen.getByText('12.00%').className).toContain('text-rose-400')
+    expect(screen.getByText('45.00%').className).toContain('text-amber-400')
+    expect(screen.getByText('90.00%').className).toContain('text-emerald-400')
+    expect(screen.getByText('60.00%').className).toContain('text-emerald-400')
   })
 })
 
@@ -254,10 +254,10 @@ describe('TripLegList — null-safety + fallbacks', () => {
     )
 
     expect(container.textContent).not.toContain('NaN')
-    expect(cellText(screen.getByText('Distance'))).toContain('0.0 km')
-    expect(cellText(screen.getByText('Duration'))).toContain('0 min')
+    expect(cellText(screen.getByText('Distance'))).toContain('0.00 km')
+    expect(cellText(screen.getByText('Duration'))).toContain('0.00 min')
     expect(cellText(screen.getByText('Energy'))).toContain('—')
-    expect(cellText(screen.getByText('Battery'))).toContain('0%')
+    expect(cellText(screen.getByText('Battery'))).toContain('0.00%')
   })
 
   it('uses a fallback charge-stop label and $0.00 when the stop name and cost are missing', () => {
@@ -319,7 +319,7 @@ describe('TripLegList — accessibility + unit preference', () => {
     )
     // 16093.44 m = 10.0 mi exactly; the label follows the preference.
     const distance = cellText(screen.getByText('Distance'))
-    expect(distance).toContain('10.0 mi')
+    expect(distance).toContain('10.00 mi')
     expect(distance).not.toContain('km')
   })
 })

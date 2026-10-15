@@ -1,0 +1,351 @@
+{
+  "item": "phase6-qa-analytics-weekly-digest",
+  "status": "DONE_SOURCE_REVIEW_WITH_FINDINGS",
+  "acceptance": "Report delivery only. Not new behavior, a test pass, native QA, page acceptance, or application acceptance.",
+  "page": "web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx",
+  "routes": ["/weekly-digest"],
+  "purpose": "Review the selected vehicle's independent Monday–Sunday driving, charging, battery-at-charge, alert and supervised-driving records; compare the preceding week and optionally request narration.",
+  "scope": {
+    "versionedWrite": "docs\\frontend-audits\\phase6-qa-analytics-weekly-digest.json",
+    "ignoredWrite": "logs\\phase6-qa-analytics-weekly-digest.log",
+    "logIgnoreEvidence": ".gitignore:80 logs/",
+    "applicationSource": "READ_ONLY",
+    "testsBackendApiCatalogConfig": "READ_ONLY",
+    "parentOnly": ["queue", "coordination", "claims", "commits", "proposed-fix dispatch"],
+    "prohibitedWorkNotPerformed": ["Git", "subagents", "installations", "servers", "custom tooling/extensions", "real API/data", "browser/native", "full suites", "original-page remigration"],
+    "deadline": {
+      "requestTimeUtc": "2026-10-13T19:57:16.752Z",
+      "firstProbeUtc": "2026-10-13T19:57:37.4626704Z",
+      "conservativeReturnUtc": "2026-10-13T20:17:00Z",
+      "hardReturnUtc": "2026-10-13T20:22:00Z",
+      "maximumCommandSeconds": 480,
+      "sourceEvidenceCutoffUtc": "2026-10-13T20:06:07.8740062Z"
+    }
+  },
+  "authorityAndDuplicateCheck": {
+    "read": [
+      "migration-queue.md:281 exact QA row, initially pending",
+      "migration-queue.md:1668 initial accepted phase5-page-analytics-weekly-digest row",
+      "docs\\orchestrator-loop.md sole operating playbook",
+      "docs\\session-handoff.md current state and supported-runtime convention",
+      "docs\\frontend-mission.md:1416-1486 sections 43 and 44",
+      "docs\\frontend-design-contract.md MDC-001/002/025/026/031/032/033/034/040-046/060/070",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      "docs\\frontend-audits\\audit-page-054.json historical inventory"
+    ],
+    "exactExistingQaReport": "NOT_PRESENT at first probe; no completed exact QA was found",
+    "exactExistingQaLog": "NOT_PRESENT at first probe",
+    "laterQueueObservation": "C09 found this exact row held by parent and the original source row still completed; concurrent parent metadata movement is not a worker queue edit.",
+    "originalMigration": "ACCEPTED; never redispatched or altered",
+    "existingSpecificFixCheck": "C09 inspected weekly-digest/AIweekscope/alertbounds matching row identities. No separate exact corrective item appeared in those matches; parent must check current claims and deduplicate proposals before queuing."
+  },
+  "historicalOnly": {
+    "sourceCommit": "975fc1638d366a5a997e8909857d024655b356df",
+    "originalTestReceipt": {"discovered": 28, "passed": 28, "failed": 0, "skipped": 0, "rerun": false},
+    "acceptedSections": 9,
+    "acceptedSourceLines": 336,
+    "originalSourceLines": 310,
+    "retainedHistoricalNeeds": ["AI selected-week scope", "direct-child numeric/localization/tone", "alert server bounds"],
+    "warning": "Historical receipts are queue evidence, not newly executed tests or mounted behavior."
+  },
+  "currentSourceInventory": {
+    "routeEvidence": ["web\\src\\App.tsx:817", "web\\src\\lib\\routeRegistry.ts:286", "web\\src\\lib\\routeLoaders.ts:56"],
+    "pageLines": 336,
+    "pageSha256": "0ad98f5b979420926405bf00e898dc678445433c8b07dde7ef9f81fe032b62af",
+    "pagePlusDirectFeaturePresentationLines": 1312,
+    "pagePlusDirectFeaturePresentationDefinition": "Page, WeekNavigation, DrivingPanel, ChargingPanel, BatteryPanel, AlertsPanel, presentation, DigestTrend, DigestOperationalSummary, FsdOperationalPanel, BatteryPill. Excludes unrelated siblings and tests.",
+    "expandedDirectReviewedScopeFiles": 18,
+    "expandedDirectReviewedScopeLines": 2216,
+    "expandedScopeDefinition": "Above plus useWeeklyDigest, notification hook, helpers, constants, display, types and directly rendered shared AIDigestNarration; per-file hashes and line counts in C07 log.",
+    "originalComparisonLimit": "310 and nine sections are preserved historical baseline claims, not a Git reconstruction. Current page alone exceeds the historical 217-line 70% threshold; this is not functional-parity proof.",
+    "actualPageCounts": {"CardGrid": 6, "Section": 2, "FadeIn": 7, "GlassPanel": 0, "ChartContainer": 0, "directSectionComponentOccurrences": 9},
+    "chartOwnership": "DrivingPanel and ChargingPanel -> ChartCard -> EmbeddedChart -> ChartContainer; AlertsPanel -> EmbeddedChart -> ChartContainer. Zero page-local ChartContainer/GlassPanel tokens do not mean zero sections.",
+    "directSharedBoundariesRead": ["PageLayout", "PageContainer", "CardGrid", "LayoutCard", "ChartCard", "EmbeddedChart", "StatGroup", "dataState", "StaleRefreshWarning", "AIFeatureCard", "withAiFeature", "useAiStream", "useUnits", "useNumberFormatting", "formatMetric", "dateFormat", "numberFormat", "useSelectedVehicle", "api scope/client"]
+  },
+  "effectiveScope": {
+    "actualUrl": "/weekly-digest",
+    "headerRange": {
+      "effective": false,
+      "owner": "web\\src\\lib\\workspaceScope.ts:23-77,155-167",
+      "mechanism": "Actual route is absent from RANGE_ENABLED_PATHS; getWorkspaceRouteScope returns range=false, vehicle=true. The independent business-week navigation is not a duplicate header range picker.",
+      "fromToUrl": "Not consumed by useWeeklyDigest; this page intentionally owns weekOffset state rather than useRangeState. Do not register a misleading header range without a separately authorized scope contract."
+    },
+    "headerVehicle": {
+      "effective": true,
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts:50-89,137-179; weekly-digest\\useWeeklyDigest.ts:82-111",
+      "mechanism": "Validated positive URL vehicle_id, then persisted selection, then first loaded vehicle. Resolved deleted URL IDs fall back through the existing owner; setter updates URL/store. No local vehicle selector rendered.",
+      "limit": "Desktop header/mobile drawer mounting, fleet authorization and actual picker interaction NOTRUN."
+    },
+    "week": {
+      "owner": "weekly-digest\\helpers.ts:13-46; useWeeklyDigest.ts:67-79,108-113,192-228",
+      "mechanism": "Browser-local Monday 00:00 through Sunday 23:59:59.999, calendar setDate/setHours (not fixed seven-day milliseconds). Selected and prior weeks query together for drives/charging; local filtering uses record start time. Exclusive request upper bound is weekEnd+1 millisecond.",
+      "timezone": "browserTimezone() for FSD and period metadata; helper dates and notification keys use browser-local calendar dates. No saved timezone preference is consulted by this digest-week owner.",
+      "period": "presentation.ts:35-51 sets start, calendar-plus-seven-day endExclusive, browser timezone, completeness=unknown and available-history provenance.",
+      "limits": ["Initial offset is zero and previous/next is local state, not shareable URL week state.", "Browser/DST behavior is source-described, not newly tested.", "StatGroup/OperationalBrief show date label/provenance; merely carrying timezone in period metadata is not proof it is visible."]
+    }
+  },
+  "dataOwnersAndRouterAgreement": [
+    {
+      "source": "vehicles",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts; web\\src\\hooks\\useSelectedVehicle.ts",
+      "request": "GET /vehicles",
+      "router": "internal\\api\\router.go:3362-3363",
+      "agreement": "SOURCE_PATH_MATCH",
+      "limits": "Fleet query error is not part of the four digest freshness descriptors."
+    },
+    {
+      "source": "drive history",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts:107-132; weekly-digest\\useWeeklyDigest.ts:108-129",
+      "request": "GET /drives?vehicle_id=<effective>&start=<prior Monday ISO>&end=<selected next Monday ISO>&limit=1000",
+      "router": "internal\\api\\router.go:3506-3507",
+      "handler": "internal\\api\\drives\\listing.go:24-58 validates vehicle, parses pagination/range and passes both bounds to GetByVehicle",
+      "agreement": "SOURCE_PATH_AND_HANDLER_PARAMETER_MATCH",
+      "limits": "Single bounded page, no pagination traversal/full-range aggregate endpoint. Database execution/completeness NOTRUN."
+    },
+    {
+      "source": "charging history and charge-session SOC",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts:32-44,122-133; weekly-digest\\useWeeklyDigest.ts:132-142",
+      "request": "GET /charging?vehicle_id=<effective>&limit=1000&offset=0&start=<prior Monday ISO>&end=<selected next Monday ISO>",
+      "router": "internal\\api\\router.go:3545-3546",
+      "handler": "internal\\api\\charging\\handler.go:127-158 validates vehicle and passes pagination plus both bounds to GetByVehicle",
+      "agreement": "SOURCE_PATH_AND_HANDLER_PARAMETER_MATCH",
+      "limits": "One page; averages describe recorded charge sessions, not live battery or a full-week coverage guarantee."
+    },
+    {
+      "source": "alerts",
+      "owner": "web\\src\\api\\hooks\\useNotifications.ts:275-283; weekly-digest\\useWeeklyDigest.ts:144-151,218-228",
+      "request": "GET /alerts?limit=1000",
+      "router": "internal\\api\\router.go:3808-3809",
+      "handler": "internal\\api\\alerts\\alert.go:104-114,140-231 accepts vehicle_id, from, to and paired before_created_at/before_id",
+      "agreement": "SOURCE_PATH_MATCH; PAGE_WEEK_AND_VEHICLE_NOT_SENT",
+      "limits": "Client-filtered global page; no historical-week coverage proof. Existing endpoint capabilities are evidenced, not a request to change backend."
+    },
+    {
+      "source": "supervised driving",
+      "owner": "web\\src\\api\\hooks\\useAnalytics.ts:583-608; weekly-digest\\useWeeklyDigest.ts:153-165",
+      "request": "GET /analytics/fsd?vehicle_id=<effective>&start=<selected Monday ISO>&end=<selected next Monday ISO>&timezone=<browser IANA>",
+      "serializer": "web\\src\\api\\scope.ts:120-143 includes snake_case vehicle_id/start/end/timezone, ordered scope cache key",
+      "router": "internal\\api\\router.go:3930",
+      "handler": "internal\\api\\fsd\\handler.go:113-120,182-235 requires paired RFC3339 bounds and reads timezone",
+      "agreement": "SOURCE_PATH_AND_HANDLER_PARAMETER_MATCH",
+      "limits": "Observed resettable-counter changes, not exact engagement; live response, comparison/DST execution NOTRUN."
+    },
+    {
+      "source": "opt-in narration",
+      "owner": "web\\src\\components\\ai\\AIDigestNarration.tsx:44-65; web\\src\\hooks\\useAiStream.ts",
+      "request": "POST /ai/digests/weekly/narrate body vehicle_id, week_offset_weeks=0",
+      "router": "internal\\api\\router.go:1036,5050-5052 -> internal\\api\\ai_routes.go:134,162-165",
+      "handler": "internal\\api\\aidigest\\handler.go:71-80,91-99,152-156",
+      "agreement": "SOURCE_MOUNTED_ROUTE_MATCH; SELECTED_WEEK_MISMATCH",
+      "limits": "No POST was performed. Handler's documented tool offset range [-12,0] needs explicit handling if a future fix exposes older page weeks."
+    }
+  ],
+  "statesAndTrust": {
+    "owner": "WeeklyDigestPage.tsx:67-110,198-225,242-251,268-292; api\\dataState.ts:199-275; feedback\\StaleRefreshWarning.tsx:60-123",
+    "sourceConfirmedMechanisms": [
+      "Four separate historical states; only fatalError may drive a source replacement, not raw refresh error.",
+      "Initial-loading flags require no retained data. Successful independent drive/charge sources remain numeric in summary/comparison via explicit driveAvailable/chargingAvailable.",
+      "Retained drive/charge/alert/FSD payloads survive refresh error; nonblocking warnings have individual source retry.",
+      "Charging paused with retained data is stale/isRefreshBlocked, not fabricated offline/server failure. Battery uses chargingInitialLoading/fatalError and therefore retains its readings.",
+      "PageLayout receives query/dataSources but no global loading/error/empty gate; independent child shells remain mounted.",
+      "Summary/comparison unknown source values are null; a returned empty source can legitimately produce count/total zero. This does not prove missing individual fields are measured zero.",
+      "FSD null distance/share and missing baseline remain missing; numeric zero is not rejected and signed comparison distance/share are not clamped.",
+      "Freshness descriptors enabled flags test query-object presence, not actual hook enabled state; no-vehicle and fleet-query failure handling remains an explicit limit."
+    ],
+    "notConfirmedAtRuntime": ["retained charts during real failure", "paused query interactions", "screen-reader announcements", "empty fleet recovery", "source-age freshness", "full history completeness"]
+  },
+  "sectionsAndActions": [
+    {"section": "week navigation", "pageLine": 152, "owner": "WeekNavigation.tsx:23-56", "visibility": "unconditional shell", "actions": ["Previous always enabled", "Next disabled for current week"], "sourceSemantics": "Localized native shared buttons, decorative icons hidden, min-h-11/min-w-11, wrapping date label."},
+    {"section": "week summary and fun fact", "pageLine": 171, "owner": "DigestOperationalSummary.tsx:18-90", "visibility": "unconditional OperationalBrief frame", "actions": ["refetchAll after source-fatal error"], "sourceSemantics": "Source-availability nulls, raw numeric specialist formatters, available-history provenance; optional fun-fact tile is not a hidden whole section."},
+    {"section": "driving", "pageLine": 199, "owner": "DrivingPanel.tsx:43-187", "visibility": "unconditional ChartCard and detail footer", "actions": ["individual retry", "View drives /drives for missing top drive"], "sourceSemantics": "SI meters converted at display; chart dataColumns and ariaLabel supplied; footer trust gap recorded below."},
+    {"section": "charging", "pageLine": 217, "owner": "ChargingPanel.tsx:40-152", "visibility": "unconditional ChartCard and detail footer", "actions": ["individual retry"], "sourceSemantics": "Wh/W/currency specialist display and comparison; footer trust gap recorded below."},
+    {"section": "supervised driving", "pageLine": 243, "owner": "FsdOperationalPanel.tsx:14-85", "visibility": "unconditional LayoutCard/brief; current-week notice and measured-distance link intentionally conditional", "actions": ["individual retry", "FSD insights /fsd?days=7"], "sourceSemantics": "Explicit counter/absence caveat, nullable baseline, preserved signed deltas; destination does not encode selected historical digest week."},
+    {"section": "battery", "pageLine": 268, "owner": "BatteryPanel.tsx:36-93; BatteryPill.tsx:15-65", "visibility": "unconditional LayoutCard, loading/error/no-session branches", "actions": ["charging retry", "Charging /charging empty recovery"], "sourceSemantics": "Accessible meter min/max/now/text and bounded geometry; session-average missing-SOC gap recorded below."},
+    {"section": "alerts", "pageLine": 284, "owner": "AlertsPanel.tsx:46-144", "visibility": "unconditional LayoutCard, loading/error/zero-alert/severity branches", "actions": ["individual retry"], "sourceSemantics": "Severity list/listitems and chart table data; zero-alert message and bounds caveat below."},
+    {"section": "week comparison", "pageLine": 309, "owner": "DigestOperationalSummary.tsx; DigestTrend.tsx", "visibility": "unconditional comparison brief", "actions": ["refetchAll after source-fatal error"], "sourceSemantics": "Preserved current/prior SI numeric values, specialist callbacks, signs and accessible comparison content; flat tone gap below."},
+    {"section": "optional narration", "pageLine": 332, "owner": "AIDigestNarration.tsx; withAiFeature.tsx:45-61; AIFeatureCard.tsx:259-352", "visibility": "page invocation always present; AI off/per-feature off intentionally returns null without hiding deterministic sections", "actions": ["Ask Helix / Generate narration enabled only with positive finite vehicle and not streaming"], "sourceSemantics": "Localized accessible action label and busy/disabled state, wrapping 44px mobile button, stream scope clears on vehicle change only."}
+  ],
+  "unitsAndNumericDisplay": {
+    "sourceConfirmed": [
+      "View-model distances m, durations s, energy Wh, power W, efficiency Wh/m; charge SOC %, cost numeric currency, derived CO2 kg.",
+      "Chart conversion uses convertDistanceFromSI/convertEnergyFromSI only at render; no legacy converter calls found by scoped source scan.",
+      "useUnits.ts:118-168 derives distance/locale/precision from saved settings; energy/duration/power retain existing display defaults rather than inventing new preferences.",
+      "Summary and FSD supply numeric rawValue and display.formatter to useOperationalMetrics; formatMetric.ts:35-62 validates numeric inputs before specialist formatter and permits signed distance/rate.",
+      "Number formatting subscribes to effective precision/locale; child chart axes convert values before formatting. Efficiency deliberately retains Wh per display-distance.",
+      "Estimated range uses 5.5 m/Wh and is labeled estimated; CO2 estimate uses 0.21 kg/kWh with explicit Wh-to-kWh conversion.",
+      "Battery gauge clamps geometry only, keeps readable percent text; its coercion must not be used to invent absent SOC."
+    ],
+    "limits": "Display-setting reactivity, currency correctness, signed/huge/extreme data and visible units were not mounted or tested."
+  },
+  "sourceConfirmedFindings": [
+    {
+      "id": "WD-QA-01",
+      "severity": "high",
+      "title": "Narration ignores the selected historical week and cannot clear on week navigation",
+      "owner": "web\\src\\components\\ai\\AIDigestNarration.tsx; WeeklyDigestPage.tsx",
+      "evidence": ["WeeklyDigestPage.tsx:332 passes vehicleId only", "AIDigestNarration.tsx:54 hardcodes week_offset_weeks=0", "AIDigestNarration.tsx:64 scopeKey contains vehicle only", "useAiStream.ts:300-322 aborts/clears only when scopeKey changes", "internal\\api\\aidigest\\handler.go:152-156 forwards body offset"],
+      "mechanism": "Previous changes deterministic digest week but neither request body nor stream identity. The narration describes current week, and old vehicle-identical output remains across week navigation.",
+      "sourceRepro": "Follow Previous -> unchanged AIDigestNarration props -> body offset still 0 -> same stream scope. No live narration was invoked.",
+      "proposedNarrowFix": "Parent queue an atomic selected-week narration prop/body/scope correction at these exact owners with focused covering tests. Preserve AI-off/vehicle cancellation; handle existing backend offset limits explicitly rather than silently narrating another week."
+    },
+    {
+      "id": "WD-QA-02",
+      "severity": "high",
+      "title": "Alert week/vehicle coverage is unbounded at request time and legacy scalar scope is insufficient",
+      "owner": "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts; web\\src\\api\\hooks\\useNotifications.ts",
+      "evidence": ["useWeeklyDigest.ts:144 global useAlertHistory(1000)", "useWeeklyDigest.ts:218-228 local date and scalar vehicle_id/zero filter", "useNotifications.ts:275-283 URL/key contain limit only", "AlertsPanel.tsx:66 zero is labeled everything looks great", "internal\\api\\alerts\\alert.go:173-187,210-231 existing vehicle/from/to/cursor support", "internal\\api\\alerts\\alert.go:371-400 initializes legacy vehicle_id to zero and separately carries all_vehicles/vehicle_ids for multi-vehicle rules"],
+      "mechanism": "A selected older week can be outside the global 1000-row result and become a false healthy zero. An all_vehicles=false rule with multiple vehicle_ids leaves legacy vehicle_id=0, which the digest treats as global even for a vehicle outside that canonical scope.",
+      "sourceRepro": "Consider selected week absent from capped recent rows, or a returned multi-vehicle rule scoped to synthetic IDs 4/5 while selected ID is 6. The existing filter yields respectively zero or an incorrectly included alert. This is control-flow evidence, not a real-data observation.",
+      "proposedNarrowFix": "Parent assign one exact hook/digest alert-scope integration: send existing vehicle/from/to bounds, preserve end-bound semantics and canonical all_vehicles/vehicle_ids, traverse the existing scoped cursor or explicitly declare partial coverage. Replace unconditional healthy-zero interpretation where coverage is unknown. No backend capability invention."
+    },
+    {
+      "id": "WD-QA-03",
+      "severity": "high",
+      "title": "Absent SOC measurements in returned sessions become measured zero",
+      "owner": "web\\src\\features\\analytics\\components\\weekly-digest\\useWeeklyDigest.ts; BatteryPanel.tsx; weekly-digest\\types.ts",
+      "evidence": ["useWeeklyDigest.ts:24-31 averagePresent returns 0 for no finite measurements", "useWeeklyDigest.ts:284-285 independent start/end averages", "types.ts:47-50 nullable start/end SOC", "BatteryPanel.tsx:36 decides availability from session count", "BatteryPanel.tsx:57,62,72 renders zero meters and charge gain"],
+      "mechanism": "One returned session with both SOC fields null passes hasData and renders 0%/0%/0% gain. Independently missing end SOC can also generate a misleading negative gain from a measured start average. Source-level session availability does not establish each field's measurement.",
+      "sourceRepro": "Trace a single in-week charging session with null start_soc_pct/end_soc_pct through averagePresent, hasData and meter props; compare an actual numeric 0 session, which must remain valid.",
+      "proposedNarrowFix": "Parent queue exact nullable-average view-model/panel handling with focused null/partial/measured-zero tests; retain charge count, energy, source retention and paused charging behavior."
+    },
+    {
+      "id": "WD-QA-04",
+      "severity": "medium",
+      "title": "Direct chart details bypass numeric trust and display unresolved values as text zeros",
+      "owner": "DrivingPanel.tsx; ChargingPanel.tsx; BatteryPanel.tsx; weekly-digest-modernization\\presentation.ts; useWeeklyDigest.ts",
+      "evidence": ["DrivingPanel.tsx:59-98,145,161 details are independent of plot loading/error", "ChargingPanel.tsx:55-86,110,126 same footer behavior", "ChartCard.tsx:26-42 forwards footer to LayoutCard separately from EmbeddedChart", "LayoutCard.tsx:64 footer renders independently", "presentation.ts:22-23 metricId=text/rawValue formatted string", "useWeeklyDigest.ts:239-244 null energy is safeNumber zero"],
+      "mechanism": "Before a source has returned, zero-initialized aggregates are formatted into ready-looking footer values even while the plot is loading or fatal. After a payload returns, a null energy measurement is still zeroed. presentedMetric converts all specialist numeric measurements to text and therefore bypasses formatMetric's numeric/missing validation.",
+      "sourceRepro": "Trace no retained drive/charge payload plus isLoading=true into unconditional detail StatGroup; then trace a returned drive with energyUsedWh=null. This is not a new rendered test.",
+      "proposedNarrowFix": "Parent assign bounded direct-child trust/numeric adapter adoption using numeric rawValue plus existing specialist display.formatter and field/source availability. Preserve independently available detail/top-drive content and every accepted retained-source behavior; never gate the whole page or rewrite unrelated children."
+    },
+    {
+      "id": "WD-QA-05",
+      "severity": "medium",
+      "title": "Fun-fact multiplier reparses a localized display string as a number",
+      "owner": "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\DigestOperationalSummary.tsx; weekly-digest\\useWeeklyDigest.ts; weekly-digest\\types.ts",
+      "evidence": ["useWeeklyDigest.ts:356 stores times=fmtNumber(times)", "types.ts:121-126 FunFact.times is string", "DigestOperationalSummary.tsx:67 Number(funFact.times)", "numberFormat.ts:91-102 locale-aware separators", "formatMetric.ts:35-38 rejects nonfinite raw input before formatter"],
+      "mechanism": "Comma-decimal or grouped locale strings are not JavaScript numeric literals. For example the source can produce '1,40', whose Number conversion is NaN; the validated multiplier becomes unavailable even though its underlying numeric ratio is known.",
+      "sourceRepro": "Follow any non-integer city-distance ratio under a comma-decimal locale from fmtNumber into Number. No executed calculation/test is claimed.",
+      "proposedNarrowFix": "Parent queue only raw numeric fun-fact multiplier propagation and its exact summary/type producers with focused locale cases. Keep existing formatted specialist label/context, city-pair logic and threshold."
+    },
+    {
+      "id": "WD-QA-06",
+      "severity": "medium",
+      "title": "Child localization contract is incomplete for data labels, dates and unit-bearing title keys",
+      "owner": "weekly-digest\\constants.ts/useWeeklyDigest.ts; DrivingPanel.tsx; ChargingPanel.tsx; AlertsPanel.tsx",
+      "evidence": ["constants.ts:10 English Mon-Sun", "useWeeklyDigest.ts:320,331 carries those labels directly to charts", "useWeeklyDigest.ts:343 capitalizes raw severity", "AlertsPanel.tsx:91 renders raw severity", "useWeeklyDigest.ts:75 and DrivingPanel.tsx:108 call dates without locale", "dateFormat.ts:44-50,65-82 defaults absent locale to browser", "DrivingPanel.tsx:140 and ChargingPanel.tsx:106 call unit-bearing title keys without unit", "C10 canonical dailyDistance='Daily distance ({{unit}})' and dailyEnergyAdded='Daily energy added ({{unit}})'"],
+      "mechanism": "Translated chrome surrounds English weekday/severity data; selected numeric locale is not passed to date labels. Canonical title keys require unit interpolation but the title call sites omit it, while subtitle/data-column calls supply it.",
+      "sourceRepro": "Trace a non-English UI/settings locale differing from the browser; inspect title translation arguments against the canonical leaf. Exact i18next warning/output under missing interpolation is NOTRUN.",
+      "proposedNarrowFix": "Parent queue exact child label/date/unit-key call-site corrections, including canonical catalog integration only if genuinely needed and exclusively claimed. Preserve raw severity/weekday identities, ordering, chart values and physical units."
+    },
+    {
+      "id": "WD-QA-07",
+      "severity": "low",
+      "title": "Flat week-over-week change is forced into favorable green",
+      "owner": "weekly-digest\\helpers.ts; weekly-digest-modernization\\DigestTrend.tsx",
+      "evidence": ["helpers.ts:69-71 flat direction sets positive=true", "DigestTrend.tsx:30-37 tests positive before flat neutral branch"],
+      "mechanism": "For equal current/prior values, the comparison neutral-flat color branch is unreachable because positive=true wins. A no-change state becomes success-colored independent of the metric's business direction.",
+      "sourceRepro": "Follow equal current and previous operands through trendFor into DigestTrend's non-highlight class conditional.",
+      "proposedNarrowFix": "Parent queue only neutral-flat precedence at the existing trend owner and focused equal/signed/inverted cases. Preserve direction, percent, accessibility description and non-flat favorability; visual contrast still needs native review."
+    }
+  ],
+  "runtimeCandidatesNotPromoted": [
+    {
+      "id": "WD-CANDIDATE-01",
+      "topic": "Mounted theme/contrast and palette",
+      "source": "Semantic classes, STATUS_COLORS, CHART_COLORS and BatteryPill dynamic colors exist; source presence cannot establish composed dark/light/custom contrast or color-blind distinguishability.",
+      "nextEvidence": "Authorized native/theme/forced-color review; no speculative palette correction queued by this report."
+    },
+    {
+      "id": "WD-CANDIDATE-02",
+      "topic": "Browser-local week rollover and DST comparison",
+      "source": "useWeeklyDigest.ts:70-71 memoizes week windows only by offset; no midnight timer is shown. FSD comparison, notifications and browser zone changes need mounted/controlled-clock evidence.",
+      "nextEvidence": "Focused deterministic clock/DST and long-lived-tab verification only under a separately authorized test/source scope."
+    },
+    {
+      "id": "WD-CANDIDATE-03",
+      "topic": "Mobile/a11y composed behavior",
+      "source": "Wrapping/min-w-0, container-width CardGrid, labeled buttons/meter/chart alternatives and 44px navigation source exist; battery label truncation, scaled text, RTL arrows, footer reachability and actual focus/hit targets remain unmeasured.",
+      "nextEvidence": "Mission matrix mounted with safe authorized fixtures/provider lock; no browser/native pass inferred."
+    },
+    {
+      "id": "WD-CANDIDATE-04",
+      "topic": "Coverage, empty fleet and drillthrough scope",
+      "source": "Drive/charge cap 1000 and completeness=unknown are explicit. Vehicle-query error is not surfaced as a source; /fsd?days=7 does not encode a selected past digest week.",
+      "nextEvidence": "Separate no-vehicle/fleet-error/high-volume and historical drillthrough checks before proposing additional fixes. Do not silently change header range ownership."
+    }
+  ],
+  "sourceAccessibilityAndMobile": {
+    "mechanisms": [
+      "WeekNavigation uses shared native Button, localized accessible labels, hidden decorative glyphs and explicit 44px minimum dimensions.",
+      "PageContainer has a named page heading/route-focus target; layout cards use stable generated title IDs and aria-labelledby.",
+      "CardGrid labels each group, derives spans from measured container width; panels/footer use min-w-0/wrapping.",
+      "Alerts include a semantic severity list and text counts/icons beyond color.",
+      "BatteryPill uses role=meter with numeric min/max/now and localized-label percent text; gauge geometry is clamped.",
+      "Charts supply ariaLabel and actual converted dataColumns through canonical ChartContainer boundaries; complete native chart keyboard/table behavior is not inspected.",
+      "StaleRefreshWarning uses polite status and explicit per-source retry; paused queries do not claim device offline.",
+      "AIFeatureCard uses localized accessible action name and disabled/busy state, 44px mobile minimum and wrapping.",
+      "No raw HTML input/button/table or direct vendor import was found in the corrected scoped scans."
+    ],
+    "notRun": ["keyboard/focus", "screen-reader", "actual touch rectangles", "mobile drawer/header", "theme/contrast", "RTL", "200% text", "reduced motion/low bandwidth", "open chart/AI states", "320/375/390/430/768/1024/1280/1440/1920/2560 widths"]
+  },
+  "verification": {
+    "method": "Source inspection, bounded existing-script attempts, built-in PowerShell scans/counts/hashes and JSON document validation only.",
+    "scriptOutcomes": {"auditViolations": 127, "verifyApiHooks": 127, "reason": "Windows backslashes are consumed by /bin/bash; scripts fail before scanning/typechecking. No path workaround/tool installation performed."},
+    "scopedFallbackCounts": {
+      "files": 18,
+      "staticInlineCssVariableMatches": 0,
+      "rawHtmlCorrectedCaseSensitiveMatches": 0,
+      "directVendorImports": 0,
+      "oldApiImports": 0,
+      "deprecatedConverterCalls": 0,
+      "offlineWordMatches": 0,
+      "anyTypeCorrectedMatches": 0,
+      "hookRequestDoublePrefixMatches": 0,
+      "camelCaseVehicleDriveSessionQueryMatches": 0,
+      "limits": "Line-oriented named-pattern scans, not full AST/style/i18n/visual certification. Hook pattern scans cover the five directly relevant hook files; router agreement is separately manually source-confirmed."
+    },
+    "retainedScanCorrections": "C07 default case-insensitive raw HTML scan matched two valid <Button> lines; any-word scan matched three comments. C08 case-sensitive raw HTML and actual any-type patterns each returned zero. Both raw and corrected outputs retained.",
+    "newTestExecution": {"discovered": null, "executed": null, "passed": null, "failed": null, "skipped": null, "status": "NOTRUN"},
+    "notRun": {
+      "npx tsc --noEmit": "NOTRUN: audit script failed before TypeScript; source-only report item, no source edits, parent owns cadence/gates.",
+      "tests": "NOTRUN: no source/test write or new behavioral acceptance authorized.",
+      "lintBuildFullSuite": "NOTRUN: report-only scope; no original passing receipt rerun.",
+      "browserNativeRealApi": "NOTRUN: explicitly prohibited/no provider grant.",
+      "preservationCli": "NOTRUN: no source edit or remigration; historical inventory retained and current source counts recorded.",
+      "GitStatusDiff": "NOTRUN: worker Git explicitly prohibited."
+    },
+    "numericCommandExits": [
+      {"id": "C01", "command": "Get-ChildItem -Filter migration-queue.md -Recurse; Test-Path/Get-Content exact report/log; [DateTime]::UtcNow", "exit": 0, "outcome": "Exact report/log absent; queue located."},
+      {"id": "C02", "command": "Select-String migration-queue.md phase6-qa-analytics-weekly-digest/phase5-page-analytics-weekly-digest/orchestrator-loop/mission43/mission44", "exit": 0, "outcome": "Overbroad output truncated by tool; exact rows reread by C03, no missing content inferred."},
+      {"id": "C03", "command": "Select-String migration-queue.md exact pipe-delimited QA/original rows; Get-ChildItem docs mission/orchestrator/handoff", "exit": 0, "outcome": "Exact authorities and historical acceptance read."},
+      {"id": "C04", "command": "bash .github\\skills\\audit-violations\\audit.sh web\\src\\features\\analytics\\pages\\WeeklyDigestPage.tsx", "exit": 127, "wrapperExit": 0, "outcome": "Script startup failed; not a passing audit."},
+      {"id": "C05", "command": "bash .github\\skills\\verify-api-hooks\\verify.sh web\\src\\api\\hooks\\useDriving.ts", "exit": 127, "wrapperExit": 0, "outcome": "Script startup failed; manual direct-hook/router evidence kept separate."},
+      {"id": "C06", "command": "rg -n listed-patterns exact scoped files via PowerShell; intended Get-Content/Get-FileHash", "exit": 1, "outcome": "rg executable unavailable; no scan/count/hash outcome."},
+      {"id": "C07", "command": "Select-String -Path exact 18 files -Pattern logged regex; Get-Content line counts; Get-FileHash -Algorithm SHA256", "exit": 0, "outcome": "2216 expanded lines, 336 page lines, nine section invocations and fingerprints; raw false positives retained."},
+      {"id": "C08", "command": "Select-String -CaseSensitive corrected raw-HTML/any-type regex; exact source mechanism citations", "exit": 0, "outcome": "Both corrected patterns zero; actual source lines logged."},
+      {"id": "C09", "command": "Select-String migration-queue.md weekly-digest/AIweekscope/alertbounds; Get-Content en.json -Raw | ConvertFrom-Json", "exit": 1, "outcome": "Queue identity search completed; catalog conversion rejected existing case-distinct keys, no leaf output."},
+      {"id": "C10", "command": "Get-Content web\\src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable; print three exact digest leaves", "exit": 0, "outcome": "Unit-bearing title keys and healthy-zero alert leaf confirmed; catalog unchanged."},
+      {"id": "C11", "command": "Get-Content exact report -Raw | ConvertFrom-Json -AsHashtable; assert item/scope/counts; compare Get-FileHash SHA256 against C07 SOURCE entries; Select-String LayoutCard footer", "exit": 0, "outcome": "JSON/item/scope valid; nine sections, seven findings, four candidates; 18 source pins stable with zero drift. Exact footer citation corrected to line 64 before return; final amended-document hash/parse is separately logged."}
+    ],
+    "documentValidation": "Final built-in ConvertFrom-Json -AsHashtable and exact item/file/section/finding ownership checks are recorded with numeric exit in the sole ignored log. This is document validation, not application testing."
+  },
+  "needs": {
+    "parentAction": "Intake this delivered source-only receipt; queue/deduplicate seven confirmed narrow corrective scopes using exact evidence/owners above. Never reopen the accepted original migration.",
+    "sourceConfirmedFindingCount": 7,
+    "runtimeCandidateCount": 4,
+    "fixAuthority": "PROPOSED_ONLY; no fix row, source delta or new test authored",
+    "nativeAcceptance": "Separate authorized mission43/44 work remains NOTRUN"
+  },
+  "release": {
+    "source": "RELEASED_READ_ONLY",
+    "report": "RELEASED",
+    "log": "RELEASED",
+    "json": "RELEASED",
+    "commands": "RELEASED_NO_RUNNING_COMMANDS",
+    "postReturnWrites": "NONE_PERMITTED"
+  }
+}

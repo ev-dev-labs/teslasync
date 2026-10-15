@@ -22,7 +22,7 @@
  *   5. Empty & null-safety (the hardening) — a single point, an empty array, and
  *      an `undefined` chartData all surface the accessible empty state instead of
  *      a blank panel or a `.length`-of-undefined crash; and a missing `stats`
- *      defaults gain/loss/net to zero instead of throwing.
+ *      keeps gain/loss/net unknown instead of throwing or manufacturing zero.
  *
  * Per the repo convention (see BatteryLevelChart.test.tsx / SessionCurveChart.test.tsx):
  * react-i18next is stubbed to echo the English fallback so asserted copy is
@@ -94,12 +94,14 @@ vi.mock('@/components/charts', () => {
       title,
       ariaLabel,
       height,
+      empty,
       className,
       children,
     }: {
       title?: string;
       ariaLabel?: string;
       height?: number;
+      empty?: boolean;
       className?: string;
       children?: ReactNode | ((context: {
         hiddenSeries: { isHidden: (key: string) => boolean };
@@ -112,6 +114,7 @@ vi.mock('@/components/charts', () => {
         <section
           aria-label="chart-container"
           data-height={String(height ?? '')}
+          data-empty={String(empty)}
           className={className}
         >
           <h3>{title}</h3>
@@ -149,12 +152,14 @@ vi.mock('@/components/charts', () => {
         {children}
       </div>
     ),
-    Area: (p: { dataKey?: string; name?: string; stroke?: string; yAxisId?: string }) => (
+    Area: (p: { dataKey?: string; name?: string; stroke?: string; fill?: string; fillOpacity?: number; yAxisId?: string }) => (
       <span
         data-testid="area"
         data-key={String(p.dataKey ?? '')}
         data-name={String(p.name ?? '')}
         data-stroke={String(p.stroke ?? '')}
+        data-fill={String(p.fill ?? '')}
+        data-fill-opacity={String(p.fillOpacity ?? '')}
         data-yaxis={String(p.yAxisId ?? '')}
       />
     ),
@@ -178,6 +183,11 @@ vi.mock('@/components/charts', () => {
 });
 
 import { ElevationChart } from './ElevationChart';
+
+vi.mock('@/components/layout', async () => {
+  const charts = await import('@/components/charts');
+  return { ChartCard: charts.ChartContainer };
+});
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -265,6 +275,14 @@ beforeEach(() => {
 // ── 1. Panel chrome ──────────────────────────────────────────────────────────
 
 describe('ElevationChart — panel chrome', () => {
+  it('requires two elevation readings for the shared ready state, including sea level', () => {
+    const { rerender } = renderChart([makePoint({ elevation: null }), makePoint({ elevation: 0 })]);
+    expect(screen.getByLabelText('chart-container')).toHaveAttribute('data-empty', 'true');
+    rerender(<ElevationChart chartData={[makePoint({ elevation: 0 }), makePoint({ elevation: 0 })]} stats={makeStats()} />);
+    expect(screen.getByLabelText('chart-container')).toHaveAttribute('data-empty', 'false');
+    expect(screen.queryByText('No telemetry data available')).not.toBeInTheDocument();
+  });
+
   it('frames the panel with the i18n title', () => {
     renderChart();
 
@@ -298,7 +316,7 @@ describe('ElevationChart — populated trace', () => {
     const area = screen.getByTestId('area');
     expect(area).toHaveAttribute('data-key', 'elevation');
     expect(area).toHaveAttribute('data-yaxis', 'elev');
-    expect(area).toHaveAttribute('data-stroke', '#10b981');
+    expect(area).toHaveAttribute('data-stroke', chartTokens.series[1]);
     expect(area).toHaveAttribute('data-name', 'Elevation (m)');
   });
 
@@ -308,7 +326,17 @@ describe('ElevationChart — populated trace', () => {
     const line = screen.getByTestId('line');
     expect(line).toHaveAttribute('data-key', 'speed');
     expect(line).toHaveAttribute('data-yaxis', 'speed');
-    expect(line).toHaveAttribute('data-stroke', '#a855f7');
+    expect(line).toHaveAttribute('data-stroke', chartTokens.series[0]);
+  });
+
+  it('uses the restrained elevation series fill at no more than eight percent opacity', () => {
+    renderChart();
+
+    const area = screen.getByTestId('area');
+    expect(area).toHaveAttribute('data-fill', chartTokens.series[1]);
+    expect(area).toHaveAttribute('data-fill-opacity', '0.08');
+    expect(Number(area.getAttribute('data-fill-opacity'))).toBeLessThanOrEqual(0.08);
+    expect(readChartRows()).toEqual(POINTS);
   });
 
   it('labels the speed line with the active (metric) speed-unit preference', () => {
@@ -340,12 +368,68 @@ describe('ElevationChart — populated trace', () => {
 // ── 3. Gain / loss / net summary ─────────────────────────────────────────────
 
 describe('ElevationChart — gain / loss / net summary', () => {
+  it.each([
+    [],
+    [null, null],
+    [0],
+    [0, null, 10],
+    [NaN, 0],
+    [0, Infinity],
+    [-Infinity, 0],
+    [-Number.MAX_VALUE, Number.MAX_VALUE],
+  ].map((elevations) => ({ elevations })))('does not turn insufficient deltas into zero for $elevations', ({ elevations }) => {
+    renderChart(elevations.map((elevation) => makePoint({ elevation })), makeStats({ elevGain: 0, elevLoss: 0 }));
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
+  });
+
+  it.each([0, -12.5, 0.25])('renders measured zero for a flat adjacent pair at %s metres', (elevation) => {
+    renderChart([makePoint({ elevation }), makePoint({ elevation })], makeStats({ elevGain: 0, elevLoss: 0 }));
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0.00 m', '0.00 m', '0.00 m']);
+  });
+
+  it('renders fractional gain, loss and negative net from signed observations', () => {
+    renderChart([
+      makePoint({ elevation: -2.5 }), makePoint({ elevation: -1.75 }), makePoint({ elevation: -3 }),
+    ], makeStats({ elevGain: 0.75, elevLoss: 1.25 }));
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0.75 m', '1.25 m', '-0.50 m']);
+  });
+
+  it('uses nullable pair evidence rather than legacy zero stats', () => {
+    render(<ElevationChart chartData={POINTS} stats={{
+      ...makeStats({ elevGain: 0, elevLoss: 0 }),
+      elevationEvidence: { gainM: null, lossM: null, eligiblePairCount: 0, pairCount: 2, coverage: 0 },
+    }} />);
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
+  });
+
+  it('renders observed partial totals without bridging missing readings', () => {
+    render(<ElevationChart chartData={[
+      makePoint({ elevation: -2.5 }), makePoint({ elevation: -1.75 }),
+      makePoint({ elevation: null }), makePoint({ elevation: 100 }),
+    ]} stats={{
+      ...makeStats(),
+      elevationEvidence: { gainM: 0.75, lossM: 0, eligiblePairCount: 1, pairCount: 3, coverage: 1 / 3 },
+    }} />);
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0.75 m', '0.00 m', '0.75 m']);
+  });
+
+  it.each([NaN, Infinity, -Infinity])('keeps invalid summary values %s unknown', (invalid) => {
+    renderChart(POINTS, makeStats({ elevGain: invalid, elevLoss: 0 }));
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '0.00 m', '—']);
+  });
+
+  it('normalizes invalid chart readings to gaps while preserving valid zeroes', () => {
+    renderChart([makePoint({ elevation: 0 }), makePoint({ elevation: NaN }), makePoint({ elevation: 0 })]);
+    expect(readChartRows().map((point) => point.elevation)).toEqual([0, null, 0]);
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
+  });
+
   it('renders climb, descent and the net (gain − loss) from stats', () => {
     const { container } = renderChart(POINTS, makeStats({ elevGain: 120, elevLoss: 45 }));
 
     const text = container.textContent ?? '';
-    expect(text).toContain('gain');
-    expect(text).toContain('loss');
+    expect(text).toContain('Gain');
+    expect(text).toContain('Loss');
     expect(text).toContain('Net');
     expect(text).toContain('120');
     expect(text).toContain('45');
@@ -353,11 +437,10 @@ describe('ElevationChart — gain / loss / net summary', () => {
     expect(text).toContain('75');
   });
 
-  it('marks the gain / loss arrow glyphs decorative (aria-hidden) so only the values are announced', () => {
-    const { container } = renderChart();
-
-    // ArrowUpRight + ArrowDownRight — both hidden from assistive tech.
-    expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThanOrEqual(2);
+  it('exposes gain and loss as semantic row headers instead of color-only arrows', () => {
+    renderChart();
+    expect(screen.getByRole('rowheader', { name: 'Gain' })).toBeInTheDocument();
+    expect(screen.getByRole('rowheader', { name: 'Loss' })).toBeInTheDocument();
   });
 });
 
@@ -427,16 +510,13 @@ describe('ElevationChart — empty & null-safety', () => {
     expect(screen.queryByTestId('composed-chart')).not.toBeInTheDocument();
   });
 
-  it('still plots the trace when stats is missing, defaulting gain/loss/net to zero', () => {
-    const { container } = render(
+  it('still plots the trace when stats is missing, keeping gain/loss/net unknown', () => {
+    render(
       <ElevationChart chartData={POINTS} stats={undefined as unknown as DriveStats} />,
     );
 
     // The chart renders (no `stats.elevGain` crash) …
     expect(screen.getByTestId('composed-chart')).toBeInTheDocument();
-    // … and the net summary falls back to a safe zero.
-    const text = container.textContent ?? '';
-    expect(text).toContain('Net');
-    expect(text).toContain('0');
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
   });
 });

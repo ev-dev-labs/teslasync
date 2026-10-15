@@ -14,13 +14,13 @@
  *   - Composition: the consumer's bulk actions render into the `children`
  *     slot, and a caller `className` is merged onto the token base classes.
  *
- * `@testing-library/user-event` is not installed in this repo, so we drive
- * interactions with `fireEvent` — matching every other component test here
- * (FullscreenButton, PinButton, Lightbox, EditableText, ContextMenu).
+ * Pointer callback coverage uses fireEvent; keyboard coverage uses user-event.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
+import { type FormEvent } from 'react'
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 // i18n stub — resolve `t(key, default, opts)` to the default string with
 // `{{count}}` interpolation so the count copy is human-readable in
@@ -178,5 +178,50 @@ describe('DataTableBulkBar — composition', () => {
     expect(region.className).toContain('custom-bar')
     // Base token classes (from tableTokens.bulkBar) survive the merge.
     expect(region.className).toContain('rounded-lg')
+  })
+})
+
+describe('DataTableBulkBar — restrained interaction', () => {
+  it('keeps child actions and clear keyboard-reachable without submitting an enclosing form', async () => {
+    const user = userEvent.setup()
+    const onExport = vi.fn()
+    const onClear = vi.fn()
+    const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault())
+    render(
+      <form onSubmit={onSubmit}>
+        <DataTableBulkBar count={4} onClear={onClear}>
+          <button type="button" onClick={onExport}>Export</button>
+        </DataTableBulkBar>
+      </form>,
+    )
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Export' })).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(onExport).toHaveBeenCalledTimes(1)
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Clear selection' })).toHaveFocus()
+    await user.keyboard(' ')
+    expect(onClear).toHaveBeenCalledTimes(1)
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.getByText('4 selected')).toBeInTheDocument()
+  })
+
+  it('retains complete long child content and logical wrapping in RTL', () => {
+    const label = 'تصدير جميع السجلات المحددة مع تفاصيل النطاق والمصدر '.repeat(5)
+    render(
+      <div dir="rtl">
+        <DataTableBulkBar count={123456} onClear={vi.fn()}>
+          <button type="button">{label}</button>
+        </DataTableBulkBar>
+      </div>,
+    )
+    const action = screen.getByRole('button', { name: label.trim() })
+    expect(action.textContent).toBe(label)
+    expect(action.parentElement).toHaveClass('ms-auto', 'flex-wrap', 'min-w-0', 'max-w-full')
+    const clear = screen.getByRole('button', { name: 'Clear selection' })
+    expect(clear).toHaveClass('min-h-11', 'md:min-h-9', 'whitespace-normal')
+    expect(clear).toHaveClass('focus-visible:outline-[var(--focus-ring)]', 'motion-reduce:transition-none')
+    expect(clear.className).not.toMatch(/cyan-500|bg-white|glow/)
+    expect(screen.getByText('123456 selected')).toBeInTheDocument()
   })
 })

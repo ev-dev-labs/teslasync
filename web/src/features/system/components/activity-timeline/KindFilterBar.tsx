@@ -38,6 +38,8 @@ export function KindFilterBar({ activeKinds, onChange, className }: KindFilterBa
       <Button
         type="button"
         size="sm"
+        wrapLabel
+        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
         variant={allSelected ? 'primary' : 'secondary'}
         aria-pressed={allSelected}
         onClick={() => onChange([])}
@@ -52,6 +54,8 @@ export function KindFilterBar({ activeKinds, onChange, className }: KindFilterBa
             key={kind}
             type="button"
             size="sm"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             variant={active ? 'primary' : 'secondary'}
             aria-pressed={active}
             icon={<Icon className="h-3.5 w-3.5" aria-hidden="true" />}

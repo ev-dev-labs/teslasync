@@ -1,64 +1,57 @@
 import type { TFunction } from 'i18next';
 
-import {
-  formatDateShort,
-  formatDateTime,
-  formatTime,
-} from '@/lib/dateFormat';
+import { formatDateTime, formatTime } from '@/lib/dateFormat';
 import type {
   DepartureDaypart,
   EvidenceBand,
 } from '../../lib/departureForecast';
 
+function departureInstant(ms: number | null | undefined): Date | null {
+  if (typeof ms !== 'number' || !Number.isFinite(ms)) return null;
+  const date = new Date(ms);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function departureClock(
-  ms: number,
+  ms: number | null | undefined,
   locale: string,
   timeZone: string,
 ): string {
-  return formatTime(new Date(ms), { locale, tz: timeZone });
+  return formatTime(departureInstant(ms), { locale, tz: timeZone });
 }
 
 export function departureDateTime(
-  ms: number,
+  ms: number | null | undefined,
   locale: string,
   timeZone: string,
 ): string {
-  return formatDateTime(new Date(ms), { locale, tz: timeZone });
+  return formatDateTime(departureInstant(ms), { locale, tz: timeZone });
 }
 
 export function departureChartLabel(
-  ms: number,
+  ms: number | null | undefined,
   locale: string,
   timeZone: string,
 ): string {
-  try {
-    return new Intl.DateTimeFormat(locale || undefined, {
-      timeZone,
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZoneName: 'shortOffset',
-    }).format(new Date(ms));
-  } catch {
-    return `${formatDateShort(new Date(ms), {
-      locale,
-      tz: timeZone,
-    })} ${formatTime(new Date(ms), { locale, tz: timeZone })} ${timeZone}`;
-  }
+  const date = departureInstant(ms);
+  if (!date) return '—';
+  return new Intl.DateTimeFormat(locale || undefined, {
+    timeZone,
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'shortOffset',
+  }).format(date);
 }
 
 /** Format an already-local abstract hour without applying a browser offset. */
 export function departureLocalHour(hour: number, locale: string): string {
-  try {
-    return new Intl.DateTimeFormat(locale || undefined, {
-      timeZone: 'UTC',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(Date.UTC(2020, 0, 1, hour, 0)));
-  } catch {
-    return `${String(hour).padStart(2, '0')}:00`;
-  }
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return '—';
+  return formatTime(new Date(Date.UTC(2020, 0, 1, hour, 0)), {
+    locale,
+    tz: 'UTC',
+  });
 }
 
 export function relativeDepartureLabel(

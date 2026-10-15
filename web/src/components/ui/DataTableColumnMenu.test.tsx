@@ -144,7 +144,7 @@ describe('DataTableColumnMenu — visibility toggling', () => {
     setup()
     openMenu()
     const checks = screen.getAllByRole('checkbox')
-    expect(checks).toHaveLength(3)
+    expect(checks).toHaveLength(4)
     checks.forEach((c) => expect(c).toBeChecked())
     expect(screen.getByText('Name')).toBeInTheDocument()
     expect(screen.getByText('Detail')).toBeInTheDocument()
@@ -228,6 +228,64 @@ describe('DataTableColumnMenu — visibility toggling', () => {
   })
 })
 
+describe('DataTableColumnMenu — select all', () => {
+  it('places the checked bulk checkbox before every individual column', () => {
+    setup()
+    openMenu()
+    expect(screen.getAllByRole('checkbox')[0]).toHaveAccessibleName('Select all')
+    expect(screen.getAllByRole('checkbox')[0]).toBeChecked()
+  })
+
+  it('selects default-hidden columns from the mixed state without changing order', () => {
+    const { onChange } = setup({
+      columns: [{ key: 'name', header: 'Name' }, { key: 'status', header: 'Status', defaultVisible: false }],
+      layout: { order: ['status', 'name'], hidden: ['status'] },
+    })
+    openMenu()
+    const all = screen.getByRole('checkbox', { name: 'Select all' })
+    expect(all).toHaveAttribute('aria-checked', 'mixed')
+    expect(all).toBePartiallyChecked()
+    fireEvent.click(all)
+    expect(onChange).toHaveBeenCalledWith({ order: ['status', 'name'], hidden: [] })
+  })
+
+  it('bulk deselection retains the first reordered column when none is required', () => {
+    const { onChange } = setup({ layout: { order: ['detail', 'name', 'status'], hidden: [] } })
+    openMenu()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
+    expect(onChange).toHaveBeenCalledWith({ order: ['detail', 'name', 'status'], hidden: ['name', 'status'] })
+  })
+
+  it('bulk deselection retains all required columns', () => {
+    const { onChange } = setup({ columns: [
+      { key: 'name', header: 'Name', required: true },
+      { key: 'status', header: 'Status' },
+      { key: 'detail', header: 'Detail', required: true },
+    ] })
+    openMenu()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
+    expect(onChange).toHaveBeenCalledWith({ order: ['name', 'status', 'detail'], hidden: ['status'] })
+  })
+
+  it.each([
+    { columns: [{ key: 'name', header: 'Name' }] },
+    { columns: [{ key: 'name', header: 'Name', required: true }, { key: 'status', header: 'Status', required: true }] },
+  ])('disables bulk deselection when no column can be hidden: %j', ({ columns }) => {
+    const { onChange } = setup({ columns })
+    openMenu()
+    const all = screen.getByRole('checkbox', { name: 'Select all' })
+    expect(all).toBeDisabled()
+    fireEvent.click(all)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('omits bulk selection for an empty menu', () => {
+    setup({ columns: [] })
+    openMenu()
+    expect(screen.queryByRole('checkbox', { name: 'Select all' })).not.toBeInTheDocument()
+  })
+})
+
 describe('DataTableColumnMenu — reordering', () => {
   it('moves a column down and emits the reordered layout', () => {
     const { onChange } = setup()
@@ -275,7 +333,7 @@ describe('DataTableColumnMenu — reordering', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show or hide columns' }))
     expect(screen.getByTestId('datatable-column-menu')).toBeInTheDocument()
     expect(screen.queryByTestId('datatable-column-menu-up-name')).toBeNull()
-    expect(screen.getAllByRole('checkbox')).toHaveLength(3)
+    expect(screen.getAllByRole('checkbox')).toHaveLength(4)
   })
 })
 
@@ -285,6 +343,54 @@ describe('DataTableColumnMenu — reset + empty hardening', () => {
     openMenu()
     fireEvent.click(screen.getByTestId('datatable-column-menu-reset'))
     expect(onReset).toHaveBeenCalledTimes(1)
+  })
+
+  describe('DataTableColumnMenu — restrained presentation preservation', () => {
+    it('keeps long RTL labels readable and native reorder actions tied to stable keys', () => {
+      const header = 'تفاصيل العمود الطويلة '.repeat(12)
+      const { onChange } = setup({
+        columns: [{ key: 'stable-name', header }, { key: 'status', header: 'Status' }],
+        layout: { order: ['status', 'stable-name'], hidden: ['status'] },
+      })
+      document.documentElement.dir = 'rtl'
+      try {
+        const menu = openMenu()
+        expect(menu).toHaveClass('end-0', 'shadow-e2')
+        const label = screen.getByText(header.trim(), { exact: false })
+        expect(label).toHaveClass('min-w-0', 'break-words')
+        expect(label).not.toHaveClass('truncate')
+        const up = screen.getByTestId('datatable-column-menu-up-stable-name')
+        expect(up.tagName).toBe('BUTTON')
+        expect(up).toHaveAttribute('type', 'button')
+        expect(up).toHaveAccessibleName(`Move ${header.trim()} up`)
+        expect(up).toHaveClass('h-11', 'w-11', 'md:h-6', 'md:w-6')
+        up.focus()
+        expect(up).toHaveFocus()
+        fireEvent.click(up)
+        expect(onChange).toHaveBeenCalledWith({
+          order: ['stable-name', 'status'],
+          hidden: ['status'],
+        })
+        expect(up).toHaveFocus()
+      } finally {
+        document.documentElement.removeAttribute('dir')
+      }
+    })
+
+    it('uses semantic focus and reduced-motion roles without changing trigger semantics', () => {
+      setup()
+      const trigger = screen.getByRole('button', { name: 'Reorder or hide columns' })
+      expect(trigger).toHaveAttribute('type', 'button')
+      expect(trigger).toHaveClass('motion-reduce:transition-none', 'duration-fast')
+      openMenu()
+      const buttons = screen.getAllByRole('button')
+      buttons.forEach(button => {
+        expect(button).toHaveClass('focus-visible:outline-[var(--focus-ring)]')
+        expect(button).not.toHaveClass('focus-visible:ring-cyan-500')
+      })
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(screen.queryByTestId('datatable-column-menu')).toBeNull()
+    })
   })
 
   it('renders an empty-state row instead of crashing when there are no columns', () => {

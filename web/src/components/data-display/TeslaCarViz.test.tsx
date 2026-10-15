@@ -19,8 +19,9 @@
 
 import type { ComponentProps } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { TeslaCarViz, TeslaCarMini, parseModelKey, type TeslaModel } from './TeslaCarViz'
+import { setGlobalPrecision } from '@/lib/numberFormat'
 
 // ── Controllable theme + deterministic i18n ──────────────────────────────────
 
@@ -62,6 +63,7 @@ function makeProps(overrides: Partial<VizProps> = {}): VizProps {
 }
 
 beforeEach(() => {
+  setGlobalPrecision(0)
   themeMode = 'dark'
   // framer-motion's useReducedMotion reads matchMedia, absent in jsdom.
   Object.defineProperty(window, 'matchMedia', {
@@ -119,6 +121,19 @@ describe('parseModelKey', () => {
 // ── TeslaCarViz — accessible label + status chips ────────────────────────────
 
 describe('TeslaCarViz — accessibility', () => {
+  it('refreshes mounted full and mini battery percentages when precision changes', () => {
+    const { container } = render(
+      <>
+        <TeslaCarViz {...makeProps({ batteryLevel: 42 })} />
+        <TeslaCarMini batteryLevel={42} isCharging={false} />
+      </>,
+    )
+    const paths = Array.from(container.querySelectorAll('path'), (node) => node.getAttribute('d'))
+    act(() => setGlobalPrecision(3))
+    expect(screen.getByText('42.000%')).toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: /Battery 42.000%/ })).toHaveLength(2)
+    expect(Array.from(container.querySelectorAll('path'), (node) => node.getAttribute('d'))).toEqual(paths)
+  })
   it('exposes the SVG as an image with a state summary label', () => {
     render(<TeslaCarViz {...makeProps({ batteryLevel: 80, isLocked: true })} />)
     const svg = screen.getByRole('img', { name: /battery 80%/i })
@@ -182,12 +197,32 @@ describe('TeslaCarViz — battery readout hardening', () => {
     expect(readout(container)).toBe('73%')
   })
 
-  it('renders 0% instead of NaN% for a non-finite battery level', () => {
+  it('keeps a non-finite battery level unknown', () => {
     const { container } = render(
       <TeslaCarViz {...makeProps({ batteryLevel: Number.NaN })} />,
     )
-    expect(readout(container)).toBe('0%')
+    expect(readout(container)).toBe('—')
     expect(readout(container)).not.toContain('NaN')
+  })
+
+  it('does not infer battery, lock or charging status from absent readings', () => {
+    render(<TeslaCarViz {...makeProps({
+      batteryLevel: null, isLocked: null, isCharging: null,
+      isClimateOn: null, sentryMode: null, speed: null,
+    })} />)
+    expect(screen.getByRole('img')).toHaveAccessibleName('Battery —')
+    expect(screen.queryByText('0%')).not.toBeInTheDocument()
+    expect(screen.queryByText('Locked')).not.toBeInTheDocument()
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument()
+    expect(screen.queryByText('Not Charging')).not.toBeInTheDocument()
+  })
+
+  it('preserves observed zero percent and explicit unlocked/not-charging flags', () => {
+    render(<TeslaCarViz {...makeProps({ batteryLevel: 0, isLocked: false, isCharging: false })} />)
+    expect(screen.getByRole('img')).toHaveAccessibleName('Battery 0%, Unlocked')
+    expect(screen.getByText('0%')).toBeInTheDocument()
+    expect(screen.getByText('Unlocked')).toBeInTheDocument()
+    expect(screen.getByText('Not Charging')).toBeInTheDocument()
   })
 
   it('clamps out-of-range battery levels into [0, 100]', () => {
@@ -293,7 +328,7 @@ describe('TeslaCarMini', () => {
     const { container: nan } = render(
       <TeslaCarMini batteryLevel={Number.NaN} isCharging={false} />,
     )
-    expect(nan.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toBe('Battery 0%')
+    expect(nan.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toBe('Battery —')
 
     const { container: over } = render(<TeslaCarMini batteryLevel={140} isCharging={false} />)
     expect(over.querySelector('svg[role="img"]')?.getAttribute('aria-label')).toBe('Battery 100%')

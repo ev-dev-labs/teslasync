@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   Thermometer,
   Wind,
@@ -20,7 +21,18 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
-import { PageContainer } from '@/components/layout';
+import { neonColorMap, typography } from '@/lib/tokens';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { type StatPeriod, type StatMetric } from '@/components/data-display';
+import { VehicleOperationalBrief } from '../components/operationalbrief-all/VehicleOperationalBrief';
+import { deriveDataState } from '@/api/dataState';
+import {
+  ClimateRenderGrid,
+  ClimateRenderGroup,
+  ClimateMetric as MetricCard,
+  ClimateMetricGroup,
+  ClimateSourceBoundary,
+} from '../components/climate-modernization';
 
 import {
   GlassPanel,
@@ -28,15 +40,14 @@ import {
   Button,
   DataTable,
   useSortToggle,
-  Heading,
   Text,
   Caption,
   Label,
+  Icon,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
-import { FadeIn } from '@/components/motion';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import {
   LinearGauge,
   ambientTemperatureGaugeRange,
@@ -57,21 +68,24 @@ import {
   AREA_DEFAULTS,
   areaGradient,
   EmbeddedChart,
+  type ChartDataRow,
+  type ChartDataColumn,
 } from '@/components/charts';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { convertTempFromSI } from '@/lib/unitConversion';
-import { formatDateTime, formatTime } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+
 import { CHART_COLORS } from '@/lib/colors';
-import { getErrorMessage } from '@/lib/errorMessage';
 
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
-import { AIPreheatPrecoolRecommender } from '@/components/ai/AIPreheatPrecoolRecommender';
+import { AIPreheatPrecoolRecommender } from '@/components/ai';
 import { useClimate, useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import type { ClimateState } from '@/types/vehicle-systems';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ─── Types ─── */
 
@@ -79,6 +93,7 @@ interface HeatLevelStyle {
   color: string;
   bg: string;
   label: string;
+  labelKey: string;
 }
 
 interface SeatDef {
@@ -91,6 +106,7 @@ interface SeatDef {
     | 'seatHeaterRearRight'
   >;
   label: string;
+  labelKey: string;
 }
 
 type Translate = (key: string, fallback: string) => string;
@@ -99,45 +115,40 @@ type ComfortTone = 'good' | 'warn' | 'bad' | 'neutral';
 /* ─── Constants ─── */
 
 const HEAT_LEVELS: HeatLevelStyle[] = [
-  { color: 'text-[var(--text-muted)]', bg: 'bg-gray-500/10', label: 'Off' },
-  { color: 'text-cyan-400', bg: 'bg-cyan-400/10', label: 'Low' },
-  { color: 'text-amber-400', bg: 'bg-amber-400/10', label: 'Medium' },
-  { color: 'text-red-400', bg: 'bg-red-400/10', label: 'High' },
+  { color: typography.color.muted, bg: 'bg-[var(--surface-2)]', label: 'Off', labelKey: 'common.off' },
+  { color: neonColorMap.cyan.text, bg: 'bg-[var(--surface-2)]', label: 'Low', labelKey: 'common.low' },
+  { color: neonColorMap.amber.text, bg: 'bg-[var(--surface-2)]', label: 'Medium', labelKey: 'commands.climate.copMedium' },
+  { color: neonColorMap.red.text, bg: 'bg-[var(--surface-2)]', label: 'High', labelKey: 'common.high' },
 ];
 
 const COOL_LEVELS: HeatLevelStyle[] = [
-  { color: 'text-[var(--text-muted)]', bg: 'bg-gray-500/10', label: 'Off' },
-  { color: 'text-sky-400', bg: 'bg-sky-400/10', label: 'Low' },
-  { color: 'text-cyan-300', bg: 'bg-cyan-300/10', label: 'Medium' },
-  { color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'High' },
+  { color: typography.color.muted, bg: 'bg-[var(--surface-2)]', label: 'Off', labelKey: 'common.off' },
+  { color: neonColorMap.cyan.text, bg: 'bg-[var(--surface-2)]', label: 'Low', labelKey: 'common.low' },
+  { color: neonColorMap.cyan.text, bg: 'bg-[var(--surface-2)]', label: 'Medium', labelKey: 'commands.climate.copMedium' },
+  { color: neonColorMap.cyan.text, bg: 'bg-[var(--surface-2)]', label: 'High', labelKey: 'common.high' },
 ];
 
 const SEATS: SeatDef[] = [
-  { key: 'seatHeaterLeft', label: 'Front Left' },
-  { key: 'seatHeaterRight', label: 'Front Right' },
-  { key: 'seatHeaterRearLeft', label: 'Rear Left' },
-  { key: 'seatHeaterRearCenter', label: 'Rear Center' },
-  { key: 'seatHeaterRearRight', label: 'Rear Right' },
+  { key: 'seatHeaterLeft', label: 'Front left', labelKey: 'widget.doorWindow.fl' },
+  { key: 'seatHeaterRight', label: 'Front right', labelKey: 'widget.doorWindow.fr' },
+  { key: 'seatHeaterRearLeft', label: 'Rear left', labelKey: 'widget.doorWindow.rl' },
+  { key: 'seatHeaterRearCenter', label: 'Rear center', labelKey: 'climate.page.rearCenter' },
+  { key: 'seatHeaterRearRight', label: 'Rear right', labelKey: 'widget.doorWindow.rr' },
 ];
 
 // Reused grid rhythms — shared between skeleton + content so the layout never
 // jumps between loading and loaded states.
 const SYSTEMS_GRID =
-  'grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5 3xl:grid-cols-7';
-const PROTECTION_GRID = 'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4';
+  'grid grid-cols-1 gap-3 @sm:grid-cols-2 @lg:grid-cols-3 @2xl:grid-cols-4 @4xl:grid-cols-5 @7xl:grid-cols-7';
+const PROTECTION_GRID = 'grid grid-cols-1 gap-3 @sm:grid-cols-2 @2xl:grid-cols-4';
+const COMFORT_GRID = 'grid grid-cols-1 gap-3 @2xl:grid-cols-3';
+const SEAT_GRID = 'grid grid-cols-1 gap-3 @sm:grid-cols-2 @lg:grid-cols-3 @3xl:grid-cols-5';
 
 const TONE_CIRCLE: Record<ComfortTone, string> = {
-  good: 'bg-emerald-500/15',
-  warn: 'bg-amber-500/15',
-  bad: 'bg-rose-500/15',
+  good: neonColorMap.green.bg,
+  warn: neonColorMap.amber.bg,
+  bad: neonColorMap.red.bg,
   neutral: 'bg-[var(--surface-2)]',
-};
-
-const TONE_TEXT: Record<ComfortTone, string> = {
-  good: 'text-emerald-300',
-  warn: 'text-amber-300',
-  bad: 'text-rose-300',
-  neutral: 'text-[var(--text-muted)]',
 };
 
 /* ─── Helpers ─── */
@@ -183,27 +194,27 @@ function keeperVariant(mode: string): 'neutral' | 'info' | 'warning' | 'danger' 
   }
 }
 
-function keeperLabel(mode: string): string {
+function keeperLabel(mode: string, t: TFunction): string {
   switch (mode) {
     case 'On':
-      return 'On';
+      return t('common.on', 'On');
     case 'Dog Mode':
-      return 'Dog Mode';
+      return t('commands.climate.dogMode', 'Dog mode');
     case 'Camp Mode':
-      return 'Camp Mode';
+      return t('commands.climate.campMode', 'Camp mode');
     default:
-      return 'Off';
+      return t('common.off', 'Off');
   }
 }
 
 function comfortBadge(
   inside: number,
   target: number,
-): { variant: 'success' | 'warning' | 'danger'; label: string } {
+): { variant: 'success' | 'warning' | 'danger'; label: string; labelKey: string } {
   const delta = Math.abs(inside - target);
-  if (delta <= 1) return { variant: 'success', label: 'Comfortable' };
-  if (delta <= 3) return { variant: 'warning', label: 'Adjusting' };
-  return { variant: 'danger', label: 'Far from target' };
+  if (delta <= 1) return { variant: 'success', label: 'Comfortable', labelKey: 'climate.page.comfortable' };
+  if (delta <= 3) return { variant: 'warning', label: 'Adjusting', labelKey: 'climate.page.adjusting' };
+  return { variant: 'danger', label: 'Far from target', labelKey: 'climate.page.farFromTarget' };
 }
 
 function scoreTone(score: number | null): ComfortTone {
@@ -240,24 +251,6 @@ function climateAccessor(row: ClimateState, key: string): number | string {
 
 /* ─── Presentational sub-components (co-located, page-scoped) ─── */
 
-/** Band heading — h2 with a leading decorative icon; matches the reference rhythm. */
-function BandHeading({
-  icon,
-  children,
-  className,
-}: {
-  icon: ReactNode;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <Heading level="panel" as="h2" className={cn('flex items-center gap-2', className)}>
-      {icon}
-      <span>{children}</span>
-    </Heading>
-  );
-}
-
 /** Placeholder cards keep the grid shape while `latest`/`history` loads. */
 function CardSkeletons({ count, className }: { count: number; className: string }) {
   return (
@@ -290,7 +283,7 @@ function GaugeCell({
   icon: ReactNode;
 }) {
   return (
-    <GlassPanel className="flex min-h-[184px] flex-col items-center justify-center gap-2 p-5">
+    <GlassPanel className="flex min-h-[184px] min-w-0 flex-col items-center justify-center gap-2 p-4 shadow-none">
       {loading ? (
         <Skeleton rounded width="120px" height={120} />
       ) : value != null ? (
@@ -302,30 +295,53 @@ function GaugeCell({
   );
 }
 
-/** Comfort stat cell (score / delta / status) sharing one circular frame. */
+/** Canonical specialist numeric stats; retain the status glyph and badge. */
 function ComfortStat({
   label,
   tone,
+  value,
+  metric,
+  period,
+  retained,
   children,
   footer,
 }: {
   label: string;
   tone: ComfortTone;
-  children: ReactNode;
+  /** Specialist display: a score without /100, or a signed temperature difference. */
+  value?: string;
+  metric?: Pick<StatMetric, 'metricId' | 'rawValue' | 'display'>;
+  period?: StatPeriod;
+  retained?: boolean;
+  children?: ReactNode;
   footer: ReactNode;
 }) {
   return (
-    <GlassPanel className="flex flex-col items-center gap-2 p-4">
-      <Label className="text-center">{label}</Label>
-      <div
-        className={cn(
-          'flex h-20 w-20 items-center justify-center rounded-full',
-          TONE_CIRCLE[tone],
-        )}
-      >
-        {children}
-      </div>
-      {footer}
+    <GlassPanel className="flex min-w-0 flex-col items-center gap-2 p-4 shadow-none">
+      {value !== undefined && period ? (
+        <VehicleOperationalBrief embedded id={`climate-comfort-${metric?.metricId ?? 'status'}`}
+          title={label} className="w-full" period={period} retained={retained} metrics={[{
+          metricId: metric?.metricId ?? 'status',
+          label,
+          description: label,
+          rawValue: metric ? metric.rawValue : value === '—' ? null : value,
+          display: metric?.display,
+          context: <div data-climate-comfort-tone={tone}>{footer}</div>,
+        }]} />
+      ) : (
+        <>
+          <Label className="text-center">{label}</Label>
+          <div
+            className={cn(
+              'flex h-20 w-20 items-center justify-center rounded-full',
+              TONE_CIRCLE[tone],
+            )}
+          >
+            {children}
+          </div>
+          {footer}
+        </>
+      )}
     </GlassPanel>
   );
 }
@@ -333,16 +349,18 @@ function ComfortStat({
 /** Auto seat-climate on/off chip. */
 function AutoClimateChip({
   label,
+  labelKey,
   value,
   t,
 }: {
   label: string;
+  labelKey: string;
   value: boolean | null | undefined;
   t: Translate;
 }) {
   return (
-    <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-white/[0.06] bg-white/[0.03] px-3 py-2">
-      <Text variant="bodySm">{t(label, label)}</Text>
+    <div className="flex min-h-11 items-center justify-between gap-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2">
+      <Text variant="bodySm">{t(labelKey, label)}</Text>
       {value != null ? (
         <Badge variant={value ? 'success' : 'neutral'} size="sm">
           {value ? t('climate.page.auto', 'Auto') : t('climate.page.manual', 'Manual')}
@@ -355,17 +373,20 @@ function AutoClimateChip({
 }
 
 /** Seat heater level card. */
-function SeatHeaterCard({ label, level, t }: { label: string; level: number; t: Translate }) {
-  const style = heatStyle(level);
+function SeatHeaterCard({ label, labelKey, level, t }: {
+  label: string; labelKey: string; level: number | null | undefined; t: Translate;
+}) {
+  const presentationIndex = clampLevel(level ?? 0);
+  const style = heatStyle(presentationIndex);
   return (
-    <GlassPanel className={cn('flex flex-col items-center gap-2 p-4', style.bg)}>
-      <Flame className={cn('h-6 w-6', style.color)} aria-hidden="true" />
-      <Text variant="bodySm" className="text-center font-medium">
-        {t(label, label)}
+    <GlassPanel className={cn('flex min-w-0 flex-col items-center gap-2 p-4 shadow-none', style.bg)}>
+      <Icon icon={Flame} size="xl" className={level == null ? typography.color.muted : style.color} />
+      <Text variant="bodySm" className="break-words text-center">
+        {t(labelKey, label)}
       </Text>
-      <Badge variant={heatBadgeVariant(level)} size="sm">
-        {t(style.label, style.label)} ({level}/3)
-      </Badge>
+      {level != null ? <Badge variant={heatBadgeVariant(presentationIndex)} size="sm">
+        {t(style.labelKey, style.label)} ({presentationIndex}/3)
+      </Badge> : <Caption>—</Caption>}
     </GlassPanel>
   );
 }
@@ -373,24 +394,26 @@ function SeatHeaterCard({ label, level, t }: { label: string; level: number; t: 
 /** Seat cooling level card. */
 function SeatCoolingCard({
   label,
+  labelKey,
   level,
   t,
 }: {
   label: string;
+  labelKey: string;
   level: number | null | undefined;
   t: Translate;
 }) {
-  const lvl = level ?? 0;
-  const style = coolStyle(lvl);
+  const presentationIndex = clampLevel(level ?? 0);
+  const style = coolStyle(presentationIndex);
   return (
-    <GlassPanel className={cn('flex flex-col items-center gap-2 p-4', style.bg)}>
-      <Snowflake className={cn('h-6 w-6', style.color)} aria-hidden="true" />
-      <Text variant="bodySm" className="text-center font-medium">
-        {t(label, label)}
+    <GlassPanel className={cn('flex min-w-0 flex-col items-center gap-2 p-4 shadow-none', style.bg)}>
+      <Icon icon={Snowflake} size="xl" className={level == null ? typography.color.muted : style.color} />
+      <Text variant="bodySm" className="break-words text-center">
+        {t(labelKey, label)}
       </Text>
       {level != null ? (
-        <Badge variant={coolBadgeVariant(lvl)} size="sm">
-          {t(style.label, style.label)} ({Math.round(lvl)}/3)
+        <Badge variant={coolBadgeVariant(presentationIndex)} size="sm">
+          {t(style.labelKey, style.label)} ({presentationIndex}/3)
         </Badge>
       ) : (
         <Caption>—</Caption>
@@ -404,8 +427,10 @@ function SeatCoolingCard({
    ═══════════════════════════════════════════════════════ */
 
 export default function ClimateControlPage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { formatDateTime, formatTime, tz } = useDateFormat();
   const { t } = useTranslation();
-  usePageTitle(t('widget.climatePanel.title', 'Climate Control'));
+  usePageTitle(t('widget.climatePanel.title', 'Climate control'));
 
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
@@ -422,14 +447,36 @@ export default function ClimateControlPage() {
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const activeIdNum = Number(activeId) || 0;
+  const canRefresh = Number.isSafeInteger(activeIdNum) && activeIdNum > 0;
 
   /* ─── Climate data ─── */
   const climateQuery = useClimate(activeId);
-  const { data: latest, isLoading, error, refetch } = climateQuery;
+  const { data: latest, isLoading, refetch } = climateQuery;
   const latestLoading = isLoading && !latest;
+  const latestState = deriveDataState(climateQuery);
 
-  const historyQuery = useClimateHistory(activeId);
-  const { data: history, isLoading: historyLoading } = historyQuery;
+  const { startInstant, endInstantExclusive } = useRangeState();
+  const historyQuery = useClimateHistory(activeId, {
+    start: startInstant,
+    end: endInstantExclusive,
+  });
+  const { data: history } = historyQuery;
+  const historyLoading = historyQuery.isLoading && !history;
+  const historyState = deriveDataState(historyQuery, { provenance: 'historical' });
+  const latestLabel = t('dataSources.labels.latestClimateState', 'Latest climate state');
+  const historyLabel = t('dataSources.labels.climateHistory', 'Climate history');
+  const latestPeriod = {
+    kind: 'snapshot' as const,
+    label: latestLabel,
+    observedAt: latest?.timestamp ?? latest?.created_at ?? null,
+    provenance: latest?.timestamp ? formatDateTime(latest.timestamp) : latestLabel,
+  };
+
+  /* ─── Charging telemetry (for NotEnoughPowerToHeat alert) ─── */
+  const chargingQuery = useChargingTelemetryLatest(activeIdNum);
+  const { data: chargingLatest } = chargingQuery;
+  const chargingState = deriveDataState(chargingQuery);
+
   const dataSources = useMemo(
     () => [
       {
@@ -444,12 +491,15 @@ export default function ClimateControlPage() {
         query: historyQuery,
         enabled: activeId !== '',
       },
+      {
+        id: 'charging-telemetry',
+        label: t('widget.chargingTelemetry.title', 'Charging telemetry'),
+        query: chargingQuery,
+        enabled: activeIdNum > 0,
+      },
     ],
-    [activeId, climateQuery, historyQuery, t],
+    [activeId, activeIdNum, climateQuery, historyQuery, chargingQuery, t],
   );
-
-  /* ─── Charging telemetry (for NotEnoughPowerToHeat alert) ─── */
-  const { data: chargingLatest } = useChargingTelemetryLatest(activeIdNum);
 
   /* ─── AI preheat/precool default departure (8 hours from now, RFC3339) ─── */
   // Stable for the component instance so the AI panel's stream body identity
@@ -488,55 +538,69 @@ export default function ClimateControlPage() {
       },
       {
         key: 'insideTemp',
+        align: 'right',
+        filterValue: (row) => row.insideTemp ?? null,
+        filterValueLabel: (_value, row) => row.insideTemp == null ? '—' : `${fmtNumber(toTemperatureDisplay(row.insideTemp))} ${tempUnit}`,
         header: `${t('common.inside', 'Inside')} ${tempUnit}`,
         sortable: true,
         render: (row) =>
-          row.insideTemp != null ? fmtNumber(toTemperatureDisplay(row.insideTemp), 1) : '—',
+          row.insideTemp != null ? fmtNumber(toTemperatureDisplay(row.insideTemp)) : '—',
       },
       {
         key: 'outsideTemp',
+        align: 'right',
+        filterValue: (row) => row.outsideTemp ?? null,
+        filterValueLabel: (_value, row) => row.outsideTemp == null ? '—' : `${fmtNumber(toTemperatureDisplay(row.outsideTemp))} ${tempUnit}`,
         header: `${t('common.outside', 'Outside')} ${tempUnit}`,
         sortable: true,
         render: (row) =>
-          row.outsideTemp != null ? fmtNumber(toTemperatureDisplay(row.outsideTemp), 1) : '—',
+          row.outsideTemp != null ? fmtNumber(toTemperatureDisplay(row.outsideTemp)) : '—',
       },
       {
         key: 'driverTempSetting',
-        header: `${t('climate.page.setTemp', 'Set Temp')} ${tempUnit}`,
+        align: 'right',
+        filterValue: (row) => row.driverTempSetting ?? null,
+        filterValueLabel: (_value, row) => row.driverTempSetting == null ? '—' : `${fmtNumber(toTemperatureDisplay(row.driverTempSetting))} ${tempUnit}`,
+        header: `${t('climate.page.setTemp', 'Set temp')} ${tempUnit}`,
         sortable: true,
         render: (row) =>
           row.driverTempSetting != null
-            ? fmtNumber(toTemperatureDisplay(row.driverTempSetting), 1)
+            ? fmtNumber(toTemperatureDisplay(row.driverTempSetting))
             : '—',
       },
       {
         key: 'fanSpeed',
+        align: 'right',
+        filterValue: (row) => row.fanSpeed ?? null,
         header: t('telemetry.fan', 'Fan'),
         sortable: true,
         render: (row) => (row.fanSpeed != null ? String(row.fanSpeed) : '—'),
       },
       {
         key: 'isAcOn',
-        header: t('widget.hvac', 'HVAC'),
+        filterValue: (row) => row.isAcOn ?? null,
+        filterValueLabel: (_value, row) => row.isAcOn == null ? '—' : row.isAcOn ? t('common.on', 'On') : t('common.off', 'Off'),
+        header: t('climate.page.acOnOff', 'AC on/off'),
         render: (row) => (
           <Badge variant={row.isAcOn ? 'success' : 'neutral'} size="sm">
-            {row.isAcOn ? t('common.on', 'On') : t('common.off', 'Off')}
+            {row.isAcOn == null ? '—' : row.isAcOn ? t('common.on', 'On') : t('common.off', 'Off')}
           </Badge>
         ),
       },
       {
         key: 'climateKeeperMode',
-        header: t('commands.climate.climateKeeper', 'Climate Keeper'),
+        filterValue: (row) => row.climateKeeperMode ?? null,
+        filterValueLabel: (_value, row) => row.climateKeeperMode == null ? '—' : keeperLabel(row.climateKeeperMode, t),
+        header: t('commands.climate.climateKeeper', 'Climate keeper'),
         render: (row) => (
           <Badge variant={keeperVariant(row.climateKeeperMode ?? '')} size="sm">
-            {t(keeperLabel(row.climateKeeperMode ?? ''))}
+            {row.climateKeeperMode == null ? '—' : keeperLabel(row.climateKeeperMode, t)}
           </Badge>
         ),
       },
     ],
-    // tempUnit + toTemperatureDisplay are captured by the render closures; the
-    // component re-renders (and rebuilds columns) whenever the unit changes.
-    [t, tempUnit],
+    // Rebuild captured display closures when effective preferences change.
+    [t, tempUnit, fmtNumber, formatDateTime],
   );
 
   /* ─── Chronological history (backend returns newest-first) ─── */
@@ -557,12 +621,55 @@ export default function ClimateControlPage() {
         outsideTemp: h.outsideTemp != null ? toTemperatureDisplay(h.outsideTemp) : null,
         driverTempSetting:
           h.driverTempSetting != null ? toTemperatureDisplay(h.driverTempSetting) : null,
-        acActive: h.isAcOn ? 1 : 0,
+        acActive: h.isAcOn == null ? null : h.isAcOn ? 1 : 0,
       })),
     // Track the primitive `tempUnit` so non-temperature setting churn doesn't
     // invalidate the memo.
     [chronoHistory, tempUnit],
   );
+
+  const chartFallbackData = useMemo<ChartDataRow[]>(
+    () => convertedChartData.map(row => ({
+      timestamp: row.timestamp ? formatDateTime(row.timestamp) : null,
+      insideTemp: row.insideTemp,
+      outsideTemp: row.outsideTemp,
+      driverTempSetting: row.driverTempSetting,
+      acActive: row.acActive,
+      fanSpeed: row.fanSpeed,
+    })),
+    [convertedChartData, formatDateTime],
+  );
+  const temperatureDataColumns = useMemo<ChartDataColumn[]>(() => [
+    { key: 'timestamp', label: t('widget.climateHistory.time', 'Time') },
+    { key: 'insideTemp', label: `${t('climate.page.insideTemp', 'Inside temp')} ${tempUnit}`, kind: 'measurement' },
+    { key: 'outsideTemp', label: `${t('climate.page.outsideTemp', 'Outside temp')} ${tempUnit}`, kind: 'measurement' },
+    { key: 'driverTempSetting', label: `${t('climate.page.driverSetTemp', 'Driver set temp')} ${tempUnit}`, kind: 'measurement' },
+  ], [t, tempUnit]);
+  const hvacDataColumns = useMemo<ChartDataColumn[]>(() => [
+    { key: 'timestamp', label: t('widget.climateHistory.time', 'Time') },
+    { key: 'acActive', label: t('climate.page.acOnOff', 'AC on/off'),
+      format: value => value == null ? '—' : value === 1 ? t('common.on', 'On') : t('common.off', 'Off') },
+    { key: 'fanSpeed', label: t('widget.climatePanel.fanSpeed', 'Fan speed'), kind: 'measurement' },
+  ], [t]);
+  const mobilePresentation = useMemo<MobileDataTablePresentation<ClimateState>>(() => ({
+    roles: {
+      timestamp: 'title', insideTemp: 'primary', outsideTemp: 'meta',
+      driverTempSetting: 'meta', fanSpeed: 'meta', isAcOn: 'badge', climateKeeperMode: 'hidden',
+    },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'timestamp': return row.timestamp ? formatDateTime(row.timestamp) : null;
+        case 'insideTemp':
+        case 'outsideTemp':
+        case 'driverTempSetting':
+          return row[key] == null ? null : `${fmtNumber(toTemperatureDisplay(row[key]))} ${tempUnit}`;
+        case 'fanSpeed': return row.fanSpeed;
+        case 'isAcOn': return row.isAcOn == null ? null : row.isAcOn ? t('common.on', 'On') : t('common.off', 'Off');
+        case 'climateKeeperMode': return row.climateKeeperMode == null ? null : keeperLabel(row.climateKeeperMode, t);
+        default: return null;
+      }
+    },
+  }), [t, tempUnit, fmtNumber, formatDateTime]);
 
   /* ─── Comfort score & temp delta ─── */
   const comfortScore = useMemo(() => {
@@ -571,24 +678,35 @@ export default function ClimateControlPage() {
     return Math.max(0, 100 - delta * 10);
   }, [latest?.insideTemp, latest?.driverTempSetting]);
 
+  // Keep the source Celsius difference and all thresholds unchanged. At the
+  // render boundary subtract the converted zero so °F deltas have no offset.
   const tempDelta = useMemo(() => {
     if (latest?.insideTemp == null || latest?.driverTempSetting == null) return null;
-    return +fmtNumber(latest.insideTemp - latest.driverTempSetting, 1);
+    return latest.insideTemp - latest.driverTempSetting;
   }, [latest?.insideTemp, latest?.driverTempSetting]);
 
   /* ─── Climate efficiency stats ─── */
   // HvacPower is an enum signal (not kW), so numeric power stats are
   // unavailable. Fan-speed stats derive from the HvacFanSpeed float signal.
   const efficiencyStats = useMemo(() => {
-    if (chronoHistory.length === 0) return null;
-    const withFan = chronoHistory.filter((h) => h.fanSpeed != null && h.fanSpeed > 0);
-    if (withFan.length === 0) return null;
-    const speeds = withFan.map((h) => h.fanSpeed ?? 0);
-    const avgFan = speeds.reduce((s, v) => s + v, 0) / speeds.length;
-    const peakFan = Math.max(...speeds);
-    const acOnCount = chronoHistory.filter((h) => h.isAcOn).length;
-    const acOnPct = (acOnCount / chronoHistory.length) * 100;
-    return { avgFan, peakFan, acOnPct };
+    const speeds = chronoHistory
+      .map((h) => h.fanSpeed)
+      .filter((speed): speed is number => typeof speed === 'number' && Number.isFinite(speed));
+    const avgFan = speeds.length > 0
+      ? speeds.reduce((s, v) => s + v, 0) / speeds.length
+      : null;
+    const peakFan = speeds.length > 0 ? Math.max(...speeds) : null;
+    const acSamples = chronoHistory.filter((h) => typeof h.isAcOn === 'boolean');
+    const acOnCount = acSamples.filter((h) => h.isAcOn === true).length;
+    const acOnPct = acSamples.length > 0 ? (acOnCount / acSamples.length) * 100 : null;
+    return {
+      avgFan,
+      peakFan,
+      acOnPct,
+      acOnCount,
+      acKnownCount: acSamples.length,
+      acUnknownCount: chronoHistory.length - acSamples.length,
+    };
   }, [chronoHistory]);
 
   const hasTempHistory = convertedChartData.length > 0;
@@ -598,36 +716,41 @@ export default function ClimateControlPage() {
      ═══════════════════════════════════════════════════════ */
 
   return (
-    <PageContainer
-      title={t('widget.climatePanel.title', 'Climate Control')}
+    <PageLayout
+      title={t('widget.climatePanel.title', 'Climate control')}
       subtitle={t('climate.page.subtitle', 'HVAC status, temperatures, and seat heaters')}
-      query={[climateQuery, historyQuery]}
+      query={[climateQuery, historyQuery, chargingQuery]}
       dataSources={dataSources}
-      actions={
+      secondaryActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Button
             variant="ghost"
             size="sm"
-            icon={<RefreshCw className="h-4 w-4" />}
-            onClick={() => void refetch()}
+            className="min-h-11 min-w-11 md:min-h-9"
+            wrapLabel
+            icon={<Icon icon={RefreshCw} />}
+            disabled={!canRefresh}
+            aria-describedby={!canRefresh ? 'climate-refresh-prerequisite' : undefined}
+            onClick={() => {
+              if (canRefresh) void refetch();
+            }}
           >
             {t('common.refresh', 'Refresh')}
           </Button>
+          {!canRefresh && (
+            <Caption id="climate-refresh-prerequisite">
+              {t('vehicleManagement.state.vehicleRequired', 'Select a vehicle')}
+            </Caption>
+          )}
         </div>
       }
     >
-      {/* ─── Query error (announced, never gates the page) ─── */}
-      {error && (
-        <AlertBanner variant="danger" icon={<AlertTriangle className="h-5 w-5" />}>
-          {t('climate.page.loadFailed', 'Failed to load climate data')}: {getErrorMessage(error)}
-        </AlertBanner>
-      )}
-
+      <ClimateRenderGrid label={t('climate.page.overview', 'Climate overview')}>
       {/* ─── AI: Preheat / Precool recommender ─── */}
       {/* Hidden entirely when ai_mode='off' or the per-feature toggle is off via */}
       {/* the withAiFeature HOC; renders an opt-in propose-only section above the */}
       {/* deterministic HVAC banner when enabled. */}
-      <FadeIn>
+      <ClimateRenderGroup id="climate-ai">
         <AIPreheatPrecoolRecommender
           vehicleId={activeIdNum > 0 ? activeIdNum : undefined}
           currentCabinTempC={latest?.insideTemp ?? null}
@@ -635,84 +758,81 @@ export default function ClimateControlPage() {
           targetCabinTempC={latest?.driverTempSetting ?? 21}
           departBy={defaultDepartBy}
         />
-      </FadeIn>
+      </ClimateRenderGroup>
 
       {/* ─── Band A — HVAC status banner (full-width strip) ─── */}
-      <FadeIn>
-        <GlassPanel
-          className={cn(
-            'flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5',
-            latest?.isAcOn ? 'border-cyan-500/30' : 'border-gray-600/30',
-          )}
-          glow={latest?.isAcOn ? 'cyan' : 'none'}
-        >
+      <ClimateRenderGroup id="climate-status">
+        <LayoutCard title={t('climate.page.hvacSystem', 'HVAC system')}>
+          <ClimateSourceBoundary state={latestState} label={latestLabel}>
+          {latestLoading ? <Skeleton height={44} /> : (
+          <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <Power
-              className={cn('h-6 w-6', latest?.isAcOn ? 'text-cyan-400' : 'text-[var(--text-muted)]')}
-              aria-hidden="true"
+            <Icon icon={Power} size="xl"
+              className={latest?.hvacPower ? neonColorMap.green.text : typography.color.muted}
             />
             <Text variant="body" className="font-medium">
-              {t('climate.page.hvacSystem', 'HVAC System')}
+              {t('climate.page.hvacSystem', 'HVAC system')}
             </Text>
-            <Badge variant={latest?.isAcOn ? 'success' : 'neutral'}>
-              {latest?.isAcOn ? t('common.active', 'Active') : t('common.off', 'Off')}
+            <Badge variant={latest?.hvacPower ? 'success' : 'neutral'}>
+              {latest?.hvacPower == null ? '—' : latest.hvacPower ? t('common.active', 'Active') : t('common.off', 'Off')}
             </Badge>
-            <Badge variant={comfort.variant} size="sm">
-              {t(comfort.label)}
+            <Badge variant={comfortScore == null ? 'neutral' : comfort.variant} size="sm">
+              {comfortScore == null ? '—' : t(comfort.labelKey, comfort.label)}
             </Badge>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {latest?.climateKeeperMode && latest.climateKeeperMode !== 'Off' && (
               <Badge variant={keeperVariant(latest.climateKeeperMode)} dot>
-                {t(keeperLabel(latest.climateKeeperMode))}
+                {keeperLabel(latest.climateKeeperMode, t)}
               </Badge>
             )}
             {latest?.defrostMode && latest.defrostMode !== 'Off' && (
               <Badge variant="info" dot>
-                <Snowflake className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                <Icon icon={Snowflake} size="xs" className="me-1 inline" />
                 {t('widget.climatePanel.defrost', 'Defrost')}
                 {latest.defrostMode !== 'Normal' ? ` (${latest.defrostMode})` : ''}
               </Badge>
             )}
             {latest?.batteryHeater && (
               <Badge variant="warning" dot>
-                <BatteryCharging className="mr-1 inline h-3 w-3" aria-hidden="true" />
-                {t('climate.page.batteryHeater', 'Battery Heater')}
-              </Badge>
-            )}
-            {chargingLatest?.not_enough_power_to_heat && (
-              <Badge variant="danger" dot>
-                <AlertTriangle className="mr-1 inline h-3 w-3" aria-hidden="true" />
-                {t('climate.page.insufficientPowerToHeat', 'Insufficient Power to Heat')}
+                <Icon icon={BatteryCharging} size="xs" className="me-1 inline" />
+                {t('climate.page.batteryHeater', 'Battery heater')}
               </Badge>
             )}
           </div>
-        </GlassPanel>
-      </FadeIn>
+          </div>
+          )}
+          </ClimateSourceBoundary>
+          <ClimateSourceBoundary state={chargingState}
+            label={t('climate.page.insufficientPowerToHeat', 'Insufficient power to heat')}>
+            {chargingQuery.isLoading && !chargingLatest ? <Skeleton height={24} /> :
+            chargingLatest?.not_enough_power_to_heat ? (
+              <Badge variant="danger" dot>
+                <Icon icon={AlertTriangle} size="xs" className="me-1 inline" />
+                {t('climate.page.insufficientPowerToHeat', 'Insufficient power to heat')}
+              </Badge>
+            ) : chargingLatest?.not_enough_power_to_heat == null ? <Caption>
+              {t('climate.page.insufficientPowerToHeat', 'Insufficient power to heat')}: —
+            </Caption> : null}
+          </ClimateSourceBoundary>
+        </LayoutCard>
+      </ClimateRenderGroup>
 
       {/* ─── Band B — Hero: temperature gauges + thermal comfort ─── */}
-      <FadeIn delay={0.05}>
-        <section
-          aria-label={t('climate.page.overview', 'Climate Overview')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
-        >
+      <ClimateRenderGroup id="climate-temperature" size="half" delay={0.05}
+        label={t('climate.page.overview', 'Climate overview')}>
           {/* Temperature gauges (hero, spans 2 cols on wide screens) */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <BandHeading
-              icon={<Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.page.temperature', 'Temperature')}
-            </BandHeading>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <LayoutCard title={t('climate.page.temperature', 'Temperature')}>
+            <ClimateSourceBoundary state={latestState} label={latestLabel}>
+            <div className="grid grid-cols-1 gap-4 @lg:grid-cols-3">
               <GaugeCell
                 loading={latestLoading}
                 value={latest?.insideTemp != null ? toTemperatureDisplay(latest.insideTemp) : null}
                 {...tempGaugeRange}
-                label={t('climate.page.insideTemp', 'Inside Temp')}
+                label={t('climate.page.insideTemp', 'Inside temp')}
                 unit={tempUnit}
                 color={CHART_COLORS[0]}
-                icon={<Thermometer className="h-6 w-6" aria-hidden="true" />}
+                icon={<Icon icon={Thermometer} size="xl" />}
               />
               <GaugeCell
                 loading={latestLoading}
@@ -720,10 +840,10 @@ export default function ClimateControlPage() {
                   latest?.outsideTemp != null ? toTemperatureDisplay(latest.outsideTemp) : null
                 }
                 {...tempGaugeRange}
-                label={t('climate.page.outsideTemp', 'Outside Temp')}
+                label={t('climate.page.outsideTemp', 'Outside temp')}
                 unit={tempUnit}
                 color={CHART_COLORS[1]}
-                icon={<Thermometer className="h-6 w-6" aria-hidden="true" />}
+                icon={<Icon icon={Thermometer} size="xl" />}
               />
               <GaugeCell
                 loading={latestLoading}
@@ -733,37 +853,39 @@ export default function ClimateControlPage() {
                     : null
                 }
                 {...tempGaugeRange}
-                label={t('climate.page.driverSetTemp', 'Driver Set Temp')}
+                label={t('climate.page.driverSetTemp', 'Driver set temp')}
                 unit={tempUnit}
                 color={CHART_COLORS[2]}
-                icon={<ThermometerSun className="h-6 w-6" aria-hidden="true" />}
+                icon={<Icon icon={ThermometerSun} size="xl" />}
               />
             </div>
-          </GlassPanel>
-
+            </ClimateSourceBoundary>
+          </LayoutCard>
+      </ClimateRenderGroup>
+      <ClimateRenderGroup id="climate-comfort" size="half" delay={0.05}>
           {/* Thermal comfort (context column) */}
-          <GlassPanel className="p-4 sm:p-5">
-            <BandHeading
-              icon={<Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.page.thermalComfort', 'Thermal Comfort')}
-            </BandHeading>
+          <LayoutCard title={t('climate.page.thermalComfort', 'Thermal comfort')}>
+            <ClimateSourceBoundary state={latestState} label={latestLabel}>
             {latestLoading ? (
-              <div className="grid grid-cols-3 gap-3">
+              <div className={COMFORT_GRID}>
                 <Skeleton height={132} className="rounded-xl" />
                 <Skeleton height={132} className="rounded-xl" />
                 <Skeleton height={132} className="rounded-xl" />
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-3">
+              <div className={COMFORT_GRID}>
                 <ComfortStat
-                  label={t('climate.page.comfortScore', 'Comfort Score')}
+                  label={t('climate.page.comfortScore', 'Comfort score')}
                   tone={scoreTone(comfortScore)}
+                  value={comfortScore != null ? fmtNumber(comfortScore) : '—'}
+                  metric={{ metricId: 'number', rawValue: comfortScore,
+                    display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } }}
+                  period={latestPeriod}
+                  retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
                   footer={
                     <Badge
                       variant={
-                        comfortScore != null && comfortScore >= 80
+                        comfortScore == null ? 'neutral' : comfortScore >= 80
                           ? 'success'
                           : comfortScore != null && comfortScore >= 50
                             ? 'warning'
@@ -771,120 +893,102 @@ export default function ClimateControlPage() {
                       }
                       size="sm"
                     >
-                      {comfortScore != null && comfortScore >= 80
+                      {comfortScore == null ? t('climate.page.notAvailable', 'N/A') : comfortScore >= 80
                         ? t('climate.page.comfortExcellent', 'Excellent')
                         : comfortScore != null && comfortScore >= 50
                           ? t('climate.page.comfortModerate', 'Moderate')
                           : t('climate.page.comfortPoor', 'Poor')}
                     </Badge>
                   }
-                >
-                  <Text
-                    as="span"
-                    size="2xl"
-                    weight="bold"
-                    className={cn('tabular-nums', TONE_TEXT[scoreTone(comfortScore)])}
-                  >
-                    {comfortScore != null ? fmtInt(comfortScore) : '—'}
-                  </Text>
-                </ComfortStat>
+                />
 
                 <ComfortStat
-                  label={t('climate.page.tempDelta', 'Temp Delta')}
+                  label={t('climate.page.tempDelta', 'Temp delta')}
                   tone={deltaTone(tempDelta)}
+                  value={tempDelta != null
+                    ? `${tempDelta > 0 ? '+' : ''}${fmtNumber(toTemperatureDisplay(tempDelta) - toTemperatureDisplay(0))}${tempUnit}`
+                    : '—'}
+                  metric={{ metricId: 'number', rawValue: tempDelta,
+                    display: { formatter: raw => ({ value: `${raw > 0 ? '+' : ''}${fmtNumber(toTemperatureDisplay(raw) - toTemperatureDisplay(0))}${tempUnit}`, unit: '' }) } }}
+                  period={latestPeriod}
+                  retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
                   footer={
                     <Caption className="rounded-full bg-[var(--surface-2)] px-3 py-1 font-medium">
                       {tempDelta != null
                         ? Math.abs(tempDelta) <= 1
-                          ? t('climate.page.nearTarget', 'Near Target')
+                          ? t('climate.page.nearTarget', 'Near target')
                           : tempDelta > 0
-                            ? t('climate.page.aboveTarget', 'Above Target')
-                            : t('climate.page.belowTarget', 'Below Target')
+                            ? t('climate.page.aboveTarget', 'Above target')
+                            : t('climate.page.belowTarget', 'Below target')
                         : t('climate.page.notAvailable', 'N/A')}
                     </Caption>
                   }
-                >
-                  <Text
-                    as="span"
-                    size="2xl"
-                    weight="bold"
-                    className={cn('tabular-nums', TONE_TEXT[deltaTone(tempDelta)])}
-                  >
-                    {tempDelta != null ? `${tempDelta > 0 ? '+' : ''}${tempDelta}` : '—'}
-                  </Text>
-                </ComfortStat>
+                />
 
                 <ComfortStat
                   label={t('common.status', 'Status')}
                   tone={scoreTone(comfortScore)}
                   footer={
-                    <Badge variant={comfort.variant} size="sm">
-                      {tempDelta != null && tempDelta > 2
-                        ? t('climate.page.tooWarm', 'Too Warm')
+                    <Badge variant={tempDelta == null ? 'neutral' : comfort.variant} size="sm">
+                      {tempDelta == null ? t('climate.page.notAvailable', 'N/A') : tempDelta > 2
+                        ? t('climate.page.tooWarm', 'Too warm')
                         : tempDelta != null && tempDelta < -2
-                          ? t('climate.page.tooCold', 'Too Cold')
+                          ? t('climate.page.tooCold', 'Too cold')
                           : t('climate.page.comfortable', 'Comfortable')}
                     </Badge>
                   }
                 >
-                  {tempDelta != null && tempDelta > 2 ? (
-                    <Sun className="h-8 w-8 text-amber-400" aria-hidden="true" />
+                  {tempDelta == null ? <Caption>—</Caption> : tempDelta > 2 ? (
+                    <Icon icon={Sun} size="xl" className={neonColorMap.amber.text} />
                   ) : tempDelta != null && tempDelta < -2 ? (
-                    <Snowflake className="h-8 w-8 text-cyan-400" aria-hidden="true" />
+                    <Icon icon={Snowflake} size="xl" className={neonColorMap.cyan.text} />
                   ) : (
-                    <Wind className="h-8 w-8 text-emerald-400" aria-hidden="true" />
+                    <Icon icon={Wind} size="xl" className={neonColorMap.green.text} />
                   )}
                 </ComfortStat>
               </div>
             )}
-          </GlassPanel>
-        </section>
-      </FadeIn>
+            </ClimateSourceBoundary>
+          </LayoutCard>
+      </ClimateRenderGroup>
 
       {/* ─── Band C — Climate systems metric grid ─── */}
-      <FadeIn delay={0.1}>
-        <GlassPanel className="p-4 sm:p-5">
-          <BandHeading
-            icon={<Settings className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-            className="mb-4"
-          >
-            {t('climate.page.climateSystems', 'Climate Systems')}
-          </BandHeading>
+      <ClimateRenderGroup id="climate-systems" delay={0.1}>
+        <LayoutCard title={t('climate.page.climateSystems', 'Climate systems')}>
+          <ClimateSourceBoundary state={latestState} label={latestLabel}>
           {latestLoading ? (
             <CardSkeletons count={13} className={SYSTEMS_GRID} />
           ) : (
-            <div className={SYSTEMS_GRID}>
+            <ClimateMetricGroup id="climate-systems-stats" period={latestPeriod}
+              retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
+              title={t('climate.page.climateSystems', 'Climate systems')}>
               <MetricCard
-                label={t('telemetry.hvac', 'HVAC Power')}
-                value={latest?.isAcOn ? t('common.on', 'On') : t('common.off', 'Off')}
-                color={latest?.isAcOn ? 'cyan' : 'blue'}
+                label={t('telemetry.hvac', 'HVAC power')}
+                value={latest?.hvacPower == null ? '—' : latest.hvacPower ? t('common.on', 'On') : t('common.off', 'Off')}
+                color={latest?.hvacPower ? 'cyan' : 'blue'}
                 icon={
-                  <Power
-                    className={cn(
-                      'h-5 w-5',
-                      latest?.isAcOn ? 'text-cyan-400' : 'text-[var(--text-muted)]',
-                    )}
+                  <Icon icon={Power} size="lg"
+                    className={typography.color.secondary}
                   />
                 }
-                subtitle={latest?.hvacPower != null
-                  ? `${t('common.state', 'State')}: ${latest.hvacPower ? t('common.on', 'On') : t('common.off', 'Off')}`
-                  : undefined}
+                subtitle={`${t('climate.page.acOnOff', 'AC on/off')}: ${latest?.isAcOn == null
+                  ? '—' : latest.isAcOn ? t('common.on', 'On') : t('common.off', 'Off')}`}
               />
 
               <MetricCard
-                label={t('climate.page.autoConditioning', 'Auto Conditioning')}
+                label={t('climate.page.autoConditioning', 'Auto conditioning')}
                 value={
-                  latest?.hvacAutoMode != null && latest.hvacAutoMode !== 'Off' ? t('common.on', 'On') : t('common.off', 'Off')
+                  latest?.hvacAutoMode == null ? '—' : latest.hvacAutoMode !== 'Off' ? t('common.on', 'On') : t('common.off', 'Off')
                 }
                 color="blue"
-                icon={<Settings className="h-5 w-5 text-blue-400" />}
+                icon={<Icon icon={Settings} size="lg" className={typography.color.secondary} />}
               />
 
               <MetricCard
-                label={t('commands.climate.climateKeeper', 'Climate Keeper')}
-                value={t(keeperLabel(latest?.climateKeeperMode ?? 'off'))}
+                label={t('commands.climate.climateKeeper', 'Climate keeper')}
+                value={latest?.climateKeeperMode == null ? '—' : keeperLabel(latest.climateKeeperMode, t)}
                 color="amber"
-                icon={<ThermometerSun className="h-5 w-5 text-amber-400" />}
+                icon={<Icon icon={ThermometerSun} size="lg" className={typography.color.secondary} />}
                 subtitle={
                   latest?.climateKeeperMode && latest.climateKeeperMode !== 'Off'
                     ? t('common.active', 'Active')
@@ -893,15 +997,19 @@ export default function ClimateControlPage() {
               />
 
               <MetricCard
-                label={t('widget.climatePanel.fanSpeed', 'Fan Speed')}
-                value={String(latest?.fanSpeed ?? 0)}
+                label={t('widget.climatePanel.fanSpeed', 'Fan speed')}
+                value={latest?.fanSpeed != null ? String(latest.fanSpeed) : '—'}
+                metric={{ metricId: 'number', rawValue: latest?.fanSpeed,
+                  display: { formatter: raw => ({ value: String(raw), unit: '' }) } }}
                 color="cyan"
-                icon={<Wind className="h-5 w-5 text-teal-400" />}
+                icon={<Icon icon={Wind} size="lg" className={typography.color.secondary} />}
                 subtitle={`${t('common.level', 'Level')} 0–10`}
               />
 
               <MetricCard
-                label={t('climate.page.fanStatus', 'Fan Status')}
+                label={t('climate.page.fanStatus', 'Fan status')}
+                metric={{ metricId: 'number', rawValue: latest?.hvacFanStatus,
+                  display: { formatter: raw => ({ value: raw > 0 ? t('climate.page.running', 'Running') : t('climate.page.idle', 'Idle'), unit: '' }) } }}
                 value={
                   latest?.hvacFanStatus != null
                     ? latest.hvacFanStatus > 0
@@ -911,13 +1019,8 @@ export default function ClimateControlPage() {
                 }
                 color="cyan"
                 icon={
-                  <Wind
-                    className={cn(
-                      'h-5 w-5',
-                      latest?.hvacFanStatus != null && latest.hvacFanStatus > 0
-                        ? 'text-teal-400'
-                        : 'text-[var(--text-muted)]',
-                    )}
+                  <Icon icon={Wind} size="lg"
+                    className={typography.color.secondary}
                   />
                 }
                 subtitle={
@@ -926,54 +1029,51 @@ export default function ClimateControlPage() {
               />
 
               <MetricCard
-                label={t('climate.page.steeringWheelHeater', 'Steering Wheel Heater')}
+                label={t('climate.page.steeringWheelHeater', 'Steering wheel heater')}
+                metric={{ metricId: 'number', rawValue: latest?.hvacSteeringWheelHeatLevel,
+                  display: { formatter: raw => ({ value: raw > 0 ? t('common.on', 'On') : t('common.off', 'Off'), unit: '' }) } }}
                 value={
-                  latest?.hvacSteeringWheelHeatLevel != null &&
+                  latest?.hvacSteeringWheelHeatLevel == null ? '—' :
                   latest.hvacSteeringWheelHeatLevel > 0
                     ? t('common.on', 'On')
                     : t('common.off', 'Off')
                 }
                 color="amber"
                 icon={
-                  <CircleGauge
-                    className={cn(
-                      'h-5 w-5',
-                      latest?.hvacSteeringWheelHeatLevel != null &&
-                        latest.hvacSteeringWheelHeatLevel > 0
-                        ? 'text-amber-400'
-                        : 'text-[var(--text-muted)]',
-                    )}
+                  <Icon icon={CircleGauge} size="lg"
+                    className={typography.color.secondary}
                   />
                 }
               />
 
               <MetricCard
-                label={t('climate.page.steeringWheelHeatLevel', 'Steering Wheel Heat Level')}
+                label={t('climate.page.steeringWheelHeatLevel', 'Steering wheel heat level')}
+                metric={{ metricId: 'number', rawValue: latest?.hvacSteeringWheelHeatLevel,
+                  display: { formatter: raw => ({ value: t(heatStyle(raw).labelKey, heatStyle(raw).label), unit: '' }) } }}
                 value={
                   latest?.hvacSteeringWheelHeatLevel == null
                     ? '—'
-                    : t(heatStyle(latest.hvacSteeringWheelHeatLevel).label)
+                    : t(heatStyle(latest.hvacSteeringWheelHeatLevel).labelKey, heatStyle(latest.hvacSteeringWheelHeatLevel).label)
                 }
                 color="amber"
                 icon={
-                  <Flame
-                    className={cn(
-                      'h-5 w-5',
+                  <Icon icon={Flame} size="lg"
+                    className={
                       latest?.hvacSteeringWheelHeatLevel != null
                         ? heatStyle(latest.hvacSteeringWheelHeatLevel).color
-                        : 'text-[var(--text-muted)]',
-                    )}
+                        : typography.color.muted
+                    }
                   />
                 }
                 subtitle={
                   latest?.hvacSteeringWheelHeatLevel != null
-                    ? `${t('common.level', 'Level')} ${fmtInt(latest.hvacSteeringWheelHeatLevel)}`
+                    ? `${t('common.level', 'Level')} ${fmtInt(clampLevel(latest.hvacSteeringWheelHeatLevel))}`
                     : undefined
                 }
               />
 
               <MetricCard
-                label={t('climate.page.steeringWheelHeatAuto', 'Steering Wheel Heat Auto')}
+                label={t('climate.page.steeringWheelHeatAuto', 'Steering wheel heat auto')}
                 value={
                   latest?.hvacSteeringWheelHeatAuto == null
                     ? '—'
@@ -983,37 +1083,27 @@ export default function ClimateControlPage() {
                 }
                 color="amber"
                 icon={
-                  <Activity
-                    className={cn(
-                      'h-5 w-5',
-                      latest?.hvacSteeringWheelHeatAuto
-                        ? 'text-amber-400'
-                        : 'text-[var(--text-muted)]',
-                    )}
+                  <Icon icon={Activity} size="lg"
+                    className={typography.color.secondary}
                   />
                 }
               />
 
               <MetricCard
-                label={t('climate.page.defrostMode', 'Defrost Mode')}
+                label={t('climate.page.defrostMode', 'Defrost mode')}
                 value={
-                  latest?.defrostMode && latest.defrostMode !== 'Off' ? latest.defrostMode : t('common.off', 'Off')
+                  latest?.defrostMode == null ? '—' : latest.defrostMode !== 'Off' ? latest.defrostMode : t('common.off', 'Off')
                 }
                 color="blue"
                 icon={
-                  <Snowflake
-                    className={cn(
-                      'h-5 w-5',
-                      latest?.defrostMode && latest.defrostMode !== 'Off'
-                        ? 'text-blue-400'
-                        : 'text-[var(--text-muted)]',
-                    )}
+                  <Icon icon={Snowflake} size="lg"
+                    className={typography.color.secondary}
                   />
                 }
               />
 
               <MetricCard
-                label={t('climate.page.defrostForPreconditioning', 'Defrost for Preconditioning')}
+                label={t('climate.page.defrostForPreconditioning', 'Defrost for preconditioning')}
                 value={
                   latest?.defrostForPreconditioning == null
                     ? '—'
@@ -1023,13 +1113,8 @@ export default function ClimateControlPage() {
                 }
                 color="cyan"
                 icon={
-                  <Snowflake
-                    className={cn(
-                      'h-5 w-5',
-                      latest?.defrostForPreconditioning
-                        ? 'text-cyan-400'
-                        : 'text-[var(--text-muted)]',
-                    )}
+                  <Icon icon={Snowflake} size="lg"
+                    className={typography.color.secondary}
                   />
                 }
                 subtitle={
@@ -1040,7 +1125,7 @@ export default function ClimateControlPage() {
               />
 
               <MetricCard
-                label={t('climate.page.rearDefrost', 'Rear Defrost')}
+                label={t('climate.page.rearDefrost', 'Rear defrost')}
                 value={
                   latest?.rearDefrostEnabled == null
                     ? '—'
@@ -1050,18 +1135,15 @@ export default function ClimateControlPage() {
                 }
                 color="blue"
                 icon={
-                  <Snowflake
-                    className={cn(
-                      'h-5 w-5',
-                      latest?.rearDefrostEnabled ? 'text-blue-400' : 'text-[var(--text-muted)]',
-                    )}
+                  <Icon icon={Snowflake} size="lg"
+                    className={typography.color.secondary}
                   />
                 }
                 subtitle={latest?.rearDefrostEnabled ? t('climate.page.clearingRearWindow', 'Clearing rear window') : undefined}
               />
 
               <MetricCard
-                label={t('climate.page.wiperHeater', 'Wiper Heater')}
+                label={t('climate.page.wiperHeater', 'Wiper heater')}
                 value={
                   latest?.wiperHeatEnabled == null
                     ? '—'
@@ -1071,11 +1153,8 @@ export default function ClimateControlPage() {
                 }
                 color="amber"
                 icon={
-                  <Flame
-                    className={cn(
-                      'h-5 w-5',
-                      latest?.wiperHeatEnabled ? 'text-orange-400' : 'text-[var(--text-muted)]',
-                    )}
+                  <Icon icon={Flame} size="lg"
+                    className={typography.color.secondary}
                   />
                 }
                 subtitle={
@@ -1086,7 +1165,7 @@ export default function ClimateControlPage() {
               />
 
               <MetricCard
-                label={t('climate.page.rearDisplayHvac', 'Rear Display HVAC')}
+                label={t('climate.page.rearDisplayHvac', 'Rear display HVAC')}
                 value={
                   latest?.rearDisplayHvacEnabled == null
                     ? '—'
@@ -1096,13 +1175,8 @@ export default function ClimateControlPage() {
                 }
                 color="cyan"
                 icon={
-                  <Monitor
-                    className={cn(
-                      'h-5 w-5',
-                      latest?.rearDisplayHvacEnabled
-                        ? 'text-cyan-400'
-                        : 'text-[var(--text-muted)]',
-                    )}
+                  <Icon icon={Monitor} size="lg"
+                    className={typography.color.secondary}
                   />
                 }
                 subtitle={
@@ -1111,107 +1185,100 @@ export default function ClimateControlPage() {
                     : undefined
                 }
               />
-            </div>
+            </ClimateMetricGroup>
           )}
-        </GlassPanel>
-      </FadeIn>
+          </ClimateSourceBoundary>
+        </LayoutCard>
+      </ClimateRenderGroup>
 
       {/* ─── Band D — Protection & safety ─── */}
-      <FadeIn delay={0.15}>
-        <GlassPanel className="p-4 sm:p-5">
-          <BandHeading
-            icon={<ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-            className="mb-4"
-          >
-            {t('climate.page.protectionSafety', 'Protection & Safety')}
-          </BandHeading>
+      <ClimateRenderGroup id="climate-protection" delay={0.15}>
+        <LayoutCard title={t('climate.page.protectionSafety', 'Protection & safety')}>
+          <ClimateSourceBoundary state={latestState} label={latestLabel}>
           {latestLoading ? (
             <CardSkeletons count={4} className={PROTECTION_GRID} />
           ) : (
-            <div className={PROTECTION_GRID}>
+            <ClimateMetricGroup id="climate-protection-stats" period={latestPeriod}
+              retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
+              title={t('climate.page.protectionSafety', 'Protection & safety')}>
               <MetricCard
-                label={t('climate.page.overheatProtection', 'Overheat Protection')}
+                label={t('climate.page.overheatProtection', 'Overheat protection')}
                 value={latest?.overheatProtection ?? t('common.unknown', 'Unknown')}
                 color="green"
-                icon={<ShieldCheck className="h-5 w-5 text-green-400" />}
+                icon={<Icon icon={ShieldCheck} size="lg" className={typography.color.secondary} />}
               />
               <MetricCard
-                label={t('climate.page.overheatTempLimit', 'Overheat Temp Limit')}
+                label={t('climate.page.overheatTempLimit', 'Overheat temp limit')}
                 value={latest?.cabinOverheatProtectionTempLimit ?? '—'}
                 color="amber"
-                icon={<ThermometerSun className="h-5 w-5 text-orange-400" />}
+                icon={<Icon icon={ThermometerSun} size="lg" className={typography.color.secondary} />}
               />
               <MetricCard
-                label={t('climate.page.batteryHeater', 'Battery Heater')}
-                value={latest?.batteryHeater ? t('common.on', 'On') : t('common.off', 'Off')}
+                label={t('climate.page.batteryHeater', 'Battery heater')}
+                value={latest?.batteryHeater == null ? '—' : latest.batteryHeater ? t('common.on', 'On') : t('common.off', 'Off')}
                 color="amber"
                 icon={
-                  <BatteryCharging
-                    className={cn(
-                      'h-5 w-5',
-                      latest?.batteryHeater ? 'text-amber-400' : 'text-[var(--text-muted)]',
-                    )}
+                  <Icon icon={BatteryCharging} size="lg"
+                    className={typography.color.secondary}
                   />
                 }
               />
               <MetricCard
-                label={t('climate.page.passengerSetting', 'Passenger Setting')}
+                label={t('climate.page.passengerSetting', 'Passenger setting')}
                 value={
                   latest?.passengerTempSetting != null
-                    ? `${fmtNumber(toTemperatureDisplay(latest.passengerTempSetting), 1)}${tempUnit}`
+                    ? `${fmtNumber(toTemperatureDisplay(latest.passengerTempSetting))}${tempUnit}`
                     : '—'
                 }
+                metric={{ metricId: 'temperature', rawValue: latest?.passengerTempSetting,
+                  display: { formatter: raw => ({ value: `${fmtNumber(toTemperatureDisplay(raw))}${tempUnit}`, unit: '' }) } }}
                 color="purple"
-                icon={<Thermometer className="h-5 w-5 text-purple-400" />}
+                icon={<Icon icon={Thermometer} size="lg" className={typography.color.secondary} />}
               />
-            </div>
+            </ClimateMetricGroup>
           )}
-        </GlassPanel>
-      </FadeIn>
+          </ClimateSourceBoundary>
+        </LayoutCard>
+      </ClimateRenderGroup>
 
       {/* ─── Band E — Seat heaters (span 2) + climate efficiency ─── */}
-      <FadeIn delay={0.2}>
-        <section
-          aria-label={t('climate.page.comfortEfficiency', 'Comfort & Efficiency')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
-        >
+      <ClimateRenderGroup id="climate-seats" size="half" delay={0.2}
+        label={t('climate.page.comfortEfficiency', 'Comfort & efficiency')}>
           {/* Seat heaters + cooling */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <BandHeading
-              icon={<Flame className="h-4 w-4 text-amber-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.page.seatHeaters', 'Seat Heaters')}
-            </BandHeading>
+          <LayoutCard title={t('climate.page.seatHeaters', 'Seat heaters')}>
 
+            <ClimateSourceBoundary state={latestState} label={latestLabel}>
             {latestLoading ? (
               <CardSkeletons
                 count={5}
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+                className={SEAT_GRID}
               />
             ) : (
               <div className="space-y-4">
                 {/* Heated seats — all five positions */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                <div className={SEAT_GRID}>
                   {SEATS.map((seat) => (
                     <SeatHeaterCard
                       key={seat.key}
                       label={seat.label}
-                      level={latest?.[seat.key] ?? 0}
+                      labelKey={seat.labelKey}
+                      level={latest?.[seat.key]}
                       t={t}
                     />
                   ))}
                 </div>
 
                 {/* Auto seat climate */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2">
                   <AutoClimateChip
-                    label="Auto Climate (Left)"
+                    label="Auto climate (left)"
+                    labelKey="climate.page.autoClimateLeft"
                     value={latest?.autoSeatClimateLeft}
                     t={t}
                   />
                   <AutoClimateChip
-                    label="Auto Climate (Right)"
+                    label="Auto climate (right)"
+                    labelKey="climate.page.autoClimateRight"
                     value={latest?.autoSeatClimateRight}
                     t={t}
                   />
@@ -1221,9 +1288,9 @@ export default function ClimateControlPage() {
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <Snowflake className="h-4 w-4 text-sky-400" aria-hidden="true" />
+                      <Icon icon={Snowflake} className={typography.color.secondary} />
                       <Text variant="body" className="font-semibold">
-                        {t('climate.page.seatCooling', 'Seat Cooling')}
+                        {t('climate.page.seatCooling', 'Seat cooling')}
                       </Text>
                     </div>
                     <Badge
@@ -1238,14 +1305,16 @@ export default function ClimateControlPage() {
                           : t('common.off', 'Off')}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                  <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2">
                     <SeatCoolingCard
-                      label="Front Left"
+                      label="Front left"
+                      labelKey="widget.doorWindow.fl"
                       level={latest?.climateSeatCoolingFrontLeft}
                       t={t}
                     />
                     <SeatCoolingCard
-                      label="Front Right"
+                      label="Front right"
+                      labelKey="widget.doorWindow.fr"
                       level={latest?.climateSeatCoolingFrontRight}
                       t={t}
                     />
@@ -1253,85 +1322,95 @@ export default function ClimateControlPage() {
                 </div>
 
                 {/* Level legend */}
-                <div className="flex flex-wrap items-center gap-4 border-t border-white/[0.06] pt-3">
+                <div className="flex flex-wrap items-center gap-4 border-t border-[var(--border-default)] pt-3">
                   {HEAT_LEVELS.map((lvl, idx) => (
                     <div key={lvl.label} className="flex items-center gap-1.5">
-                      <Flame className={cn('h-3.5 w-3.5', lvl.color)} aria-hidden="true" />
+                      <Icon icon={Flame} size="sm" className={lvl.color} />
                       <Caption>
-                        {idx} — {t(lvl.label)}
+                        {idx} — {t(lvl.labelKey, lvl.label)}
                       </Caption>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-          </GlassPanel>
-
+            </ClimateSourceBoundary>
+          </LayoutCard>
+      </ClimateRenderGroup>
+      <ClimateRenderGroup id="climate-efficiency" size="half" delay={0.2}>
           {/* Climate efficiency */}
-          <GlassPanel className="p-4 sm:p-5">
-            <BandHeading
-              icon={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.page.climateEfficiency', 'Climate Efficiency')}
-            </BandHeading>
+          <LayoutCard title={t('climate.page.climateEfficiency', 'Climate efficiency')}>
+            <ClimateSourceBoundary state={historyState} label={historyLabel}>
             {historyLoading ? (
               <CardSkeletons count={4} className="grid grid-cols-2 gap-3 sm:gap-4" />
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <ClimateMetricGroup id="climate-efficiency-stats"
+                retained={historyState.refreshError != null || (historyState.hasData && historyState.isRefreshBlocked)}
+                title={t('climate.page.climateEfficiency', 'Climate efficiency')} period={{
+                kind: 'unknown',
+                label: historyLabel,
+              }}>
                 <MetricCard
-                  label={t('climate.page.avgFanSpeed', 'Avg Fan Speed')}
-                  value={efficiencyStats ? fmtNumber(efficiencyStats.avgFan, 1) : '—'}
+                  label={t('climate.page.avgFanSpeed', 'Avg fan speed')}
+                  value={efficiencyStats.avgFan != null ? fmtNumber(efficiencyStats.avgFan) : '—'}
+                  metric={{ metricId: 'number', rawValue: efficiencyStats?.avgFan,
+                    display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } }}
                   subtitle={t('climate.page.levelRange', 'Level 0–10')}
-                  icon={<Wind className="h-4 w-4" />}
+                  icon={<Icon icon={Wind} className={typography.color.secondary} />}
                   color="cyan"
                 />
                 <MetricCard
-                  label={t('climate.page.peakFanSpeed', 'Peak Fan Speed')}
-                  value={efficiencyStats ? fmtNumber(efficiencyStats.peakFan, 1) : '—'}
+                  label={t('climate.page.peakFanSpeed', 'Peak fan speed')}
+                  value={efficiencyStats.peakFan != null ? fmtNumber(efficiencyStats.peakFan) : '—'}
+                  metric={{ metricId: 'number', rawValue: efficiencyStats?.peakFan,
+                    display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } }}
                   subtitle={t('climate.page.levelRange', 'Level 0–10')}
-                  icon={<Wind className="h-4 w-4" />}
+                  icon={<Icon icon={Wind} className={typography.color.secondary} />}
                   color="purple"
                 />
                 <MetricCard
-                  label={t('climate.page.acOnTime', 'AC On Time')}
-                  value={efficiencyStats ? `${fmtInt(efficiencyStats.acOnPct)}%` : '—'}
-                  subtitle={t('climate.page.ofSamples', 'of samples')}
-                  icon={<Zap className="h-4 w-4" />}
+                  label={`${t('climate.page.acOnOff', 'AC on/off')} · ${t('common.on', 'On')}`}
+                  value={efficiencyStats.acOnPct != null ? `${fmtNumber(efficiencyStats.acOnPct)}%` : '—'}
+                  metric={{ metricId: 'percent', rawValue: efficiencyStats?.acOnPct,
+                    display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } }}
+                  subtitle={`${t('hvacCycling.duty.onSamples', 'Known on-state samples')}: ${fmtInt(efficiencyStats.acOnCount)} / ${t('hvacCycling.kpis.known', 'Known-state samples')}: ${fmtInt(efficiencyStats.acKnownCount)} · ${t('common.unknown', 'Unknown')}: ${fmtInt(efficiencyStats.acUnknownCount)}`}
+                  icon={<Icon icon={Zap} className={typography.color.secondary} />}
                   color="amber"
                 />
+              </ClimateMetricGroup>
+            )}
+            </ClimateSourceBoundary>
+            <ClimateSourceBoundary state={latestState} label={latestLabel}>
+              {latestLoading ? <Skeleton height={84} /> :
+              <ClimateMetricGroup id="climate-efficiency-comfort" period={latestPeriod}
+                retained={latestState.refreshError != null || (latestState.hasData && latestState.isRefreshBlocked)}
+                title={t('climate.page.comfortScore', 'Comfort score')}>
                 <MetricCard
-                  label={t('climate.page.comfortScore', 'Comfort Score')}
-                  value={comfortScore != null ? `${fmtInt(comfortScore)}%` : '—'}
-                  icon={<Thermometer className="h-4 w-4" />}
+                  label={t('climate.page.comfortScore', 'Comfort score')}
+                  value={comfortScore != null ? `${fmtNumber(comfortScore)}%` : '—'}
+                  metric={{ metricId: 'percent', rawValue: comfortScore,
+                    display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } }}
+                  icon={<Icon icon={Thermometer} className={typography.color.secondary} />}
                   color={comfortScore != null && comfortScore >= 80 ? 'green' : 'amber'}
                 />
-              </div>
-            )}
-          </GlassPanel>
-        </section>
-      </FadeIn>
+              </ClimateMetricGroup>}
+            </ClimateSourceBoundary>
+          </LayoutCard>
+      </ClimateRenderGroup>
 
       {/* ─── Band F — History charts (side-by-side on wide screens) ─── */}
-      <FadeIn delay={0.25}>
-        <section
-          aria-label={t('widget.climateHistory.title', 'Climate History')}
-          className="grid grid-cols-1 gap-4 2xl:grid-cols-2 2xl:gap-5"
-        >
+      <ClimateRenderGroup id="climate-temperature-history" size="half" delay={0.25}
+        label={t('widget.climateHistory.title', 'Climate history')}>
           {/* Temperature history */}
-          <GlassPanel className="p-4 sm:p-5">
-            <BandHeading
-              icon={<Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.history.title', 'Temperature History')}
-            </BandHeading>
+          <LayoutCard title={t('climate.history.title', 'Temperature history')}>
+            <Caption>{tz}</Caption>
+            <ClimateSourceBoundary state={historyState} label={historyLabel}>
             {historyLoading ? (
               <Skeleton height={300} />
             ) : !hasTempHistory ? (
               // no-action: temperature history accumulates automatically from climate telemetry.
               <EmptyState
-                icon={<Thermometer className="h-10 w-10" aria-hidden="true" />}
+                icon={<Icon icon={Thermometer} size="xl" />}
                 message={t(
                   'climate.history.temperatureEmpty',
                   'No temperature history has been recorded.',
@@ -1343,11 +1422,12 @@ export default function ClimateControlPage() {
               />
             ) : (
               <div className="h-64 sm:h-72 xl:h-80">
-                {/* chart-a11y:no-table continuous temperature time-series with many data points — not tabular */}
                 <EmbeddedChart
                   chartKey="climate-temp-history"
-                  title={t('climate.history.title', 'Temperature History')}
+                  title={t('climate.history.title', 'Temperature history')}
                   ariaLabel={t('climate.history.temperatureAria', 'Cabin, ambient, and driver set-point temperature over time')}
+                  data={chartFallbackData}
+                  dataColumns={temperatureDataColumns}
                   fluid
                 >
                   {({ hiddenSeries }) => (
@@ -1364,12 +1444,12 @@ export default function ClimateControlPage() {
                           tickFormatter={(v: string) => formatTime(v)}
                         />
                         <YAxis tick={axisTick} unit={tempUnit} />
-                        <Tooltip content={<ChartTooltip />} />
+                        <Tooltip content={<ChartTooltip timezone={tz} labelFormatter={label => formatDateTime(typeof label === 'string' ? label : null)} />} />
                         <ChartLegend />
                         <Line
                           {...AREA_DEFAULTS}
                           dataKey="insideTemp"
-                          name={t('climate.page.insideTemp', 'Inside Temp')}
+                          name={t('climate.page.insideTemp', 'Inside temp')}
                           stroke={CHART_COLORS[0]}
                           {...chartAnimation}
                           hide={hiddenSeries?.isHidden('insideTemp') ?? false}
@@ -1377,7 +1457,7 @@ export default function ClimateControlPage() {
                         <Line
                           {...AREA_DEFAULTS}
                           dataKey="outsideTemp"
-                          name={t('climate.page.outsideTemp', 'Outside Temp')}
+                          name={t('climate.page.outsideTemp', 'Outside temp')}
                           stroke={CHART_COLORS[1]}
                           {...chartAnimation}
                           hide={hiddenSeries?.isHidden('outsideTemp') ?? false}
@@ -1385,7 +1465,7 @@ export default function ClimateControlPage() {
                         <Line
                           {...AREA_DEFAULTS}
                           dataKey="driverTempSetting"
-                          name={t('climate.page.driverSetTemp', 'Driver Set Temp')}
+                          name={t('climate.page.driverSetTemp', 'Driver set temp')}
                           stroke={CHART_COLORS[2]}
                           strokeDasharray="5 5"
                           {...chartAnimation}
@@ -1397,22 +1477,20 @@ export default function ClimateControlPage() {
                 </EmbeddedChart>
               </div>
             )}
-          </GlassPanel>
-
+            </ClimateSourceBoundary>
+          </LayoutCard>
+      </ClimateRenderGroup>
+      <ClimateRenderGroup id="climate-hvac-history" size="half" delay={0.25}>
           {/* AC state & fan speed history */}
-          <GlassPanel className="p-4 sm:p-5">
-            <BandHeading
-              icon={<Wind className="h-4 w-4 text-purple-300" aria-hidden="true" />}
-              className="mb-4"
-            >
-              {t('climate.page.acStateFanSpeed', 'AC State & Fan Speed')}
-            </BandHeading>
+          <LayoutCard title={t('climate.page.acStateFanSpeed', 'AC state & fan speed')}>
+            <Caption>{tz}</Caption>
+            <ClimateSourceBoundary state={historyState} label={historyLabel}>
             {historyLoading ? (
               <Skeleton height={300} />
             ) : !hasTempHistory ? (
               // no-action: HVAC history accumulates automatically from climate telemetry.
               <EmptyState
-                icon={<Wind className="h-10 w-10" aria-hidden="true" />}
+                icon={<Icon icon={Wind} size="xl" />}
                 message={t(
                   'climate.history.hvacEmpty',
                   'No HVAC operating history has been recorded.',
@@ -1424,11 +1502,12 @@ export default function ClimateControlPage() {
               />
             ) : (
               <div className="h-64 sm:h-72 xl:h-80">
-                {/* chart-a11y:no-table continuous HVAC time-series (AC on/off + fan speed) — dense, not tabular */}
                 <EmbeddedChart
                   chartKey="climate-hvac-history"
-                  title={t('climate.page.acStateFanSpeed', 'AC State & Fan Speed')}
+                  title={t('climate.page.acStateFanSpeed', 'AC state & fan speed')}
                   ariaLabel={t('climate.history.hvacAria', 'AC on/off state and fan speed over time')}
+                  data={chartFallbackData}
+                  dataColumns={hvacDataColumns}
                   fluid
                 >
                   {({ hiddenSeries }) => (
@@ -1452,7 +1531,7 @@ export default function ClimateControlPage() {
                           tick={axisTick}
                           width={36}
                         />
-                        <Tooltip content={<ChartTooltip />} />
+                        <Tooltip content={<ChartTooltip timezone={tz} labelFormatter={label => formatDateTime(typeof label === 'string' ? label : null)} />} />
                         <ChartLegend />
                         {areaGradient('climateAcGrad', CHART_COLORS[0])}
                         <Area
@@ -1460,7 +1539,7 @@ export default function ClimateControlPage() {
                           yAxisId="ac"
                           type="stepAfter"
                           dataKey="acActive"
-                          name={t('climate.page.acOnOff', 'AC On/Off')}
+                          name={t('climate.page.acOnOff', 'AC on/off')}
                           stroke={CHART_COLORS[0]}
                           fill="url(#climateAcGrad)"
                           {...chartAnimation}
@@ -1471,7 +1550,7 @@ export default function ClimateControlPage() {
                           yAxisId="fan"
                           type="stepAfter"
                           dataKey="fanSpeed"
-                          name={t('widget.climatePanel.fanSpeed', 'Fan Speed')}
+                          name={t('widget.climatePanel.fanSpeed', 'Fan speed')}
                           stroke={CHART_COLORS[3]}
                           {...chartAnimation}
                           hide={hiddenSeries?.isHidden('fanSpeed') ?? false}
@@ -1482,25 +1561,20 @@ export default function ClimateControlPage() {
                 </EmbeddedChart>
               </div>
             )}
-          </GlassPanel>
-        </section>
-      </FadeIn>
+            </ClimateSourceBoundary>
+          </LayoutCard>
+      </ClimateRenderGroup>
 
       {/* ─── Band G — Climate history table (full-width detail band) ─── */}
-      <FadeIn delay={0.3}>
-        <GlassPanel className="p-4 sm:p-5">
-          <BandHeading
-            icon={<CircleGauge className="h-4 w-4 text-purple-300" aria-hidden="true" />}
-            className="mb-4"
-          >
-            {t('widget.climateHistory.title', 'Climate History')}
-          </BandHeading>
+      <ClimateRenderGroup id="climate-history-table" delay={0.3}>
+        <LayoutCard title={t('widget.climateHistory.title', 'Climate history')}>
+          <ClimateSourceBoundary state={historyState} label={historyLabel}>
           {historyLoading ? (
             <Skeleton lines={8} />
           ) : sortedHistory.length === 0 ? (
             // no-action: climate snapshots appear automatically as telemetry arrives.
             <EmptyState
-              icon={<CircleGauge className="h-10 w-10" aria-hidden="true" />}
+              icon={<Icon icon={CircleGauge} size="xl" />}
               message={t('climate.history.emptyMessage', 'No climate history has been recorded.')}
               description={t(
                 'climate.history.emptyDescription',
@@ -1510,8 +1584,13 @@ export default function ClimateControlPage() {
           ) : (
             <DataTable
               tableId="vehicle-systems:climate-history"
+              enableValueFilters
+              filterData={history ?? []}
               columns={columns}
               mobileColumns={['timestamp', 'insideTemp', 'outsideTemp']}
+              mobilePresentation={mobilePresentation}
+              variant="embedded"
+              name={t('widget.climateHistory.title', 'Climate history')}
               data={sortedHistory}
               keyExtractor={(row) => String(row.id ?? 0)}
               sortKey={sortKey}
@@ -1521,8 +1600,10 @@ export default function ClimateControlPage() {
               pagination
             />
           )}
-        </GlassPanel>
-      </FadeIn>
-    </PageContainer>
+          </ClimateSourceBoundary>
+        </LayoutCard>
+      </ClimateRenderGroup>
+      </ClimateRenderGrid>
+    </PageLayout>
   );
 }

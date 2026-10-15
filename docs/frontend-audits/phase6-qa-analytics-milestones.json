@@ -1,0 +1,738 @@
+{
+  "validation": {
+    "ignoredByLogsDirectoryRule": true,
+    "hashChanges": [],
+    "numericExitCode": 0,
+    "sourceFilesChecked": 15,
+    "jsonParse": true,
+    "readonlyTestFilesChecked": 2,
+    "utc": "2026-10-13T20:03:43.1873498Z",
+    "status": "VALIDATED_SOURCE_ONLY_REPORT_DELIVERY",
+    "testsAndPagePass": false,
+    "logPresent": true
+  },
+  "domainFiles": [
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MilestoneBrief.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.ts",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\index.ts",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneSectionBody.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\OdometerGrowthChart.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\PaceForecastScenarios.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\ReachedMilestones.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\types.ts",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\useOdometerMilestoneDisplay.ts"
+  ],
+  "page": "web/src/features/analytics/pages/MilestonesPage.tsx",
+  "branch": "fix/dashboard-followups (assignment authority; Git NOT RUN)",
+  "commands": [
+    {
+      "name": "static-inline-style",
+      "rawOutput": "CHECK static-inline-style RAW_MATCH_LINES=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern 'style\\s*=\\s*\\{\\{' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 0
+    },
+    {
+      "name": "raw-html",
+      "rawOutput": "CHECK raw-html RAW_MATCH_LINES=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern '<(button|input|textarea|select|table)(\\s|>)' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 0
+    },
+    {
+      "name": "direct-library-import",
+      "rawOutput": "CHECK direct-library-import RAW_MATCH_LINES=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern '(?:from\\s*|import\\s*)['\\\"](?:recharts|react-leaflet|framer-motion)['\\\"]' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 0
+    },
+    {
+      "name": "old-api-import",
+      "rawOutput": "CHECK old-api-import RAW_MATCH_LINES=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern '['\\\"](?:\\.\\./)+api['\\\"]' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 0
+    },
+    {
+      "name": "double-prefix",
+      "rawOutput": "CHECK double-prefix RAW_MATCH_LINES=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern '/api/v1/' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 0
+    },
+    {
+      "name": "camelcase-param",
+      "rawOutput": "CHECK camelcase-param RAW_MATCH_LINES=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern '[?&][a-z_]*[A-Z][a-zA-Z]*=' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 0
+    },
+    {
+      "name": "hidden-section-candidate",
+      "rawOutput": "CHECK hidden-section-candidate RAW_MATCH_LINES=1\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:141:          {baseValidationError && (",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern '&&\\s*(<|\\()' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 1
+    },
+    {
+      "name": "hardcoded-string-candidate",
+      "rawOutput": "CHECK hardcoded-string-candidate RAW_MATCH_LINES=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern '>\\s*[A-Za-z][A-Za-z ]{2,}\\s*<' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 0
+    },
+    {
+      "name": "page-wrapper",
+      "rawOutput": "CHECK page-wrapper RAW_MATCH_LINES=1\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:123:    <PageLayout",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern '<Page(Layout|Container)\\b' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 1
+    },
+    {
+      "name": "fetch-useeffect",
+      "rawOutput": "CHECK fetch-useeffect RAW_MATCH_LINES=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern '\\b(fetch|useEffect)\\s*\\(' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 0
+    },
+    {
+      "name": "section-shell",
+      "rawOutput": "CHECK section-shell RAW_MATCH_LINES=15\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MilestoneBrief.tsx:58:    <OperationalBrief compact title={title} metrics={operationalMetrics} loading={isLoading}\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx:50:    <section\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx:57:      <LayoutCard title={t(\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx:60:    <section\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx:67:      <LayoutCard title={t('milestones.progress.title', 'Progress to the next round number')}\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx:61:    <section\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx:69:      <ChartCard\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\OdometerGrowthChart.tsx:62:    <section\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\OdometerGrowthChart.tsx:70:      <ChartCard\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\PaceForecastScenarios.tsx:45:    <section\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\PaceForecastScenarios.tsx:52:      <LayoutCard title={t('milestones.scenarios.title', 'Pace & forecast scenarios')}\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\ReachedMilestones.tsx:46:    <section\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\ReachedMilestones.tsx:54:      <LayoutCard title={t('milestones.reached.title', 'Milestones reached')}>\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx:30:    <section\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx:38:      <LayoutCard title={t('milestones.roadmap.title', 'Upcoming milestone roadmap')}>",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern '<(section|LayoutCard|ChartCard|OperationalBrief)\\b' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 15
+    },
+    {
+      "name": "action-candidate",
+      "rawOutput": "CHECK action-candidate RAW_MATCH_LINES=19\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:117:    onRetry: () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:139:            onBaseChange={handleBaseChange}\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MilestoneBrief.tsx:12:export function MilestoneBrief({ summary, isLoading, error, onRetry, retained = false }: MilestoneSectionState & {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MilestoneBrief.tsx:69:      errorRecovery={{ onRetry }}>{null}</SourceContent>\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MilestoneBrief.tsx:73:        actionTo={{ label: t('milestones.actions.browseDrives', 'Browse drives'), to: '/drives' }} /> : null}\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx:10:  onBaseChange: (value: string) => void;\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx:16:  onBaseChange,\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx:33:    onBaseChange(value);\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx:7:  HelpTooltip,\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx:68:        actions={<HelpTooltip\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneSectionBody.tsx:30:      error={state.error} errorRecovery={{ onRetry: state.onRetry }}\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx:85:        chartKey=\"odometer-milestones-monthly\"\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx:86:        exportable={!state.error && !state.isLoading && hasData}\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx:115:              <QueryError error={state.error} onRetry={state.onRetry} />\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\OdometerGrowthChart.tsx:83:        exportable={!state.error && !state.isLoading && hasData}\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\OdometerGrowthChart.tsx:111:            <QueryError error={state.error} onRetry={state.onRetry} />\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\PaceForecastScenarios.tsx:66:              actionTo={{\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\ReachedMilestones.tsx:63:              actionTo={{\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\types.ts:4:  onRetry: () => void;",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern 'onRetry|onBaseChange|actionTo|exportable|chartKey|errorRecovery|HelpTooltip' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 19
+    },
+    {
+      "name": "definition-list",
+      "rawOutput": "CHECK definition-list RAW_MATCH_LINES=1\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx:127:                    as=\"dd\"",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern 'as=\"dd\"|<dl|<dt' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 1
+    },
+    {
+      "name": "style-candidate",
+      "rawOutput": "CHECK style-candidate RAW_MATCH_LINES=12\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx:71:        className=\"max-w-[11rem]\"\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx:118:                ? 'border-amber-400/20 bg-amber-400/5'\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx:119:                : 'border-cyan-400/15 bg-cyan-400/5',\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx:126:                  ? 'text-amber-300'\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx:127:                  : 'text-cyan-300',\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx:205:                  className=\"mt-0.5 h-4 w-4 shrink-0 text-amber-300\"\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx:79:          <div className=\"grid items-center gap-6 lg:grid-cols-[auto_1fr]\">\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx:139:          <div className=\"mt-5 flex gap-2 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3\">\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx:141:              className=\"mt-0.5 h-4 w-4 shrink-0 text-amber-300\"\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\ReachedMilestones.tsx:71:              className=\"max-h-[26rem] overflow-y-auto pr-2\"\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx:102:          <div className=\"mt-3 flex gap-2 rounded-lg bg-white/[0.025] p-3\">\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx:104:              className=\"mt-0.5 h-4 w-4 shrink-0 text-cyan-300\"",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path domainFiles -Pattern 'max-[hw]-\\[|grid-cols-\\[|bg-white|text-(cyan|amber)|border-(cyan|amber)' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 12
+    },
+    {
+      "name": "hook-double-prefix",
+      "rawOutput": "CHECK hook-double-prefix useDriving.ts:140-155 RAW_MATCH_LINES=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; (Get-Content D:\\repos\\teslasync\\web\\src\\api\\hooks\\useDriving.ts)[139..154] | Select-String -Pattern '/api/v1/' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 0
+    },
+    {
+      "name": "hook-camelcase-param",
+      "rawOutput": "CHECK hook-camelcase-param useDriving.ts:140-155 RAW_MATCH_LINES=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; (Get-Content D:\\repos\\teslasync\\web\\src\\api\\hooks\\useDriving.ts)[139..154] | Select-String -Pattern '[?&][a-z_]*[A-Z][a-zA-Z]*=' -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 0
+    },
+    {
+      "name": "canonical-English-keys",
+      "rawCounts": {
+        "missingOccurrences": 0,
+        "distinct": 113,
+        "occurrences": 122
+      },
+      "command": "Set-Location D:\\repos\\teslasync\\web; ConvertFrom-Json -AsHashtable en.json; builtin regex t()/i18nKey extraction across domainFiles and nested dotted-key IDictionary lookup",
+      "exitCode": 0,
+      "rawOutput": "I18N occurrences=122 distinct=113 missingOccurrences=0"
+    },
+    {
+      "name": "literal-fallback-parity",
+      "rawCounts": {
+        "mismatches": 0,
+        "helpParity": false,
+        "occurrences": 121
+      },
+      "command": "Set-Location D:\\repos\\teslasync\\web; builtin regex literal t(key,fallback) extraction, case-sensitive canonical comparison; Select-String MilestoneProgress.tsx defaultValue= and compare help.milestones.body",
+      "exitCode": 0,
+      "rawOutput": "FALLBACK_LITERAL_OCCURRENCES=121 MISMATCHES=0 HELP_PARITY=False"
+    },
+    {
+      "name": "preservation",
+      "rawCounts": {
+        "sections": 8,
+        "testFiles": 2,
+        "domainFiles": 15,
+        "presentationLines": 1534.0
+      },
+      "command": "Set-Location D:\\repos\\teslasync\\web; Get-Content/Get-FileHash SHA256 exact domainFiles and two readonly tests; Select-String page eight mounted sections -CaseSensitive; ConvertFrom-Json audit-page-049 historical preservation",
+      "exitCode": 0,
+      "rawOutput": "PRESERVATION pageLines=203 presentationLines=1534 sections=8 historicalPageLines=176 historicalPresentationLines=1507\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx lines=203 sha256=3065E77FA47B75DB6E905F391563D16F7392B62A6F9B18A2DC35BD41C94CB049\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MilestoneBrief.tsx lines=75 sha256=E6DCAB6F0947F0FF246031F61712CA414B6E44B5BBB18B53F782E9848A30CA47\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.ts lines=655 sha256=7ADB2313F926279290FBCB32587608CEB8552F711F42BEBFD82A4F673C774F50\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\index.ts lines=10 sha256=F1ED99621829FF6014B63CBF951CAE2C498A87C93C66F7192271BD480604C343\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx lines=75 sha256=5954E1A407E123CC2FDCEDCA24A33971592E26B6A36B67DEFF82729C167C0B95\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx lines=219 sha256=BA1E712066D85A0C8A5CCFF4F3E1269C844910B23408836DC7C76B096DAD6F6A\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx lines=150 sha256=3EB89069E52808447D43905AA361102750FE50E6624B68E096BB28FDC73491F7\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneSectionBody.tsx lines=34 sha256=BEACE3ABC8C02D95644AD0180DCCE10CB02BDFC97D48DB52378F2C8690E72A76\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx lines=201 sha256=EF29657B85D111166D1A06FE1639B545544AEDF12BAFEA7FCB89AA92C36B51A6\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\OdometerGrowthChart.tsx lines=176 sha256=A4A96A64F89B91F028627F5055BBA99BE8015918C5C619D4FF8A59D60ED14CE4\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\PaceForecastScenarios.tsx lines=201 sha256=2DC82505CA573E3D8E304F4724763393612BE6C73BDFC3D1A4DE9D42EBE794A3\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\ReachedMilestones.tsx lines=82 sha256=979462C21A5D673ADA24737D62092979DCB7D3824F5F98ECCD61B915B7E01A06\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\types.ts lines=5 sha256=109E5EB22C416916622ADE3AC08D049B7068EB151C7945437EC4FE5C88D4EBBD\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx lines=118 sha256=CA7B3560D93A3B8FEC14F5C2DEEB43789C69B0C19C553859014BB1C69E641FA0\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\useOdometerMilestoneDisplay.ts lines=53 sha256=DE36F99BA60E93139EBDBDCFAC237093CA371DBEF65654D6329628C1C629EA8D\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.test.tsx lines=394 sha256=6818AE3208380C81912713B7189400DF4D232F204FFFEA4C266FD50B18E859C8\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts lines=460 sha256=C0C7746C2D9F824787324C5E72814E658539CBFC77C94DA87D34880E2075B72C\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:151:        <MilestoneKpis summary={summary} {...sectionState}\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:156:        <MilestoneProgress\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:164:          <OdometerGrowthChart\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:168:          <MonthlyDistanceChart\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:177:          <ReachedMilestones\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:181:          <UpcomingRoadmap\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:189:        <PaceForecastScenarios\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx:196:        <MilestoneMethodology"
+    },
+    {
+      "name": "readonly-test-declarations",
+      "rawOutput": "TEST_DECLARATION_SITES=27; runner discovery/execution NOT RUN\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.test.tsx:239:  it('mounts every workspace section and requests the maximum history window', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.test.tsx:252:  it('threads loading, error, and empty states to every mounted section', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.test.tsx:274:  it('retains calibration, eight sections and frozen as-of evidence after a failed refresh', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.test.tsx:289:  it('preserves the no-vehicle recovery state and disables history scope', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.test.tsx:300:  it('converts mile calibration edits back to canonical kilometres', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.test.tsx:323:  it.each([\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.test.tsx:345:  it('freezes Date.now once for the lifetime of the page mount', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.test.tsx:359:  it.each([\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:82:  it('uses 10k display-unit steps through 100k, then 50k steps', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:92:  it('builds round mile thresholds while returning canonical kilometres', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:106:  it.each([\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:119:  it('applies calibration before the first observed row and dates crossings', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:140:  it('dates every milestone crossed by one long drive to that drive', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:156:  it('sorts by timestamp and drive id independently of input order', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:177:  it('excludes and accounts for invalid, future, and unusable distances', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:207:  it('computes current ladder-segment progress in canonical kilometres', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:223:  it('builds supported 30-day, 90-day, and full-history evidence', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:268:  it('uses the actual shorter observed span instead of dividing by 90', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:281:  it('withholds recent pace while allowing a supported full-window scenario', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:304:  it('projects with unrounded pace and emits valid full timestamps', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:324:  it('withholds projections beyond the finite forecast horizon', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:338:  it('returns cumulative points and UTC monthly rollups from every eligible drive', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:377:  it('downsamples deterministically while all rows still feed aggregates', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:393:  it('detects the cap only when returned rows equal the requested limit', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:407:  it('returns a complete empty-window contract without inventing pace', () => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:428:  it.each([\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts:444:  it('keeps the first and last point and chooses stable interior indices', () => {",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String -Path testsReadonlyManifest.file -Pattern ^\\s*(it|test)(\\.each|\\() -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 27
+    },
+    {
+      "name": "direct-router",
+      "rawOutput": "DIRECT_ROUTER_MATCH_LINES=6\nD:\\repos\\teslasync\\internal\\api\\router.go:3362:\t\tr.Route(\"/vehicles\", func(r chi.Router) {\nD:\\repos\\teslasync\\internal\\api\\router.go:3363:\t\t\tr.Get(\"/\", vehicleHandler.List)\nD:\\repos\\teslasync\\internal\\api\\router.go:3491:\t\t\t\tr.Get(\"/settings\", vehicleSettingsHandler.List)\nD:\\repos\\teslasync\\internal\\api\\router.go:3506:\t\tr.Route(\"/drives\", func(r chi.Router) {\nD:\\repos\\teslasync\\internal\\api\\router.go:3507:\t\t\tr.Get(\"/\", driveHandler.ListByVehicle)\nD:\\repos\\teslasync\\internal\\api\\router.go:3702:\t\t\tr.Get(\"/settings\", settingsHandler.Get)",
+      "command": "Set-Location D:\\repos\\teslasync\\web; Select-String router.go exact drives/vehicles/settings owner patterns -CaseSensitive",
+      "exitCode": 0,
+      "rawMatchLines": 6
+    },
+    {
+      "rawOutput": "CANONICAL help.milestones.body=Calibration is the odometer immediately before the chronologically first eligible drive in this returned history window. Eligible drive distances are added in order, and milestones are round in your selected distance unit.\n70: i18nKey=\"help.milestones.body\"\n71: defaultValue=\"Calibration is the odometer immediately before the chronologically first row in this returned history window. Eligible drive distances are added in order, and milestones are round in your selected distance unit.\"",
+      "command": "Set-Location D:\\repos\\teslasync\\web; ConvertFrom-Json en.json; print help.milestones.body; Select-String MilestoneProgress.tsx i18nKey=|defaultValue= -CaseSensitive",
+      "name": "help-mismatch-detail",
+      "exitCode": 0
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "JSON_PARSE=OK; FINDINGS=6; RULE_TOTAL=6; UNPROVED_CANDIDATES=4\nSOURCE_FILES_RECHECKED=15; READONLY_TEST_FILES_RECHECKED=2; HASH_CHANGES=0\nSECTIONS=8; ACTION_FAMILIES=7; PAGE_LINE_RATIO=1.153409; PRESENTATION_LINE_RATIO=1.017916\nIGNORE_RULE_MATCHES=1; LOG_EXISTS=True\nD:\\repos\\teslasync\\.gitignore:80:logs/\nFINAL_VALIDATION=True; exitCode=0",
+      "command": "Set-Location D:\\repos\\teslasync\\web; ConvertFrom-Json exact report; Get-FileHash all15 source files/two readonly tests; count findings/rules/sections/actions/line ratios; Select-String .gitignore ^logs/$ -CaseSensitive; Test-Path exact log",
+      "name": "final-json-log-source-validation"
+    }
+  ],
+  "preservation": {
+    "pageLineRatio": 1.153409,
+    "currentPresentationLines": 1534.0,
+    "sourceTestsWritten": false,
+    "presentationLineRatio": 1.017916,
+    "historicalPresentationLines": 1507,
+    "currentPageLines": 203,
+    "historicalPageLines": 176,
+    "historicalOriginalSha256": "56fe402311a7264bcb03d9806e3c263158ce0f526d5a846227f5a264dfb773bc",
+    "sourceManifest": [
+      {
+        "sha256": "3065E77FA47B75DB6E905F391563D16F7392B62A6F9B18A2DC35BD41C94CB049",
+        "lines": 203,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx"
+      },
+      {
+        "sha256": "E6DCAB6F0947F0FF246031F61712CA414B6E44B5BBB18B53F782E9848A30CA47",
+        "lines": 75,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MilestoneBrief.tsx"
+      },
+      {
+        "sha256": "7ADB2313F926279290FBCB32587608CEB8552F711F42BEBFD82A4F673C774F50",
+        "lines": 655,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.ts"
+      },
+      {
+        "sha256": "F1ED99621829FF6014B63CBF951CAE2C498A87C93C66F7192271BD480604C343",
+        "lines": 10,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\index.ts"
+      },
+      {
+        "sha256": "5954E1A407E123CC2FDCEDCA24A33971592E26B6A36B67DEFF82729C167C0B95",
+        "lines": 75,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx"
+      },
+      {
+        "sha256": "BA1E712066D85A0C8A5CCFF4F3E1269C844910B23408836DC7C76B096DAD6F6A",
+        "lines": 219,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx"
+      },
+      {
+        "sha256": "3EB89069E52808447D43905AA361102750FE50E6624B68E096BB28FDC73491F7",
+        "lines": 150,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx"
+      },
+      {
+        "sha256": "BEACE3ABC8C02D95644AD0180DCCE10CB02BDFC97D48DB52378F2C8690E72A76",
+        "lines": 34,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneSectionBody.tsx"
+      },
+      {
+        "sha256": "EF29657B85D111166D1A06FE1639B545544AEDF12BAFEA7FCB89AA92C36B51A6",
+        "lines": 201,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx"
+      },
+      {
+        "sha256": "A4A96A64F89B91F028627F5055BBA99BE8015918C5C619D4FF8A59D60ED14CE4",
+        "lines": 176,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\OdometerGrowthChart.tsx"
+      },
+      {
+        "sha256": "2DC82505CA573E3D8E304F4724763393612BE6C73BDFC3D1A4DE9D42EBE794A3",
+        "lines": 201,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\PaceForecastScenarios.tsx"
+      },
+      {
+        "sha256": "979462C21A5D673ADA24737D62092979DCB7D3824F5F98ECCD61B915B7E01A06",
+        "lines": 82,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\ReachedMilestones.tsx"
+      },
+      {
+        "sha256": "109E5EB22C416916622ADE3AC08D049B7068EB151C7945437EC4FE5C88D4EBBD",
+        "lines": 5,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\types.ts"
+      },
+      {
+        "sha256": "CA7B3560D93A3B8FEC14F5C2DEEB43789C69B0C19C553859014BB1C69E641FA0",
+        "lines": 118,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx"
+      },
+      {
+        "sha256": "DE36F99BA60E93139EBDBDCFAC237093CA371DBEF65654D6329628C1C629EA8D",
+        "lines": 53,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\useOdometerMilestoneDisplay.ts"
+      }
+    ],
+    "sectionCount": 8,
+    "testsReadonlyManifest": [
+      {
+        "sha256": "6818AE3208380C81912713B7189400DF4D232F204FFFEA4C266FD50B18E859C8",
+        "lines": 394,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.test.tsx"
+      },
+      {
+        "sha256": "C0C7746C2D9F824787324C5E72814E658539CBFC77C94DA87D34880E2075B72C",
+        "lines": 460,
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.test.ts"
+      }
+    ],
+    "countsMeaning": "Eight logical sections, seven section tags plus KPI wrapper; 15 frame/tag raw match lines. Seven action families versus 19 action syntax lines. No runner counts inferred from declaration sites.",
+    "frameCounts": {
+      "LayoutCard": 5,
+      "OperationalBrief": 1,
+      "ChartCard": 2
+    },
+    "sectionNames": [
+      "Milestone summary metrics",
+      "Progress to next milestone",
+      "Observed odometer growth history",
+      "Monthly distance and pace context",
+      "Milestones reached",
+      "Upcoming milestone roadmap",
+      "Pace and forecast scenarios",
+      "Coverage calibration and methodology"
+    ],
+    "originalAuditEntrySha256": "3065E77FA47B75DB6E905F391563D16F7392B62A6F9B18A2DC35BD41C94CB049",
+    "actionFamilies": [
+      "Calibration input: blur/Enter commit, Escape revert, distance-unit suffix and help",
+      "History refetch/retry and stale refresh recovery",
+      "Browse drives empty-state navigation",
+      "Growth and monthly chart exports/data-column alternatives via the canonical frame",
+      "Monthly hidden-series state with chartKey odometer-milestones-monthly",
+      "OperationalBrief Review details drawer",
+      "Onboarding recovery when no vehicle is selected"
+    ],
+    "actionRawMatchLines": 19,
+    "actionFamilyCount": 7
+  },
+  "scanCorrections": {
+    "exitCode": 0,
+    "hookFalsePositive": "Case-insensitive [A-Z] matched snake_case and interpolation variables; corrected CaseSensitive scans authoritative",
+    "rawHtmlMatches": 1,
+    "shellId": "5477",
+    "rawHtmlFalsePositive": "PaceForecastScenarios.tsx:93 <Table> matched case-insensitive scan, not raw table",
+    "hookCamelcaseMatches": 8
+  },
+  "item": "phase6-qa-analytics-milestones",
+  "failures": [
+    {
+      "resolution": "Builtin Select-String; no install",
+      "rawOutput": "rg: The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+      "shellId": "5396",
+      "exitCode": 1,
+      "command": "rg --files ..."
+    },
+    {
+      "resolution": "Explicit creation existence guard",
+      "rawOutput": "No assigned report/log returned; absent-path probe ended 1 after document reads",
+      "shellId": "5407",
+      "exitCode": 1,
+      "command": "Get-Item assigned report/log -ErrorAction SilentlyContinue"
+    },
+    {
+      "resolution": "Command never launched; no writes; split bounded builtin scans/report operations",
+      "rawOutput": "The filename or extension is too long. (os error 206)",
+      "shellId": "5550",
+      "exitCode": 1,
+      "command": "Inline report/scans creation command"
+    },
+    {
+      "resolution": "Existing layout-reference/PageLayout.tsx read",
+      "tool": "view",
+      "exitCode": null,
+      "rawOutput": "Path D:\\repos\\teslasync\\web\\src\\components\\layout\\PageLayout.tsx does not exist."
+    },
+    {
+      "resolution": "Existing drive.go read",
+      "tool": "view",
+      "exitCode": null,
+      "rawOutput": "Path D:\\repos\\teslasync\\internal\\models\\drive\\model.go does not exist."
+    }
+  ],
+  "recordedUtc": "2026-10-13T20:01:13.5443346Z",
+  "routes": [
+    "/milestones"
+  ],
+  "status": "DONE_SOURCE_ONLY_REPORT_DELIVERY",
+  "repository": "D:\\repos\\teslasync",
+  "pageAcceptance": "NOT_ASSESSED_NOT_PAGE_PASS",
+  "mode": "Readonly accepted page/direct necessary support QA; builtin source/scans only",
+  "clock": {
+    "assignmentUtc": "2026-10-13T19:50:25.188Z",
+    "conservativeReturnByUtc": "2026-10-13T20:05:00Z",
+    "hardLimitUtc": "2026-10-13T20:10:00Z",
+    "policy": "Earlier creation-relative limits control; no resets"
+  },
+  "ownership": {
+    "versionedReport": "docs/frontend-audits/phase6-qa-analytics-milestones.json",
+    "ignoredAbsoluteLog": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-analytics-milestones.log",
+    "allSourceTestsBackendCatalogConfigQueueHandoff": "READ_ONLY",
+    "otherFilesWritten": [],
+    "release": "ALL_REPORT_LOG_COMMANDS_RELEASED; NO_POST_RETURN_WRITES",
+    "commands": "All invoked bounded commands completed; no background/server/helper process started"
+  },
+  "scopeAuthority": {
+    "queue": "migration-queue.md:277",
+    "dependency": "phase5-page-analytics-milestones",
+    "acceptedReceipt": "migration-queue.md:1660: [x] SOURCE ONLY at a6eb9b6fadf500fa052a7698b814d82292e73d3b; historical source/test evidence not fresh native QA",
+    "duplicatePolicy": "No duplicate dependency QA/remigration/queue dispatch; report residuals only"
+  },
+  "purpose": "Review calibrated bounded-history odometer progress, crossings, round selected-unit thresholds and evidence-supported forecasts without changing source.",
+  "contractsRead": [
+    "docs/orchestrator-loop.md:1-350 (sole playbook, worker contract)",
+    "docs/frontend-worker-conventions.md",
+    "docs/frontend-design-contract.md:1-280,419-605",
+    "docs/frontend-mission.md:1-280,485-580,704-846,921-1080",
+    "docs/session-handoff.md (bounded worker/convention/acceptance extracts)",
+    ".github/copilot-instructions.md:1-140",
+    ".github/instructions/react-frontend.instructions.md:1-300",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    "docs/I18N_GUIDELINES.md:1-165",
+    ".gitignore",
+    "agent-loop-playbook.md (superseded; not executed)"
+  ],
+  "dataSources": [
+    {
+      "hook": "useDriveHistory",
+      "file": "web/src/api/hooks/useDriving.ts",
+      "line": 143,
+      "path": "/drives?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}",
+      "endpoint": "GET /api/v1/drives",
+      "router": "internal/api/router.go:3506-3507 -> DriveHandler.ListByVehicle",
+      "handler": "internal/api/drives/listing.go:24-60",
+      "queryKey": "['drives', vehicleId, 'history', boundedLimit] at useDriving.ts:47-48",
+      "cancellation": "signal forwarded at useDriving.ts:150",
+      "enablement": "!!vehicleId",
+      "limit": 1000,
+      "producer": "internal/models/drive/drive.go:33,36: start_ts and distance_m meters",
+      "decode": "api/client.ts:301 -> lib/resilience.ts:26-41 adds startTs/distanceM aliases and preserves snake_case without unit conversion",
+      "ordering": "internal/database/drive/repo.go:183 newest started_at DESC,id DESC; model reorders chronologically",
+      "verified": "SOURCE_ONLY"
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "endpoint": "GET /api/v1/vehicles",
+      "source": "useVehicles.ts:74-81; router.go:3362-3363",
+      "ownership": "Existing URL/store/first-known vehicle workspace selection; no duplicate picker"
+    },
+    {
+      "hook": "useUnits -> useSettings -> getSettings",
+      "endpoint": "GET /api/v1/settings",
+      "source": "useSettings.ts:81-89; api/settings.ts:24; router.go:3702",
+      "ownership": "Existing settings/locale/precision/unit preference, no producer guesses/new adapter"
+    },
+    {
+      "hook": "useStoredNumber",
+      "source": "web/src/hooks/useStoredNumber.ts:12-46",
+      "endpoint": null,
+      "ownership": "Existing persisted local kilometer calibration; scope/admission residuals below"
+    }
+  ],
+  "scopeAndArithmetic": {
+    "scope": "workspaceScope.ts:23-76,157-168: /milestones range=false,vehicle=true. Bounded cumulative-history/calibration semantics are intentional; no new header dates forced onto lifetime-style business logic.",
+    "lifetime": "MilestoneBrief.tsx:56 and MilestoneMethodology.tsx:134-141 explicitly qualify bounded observations, not guaranteed lifetime history, even below cap.",
+    "thresholdProgress": "10,000 selected-display-unit increments through 100,000, then 50,000. Model local km thresholds; segment denominator next-previous and clamped progressed/segment, not current/next lifetime ratio.",
+    "paceDenominators": "At least five eligible drives. Elapsed span from later of trailing boundary or first eligible start to frozen as-of; full observed-history span starts at first eligible row. Not blindly distance/30 or /90.",
+    "observedForecast": "Crossing dates are drive start instants; ETA is unrounded supported trailing90 pace, qualified sensitivity range and finite positive 36,525-day horizon. Unsupported pace/ETA null/dash, not zero.",
+    "unknownZeroSigns": "Invalid/future timestamps and nonfinite/zero/negative distances excluded once and counted. Negative calibration physically invalid, not a blanket ban on legitimate signed physical quantities. Calibration-only progress/upcoming and zero accounting remain intentionally visible for authoritative empty history.",
+    "siPreferences": "Raw backend/query/cache distances meters; documented local model km derivations. Display converts km*1000 with current SI helpers/useUnits saved km/mi. Operational metrics receive meters and explicit meters/day; saved km calibration preserved, not silently migrated or guessed producer units.",
+    "clock": "nowMs frozen once per mount; existing test explicitly preserves it. Refresh may exclude rows after that declared as-of. This is a disclosed policy/limitation, not fabricated period-scope defect.",
+    "aggregates": "Every eligible row contributes totals/monthly UTC/crossings; only plotted cumulative series sampled to240 with endpoints. Chart export input is displayed series, not promised full-lifetime export."
+  },
+  "states": {
+    "initial": "No retained data -> initial; KPI loading and per-section skeleton/chart loading. [] iteration fallback is not presented as fetched zero while loading.",
+    "fatal": "Only source.fatalError without retained payload reaches SourceContent/QueryError. PageLayout query prop is metadata, not whole-page raw error gate; all eight shells remain.",
+    "retainedFailed": "Payload kept, stale/fatalError=null; StaleRefreshWarning and KPI Retained evidence with drivesQuery.refetch retry.",
+    "retainedPaused": "Payload kept, stale/isRefreshBlocked; nonblocking warning not invented server failure. Initial paused with no payload remains initial.",
+    "refresh": "query freshness metadata uses original source; retained content not blanked. No native freshness acceptance inferred.",
+    "empty": "KPI/charts/reached/scenarios explicit empty content; calibration-only progress/upcoming and methodology retain meaningful sections/accounting.",
+    "noVehicle": "Deliberate NoVehicleSelected onboarding recovery, history disabled, not hidden-section violation."
+  },
+  "confirmedFindings": [
+    {
+      "id": "M01",
+      "rule": "calibration-scope",
+      "priority": "P1",
+      "file": "web/src/features/analytics/pages/MilestonesPage.tsx",
+      "line": 50,
+      "mechanism": "One persistent key independent of selected vehicle/first eligible returned-window origin. History key changes by vehicle, calibration does not; another vehicle's offset can enter its summary. No stored anchor identity when newest-history origin shifts.",
+      "evidence": [
+        "MilestonesPage.tsx:43-60,68-74",
+        "useStoredNumber.ts:16-20,38-46",
+        "useDriving.ts:47-48,143-154",
+        "MilestoneMethodology.tsx:153-154"
+      ],
+      "sourceRepro": "Reasoned NOT executed: save100000km for vehicle A, select vehicle B with10km eligible total; B summary computes100010km using A calibration. No real identity/storage mutation used.",
+      "narrowNeed": "Separately queued vehicle/window calibration identity treatment preserving existing saved value and declared calibration semantics. Key-only replacement insufficient: useStoredNumber initializes once, does not reload key on change. No invented authoritative odometer.",
+      "owner": "page/domain; persistence owner only if required",
+      "confidence": "confirmed source mechanism; native NOT RUN",
+      "historical": "Global-key risk already in original audit; still present, no duplicate remigration"
+    },
+    {
+      "id": "M02",
+      "rule": "persisted-calibration-admission",
+      "priority": "P1",
+      "file": "web/src/features/analytics/pages/MilestonesPage.tsx",
+      "line": 54,
+      "mechanism": "Finite nonnegative stored values admitted into unguarded render model; edit-only RangeError catch cannot protect initial storage/cross-tab event updates from finite-total/safe-ladder guard failures.",
+      "evidence": [
+        "MilestonesPage.tsx:53-75,89-100",
+        "useStoredNumber.ts:18-20,28-33",
+        "odometerMilestones.ts:268-272,539-541"
+      ],
+      "sourceRepro": "Reasoned NOT executed: stored1000000000km and[] history admitted, but post100k ladder exceeds10000 steps and throws during render before local recovery.",
+      "narrowNeed": "Separately claimed persisted-value admission/recoverable invalid calibration using existing model guards; preserve saved value, no silent reset; cover initial/cross-tab paths only when test edits authorized.",
+      "owner": "page/domain",
+      "confidence": "confirmed control flow"
+    },
+    {
+      "id": "M03",
+      "rule": "calibration-draft-commit-consistency",
+      "priority": "P2",
+      "file": "web/src/features/analytics/components/odometer-milestones/MilestoneControls.tsx",
+      "line": 33,
+      "mechanism": "Uncontrolled numeric input defaultValue/key(distanceUnit), void commit callback: finite positive model-rejected blur draft remains visible while summary retains old committed calibration. No explicit external committed-value synchronization.",
+      "evidence": [
+        "MilestoneControls.tsx:26-34,47-68",
+        "MilestonesPage.tsx:97-103,134-146"
+      ],
+      "sourceRepro": "Reasoned NOT executed: enter1000000000km/blur; child permits finite value, parent rejects/preserves summary, child receives no rejection/reset. Existing page test mocks this control with onChange, not its actual blur contract.",
+      "narrowNeed": "Separately queued draft/commit outcome synchronization preserving blur/Enter commit, Escape cancel, valid drafts and saved precision; visibly distinguish rejected draft from committed value without discarding user input.",
+      "owner": "page/domain",
+      "confidence": "confirmed source contract; browser NOT RUN"
+    },
+    {
+      "id": "M04",
+      "rule": "form-error-association",
+      "priority": "P2",
+      "file": "web/src/features/analytics/pages/MilestonesPage.tsx",
+      "line": 142,
+      "mechanism": "Sibling ErrorText role=alert has no stable ID linked to Input. MilestoneControls receives no error/aria-invalid/aria-describedby; group label is not persistent field-error association.",
+      "evidence": [
+        "MilestonesPage.tsx:130-147",
+        "MilestoneControls.tsx:7-10,47-72",
+        "components/ui/Input.tsx:48-62,104-110"
+      ],
+      "sourceRepro": "Reasoned NOT executed: rejected finite edit shows alert but field remains without associated invalid/error semantics. Alert announcement not claimed absent.",
+      "narrowNeed": "Use existing Input.error API or stable ID/ARIA association via separately claimed page/control files, retaining localized recovery and sections.",
+      "owner": "page/domain",
+      "confidence": "confirmed markup wiring; screen reader NOT RUN"
+    },
+    {
+      "id": "M05",
+      "rule": "definition-list-semantics",
+      "priority": "P2",
+      "file": "web/src/features/analytics/components/odometer-milestones/MilestoneProgress.tsx",
+      "line": 127,
+      "mechanism": "Text as=dd renders native dd inside div tile with caption span, not dl/dt structure. Four detail instances share one invalid source template.",
+      "evidence": [
+        "MilestoneProgress.tsx:90-136",
+        "components/ui/Typography.tsx:70-96"
+      ],
+      "sourceRepro": "Structural source inspection only: dd template has no dl/dt ancestor; one source site, four rendered instances.",
+      "narrowNeed": "Existing KVList or valid dl/dt/dd composition preserving four labels/values/mobile order; no new renderer.",
+      "owner": "page/domain",
+      "confidence": "confirmed source semantics"
+    },
+    {
+      "id": "M06",
+      "rule": "canonical-help-copy-drift",
+      "priority": "P3",
+      "file": "web/src/features/analytics/components/odometer-milestones/MilestoneProgress.tsx",
+      "line": 71,
+      "mechanism": "help.milestones.body fallback says chronologically first row; canonical English says chronologically first eligible drive, matching model's exclusions. Canonical key exists but fallback not equal; fallback can misdescribe calibration when oldest returned rows are excluded.",
+      "evidence": [
+        "MilestoneProgress.tsx:70-71",
+        "en.json:help.milestones.body",
+        "odometerMilestones.ts:311-368"
+      ],
+      "sourceRepro": "Source comparison actually run; HELP_PARITY=False. Runtime missing-locale/fallback rendering NOT RUN.",
+      "narrowNeed": "Align existing feature help fallback with already correct canonical wording under separately claimed source scope; no catalog changes/new keys necessary.",
+      "owner": "page/domain",
+      "confidence": "confirmed literal mismatch; fallback rendering NOT RUN"
+    }
+  ],
+  "unprovedCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/analytics/components/odometer-milestones/MilestoneProgress.tsx",
+      "line": 18,
+      "category": "mobile/container",
+      "detail": "Base two-column tiles may constrain large values/long translations/200% text. No observed clipping. Native allocated-container/viewport/RTL QA NOT RUN."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/analytics/components/odometer-milestones/ReachedMilestones.tsx",
+      "line": 71,
+      "category": "scroll/geometry",
+      "detail": "max-h-[26rem] timeline needs keyboard/scroll review; no trapped content inferred. NOT RUN."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/analytics/components/odometer-milestones/UpcomingRoadmap.tsx",
+      "line": 102,
+      "category": "theme/contrast/style",
+      "detail": "bg-white/[0.025], cyan/amber accents, arbitrary geometry are bounded review candidates; no neon/contrast/theme failure inferred from classes. Composed modes/forced-colors QA NOT RUN."
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/analytics/components/odometer-milestones/MonthlyDistanceChart.tsx",
+      "line": 183,
+      "category": "motion/performance",
+      "detail": "Bar/Line motion delegated to chart pipeline; growth explicitly disables animation. No reduced-motion/performance failure claimed; native/profile QA NOT RUN."
+    }
+  ],
+  "exceptions": [
+    "PageLayout delegates PageContainer at layout-reference/PageLayout.tsx:9-16; no missing wrapper violation.",
+    "baseValidationError conditional is field feedback, not a hidden section. NoVehicleSelected is deliberate recovery.",
+    "Chart API margins/radius/dot and CHART_COLORS dynamic props are not static inline-style violations.",
+    "Shared building-block HTML/vendor imports excluded; no direct vendor imports in active feature source.",
+    "Preference/selection effects are not useEffect data loading.",
+    "repo.go:171,176,183 fmt.Sprintf inserts parameter placeholder indexes, not data; Query(ctx,query,args...) at185. No SQL interpolation/context violation on this direct call path."
+  ],
+  "evidenceLimits": {
+    "native": "NOT_RUN",
+    "API": "NOT_RUN",
+    "runtime": "NOT_RUN",
+    "geometry": "NOT_RUN",
+    "contrast": "NOT_RUN",
+    "performance": "NOT_RUN",
+    "freshTests": "NOT_RUN",
+    "globalTSC": "NOT_RUN: npx tsc --noEmit not authorized for source-only worker",
+    "fullPage": "NOT_RUN",
+    "browserKeyboardScreenReader": "NOT_RUN",
+    "fullSuiteBuildLint": "NOT_RUN",
+    "sourceRepro": "Reasoned source mechanisms only, except actual literal/source scans; no execution of page/model",
+    "runtimeProbe": "Default node --version returned v24.18.0; assigned session-files Node26.11.1 runtime not needed/selected; no claim unavailable"
+  },
+  "testReceipt": {
+    "runs": 0,
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "meaning": "No runner invoked; zero execution is NOT a pass.27 readonly declaration sites separate from runtime discovery.",
+    "historical": "Accepted queue receipt preserves initial9pass/2arithmetic failures, later oracle edits unexecuted, final external usage-manifest startup block with zero cases; no fresh11pass claim."
+  },
+  "summary": {
+    "confirmedSourceFindings": 6,
+    "unprovedCandidates": 4,
+    "pagePass": false,
+    "reportDeliveryOnly": true,
+    "filesWithMostIssues": [
+      {
+        "file": "MilestonesPage.tsx",
+        "count": 3
+      },
+      {
+        "file": "MilestoneProgress.tsx",
+        "count": 2
+      },
+      {
+        "file": "MilestoneControls.tsx",
+        "count": 1
+      }
+    ]
+  },
+  "priorityFixes": [
+    "P1 calibration identity/window scope and stored-value admission",
+    "P2 rejected draft/committed summary consistency and field-error association",
+    "P2 definition-list semantics",
+    "P3 existing help fallback/canonical copy alignment"
+  ],
+  "requiredSharedChanges": "No shared changes performed or automatically required. Page/domain residuals need separate claims; use existing Input/KVList/persistence APIs. Parent owns any necessary shared API/catalog integration; this report does not dispatch work.",
+  "ruleSummary": {
+    "persisted-calibration-admission": 1,
+    "double-prefix": 0,
+    "static-inline-style": 0,
+    "camelcase-param": 0,
+    "old-api-import": 0,
+    "definition-list-semantics": 1,
+    "calibration-scope": 1,
+    "direct-library-import": 0,
+    "fetch-useeffect": 0,
+    "raw-html": 0,
+    "hidden-section": 0,
+    "canonical-help-copy-drift": 1,
+    "missing-page-container": 0,
+    "form-error-association": 1,
+    "calibration-draft-commit-consistency": 1,
+    "hardcoded-string": 0
+  },
+  "ruleCountsMeaning": "Exact mounted page/domain source-site counts after actual case-sensitive scans and manual exceptions; not whole repository/backend/native acceptance.",
+  "filesRead": [
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\MilestonesPage.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MilestoneBrief.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\lib\\odometerMilestones.ts",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\index.ts",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneControls.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneMethodology.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneProgress.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MilestoneSectionBody.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\MonthlyDistanceChart.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\OdometerGrowthChart.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\PaceForecastScenarios.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\ReachedMilestones.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\types.ts",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\UpcomingRoadmap.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\odometer-milestones\\useOdometerMilestoneDisplay.ts",
+    "web/src/features/analytics/pages/MilestonesPage.test.tsx (whole)",
+    "web/src/features/analytics/lib/odometerMilestones.test.ts (declarations only)",
+    "web/src/api/hooks/useDriving.ts:1-220",
+    "web/src/api/dataState.ts:1-260",
+    "web/src/api/client.ts:1-210 and decoder scan",
+    "web/src/api/types.ts:119-157",
+    "web/src/types/driving.ts:1-80",
+    "web/src/api/hooks/useVehicles.ts:1-115",
+    "web/src/api/settings.ts:1-70",
+    "web/src/hooks/useSelectedVehicle.ts:1-170",
+    "web/src/hooks/useStoredNumber.ts",
+    "web/src/hooks/useUnits.ts:1-210",
+    "web/src/hooks/useSettings.ts:1-165",
+    "web/src/lib/unitConversion.ts (distance extracts)",
+    "web/src/lib/resilience.ts:26-41",
+    "web/src/lib/workspaceScope.ts:1-185",
+    "web/src/App.tsx (mount scan)",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx:1-260",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/ui/Typography.tsx:65-99",
+    "web/src/components/ui/Input.tsx (error extracts)",
+    "web/src/i18n/en.json (nested lookup only)",
+    "internal/api/router.go (endpoint extracts)",
+    "internal/api/drives/listing.go:1-250 (direct ListByVehicle reviewed, not full backend audit)",
+    "internal/database/drive/repo.go:150-225",
+    "internal/models/drive/drive.go:1-80",
+    "docs/frontend-audits/audit-page-049.json (historical extracts)"
+  ]
+}

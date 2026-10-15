@@ -1,0 +1,612 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-vehicle-systems-tire-differential-drift",
+  "attempt": 1,
+  "actor": "bf7c2409-6cec-4178-bf98-b3146013a241",
+  "status": "REPORT_COMPLETE_FINDINGS_TEST_FAILURE_NO_PAGE_ACCEPTANCE",
+  "generatedUtc": "2026-10-14T01:42:23.0571391Z",
+  "reservationUtc": "2026-10-14T01:24:50.678Z",
+  "returnDeadlineUtc": "2026-10-14T01:44:50.678Z",
+  "hardDeadlineUtc": "2026-10-14T01:49:50.678Z",
+  "acceptedSourceCommit": "be1c0cfa7f49f990f0a89401d3d1c172df3441dd",
+  "page": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+  "routes": [
+    "/tire-differential-drift"
+  ],
+  "allowedWrites": [
+    "docs/frontend-audits/phase6-qa-vehicle-systems-tire-differential-drift.json",
+    "web/logs/phase6-qa-vehicle-systems-tire-differential-drift.log"
+  ],
+  "counts": {
+    "byRule": {
+      "signed-chart-precision-loss": 1,
+      "page-fixture-date-contract": 1,
+      "zero-imbalance-corner-claim": 1,
+      "workspace-range-contract": 1,
+      "chart-unit-and-locale-metadata": 1,
+      "missing-canonical-i18n-keys": 1,
+      "initial-paused-as-empty": 1
+    },
+    "deduplicatedNeeds": 6,
+    "productMechanisms": 6,
+    "fixtureMechanisms": 1,
+    "policy": "Distinct mechanisms, not repeated manifestations, four leaves, or thirteen failed cases as thirteen defects.",
+    "confirmedMechanisms": 7,
+    "missingCanonicalLeaves": 4,
+    "conditionalCandidates": 5,
+    "nativeCandidates": 3,
+    "confirmedByPrimaryFile": {
+      "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx": 1,
+      "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx": 5,
+      "web/src/features/vehicle-systems/lib/tireDifferentialDrift.ts": 1
+    }
+  },
+  "confirmedIssueCount": 7,
+  "confirmedIssues": [
+    {
+      "severity": "P1",
+      "mechanism": "Route lacks header range registration; page does not consume useRangeState. Hook calculates a rolling30day start at fetch time, sends start only, and keys by vehicle/days rather than both bounds. Backend defaults end to now but already accepts start and end.",
+      "line": 52,
+      "repro": "Source-only: /tire-differential-drift?vehicle_id=7&from=2026-01-01&to=2026-01-07 still disables header range and requests a rolling start without end. Browser/API not exercised.",
+      "related": [
+        "web/src/api/hooks/useVehicleSystems.ts:17-18,65-81",
+        "web/src/lib/workspaceScope.ts:23-77,164-175",
+        "internal/api/tirepressure/handler.go:67-77",
+        "internal/api/apiparams/params.go:89-92"
+      ],
+      "rule": "workspace-range-contract",
+      "evidence": "Original accepted receipt already notes 30d/start-only/end-bound debt. No remigration.",
+      "owner": "page/API/workspace integration",
+      "id": "F1",
+      "fix": "Register actual route; consume startInstant/endInstantExclusive/timezone; key/send both through existing typed hook; preserve cancellation and vehicle. Test actual server boundaries rather than filter loaded rows.",
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx"
+    },
+    {
+      "severity": "P1",
+      "mechanism": "Initial paused query with undefined data has isLoading=false; page retained predicate requires data. Wrapper selects ready despite isRefreshBlocked. Both plots and reading section therefore select empty/no history before a response exists.",
+      "line": 103,
+      "repro": "Source-only fixture branch trace: vehicle7/data undefined/isLoading false/isPending true/isError false/fetchStatus paused/dataUpdatedAt0. No pause explanation/source-local retry. Header refresh may exist but FreshnessQuery does not carry paused. New fixture NOTRUN.",
+      "related": [
+        "web/src/api/dataState.ts:210-226",
+        "web/src/features/vehicle-systems/components/VehicleSourceContent.tsx:18-21",
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+        ":179-187,232-239,274-280"
+      ],
+      "rule": "initial-paused-as-empty",
+      "evidence": "Retained-offline cases exist; initial-paused case absent.",
+      "owner": "page",
+      "id": "F2",
+      "fix": "Reuse existing VehicleSourcePause for initial blocked acquisition with honest localized explanation/retry; retain all shells and do not claim a vehicle-offline cause.",
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx"
+    },
+    {
+      "severity": "P1",
+      "mechanism": "Residual and slope numeric chart/table rows are rounded to two decimal places before display, ignoring saved precision. Small signed nonzero pressure drift becomes chart zero while precise corner text and leak flag can disagree.",
+      "line": 78,
+      "repro": "Source arithmetic only: -100Pa/day -> -0.001bar/day -> Math.round(-0.001*100)/100 = negative zero. Saved precision3 corner text can show -0.001bar/day. Residual -100Pa also rounds to zero. Existing test covers -1000Pa/day at precision2, not this case.",
+      "related": [
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx:78-83,93-96,295-300 web/src/hooks/useUnits.ts:111-140"
+      ],
+      "rule": "signed-chart-precision-loss",
+      "evidence": "Correct Pa/kPa bridge, incorrect early rounding.",
+      "owner": "page",
+      "id": "F3",
+      "fix": "Keep unrounded signed numeric converted rows; use existing locale/precision formatting at axis/tooltip/table display only, with no raw cache/model changes.",
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx"
+    },
+    {
+      "severity": "P2",
+      "mechanism": "Residual fallback columns contain corner labels without units/format/numeric kind. Generic tooltip has no formatter, and Line/Bar no unit prop. YAxis unit does not supply tooltip payload/table units. Accessible/forced-colors table defaults String(raw), bypassing locale and physical unit context.",
+      "line": 193,
+      "repro": "Source-only: identical corner headers accompany different bar/psi numbers; forced-colors hides plot/YAxis. Tooltip appends only payload.unit, absent from page series. Slope table correctly labels pressure/day.",
+      "related": [
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx:193-196,204,211-214,253-254 web/src/components/charts/ChartTooltip.tsx:89-108,164-168 web/src/components/charts/ChartContainer.tsx:904-932"
+      ],
+      "rule": "chart-unit-and-locale-metadata",
+      "evidence": "Confirmed caller/render contract; native tooltip NOTRUN. CSV is not an existing action because exportData is absent.",
+      "owner": "page",
+      "id": "F4",
+      "fix": "Use existing dataColumns formatter/measurement kind and localized unit-bearing headings; supply tooltip series units or existing formatter props without double converting. Preserve UTC/time fields and all series.",
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx"
+    },
+    {
+      "severity": "P2",
+      "mechanism": "Search best=-Infinity makes FL the imbalanceCorner when every mean residual is real zero. Page shows largest offset Front left and Most offset badge instead of evenly matched; noImbalance path is unreachable on usable all-zero means.",
+      "line": 378,
+      "repro": "Source-only derivation from existing samples(12,0): all four pressures at day d are240000-500*dPa. Residual/imbalance0; first iteration picks FL. Existing zero test omits corner/badge assertion and currently crashes before assertions.",
+      "related": [
+        "web/src/features/vehicle-systems/lib/tireDifferentialDrift.ts:378-385 web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx:105,148-150,290-292 web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx:180-186"
+      ],
+      "rule": "zero-imbalance-corner-claim",
+      "evidence": "Deterministic code path. Passed domain19 does not cover this identity.",
+      "owner": "feature model/page",
+      "id": "F5",
+      "fix": "Represent no distinguishable offset as null; keep measured zero; define ties without falsely unique ranking. Narrow model/page coverage, no slope/evidence threshold changes.",
+      "file": "web/src/features/vehicle-systems/lib/tireDifferentialDrift.ts"
+    },
+    {
+      "severity": "P2",
+      "mechanism": "Dynamic t lookups reference missing corner subtree in canonical tireDifferentialDrift. Safe case-preserving JSON lookup returned present=False for all four, so English fallback labels are not canonical localized keys.",
+      "line": 67,
+      "repro": "Executed canonical leaf check, four false results in log. Locale/browser NOTRUN. Static extractor/ESLint success does not establish dynamic completeness.",
+      "related": [
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx:33-35,90-91 web/src/i18n/en.json:31792-31831"
+      ],
+      "rule": "missing-canonical-i18n-keys",
+      "evidence": "One mechanism/four leaves; original acceptance already mentions four fallback keys, but no exact corrective root was found.",
+      "owner": "i18n integration",
+      "id": "F6",
+      "fix": "Return exact defaults Front left/Front right/Rear left/Rear right to serialized canonical catalog owner; use normal generator/guards, static discoverable mapping if required. QA makes no catalog writes.",
+      "missingKeys": [
+        "tireDifferentialDrift.corner.fl",
+        "tireDifferentialDrift.corner.fr",
+        "tireDifferentialDrift.corner.rl",
+        "tireDifferentialDrift.corner.rr"
+      ],
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx"
+    },
+    {
+      "severity": "P1",
+      "mechanism": "Date-hook mock returns only tz/locale/formatDateTime. Real header DataFreshness calls missing formatTime. All13page cases throw TypeError before intended assertions.",
+      "line": 50,
+      "repro": "Executed normal Vitest:32discovered/executed,19domain passed,13page failed,0skipped,exit1; raw case names/stacks in log. Separate runner-loader startup failed __dirname before discovery.",
+      "related": [
+        "web/src/components/data-display/DataFreshness.tsx:134,185",
+        "web/src/hooks/useDateFormat.ts:36,95-96,127"
+      ],
+      "rule": "page-fixture-date-contract",
+      "evidence": "Confirmed own-scope fixture defect; not external production failure or behavioral acceptance.",
+      "owner": "page test-only",
+      "id": "F7",
+      "fix": "Repair only incomplete date fixture; preserve every case/assertion and real header/trust/card components. Rerun only page test, not unchanged passing domain file.",
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx"
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "related": [
+        "internal/api/tirepressure/handler.go:40-48,128-136",
+        "internal/signal/state_reader.go:57-73",
+        "internal/signal/state_reader_log.go:498-509,566-585",
+        "web/src/features/vehicle-systems/lib/tireDifferentialDrift.ts",
+        ":159-167,194-199,321-326"
+      ],
+      "line": 61,
+      "condition": "Old/unknown per-corner times mixed with changed pressure",
+      "requiredEvidence": "Existing safe synthetic staggered/seed-only contract tests and explicit unknown per-reading freshness; no invented freshness threshold or real false-leak claim.",
+      "file": "web/src/features/vehicle-systems/lib/tireDifferentialDrift.ts",
+      "id": "C1",
+      "detail": "Model ignores available last_seen fields and uses change-feed row ts. Internal ObservedAt intentionally omitted from wire. Unchanged-tuple collapse does not prove simultaneous fresh observations when one corner changes; common-weather cancellation assumes common synchronous shifts."
+    },
+    {
+      "related": [
+        "web/src/features/vehicle-systems/lib/tireDifferentialDrift.ts:141-143,343-355,365-371"
+      ],
+      "line": 138,
+      "condition": "Samples/span/agreement below detection gates",
+      "requiredEvidence": "Resolve insufficient inference versus no detection wording; test minimum samples/span/agreement. Not a confirmed measured-zero violation until intended label semantics resolved.",
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+      "id": "C2",
+      "detail": "None detected/score0 also means flag withheld by evidence gates. Algorithmic no flag is true, but may imply evidence of no leak; projection correctly null."
+    },
+    {
+      "related": [
+        "web/src/hooks/useChartPalette.ts:51-55"
+      ],
+      "line": 36,
+      "condition": "Global saved chart_palette differs from fixed corner palette",
+      "requiredEvidence": "Owner decision and saved light/custom/palette behavior; no new palette library.",
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+      "id": "C3",
+      "detail": "Static restrained chartTokens.series keep corner identity but do not subscribe to saved palette. No preference reset; intentional domain override policy unknown."
+    },
+    {
+      "related": [
+        "web/src/features/vehicle-systems/lib/tireDifferentialDrift.ts:369-372,393"
+      ],
+      "line": 140,
+      "condition": "Score interpreted as dimensionless confidence",
+      "requiredEvidence": "Clarify rank definition/unit in existing help without fabricating manufacturer confidence.",
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+      "id": "C4",
+      "detail": "leakScore=absolute Pa/day slope times agreement, not normalized probability; raw score does not change with display pressure units."
+    },
+    {
+      "related": [
+        "internal/signal/state_reader.go:178-185",
+        "internal/api/apiparams/params.go:68-73,89-92"
+      ],
+      "line": 575,
+      "condition": "Header-bound integration/exact start-end events",
+      "requiredEvidence": "Existing seed/start/exclusive-end tests; integrated user-visible boundary failure NOTRUN. Not a second API rewrite.",
+      "file": "internal/signal/state_reader_log.go",
+      "id": "C5",
+      "detail": "Interface says[from,to), actual SQL seed<=start/window>start and<=end; API exclusive RFC3339 end adjusted for inclusive SQL. Do not assume wording proves integrated boundaries."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "detail": "Fixed10/11px tick API props and340/280px heights need measured readability, long translations, RTL/200percent text/narrow cards at all ten widths. Source min-w-0/sharedframes/sm two-column cards are declarations only.",
+      "rule": "mobile-chart-geometry",
+      "line": 201,
+      "status": "NOTRUN",
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+      "id": "N1"
+    },
+    {
+      "detail": "Actual current legend min-h-11/min-w-11 mobile declarations supersede old tiny-legend finding. Help/Escape/focus/export/clipboard and actual OS forced-colors/table acceptance still unverified; F4 applies.",
+      "rule": "keyboard-screenreader-forced-colors",
+      "line": 120,
+      "status": "NOTRUN",
+      "file": "web/src/components/charts/ChartLegend.tsx",
+      "id": "N2"
+    },
+    {
+      "detail": "Token-backed restrained colors/shared FadeIn are not composed theme/custom contrast or reduced-motion/low-bandwidth/native safe-area acceptance. Tests mock motion and plot boundaries.",
+      "rule": "composed-visual-motion",
+      "line": 36,
+      "status": "NOTRUN",
+      "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+      "id": "N3"
+    }
+  ],
+  "needs": [
+    {
+      "covers": [
+        "F1",
+        "C5"
+      ],
+      "dedup": "Already recorded original integration debt; no exact Phase6 corrective row matched. Existing server accepts both parameters; backend scope only if a concrete boundary test requires it. No completed-page redispatch.",
+      "proposedItem": "phase6-fix-tire-drift-workspace-bounds",
+      "id": "NQ1",
+      "files": [
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx",
+        "web/src/api/hooks/useVehicleSystems.ts",
+        "web/src/api/hooks/useVehicleSystems.test.tsx",
+        "web/src/lib/workspaceScope.ts"
+      ]
+    },
+    {
+      "covers": [
+        "F2"
+      ],
+      "dedup": "Reuse existing VehicleSourcePause; no shared root/API required, no exact queued fix.",
+      "proposedItem": "phase6-fix-tire-drift-initial-pause",
+      "id": "NQ2",
+      "files": [
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx"
+      ]
+    },
+    {
+      "covers": [
+        "F3",
+        "F4"
+      ],
+      "dedup": "One local repair for signed precision and unit/locale metadata; existing formatter/data-column APIs suffice.",
+      "proposedItem": "phase6-fix-tire-drift-chart-quantity-contract",
+      "id": "NQ3",
+      "files": [
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx"
+      ]
+    },
+    {
+      "covers": [
+        "F5"
+      ],
+      "dedup": "One feature model/caller objective, not a global metric/status engine.",
+      "proposedItem": "phase6-fix-tire-drift-zero-offset",
+      "id": "NQ4",
+      "files": [
+        "web/src/features/vehicle-systems/lib/tireDifferentialDrift.ts",
+        "web/src/features/vehicle-systems/lib/tireDifferentialDrift.test.ts",
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx",
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx"
+      ]
+    },
+    {
+      "dedup": "Original receipt already reports four fallbacks. Done charging projection root and GDPR/Causal/DLQ roots do not own these keys. Send exact leaves to serialized canonical owner; no broad translation/generator campaign.",
+      "defaults": [
+        "Front left",
+        "Front right",
+        "Rear left",
+        "Rear right"
+      ],
+      "keys": [
+        "tireDifferentialDrift.corner.fl",
+        "tireDifferentialDrift.corner.fr",
+        "tireDifferentialDrift.corner.rl",
+        "tireDifferentialDrift.corner.rr"
+      ],
+      "files": [
+        "web/src/i18n/en.json",
+        "web/src/i18n/en/locale-vehicle-systems.json",
+        "normal-derived artifacts established by actual generator result"
+      ],
+      "proposedItem": "phase6-integrate-tire-drift-corner-keys",
+      "id": "NQ5",
+      "covers": [
+        "F6"
+      ]
+    },
+    {
+      "covers": [
+        "F7"
+      ],
+      "dedup": "Actual thirteen-case own fixture failure, no matching corrective root. Historical scoped-runner-startup diagnosis is not this mock defect. Preserve originals; rerun page only.",
+      "proposedItem": "phase6-fix-tire-drift-page-fixture-date",
+      "id": "NQ6",
+      "files": [
+        "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx"
+      ]
+    }
+  ],
+  "finalVerification": {
+    "pinCount": 12,
+    "checkedUtc": "2026-10-14T01:44:13.1107359Z",
+    "status": "PASS_JSON_IDENTITY_COUNTS_AND_12_BEFORE_AFTER_PINS"
+  },
+  "sourceHashes": {
+    "before": {
+      "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx": "0621EAF183CA51345412F21378213F828EEA93A769EDA9352EBD96B82E4CA01D",
+      "web/src/api/hooks/useVehicleSystems.ts": "06474D1DC7E0B1D63BE82589D14ABBB39AC33A29E5319A888A1236A295881C8D",
+      "web/src/features/vehicle-systems/components/VehicleSourceContent.tsx": "1B17CBF2559E17DE73EBFBB0D231BD68C7AEDD4A5BAD01CDFA42BDEF05E3BD64",
+      "web/src/features/vehicle-systems/lib/tireDifferentialDrift.ts": "3712605185F55A6B8D5C0C8BCEFDB769E0332F869F709E7DAC6C5F87D730C429",
+      "web/src/lib/workspaceScope.ts": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "internal/tesla/units/conversions.go": "EDBBD6E68ADD3E59FEDEFD2328B30AC091E817E3C4D88D08471A856FEF6B5E29",
+      "web/src/lib/unitConversion.ts": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx": "E0B859E45485E60C9CCE07BBF523817C6971C9C95C3D4DDDB254294A19F2B173",
+      "internal/tesla/units/units.go": "8413AA7998BDF9EB318769E6B248FFC282CB5EBF5113A658A2BC885D9527DC28",
+      "internal/api/tirepressure/handler.go": "20B4468EB42608CBA61112D8E6CD4DCB1D2348FBD00B54BB780116A3F9F95F9B",
+      "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx": "A6646BF74BC61E0EF0A73C1020582A55AD2CED6376A8F6A4A089F18BA2AD0963",
+      "web/src/features/vehicle-systems/lib/tireDifferentialDrift.test.ts": "A753049273E773A119292BE8A7F32FB1F3A28E6095D33089568DC974750DA32A"
+    },
+    "algorithm": "SHA256",
+    "timing": "Four primary pins captured before QA/tests; eight contract pins before normal tests. Rechecked unchanged after validation; final check follows. Other reads are bounded snapshots, not universal shared-file pins.",
+    "after": {
+      "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx": "0621EAF183CA51345412F21378213F828EEA93A769EDA9352EBD96B82E4CA01D",
+      "web/src/api/hooks/useVehicleSystems.ts": "06474D1DC7E0B1D63BE82589D14ABBB39AC33A29E5319A888A1236A295881C8D",
+      "web/src/features/vehicle-systems/components/VehicleSourceContent.tsx": "1B17CBF2559E17DE73EBFBB0D231BD68C7AEDD4A5BAD01CDFA42BDEF05E3BD64",
+      "web/src/features/vehicle-systems/lib/tireDifferentialDrift.ts": "3712605185F55A6B8D5C0C8BCEFDB769E0332F869F709E7DAC6C5F87D730C429",
+      "web/src/lib/workspaceScope.ts": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "internal/tesla/units/conversions.go": "EDBBD6E68ADD3E59FEDEFD2328B30AC091E817E3C4D88D08471A856FEF6B5E29",
+      "web/src/lib/unitConversion.ts": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx": "E0B859E45485E60C9CCE07BBF523817C6971C9C95C3D4DDDB254294A19F2B173",
+      "internal/tesla/units/units.go": "8413AA7998BDF9EB318769E6B248FFC282CB5EBF5113A658A2BC885D9527DC28",
+      "internal/api/tirepressure/handler.go": "20B4468EB42608CBA61112D8E6CD4DCB1D2348FBD00B54BB780116A3F9F95F9B",
+      "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx": "A6646BF74BC61E0EF0A73C1020582A55AD2CED6376A8F6A4A089F18BA2AD0963",
+      "web/src/features/vehicle-systems/lib/tireDifferentialDrift.test.ts": "A753049273E773A119292BE8A7F32FB1F3A28E6095D33089568DC974750DA32A"
+    }
+  },
+  "checks": [
+    {
+      "exit": 0,
+      "stdout": "v26.8.1",
+      "command": "node --version"
+    },
+    {
+      "passed": 0,
+      "command": "node node_modules/vitest/vitest.mjs run src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx src/features/vehicle-systems/lib/tireDifferentialDrift.test.ts --pool=forks --maxWorkers=2 --no-cache --configLoader=runner --reporter=verbose",
+      "error": "ReferenceError: __dirname is not defined. No config/helper/source repair.",
+      "executed": 0,
+      "discovered": 0,
+      "status": "STARTUP_FAILED",
+      "skipped": 0,
+      "exit": 1,
+      "failed": 0
+    },
+    {
+      "passed": 19,
+      "filePassed": 1,
+      "command": "node node_modules/vitest/vitest.mjs run src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx src/features/vehicle-systems/lib/tireDifferentialDrift.test.ts --pool=forks --maxWorkers=2 --no-cache --reporter=verbose",
+      "status": "OWN_PAGE_FIXTURE_FAILURE",
+      "error": "All13page cases fail formatTime mock contract; all19domain pass. Exact case names/stacks/raw output in log. Guards remained active; emitted namespace baseline49 stale entries/new2dotless warning is not a fresh whole-repo namespace acceptance.",
+      "executed": 32,
+      "discovered": 32,
+      "fileFailed": 1,
+      "durationReportedSeconds": 7.49,
+      "skipped": 0,
+      "exit": 1,
+      "failed": 13
+    },
+    {
+      "exit": 0,
+      "stdout": "",
+      "command": "node node_modules/eslint/bin/eslint.js src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx src/features/vehicle-systems/pages/TireDifferentialDriftPage.test.tsx src/features/vehicle-systems/lib/tireDifferentialDrift.ts src/features/vehicle-systems/lib/tireDifferentialDrift.test.ts --max-warnings 0",
+      "status": "SCOPED_LINT_PASS"
+    },
+    {
+      "exit": 0,
+      "failureHistory": [
+        "Case-insensitive regex false positive on start corrected with -CaseSensitive.",
+        "Canonical JSON lookup: case-collision error exit1, absent-subtree indexing error exit1, safe -AsHashtable leaf lookup exit0 with four false.",
+        "Large exploratory tool outputs truncated; replaced with bounded reads/searches.",
+        "Oversized initial report construction rejected os206 exit1 before execution; bounded artifact writes succeeded."
+      ],
+      "command": "Select-String scopes, SHA256 hashes, canonical JSON lookup, queue exact owner/mechanism searches",
+      "rawOutput": "See allowed log"
+    }
+  ],
+  "preservation": {
+    "pageTestLines": 234,
+    "priorPageLines": 288,
+    "states": {
+      "single": "Measured residual/offset retained, slope and projection remain unavailable",
+      "noVehicle": "All4shells/onboarding preserved. Real global fleet loading/failure prerequisite acquisition not behavior-accepted by mocked page tests.",
+      "empty": "Resolved empty/unusable history does not display default no-leak/zero measurements; real raw/usable sample count0 is legitimate",
+      "retained": "Refresh errors/paused with retained data keep metrics/charts and source-local warning/retry",
+      "loading": "Initial source-shaped metric/chart/reading skeleton bodies; all section shells persist",
+      "initialPause": "F2, not a confirmed empty response",
+      "measuredZero": "Model keeps true zero slopes/imbalance; misleading zero-corner ranking is F5",
+      "observedVersusModel": "Page/period/help clearly label inference/not manufacturer readings and not live-state observation; row timestamp/per-reading freshness C1 remains unknown",
+      "fatal": "Only source-local fatal bodies replaced, existing retry retained"
+    },
+    "actions": [
+      "Four residual legend toggles and stable hidden_tire-differential-drift-residuals URL keys",
+      "Two existing PNG/SVG/copy-image export menus; no execution claimed",
+      "Source-local fatal/retained refetch retries",
+      "Localized inference HelpTooltip and metric details/help",
+      "Governed onboarding navigation /onboarding"
+    ],
+    "modelLines": 400,
+    "metricCount": 4,
+    "notDeclaredActions": [
+      "CSV absent because exportData not supplied; not lost behavior",
+      "Fullscreen absent because fullscreen prop not supplied",
+      "No mutations or duplicate page scope selectors"
+    ],
+    "sectionCount": 4,
+    "currentPageLines": 310,
+    "sections": [
+      {
+        "line": 117,
+        "content": "Leak/score, imbalance/corner, gated days, usable/raw count/span",
+        "name": "Differential drift metrics",
+        "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx"
+      },
+      {
+        "line": 173,
+        "content": "Four signed FL/FR/RL/RR lines, URL legend state, exact UTC and full localized time/timezone columns",
+        "name": "Common-mode-removed residuals",
+        "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx"
+      },
+      {
+        "line": 226,
+        "content": "Four corner categories when at least two usable distinct times; signed slope, confidence, leak text",
+        "name": "Per-corner drift rate",
+        "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx"
+      },
+      {
+        "line": 266,
+        "content": "Four corner cards/slope/agreement/mean offset/badges/full help",
+        "name": "Reading this inference",
+        "file": "web/src/features/vehicle-systems/pages/TireDifferentialDriftPage.tsx"
+      }
+    ],
+    "modelTestLines": 229,
+    "behavior": [
+      "Raw cache untouched; finite/plausible complete-corner rows, timestamp aliases and snake/camel pressure keys preserved",
+      "Sort/timestamp replacement/identical-tuple collapse preserved",
+      "Common-mode median, signed Theil-Sen fit and pairwise agreement preserved",
+      "Minimum8samples/2days/.65agreement;30000Pa threshold;50000-700000Pa plausibility;pairwise cap200 preserved",
+      "Projection null below evidence/healing/horizon; actual already-threshold0 valid",
+      "No deletion/rewrite authorized:310lines exceed generic300-line guideline but accepted source receipt retained310"
+    ]
+  },
+  "pressureContract": {
+    "frontendPressureFormatterInput": "kPa",
+    "chain": [
+      "internal/tesla/protomodel/signal_metadata_gen.go:1477-1480 pressure metadata",
+      "internal/tesla/units/conversions.go:92-110 fixed bar raw telemetry; units.go:66-71 raw*100000 ->Pa",
+      "internal/tesla/normalize/normalize.go:137-200 ToSI assignment; pipeline.go:462-483 converted fanout",
+      "internal/signal/state_reader_log.go:501-503,574-577 typed float_value no display scaling",
+      "internal/api/tirepressure/handler.go:40-48,76-77,128-136 direct mapped forward-fold values",
+      "feature model:139-145,321-355 operates Pa/Pa-per-day",
+      "web/src/lib/unitConversion.ts:212-226 accepts kPa"
+    ],
+    "wireHistoryUnit": "Pa",
+    "freshness": "Change-feed timestamp not proof each carried corner was observed then; last_seen may be absent/stale, age policy not guessed.",
+    "arithmetic": "240000Pa=240kPa=2.4bar or about34.81psi. -1000Pa/day=-1kPa/day=-.01bar/day before rounding.",
+    "status": "SOURCE_TRACED",
+    "displayBridge": "page71,145,296-298 divide Pa by1000 once; correct for signed residual and slope as conversion is multiplicative",
+    "limits": "Source producer truth overrides old frontend instructions and backend test35.2fixtures. No backend/device execution."
+  },
+  "declarations": {
+    "a11y": "Named headings/plot labels, decorative aria-hidden icons, text badges, source retry, shared alternative table/help. F4 unit gap; native focus/contrast/screen-reader NOTRUN.",
+    "mobile": "min-w-0 bounded shared frames, wrap-safe cards, sm2columns and current mobile44px legend declarations; no measured viewport/target claim.",
+    "preferences": "useUnits preserves saved bar/psi, locale and precision; F3 bypasses precision in chart rows. useDateFormat/full ISO identity retained. URL legend preference retained. Static corner palette applicability C3, no preference reset.",
+    "i18n": "All visible page labels/help/actions use t/fallback. Missing dynamic canonical leaves F6; static hardcoded JSX scan0 is not dynamic acceptance.",
+    "scope": "Header/URL/store vehicle owner consumed without duplicate selector; dated range/bounds absent F1."
+  },
+  "ruleChecks": {
+    "limits": "Executed scoped regex plus review/ESLint, not a whole-repo zero-violations claim.",
+    "exceptions": [
+      "Recharts tick/stroke API props are not static inline CSS style violations",
+      "PageLayout delegates to real PageContainer: no missing-container violation",
+      "Shared semantic raw table/concrete imports are building blocks",
+      "useSelectedVehicle effect synchronizes selection, not data loading",
+      "Null interior fallback bodies do not hide persistent sections"
+    ],
+    "backend": "Scoped handler: searched SQL interpolation/println/panic/Pool/NewRequest patterns matched0. Actual Timeline/LiveState calls use r.Context. No whole-internal/** audit.",
+    "matchedLines": {
+      "camelcase-param-case-sensitive": 0,
+      "hardcoded-page-jsx": 0,
+      "hidden-section-shell": 0,
+      "static-inline-style": 0,
+      "direct-library-import": 0,
+      "fetch-useeffect": 0,
+      "raw-html": 0,
+      "workspace-range-consumption": 0,
+      "old-api-import": 0,
+      "double-prefix": 0
+    },
+    "frontendScope": "Page/model/VehicleSourceContent/VehicleOperationalBrief/useVehicleSystems; tests treated as fixtures, shared building blocks excluded from feature raw-html/direct-import rule"
+  },
+  "instructionsRead": [
+    "docs/orchestrator-loop.md fully",
+    "docs/frontend-design-contract.md fully2539lines",
+    "docs/frontend-mission.md fully",
+    "current inventory authority+target row278",
+    "current handoff recovery/conventions",
+    "current queue target/accepted receipt/exact owner and mechanism dedup",
+    "frontend-worker-conventions",
+    "copilot instructions",
+    "react-frontend/frontend-si-cutover/unit-conversion instructions"
+  ],
+  "filesRead": [
+    "Target page/model and both tests",
+    "VehicleSourceContent/its test/VehicleSourcePause/VehicleOperationalBrief",
+    "useVehicleSystems and relevant analysis-hook test excerpt",
+    "dataState/useSelectedVehicle/useRangeState contract/useUnits/useDateFormat producer/useChartPalette/unitConversion/workspaceScope",
+    "App route mount search",
+    "PageContainer/PageLayout/LayoutCard/ChartCard/SourceContent",
+    "EmbeddedChart/ChartContainer excerpts/ChartTooltip/ChartLegend/DataFreshness",
+    "canonical en.json target/leaf parse and existing catalog output names",
+    "package.json/vite.config.ts/test-setup.ts",
+    "audit-page-227.json/phase6-scoped-runner-startup.json",
+    "internal API tire route/handler/historical handler-test excerpt/apiparams",
+    "signal state_reader contract and state_reader_log typed-value/bounds excerpts",
+    "Tesla units/conversions/normalization producer/pipeline/pressure metadata and normalization-test matches"
+  ],
+  "evidenceLimits": {
+    "installs": 0,
+    "sourceQA": "Deterministic source branch/arithmetic repros are not newly executed fixtures. Only existing scoped cases executed.",
+    "sourceTestCatalogConfigQueueGitWrites": 0,
+    "servers": 0,
+    "notRun": [
+      "global npx tsc --noEmit: prohibited/no TypeScript pass claim",
+      "build/full suites/full lint: prohibited",
+      "custom helpers/new fixture writes/assertion edits/passing-file reruns: prohibited",
+      "browser/server/network/API/device/vehicle commands: prohibited",
+      "visual/native/keyboard/contrast/RTL/200percent text/forced-colors/screen-reader/safe-area: NOTRUN",
+      "backend Go tests/real sensor freshness: NOTRUN",
+      "preservation CLI extra baseline files: NOTRUN"
+    ],
+    "pageBehavior": "13page cases fail before intended assertions. No passing page behavior claim.",
+    "subagents": 0,
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ]
+  },
+  "releaseArtifacts": [
+    "docs/frontend-audits/phase6-qa-vehicle-systems-tire-differential-drift.json",
+    "web/logs/phase6-qa-vehicle-systems-tire-differential-drift.log"
+  ],
+  "release": {
+    "onlyAssignedArtifactsWritten": true,
+    "releaseUtc": "2026-10-14T01:44:13.1055883Z",
+    "sourceWritesReleased": true,
+    "ownedBoundedCommands": "Both Vitest invocations and scoped ESLint completed; no owned running command remains."
+  }
+}

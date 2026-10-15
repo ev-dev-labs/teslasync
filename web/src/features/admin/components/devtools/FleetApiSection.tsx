@@ -1,13 +1,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { GlassPanel, Badge, Button, Input, Select, Textarea, type Column } from '@/components/ui'
+import { GlassPanel, Badge, Button, Input, Select, Textarea, ConfirmDialog, SignalConfigModal, Caption, Code, HelperText, PanelTitle, SectionTitle, Text, type Column } from '@/components/ui'
 import { Skeleton, AlertBanner } from '@/components/feedback'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 import { formatDateTime } from '@/lib/dateFormat'
-import { fmtInt } from '@/lib/numberFormat'
+
 import { getErrorMessage } from '@/lib/errorMessage'
-import SignalConfigModal from '@/components/ui/SignalConfigModal'
 
 import { ToolCard } from './ToolCard'
 import { CopyButton } from '@/components/ui'
@@ -17,6 +17,11 @@ import { apiFetch, extractTelemetryErrors, useVehicleOptions } from './helpers'
 import type { TelemetryError } from './types'
 import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
 import { Icons } from '@/lib/icons';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+
+function resultError(error: unknown, data?: Record<string, unknown>): string | undefined {
+  return error ? getErrorMessage(error) : typeof data?.error === 'string' ? data.error : undefined
+}
 
 /* ─── Fleet API Config Tool ───────────────────────────────────────────── */
 
@@ -28,53 +33,55 @@ function FleetApiConfigTool() {
   })
 
   if (isLoading) return <GlassPanel className="p-5"><Skeleton lines={4} /></GlassPanel>
-  if (configError) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(configError)}</AlertBanner>
+  if (configError && !data) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(configError)}</AlertBanner>
 
   const info = data ?? {}
-  // apiFetch resolves request failures into a `{ error }` payload instead of
-  // rejecting, so the useQuery().error branch above never fires. Surface that
-  // payload error here rather than silently rendering blank config fields.
   const apiError = typeof info.error === 'string' ? info.error : undefined
   if (apiError) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {apiError}</AlertBanner>
 
-  const baseUrl = (info.baseUrl as string) ?? ''
-  const clientId = (info.clientId as string) ?? ''
-  const authStatus = info.authenticated === true
-  const regions = Array.isArray(info.regions) ? (info.regions as string[]) : []
+  const baseUrl = typeof info.base_url === 'string' ? info.base_url : ''
+  const clientId = typeof info.client_id === 'string' ? info.client_id : ''
+  const authStatus = typeof info.has_valid_token === 'boolean' ? info.has_valid_token : undefined
+  const regions = info.regions && typeof info.regions === 'object' && !Array.isArray(info.regions)
+    ? Object.entries(info.regions).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+    : []
 
   return (
-    <ToolCard icon={Icons.settings} color="cyan" title={t('devtools.fleet.config', 'Config')} description={t('devtools.fleet.configDesc', 'Config Desc')}>
+    <ToolCard icon={Icons.settings} color="cyan" title={t('devtools.fleet.config', 'Config')} description={t('devtools.fleet.configDesc', 'Config desc')}>
+      {configError && <AlertBanner variant="warning">{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(configError)}</AlertBanner>}
       <div className="grid gap-3 sm:grid-cols-2">
         <GlassPanel className="p-3">
-          <span className="text-xs text-[var(--text-secondary)]">{t('devtools.fleet.baseUrl', 'Base Url')}</span>
+          <Caption>{t('devtools.fleet.baseUrl', 'Base URL')}</Caption>
           <div className="mt-1 flex items-center gap-2">
-            <span className="truncate text-sm font-mono text-[var(--text-primary)]">{baseUrl || '—'}</span>
+            <Code className="break-all">{baseUrl || '—'}</Code>
             {baseUrl && <CopyButton text={baseUrl} />}
           </div>
         </GlassPanel>
         <GlassPanel className="p-3">
-          <span className="text-xs text-[var(--text-secondary)]">{t('devtools.fleet.clientId', 'Client Id')}</span>
+          <Caption>{t('devtools.fleet.clientId', 'Client ID')}</Caption>
           <div className="mt-1 flex items-center gap-2">
-            <span className="truncate text-sm font-mono text-[var(--text-primary)]">{clientId || '—'}</span>
+            <Code className="break-all">{clientId || '—'}</Code>
             {clientId && <CopyButton text={clientId} />}
           </div>
         </GlassPanel>
         <GlassPanel className="p-3">
-          <span className="text-xs text-[var(--text-secondary)]">{t('devtools.fleet.authStatus', 'Auth Status')}</span>
+          <Caption>{t('devtools.fleet.authStatus', 'Auth status')}</Caption>
           <div className="mt-1 flex items-center gap-2">
-            {authStatus ? (
+            {authStatus === true ? (
               <Badge variant="success" size="sm" dot>{t('devtools.fleet.authenticated', 'Authenticated')}</Badge>
+            ) : authStatus === false ? (
+              <Badge variant="danger" size="sm" dot>{t('devtools.fleet.notAuthenticated', 'Not authenticated')}</Badge>
             ) : (
-              <Badge variant="danger" size="sm" dot>{t('devtools.fleet.notAuthenticated', 'Not Authenticated')}</Badge>
+              <Badge variant="neutral" size="sm">{t('common.unknown', 'Unknown')}</Badge>
             )}
           </div>
         </GlassPanel>
         <GlassPanel className="p-3">
-          <span className="text-xs text-[var(--text-secondary)]">{t('devtools.fleet.regions', 'Regions')}</span>
+          <Caption>{t('devtools.fleet.regions', 'Regions')}</Caption>
           <div className="mt-1 flex flex-wrap gap-1">
             {regions.length > 0
-              ? regions.map((r) => <Badge key={r} variant="info" size="sm">{r}</Badge>)
-              : <span className="text-sm text-[var(--text-muted)]">—</span>}
+              ? regions.map(([region, url]) => <div key={region} className="min-w-0"><Badge variant="neutral" size="sm">{region}</Badge><Code className="ml-2 break-all">{url}</Code></div>)
+              : <Caption>—</Caption>}
           </div>
         </GlassPanel>
       </div>
@@ -88,34 +95,35 @@ function PartnerRegistrationTool() {
   const { t } = useTranslation()
   const [domain, setDomain] = useState('')
   const mutation = useMutation({
-    mutationFn: () => apiFetch('register-partner', 'POST', { domain }),
+    networkMode: 'always',
+    mutationFn: (submittedDomain: string) => apiFetch('register-partner', 'POST', { domain: submittedDomain }),
   })
 
   const opensslGen = 'openssl ecparam -name prime256v1 -genkey -noout -out private.pem'
   const opensslPub = 'openssl ec -in private.pem -pubout -out public.pem'
 
   return (
-    <ToolCard icon={Icons.globe} color="green" title={t('devtools.fleet.partnerReg', 'Partner Reg')} description={t('devtools.fleet.partnerRegDesc', 'Partner Reg Desc')}>
+    <ToolCard icon={Icons.globe} color="green" title={t('devtools.fleet.partnerReg', 'Partner reg')} description={t('devtools.fleet.partnerRegDesc', 'Partner reg desc')}>
       <div className="space-y-3">
-        <GlassPanel className="border-neon-amber/20 bg-neon-amber/5 p-3">
+        <GlassPanel className="border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)] p-3">
           <div className="flex items-start gap-2">
-            <Icons.severityWarn className="mt-0.5 h-4 w-4 shrink-0 text-neon-amber" />
-            <div className="text-xs text-neon-amber/80">
-              <p className="font-semibold">{t('devtools.fleet.prerequisites', 'Prerequisites')}</p>
-              <p className="mt-1">{t('devtools.fleet.prerequisitesDesc', 'Prerequisites Desc')}</p>
+            <Icons.severityWarn className="mt-0.5 h-4 w-4 shrink-0 text-[var(--semantic-warning)]" />
+            <div>
+              <Caption>{t('devtools.fleet.prerequisites', 'Prerequisites')}</Caption>
+              <HelperText className="mt-1">{t('devtools.fleet.prerequisitesDesc', 'Prerequisites desc')}</HelperText>
             </div>
           </div>
         </GlassPanel>
 
         <div className="space-y-2">
-          <span className="text-xs font-medium text-[var(--text-secondary)]">{t('devtools.fleet.opensslCommands', 'Openssl Commands')}</span>
+          <Caption>{t('devtools.fleet.opensslCommands', 'OpenSSL commands')}</Caption>
           <div className="space-y-1">
-            <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1.5">
-              <code className="flex-1 text-xs text-cyan-300">{opensslGen}</code>
+            <div className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
+              <Code className="min-w-0 flex-1 break-all">{opensslGen}</Code>
               <CopyButton text={opensslGen} />
             </div>
-            <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1.5">
-              <code className="flex-1 text-xs text-cyan-300">{opensslPub}</code>
+            <div className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
+              <Code className="min-w-0 flex-1 break-all">{opensslPub}</Code>
               <CopyButton text={opensslPub} />
             </div>
           </div>
@@ -132,16 +140,18 @@ function PartnerRegistrationTool() {
           variant="primary"
           size="sm"
           loading={mutation.isPending}
-          onClick={() => mutation.mutate()}
+          disabled={!domain.trim()}
+          onClick={() => mutation.mutate(domain.trim())}
           icon={<Icons.play className="h-3.5 w-3.5" />}
         >
           {t('devtools.fleet.register', 'Register')}
         </Button>
-        {mutation.data && (
+        {(mutation.data || mutation.error) && (
           <ResultPanel
-            title={t('devtools.fleet.partnerReg', 'Partner Reg')}
-            data={mutation.data.error ? undefined : mutation.data}
-            error={typeof mutation.data.error === 'string' ? mutation.data.error : undefined}
+            title={t('devtools.fleet.partnerReg', 'Partner reg')}
+            context={mutation.variables}
+            data={mutation.data}
+            error={resultError(mutation.error, mutation.data)}
           />
         )}
       </div>
@@ -156,7 +166,7 @@ function PartnerPublicKeyTool() {
   const [domain, setDomain] = useState('')
 
   const mutation = useMutation({
-    mutationFn: () => apiFetch(`partner-public-key?domain=${encodeURIComponent(domain)}`),
+    mutationFn: (submittedDomain: string) => apiFetch(`partner-public-key?domain=${encodeURIComponent(submittedDomain)}`),
   })
 
   const response = mutation.data ?? {}
@@ -167,7 +177,7 @@ function PartnerPublicKeyTool() {
   const publicKey = ((response.response as Record<string, unknown>)?.public_key as string) ?? ''
 
   return (
-    <ToolCard icon={Icons.security} color="cyan" title={t('devtools.partnerKey.title', 'Public Key Verification')} description={t('devtools.partnerKey.desc', 'Verify your registered public key with Tesla')}>
+    <ToolCard icon={Icons.security} color="cyan" title={t('devtools.partnerKey.title', 'Public key verification')} description={t('devtools.partnerKey.desc', 'Verify your registered public key with Tesla')}>
       <div className="space-y-3">
         <Input
           label={t('devtools.fleet.domain', 'Domain')}
@@ -181,39 +191,39 @@ function PartnerPublicKeyTool() {
           size="sm"
           loading={mutation.isPending}
           disabled={!domain.trim()}
-          onClick={() => mutation.mutate()}
+          onClick={() => mutation.mutate(domain.trim())}
           icon={<Icons.play className="h-3.5 w-3.5" />}
         >
           {t('devtools.partnerKey.verify', 'Verify')}
         </Button>
 
-        {mutation.data && (
+        {(mutation.data || mutation.error) && (
           <>
-            <div className="flex flex-wrap items-center gap-2">
+            {!resultError(mutation.error, mutation.data) && <div className="flex flex-wrap items-center gap-2">
               {remoteFound ? (
-                <Badge variant="success" size="sm" dot>{t('devtools.partnerKey.keyRegistered', 'Key Registered')}</Badge>
+                <Badge variant="success" size="sm" dot>{t('devtools.partnerKey.keyRegistered', 'Key registered')}</Badge>
               ) : (
-                <Badge variant="danger" size="sm" dot>{t('devtools.partnerKey.keyNotFound', 'Key Not Found')}</Badge>
+                <Badge variant="danger" size="sm" dot>{t('devtools.partnerKey.keyNotFound', 'Key not found')}</Badge>
               )}
               {remoteFound && localConfigured && (
                 matchesLocal ? (
-                  <Badge variant="success" size="sm" dot>{t('devtools.partnerKey.matchesLocal', 'Matches Local Key')}</Badge>
+                  <Badge variant="success" size="sm" dot>{t('devtools.partnerKey.matchesLocal', 'Matches local key')}</Badge>
                 ) : (
-                  <Badge variant="warning" size="sm" dot>{t('devtools.partnerKey.mismatch', 'Does Not Match Local Key')}</Badge>
+                  <Badge variant="warning" size="sm" dot>{t('devtools.partnerKey.mismatch', 'Does not match local key')}</Badge>
                 )
               )}
               {remoteFound && !localConfigured && (
-                <Badge variant="neutral" size="sm">{t('devtools.partnerKey.noLocal', 'No Local Key Configured')}</Badge>
+                <Badge variant="neutral" size="sm">{t('devtools.partnerKey.noLocal', 'No local key configured')}</Badge>
               )}
-            </div>
+            </div>}
 
             {publicKey && (
               <div className="space-y-1">
-                <span className="text-xs font-medium text-[var(--text-secondary)]">{t('devtools.partnerKey.pemLabel', 'Registered PEM')}</span>
-                <div className="rounded bg-[var(--surface-overlay)] p-3">
-                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs text-[var(--text-primary)]">
+                <Caption>{t('devtools.partnerKey.pemLabel', 'Registered PEM')}</Caption>
+                <div className="rounded bg-[var(--surface-2)] p-3">
+                  <Text as="pre" variant="code" className="max-h-48 overflow-auto whitespace-pre-wrap break-all">
                     {publicKey}
-                  </pre>
+                  </Text>
                   <div className="mt-2 flex justify-end">
                     <CopyButton text={publicKey} />
                   </div>
@@ -222,9 +232,10 @@ function PartnerPublicKeyTool() {
             )}
 
             <ResultPanel
-              title={t('devtools.partnerKey.rawResponse', 'Raw Response')}
-              data={response.error ? undefined : response}
-              error={typeof response.error === 'string' ? (response.error as string) : undefined}
+              title={t('devtools.partnerKey.rawResponse', 'Raw response')}
+              context={mutation.variables}
+              data={mutation.data}
+              error={resultError(mutation.error, mutation.data)}
               idle={false}
             />
           </>
@@ -240,6 +251,7 @@ function PublicKeySetupTool() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [pemInput, setPemInput] = useState('')
+  const [confirmation, setConfirmation] = useState<'generate' | 'delete' | { pem: string } | null>(null)
 
   const { data: status, isLoading, error: keyError } = useQuery({
     queryKey: ['devtools', 'public-key-status'],
@@ -247,92 +259,116 @@ function PublicKeySetupTool() {
   })
 
   const generateMut = useMutation({
+    networkMode: 'always',
     mutationFn: () => apiFetch('generate-keypair', 'POST'),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['devtools', 'public-key-status'] }) },
+    onSuccess: (data) => { if (!data.error) queryClient.invalidateQueries({ queryKey: ['devtools', 'public-key-status'] }) },
   })
 
   const uploadMut = useMutation({
-    mutationFn: () => apiFetch('upload-public-key', 'POST', { pem: pemInput }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['devtools', 'public-key-status'] }); setPemInput('') },
+    networkMode: 'always',
+    mutationFn: (submittedPem: string) => apiFetch('upload-public-key', 'POST', { public_key_pem: submittedPem }),
+    onSuccess: (data, submittedPem) => {
+      if (data.error) return
+      queryClient.invalidateQueries({ queryKey: ['devtools', 'public-key-status'] })
+      setPemInput((current) => current === submittedPem ? '' : current)
+    },
   })
 
   const deleteMut = useMutation({
+    networkMode: 'always',
     mutationFn: () => apiFetch('public-key', 'DELETE'),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['devtools', 'public-key-status'] }) },
+    onSuccess: (data) => { if (!data.error) queryClient.invalidateQueries({ queryKey: ['devtools', 'public-key-status'] }) },
   })
 
   if (isLoading) return <GlassPanel className="p-5"><Skeleton lines={3} /></GlassPanel>
-  if (keyError) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(keyError)}</AlertBanner>
+  if (keyError && !status) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(keyError)}</AlertBanner>
 
-  // apiFetch resolves request failures as a `{ error }` payload, so surface it
-  // here — the useQuery().error branch above is otherwise unreachable.
   const statusApiError = typeof status?.error === 'string' ? status.error : undefined
   if (statusApiError) return <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>{t('error.loadFailed', 'Failed to load data')}: {statusApiError}</AlertBanner>
 
   const configured = status?.configured === true
   const fingerprint = (status?.fingerprint as string) ?? ''
-  const wellKnownUrl = (status?.wellKnownUrl as string) ?? ''
+  const wellKnownPath = typeof status?.well_known_path === 'string' ? status.well_known_path : ''
+  const keyWritePending = generateMut.isPending || deleteMut.isPending || uploadMut.isPending
 
   return (
-    <ToolCard icon={Icons.key} color="purple" title={t('devtools.fleet.publicKey', 'Public Key')} description={t('devtools.fleet.publicKeyDesc', 'Public Key Desc')}>
+    <ToolCard icon={Icons.key} color="purple" title={t('devtools.fleet.publicKey', 'Public key')} description={t('devtools.fleet.publicKeyDesc', 'Public key desc')}>
+      {keyError && <AlertBanner variant="warning">{t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(keyError)}</AlertBanner>}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[var(--text-secondary)]">{t('common.status', 'Status')}:</span>
+          <Caption>{t('common.status', 'Status')}:</Caption>
           {configured ? (
             <Badge variant="success" size="sm" dot>{t('devtools.fleet.configured', 'Configured')}</Badge>
           ) : (
-            <Badge variant="warning" size="sm" dot>{t('devtools.fleet.notConfigured', 'Not Configured')}</Badge>
+            <Badge variant="warning" size="sm" dot>{t('devtools.fleet.notConfigured', 'Not configured')}</Badge>
           )}
         </div>
 
         {fingerprint && (
-          <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1.5">
-            <Icons.fingerprint className="h-4 w-4 text-neon-purple" />
-            <code className="text-xs text-[var(--text-primary)]">{fingerprint}</code>
+          <div className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
+            <Icons.fingerprint className="h-4 w-4 text-[var(--text-secondary)]" />
+            <Code className="break-all">{fingerprint}</Code>
             <CopyButton text={fingerprint} />
           </div>
         )}
 
-        {wellKnownUrl && (
-          <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1.5">
-            <Icons.link className="h-4 w-4 text-neon-cyan" />
-            <code className="flex-1 truncate text-xs text-[var(--text-primary)]">{wellKnownUrl}</code>
-            <CopyButton text={wellKnownUrl} />
+        {wellKnownPath && (
+          <div className="flex items-center gap-2 rounded bg-[var(--surface-2)] px-3 py-1.5">
+            <Icons.link className="h-4 w-4 text-[var(--text-secondary)]" />
+            <Code className="flex-1 break-all">{wellKnownPath}</Code>
+            <CopyButton text={wellKnownPath} />
           </div>
         )}
 
-        <GlassPanel className="border-neon-amber/20 bg-neon-amber/5 p-3">
+        <GlassPanel className="border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)] p-3">
           <div className="flex items-start gap-2">
-            <Icons.severityWarn className="mt-0.5 h-4 w-4 shrink-0 text-neon-amber" />
-            <span className="text-xs text-neon-amber/80">{t('devtools.fleet.privateKeyWarning', 'Private Key Warning')}</span>
+            <Icons.severityWarn className="mt-0.5 h-4 w-4 shrink-0 text-[var(--semantic-warning)]" />
+            <Caption>{t('devtools.fleet.privateKeyWarning', 'Private key warning')}</Caption>
           </div>
         </GlassPanel>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" size="sm" loading={generateMut.isPending} onClick={() => generateMut.mutate()} icon={<Icons.key className="h-3.5 w-3.5" />}>
-            {t('devtools.fleet.generateKeypair', 'Generate Keypair')}
+          <Button variant="primary" size="sm" loading={generateMut.isPending} disabled={keyWritePending} onClick={() => status?.configured === false ? generateMut.mutate() : setConfirmation('generate')} icon={<Icons.key className="h-3.5 w-3.5" />}>
+            {t('devtools.fleet.generateKeypair', 'Generate keypair')}
           </Button>
-          <Button variant="danger" size="sm" loading={deleteMut.isPending} onClick={() => deleteMut.mutate()} icon={<Icons.delete className="h-3.5 w-3.5" />}>
-            {t('devtools.fleet.deleteKeypair', 'Delete Keypair')}
+          <Button variant="danger" size="sm" loading={deleteMut.isPending} disabled={keyWritePending || !configured} onClick={() => setConfirmation('delete')} icon={<Icons.delete className="h-3.5 w-3.5" />}>
+            {t('devtools.fleet.deleteKeypair', 'Delete keypair')}
           </Button>
         </div>
 
-        <ResultPanel title={t('devtools.fleet.generateKeypair', 'Generate Keypair')} data={generateMut.data?.error ? undefined : generateMut.data} error={typeof generateMut.data?.error === 'string' ? generateMut.data.error : undefined} idle={!generateMut.data} idleMessage={t('devtools.keypairIdle', 'Generate or delete a keypair to see results')} />
-        <ResultPanel title={t('devtools.fleet.deleteKeypair', 'Delete Keypair')} data={deleteMut.data?.error ? undefined : deleteMut.data} error={typeof deleteMut.data?.error === 'string' ? deleteMut.data.error : undefined} idle={!deleteMut.data} />
+        <ResultPanel title={t('devtools.fleet.generateKeypair', 'Generate keypair')} data={generateMut.data} error={resultError(generateMut.error, generateMut.data)} idle={!generateMut.data} idleMessage={t('devtools.keypairIdle', 'Generate or delete a keypair to see results')} />
+        <ResultPanel title={t('devtools.fleet.deleteKeypair', 'Delete keypair')} data={deleteMut.data} error={resultError(deleteMut.error, deleteMut.data)} idle={!deleteMut.data} />
 
         <div className="space-y-2">
-          <span className="text-xs font-medium text-[var(--text-secondary)]">{t('devtools.fleet.uploadPem', 'Upload Pem')}</span>
           <Textarea
+            label={t('devtools.fleet.uploadPem', 'Upload PEM')}
             rows={4}
             placeholder={t('devtools.fleet.pemPlaceholder', 'Pem Placeholder')}
             value={pemInput}
             onChange={(e) => setPemInput(e.target.value)}
           />
-          <Button variant="secondary" size="sm" loading={uploadMut.isPending} onClick={() => uploadMut.mutate()} icon={<Icons.upload className="h-3.5 w-3.5" />}>
-            {t('devtools.fleet.uploadKey', 'Upload Key')}
+          <Button variant="secondary" size="sm" loading={uploadMut.isPending} disabled={keyWritePending || !pemInput.trim()} onClick={() => status?.configured === false ? uploadMut.mutate(pemInput) : setConfirmation({ pem: pemInput })} icon={<Icons.upload className="h-3.5 w-3.5" />}>
+            {t('devtools.fleet.uploadKey', 'Upload key')}
           </Button>
-          <ResultPanel title={t('devtools.fleet.uploadKey', 'Upload Key')} data={uploadMut.data?.error ? undefined : uploadMut.data} error={typeof uploadMut.data?.error === 'string' ? uploadMut.data.error : undefined} idle={!uploadMut.data} idleMessage={t('devtools.uploadIdle', 'Upload a public key to see results')} />
+          <ResultPanel title={t('devtools.fleet.uploadKey', 'Upload key')} data={uploadMut.data} error={resultError(uploadMut.error, uploadMut.data)} idle={!uploadMut.data} idleMessage={t('devtools.uploadIdle', 'Upload a public key to see results')} />
         </div>
+        <ConfirmDialog
+          open={confirmation !== null}
+          title={confirmation === 'delete' ? t('devtools.fleet.deleteKeypair', 'Delete keypair') : confirmation === 'generate' ? t('devtools.fleet.generateKeypair', 'Generate keypair') : t('devtools.fleet.uploadKey', 'Upload key')}
+          message={confirmation === 'delete' ? t('devtools.fleet.confirmDeleteKey', 'Delete the configured public key for this TeslaSync installation? Existing vehicle key pairing may stop working.') : t('devtools.fleet.confirmReplaceKey', 'Replace the configured public key for this TeslaSync installation? Existing vehicle key pairing may need to be repeated.')}
+          details={fingerprint ? <Code>{fingerprint}</Code> : undefined}
+          confirmLabel={t('common.confirm', 'Confirm')}
+          cancelLabel={t('common.cancel', 'Cancel')}
+          confirmDisabled={keyWritePending}
+          onCancel={() => setConfirmation(null)}
+          onConfirm={() => {
+            if (keyWritePending) return
+            if (confirmation === 'delete') deleteMut.mutate()
+            else if (confirmation === 'generate') generateMut.mutate()
+            else if (confirmation) uploadMut.mutate(confirmation.pem)
+            setConfirmation(null)
+          }}
+        />
       </div>
     </ToolCard>
   )
@@ -342,35 +378,30 @@ function PublicKeySetupTool() {
 
 function VehicleKeyPairingTool() {
   const { t } = useTranslation()
-  const { data } = useQuery({
+  const { isPending, error } = useQuery({
     queryKey: ['devtools', 'fleet-api-info'],
     queryFn: () => apiFetch('fleet-api-info'),
   })
-  const hostname = (data?.hostname as string) ?? 'yourapp.example.com'
-  const pairingUrl = `https://tesla.com/_ak/${hostname}`
 
   return (
-    <ToolCard icon={Icons.vehicle} color="green" title={t('devtools.fleet.keyPairing', 'Key Pairing')} description={t('devtools.fleet.keyPairingDesc', 'Key Pairing Desc')}>
+    <ToolCard icon={Icons.vehicle} color="green" title={t('devtools.fleet.keyPairing', 'Key pairing')} description={t('devtools.fleet.keyPairingDesc', 'Key pairing desc')}>
       <div className="space-y-3">
-        <div className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-2">
-          <Icons.link className="h-4 w-4 text-neon-green" />
-          <code className="flex-1 truncate text-sm text-emerald-300">{pairingUrl}</code>
-          <CopyButton text={pairingUrl} />
-        </div>
-        <div className="rounded-lg bg-neon-cyan/5 p-3">
-          <p className="text-xs text-[var(--text-secondary)]">{t('devtools.fleet.pairingInstructions', 'Pairing Instructions')}</p>
-          <ul className="mt-2 space-y-1 text-xs text-[var(--text-secondary)]">
+        <HelperText>{isPending ? t('common.loading', 'Loading...') : t('devtools.fleet.pairingHostUnknown', 'Pairing link unavailable: the configured application hostname is not provided by Fleet API info.')}</HelperText>
+        {error && <AlertBanner variant="danger">{getErrorMessage(error)}</AlertBanner>}
+        <div className="rounded-lg bg-[var(--surface-2)] p-3">
+          <HelperText>{t('devtools.fleet.pairingInstructions', 'Pairing instructions')}</HelperText>
+          <ul className={cn('mt-2 space-y-1', typography.role.helper)}>
             <li className="flex items-start gap-2">
-              <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
-              <span>{t('devtools.fleet.pairingStep1', 'Pairing Step1')}</span>
+              <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-[var(--text-secondary)]" />
+              <span>{t('devtools.fleet.pairingStep1', 'Pairing step1')}</span>
             </li>
             <li className="flex items-start gap-2">
-              <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
-              <span>{t('devtools.fleet.pairingStep2', 'Pairing Step2')}</span>
+              <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-[var(--text-secondary)]" />
+              <span>{t('devtools.fleet.pairingStep2', 'Pairing step2')}</span>
             </li>
             <li className="flex items-start gap-2">
-              <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-neon-cyan" />
-              <span>{t('devtools.fleet.pairingStep3', 'Pairing Step3')}</span>
+              <Icons.next className="mt-0.5 h-3 w-3 shrink-0 text-[var(--text-secondary)]" />
+              <span>{t('devtools.fleet.pairingStep3', 'Pairing step3')}</span>
             </li>
           </ul>
         </div>
@@ -393,29 +424,33 @@ function FleetTelemetrySubscribeTool() {
   const [selectedSignals, setSelectedSignals] = useState<{ name: string; interval: number }[]>([])
 
   const { options: vehicleOptions } = useVehicleOptions()
+  const selectedVehicle = vehicleOptions.some((option) => option.value === vin)
+  const validPort = port.trim() === '' || (/^\d+$/.test(port) && Number(port) >= 0 && Number(port) <= 65535)
+  const validInterval = Number.isInteger(interval) && interval >= 0 && interval <= 86400
 
   const subscribeMut = useMutation({
-    mutationFn: () =>
+    networkMode: 'always',
+    mutationFn: (submission: { vin: string; hostname: string; port: number; ca: string; signals: typeof selectedSignals; interval: number }) =>
       apiFetch('fleet-telemetry-subscribe', 'POST', {
-        vins: [vin],
-        hostname,
-        port: parseInt(port, 10),
-        ca: caCert || undefined,
-        fields: selectedSignals.length > 0 ? selectedSignals.map((s) => s.name) : undefined,
-        interval_seconds: interval,
-        field_intervals: selectedSignals.length > 0
-          ? Object.fromEntries(selectedSignals.filter((s) => s.interval !== interval).map((s) => [s.name, s.interval]))
+        vins: [submission.vin],
+        hostname: submission.hostname,
+        port: submission.port,
+        ca: submission.ca || undefined,
+        fields: submission.signals.length > 0 ? submission.signals.map((s) => s.name) : undefined,
+        interval_seconds: submission.interval,
+        field_intervals: submission.signals.length > 0
+          ? Object.fromEntries(submission.signals.filter((s) => s.interval !== submission.interval).map((s) => [s.name, s.interval]))
           : undefined,
       }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['devtools'] }) },
+    onSuccess: (data) => { if (!data.error) queryClient.invalidateQueries({ queryKey: ['devtools'] }) },
   })
 
   return (
-    <ToolCard icon={Icons.radio} color="cyan" title={t('devtools.fleet.telemetrySub', 'Telemetry Sub')} description={t('devtools.fleet.telemetrySubDesc', 'Telemetry Sub Desc')}>
+    <ToolCard icon={Icons.radio} color="cyan" title={t('devtools.fleet.telemetrySub', 'Telemetry sub')} description={t('devtools.fleet.telemetrySubDesc', 'Telemetry sub desc')}>
       <div className="space-y-3">
         <Select
           label={t('common.vehicle', 'Vehicle')}
-          placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
+          placeholder={t('timeline.selectVehicle', 'Select vehicle')}
           options={vehicleOptions}
           value={vin}
           onChange={(e) => setVin(e.target.value)}
@@ -433,12 +468,13 @@ function FleetTelemetrySubscribeTool() {
             placeholder="443"
             value={port}
             onChange={(e) => setPort(e.target.value)}
+            error={!validPort ? t('devtools.fleet.portInvalid', 'Use an integer port from 1 to 65535, or leave it blank or 0 for the server default.') : undefined}
             icon={<Icons.network className="h-4 w-4" />}
           />
         </div>
         <div>
-          <span className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">{t('devtools.fleet.caCert', 'Ca Cert')}</span>
           <Textarea
+            label={t('devtools.fleet.caCert', 'CA cert')}
             rows={3}
             placeholder={t('devtools.fleet.caCertPlaceholder', 'Ca Cert Placeholder')}
             value={caCert}
@@ -452,26 +488,33 @@ function FleetTelemetrySubscribeTool() {
             onClick={() => setSignalModalOpen(true)}
             icon={<Icons.settings className="h-3.5 w-3.5" />}
           >
-            {t('devtools.fleet.configureSignals', 'Configure Signals')} ({selectedSignals.length})
+            {t('devtools.fleet.configureSignals', 'Configure signals')} ({selectedSignals.length})
           </Button>
-          <span className="text-xs text-[var(--text-muted)]">
-            {t('devtools.fleet.intervalLabel', 'Interval Label')}: {interval}s
-          </span>
+          <Caption>
+            {t('devtools.fleet.intervalLabel', 'Interval label')}: {interval}s
+          </Caption>
         </div>
+        <HelperText>{t('devtools.fleet.serverDefaults', 'A blank hostname or blank/0 port uses the server configuration; the configured hostname is not available in this view.')}</HelperText>
+        {!selectedVehicle && <HelperText>{t('timeline.selectVehicle', 'Select vehicle')}</HelperText>}
         <Button
           variant="primary"
           size="sm"
           loading={subscribeMut.isPending}
-          onClick={() => subscribeMut.mutate()}
+          disabled={!selectedVehicle || !validPort || !validInterval}
+          onClick={() => {
+            if (!selectedVehicle || !validPort || !validInterval) return
+            subscribeMut.mutate({ vin, hostname: hostname.trim(), port: Number(port), ca: caCert, signals: selectedSignals, interval })
+          }}
           icon={<Icons.play className="h-3.5 w-3.5" />}
         >
           {t('devtools.fleet.subscribe', 'Subscribe')}
         </Button>
-        {subscribeMut.data && (
+        {(subscribeMut.data || subscribeMut.error) && (
           <ResultPanel
-            title={t('devtools.fleet.telemetrySub', 'Telemetry Sub')}
-            data={subscribeMut.data.error ? undefined : subscribeMut.data}
-            error={typeof subscribeMut.data.error === 'string' ? subscribeMut.data.error : undefined}
+            title={t('devtools.fleet.telemetrySub', 'Telemetry sub')}
+            context={subscribeMut.variables?.vin}
+            data={subscribeMut.data}
+            error={resultError(subscribeMut.error, subscribeMut.data)}
           />
         )}
       </div>
@@ -496,19 +539,16 @@ function FleetTelemetrySubscribeTool() {
 function FleetTelemetryConfigTool() {
   const { t } = useTranslation()
   const [vin, setVin] = useState('')
+  const [deleteVin, setDeleteVin] = useState<string | null>(null)
 
   const { options: vehicleOptions } = useVehicleOptions()
 
-  const configQuery = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${vin}`) })
-  const errorsQuery = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-errors?vin=${vin}`) })
-  const deleteMut = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${vin}`, 'DELETE') })
+  const configQuery = useMutation({ mutationFn: (submittedVin: string) => apiFetch(`fleet-telemetry-config?vin=${encodeURIComponent(submittedVin)}`) })
+  const errorsQuery = useMutation({ mutationFn: (submittedVin: string) => apiFetch(`fleet-telemetry-errors?vin=${encodeURIComponent(submittedVin)}`) })
+  const deleteMut = useMutation({ networkMode: 'always', mutationFn: (submittedVin: string) => apiFetch(`fleet-telemetry-config?vin=${encodeURIComponent(submittedVin)}`, 'DELETE') })
 
-  // Defensive extraction: see extractTelemetryErrors godoc above.
-  // errorsRaw is the unwrapped Tesla payload (for the "Show raw"
-  // disclosure when the table is empty), errorsApiError is the
-  // upstream error string returned by apiFetch on non-2xx.
-  const errorsApiError =
-    typeof errorsQuery.data?.error === 'string' ? (errorsQuery.data.error as string) : undefined
+  // Keep rejected transport failures separate from unrecognized Tesla payloads.
+  const errorsApiError = resultError(errorsQuery.error, errorsQuery.data)
   const { errors: errorData, ok: errorsOk } = useMemo(
     () => (errorsApiError ? { errors: [], ok: false } : extractTelemetryErrors(errorsQuery.data)),
     [errorsQuery.data, errorsApiError],
@@ -517,68 +557,94 @@ function FleetTelemetryConfigTool() {
   const errorColumns: Column<TelemetryError>[] = useMemo(() => [
     {
       key: 'timestamp',
+      filterValue: (r) => r.timestamp ?? null,
+      filterValueLabel: (_value, r) => r.timestamp ? formatDateTime(r.timestamp) : '—',
       header: t('common.timestamp', 'Timestamp'),
       render: (r) => (
-        <span className="text-xs">{r.timestamp ? formatDateTime(r.timestamp) : '—'}</span>
+        <Caption>{r.timestamp ? formatDateTime(r.timestamp) : '—'}</Caption>
       ),
     },
     {
       key: 'code',
+      filterValue: (r) => r.code || null,
       header: t('devtools.fleet.code', 'Code'),
-      render: (r) => (r.code ? <Badge variant="danger" size="sm">{r.code}</Badge> : <span className="text-xs text-[var(--text-muted)]">—</span>),
+      render: (r) => (r.code ? <Badge variant="danger" size="sm">{r.code}</Badge> : <Caption>—</Caption>),
     },
     {
       key: 'message',
+      filterValue: (r) => r.message || null,
       header: t('devtools.fleet.message', 'Message'),
       render: (r) => (
-        <span className="text-xs text-[var(--text-secondary)]">{r.message || '—'}</span>
+        <Caption>{r.message || '—'}</Caption>
       ),
     },
   ], [t])
 
-  const vinSelected = vin !== ''
-  const errorsRequested = errorsQuery.data != null || errorsQuery.isPending
+  const vinSelected = vehicleOptions.some((option) => option.value === vin)
+  const errorsRequested = errorsQuery.status !== 'idle'
+  const resetSelection = (nextVin: string) => {
+    if (deleteMut.isPending) return
+    configQuery.reset()
+    errorsQuery.reset()
+    deleteMut.reset()
+    setDeleteVin(null)
+    setVin(nextVin)
+  }
 
   return (
-    <ToolCard icon={Icons.satellite} color="purple" title={t('devtools.fleet.telemetryConfig', 'Telemetry Config')} description={t('devtools.fleet.telemetryConfigDesc', 'Telemetry Config Desc')}>
+    <ToolCard icon={Icons.satellite} color="purple" title={t('devtools.fleet.telemetryConfig', 'Telemetry config')} description={t('devtools.fleet.telemetryConfigDesc', 'Telemetry config desc')}>
       <div className="space-y-3">
         <Select
           label={t('common.vehicle', 'Vehicle')}
-          placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
+          placeholder={t('timeline.selectVehicle', 'Select vehicle')}
           options={vehicleOptions}
           value={vin}
-          onChange={(e) => setVin(e.target.value)}
+          onChange={(e) => resetSelection(e.target.value)}
+          disabled={deleteMut.isPending}
         />
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" size="sm" disabled={!vinSelected} loading={configQuery.isPending} onClick={() => configQuery.mutate()} icon={<Icons.show className="h-3.5 w-3.5" />}>
-            {t('devtools.fleet.getConfig', 'Get Config')}
+          <Button variant="primary" size="sm" disabled={!vinSelected} loading={configQuery.isPending} onClick={() => configQuery.mutate(vin)} icon={<Icons.show className="h-3.5 w-3.5" />}>
+            {t('devtools.fleet.getConfig', 'Get config')}
           </Button>
-          <Button variant="secondary" size="sm" disabled={!vinSelected} loading={errorsQuery.isPending} onClick={() => errorsQuery.mutate()} icon={<Icons.severityWarn className="h-3.5 w-3.5" />}>
-            {t('devtools.fleet.viewErrors', 'View Errors')}
+          <Button variant="secondary" size="sm" disabled={!vinSelected} loading={errorsQuery.isPending} onClick={() => errorsQuery.mutate(vin)} icon={<Icons.severityWarn className="h-3.5 w-3.5" />}>
+            {t('devtools.fleet.viewErrors', 'View errors')}
           </Button>
-          <Button variant="danger" size="sm" disabled={!vinSelected} loading={deleteMut.isPending} onClick={() => deleteMut.mutate()} icon={<Icons.delete className="h-3.5 w-3.5" />}>
-            {t('devtools.fleet.deleteConfig', 'Delete Config')}
+          <Button variant="danger" size="sm" disabled={!vinSelected} loading={deleteMut.isPending} onClick={() => setDeleteVin(vin)} icon={<Icons.delete className="h-3.5 w-3.5" />}>
+            {t('devtools.fleet.deleteConfig', 'Delete config')}
           </Button>
         </div>
-        <ResultPanel title={t('devtools.fleet.telemetryConfig', 'Telemetry Config')} data={configQuery.data?.error ? undefined : configQuery.data} error={typeof configQuery.data?.error === 'string' ? configQuery.data.error : undefined} idle={!configQuery.data} idleMessage={t('devtools.configIdle', 'Fetch config to see results')} />
-        <ResultPanel title={t('devtools.fleet.deleteConfig', 'Delete Config')} data={deleteMut.data?.error ? undefined : deleteMut.data} error={typeof deleteMut.data?.error === 'string' ? deleteMut.data.error : undefined} idle={!deleteMut.data} />
+        <ResultPanel title={t('devtools.fleet.telemetryConfig', 'Telemetry config')} context={configQuery.variables} data={configQuery.data} error={resultError(configQuery.error, configQuery.data)} idle={!configQuery.data} idleMessage={t('devtools.configIdle', 'Fetch config to see results')} />
+        <ResultPanel title={t('devtools.fleet.deleteConfig', 'Delete config')} context={deleteMut.variables} data={deleteMut.data} error={resultError(deleteMut.error, deleteMut.data)} idle={!deleteMut.data} />
         {/* Errors panel — has FOUR distinct render states; before this
             fix only state (4) rendered, so loading / error / empty all
             looked identical to "button did nothing". */}
         <TelemetryErrorsPanel
-          title={t('devtools.fleet.telemetryErrors', 'Telemetry Errors')}
+          title={errorsQuery.variables ? `${t('devtools.fleet.telemetryErrors', 'Telemetry errors')} · ${errorsQuery.variables}` : t('devtools.fleet.telemetryErrors', 'Telemetry errors')}
           loading={errorsQuery.isPending}
           error={errorsApiError}
           requested={errorsRequested}
           ok={errorsOk}
           errors={errorData}
           columns={errorColumns}
-          vin={vin}
+          vin={errorsQuery.variables ?? ''}
           idleMessage={t('devtools.errorsIdle', 'Click View Errors to fetch recent Fleet Telemetry errors for this vehicle.')}
           emptyMessage={t('devtools.errorsEmpty', 'No Fleet Telemetry errors reported for this vehicle.')}
           rawData={errorsQuery.data}
           rawDisclosureLabel={t('devtools.errorsRaw', 'Show raw Tesla response')}
-          downloadLabel={t('devtools.fleet.downloadErrors', 'Download Errors')}
+          downloadLabel={t('devtools.fleet.downloadErrors', 'Download errors')}
+        />
+        <ConfirmDialog
+          open={deleteVin !== null}
+          title={t('devtools.fleet.deleteConfig', 'Delete config')}
+          message={t('devtools.fleet.confirmDeleteConfig', 'Delete Fleet Telemetry configuration for {{vin}}? This stops its telemetry subscription.', { vin: deleteVin })}
+          confirmLabel={t('common.confirm', 'Confirm')}
+          cancelLabel={t('common.cancel', 'Cancel')}
+          confirmDisabled={deleteMut.isPending || deleteVin !== vin || !vinSelected}
+          onCancel={() => setDeleteVin(null)}
+          onConfirm={() => {
+            if (deleteVin && deleteVin === vin && vinSelected && !deleteMut.isPending) deleteMut.mutate(deleteVin)
+            setDeleteVin(null)
+          }}
         />
       </div>
     </ToolCard>
@@ -591,28 +657,30 @@ function FleetStatusTool() {
   const { t } = useTranslation()
   const { vehicles } = useVehicleOptions()
   const fleetStatusMut = useMutation({
-    mutationFn: () => apiFetch('fleet-status', 'POST', { vins: vehicles.map((v) => v.vin) }),
+    networkMode: 'always',
+    mutationFn: (submittedVins: string[]) => apiFetch('fleet-status', 'POST', { vins: submittedVins }),
   })
 
   return (
-    <ToolCard icon={Icons.charging} color="green" title={t('devtools.fleet.fleetStatus', 'Fleet Status')} description={t('devtools.fleet.fleetStatusDesc', 'Check fleet status for all vehicles')}>
+    <ToolCard icon={Icons.charging} color="green" title={t('devtools.fleet.fleetStatus', 'Fleet status')} description={t('devtools.fleet.fleetStatusDesc', 'Check fleet status for all vehicles')}>
       <div className="mt-3 flex items-center gap-2">
         <Button
           variant="primary"
           size="sm"
           loading={fleetStatusMut.isPending}
-          onClick={() => fleetStatusMut.mutate()}
+          onClick={() => fleetStatusMut.mutate(vehicles.map((v) => v.vin))}
           disabled={vehicles.length === 0}
           icon={<Icons.play className="h-3.5 w-3.5" />}
         >
-          {t('devtools.fleet.checkFleetStatus', 'Check Fleet Status')}
+          {t('devtools.fleet.checkFleetStatus', 'Check fleet status')}
         </Button>
       </div>
-      {fleetStatusMut.data && (
+      {(fleetStatusMut.data || fleetStatusMut.error) && (
         <ResultPanel
-          title={t('devtools.fleet.fleetStatus', 'Fleet Status')}
-          data={fleetStatusMut.data.error ? undefined : fleetStatusMut.data}
-          error={typeof fleetStatusMut.data.error === 'string' ? fleetStatusMut.data.error : undefined}
+          title={t('devtools.fleet.fleetStatus', 'Fleet status')}
+          context={fleetStatusMut.variables?.join(', ')}
+          data={fleetStatusMut.data}
+          error={resultError(fleetStatusMut.error, fleetStatusMut.data)}
         />
       )}
     </ToolCard>
@@ -633,10 +701,19 @@ function VehicleDataTools() {
   const [activeAction, setActiveAction] = useState<VehicleDataAction | null>(null)
   const { options: vehicleOptions } = useVehicleOptions()
 
-  const chargingMut = useMutation({ mutationFn: () => apiFetch(`nearby-charging?vin=${vin}`) })
-  const releaseNotesMut = useMutation({ mutationFn: () => apiFetch(`release-notes?vin=${vin}`) })
-  const alertsMut = useMutation({ mutationFn: () => apiFetch(`recent-alerts?vin=${vin}`) })
-  const serviceMut = useMutation({ mutationFn: () => apiFetch(`service-data?vin=${vin}`) })
+  const chargingMut = useMutation({ mutationFn: (submittedVin: string) => apiFetch(`nearby-charging?vin=${encodeURIComponent(submittedVin)}`) })
+  const releaseNotesMut = useMutation({ mutationFn: (submittedVin: string) => apiFetch(`release-notes?vin=${encodeURIComponent(submittedVin)}`) })
+  const alertsMut = useMutation({ mutationFn: (submittedVin: string) => apiFetch(`recent-alerts?vin=${encodeURIComponent(submittedVin)}`) })
+  const serviceMut = useMutation({ mutationFn: (submittedVin: string) => apiFetch(`service-data?vin=${encodeURIComponent(submittedVin)}`) })
+  const vinSelected = vehicleOptions.some((option) => option.value === vin)
+  const resetSelection = (nextVin: string) => {
+    chargingMut.reset()
+    releaseNotesMut.reset()
+    alertsMut.reset()
+    serviceMut.reset()
+    setActiveAction(null)
+    setVin(nextVin)
+  }
 
   const activeMutation =
     activeAction === 'charging' ? chargingMut
@@ -645,36 +722,41 @@ function VehicleDataTools() {
           : activeAction === 'service' ? serviceMut
             : null
   const lastResult = activeMutation?.data
-  const resultError = typeof lastResult?.error === 'string' ? lastResult.error : undefined
+  const actionError = resultError(activeMutation?.error, lastResult)
+  const actionLabel = activeAction === 'charging' ? t('devtools.fleet.nearbyCharging', 'Nearby charging')
+    : activeAction === 'releaseNotes' ? t('devtools.fleet.releaseNotes', 'Release notes')
+      : activeAction === 'alerts' ? t('devtools.fleet.recentAlerts', 'Recent alerts')
+        : activeAction === 'service' ? t('devtools.fleet.serviceData', 'Service data') : ''
 
   return (
-    <ToolCard icon={Icons.vehicle} color="cyan" title={t('devtools.fleet.vehicleData', 'Vehicle Data')} description={t('devtools.fleet.vehicleDataDesc', 'Vehicle Data Desc')}>
+    <ToolCard icon={Icons.vehicle} color="cyan" title={t('devtools.fleet.vehicleData', 'Vehicle data')} description={t('devtools.fleet.vehicleDataDesc', 'Vehicle data desc')}>
       <div className="space-y-3">
         <Select
           label={t('common.vehicle', 'Vehicle')}
-          placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
+          placeholder={t('timeline.selectVehicle', 'Select vehicle')}
           options={vehicleOptions}
           value={vin}
-          onChange={(e) => setVin(e.target.value)}
+          onChange={(e) => resetSelection(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" loading={chargingMut.isPending} onClick={() => { setActiveAction('charging'); chargingMut.mutate() }} icon={<Icons.location className="h-3.5 w-3.5" />}>
-            {t('devtools.fleet.nearbyCharging', 'Nearby Charging')}
+          <Button variant="secondary" size="sm" disabled={!vinSelected} loading={chargingMut.isPending} onClick={() => { setActiveAction('charging'); chargingMut.mutate(vin) }} icon={<Icons.location className="h-3.5 w-3.5" />}>
+            {t('devtools.fleet.nearbyCharging', 'Nearby charging')}
           </Button>
-          <Button variant="secondary" size="sm" loading={releaseNotesMut.isPending} onClick={() => { setActiveAction('releaseNotes'); releaseNotesMut.mutate() }} icon={<Icons.fileText className="h-3.5 w-3.5" />}>
-            {t('devtools.fleet.releaseNotes', 'Release Notes')}
+          <Button variant="secondary" size="sm" disabled={!vinSelected} loading={releaseNotesMut.isPending} onClick={() => { setActiveAction('releaseNotes'); releaseNotesMut.mutate(vin) }} icon={<Icons.fileText className="h-3.5 w-3.5" />}>
+            {t('devtools.fleet.releaseNotes', 'Release notes')}
           </Button>
-          <Button variant="secondary" size="sm" loading={alertsMut.isPending} onClick={() => { setActiveAction('alerts'); alertsMut.mutate() }} icon={<Icons.severityWarn className="h-3.5 w-3.5" />}>
-            {t('devtools.fleet.recentAlerts', 'Recent Alerts')}
+          <Button variant="secondary" size="sm" disabled={!vinSelected} loading={alertsMut.isPending} onClick={() => { setActiveAction('alerts'); alertsMut.mutate(vin) }} icon={<Icons.severityWarn className="h-3.5 w-3.5" />}>
+            {t('devtools.fleet.recentAlerts', 'Recent alerts')}
           </Button>
-          <Button variant="secondary" size="sm" loading={serviceMut.isPending} onClick={() => { setActiveAction('service'); serviceMut.mutate() }} icon={<Icons.maintenance className="h-3.5 w-3.5" />}>
-            {t('devtools.fleet.serviceData', 'Service Data')}
+          <Button variant="secondary" size="sm" disabled={!vinSelected} loading={serviceMut.isPending} onClick={() => { setActiveAction('service'); serviceMut.mutate(vin) }} icon={<Icons.maintenance className="h-3.5 w-3.5" />}>
+            {t('devtools.fleet.serviceData', 'Service data')}
           </Button>
         </div>
         <ResultPanel
-          title={t('devtools.fleet.vehicleData', 'Vehicle Data')}
-          data={resultError ? undefined : lastResult}
-          error={resultError}
+          title={actionLabel || t('devtools.fleet.vehicleData', 'Vehicle data')}
+          context={activeMutation?.variables}
+          data={lastResult}
+          error={actionError}
           idle={!lastResult}
           idleMessage={t('devtools.vehicleDataIdle', 'Choose a vehicle and an action to see results.')}
         />
@@ -686,6 +768,7 @@ function VehicleDataTools() {
 /* ─── Onboarding Workflow ─────────────────────────────────────────────── */
 
 function OnboardingWorkflow() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const [currentStep, setCurrentStep] = useState(0)
   const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
@@ -716,7 +799,7 @@ function OnboardingWorkflow() {
   useEffect(() => {
     const autoDetected: Record<string, boolean> = { ...completed }
     if (keyStatus?.configured === true) autoDetected.keypair = true
-    if (fleetInfo?.authenticated === true) autoDetected.auth = true
+    if (fleetInfo?.has_valid_token === true) autoDetected.auth = true
     const changed = Object.keys(autoDetected).some((k) => autoDetected[k] !== completed[k])
     if (changed) setCompleted(autoDetected)
   }, [keyStatus, fleetInfo, completed])
@@ -732,9 +815,6 @@ function OnboardingWorkflow() {
     if (currentStep < ONBOARDING_STEPS.length - 1) setCurrentStep(currentStep + 1)
   }
 
-  // apiFetch turns request failures into a `{ error }` payload rather than a
-  // rejected query, so fold those payload errors into the banner too —
-  // otherwise a failed status/info fetch would leave the wizard silent.
   const keyStatusApiError = typeof keyStatus?.error === 'string' ? keyStatus.error : undefined
   const fleetInfoApiError = typeof fleetInfo?.error === 'string' ? fleetInfo.error : undefined
   const onboardingError = [keyStatusError, fleetInfoError, keyStatusApiError, fleetInfoApiError].find(Boolean)
@@ -749,13 +829,13 @@ function OnboardingWorkflow() {
 
       {/* Progress bar */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs text-[var(--text-secondary)]">
-          <span>{t('devtools.fleet.progress', 'Progress')}</span>
-          <span>{completedCount} / {ONBOARDING_STEPS.length} ({fmtInt(progressPct)}%)</span>
+        <div className="flex items-center justify-between">
+          <Caption>{t('devtools.fleet.progress', 'Progress')}</Caption>
+          <Caption>{fmtInt(completedCount)} / {fmtInt(ONBOARDING_STEPS.length)} ({fmtInt(progressPct)}%)</Caption>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-glass-border">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-neon-cyan to-neon-green transition-all duration-slow"
+            className="h-full rounded-full bg-[var(--semantic-info)] transition-all duration-slow motion-reduce:transition-none"
             style={{ width: `${progressPct}%` }}
           />
         </div>
@@ -772,7 +852,7 @@ function OnboardingWorkflow() {
             role="button"
             tabIndex={0}
             aria-current={i === currentStep ? 'step' : undefined}
-            aria-label={t('devtools.onboarding.goToStep', 'Go to step {{step}}: {{label}}', { step: i + 1, label: s.label })}
+            aria-label={t('devtools.onboarding.goToStep', 'Go to step {{step}}: {{label}}', { step: i + 1, label: t(s.labelKey, s.label) })}
             onClick={() => setCurrentStep(i)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -782,7 +862,7 @@ function OnboardingWorkflow() {
             }}
             className="cursor-pointer"
           >
-            {s.label}
+            {t(s.labelKey, s.label)}
           </Badge>
         ))}
       </div>
@@ -794,10 +874,10 @@ function OnboardingWorkflow() {
             {completed[step.id] ? <Icons.success className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-              {t('devtools.onboarding.stepLabel', 'Step {{step}}', { step: currentStep + 1 })}: {step.label}
-            </h3>
-            <p className="text-xs text-[var(--text-secondary)]">{step.desc}</p>
+            <PanelTitle>
+              {t('devtools.onboarding.stepLabel', 'Step {{step}}', { step: currentStep + 1 })}: {t(step.labelKey, step.label)}
+            </PanelTitle>
+            <HelperText>{t(step.descKey, step.desc)}</HelperText>
           </div>
         </div>
 
@@ -817,7 +897,7 @@ function OnboardingWorkflow() {
             onClick={markComplete}
             icon={<Icons.success className="h-3.5 w-3.5" />}
           >
-            {completed[step.id] ? t('devtools.fleet.completed', 'Completed') : t('devtools.fleet.markComplete', 'Mark Complete')}
+            {completed[step.id] ? t('devtools.fleet.completed', 'Completed') : t('devtools.fleet.markComplete', 'Mark complete')}
           </Button>
           <Button
             variant="ghost"
@@ -844,13 +924,13 @@ export function FleetApiSection() {
     <div className="space-y-6">
       {/* Onboarding wizard */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('devtools.fleet.setupWizard', 'Setup Wizard')}</h2>
+        <SectionTitle>{t('devtools.fleet.setupWizard', 'Setup wizard')}</SectionTitle>
         <OnboardingWorkflow />
       </div>
 
       {/* Fleet API tool grid */}
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('devtools.fleet.toolsTitle', 'Fleet API Tools')}</h2>
+        <SectionTitle>{t('devtools.fleet.toolsTitle', 'Fleet API tools')}</SectionTitle>
         <div className="grid gap-4 lg:grid-cols-2">
           <FleetApiConfigTool />
           <PartnerRegistrationTool />

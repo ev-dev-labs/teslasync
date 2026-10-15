@@ -12,7 +12,7 @@ export function ConflictWarnings({ conflicts }: ConflictWarningsProps) {
   const items = conflicts ?? [];
   if (items.length === 0) return null;
 
-  const title = t('automations.builder.conflict', 'Potential Conflict');
+  const title = t('automations.builder.conflict', 'Potential conflict');
 
   return (
     <div className="space-y-2">

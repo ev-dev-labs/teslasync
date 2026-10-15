@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/Button'
+import { typography } from '@/lib/tokens'
 import { useUnreadCount } from '@/api/hooks/useNotifications'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 
@@ -73,8 +74,8 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
   useEffect(() => {
     if (!open) return
     const onMouseDown = (e: MouseEvent) => {
-      const target = e.target as Node | null
-      if (!target) return
+      const target = e.target
+      if (!(target instanceof Node)) return
       if (containerRef.current?.contains(target)) return
       if (popoverRef.current?.contains(target)) return
       setOpen(false)
@@ -145,13 +146,17 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
         aria-controls={open ? `${headingId}-panel` : undefined}
         aria-label={triggerLabel}
         onClick={handleTriggerClick}
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+        className="relative h-9 w-9 p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]"
       >
         <Icons.notifications className="h-5 w-5" aria-hidden="true" />
         {count > 0 && (
           <span
             aria-hidden="true"
-            className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-2xs font-bold text-[var(--text-primary)] shadow ring-1 ring-rose-300/60"
+            className={cn(
+              'absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] px-1 text-[var(--semantic-info)] forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
+              typography.size['2xs'],
+              typography.weight.semibold,
+            )}
           >
             {display}
           </span>
@@ -168,7 +173,10 @@ export function NotificationBellPopover({ className }: NotificationBellPopoverPr
                 role="status"
                 aria-live="polite"
                 style={{ position: 'fixed', top: coords.top, right: coords.right, width: POPOVER_WIDTH_PX }}
-                className="z-[80] max-w-[calc(100vw-1rem)] rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-4 py-8 text-center text-xs text-[var(--text-muted)] shadow-2xl"
+                className={cn(
+                  'z-shell-panel max-w-shell-panel-viewport rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] px-4 py-8 text-center shadow-e2 forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
+                  typography.role.caption,
+                )}
               >
                 {t('notifications.bellPopover.loading', 'Loading…')}
               </div>

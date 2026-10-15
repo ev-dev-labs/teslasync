@@ -72,6 +72,8 @@ const dashboard: SavedDashboard = {
     { id: 'wid-2', widgetId: 'vehicle-hero-card' },
   ],
   layouts: baseLayouts,
+  createdAt: '2026-10-03T00:00:00Z',
+  updatedAt: '2026-10-03T00:00:00Z',
 };
 
 function renderGrid() {
@@ -164,6 +166,7 @@ describe('DashboardGrid — mobile flex stack', () => {
       expect(c.className).toMatch(/min-h-\[12rem\]/);
       expect(c.className).toMatch(/flex/);
       expect(c.className).toMatch(/flex-col/);
+      expect(c.querySelector('.widget-panel')).toHaveClass('flex', 'flex-col', 'flex-1');
     });
   });
 });

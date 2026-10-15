@@ -4,15 +4,15 @@
  * The page is a pure orchestrator: it fans a selected vehicle out into a
  * polled `/security/latest` query + a `/security` history query, derives the
  * page-level `isSecure` posture / range-filtered history / digital-twin
- * view-model, and hands those down to nine presentational panels (each with
+ *     view-model, and hands those down to nine presentational panels (each with
  * its own loading/error/empty state and tested separately).
  *
  * These tests isolate the ORCHESTRATION seam: the nine panels + the two
  * page shell (with workspace controls owned by the application header) + PageContainer + FadeIn are
  * stubbed so every derived prop the page computes is observable, while the
- * real helpers (`isSecure`, `buildTwinStateFromAdmin`, the client-side range
- * filter), the real `AlertBanner`, and the real TanStack Query wiring for the
- * inline latest query all execute.
+ * real helpers (`isSecure`, `buildTwinStateFromAdmin`, the exact interval
+ * guard), the real `AlertBanner`, and the real TanStack Query wiring for the
+ * latest-state hook all execute.
  *
  * Coverage:
  *   1. Happy/secure path — every section renders, the summary reports the
@@ -26,8 +26,8 @@
  *      security panels remain visible.
  *   4. No selected vehicle → the latest query is DISABLED (request never
  *      fires) and the panels honestly show "no data".
- *   5+6. The client-side range filter narrows / widens the history handed to
- *      the summary + tables.
+ *   5+6. Workspace instants scope the server history request and guard the
+ *      history handed to the summary + tables, including DST boundaries.
  *   7. Loading fans out to the summary + panels.
  *   8. Errors fan out, and retry is wired to the CORRECT refetch (latest vs
  *      history).
@@ -41,12 +41,14 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { SecurityEvent } from '@/types/admin';
 import type { DataSourceDescriptor } from '@/components/feedback';
+import { deriveDataState, type DataState } from '@/api/dataState';
 
 /* ------------------------------------------------------------------ */
 /*  Props observed by the stubbed panels (serialized into the DOM).    */
 /* ------------------------------------------------------------------ */
 interface StubProps {
-  isSecure?: boolean;
+  sourceState?: DataState<unknown>;
+  isSecure?: boolean | null;
   lastLockChange?: string;
   sentryUptime?: number;
   totalEvents?: number;
@@ -63,6 +65,35 @@ interface StubProps {
   history?: unknown[];
   timelineEvents?: unknown[];
 }
+
+vi.mock('../components/operationalbrief-r-z/SecurityOperationalBrief', () => ({
+  SecurityOperationalBrief: (p: {
+    isSecure: boolean | null;
+    totalEvents: number | null;
+    sentryUptime: number | null;
+    latestLoading: boolean;
+    historyLoading: boolean;
+    lastLockChange?: string;
+    observedAt?: string;
+  }) => (
+    <div
+      data-testid="sum-row"
+      data-secure={String(p.isSecure)}
+      data-total={String(p.totalEvents)}
+      data-uptime={String(p.sentryUptime)}
+      data-loading={String(p.latestLoading || p.historyLoading)}
+      data-last-lock={p.lastLockChange}
+      data-observed-at={String(p.observedAt)}
+    />
+  ),
+}));
+
+vi.mock('../components/operationalbrief-r-z/SecurityStatisticsBrief', () => ({
+  SecurityStatisticsBrief: (p: StubProps) => (
+    <div data-testid="security-stats" data-total={String(p.securityStats?.total ?? 0)} data-uptime={String(p.sentryUptime)}
+      data-loading={String(p.isLoading)} />
+  ),
+}));
 
 /* ── i18n: return the English fallback, interpolating {{vars}}. ────── */
 vi.mock('react-i18next', () => ({
@@ -96,7 +127,7 @@ vi.mock('@/components/layout', async () => {
     typeof import('@/components/feedback/DataSourceNotice')
   >('@/components/feedback/DataSourceNotice');
   return {
-    PageContainer: ({
+    PageLayout: ({
       title,
       subtitle,
       actions,
@@ -179,7 +210,8 @@ vi.mock('../components/security-access', () => ({
     />
   ),
   LiveVehicleState: (p: StubProps) => (
-    <div data-testid="live-state" data-haslatest={String(!!p.latest)} data-loading={String(p.isLoading)} />
+    <div data-testid="live-state" data-haslatest={String(!!p.latest)} data-loading={String(p.isLoading)}
+      data-provenance={p.sourceState?.provenance} data-status={p.sourceState?.status} />
   ),
   WindowStatusDetail: (p: StubProps) => (
     <div data-testid="window-detail" data-haslatest={String(!!p.latest)} data-loading={String(p.isLoading)} />
@@ -190,6 +222,8 @@ vi.mock('../components/security-access', () => ({
       data-buckets={String(p.sentryBuckets?.length ?? 0)}
       data-loading={String(p.isLoading)}
       data-haserror={String(!!p.error)}
+      data-status={p.sourceState?.status}
+      data-paused={String(p.sourceState?.isRefreshBlocked)}
     />
   ),
   SecurityStatistics: (p: StubProps) => (
@@ -200,14 +234,16 @@ vi.mock('../components/security-access', () => ({
     />
   ),
   EventHistoryTable: (p: StubProps) => (
-    <div data-testid="history-table" data-count={String(p.history?.length ?? 0)} data-haserror={String(!!p.error)}>
+    <div data-testid="history-table" data-count={String(p.history?.length ?? 0)} data-haserror={String(!!p.error)}
+      data-status={p.sourceState?.status} data-paused={String(p.sourceState?.isRefreshBlocked)}>
       <button type="button" data-testid="history-retry" onClick={() => p.onRetry?.()}>
         retry
       </button>
     </div>
   ),
   EventTimeline: (p: StubProps) => (
-    <div data-testid="timeline" data-count={String(p.timelineEvents?.length ?? 0)} data-haserror={String(!!p.error)} />
+    <div data-testid="timeline" data-count={String(p.timelineEvents?.length ?? 0)} data-haserror={String(!!p.error)}
+      data-status={p.sourceState?.status} data-paused={String(p.sourceState?.isRefreshBlocked)} />
   ),
 }));
 
@@ -216,7 +252,10 @@ vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
 vi.mock('@/hooks/useRangeState', () => ({ useRangeState: vi.fn() }));
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vi.fn() }));
-vi.mock('@/api/hooks/useAdmin', () => ({ useSecurityEvents: vi.fn() }));
+vi.mock('@/api/hooks/useAdmin', async () => ({
+  ...await vi.importActual<typeof import('@/api/hooks/useAdmin')>('@/api/hooks/useAdmin'),
+  useSecurityEvents: vi.fn(),
+}));
 
 /* ── API client: keep everything real except `request`. ───────────── */
 vi.mock('@/api/client', async () => {
@@ -283,15 +322,20 @@ function setVehicle(vehicleId: number | null) {
     vehicleId,
     vehicle: null,
     vehicles: [],
+    vehiclesState: deriveDataState({ data: [] }),
     setVehicleId: vi.fn(),
   });
 }
 
 let setRangeSpy: ReturnType<typeof vi.fn>;
 function setRange(start: string, end: string) {
+  const endExclusive = new Date(`${end}T00:00:00Z`);
+  endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
   mockedUseRangeState.mockReturnValue({
     start,
     end,
+    startInstant: new Date(`${start}T00:00:00Z`).toISOString(),
+    endInstantExclusive: endExclusive.toISOString(),
     setRange: setRangeSpy,
   } as unknown as ReturnType<typeof useRangeState>);
 }
@@ -319,8 +363,13 @@ function setHistory(opts: {
   refetch?: () => void;
 }) {
   mockedUseSecurityEvents.mockReturnValue({
-    data: opts.data ?? [],
+    data: opts.data ?? (opts.error ? undefined : []),
     isLoading: opts.isLoading ?? false,
+    isError: opts.error != null,
+    isSuccess: opts.error == null,
+    isPending: opts.isLoading ?? false,
+    isFetching: opts.isLoading ?? false,
+    fetchStatus: opts.isLoading ? 'fetching' : 'idle',
     error: opts.error ?? null,
     refetch: opts.refetch ?? vi.fn(),
   } as unknown as ReturnType<typeof useSecurityEvents>);
@@ -367,7 +416,7 @@ describe('SecurityAccessPage — secure happy path', () => {
     await waitFor(() => expect(screen.getByTestId('twin')).toHaveAttribute('data-hasdata', 'true'));
 
     // Page chrome + a11y landmarks (each bento section is a labelled region).
-    expect(screen.getByRole('heading', { name: 'Security & Access' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Security & access' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Summary metrics' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Security posture' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Live vehicle state' })).toBeInTheDocument();
@@ -411,7 +460,7 @@ describe('SecurityAccessPage — secure happy path', () => {
     expect(calledUrl).not.toContain('/api/v1');
 
     // Document title registered.
-    expect(mockedUsePageTitle).toHaveBeenCalledWith('Security & Access');
+    expect(mockedUsePageTitle).toHaveBeenCalledWith('Security & access');
   });
 });
 
@@ -477,12 +526,13 @@ describe('SecurityAccessPage — no vehicle selected', () => {
     expect(mockedRequest).not.toHaveBeenCalled();
     expect(screen.getByTestId('twin')).toHaveAttribute('data-hasdata', 'false');
     expect(screen.getByTestId('status-cards')).toHaveAttribute('data-haslatest', 'false');
+    expect(screen.getByTestId('sum-row')).toHaveAttribute('data-secure', 'null');
     // No latest → isSecure defaults to true → no false-positive warning.
     expect(screen.queryByText('Vehicle may not be secure')).toBeNull();
   });
 });
 
-describe('SecurityAccessPage — client-side range filter', () => {
+describe('SecurityAccessPage — server-scoped workspace range', () => {
   const events = [
     makeEvent('e1', '2020-01-05T00:00:00Z'),
     makeEvent('e2', '2020-02-10T00:00:00Z'),
@@ -498,6 +548,32 @@ describe('SecurityAccessPage — client-side range filter', () => {
     await screen.findByTestId('sum-row');
     expect(screen.getByTestId('sum-row')).toHaveAttribute('data-total', '1');
     expect(screen.getByTestId('history-table')).toHaveAttribute('data-count', '1');
+    expect(mockedUseSecurityEvents).toHaveBeenCalledWith(
+      '1', '2020-02-01T00:00:00.000Z', '2020-02-29T00:00:00.000Z',
+    );
+  });
+
+  it('sends timezone-aware instants and excludes the exact end across a DST-shortened day', async () => {
+    setRange('2026-03-08', '2026-03-08');
+    mockedUseRangeState.mockReturnValue({
+      ...mockedUseRangeState(),
+      startInstant: '2026-03-08T08:00:00Z',
+      endInstantExclusive: '2026-03-09T07:00:00Z',
+    });
+    setHistory({ data: [
+      makeEvent('before', '2026-03-08T07:59:59.999Z'),
+      makeEvent('start', '2026-03-08T08:00:00Z'),
+      makeEvent('last', '2026-03-09T06:59:59.999Z'),
+      makeEvent('end', '2026-03-09T07:00:00Z'),
+    ] });
+    renderPage();
+    await screen.findByTestId('sum-row');
+    expect(mockedUseSecurityEvents).toHaveBeenCalledWith(
+      '1', '2026-03-08T08:00:00Z', '2026-03-09T07:00:00Z',
+    );
+    expect(screen.getByTestId('sum-row')).toHaveAttribute('data-total', '2');
+    expect(screen.getByTestId('history-table')).toHaveAttribute('data-count', '2');
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
   });
 
   it('passes the whole history through when the window spans every event', async () => {
@@ -529,7 +605,7 @@ describe('SecurityAccessPage — loading state', () => {
 describe('SecurityAccessPage — error + retry wiring', () => {
   it('routes retry to the correct refetch: history panels → history, live panels → latest', async () => {
     const historyRefetch = vi.fn();
-    setHistory({ data: [], error: new Error('hist boom'), refetch: historyRefetch });
+    setHistory({ error: new Error('hist boom'), refetch: historyRefetch });
     mockedRequest.mockRejectedValue(new Error('latest boom'));
 
     renderPage();
@@ -562,5 +638,95 @@ describe('SecurityAccessPage — action controls', () => {
     expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
     expect(setRangeSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('SecurityAccessPage — retained history', () => {
+  it('keeps the latest posture, twin, windows and live-state panels after latest refresh fails', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('twin')).toHaveAttribute('data-hasdata', 'true'));
+    mockedRequest.mockRejectedValue(new Error('latest refresh failed'));
+    fireEvent.click(screen.getByTestId('twin-retry'));
+    await screen.findByText('Data may be stale');
+
+    expect(screen.getByTestId('sum-row')).toHaveAttribute('data-secure', 'true');
+    expect(screen.getByTestId('twin')).toHaveAttribute('data-locked', 'true');
+    expect(screen.getByTestId('twin')).toHaveAttribute('data-haserror', 'false');
+    expect(screen.getByTestId('status-cards')).toHaveAttribute('data-haslatest', 'true');
+    expect(screen.getByTestId('status-cards')).toHaveAttribute('data-haserror', 'false');
+    expect(screen.getByTestId('live-state')).toHaveAttribute('data-haslatest', 'true');
+    expect(screen.getByTestId('window-detail')).toHaveAttribute('data-haslatest', 'true');
+    expect(screen.getByTestId('history-table')).toHaveAttribute('data-haserror', 'false');
+  });
+
+  describe('SecurityAccessPage — evidence trust', () => {
+    it('keeps a successful empty latest object unknown without inventing an observation timestamp', async () => {
+      mockedRequest.mockResolvedValue({});
+      renderPage();
+      await waitFor(() => expect(screen.getByTestId('live-state')).toHaveAttribute('data-status', 'unavailable'));
+      expect(screen.getByTestId('live-state')).toHaveAttribute('data-provenance', 'unknown');
+      expect(screen.getByTestId('sum-row')).toHaveAttribute('data-secure', 'null');
+      expect(screen.getByTestId('sum-row')).toHaveAttribute('data-observed-at', 'undefined');
+      expect(screen.queryByText('Vehicle may not be secure')).toBeNull();
+    });
+
+    it('downgrades retained latest state after a failed refresh without dropping false readings', async () => {
+      mockedRequest.mockResolvedValue(makeLatest({ locked: false }));
+      renderPage();
+      await waitFor(() => expect(screen.getByTestId('live-state')).toHaveAttribute('data-provenance', 'live'));
+      mockedRequest.mockRejectedValue(new Error('refresh failed'));
+      fireEvent.click(screen.getByTestId('twin-retry'));
+      await waitFor(() => expect(screen.getByTestId('live-state')).toHaveAttribute('data-provenance', 'cached'));
+      expect(screen.getByTestId('sum-row')).toHaveAttribute('data-secure', 'false');
+    });
+
+    it('propagates cold-paused history trust to every historical renderer', async () => {
+      setHistory({});
+      mockedUseSecurityEvents.mockReturnValue({
+        ...mockedUseSecurityEvents('1'), data: undefined, isPending: true,
+        isSuccess: false, isLoading: false, isFetching: false, fetchStatus: 'paused',
+        status: 'pending', error: null, isError: false, isLoadingError: false,
+        isRefetchError: false, isPlaceholderData: false,
+      });
+      renderPage();
+      for (const id of ['history-table', 'sentry-chart', 'timeline']) {
+        expect(screen.getByTestId(id)).toHaveAttribute('data-status', 'initial');
+        expect(screen.getByTestId(id)).toHaveAttribute('data-paused', 'true');
+      }
+      expect(screen.getByTestId('sum-row')).toHaveAttribute('data-total', 'null');
+      expect(screen.getByTestId('security-stats')).toHaveAttribute('data-loading', 'true');
+      expect(screen.getAllByText('Refresh paused').length).toBeGreaterThan(0);
+    });
+
+    it('uses workspace-local Sentry days and the latest transition from ascending history', async () => {
+      mockedUseRangeState.mockReturnValue({ ...mockedUseRangeState(), timezone: 'America/Los_Angeles' });
+      setHistory({ data: [
+        makeEvent('a', '2026-10-11T01:00:00Z', { locked: false }),
+        makeEvent('b', '2026-10-11T02:00:00Z', { locked: true }),
+        makeEvent('c', '2026-10-11T09:00:00Z', { locked: false }),
+      ] });
+      renderPage();
+      expect(screen.getByTestId('sum-row')).toHaveAttribute('data-last-lock', '2026-10-11T09:00:00Z');
+      expect(screen.getByTestId('sentry-chart')).toHaveAttribute('data-buckets', '2');
+    });
+  });
+
+  it('keeps the event count, sentry chart, timeline and source-specific retry after history refresh fails', async () => {
+    const historyRefetch = vi.fn();
+    setHistory({
+      data: [makeEvent('retained-event', '2020-02-10T00:00:00Z')],
+      error: new Error('history refresh failed'),
+      refetch: historyRefetch,
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('twin')).toHaveAttribute('data-hasdata', 'true'));
+    expect(screen.getByTestId('sum-row')).toHaveAttribute('data-total', '1');
+    expect(screen.getByTestId('history-table')).toHaveAttribute('data-count', '1');
+    expect(screen.getByTestId('history-table')).toHaveAttribute('data-haserror', 'false');
+    expect(screen.getByTestId('sentry-chart')).toHaveAttribute('data-haserror', 'false');
+    expect(screen.getByTestId('timeline')).toHaveAttribute('data-haserror', 'false');
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('history-retry'));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -18,6 +18,7 @@ import { usePackActions } from '../hooks/usePackActions';
 import { useCatalog } from '../hooks/useCatalog';
 import { VerificationStatusBadge } from './VerificationStatusBadge';
 import { CapabilityRequestList } from './CapabilityRequestList';
+import { PackRepositorySource } from './PackRepositorySource';
 import { isEnableAllowed } from '../lib/trust';
 import type { InstalledPackRecord } from '../lib/packRepository';
 
@@ -33,16 +34,16 @@ function EnabledToggleCell({ record }: { record: InstalledPackRecord }) {
     <div className="flex items-center gap-2">
       <Toggle
         checked={record.enabled && allowed}
+        disabled={!interactive}
         onChange={(checked) => {
           if (!interactive) return;
           setEnabled.mutate({ packId: record.packId, enabled: checked });
         }}
         size="sm"
         aria-label={t('intelPacks.installed.toggleEnabled', 'Enable {{name}}', { name: record.envelope.manifest.name })}
-        className={!interactive ? 'opacity-50 pointer-events-none' : undefined}
       />
       {!allowed && (
-        <Caption className="text-amber-300">
+        <Caption className="text-[var(--semantic-warning)]">
           {t('intelPacks.installed.noTrustDecision', 'No trust decision on record')}
         </Caption>
       )}
@@ -88,10 +89,12 @@ export function InstalledInventoryPanel() {
   const columns: Column<InstalledPackRecord>[] = [
     {
       key: 'name',
+      filterValue: (r) => r.packId,
+      filterValueLabel: (_value, r) => r.envelope.manifest.name,
       header: t('intelPacks.installed.colName', 'Pack'),
       render: (r) => (
         <div className="min-w-0">
-          <p className="text-sm font-medium text-[var(--text-primary)] truncate">{r.envelope.manifest.name}</p>
+          <p className="text-sm font-medium text-[var(--text-primary)] break-words">{r.envelope.manifest.name}</p>
           <p className="text-xs text-[var(--text-muted)]">v{r.envelope.manifest.version}</p>
         </div>
       ),
@@ -110,15 +113,15 @@ export function InstalledInventoryPanel() {
     },
     {
       key: 'actions',
-      header: '',
+      header: t('common.actions', 'Actions'),
       render: (r) => {
         const catalogEntry = catalogByPackId.get(r.packId);
         const canUpgrade = catalogEntry != null && catalogEntry.envelope.manifest.version !== r.envelope.manifest.version;
         return (
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             {canUpgrade && (
-              <Badge variant="warning" size="sm" title={t('intelPacks.installed.upgradeHint', 'Open the Catalog tab to review and upgrade')}>
-                {t('intelPacks.installed.upgradeAvailable', 'v{{version}} available — see Catalog', { version: catalogEntry!.envelope.manifest.version })}
+              <Badge variant="warning" size="sm" title={t('intelPacks.installed.upgradeHint', 'Open the catalog tab to review and upgrade')}>
+                {t('intelPacks.installed.upgradeAvailable', 'v{{version}} available — see catalog', { version: catalogEntry!.envelope.manifest.version })}
               </Badge>
             )}
             {r.previousVersions.length > 0 && (
@@ -146,48 +149,61 @@ export function InstalledInventoryPanel() {
     },
   ];
 
-  if (rows.length === 0) {
-    return (
-      // no-action: the install control lives in the adjacent Catalog tab of this same marketplace page, not in this Installed tab.
-      <EmptyState
-        icon={<PackageOpen className="h-10 w-10" />}
-        message={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the Catalog tab.')}
-      />
-    );
-  }
-
   return (
-    <div className="space-y-3">
-      <DataTable
-        tableId="intelligence-packs:installed"
-        columns={columns}
-        data={rows}
-        keyExtractor={(r) => r.packId}
-        expandable
-        expandedKeys={expandedKeys}
-        onExpandedChange={setExpandedKeys}
-        renderExpanded={(r) => <ExpandedDetail record={r} />}
-        emptyMessage={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the Catalog tab.')}
-        mobileColumns={['name', 'enabled']}
-        name="IntelligencePacksInstalled"
-      />
+    <PackRepositorySource query={installedQuery} label={t('intelPacks.tabs.installed', 'Installed')}>
+      {rows.length === 0 ? (
+        // no-action: the install control lives in the adjacent Catalog tab of this same marketplace page, not in this Installed tab.
+        <EmptyState
+          icon={<PackageOpen className="h-10 w-10" />}
+          message={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the catalog tab.')}
+        />
+      ) : (
+        <div className="space-y-3">
+          <DataTable
+            enableValueFilters
+            tableId="intelligence-packs:installed"
+            columns={columns}
+            data={rows}
+            keyExtractor={(r) => r.packId}
+            expandable
+            expandedKeys={expandedKeys}
+            onExpandedChange={setExpandedKeys}
+            renderExpanded={(r) => <ExpandedDetail record={r} />}
+            emptyMessage={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the catalog tab.')}
+            mobilePresentation={{
+              roles: { name: 'title', verification: 'badge' },
+              displayValue: (r, key) => key === 'name'
+                ? `${r.envelope.manifest.name} · v${r.envelope.manifest.version}`
+                : key === 'verification' ? r.verification.status : null,
+              inlineActions: (r) => (
+                <>
+                  <EnabledToggleCell record={r} />
+                  {columns.find((column) => column.key === 'actions')?.render(r)}
+                </>
+              ),
+            }}
+            rowLabel={(r) => r.envelope.manifest.name}
+            name="IntelligencePacksInstalled"
+          />
 
-      <ConfirmDialog
-        open={uninstallTarget != null}
-        title={t('intelPacks.confirm.uninstallTitle', 'Uninstall pack?')}
-        message={t('intelPacks.confirm.uninstallMessage', 'This removes "{{name}}" and its version history from this device. This cannot be undone.', {
-          name: uninstallTarget?.envelope.manifest.name ?? '',
-        })}
-        variant="danger"
-        confirmLabel={t('intelPacks.installed.uninstall', 'Uninstall')}
-        cancelLabel={t('common.cancel', 'Cancel')}
-        loading={uninstall.isPending}
-        onConfirm={async () => {
-          if (uninstallTarget) await uninstall.mutateAsync(uninstallTarget.packId);
-          setUninstallTarget(null);
-        }}
-        onCancel={() => setUninstallTarget(null)}
-      />
-    </div>
+          <ConfirmDialog
+            open={uninstallTarget != null}
+            title={t('intelPacks.confirm.uninstallTitle', 'Uninstall pack?')}
+            message={t('intelPacks.confirm.uninstallMessage', 'This removes "{{name}}" and its version history from this device. This cannot be undone.', {
+              name: uninstallTarget?.envelope.manifest.name ?? '',
+            })}
+            variant="danger"
+            confirmLabel={t('intelPacks.installed.uninstall', 'Uninstall')}
+            cancelLabel={t('common.cancel', 'Cancel')}
+            loading={uninstall.isPending}
+            onConfirm={async () => {
+              if (uninstallTarget) await uninstall.mutateAsync(uninstallTarget.packId);
+              setUninstallTarget(null);
+            }}
+            onCancel={() => setUninstallTarget(null)}
+          />
+        </div>
+      )}
+    </PackRepositorySource>
   );
 }

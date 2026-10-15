@@ -1,0 +1,18 @@
+[
+  {
+    "path": "web\\e2e\\operationalbrief-contracts\\specialized-home-energy.supported.spec.ts",
+    "currentCopy": ".agents\\artifacts\\atomic-browser-home-source-20261007T062501Z\\current\\specialized-home-energy.supported.spec.ts",
+    "sha256": "9843FE43414139222E444F3E1315673A193B38CC290906D0229A8880DFD3AB75",
+    "copySha256": "9843FE43414139222E444F3E1315673A193B38CC290906D0229A8880DFD3AB75",
+    "lines": 272,
+    "bytes": 16334
+  },
+  {
+    "path": "web\\e2e\\operationalbrief-contracts\\specialized-home-energy.supported.fixtures.ts",
+    "currentCopy": ".agents\\artifacts\\atomic-browser-home-source-20261007T062501Z\\current\\specialized-home-energy.supported.fixtures.ts",
+    "sha256": "9EADEF650BB2713AA44F9F219E1296F929C421E0D9EE177EF4DD6C0F8CA4291F",
+    "copySha256": "9EADEF650BB2713AA44F9F219E1296F929C421E0D9EE177EF4DD6C0F8CA4291F",
+    "lines": 133,
+    "bytes": 6872
+  }
+]

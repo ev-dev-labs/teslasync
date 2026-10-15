@@ -9,7 +9,7 @@
  *   - loading (busy skeleton, shell still visible, no list),
  *   - error (QueryError retry wired to onRetry),
  *   - empty (placeholder, no list),
- *   - null/NaN safety (bad rollups coerced to 0, sort not scrambled),
+ *   - null/NaN safety (unknown rollups stay unknown, sort not scrambled),
  *   - the blank / whitespace-name fallback,
  *   - a11y (decorative header icon + accessible list name).
  *
@@ -80,6 +80,31 @@ describe('FleetComparisonPanel', () => {
     cleanup()
   })
 
+  it('uses neutral secondary title ink without changing the saved vehicle palette or bar scale', () => {
+    renderPanel({
+      entries: [
+        makeEntry({ id: 'a', name: 'Alpha', distance: 50, efficiency: 140 }),
+        makeEntry({ id: 'b', name: 'Bravo', distance: 200, efficiency: 160 }),
+      ],
+    })
+
+    const title = screen.getByRole('heading', { name: 'Fleet comparison' })
+    expect(title).toHaveClass('text-[var(--text-secondary)]')
+    expect(title.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]')
+    expect(title.querySelector('svg')).not.toHaveClass('text-cyan-300')
+
+    const items = screen.getAllByRole('listitem')
+    expect(items).toHaveLength(2)
+    for (const [index, value] of [200, 50].entries()) {
+      const bar = within(items[index]).getByRole('progressbar')
+      expect(bar).toHaveAttribute('aria-valuenow', String(value))
+      expect(bar).toHaveAttribute('aria-valuemax', '200')
+      expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({
+        background: `linear-gradient(90deg, ${hoisted.palette[index]}99, ${hoisted.palette[index]})`,
+      })
+    }
+  })
+
   it('renders one row per vehicle sorted by distance (desc) with km + Wh/km labels', () => {
     renderPanel({
       entries: [
@@ -121,7 +146,7 @@ describe('FleetComparisonPanel', () => {
     // Panel title (shell) is always present — never a blank panel.
     expect(screen.getByText(/fleet comparison/i)).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
-    expect(container.querySelector('.animate-pulse')).toBeTruthy()
+    expect(container.querySelector('[aria-busy="true"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).toBeTruthy()
     // The panel announces its busy state to assistive tech.
     expect(container.querySelector('[aria-busy="true"]')).toBeTruthy()
   })
@@ -153,22 +178,25 @@ describe('FleetComparisonPanel', () => {
     ).toBeInTheDocument()
   })
 
-  it('coerces null / undefined / NaN rollups to 0 and keeps them below real distances in the sort', () => {
+  it('preserves unknown rollups without a magnitude and sorts them after measured zero', () => {
     renderPanel({
       entries: [
-        // NaN distance is the ordering trap: with `?? 0` it slips through and
-        // scrambles the comparator; `safeNumber` pins it to 0.
         makeEntry({ id: 'bad', name: 'Bad', distance: NaN, efficiency: null as unknown as number }),
+        makeEntry({ id: 'zero', name: 'Measured zero', distance: 0, efficiency: 0 }),
         makeEntry({ id: 'good', name: 'Good', distance: 100, efficiency: 150 }),
       ],
     })
 
     const items = screen.getAllByRole('listitem')
-    expect(items).toHaveLength(2)
-    // 100 km real distance must outrank the coerced-to-0 bad rollup.
+    expect(items).toHaveLength(3)
     expect(items[0]).toHaveTextContent('Good')
-    expect(items[1]).toHaveTextContent('Bad')
+    expect(items[1]).toHaveTextContent('Measured zero')
     expect(items[1]).toHaveTextContent('0 km · 0.00 Wh/km')
+    expect(within(items[1]).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expect(items[2]).toHaveTextContent('Bad')
+    expect(items[2]).toHaveTextContent('— km · — Wh/km')
+    expect(within(items[2]).getByRole('progressbar')).not.toHaveAttribute('aria-valuenow')
+    expect(items[2].querySelector('[data-metric-fill]')).toBeNull()
   })
 
   it('falls back to "Unnamed" for blank and whitespace-only vehicle names', () => {

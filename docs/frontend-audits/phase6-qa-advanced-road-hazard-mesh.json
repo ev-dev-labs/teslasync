@@ -1,0 +1,511 @@
+{
+  "item": "phase6-qa-advanced-road-hazard-mesh",
+  "kind": "read-only-finished-page-QA",
+  "status": "SOURCE_REVIEW_COMPLETE_WITH_FINDINGS",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+  "routes": ["/intelligence/road-hazards"],
+  "purpose": "Review accepted coarse-cell hazard presentation and its directly used presentation, trust, formatting, pagination, and route contracts without requesting hazard, location, identity, or report data.",
+  "primaryGoal": "Identify reproducible source defects while preserving privacy, query scope, complete sections, and truthful asynchronous evidence states.",
+  "reviewedAtUtc": "2026-10-13T18:56:55.461Z",
+  "budget": {
+    "startedAtUtc": "2026-10-13T18:46:52.598Z",
+    "targetMinutes": 10,
+    "maximumMinutes": 20,
+    "hardStopMinutes": 25,
+    "maximumCommandMinutes": 8
+  },
+  "ownership": {
+    "writtenFiles": [
+      "docs\\frontend-audits\\phase6-qa-advanced-road-hazard-mesh.json",
+      "logs\\phase6-qa-advanced-road-hazard-mesh.log"
+    ],
+    "logIgnoredBy": ".gitignore:80",
+    "sourceChanges": "NONE",
+    "priorPhase6QaReportsRead": "NONE",
+    "authorization": "Exact existing finished-page-QA assignment at migration-queue.md:235; report and ignored log only.",
+    "release": "ALL_RELEASED_AT_RETURN",
+    "postReturnWrites": "NONE"
+  },
+  "acceptance": {
+    "sourceReview": "COMPLETED",
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "freshTests": "NOTRUN",
+    "fullPage": "NOTRUN",
+    "browser": "NOTRUN",
+    "http": "NOTRUN",
+    "typescript": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "suites": "NOTRUN",
+    "visualMobileDesktopThemes": "NOTRUN",
+    "keyboardScreenReaderContrastForcedColors": "NOTRUN",
+    "reason": "Explicit source-only assignment prohibits browser/HTTP/live data, mutations, Git, Docker, installs, servers, helpers, extensions, subagents, global TSC, and suites. Static counts are not application acceptance."
+  },
+  "dataSources": [
+    {
+      "hook": "useRoadHazards",
+      "owner": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "lines": [29, 37, 49, 71, 73, 91, 94],
+      "pageCall": "RoadHazardMeshPage.tsx:34: useRoadHazards(vehicleId, 18, (page - 1) * 18)",
+      "path": "/advanced-intelligence/road-hazards",
+      "queryParameters": ["vehicle_id", "limit", "offset"],
+      "queryKey": ["advanced-intelligence", "road-hazards", "vehicleId", "limit", "offset"],
+      "enablement": "vehicleId != null && vehicleId > 0",
+      "cancellation": "TanStack query signal is passed through request<T>(..., { signal }).",
+      "transport": "GET route source contract only; no request was executed.",
+      "schema": "HazardPage / HazardCluster in web\\src\\types\\advancedIntelligence.ts:132-146; shared types inspected read-only, not edited."
+    }
+  ],
+  "routeSourceContract": {
+    "result": "MATCHED_BY_BOUNDED_SOURCE_INSPECTION",
+    "applicationMount": "web\\src\\App.tsx:233 lazy-loads the accepted page; :767 mounts intelligence/road-hazards.",
+    "hookRoot": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:29 sets /advanced-intelligence; :94 selects road-hazards; :49-55 builds snake_case vehicle_id, limit, offset.",
+    "clientPrefix": "web\\src\\api\\client.ts:94 prepends /api/v1 in normal API mode; :74-79 defensively normalizes paths.",
+    "backendComposition": "internal\\api\\router.go:3210 owns /api/v1; :3960 mounts advancedIntelligenceHandler.",
+    "backendRoute": "internal\\handler\\v1\\advancedintelligence\\handler.go:71 mounts /advanced-intelligence; :75 registers GET /road-hazards.",
+    "backendParameters": "handler.go:405-419 reads positive vehicle_id, limit 1..100, offset 0..100000. The page uses limit=18.",
+    "workspace": {
+      "vehicle": "Enabled by getWorkspaceRouteScope: this route is absent from the vehicle-disabled paths/prefixes. The page consumes useSelectedVehicle and does not duplicate its picker.",
+      "range": "Disabled: /intelligence/road-hazards is absent from RANGE_ENABLED_PATHS. Neither the page nor its list hook consumes date bounds; the inspected handler accepts vehicle/limit/offset only.",
+      "assessment": "The lack of useRangeState is not reported as a confirmed defect for this non-range-owning route. Last-seen/window timestamps alone do not establish an authorized date-filter contract.",
+      "source": "web\\src\\lib\\workspaceScope.ts:23-77, 95-136, 158-170"
+    },
+    "limits": "No backend service/repository behavior, actual response, authorization, privacy threshold, total semantics, or runtime route acceptance was verified. Verification helper scripts were inspected as guidance, not executed."
+  },
+  "components": [
+    {"name": "PageLayout, Grid", "owner": "@/components/layout", "role": "Existing page composition and allocated-container layout; no alternative shell."},
+    {"name": "AlertBanner", "owner": "@/components/feedback", "role": "Always-mounted coarse-cell privacy explanation."},
+    {"name": "InsightPanel", "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "role": "Hazard source loading/error/retention/empty state and freshness boundary."},
+    {"name": "EvidencePanel", "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "role": "Quality, supporting evidence, limitations, and explicitly unsupported capabilities."},
+    {"name": "Table, Card, Badge, Icon, Text", "owner": "@/components/ui", "role": "Semantic embedded record matrices and existing restrained presentation primitives."},
+    {"name": "Pagination", "owner": "web\\src\\components\\ui\\Pagination.tsx", "role": "Existing page navigation and direct jump; inspected read-only for the page's pending/failure interaction."},
+    {"name": "useNumberFormatting, formatRelative, formatDateTime", "owner": "Existing hooks/lib formatters", "role": "Locale-aware numeric display and central date formatting; no competing formatter."},
+    {"name": "useDataState / deriveDataState", "owner": "Existing hooks/API trust contract", "role": "Distinguishes first failure from retained refresh failure/paused refresh; inspected read-only."}
+  ],
+  "confirmedIssues": [
+    {
+      "id": "RHM-01",
+      "priority": "P1",
+      "classification": "CONFIRMED_SOURCE_DEFECT",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 138,
+      "relatedLocations": [
+        {"file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx", "lines": [35, 138, 139, 140, 141]},
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "lines": [14, 35, 40, 70, 99, 115]},
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "lines": [43, 44, 48]}
+      ],
+      "rule": "MDC-026: unresolved/error evidence is not authoritative empty or unsupported evidence.",
+      "detail": "EvidencePanel receives payload fields but no query/state/error/retry metadata. Its inner InsightPanel uses the default empty=false with no query and therefore resolves ready even before a response exists. During first loading, first paused load, first failure, or no selection, it states 'Quality metadata is unsupported.', 'No supporting evidence was returned.', and 'No additional limitations were returned.'. Those source conclusions are not established by an unresolved or failed request. Retained evidence also has no panel-local stale/paused warning or retry, although the neighboring cluster panel does.",
+      "mechanism": "query.data undefined -> items=[] and undefined quality/limitations -> EvidencePanel defaults arrays to [] -> inner InsightPanel has no query and resolves ready -> unsupported/returned-empty messages are selected.",
+      "sourceDerivedRepro": [
+        "Reason over a selected synthetic vehicle with query.data=undefined, query.isLoading=true and fetchStatus='fetching'; do not make a request.",
+        "RoadHazardMeshPage passes query to the cluster InsightPanel but only undefined metadata and [] evidence to EvidencePanel.",
+        "The evidence panel's three missing-value messages render from its ready branch despite no completed response. The same mechanism applies to first-load failure and paused first load."
+      ],
+      "reproExecuted": false,
+      "confidence": "HIGH: deterministic props/branch trace; no runtime or production response claim.",
+      "fix": "Have the assigned page/direct-panel owner propagate the same existing source-state contract to evidence without hiding the shell or dropping unsupported-capability disclosures. Reserve 'returned empty' for a completed response; preserve retained metadata with matching warning/retry.",
+      "owner": "page/direct-feature-panel; any EvidencePanel API change requires assigned ownership"
+    },
+    {
+      "id": "RHM-02",
+      "priority": "P1",
+      "classification": "CONFIRMED_SOURCE_DEFECT",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 131,
+      "relatedLocations": [
+        {"file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx", "lines": [34, 40, 127, 129, 131, 132]},
+        {"file": "web\\src\\components\\ui\\Pagination.tsx", "lines": [30, 31, 33, 34, 37, 95, 96, 138, 144]}
+      ],
+      "rule": "MDC-023/MDC-026: unknown totals are not zero; recovery must keep the real requested page reachable.",
+      "detail": "On page 2 with no cached page-2 response, total defaults to zero while the requested page remains 2. Pagination's exact-total mode clamps its safePage to 1 and disables previous/next. If that new page fails, the page's correction effect exits on query.error, leaving the request at page 2 while navigation displays page 1 of an empty result. A direct jump to 1 also does not call onPageChange because it equals Pagination's synthetic safePage. This prevents using the pagination controls to recover to the cached first page.",
+      "mechanism": "page=2 + query.data undefined -> total=0 -> totalPages=1 -> safePage=1 -> previous disabled; form target=1 equals safePage and suppresses callback; error prevents the parent's clamp effect.",
+      "sourceDerivedRepro": [
+        "Start from a synthetic first-page success with total=36 and advance to page 2; the new query key has no cached data.",
+        "Reason over page=2, query.data=undefined and query.error set after the page-2 load fails.",
+        "Pagination receives page=2,total=0,pageSize=18, but computes safePage=1 and disables previous/next; entering 1 produces no callback. Only retrying the failing page or changing broader scope remains."
+      ],
+      "reproExecuted": false,
+      "confidence": "HIGH: valid query-state transition and explicit clamping/callback predicates.",
+      "fix": "Preserve the requested page and last known total for the same vehicle, or use the existing unknown-total contract while the new page has no response. Do not infer an empty full result or disable the previous-page recovery route from missing query.data.",
+      "owner": "page integration with existing Pagination API; no global primitive rewrite authorized"
+    },
+    {
+      "id": "RHM-03",
+      "priority": "P2",
+      "classification": "CONFIRMED_SOURCE_DEFECT",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "line": 90,
+      "relatedLocations": [
+        {"file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx", "lines": [35, 67, 73, 83]},
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "lines": [41, 77, 90]},
+        {"file": "web\\src\\api\\dataState.ts", "lines": [190, 191, 234, 237, 244, 247]}
+      ],
+      "rule": "MDC-026: retaining an authoritative empty response must retain its truthful empty explanation.",
+      "detail": "For a retained HazardPage object whose items array is empty, a failed or paused refresh makes the panel retained. InsightPanel forces SourceContent ready and only keeps the empty body if dataState.data itself is an empty array. HazardPage is an object, so the page's empty=true no longer selects the empty body. The retained empty hazard result becomes an empty Grid rather than the previously established privacy/evidence-threshold explanation.",
+      "mechanism": "empty=true + retained=true + Array.isArray(HazardPage)=false -> empty-body conditional false -> children render -> items.map over [] yields no record or empty explanation.",
+      "sourceDerivedRepro": [
+        "Use an already successful synthetic HazardPage with items=[],total=0,offset=0 and valid metadata.",
+        "Reason over a subsequent refresh error or fetchStatus='paused' while retaining that object.",
+        "deriveDataState returns stale with hasData=true; InsightPanel's empty-body predicate evaluates false because the retained envelope is not an array."
+      ],
+      "reproExecuted": false,
+      "confidence": "HIGH: declared envelope shape and retained-state predicates inspected.",
+      "fix": "Honor the explicit empty prop for retained object envelopes as well as arrays, while retaining the stale/paused warning and retry. Do not replace retained nonempty content with an error.",
+      "owner": "direct feature InsightPanel owner"
+    },
+    {
+      "id": "RHM-04",
+      "priority": "P2",
+      "classification": "CONFIRMED_SOURCE_DEFECT",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 91,
+      "relatedLocations": [
+        {"file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx", "lines": [20, 21, 22, 91]},
+        {"file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "lines": [21, 22, 23, 57]},
+        {"file": "web\\src\\types\\advancedIntelligence.ts", "lines": [9, 12, 134]}
+      ],
+      "rule": "MDC-044: localize recognized semantic status labels, preserving raw source values for classification.",
+      "detail": "The recognized hazard severity and quality status labels are printed verbatim rather than through t(). For example, 'high' and 'limited' remain English protocol tokens in every application locale even though surrounding labels are localized. This finding concerns recognized status vocabulary, not unverified free-text hazard descriptions, evidence summaries, reasons, or identifiers.",
+      "mechanism": "Badge children are cluster.severity and quality.status; no localized label lookup is applied.",
+      "sourceDerivedRepro": [
+        "Reason over an application locale other than English, with a synthetic cluster severity='high' and quality.status='limited'.",
+        "The badge children remain the literal source values regardless of t() locale."
+      ],
+      "reproExecuted": false,
+      "confidence": "HIGH: both tokens are explicitly recognized by the inspected source/schema.",
+      "fix": "Use existing localized labels for recognized domain statuses and preserve unknown raw values with an honest fallback. Catalog availability is unverified; any missing catalog entries belong to the serialized catalog owner.",
+      "owner": "page/direct-feature-panel; catalog owner only if existing keys are missing"
+    },
+    {
+      "id": "RHM-07",
+      "priority": "P2",
+      "classification": "CONFIRMED_SOURCE_DEFECT",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 23,
+      "relatedLocations": [
+        {"file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx", "lines": [20, 23, 91]},
+        {"file": "web\\src\\types\\advancedIntelligence.ts", "lines": [133, 134]}
+      ],
+      "rule": "MDC-025: unknown severity is neutral, not an established informational severity.",
+      "detail": "The open string severity contract permits an unknown or new classification. severityVariant maps every value not explicitly high/critical/medium/warning to info, including 'unknown' and an empty string. This assigns a known informational presentation to missing or unclassified severity; an empty string also produces no explanatory label. Production occurrence is unverified.",
+      "mechanism": "severityVariant('unknown') falls through to return 'info'; Badge displays that variant rather than neutral/unknown.",
+      "sourceDerivedRepro": [
+        "Reason over a schema-permitted synthetic cluster with severity='unknown'.",
+        "Neither danger nor warning condition matches, so variant='info'. The source does not preserve a distinct neutral unknown classification."
+      ],
+      "reproExecuted": false,
+      "confidence": "HIGH for schema-permitted branch behavior, not a claim about actual hazard records.",
+      "fix": "Retain the existing known severity mappings, explicitly map unknown/absent/unrecognized values to the existing neutral status treatment, and provide a truthful localized fallback label without changing source values.",
+      "owner": "page"
+    }
+  ],
+  "supersededDuringReview": [
+    {
+      "id": "RHM-05",
+      "priority": "P2",
+      "classification": "CONFIRMED_AT_INITIAL_SNAPSHOT_SUPERSEDED_BY_CONCURRENT_SOURCE_CORRECTION",
+      "currentDisposition": "NOT A CURRENT CONFIRMED DEFECT: bounded reinspection found a locale-aware Intl.RelativeTimeFormat using the selected formatter locale. Current correction is source evidence only; runtime/fresh tests remain NOTRUN.",
+      "snapshotSha256": "F86CBF7BA2D84CA11D93BF9A9253E96CFD44B907A275A7790EB174C632F5C53E",
+      "reinspectedSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "currentSource": "web\\src\\lib\\dateFormat.ts:124-154",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 118,
+      "relatedLocations": [
+        {"file": "web\\src\\lib\\dateFormat.ts", "lines": [120, 127, 129, 131, 133]}
+      ],
+      "rule": "MDC-044: relative dates must follow the effective locale.",
+      "detail": "The Last seen cell uses formatRelative, whose sub-week branches return hardcoded 'just now', 'm ago', 'h ago', and 'd ago'. These branches ignore even a supplied locale option, and the page supplies no option. Thus the visible recency phrase stays English in non-English application locales.",
+      "mechanism": "The date helper constructs literal strings before its locale-aware absolute-date fallback.",
+      "sourceDerivedRepro": [
+        "Reason over a timestamp exactly three minutes before a fixed synthetic now.",
+        "formatRelative reaches minutes<60 and returns '3m ago', including if opts.locale is a non-English locale. The page uses this result verbatim."
+      ],
+      "reproExecuted": false,
+      "confidence": "HIGH: literal return branches inspected; no browser-locale execution claimed.",
+      "fix": "Correct the existing shared relative-date owner using the current locale/preference mechanism. Preserve null/invalid placeholders and relative/absolute boundary semantics; do not create a competing page formatter.",
+      "owner": "shared dateFormat owner, not this report-only worker"
+    },
+    {
+      "id": "RHM-06",
+      "priority": "P2",
+      "classification": "CONFIRMED_AT_INITIAL_SNAPSHOT_SUPERSEDED_BY_CONCURRENT_SOURCE_CORRECTION",
+      "currentDisposition": "NOT A CURRENT CONFIRMED DEFECT: bounded reinspection found future-aware signed relative time and a distinct future-subsecond branch. Current correction is source evidence only; runtime/fresh tests remain NOTRUN.",
+      "snapshotSha256": "F86CBF7BA2D84CA11D93BF9A9253E96CFD44B907A275A7790EB174C632F5C53E",
+      "reinspectedSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "currentSource": "web\\src\\lib\\dateFormat.ts:128-154",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 118,
+      "relatedLocations": [
+        {"file": "web\\src\\lib\\dateFormat.ts", "lines": [124, 125, 126, 127]}
+      ],
+      "rule": "MDC-026/MDC-044: future/clock-skewed evidence must not be represented as newly observed evidence.",
+      "detail": "Any valid future last_seen instant is presented as 'just now', including one a day or year in the future. formatRelative subtracts the future instant from now and immediately checks seconds<60 without distinguishing negative values. This understates recency uncertainty on a page that explicitly asks the user to prioritize clusters by recency.",
+      "mechanism": "future instant -> negative diff and seconds -> seconds<60 -> 'just now'.",
+      "sourceDerivedRepro": [
+        "Fix synthetic now at 2030-01-01T00:00:00Z and last_seen at 2030-01-02T00:00:00Z.",
+        "The source arithmetic yields seconds=-86400; the first relative branch returns 'just now'. No clock or application state was mutated."
+      ],
+      "reproExecuted": false,
+      "confidence": "HIGH for source behavior; actual production future observations were not requested or established.",
+      "fix": "Have the shared date owner distinguish future relative time or explicitly unknown/clock-skewed recency without changing valid historical instants or inventing observation timestamps.",
+      "owner": "shared dateFormat owner"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "RHM-C01",
+      "classification": "CANDIDATE_CONTRACT_REACHABILITY_UNVERIFIED",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 105,
+      "relatedLocations": ["RoadHazardMeshPage.tsx:111", "EvidencePanel.tsx:59", "web\\src\\lib\\numberFormat.ts:61-62,91-104"],
+      "detail": "Missing/non-finite confidence, observation count, or quality sample count would be silently formatted as zero because fmtNumber calls safeNumber. This is a deterministic malformed-payload consequence, but these fields are required numbers in the inspected schema; no actual nullable producer response was established. Do not report a confirmed current API-null bug from this alone.",
+      "sourceDerivedRepro": "Conditional only: confidence_pct=null or non-finite -> safeNumber returns 0 -> page appends '%' rather than an unknown placeholder.",
+      "reproExecuted": false,
+      "nextEvidence": "Authorized bounded null-contract fixture or producer contract proof; no live hazard fetch.",
+      "owner": "page guard if nullable/invalid inputs are supported; shared/integration changes require separate ownership"
+    },
+    {
+      "id": "RHM-C02",
+      "classification": "CANDIDATE_OUTSIDE_DECLARED_QUALITY_UNION",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 24,
+      "detail": "An absent/unrecognized quality.status in a present object falls through to danger. However, QualityStatus is explicitly sufficient|limited|insufficient, and insufficient legitimately uses danger; malformed unknown statuses were not observed. This is not a confirmed valid-response defect.",
+      "sourceDerivedRepro": "Conditional malformed quality.status=undefined -> qualityVariant returns danger while the label is absent.",
+      "reproExecuted": false,
+      "owner": "direct feature panel only after supported unknown-status contract is established"
+    },
+    {
+      "id": "RHM-C03",
+      "classification": "CANDIDATE_SCOPE_METADATA_AMBIGUITY",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 140,
+      "detail": "Evidence sources are flattened from the currently loaded page only; quality and limitations are taken from the page envelope. The generic evidence heading does not identify current-page versus whole-result metadata scope. Backend aggregate semantics were deliberately not traced, so no confirmed scope mismatch or lost full-result evidence is claimed.",
+      "sourceDerivedRepro": "Conditional multi-page result: navigating pages changes item evidence while envelope quality may or may not describe the same scope.",
+      "reproExecuted": false,
+      "owner": "page/integration contract clarification"
+    },
+    {
+      "id": "RHM-C04",
+      "classification": "CANDIDATE_USER_DATE_PREFERENCE_INTEGRATION",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 62,
+      "relatedLocations": ["EvidencePanel.tsx:90,92", "web\\src\\lib\\dateFormat.ts:29-50,54-62"],
+      "detail": "Absolute evidence/window dates use formatDateTime without options; its default is browser locale/timezone. Whether this differs from the effective application date/time preferences for this route needs a bounded preference integration check. No current user settings, browser, 12/24h preference, or timezone were inspected.",
+      "reproExecuted": false,
+      "owner": "page/direct panel with existing date preference mechanism"
+    },
+    {
+      "id": "RHM-C05",
+      "classification": "CANDIDATE_EXTREME_TOTAL_REACHABILITY_UNVERIFIED",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 34,
+      "relatedLocations": ["internal\\handler\\v1\\advancedintelligence\\handler.go:415", "web\\src\\components\\ui\\Pagination.tsx:33,138"],
+      "detail": "Page size 18 permits offset=100008 at page 5557, above the handler's offset maximum 100000. If a response advertises enough total records, unrestricted direct-page navigation can select an unrequestable page. No real or producer-supported total above that threshold was established, so this remains an extreme-data candidate rather than a confirmed observed failure.",
+      "sourceDerivedRepro": "Conditional total>=100009, choose page 5557 -> (5557-1)*18=100008 -> handler rejects offset.",
+      "reproExecuted": false,
+      "owner": "page/integration pagination contract"
+    }
+  ],
+  "states": [
+    {"state": "No selected vehicle", "source": "RoadHazardMeshPage.tsx:29,67,74-75", "assessment": "Cluster shell remains with selection instruction; hook disables its read. Evidence misclassifies unresolved metadata, RHM-01."},
+    {"state": "First loading", "source": "InsightPanel.tsx:44-48", "assessment": "Cluster query delegates loading to SourceContent; exact rendered skeleton geometry is unverified. Evidence incorrectly defaults ready, RHM-01."},
+    {"state": "First paused/unresolved", "source": "InsightPanel.tsx:49-55", "assessment": "Cluster source explicitly distinguishes paused/unresolved availability with role=status. Evidence lacks that distinction, RHM-01."},
+    {"state": "Initial fatal error", "source": "InsightPanel.tsx:45,81-85", "assessment": "Cluster source uses fatal error plus retry recovery rather than suppressing its shell. Evidence remains ready without matching failure/recovery, RHM-01."},
+    {"state": "Resolved nonempty", "source": "RoadHazardMeshPage.tsx:83-121", "assessment": "Every record exposes hazard type, severity, coarse cell, confidence, observations, and last seen; evidence metadata remains in a separate shell."},
+    {"state": "Resolved empty", "source": "RoadHazardMeshPage.tsx:73-79; InsightPanel.tsx:57-62", "assessment": "Fresh successful empty result has a privacy/evidence-threshold explanation and source retry."},
+    {"state": "Retained nonempty refresh error/paused", "source": "InsightPanel.tsx:41,66-79; api\\dataState.ts:234-249", "assessment": "Clusters keep retained content with a nonblocking stale/paused warning; evidence has no own trust state, RHM-01. No actual refresh was attempted."},
+    {"state": "Retained empty refresh error/paused", "source": "InsightPanel.tsx:90", "assessment": "Object-envelope empty explanation disappears, RHM-03."},
+    {"state": "New-page loading or fatal error without cache", "source": "RoadHazardMeshPage.tsx:40,127-134", "assessment": "Unknown total is passed as zero and recovery navigation is clamped, RHM-02."},
+    {"state": "Vehicle change", "source": "RoadHazardMeshPage.tsx:31-38; hook query key:37-38", "assessment": "Derived page immediately resets to 1 for the new vehicle and an effect persists that reset; the query key carries vehicle/limit/offset. No scope mutation or request was executed."},
+    {"state": "Null optional evidence values", "source": "EvidencePanel.tsx:35-37,60-62,66,87-92", "assessment": "Optional arrays default to []; coverage=0 is preserved while null coverage is '—'; null sample counts omit the sample phrase; null/invalid dates use the shared placeholder. Required malformed numeric fields are only candidate RHM-C01."}
+  ],
+  "siAndUnits": {
+    "assessment": "No physical distance/speed/temperature/pressure/energy measurement is presented by this page or its directly used evidence panel. Displayed measurements are percentages, counts, and timestamps; useUnits is not required merely for these dimensionless values.",
+    "source": "RoadHazardMeshPage.tsx:93-119; EvidencePanel.tsx:59-62,87-92",
+    "rawWireCache": "No conversion or payload rewriting is added; typed hook reads remain unchanged.",
+    "deprecatedHelpers": "0 scoped pattern matches; no legacy converter call found by the executed scan.",
+    "limits": "No SI producer/storage audit or migration is claimed."
+  },
+  "locale": {
+    "positiveSourceEvidence": "Static headings, descriptions, table labels, empty/recovery/privacy/unsupported copy use t(); numbers use the reactive useNumberFormatting preference hook.",
+    "confirmedGaps": ["RHM-04"],
+    "supersededSourceFindings": ["RHM-05"],
+    "candidates": ["RHM-C04"],
+    "catalogs": "READONLY and not opened; key existence, locale completeness, interpolation/plural output, and cold-i18n acceptance are NOTRUN.",
+    "rtl": "Wrapping and existing pagination directional-icon classes are present; actual RTL layout, phrase order, percent placement, and assistive output remain NOTRUN."
+  },
+  "actions": {
+    "present": [
+      "Existing Pagination previous/next/first/last/current-page and direct-jump affordances when total>18 or requested page>1.",
+      "Existing cluster source retry/refresh via InsightPanel and SourceContent recovery."
+    ],
+    "notPresent": [
+      "Hazard reporting",
+      "Location resolution/map-pin navigation",
+      "Automatic rerouting",
+      "Vehicle commands",
+      "Report export/download",
+      "Page-local workspace vehicle or date picker"
+    ],
+    "confirmedGap": "RHM-02: page recovery navigation can be disabled by an unknown total represented as zero.",
+    "interactionExecuted": "NONE"
+  },
+  "responsive": {
+    "sourceEvidence": [
+      "RoadHazardMeshPage.tsx:81-84: allocated @container grid with @2xl two-column and @5xl three-column transitions, min-w-0 articles.",
+      "RoadHazardMeshPage.tsx:86-91,99: flex wrapping and break-all for long hazard/severity/cell tokens.",
+      "EvidencePanel.tsx:47-48,75,104: narrow min-w-0 wrapping grid, three columns only at lg.",
+      "web\\src\\components\\ui\\Table.tsx:21-24: embedded table has contained overflow-x-auto and bounded width.",
+      "web\\src\\components\\ui\\Pagination.tsx:53-59: container-aware wrapping, mobile h-11/min-w-11 controls and narrower desktop classes."
+    ],
+    "assessment": "Source has reflow/containment safeguards and does not remove record fields for mobile. This is not measured overflow, target-size, scroll reachability, or visual acceptance.",
+    "matrix": "320/375/390/430/768/1024/1280/1440/1920/2560, narrow containers, 200% text, long labels, RTL, dark/light/custom/forced-colors: NOTRUN."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "RoadHazardMeshPage.tsx:30,89,93-99: useId-derived hazard/cell IDs supply per-record table descriptions independently of translations.",
+      "RoadHazardMeshPage.tsx:89: hazard heading uses Text as=h3.",
+      "RoadHazardMeshPage.tsx:95-117: all four table row labels use th scope=row; severity text accompanies its color.",
+      "EvidencePanel.tsx:48,75,104: labeled quality/evidence/limitations sections; decorative section icons explicitly aria-hidden.",
+      "InsightPanel.tsx:50: initial paused/unresolved status text has role=status.",
+      "Pagination.tsx:57,60,95-96,111-116,150-162: localized navigation/control names, live count, current-page semantics, numeric input association, and error announcement exist in source."
+    ],
+    "limits": "Keyboard/focus restoration, screen-reader output, computed contrast, forced colors, reduced motion, touch targets, and scroll-region keyboard reachability were not exercised. Presence of shared components is not an accessibility pass."
+  },
+  "privacy": {
+    "sourceEvidence": "Always-mounted privacy banner says cells are identifiers, not map pins; only coarse_cell/hazard metadata is rendered. Unsupported exact coordinates/route reconstruction and rerouting/commands are always supplied to EvidencePanel.",
+    "noLiveData": true,
+    "noIdentityOrLocationInference": true,
+    "backendThresholdEnforcement": "UNVERIFIED; route source and banner do not establish backend privacy acceptance."
+  },
+  "preservation": {
+    "changes": "NONE to source, tests, types, hooks, shared primitives, catalogs, configuration, backend, or routing.",
+    "snapshots": [
+      {"file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx", "lineCount": 150, "sha256": "4CD720CA5D56B4B1FE5E44C04E2EFEAB338399E122C0032BA4E1FA0CABE86884"},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "lineCount": 95, "sha256": "9CC182A39DA7697644C2D06DEDAA20E50697BC130401E47983CCD3B43BD501BE"},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "lineCount": 132, "sha256": "68336512C44ACA2575339906B1F016EB180A30A1ABCB96E42BA0FC27FE0C39B4"}
+    ],
+    "currentPageAndDirectPanelTotalLines": 377,
+    "originalComparison": "NOTRUN: no original/prior Phase6 QA baseline was opened, no Git was run, and no implementation changed. The current count is not a claimed >=70% comparison.",
+    "topLevelSections": ["Coarse-cell privacy notice", "Hazard clusters plus pagination", "Evidence, quality, and limitations"],
+    "evidenceSubsections": ["Data quality", "Evidence sources", "Limitations with explicitly unsupported capabilities"],
+    "recordFields": ["hazard_type", "severity", "coarse_cell", "confidence_pct", "observation_count", "last_seen"],
+    "sectionPatternCounts": {
+      "GlassPanel": 0,
+      "ChartContainer": 0,
+      "InsightPanel": 2,
+      "EvidencePanel": 1,
+      "AlertBanner": 1,
+      "section": 3,
+      "Pagination": 1
+    },
+    "sectionCountInterpretation": "Counts are across the exact three-file production scope: one InsightPanel in the page plus one inside EvidencePanel. The feature uses LayoutCard/SourceContent, so zero GlassPanel/ChartContainer matches do not imply missing sections."
+  },
+  "sourcePins": [
+    {"file": "web\\src\\components\\ui\\Pagination.tsx", "sha256": "7C07A1069AF3B7A334382686C315A156643C33C92F6DA56BBD3F051188F39C7E"},
+    {"file": "web\\src\\lib\\dateFormat.ts", "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64", "initialSha256": "F86CBF7BA2D84CA11D93BF9A9253E96CFD44B907A275A7790EB174C632F5C53E", "disposition": "One observed concurrent source drift; original evidence retained in supersededDuringReview; relevant new branches inspected without tests or mutations."},
+    {"file": "web\\src\\lib\\numberFormat.ts", "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3"},
+    {"file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts", "sha256": "DAC2B5A3C62F8E0B7D366A11BA11115818895D3A751B482C9361D6647D967067"},
+    {"file": "web\\src\\lib\\workspaceScope.ts", "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"},
+    {"file": "web\\src\\types\\advancedIntelligence.ts", "sha256": "CC6E80B16F9119E2D322D662A2EBE2718A195FFDA67738A1B0C59402CAEE8F13"},
+    {"file": "web\\src\\hooks\\useNumberFormatting.ts", "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"}
+  ],
+  "staticAudit": {
+    "method": "Executed native PowerShell Select-String on RoadHazardMeshPage.tsx, InsightPanel.tsx, EvidencePanel.tsx only; no helper or global compiler.",
+    "rawOutput": [
+      "COUNT static_inline_var=0",
+      "COUNT raw_controls=1",
+      "D:\\repos\\teslasync\\web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx:93:<Table variant=\"embedded\" aria-label={t('advancedIntelligence.hazards.title', 'Road hazard mesh')}",
+      "COUNT direct_vendor_import=0",
+      "COUNT old_api_import=0",
+      "COUNT direct_fetch=0",
+      "COUNT any_type=0",
+      "COUNT double_prefix=0",
+      "COUNT camel_query=0",
+      "COUNT deprecated_unit_helpers=0",
+      "COUNT duplicate_scope_controls=0",
+      "EXIT 0 (static scan executed, not application acceptance)",
+      "CORRECTED_COUNT raw_controls=0",
+      "EXIT 0"
+    ],
+    "correction": "Initial raw_controls=1 was a PowerShell case-insensitive false positive on shared <Table>. A separate executed -CaseSensitive scan returned 0. Both outputs are retained, not silently overwritten.",
+    "scopeLimit": "These are bounded pattern-match counts, not zero semantic defects or a clean whole-project audit. The double-prefix/camel-parameter contract was additionally checked from the relevant hook builder and backend route source.",
+    "scriptDisposition": "audit.sh and verify.sh read as guidance but NOTRUN: audit.sh invokes forbidden global TSC; both scripts call helper machinery not authorized for this worker.",
+    "typing": "npx tsc --noEmit NOTRUN by explicit assignment; no compile-clean claim."
+  },
+  "visualIssues": {
+    "confirmedRenderedIssues": [],
+    "sourceFindings": ["RHM-04", "RHM-07"],
+    "supersededSourceFindings": ["RHM-05"],
+    "limits": "No screenshot, render, measured color, viewport, or native visual evidence."
+  },
+  "architectureIssues": ["RHM-01", "RHM-02", "RHM-03"],
+  "duplicatedPatterns": "No competing implementation was added. Existing shared categories and direct feature panels are retained; only source issues are reported.",
+  "competingImplementations": [],
+  "requiredSharedChanges": [
+    {
+      "name": "Direct feature panel trust and retained-empty envelope handling",
+      "ownerFiles": [
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx"
+      ],
+      "issues": ["RHM-01", "RHM-03"],
+      "states": ["initial", "paused", "fatal", "ready", "authoritative empty", "retained empty", "retained refresh failure"],
+      "usedBy": ["RoadHazardMeshPage"],
+      "dependsOn": "Existing useDataState/SourceContent semantics; exclusive corrective ownership, not a new trust model."
+    }
+  ],
+  "priority": "P1 for misleading evidence conclusions and disabled page-error recovery; P2 for retained-empty explanation and semantic statuses. Relative date findings were superseded by a concurrent source correction; its native/runtime/fresh-test acceptance is still NOTRUN.",
+  "evidenceLimits": [
+    "All reproductions are source-derived synthetic state reasoning, not executed tests or mounted observations.",
+    "No previous Phase6 QA report supplied findings; this report is based on inspected current accepted source and direct contracts.",
+    "No live hazard/report/location/identity request, browser, HTTP, mutation, Git, Docker, install, server, subagent, extension, helper, global TSC, or suite was used.",
+    "No actual backend data quality, aggregate scope, privacy threshold, authentication, producer-null contract, or large-total reachability was established.",
+    "Source hashes identify the inspected shared-host snapshot; concurrent owner changes can supersede findings and require assigned revalidation.",
+    "One dateFormat.ts drift was observed before release. Only its relevant changed source branches were re-read, and RHM-05/RHM-06 were removed from current confirmedIssues into supersededDuringReview. No other worker's tests or QA report were used as proof.",
+    "Runtime/native/fresh tests/full-page acceptance are NOTRUN, not passed.",
+    "Source QA completion is not page or application acceptance."
+  ],
+  "filesRead": [
+    "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\formatters.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts (relevant road-hazard factory/root/key only)",
+    "web\\src\\types\\advancedIntelligence.ts (quality/evidence/page/hazard shapes only)",
+    "web\\src\\hooks\\useNumberFormatting.ts (relevant formatter definitions)",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts (relevant trust-state derivation only)",
+    "web\\src\\lib\\numberFormat.ts (safeNumber/fmtNumber/preferences only)",
+    "web\\src\\lib\\dateFormat.ts (relative/absolute formatter definitions only)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\App.tsx (road-hazard lazy import and mount only)",
+    "web\\src\\api\\client.ts (prefix normalization contract only)",
+    "internal\\api\\router.go (API prefix and advanced-intelligence mount only)",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go (route, road-hazard handler and list-parameter contract only)",
+    "docs\\frontend-design-contract.md (applicable design/trust/scope/locale/SI/mobile/a11y/acceptance sections)",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md (principles/design, state, a11y, QA/definition-of-done sections)",
+    "migration-queue.md (header and exact assigned finished-page-QA row235; no queue edit or parent loop)",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\prompts\\audit-pages.prompt.md (audit guidance only; broad commands not run)",
+    ".github\\skills\\audit-violations\\audit.sh (read only)",
+    ".github\\skills\\verify-api-hooks\\verify.sh (read only)",
+    ".gitignore (ignored log rule only)"
+  ],
+  "commandLifecycle": {
+    "mode": "All worker PowerShell commands synchronous and bounded.",
+    "knownCompletedShellIds": ["5162", "5167", "5169", "5171", "5175", "5178", "5187", "5188", "5199", "5200"],
+    "startedBackgroundCommands": [],
+    "ownedActiveCommandsAtReturn": [],
+    "release": "ALL_RELEASED; no server, browser session, background task, helper, or post-return writer exists."
+  }
+}

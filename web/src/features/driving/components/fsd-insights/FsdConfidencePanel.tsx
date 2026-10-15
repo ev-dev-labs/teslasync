@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { KVList } from '@/components/data-display';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
+import { typography } from '@/lib/tokens';
 import type { FsdInsights, FsdInsightsQuality } from '@/types/fsd';
 
 import { FsdConfidenceFootnotes } from './FsdConfidenceFootnotes';
@@ -68,7 +69,7 @@ export function FsdConfidencePanel({ insights, state }: FsdConfidencePanelProps)
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Database className={`h-4 w-4 ${typography.color.muted}`} aria-hidden="true" />
           {t('fsd.confidence.title', 'Data confidence & methodology')}
         </PanelTitle>
         {quality && (

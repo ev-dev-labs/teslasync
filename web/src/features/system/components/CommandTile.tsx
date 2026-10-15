@@ -1,4 +1,4 @@
-import { useCallback, type KeyboardEvent } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Button as ControlButton, GlassPanel, Text } from '@/components/ui';
@@ -18,9 +18,9 @@ interface CommandTileProps {
 }
 
 const hoverStyles = {
-  default: 'hover:border-neon-cyan/30',
-  danger: 'hover:border-neon-red/30',
-  success: 'hover:border-neon-green/30',
+  default: 'hover:border-[var(--semantic-info-border)]',
+  danger: 'hover:border-[var(--semantic-danger-border)]',
+  success: 'hover:border-[var(--semantic-success-border)]',
 } as const;
 
 export function CommandTile({ def, onExecute, onRequestDialog, loading, disabled = false, disabledReason, lastStatus, isFavorite, onToggleFavorite }: CommandTileProps) {
@@ -38,43 +38,50 @@ export function CommandTile({ def, onExecute, onRequestDialog, loading, disabled
     onExecute(def.command, def.params);
   }, [loading, disabled, def, onRequestDialog, onExecute]);
 
-  // Keyboard parity for the sanctioned role="button" tile (see eslint.config.js:
-  // click sites are remediated with role="button" + onKeyDown). Ignore key
-  // events that bubble up from the nested favorite control so pressing
-  // Enter/Space while it is focused never also fires the command.
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLDivElement>) => {
-      if (e.target !== e.currentTarget) return;
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleActivate();
-      }
-    },
-    [handleActivate],
-  );
-
   return (
     <GlassPanel
-      role="button"
-      tabIndex={loading || disabled ? -1 : 0}
-      aria-label={label}
-      aria-busy={loading || undefined}
-      aria-disabled={loading || disabled || undefined}
       title={disabled ? disabledReason : undefined}
-      className={cn(
-        'p-3 sm:p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[116px] justify-center cursor-pointer relative group',
-        'outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--theme-primary)]',
-        hoverStyles[variant] ?? hoverStyles.default,
-        (loading || disabled) && 'opacity-50 cursor-not-allowed',
-      )}
-      onClick={handleActivate}
-      onKeyDown={handleKeyDown}
+      className="p-0 flex flex-col min-w-0 min-h-[116px] relative group"
     >
       <ControlButton
         type="button"
         variant="ghost"
+        disabled={loading || disabled}
+        tabIndex={loading || disabled ? -1 : 0}
+        aria-label={label}
+        aria-busy={loading || undefined}
+        aria-disabled={loading || disabled || undefined}
+        title={disabled ? disabledReason : undefined}
+        className={cn(
+          // Reserve the favorite's entire 44px row so the sibling hit areas never overlap.
+          'mt-11 h-auto min-h-11 w-full min-w-0 flex-col gap-2 p-3 sm:p-4 whitespace-normal break-words text-center border border-transparent',
+          hoverStyles[variant] ?? hoverStyles.default,
+        )}
+        onClick={handleActivate}
+      >
+        <span className="rounded-xl p-2.5 transition-colors bg-[var(--surface-2)] text-[var(--text-muted)]">
+          {loading ? <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none" /> : <Icon aria-hidden="true" className="h-5 w-5" />}
+        </span>
+        <span className="min-w-0">
+          <Text size="xs" weight="medium" color="primary" className="block">{label}</Text>
+          {def.sublabelFallback && (
+            <Text size="2xs" weight="medium" color="muted" className="mt-0.5 block">
+              {t(def.sublabelKey ?? '', def.sublabelFallback)}
+            </Text>
+          )}
+          {lastStatus && (
+            <Text size="2xs" className={cn('mt-0.5 block',
+              lastStatus.startsWith('✓') ? 'text-emerald-300' : 'text-rose-300',
+            )}>{lastStatus}</Text>
+          )}
+        </span>
+      </ControlButton>
+
+      <ControlButton
+        type="button"
+        variant="ghost"
         size="sm"
-        onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+        onClick={onToggleFavorite}
         aria-pressed={isFavorite}
         className={cn(
           'absolute left-0 top-0 min-h-11 min-w-11 rounded p-0 transition-opacity hover:bg-transparent',
@@ -89,26 +96,9 @@ export function CommandTile({ def, onExecute, onRequestDialog, loading, disabled
 
       {def.dangerous && (
         <div className="absolute top-1.5 right-1.5">
-          <AlertTriangle aria-hidden="true" className="h-3 w-3 text-neon-red/50" />
+          <AlertTriangle aria-hidden="true" className="h-3 w-3 text-[var(--semantic-danger)]" />
         </div>
       )}
-
-      <div className="rounded-xl p-2.5 transition-colors bg-[var(--surface-2)] text-[var(--text-muted)]">
-        {loading ? <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" /> : <Icon aria-hidden="true" className="h-5 w-5" />}
-      </div>
-      <div>
-        <Text size="xs" weight="medium" color="primary" className="block">{label}</Text>
-        {def.sublabelFallback && (
-          <Text size="2xs" weight="medium" color="muted" className="mt-0.5 block">
-            {t(def.sublabelKey ?? '', def.sublabelFallback)}
-          </Text>
-        )}
-        {lastStatus && (
-          <Text size="2xs" className={cn('mt-0.5 block',
-            lastStatus.startsWith('✓') ? 'text-emerald-300' : 'text-rose-300',
-          )}>{lastStatus}</Text>
-        )}
-      </div>
     </GlassPanel>
   );
 }

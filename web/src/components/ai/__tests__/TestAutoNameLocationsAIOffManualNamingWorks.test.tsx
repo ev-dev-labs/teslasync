@@ -36,6 +36,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
+import { useState } from 'react'
 
 import type { AppSettings } from '@/api/types'
 
@@ -45,6 +46,8 @@ vi.mock('@/hooks/useSettings', () => ({
 
 import { useSettings } from '@/hooks/useSettings'
 import { AIAutoNameUnnamedLocations } from '@/components/ai/AIAutoNameUnnamedLocations'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 
@@ -105,6 +108,44 @@ afterEach(() => {
 })
 
 describe('TestAutoNameLocationsAIOffManualNamingWorks (auto-name-unnamed-locations AI-off contract)', () => {
+  it('keeps the manual naming form usable with AI off and makes no AI or persistence request', () => {
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'off',
+        ai_features: { 'auto-name-unnamed-locations': true },
+      }),
+    )
+    const onManualSave = vi.fn()
+    const onApplyName = vi.fn()
+    function ManualNamingHarness() {
+      const [name, setName] = useState('')
+      return (
+        <>
+          <Input
+            label="Manual location name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <Button onClick={() => onManualSave(name)} disabled={!name.trim()}>
+            Save manual name
+          </Button>
+          <AIAutoNameUnnamedLocations locationId={501} onApplyName={onApplyName} />
+        </>
+      )
+    }
+
+    render(<ManualNamingHarness />)
+    expect(screen.queryByTestId('ai-feature-auto-name-unnamed-locations-root')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save manual name' })).toBeDisabled()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Manual location name' }), {
+      target: { value: 'Manually named stop' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save manual name' }))
+    expect(onManualSave).toHaveBeenCalledExactlyOnceWith('Manually named stop')
+    expect(onApplyName).not.toHaveBeenCalled()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
   it('TestAutoNameLocationsAIOffManualNamingWorks: renders nothing when ai_mode=off even with the auto-name-unnamed-locations toggle on', () => {
     mockUseSettings.mockReturnValue(
       settingsPayload({

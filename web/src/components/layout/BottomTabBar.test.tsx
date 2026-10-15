@@ -37,6 +37,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { navSections } from './Layout'
 import { navRouteIcons } from '@/lib/navRouteIcons'
@@ -77,11 +78,11 @@ function renderBar(pathname = '/') {
 }
 
 function indicatorsWithin(el: HTMLElement): HTMLElement[] {
-  // The active underline is the theme-primary pill span. Filter by className
+  // The active underline is the neutral pill span. Filter by className
   // rather than a CSS selector to avoid escaping the `[var(--…)]` arbitrary
   // value in querySelector.
   return Array.from(el.querySelectorAll('span')).filter((s) =>
-    s.className.includes('bg-[var(--theme-primary)]'),
+    s.className.includes('bg-[var(--text-secondary)]'),
   )
 }
 
@@ -216,15 +217,17 @@ describe('BottomTabBar', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
     expect(nav.className).toContain('bg-[var(--surface-1)]')
-    expect(nav.className).toContain('dark:bg-[var(--surface-overlay)]')
+    expect(nav.className).not.toContain('backdrop-blur')
+    expect(nav.className).not.toContain('dark:bg-[var(--surface-overlay)]')
     expect(nav.className).toContain('border-[var(--border-default)]')
-    expect(nav.className).toContain('shadow-e3')
+    expect(nav.className).toContain('shadow-e2')
 
     const active = screen.getByRole('link', { name: 'Charging' })
     expect(active.className).toContain('text-[var(--text-primary)]')
-    expect(active.className).toContain('bg-[rgba(var(--theme-primary-rgb),0.10)]')
+    expect(active.className).toContain('bg-[var(--surface-2)]')
+    expect(active.className).toContain('ring-[var(--border-strong)]')
     expect(active.className).toContain('font-semibold')
-    expect(active.querySelector('svg')).toHaveAttribute('stroke-width', '2.4')
+    expect(active.querySelector('svg')).toHaveAttribute('stroke-width', '2')
 
     const inactive = screen.getByRole('link', { name: 'Drives' })
     expect(inactive.className).toContain('text-[var(--text-secondary)]')
@@ -259,9 +262,101 @@ describe('BottomTabBar', () => {
     expect(nav.className).toContain('xl:hidden')
     expect(nav.className).toContain('safe-bottom')
     screen.getAllByRole('link').forEach((link) => {
-      expect(link.className).toContain('min-h-[44px]')
-      expect(link.className).toContain('min-w-[48px]')
+      expect(link.className).toContain('min-h-11')
+      expect(link.className).toContain('min-w-12')
     })
+  })
+
+  it('retains full long translated captions in a contained scroll region for RTL', () => {
+    const longLabel = 'Eine sehr lange übersetzte Navigationsbeschriftung'
+    tSpy.mockImplementation((key: string, fallback?: string) =>
+      key === 'nav.mobileCharging' ? longLabel : fallback ?? key,
+    )
+    const { container } = renderBar('/charging/42')
+    container.setAttribute('dir', 'rtl')
+    const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
+    expect(nav.className).toContain('overflow-x-auto')
+    const charging = screen.getByRole('link', { name: longLabel })
+    expect(charging).toHaveTextContent(longLabel)
+    expect(charging).toHaveAttribute('aria-current', 'page')
+    expect(charging.className).toContain('basis-auto')
+    expect(charging.className).toContain('shrink-0')
+    expect(charging.querySelector('span')).toHaveClass('text-sm')
+    expect(charging.querySelector('span')).not.toHaveClass('truncate')
+    expect(container).toHaveAttribute('dir', 'rtl')
+  })
+
+  it('retains keyboard prefetch, explicit focus and reduced-motion presentation', () => {
+    renderBar()
+    const charging = screen.getByRole('link', { name: 'Charging' })
+    charging.focus()
+    expect(charging).toHaveFocus()
+    expect(mockedPrefetch).toHaveBeenCalledWith('/charging')
+    expect(charging.className).toContain('focus-visible:ring-[var(--focus-ring)]')
+    expect(charging.className).toContain('forced-colors:focus-visible:outline-[Highlight]')
+    expect(charging.className).toContain('motion-reduce:transition-none')
+  })
+
+  it.each(['ltr', 'rtl'])(
+    'reveals every keyboard-focused tab in its nearest scroll container in %s without navigation',
+    async (direction) => {
+      const user = userEvent.setup()
+      const labels = TABS.map((tab) => `${tab.label} — Sehr lange übersetzte Navigationsbeschriftung`)
+      tSpy.mockImplementation((key: string, fallback?: string) => {
+        const index = TABS.findIndex((tab) => tab.key === key)
+        return index < 0 ? fallback ?? key : labels[index]
+      })
+      const { container } = renderBar('/settings')
+      container.setAttribute('dir', direction)
+      const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
+      const links = screen.getAllByRole('link')
+      const scrolls = links.map((link) => {
+        const scrollIntoView = vi.fn()
+        Object.defineProperty(link, 'scrollIntoView', { value: scrollIntoView })
+        return scrollIntoView
+      })
+      const options = {
+        behavior: 'instant',
+        block: 'nearest',
+        inline: 'nearest',
+        container: 'nearest',
+      }
+
+      expect(nav).toHaveClass('overflow-x-auto')
+      expect(scrolls.every((scroll) => scroll.mock.calls.length === 0)).toBe(true)
+      expect(mockedPrefetch).not.toHaveBeenCalled()
+      for (const [index, tab] of TABS.entries()) {
+        await user.tab()
+        expect(links[index]).toHaveFocus()
+        expect(links[index]).toHaveAttribute('href', tab.path)
+        expect(links[index]).toHaveAccessibleName(labels[index])
+        expect(links[index]).toHaveTextContent(labels[index])
+        expect(scrolls[index]).toHaveBeenCalledExactlyOnceWith(options)
+        expect(scrolls[index].mock.contexts[0]).toBe(links[index])
+        expect(mockedPrefetch).toHaveBeenLastCalledWith(tab.path)
+        expect(mockedPrefetch).toHaveBeenCalledTimes(index + 1)
+        links.forEach((link) => expect(link).not.toHaveAttribute('aria-current'))
+      }
+      expect(scrolls.map((scroll) => scroll.mock.calls.length)).toEqual([1, 1, 1, 1, 1, 1])
+
+      await user.tab({ shift: true })
+      expect(links[4]).toHaveFocus()
+      expect(scrolls[4]).toHaveBeenNthCalledWith(2, options)
+      expect(scrolls[5]).toHaveBeenCalledTimes(1)
+      expect(mockedPrefetch).toHaveBeenLastCalledWith('/live')
+    },
+  )
+
+  it('keeps focus and prefetch working when scrollIntoView is unavailable', () => {
+    renderBar('/settings')
+    const more = screen.getByRole('link', { name: 'More' })
+    Object.defineProperty(more, 'scrollIntoView', { value: undefined })
+
+    expect(() => more.focus()).not.toThrow()
+    expect(more).toHaveFocus()
+    expect(more).toHaveAttribute('href', '/explore')
+    expect(more).not.toHaveAttribute('aria-current')
+    expect(mockedPrefetch).toHaveBeenCalledExactlyOnceWith('/explore')
   })
 })
 

@@ -52,8 +52,9 @@ func (s *Service) Create(ctx context.Context, v *vehicle.Vehicle) error {
 	v.CreatedAt = time.Now()
 	v.UpdatedAt = time.Now()
 
-	if v.Model == "" {
-		v.Model = vehicle.DetectModelFromVIN(v.VIN)
+	if v.Model == nil {
+		model := vehicle.DetectModelFromVIN(v.VIN)
+		v.Model = &model
 	}
 
 	if err := s.repo.Save(ctx, v); err != nil {
@@ -71,11 +72,11 @@ func (s *Service) GetByID(ctx context.Context, id string) (*vehicle.Vehicle, err
 	return v, nil
 }
 
-// GetByUserID returns all vehicles for a user.
-func (s *Service) GetByUserID(ctx context.Context, userID string) ([]vehicle.Vehicle, error) {
-	vehicles, err := s.repo.GetByUserID(ctx, userID)
+// GetAll returns the shared fleet after the caller's authorization decision.
+func (s *Service) GetAll(ctx context.Context) ([]vehicle.Vehicle, error) {
+	vehicles, err := s.repo.GetAll(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("getting vehicles for user %s: %w", userID, err)
+		return nil, fmt.Errorf("getting fleet vehicles: %w", err)
 	}
 	return vehicles, nil
 }

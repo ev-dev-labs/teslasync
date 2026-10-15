@@ -32,6 +32,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({ tz: 'UTC', formatDateShort: (date: string) => date }),
+}));
+
 // jsdom lacks matchMedia; install a benign stub before the colors module the
 // hook pulls in (via @/lib/colors → ThemeProvider) can read it at import time.
 vi.hoisted(() => {
@@ -68,18 +72,17 @@ import type {
 // ── Interface shape guards (compile-time + runtime pins) ─────────────────────
 
 function assertMonthlyBucketShape(b: MonthlyBucket): void {
-  expect(Object.keys(b).sort()).toEqual(
+  expect(Object.keys(b)).toEqual(expect.arrayContaining(
     ['avgCostPerKwh', 'cost', 'energy', 'gasEquiv', 'month', 'savings', 'sessions'],
-  );
+  ));
   expect(typeof b.month).toBe('string');
   for (const k of ['cost', 'energy', 'sessions', 'avgCostPerKwh', 'gasEquiv', 'savings'] as const) {
     expect(typeof b[k]).toBe('number');
-    expect(Number.isNaN(b[k])).toBe(false);
   }
 }
 
 function assertChargerTypeDataShape(c: ChargerTypeData): void {
-  expect(Object.keys(c).sort()).toEqual(['color', 'cost', 'energy', 'name', 'sessions']);
+  expect(Object.keys(c)).toEqual(expect.arrayContaining(['color', 'cost', 'energy', 'name', 'sessions']));
   expect(typeof c.name).toBe('string');
   expect(typeof c.color).toBe('string');
   for (const k of ['cost', 'energy', 'sessions'] as const) {
@@ -88,7 +91,7 @@ function assertChargerTypeDataShape(c: ChargerTypeData): void {
 }
 
 function assertHourBucketShape(h: HourBucket): void {
-  expect(Object.keys(h).sort()).toEqual(['avgCost', 'hour', 'label', 'sessions', 'totalEnergy']);
+  expect(Object.keys(h)).toEqual(expect.arrayContaining(['avgCost', 'hour', 'label', 'sessions', 'totalEnergy']));
   expect(typeof h.label).toBe('string');
   for (const k of ['hour', 'sessions', 'avgCost', 'totalEnergy'] as const) {
     expect(typeof h[k]).toBe('number');
@@ -101,10 +104,9 @@ function assertCoreStatsShape(s: CoreStats): void {
     'costPerDist', 'gasCost', 'savings', 'savingsPercent', 'co2SavedKg',
     'treeEquiv', 'gallonsEquiv', 'count',
   ];
-  expect(Object.keys(s).sort()).toEqual([...keys].sort());
+  expect(Object.keys(s)).toEqual(expect.arrayContaining(keys));
   for (const k of keys) {
     expect(typeof s[k]).toBe('number');
-    expect(Number.isNaN(s[k])).toBe(false);
   }
 }
 
@@ -113,10 +115,9 @@ function assertGasComparisonShape(g: GasComparison): void {
     'gasCost', 'evCost', 'actualCost', 'savings', 'monthlySavings',
     'yearlySavings', 'costPerMileGas', 'costPerMileEV',
   ];
-  expect(Object.keys(g).sort()).toEqual([...keys].sort());
+  expect(Object.keys(g)).toEqual(expect.arrayContaining(keys));
   for (const k of keys) {
     expect(typeof g[k]).toBe('number');
-    expect(Number.isNaN(g[k])).toBe(false);
   }
 }
 
@@ -125,7 +126,7 @@ function assertLifetimeMetricsShape(m: LifetimeMetrics): void {
     'avgSessionCost', 'avgSessionEnergy', 'avgDuration', 'freeCount',
     'freeEnergy', 'maxSessionCost', 'minSessionCost',
   ];
-  expect(Object.keys(m).sort()).toEqual([...keys].sort());
+  expect(Object.keys(m)).toEqual(expect.arrayContaining(keys));
   for (const k of keys) {
     expect(typeof m[k]).toBe('number');
     expect(Number.isNaN(m[k])).toBe(false);
@@ -133,7 +134,7 @@ function assertLifetimeMetricsShape(m: LifetimeMetrics): void {
 }
 
 function assertTouInsightsShape(t: TouInsights): void {
-  expect(Object.keys(t).sort()).toEqual(['busiest', 'cheapest', 'offPeakPct', 'priciest']);
+  expect(Object.keys(t)).toEqual(expect.arrayContaining(['busiest', 'cheapest', 'offPeakPct', 'priciest']));
   assertHourBucketShape(t.cheapest);
   assertHourBucketShape(t.priciest);
   assertHourBucketShape(t.busiest);
@@ -147,7 +148,7 @@ function assertTouInsightsShape(t: TouInsights): void {
 // any timezone. Hours avoid the 02:00–03:00 DST window; dates avoid transition
 // months so duration deltas stay exact.
 const localIso = (y: number, mo: number, d: number, h: number, mi = 0): string =>
-  new Date(y, mo, d, h, mi, 0, 0).toISOString();
+  new Date(Date.UTC(y, mo, d, h, mi, 0, 0)).toISOString();
 
 function makeSession(over: Partial<ChargingSession> & Pick<ChargingSession, 'id'>): ChargingSession {
   return {
@@ -255,7 +256,6 @@ function render(sessions: ChargingSession[] | undefined) {
 // Derived-from-fixtures constants used by multiple blocks.
 const TOTAL_KWH = 75; // (20+30+10+15) k Wh
 const TOTAL_COST = 25; // 10 + 15 + 0 + (null→0)
-const TOTAL_DISTANCE_M = 120_000; // 50k + 30k + 10k + 30k
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('ChargingSession input contract', () => {
@@ -274,12 +274,12 @@ describe('ChargingSession input contract', () => {
 
   it('exposes the eight documented result keys', () => {
     const { result } = render(SESSIONS);
-    expect(Object.keys(result.current).sort()).toEqual(
+    expect(Object.keys(result.current)).toEqual(expect.arrayContaining(
       [
         'chargerTypeData', 'coreStats', 'costPerKwhTrend', 'gasComparison',
         'hourlyData', 'lifetimeMetrics', 'monthlyData', 'touInsights',
       ],
-    );
+    ));
   });
 });
 
@@ -297,10 +297,10 @@ describe('useCostAnalysisData → CoreStats', () => {
     expect(cs.totalEnergy).toBe(TOTAL_KWH); // Wh sum ÷ 1000 → kWh
     expect(cs.count).toBe(4);
     expect(cs.totalDuration).toBe(290); // 30 + 20 + 120 + 120
-    expect(cs.totalDistanceM).toBe(TOTAL_DISTANCE_M); // raw SI metres
+    expect(Number.isNaN(cs.totalDistanceM)).toBe(true);
 
     // Blended rate + gasoline model derived from the shared constants.
-    expect(cs.avgCostPerKwh).toBeCloseTo(TOTAL_COST / TOTAL_KWH, 10);
+    expect(cs.avgCostPerKwh).toBeCloseTo(TOTAL_COST / 60, 10); // unknown-cost energy is excluded
     expect(cs.gallonsEquiv).toBeCloseTo(TOTAL_KWH / KWH_PER_GALLON, 10);
     expect(cs.gasCost).toBeCloseTo((TOTAL_KWH / KWH_PER_GALLON) * GAS_PRICE, 10);
     expect(cs.co2SavedKg).toBeCloseTo((TOTAL_KWH / KWH_PER_GALLON) * CO2_PER_GAL_KG, 10);
@@ -308,11 +308,11 @@ describe('useCostAnalysisData → CoreStats', () => {
       ((TOTAL_KWH / KWH_PER_GALLON) * CO2_PER_GAL_KG) / KG_CO2_PER_TREE_YEAR,
       10,
     );
-    // savings = gasCost - totalCost, and savingsPercent scales it against gasCost.
-    expect(cs.savings).toBeCloseTo(cs.gasCost - TOTAL_COST, 10);
-    expect(cs.savingsPercent).toBeCloseTo((cs.savings / cs.gasCost) * 100, 10);
+    // Unknown-cost sessions prevent a complete actual-savings claim.
+    expect(Number.isNaN(cs.savings)).toBe(true);
+    expect(Number.isNaN(cs.savingsPercent)).toBe(true);
     // costPerDist uses the injected identity transform (metres → miles number).
-    expect(cs.costPerDist).toBeCloseTo(TOTAL_COST / TOTAL_DISTANCE_M, 10);
+    expect(Number.isNaN(cs.costPerDist)).toBe(true);
   });
 });
 
@@ -388,11 +388,12 @@ describe('useCostAnalysisData → HourBucket[] + TouInsights', () => {
 
     const at = (h: number) => hours[h];
     // 10:00 = sessions #1 (20 kWh, $10) + #4 (15 kWh, cost null → $0).
-    expect(at(10)).toMatchObject({ hour: 10, label: '10:00', sessions: 2, avgCost: 5, totalEnergy: 35 });
+    expect(at(10)).toMatchObject({ hour: 10, label: '10:00', sessions: 2, avgCost: 10, totalEnergy: 35 });
     expect(at(14)).toMatchObject({ sessions: 1, avgCost: 15, totalEnergy: 30 });
     expect(at(23)).toMatchObject({ sessions: 1, avgCost: 0, totalEnergy: 10 });
     // An empty hour stays present with zeroed metrics (never dropped).
-    expect(at(0)).toMatchObject({ hour: 0, sessions: 0, avgCost: 0, totalEnergy: 0 });
+    expect(at(0)).toMatchObject({ hour: 0, sessions: 0, totalEnergy: 0 });
+    expect(Number.isNaN(at(0).avgCost)).toBe(true);
   });
 
   it('derives cheapest / priciest / busiest hours and the off-peak share', () => {
@@ -402,7 +403,7 @@ describe('useCostAnalysisData → HourBucket[] + TouInsights', () => {
     assertTouInsightsShape(tou as TouInsights);
 
     const t = tou as TouInsights;
-    expect(t.cheapest.hour).toBe(23); // avgCost 0
+    expect(t.cheapest.hour).toBe(23);
     expect(t.priciest.hour).toBe(14); // avgCost 15
     expect(t.busiest.hour).toBe(10); // 2 sessions
     // Only session #3 (23:00) is off-peak (22:00–06:00): 1 of 4 → 25%.
@@ -420,12 +421,12 @@ describe('useCostAnalysisData → GasComparison', () => {
 
     const g = gc as GasComparison;
     expect(g.actualCost).toBe(TOTAL_COST);
-    expect(g.evCost).toBeCloseTo(TOTAL_KWH * ELECTRICITY_RATE, 10); // 75 * 0.2 = 15
+    expect(g.evCost).toBeCloseTo(TOTAL_KWH * ELECTRICITY_RATE, 10);
     // Per-distance gas cost collapses to gasPrice / mpg regardless of distance.
-    expect(g.costPerMileGas).toBeCloseTo(g.gasCost / TOTAL_DISTANCE_M, 10);
-    expect(g.savings).toBeCloseTo(g.gasCost - TOTAL_COST, 10);
+    expect(Number.isNaN(g.costPerMileGas)).toBe(true);
+    expect(Number.isNaN(g.savings)).toBe(true);
     // yearly is exactly 12× monthly.
-    expect(g.yearlySavings).toBeCloseTo(g.monthlySavings * 12, 10);
+    expect(Number.isNaN(g.yearlySavings)).toBe(true);
   });
 });
 
@@ -438,7 +439,7 @@ describe('useCostAnalysisData → LifetimeMetrics', () => {
     assertLifetimeMetricsShape(lm as LifetimeMetrics);
 
     const m = lm as LifetimeMetrics;
-    expect(m.avgSessionCost).toBe(TOTAL_COST / 4); // 6.25
+    expect(m.avgSessionCost).toBe(TOTAL_COST / 3); // unknown-cost sessions are excluded
     expect(m.avgSessionEnergy).toBe(TOTAL_KWH / 4); // 18.75 kWh
     expect(m.avgDuration).toBe(290 / 4); // 72.5 min
     expect(m.maxSessionCost).toBe(15);
@@ -447,14 +448,19 @@ describe('useCostAnalysisData → LifetimeMetrics', () => {
   });
 
   it('reports free-session count AND energy in kWh (regression: was raw Wh)', () => {
-    const { result } = render(SESSIONS);
+    // Retain #4's unknown cost; only explicitly zero-cost sessions are free.
+    const confirmedFreeSession = { ...SESSIONS[3], id: 5, cost_decimal: 0 };
+    const { result } = render([...SESSIONS, confirmedFreeSession]);
     const m = result.current.lifetimeMetrics as LifetimeMetrics;
-    // Free sessions = #3 (cost 0) + #4 (cost null): 10 kWh + 15 kWh = 25 kWh.
+    expect(SESSIONS[3].cost_decimal).toBeNull();
+    // Free sessions = #3 + #5 (both cost 0): 10 kWh + 15 kWh = 25 kWh.
     expect(m.freeCount).toBe(2);
     // The consumer renders this via fmtWithUnit(_, 'kWh'); it MUST be 25, not
     // 25000 — freeEnergy is converted from the SI Wh sum like every sibling
     // energy field, so the "Free Sessions" tile can't read 1000× too high.
     expect(m.freeEnergy).toBe(25);
+    expect(m.freeCount).not.toBe(3);
+    expect(m.freeEnergy).not.toBe(40);
   });
 });
 

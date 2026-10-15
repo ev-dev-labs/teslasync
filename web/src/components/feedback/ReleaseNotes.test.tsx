@@ -116,7 +116,7 @@ describe('ReleaseNotes', () => {
     expect(screen.getByText('Beta')).toBeInTheDocument()
     expect(screen.getByText('Stable')).toBeInTheDocument()
     // The section heading uses the shared changelog copy.
-    expect(screen.getByText("What's New")).toBeInTheDocument()
+    expect(screen.getByText("What's new")).toBeInTheDocument()
   })
 
   it('behaves as a single-open accordion on toggle', () => {

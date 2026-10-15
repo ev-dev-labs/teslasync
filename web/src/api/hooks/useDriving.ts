@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { validateAnalyticalHistory } from '@/lib/analyticalHistory';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useMutationToast } from './_toastHelpers';
@@ -44,8 +45,10 @@ export const drivingKeys = {
     (window?.start || window?.end || window?.limit
       ? ['drives', vehicleId, window.start ?? null, window.end ?? null, window.limit ?? null] as const
       : ['drives', vehicleId] as const),
-  history: (vehicleId?: string, limit = 1000) =>
-    ['drives', vehicleId, 'history', limit] as const,
+  history: (vehicleId?: string, limit = 1000, window?: Pick<DriveWindow, 'start' | 'end'>) =>
+    (window?.start || window?.end
+      ? ['drives', vehicleId, 'history', limit, window.start ?? null, window.end ?? null] as const
+      : ['drives', vehicleId, 'history', limit] as const),
   calendar: (vehicleId?: string, start?: string, end?: string) =>
     ['drives', vehicleId, 'calendar', start, end] as const,
   // Detail key is namespaced under 'drive' (singular) so it never collides
@@ -57,7 +60,10 @@ export const drivingKeys = {
   // all undefined on an array.
   drive: (id: string) => ['drive', id] as const,
   score: (vehicleId?: string) => ['drive-score', vehicleId] as const,
-  stats: (vehicleId?: string) => ['driving-stats', vehicleId] as const,
+  stats: (vehicleId?: string, window?: Pick<DriveWindow, 'start' | 'end'>) =>
+    (window?.start || window?.end
+      ? ['driving-stats', vehicleId, window.start ?? null, window.end ?? null] as const
+      : ['driving-stats', vehicleId] as const),
   dynamics: (vehicleId?: string) => ['driving-dynamics', vehicleId] as const,
   accelerationDistribution: (vehicleId?: string) => ['acceleration-distribution', vehicleId] as const,
   drivetrainHealth: (vehicleId?: string) => ['drivetrain-health', vehicleId] as const,
@@ -119,10 +125,11 @@ export function useDrives(vehicleId?: string, options?: DriveWindow | number) {
       if (opts.end) params.set('end', opts.end);
       if (boundedLimit != null) params.set('limit', String(boundedLimit));
       const qs = params.toString();
-      return request<Drive[]>(qs ? `/drives?${qs}` : '/drives', { signal });
+      // Go nil slices remain empty-compatible; other invalid shapes must not replace cached evidence.
+      return request<Drive[] | null>(qs ? `/drives?${qs}` : '/drives', { signal })
+        .then((rows) => validateAnalyticalHistory(rows === null ? [] : rows, 'drive'));
     },
     enabled: !!vehicleId,
-    select: safeArray,
     refetchInterval: opts.refetchInterval,
     staleTime: STALE_TIMES.FAST,
   });
@@ -136,31 +143,42 @@ export function useDrives(vehicleId?: string, options?: DriveWindow | number) {
  *
  * The backend caps one request at 1,000 rows. Callers must still describe the
  * result as an observed history window rather than guaranteed lifetime data.
+ * Workspace callers pass startInstant/endInstantExclusive unchanged as
+ * start/end; both bounds scope the server result and its isolated cache key.
  */
-export function useDriveHistory(vehicleId?: string, limit = 1000) {
+export function useDriveHistory(
+  vehicleId?: string,
+  limit = 1000,
+  window?: Pick<DriveWindow, 'start' | 'end'>,
+) {
   const boundedLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+  const params = new URLSearchParams({ vehicle_id: String(vehicleId), limit: String(boundedLimit) });
+  if (window?.start) params.set('start', window.start);
+  if (window?.end) params.set('end', window.end);
   return useQuery({
-    queryKey: drivingKeys.history(vehicleId, boundedLimit),
+    queryKey: drivingKeys.history(vehicleId, boundedLimit, window),
     queryFn: ({ signal }) =>
       request<Drive[]>(
-        `/drives?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
+        `/drives?${params}`,
         { signal },
-      ),
+      ).then((rows) => validateAnalyticalHistory(rows, 'drive')),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.MODERATE,
-    select: safeArray,
   });
 }
 
 const CALENDAR_PAGE_SIZE = 1000;
 
-/** Fetch every drive in a bounded calendar or rhythm window, not just the first API page. */
+/** Fetch every drive in a valid bounded history window, preserving both exact bounds on every page. */
 export function useDriveCalendarHistory(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
     queryKey: drivingKeys.calendar(vehicleId, start, end),
     queryFn: async ({ signal }) => {
       if (!vehicleId || !start || !end) {
         throw new Error('Drive calendar vehicle and date range are required');
+      }
+      if (!isDriveDateBound(start) || !isDriveDateBound(end) || Date.parse(start) > Date.parse(end)) {
+        throw new Error('Drive calendar requires a valid start and end date range');
       }
       const drives: Drive[] = [];
       const seenIds = new Set<number>();
@@ -203,6 +221,7 @@ export function useDrive(id: string) {
   });
 }
 
+/** Independent all-completed-drive score. The server ignores date range parameters. */
 export function useDriveScore(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.score(vehicleId),
@@ -215,13 +234,18 @@ export function useDriveScore(vehicleId?: string) {
   });
 }
 
-export function useDrivingStats(vehicleId?: string) {
+/** Full completed-drive aggregate; bounds scope started_at, never the list page. */
+export function useDrivingStats(vehicleId?: string, window?: Pick<DriveWindow, 'start' | 'end'>) {
   return useQuery({
-    queryKey: drivingKeys.stats(vehicleId),
-    queryFn: ({ signal }) =>
-      request<DrivingStats>(
-        vehicleId ? `/drives/stats?vehicle_id=${vehicleId}` : '/drives/stats', { signal },
-      ),
+    queryKey: drivingKeys.stats(vehicleId, window),
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams();
+      if (vehicleId) params.set('vehicle_id', vehicleId);
+      if (window?.start) params.set('start', window.start);
+      if (window?.end) params.set('end', window.end);
+      const qs = params.toString();
+      return request<DrivingStats>(qs ? `/drives/stats?${qs}` : '/drives/stats', { signal });
+    },
     enabled: !!vehicleId,
     retry: false,
   });
@@ -267,10 +291,22 @@ export function useDrivetrainHealth(vehicleId?: string) {
   });
 }
 
+/**
+ * RFC3339 bounds are [start, end). The server's ParseDateRange converts the
+ * exclusive end to an inclusive PostgreSQL microsecond before BETWEEN.
+ * Date-only bounds retain the endpoint's inclusive UTC-calendar semantics.
+ * Omit both bounds for full history; a single bound is not supported.
+ */
 export function useSpeedProfile(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
     queryKey: [...drivingKeys.speedProfile(vehicleId), start, end],
     queryFn: ({ signal }) => {
+      if (start || end) {
+        if (!start || !end || !isDriveDateBound(start)
+          || !isDriveDateBound(end) || Date.parse(start) > Date.parse(end)) {
+          throw new Error('Speed profile requires a valid start and end date range');
+        }
+      }
       if (!vehicleId) return request<SpeedProfileData>('/analytics/speed-profile', { signal });
       const params = new URLSearchParams({ vehicle_id: vehicleId });
       if (start) params.set('start', start);
@@ -279,6 +315,13 @@ export function useSpeedProfile(vehicleId?: string, start?: string, end?: string
     },
     enabled: !!vehicleId,
   });
+}
+
+export function isDriveDateBound(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$/.test(value)
+    || !Number.isFinite(Date.parse(value))) return false;
+  const calendarDate = value.slice(0, 10);
+  return new Date(`${calendarDate}T00:00:00Z`).toISOString().slice(0, 10) === calendarDate;
 }
 
 export function useRegenEfficiency(vehicleId?: string, start?: string, end?: string) {

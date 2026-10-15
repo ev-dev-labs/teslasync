@@ -1,0 +1,348 @@
+{
+  "item": "audit-page-038",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+  "routes": ["/intelligence/tco-optimizer"],
+  "phase": 0,
+  "mode": "read-only source audit; only report and heartbeat written",
+  "purpose": "Compare constrained vehicle total-cost, risk and convenience strategies using supported recorded evidence.",
+  "primaryGoal": "Submit explicitly confirmed SI/currency-minor-unit planning constraints for the workspace vehicle, compare Pareto-like alternatives, and understand evidence and unsupported projections.",
+  "identity": {
+    "component": "TCOOptimizerPage",
+    "lazyImport": {"file": "web\\src\\App.tsx", "line": 240},
+    "routeRegistration": {"file": "web\\src\\App.tsx", "line": 774, "wrapper": "SafeRoute name=TCOOptimizer"},
+    "rootSha256": "0246c0837ad7577658a5dbfcd3a2abe5388a590038ae208d0ed90b23ed5510c0",
+    "rootLineCount": 244,
+    "runtimeMounted": "unverified"
+  },
+  "dataSources": [
+    {
+      "hook": "useRunTCOOptimizer",
+      "owner": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 198,
+      "kind": "user-submitted TanStack mutation; no automatic page query",
+      "endpoint": "POST /api/v1/advanced-intelligence/tco-optimizer/scenarios",
+      "sourceOwnership": {
+        "request": "TCOOptimizerRequest in web\\src\\types\\advancedIntelligence.ts:398",
+        "response": "TCOOptimizerResponse in web\\src\\types\\advancedIntelligence.ts:422",
+        "router": "internal\\api\\router.go:3167,3917",
+        "mount": "internal\\handler\\v1\\advancedintelligence\\handler.go:69-85",
+        "handler": "internal\\handler\\v1\\advancedintelligence\\handler.go:352-372",
+        "service": "internal\\app\\advancedintelligencesvc\\federated_causal_tco.go:416-436",
+        "derivation": "internal\\app\\advancedintelligencesvc\\federated_causal_tco.go:465-557"
+      },
+      "knownBehavior": "Service reads evidence for the submitted vehicle/currency over the preceding 365 days. Horizon is an independent future planning duration, not workspace history range. Builder initializes arrays and leaves projected costs and budget status null unless both charging channels, matching-currency costs, positive energy/distance and maintenance costs are supported. Reliability needs at least three charging outcomes. Convenience is modeled, not a measured source.",
+      "endpointVerification": "Source matched exactly through mounted route module; no network request made.",
+      "unknown": "Repository SQL, live authorization, actual evidence coverage, transport responses and production freshness were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "GET /api/v1/vehicles via useVehicles at web\\src\\api\\hooks\\useVehicles.ts:73-76",
+      "sourceOwnership": "Existing URL/store/fleet fallback selection, not a page-specific vehicle picker.",
+      "knownBehavior": "Page reads vehicleId and disables submit when null; selected-vehicle hook does not expose loading/error provenance to this caller.",
+      "endpointVerification": "Frontend endpoint inspected; backend registration for the transitive fleet query not traced in this bounded audit."
+    },
+    {
+      "hook": "useUnits / useNumberFormatting",
+      "owner": "web\\src\\hooks\\useUnits.ts; web\\src\\hooks\\useNumberFormatting.ts",
+      "kind": "Existing settings and formatter bridges",
+      "knownBehavior": "Duration/distance hints convert raw seconds/meters only for display; money uses response currency and locale, with currency-specific minor-unit fraction digits; numeric percentages use current formatter preferences.",
+      "unknown": "Transitive settings API and catalog coverage not independently audited."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "Existing full-width PageContainer adapter; container/min-w-0 and shell ownership retained."},
+    {"name": "InsightPanel", "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "role": "Domain panel composing LayoutCard and SourceContent; accepts explicit sourceState/error/onRetry or query trust."},
+    {"name": "LayoutCard / SourceContent", "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx; web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "role": "Canonical named persistent panel and loading/error/empty/retained content; no replacement library needed."},
+    {"name": "EvidencePanel", "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "role": "Existing shared domain quality/evidence/limitations/unsupported explanation owner."},
+    {"name": "SiNumberInput / MutationError", "owner": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx; web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx", "role": "SI numeric input wrapper and domain mutation failure feedback."},
+    {"name": "Input / Button / Text / Badge / Table", "owner": "@/components/ui category barrel; Input.tsx, Button.tsx and Table.tsx inspected", "role": "Reuse labeled fields, busy submit, semantic text/status and semantic matrix. Table is appropriate here: no existing sorting, pagination, selection or export behavior to preserve."},
+    {"name": "AlertBanner / EmptyState / KVList", "owner": "@/components/feedback and @/components/data-display", "role": "Existing warning, empty and quality-detail rendering; implementations not fully inspected."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "role": "Existing motion wrapper; source honors reduced motion and delegates preference ownership."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "line": 182,
+      "rule": "MDC-002/MDC-015",
+      "detail": "Strategy articles manually recreate neutral surface chrome despite an existing Card/LayoutCard surface pipeline.",
+      "fix": "Compose existing Card or LayoutCard, preserving all five rows, constraints, badge and source ordering; avoid a new StrategyCard shared library without independent consumer evidence.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": "Constraints stack below md, become two columns at md and three at xl. Strategies stack below lg, two columns at lg, three at xl. Evidence sections stack below lg, then three columns. Table owns local overflow-x-auto. PageLayout supplies min-w-0/full width.",
+    "viewportAcceptance": "All ten requested widths, allocated-container widths, zoom, long labels and RTL unverified.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "line": 162,
+        "rule": "MDC-020/MDC-043",
+        "detail": "Long localized submit label uses the default fixed-height Button without wrapLabel. Narrow allocation and translated labels have no page-level wrapping opt-in.",
+        "fix": "Use existing wrapLabel with allocated-width constraints and validate 320px/long translations; preserve submit/busy behavior.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "sourceStrengths": "Shared Input generates stable associated IDs and hint descriptions; native required/min/max validation exists. Submit has text and shared aria-busy; decorative icons are aria-hidden. Strategy headings are h3 and table row headers use scope=row. Reduced-motion implementation is reused.",
+    "runtime": "Keyboard, focus restoration/order, screen reader, effective contrast, forced colors and touch spacing unverified.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "line": 164,
+        "rule": "MDC-026/MDC-040",
+        "detail": "When vehicleId is null the sole submit action is disabled without explaining selection loading, unavailable fleet or recovery. No page prerequisite message distinguishes these cases.",
+        "fix": "Expose a truthful workspace-selection prerequisite using existing shell/fleet trust ownership; never add a duplicate vehicle selector or label all null selection as an empty fleet.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "line": 194,
+        "rule": "MDC-040",
+        "detail": "Every strategy table has the same page-title accessible name; the adjacent h3 is not linked to that matrix.",
+        "fix": "Use per-strategy stable heading IDs and aria-labelledby or a localized table name including strategy identity.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "line": 170,
+        "rule": "MDC-021/MDC-040",
+        "detail": "Server input failures only reach an aggregate MutationError; field errors and aria-invalid are never passed to Input. Client lacks backend horizon/distance maxima and currency alphabet constraint.",
+        "fix": "Mirror source-confirmed constraints with localized field feedback linked by existing Input error props, retaining server validation and aggregate network recovery. Backend maxima are ten 365-day years and 1,000,000,000 m; currency must be three ASCII letters.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initial": "Form and all three panels remain mounted; alternatives use submit-instruction empty state.",
+    "loading": "Only submit shows mutation.isPending. Alternatives/EvidencePanel do not receive pending state.",
+    "empty": "Missing result and resolved zero strategies share the same submit instruction.",
+    "error": "MutationError displays Error.message or localized fallback in form panel; no source-specific alternatives error state.",
+    "unsupported": "Null cost and budget become Unsupported, null risk becomes em dash; evidence quality and limitations remain visible.",
+    "offlineStale": "No page source-state wiring for paused/offline or retained result provenance. Global client behavior is not proof of page trust presentation.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "line": 44,
+        "rule": "MDC-026/MDC-032/MDC-046",
+        "detail": "Mutation result is displayed without checking result.vehicle_id against current workspace vehicle, rendering generated_at or preserving/displaying submitted constraints. Changing vehicle or editing inputs leaves prior alternatives visually associated with current scope/form; an in-flight old-scope result is not distinguished.",
+        "fix": "Bind result provenance to submitted vehicle and immutable constraint snapshot; label retained results and generated time explicitly, reconcile scope changes without misattribution, and preserve usable prior results rather than silently discarding them.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+        "line": 177,
+        "rule": "MDC-026",
+        "detail": "Idle, pending, failed and successful-empty alternatives all collapse through !result to submit-instruction empty rendering. Existing InsightPanel supports sourceState/error/onRetry but is not supplied these mutation states.",
+        "fix": "Adapt mutation lifecycle to existing persistent source presentation, with distinct initial prerequisites, pending/paused status, failure recovery and resolved-empty explanation; retain all neighboring panels and supported data.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "line": 97,
+        "rule": "MDC-026",
+        "detail": "Before any response, absent props produce 'No supporting evidence was returned', 'No additional limitations were returned' (line 113) and unsupported quality (line 68), falsely implying a completed run. TCO passes absent result props at page lines 233-235.",
+        "fix": "Extend the existing domain EvidencePanel with an explicit idle/pending/paused/error/ready/retained lifecycle adapter and truthful pre-response copy; preserve three subsections and unsupported explanations.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "line": 182,
+      "rule": "MDC-010/MDC-015",
+      "detail": "Strategy surfaces use fixed white-alpha background/border and custom radius/padding instead of current neutral surface tokens. Nested Table defaults to standalone chrome inside that surface.",
+      "fix": "Reuse current neutral Card surface and Table variant=embedded; preserve semantic matrix and overflow. Theme/contrast acceptance remains required.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 81,
+      "rule": "MDC-010/MDC-015",
+      "detail": "Evidence records duplicate fixed white-alpha surface chrome. Repeated decorative cyan icons at lines 48 and 75 use fixed hue rather than neutral or meaningful semantic tokens.",
+      "fix": "Have the existing shared domain owner use canonical neutral surfaces and restrained icon tokens; keep warning semantic meaning and all evidence metadata.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "line": 39,
+      "rule": "MDC-013",
+      "detail": "Unit suffix uses a raw span/text-xs role rather than existing Caption/Text typography.",
+      "fix": "Reuse Text as=span with a caption role without altering SI suffix or linked hint.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "line": 81,
+      "rule": "MDC-045/MDC-026",
+      "detail": "SiNumberInput preserves empty as null, but page immediately maps null to zero for horizon and distance (line 92). Other numeric fields use Number('') at lines 108,122,136,147, conflating a cleared draft with a measured/user-entered zero and changing the paired charging share.",
+      "fix": "Keep nullable/string draft state separate from typed request construction; submit only validated complete values. Preserve legitimate zero for shares/risk/budget and all SI defaults.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+      "line": 186,
+      "rule": "MDC-044",
+      "detail": "strategy.name is rendered directly; inspected builder emits machine identifiers constrained_recorded_mix/home_priority/access_priority. EvidencePanel also renders raw quality.status at line 55. Known enum labels bypass localization, unlike neighboring labels.",
+      "fix": "Map known strategy/status identifiers to localized presentation labels with raw fallback for unknown values; preserve raw identities and server evidence/constraint text, which must not be silently rewritten.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "order": [
+      "Workspace/result provenance and lifecycle trust",
+      "Truthful evidence lifecycle shared contract",
+      "Draft/validation and accessible recovery",
+      "Neutral surfaces, semantic table naming and narrow-label wrapping",
+      "Known domain identifier localization"
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "EvidencePanel explicit simulation lifecycle",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Add an explicit source/run lifecycle contract accepting idle, pending, paused, ready, error and retained states plus contextual status/error/retry; retain quality/evidence/limitations/unsupported props and all three subsection shells.",
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx:232"],
+      "dependsOn": ["Existing InsightPanel and SourceContent state semantics", "Source-confirmed mutation state/provenance adapter"],
+      "acceptance": "No completed-response claims before success; loading/error/paused distinguishable; retained data and unsupported notices survive; no fabricated zeros.",
+      "scopeLimit": "Other production consumers were not inspected. Reconcile domain-owner caller inventory before changing public props; do not create a speculative new global composite."
+    },
+    {
+      "name": "EvidencePanel neutral chrome and localized quality labels",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Keep current optional typed evidence contracts; use canonical neutral surface tokens and existing Badge variants for sufficient/limited/insufficient; localize known statuses without changing wire IDs.",
+      "usedBy": ["TCOOptimizerPage EvidencePanel"],
+      "dependsOn": ["Existing Card/surface tokens", "Canonical catalog integration owner"],
+      "acceptance": "All observations, source names, sample counts, timestamps, window, reasons, limitations and unsupported messages retained across themes."
+    },
+    {
+      "name": "SiNumberInput typography-only suffix alignment",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "propsVariantsStates": "No new props; preserve null/finite validation, native constraints, explicit IDs, canonical unit suffix and displayHint.",
+      "usedBy": ["TCOOptimizerPage planning horizon", "TCOOptimizerPage annual distance"],
+      "dependsOn": ["Existing Text/Caption primitive"],
+      "acceptance": "Suffix stays visible and field association/value semantics unchanged."
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "strategy surface", "current": "local article chrome", "existingOwner": "Card/LayoutCard", "decision": "reuse; no new shared financial card needed"},
+    {"pattern": "simulation source states", "current": "empty boolean plus MutationError", "existingOwner": "InsightPanel/SourceContent", "decision": "adapt existing state pipeline; retain domain error detail"},
+    {"pattern": "SI and monetary formatting", "current": "useUnits/useNumberFormatting/formatCurrencyMinor", "existingOwner": "existing formatter bridges", "decision": "keep; no replacement converter or formatter"},
+    {"pattern": "workspace controls", "current": "useSelectedVehicle only", "existingOwner": "header workspace selection and workspaceScope", "decision": "keep single workspace owner; planning horizon is not a second historical range picker"}
+  ],
+  "preservation": {
+    "sourceSha256": "0246c0837ad7577658a5dbfcd3a2abe5388a590038ae208d0ed90b23ed5510c0",
+    "currentLineCount": 244,
+    "pageSpecificPresentationDependencyLines": {"InsightPanel": 72, "EvidencePanel": 130, "SiNumberInput": 46, "MutationError": 21, "totalWithPage": 513},
+    "sectionNames": ["Supported-cost notice", "Optimization constraints", "Pareto-like alternatives", "Evidence, quality, and limitations"],
+    "sectionCounts": {"topLevelNotice": 1, "domainPanels": 3, "directInsightPanel": 2, "EvidencePanel": 1, "evidenceSubsections": 3, "GlassPanel": 0, "ChartContainer": 0},
+    "formFields": ["horizon_s", "annual_distance_m", "home_charging_pct", "public_charging_pct", "risk_tolerance_pct", "budget_minor", "currency"],
+    "defaults": {"horizon_s": 94608000, "annual_distance_m": 20000000, "home_charging_pct": 80, "public_charging_pct": 20, "risk_tolerance_pct": 35, "budget_minor": 1800000, "currency": "USD"},
+    "actions": ["Edit all seven constraints", "Automatically complement home/public shares to 100 percent", "Uppercase currency draft", "Generate confirmed alternatives by form submit", "Resubmit after reviewing errors", "Select workspace vehicle through existing shell"],
+    "strategyContent": ["Source strategy identity/order", "Pareto-efficient badge", "Projected cost", "Risk score", "Convenience score", "Home/public mix", "Budget status", "Every constraint explanation"],
+    "evidenceContent": ["Quality status", "Samples", "Coverage", "Observation window", "Quality reasons", "Evidence source/summary/sample count/observed time", "Limitations", "Explicitly unsupported cost projections and purchases/charging changes/financial guarantees"],
+    "dataBehavior": [
+      "POST only on deliberate form submit with vehicle_id and confirmed=true.",
+      "Keep wire/cache seconds, meters, percentages and currency minor units; never convert request SI into display units.",
+      "Keep response currency and currency-specific fraction digits, user locale/precision and duration/distance preferences.",
+      "Null cost/risk/budget means unsupported or unknown, never zero.",
+      "Preserve backend model calculations, evidence ownership and fixed source lookback.",
+      "No replacement date or vehicle selector; actual route scope is vehicle=true, range=false from workspaceScope.",
+      "Preserve all panels, descriptions, source arrays, constraints and ordering even when unavailable."
+    ],
+    "exportsCharts": "No page export, chart, pagination or table selection action exists in inspected source; do not invent one or drop semantic tables.",
+    "preservationAcceptance": "Baseline source inventory only. No source edits or runtime equivalence claim."
+  },
+  "sourceInventory": [
+    {"file": "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx", "lines": 244, "sha256": "0246c0837ad7577658a5dbfcd3a2abe5388a590038ae208d0ed90b23ed5510c0"},
+    {"file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "lines": 72, "sha256": "7b774ae98c6bfed41d47605b36045a61a7c4ab0c6e41bf2d6770feb59b52d8dd"},
+    {"file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "lines": 130, "sha256": "667bce14e068b5c386e2e3f524295532e62f8d3033218808db6e60d213e3898e"},
+    {"file": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx", "lines": 46, "sha256": "dcf18264e4554065e077786f16441f3d24fc6ef923eaa1cf2d29c4198fb67f24"},
+    {"file": "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx", "lines": 21, "sha256": "3846836c6ab28cec6164a8c09539c97030167b14ce7ecc232ff2fb4fcb9014c5"},
+    {"file": "web\\src\\features\\advanced-intelligence\\components\\index.ts", "lines": 6, "sha256": "59128ff5c6963dd4e04b1a5370f8634197986893d79ad74fc3ba67fe48dacfc1"},
+    {"file": "web\\src\\features\\advanced-intelligence\\formatters.ts", "lines": 44, "sha256": "04a7db2f8b03374d3353618653fe8d2e8bcd108a6fa5ea4d87267d956c9d0280"},
+    {"file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts", "lines": 251, "sha256": "dac2b5a3c62f8e0b7d366a11ba11115818895d3a751b482c9361d6647d967067"},
+    {"file": "web\\src\\types\\advancedIntelligence.ts", "lines": 431, "sha256": "cc6e80b16f9119e2d322d662a2ebe2718a195ffda67738a1b0c59402caee8f13"}
+  ],
+  "evidenceLimits": {
+    "method": "Direct scoped source inspection, line-cited searches, SHA-256 and page-only regex counts; no Git, source/queue/shared writes, production mutation or full gates.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "historicalAcceptance": "Not borrowed as current proof.",
+    "fullGates": "NOTRUN: TypeScript/build/lint/full test suites prohibited by Phase 0 scope. audit-violations/audit.sh inspected but not run because it invokes project TypeScript. verify-api-hooks/verify.sh inspected but not run because it enumerates the broader mounted route tree; exact assigned endpoint traced manually.",
+    "sourceScan": {
+      "command": "PowerShell piped Python pathlib/re page-only audit, hashing and section counts; executed 2026-10-07T10:23:05Z",
+      "exitCode": 0,
+      "rawOutput": "PAGE_SCOPED_COUNTS {\"staticInlineStyles\": 0, \"rawControls\": 0, \"directLibraries\": 0, \"oldApiImports\": 0, \"doublePrefix\": 0, \"camelCaseVehicleParam\": 0}\nSECTION_COUNTS {\"InsightPanel\": 2, \"EvidencePanel\": 1, \"AlertBanner\": 1, \"Table\": 1, \"GlassPanel\": 0, \"ChartContainer\": 0}",
+      "limit": "Counts cover only root page, are regex heuristics, and do not establish comprehensive violations or runtime acceptance."
+    },
+    "scopeLimits": "App/router/workspace/client/shared primitive and backend service inspection limited to this page's identity, contracts and endpoint. No other page reviewed. Imported library implementations, canonical translation catalogs, repository SQL, settings endpoints and whole dependency graph not exhaustively inspected.",
+    "sourceDrift": "Inventory is a live read snapshot; disjoint workers may change shared files. Final root hash rechecked unchanged at 2026-10-07T10:27:21Z.",
+    "reportValidation": {
+      "exitCode": 0,
+      "rawOutput": "HOOK_LINE 198\nPASS JSON schema fields, identity, nine source hashes/line counts and issue citation ranges\nUTC 2026-10-07T10:27:21.547396+00:00",
+      "limit": "JSON/source-only checks, not TypeScript or runtime acceptance."
+    }
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+    "web\\src\\features\\advanced-intelligence\\formatters.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\ui\\Input.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\app\\advancedintelligencesvc\\federated_causal_tco.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler_test.go",
+    "internal\\app\\advancedintelligencesvc\\engines_test.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-038.json", ".agent-status\\audit-page-038.txt"]
+}

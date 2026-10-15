@@ -20,7 +20,10 @@ vi.mock('react-i18next', () => {
     }
     if (second && typeof second === 'object') {
       const bag = second as Record<string, unknown>
-      const tpl = typeof bag.defaultValue === 'string' ? bag.defaultValue : key
+      // Mirror i18next's plural defaults: defaultValue_one applies when count is 1.
+      const tpl = bag.count === 1 && typeof bag.defaultValue_one === 'string'
+        ? bag.defaultValue_one
+        : typeof bag.defaultValue === 'string' ? bag.defaultValue : key
       return interpolate(tpl, bag)
     }
     return key
@@ -104,6 +107,17 @@ vi.mock('@/hooks/useSettings', async () => {
 // tests have no QueryClient — stub the hooks so they don't throw.
 // useAnnotations.test.tsx calls vi.unmock to exercise the real module.
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({
+    data: [],
+    isPending: false,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    fetchStatus: 'idle',
+    dataUpdatedAt: 0,
+    refetch: vi.fn(),
+  }),
   useChartAnnotationsAsData: () => ({
     annotations: [],
     isLoading: false,
@@ -139,13 +153,86 @@ vi.mock('@/components/feedback/Toast', async () => {
   }
 })
 
+// Shared chart hooks (useChartPalette) read the theme and the raw settings
+// query. Bare component renders mount neither ThemeProvider nor a
+// QueryClient; outside those providers fall back to the default dark theme
+// and an idle settings query (palette defaults) instead of throwing. Inside a
+// provider the real hooks run unchanged, and files that mock either module
+// themselves still win.
+vi.mock('@/components/ui/ThemeProvider', async () => {
+  const actual = await vi.importActual<typeof import('@/components/ui/ThemeProvider')>(
+    '@/components/ui/ThemeProvider',
+  )
+  const fallback = {
+    themeId: 'neon-cyan' as const,
+    modeId: 'dark',
+    theme: {
+      id: 'neon-cyan' as const, name: 'Signal Blue',
+      primary: '#3b82f6', primaryRGB: '59, 130, 246', accent: '#06b6d4', accentRGB: '6, 182, 212',
+    },
+    mode: {
+      id: 'dark', name: 'Dark', bg: '#0b0d12', surface1: '#11151c', surface2: '#171c25',
+      surface3: '#202733', glassBg: 'rgba(255, 255, 255, 0.025)', glassBorder: 'rgba(255, 255, 255, 0.08)',
+      textPrimary: '#f4f7fb', textSecondary: '#aab4c3', textMuted: '#758195', colorScheme: 'dark' as const,
+    },
+    setTheme: () => {},
+    setMode: () => {},
+    setCustomColors: () => {},
+    themes: {},
+    modes: {},
+  }
+  return {
+    ...actual,
+    useTheme: () => {
+      try {
+        return actual.useTheme()
+      } catch {
+        return fallback as unknown as ReturnType<typeof actual.useTheme>
+      }
+    },
+  }
+})
+
+vi.mock('@/api/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/api/hooks/useSettings')>(
+    '@/api/hooks/useSettings',
+  )
+  const { QueryClientContext } = await vi.importActual<typeof import('@tanstack/react-query')>(
+    '@tanstack/react-query',
+  )
+  const { useContext } = await vi.importActual<typeof import('react')>('react')
+  const idle = {
+    data: undefined, error: null, isError: false, isPending: true, isLoading: false,
+    isFetching: false, isSuccess: false, status: 'pending', fetchStatus: 'idle',
+    dataUpdatedAt: 0, refetch: () => Promise.resolve(idle),
+  }
+  return {
+    ...actual,
+    useSettings: () => {
+      // The provider is fixed for a mounted tree, so the branch is stable
+      // across renders of the same component.
+      const client = useContext(QueryClientContext)
+      if (client) return actual.useSettings()
+      return idle as unknown as ReturnType<typeof actual.useSettings>
+    },
+  }
+})
+
 vi.mock('@/lib/timezone', async () => {
   const actual = await vi.importActual<typeof import('@/lib/timezone')>(
     '@/lib/timezone',
   )
+  // Resolves through the (possibly file-mocked) settings so a test that saves
+  // a user timezone sees it. No vehicle is selected in bare renders, and the
+  // browser zone is replaced by UTC so results never depend on the host TZ.
+  const { useSettings } = await import('@/hooks/useSettings')
   return {
     ...actual,
-    useTimezone: () => 'UTC',
+    useTimezone: (mode: Parameters<typeof actual.useTimezone>[0] = 'vehicle') => {
+      const settings = (useSettings() as { settings?: { timezone_user?: string | null } } | undefined)?.settings
+      const userTz = settings?.timezone_user?.trim() ? settings.timezone_user : 'UTC'
+      return actual.resolveTimezone(mode, undefined, userTz)
+    },
   }
 })
 

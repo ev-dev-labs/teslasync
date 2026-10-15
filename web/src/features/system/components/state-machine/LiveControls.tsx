@@ -14,12 +14,9 @@ import { cn } from '@/lib/cn';
  *   - the index into the transition buffer (for stepping)
  *   - whether step-prev / step-next are valid right now
  *
- * The right-hand counter distinguishes the *Window* dropdown's slice
- * from the underlying 24 h fetch:
- *   "{{n}} in window · {{N}} in 24 h"
- * with a hover Tooltip that explains the scope difference. The legacy
- * single-scope `bufferCount` prop is preserved as a deprecated fallback
- * so external callers don't break mid-migration.
+ * Counts distinguish the timeline window, filtered buffer, loaded server
+ * page and matching server total. Legacy callers retain a generic buffer
+ * counter without implying a time range or an aggregate.
  */
 export interface LiveControlsProps {
   isLive: boolean;
@@ -33,13 +30,17 @@ export interface LiveControlsProps {
   onClearBuffer: () => void;
   /** Number of transitions inside the active Window dropdown slice. */
   windowCount?: number;
-  /** Total transitions fetched (typically the last 24 h). */
+  /** Server-reported matching total across all pages in the query range. */
   totalCount?: number;
+  loadedCount?: number;
+  filteredBufferCount?: number;
+  rangeScope?: string;
+  page?: number;
+  bufferSince?: string;
+  windowEnd?: string;
   /**
-   * @deprecated Use `windowCount` + `totalCount`. Kept for one Phase as a
-   * fallback so external callers don't break mid-migration; if both new
-   * props are absent, this scalar drives both counts (preserving the old
-   * "{{n}} buffered" copy).
+   * @deprecated Use the explicit window, filtered buffer, loaded and total
+   * counts. Legacy callers retain the generic "{{n}} buffered" copy.
    */
   bufferCount?: number;
   className?: string;
@@ -69,6 +70,12 @@ export function LiveControls({
   onClearBuffer,
   windowCount,
   totalCount,
+  loadedCount,
+  filteredBufferCount,
+  rangeScope,
+  page,
+  bufferSince,
+  windowEnd,
   bufferCount,
   className,
 }: LiveControlsProps) {
@@ -89,48 +96,59 @@ export function LiveControls({
   }, [windowMinutes, t]);
 
   const inWindow = windowCount ?? bufferCount ?? 0;
-  const total = totalCount ?? bufferCount ?? 0;
-  const outside = Math.max(0, total - inWindow);
-  const dual = totalCount != null || windowCount != null;
-
-  const counterLabel = dual && outside > 0
-    ? t('debugger.controls.bufferedDual', '{{inWindow}} in window · {{total}} in 24 h', {
-        inWindow,
-        total,
+  const scoped = loadedCount != null || rangeScope != null;
+  const counterLabel = scoped
+    ? t('debugger.controls.scopedCounts', '{{inWindow}} in window · {{buffer}} in filtered buffer · {{loaded}} loaded · {{total}} matching', {
+        inWindow: windowCount ?? '—', buffer: filteredBufferCount ?? '—',
+        loaded: loadedCount ?? '—', total: totalCount ?? '—',
       })
+    : windowCount != null || totalCount != null
+      ? t('debugger.controls.windowBufferCounts', '{{inWindow}} in window · {{buffer}} buffered', {
+          inWindow, buffer: totalCount ?? bufferCount ?? '—',
+        })
     : t('debugger.controls.buffered', '{{n}} buffered', { n: inWindow });
 
-  const tooltipLabel = t(
-    'debugger.controls.bufferedTooltip',
-    'Counts inside the {{minutes}}-minute Window dropdown. {{outside}} more transitions fetched in the last 24 h.',
-    { minutes: windowMinutes, outside },
-  );
+  const windowStart = windowEnd && Number.isFinite(Date.parse(windowEnd))
+    ? new Date(Date.parse(windowEnd) - windowMinutes * 60_000).toISOString()
+    : undefined;
+  const tooltipLabel = scoped
+    ? t('debugger.controls.scopedTooltip',
+        'Matching total: {{range}}. Loaded server page: {{page}}. Buffer cleared at: {{since}}; when cleared, only loaded rows at or after that instant are included. Timeline window: [{{windowStart}}, {{windowEnd}}], intersected with the filtered buffer. No full-range aggregate is inferred from loaded rows.',
+        { range: rangeScope ?? '—', page: page ?? '—',
+          since: bufferSince ?? t('debugger.controls.notCleared', 'Not cleared'),
+          windowStart: windowStart ?? '—', windowEnd: windowEnd ?? '—' })
+    : t('debugger.controls.bufferTooltip',
+        'The {{minutes}}-minute timeline window is a slice of the loaded buffer, not a full-range total.',
+        { minutes: windowMinutes });
 
   return (
     <div
       data-testid="live-controls"
       className={cn(
-        'flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-2',
+        'flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2',
         className,
       )}
     >
       <Button
         size="sm"
-        variant={isLive ? 'primary' : 'secondary'}
+        variant="secondary"
+        className={isLive ? 'border-[var(--text-secondary)] bg-[var(--surface-2)]' : undefined}
         onClick={() => onToggleLive(true)}
         aria-pressed={isLive}
       >
         <span
+          aria-hidden="true"
           className={cn(
             'mr-1.5 inline-block h-2 w-2 rounded-full',
-            isLive ? 'bg-emerald-300 animate-pulse' : 'bg-[var(--surface-2)]',
+            isLive ? 'bg-[var(--semantic-success)]' : 'bg-[var(--text-secondary)]',
           )}
         />
         {t('debugger.controls.live', 'Live')}
       </Button>
       <Button
         size="sm"
-        variant={!isLive ? 'primary' : 'secondary'}
+        variant="secondary"
+        className={!isLive ? 'border-[var(--text-secondary)] bg-[var(--surface-2)]' : undefined}
         onClick={() => onToggleLive(false)}
         aria-pressed={!isLive}
       >

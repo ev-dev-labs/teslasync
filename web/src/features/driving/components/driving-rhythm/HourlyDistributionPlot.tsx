@@ -18,8 +18,9 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceToSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HourlyDistributionPlotProps {
   rows: {
@@ -36,6 +37,7 @@ export function HourlyDistributionPlot({
   rows,
   isHidden: externalIsHidden,
 }: HourlyDistributionPlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatDistance } = useUnits();
   const driveName = t('rhythm.hourly.drives', 'Drive starts');
@@ -56,7 +58,6 @@ export function HourlyDistributionPlot({
         format: (v) =>
           formatDistance(
             v != null ? convertDistanceToSI(v as number, unitPrefs.distance) : null,
-            { precision: 1 },
           ),
       },
     ],
@@ -104,7 +105,7 @@ export function HourlyDistributionPlot({
                 tickLine={false}
                 axisLine={false}
                 width={48}
-                tickFormatter={(value) => fmtNumber(value, 0)}
+                tickFormatter={(value) => fmtNumber(value)}
               />
               <Tooltip
                 content={
@@ -118,7 +119,6 @@ export function HourlyDistributionPlot({
                             typeof value === 'number'
                               ? convertDistanceToSI(value, unitPrefs.distance)
                               : null,
-                            { precision: 1 },
                           )
                     }
                   />

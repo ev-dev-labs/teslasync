@@ -14,8 +14,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import './operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
 
 type LiveEntry = { value: unknown; timestamp: string | null };
@@ -26,6 +27,8 @@ const h = vi.hoisted(() => ({
     data: undefined as LiveData,
     isLoading: false,
     dataUpdatedAt: 0,
+    error: null as Error | null,
+    refetch: vi.fn(),
   },
 }));
 
@@ -96,10 +99,10 @@ function renderPanel(props?: Partial<SignalCatalogPanelProps>) {
   );
 }
 
-// StatCard renders <label span> then a sibling value row; hop across.
+// Query the accepted renderer's value independently of layout or table labels.
 function statValue(label: string): string {
-  const labelEl = screen.getByText(label);
-  return labelEl.parentElement?.nextElementSibling?.textContent?.trim() ?? '';
+  const labelEl = screen.getAllByText(label).find((element) => !element.closest('table'))!;
+  return labelEl.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent?.trim() ?? '';
 }
 
 // The signal-name column is the only place that renders <code>.
@@ -111,6 +114,7 @@ beforeEach(() => {
   h.gaps.data = sampleData();
   h.gaps.isLoading = false;
   h.gaps.dataUpdatedAt = 0;
+  h.gaps.error = null;
   localStorage.clear();
 });
 
@@ -166,13 +170,39 @@ describe('formatStaleness', () => {
 
 // ── SignalCatalogPanel — summary + table ────────────────────────────────────
 describe('SignalCatalogPanel — summary + rows', () => {
+  it('shows fatal recovery instead of a false empty catalog and unknown metric counts', () => {
+    h.gaps.data = undefined;
+    h.gaps.error = new Error('catalog unavailable');
+    renderPanel({ title: 'Catalog' });
+    expect(screen.getByRole('heading', { name: 'Catalog' })).toBeInTheDocument();
+    expect(statValue('Total signals')).toBe('—');
+    expect(screen.queryByText('No signal data available')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(h.gaps.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps full retained values, filters and selection usable through refresh failure', () => {
+    const completeValue = 'complete version and build metadata '.repeat(30);
+    h.gaps.data = { firmware: { value: completeValue, timestamp: tsAgo(5) } };
+    h.gaps.error = new Error('refresh unavailable');
+    const onToggle = vi.fn();
+    renderPanel({ selection: { selectedSignals: [], onToggle } });
+    expect(statValue('Total signals')).toBe('1');
+    expect(screen.getByText(completeValue.trim(), { exact: true })).toBeInTheDocument();
+    const value = screen.getByText(completeValue.trim(), { exact: true });
+    expect(value.className).not.toContain('truncate');
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: /Add firmware/ }));
+    expect(onToggle).toHaveBeenCalledWith('firmware');
+  });
   it('renders the four KPI cards partitioned by staleness category', () => {
     renderPanel();
-    expect(statValue('Total Signals')).toBe('4');
+    expect(statValue('Total signals')).toBe('4');
     // "Active" card counts the active category (fresh + aging).
     expect(statValue('Active (<30s)')).toBe('2');
     expect(statValue('Stale (>5min)')).toBe('1');
-    expect(statValue('Never Received')).toBe('1');
+    expect(statValue('Never received')).toBe('1');
   });
 
   it('renders every signal row with a per-window status badge', () => {
@@ -183,12 +213,12 @@ describe('SignalCatalogPanel — summary + rows', () => {
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getByText('Aging')).toBeInTheDocument();
     expect(screen.getByText('Stale')).toBeInTheDocument();
-    expect(screen.getByText('Never received')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('Never received')).toBeInTheDocument();
   });
 
   it('hides the summary band when showSummary is false', () => {
     renderPanel({ showSummary: false });
-    expect(screen.queryByText('Total Signals')).toBeNull();
+    expect(screen.queryByText('Total signals')).toBeNull();
     // Rows still render.
     expect(screen.getByText('vehicle_speed')).toBeInTheDocument();
   });
@@ -205,7 +235,12 @@ describe('SignalCatalogPanel — loading & empty', () => {
   it('shows skeletons (no table, no empty copy) while loading', () => {
     h.gaps.isLoading = true;
     const { container } = renderPanel();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const catalog = screen.getByLabelText('Filter signals').closest('[data-print-card]')!;
+    const skeletons = catalog.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeletons.length).toBeGreaterThan(0);
+    expect(skeletons).toHaveLength(8);
+    skeletons.forEach((skeleton) => expect(skeleton).toHaveClass('h-12', 'w-full'));
+    expect(container.querySelector('table')).toBeNull();
     expect(screen.queryByText('vehicle_speed')).toBeNull();
     expect(screen.queryByText('No signal data available')).toBeNull();
   });
@@ -240,7 +275,7 @@ describe('SignalCatalogPanel — search, filter & sort', () => {
 
   it('narrows to stale+never and reflects pressed state via aria-pressed', () => {
     renderPanel();
-    const staleBtn = screen.getByRole('button', { name: 'Stale Only' });
+    const staleBtn = screen.getByRole('button', { name: 'Stale only' });
     expect(staleBtn).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.click(staleBtn);
@@ -254,7 +289,7 @@ describe('SignalCatalogPanel — search, filter & sort', () => {
 
   it('narrows to the active category only', () => {
     renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: 'Active Only' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Active only' }));
     const names = signalNames();
     expect(names).toContain('vehicle_speed');
     expect(names).toContain('battery_level');
@@ -313,8 +348,8 @@ describe('SignalCatalogPanel — invalid timestamp hardening', () => {
     h.gaps.data = { flaky_signal: { value: 1, timestamp: 'not-a-real-date' } };
     renderPanel();
 
-    expect(statValue('Never Received')).toBe('1');
+    expect(statValue('Never received')).toBe('1');
     expect(statValue('Active (<30s)')).toBe('0');
-    expect(screen.getByText('Never received')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('Never received')).toBeInTheDocument();
   });
 });

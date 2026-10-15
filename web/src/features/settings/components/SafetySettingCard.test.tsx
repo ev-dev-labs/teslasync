@@ -10,21 +10,19 @@
  * Coverage goes past a smoke render:
  *   • the deterministic `safety-settings-row-<key>` / `safety-settings-value-<key>`
  *     test-ID contract the AI-OFF static-help suite asserts against;
- *   • the `accent` → neon-token branch (default cyan, an explicit accent, and
+ *   • the `accent` → semantic-token branch (default cyan, an explicit accent, and
  *     the out-of-range fallback that must NOT crash);
  *   • the `valueVariant` → Badge colour branch (default `info` vs an override);
  *   • the empty-value → em-dash guard (a status chip is never blank);
  *   • the docs anchor's href / target / rel / accessible-name wiring;
  *   • a11y: h3 heading role, the icon wrapper is `aria-hidden`, the decorative
  *     ExternalLink glyph is hidden, and the link is keyboard-focusable with a
- *     visible focus ring.
- *
- * user-event is not installed in this repo, so keyboard focus is driven with
- * the native `.focus()` DOM API (matching the sibling settings tests).
+ *     visible theme/system focus outline.
  */
 
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 import type { NeonColor } from '@/lib/tokens'
 import {
@@ -74,6 +72,26 @@ describe('SafetySettingCard — content + structure', () => {
     expect(row.tagName).toBe('LI')
   })
 
+  it('uses neutral theme surface and hover-border roles without recoloring the status', () => {
+    renderCard({ accent: 'red', valueVariant: 'danger', value: 'Suspended' })
+
+    const row = screen.getByTestId('safety-settings-row-quietHoursEnabled')
+    expect(row).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'border-[var(--border-subtle)]',
+      'hover:border-[var(--panel-border-hover)]',
+      'transition-colors',
+    )
+    expect(row.className).not.toMatch(/(?:bg|border)-white|neon-|shadow-/)
+
+    const chip = screen.getByTestId('safety-settings-value-quietHoursEnabled')
+    expect(chip).toHaveTextContent('Suspended')
+    expect(chip).toHaveClass('text-[var(--semantic-danger)]')
+    expect(screen.getByRole('link', {
+      name: 'Open documentation for Quiet hours',
+    })).toHaveAttribute('href', '/docs/notifications/quiet-hours.md')
+  })
+
   it('derives both deterministic test IDs verbatim from testKey', () => {
     renderCard({ testKey: 'apiSuspended', title: 'API kill-switch', value: 'Active' })
 
@@ -94,16 +112,16 @@ describe('SafetySettingCard — value chip', () => {
   it('defaults to the info Badge variant', () => {
     renderCard()
     const chip = screen.getByTestId('safety-settings-value-quietHoursEnabled')
-    // info → blue Badge palette (see components/ui/Badge variants map).
-    expect(chip.className).toContain('text-blue-800')
-    expect(chip.className).not.toContain('text-red-800')
+    // Historical accent names now resolve to theme-aware semantic roles.
+    expect(chip.className).toContain('text-[var(--semantic-info)]')
+    expect(chip.className).not.toContain('text-[var(--semantic-danger)]')
   })
 
   it('applies an explicit valueVariant to the chip colour', () => {
     renderCard({ valueVariant: 'danger', value: 'Suspended' })
     const chip = screen.getByTestId('safety-settings-value-quietHoursEnabled')
     expect(chip).toHaveTextContent('Suspended')
-    expect(chip.className).toContain('text-red-800')
+    expect(chip.className).toContain('text-[var(--semantic-danger)]')
   })
 
   it('falls back to an em-dash so the status chip is never blank', () => {
@@ -118,16 +136,16 @@ describe('SafetySettingCard — accent branch', () => {
     renderCard()
     const wrapper = screen.getByTestId('card-icon').parentElement
     expect(wrapper).not.toBeNull()
-    expect(wrapper?.className).toContain('text-cyan-300')
-    expect(wrapper?.className).toContain('bg-neon-cyan/10')
+    expect(wrapper?.className).toContain('text-[var(--semantic-info)]')
+    expect(wrapper?.className).toContain('bg-[var(--semantic-info-bg)]')
   })
 
   it('maps an explicit accent onto its toned token set', () => {
     renderCard({ accent: 'red' })
     const wrapper = screen.getByTestId('card-icon').parentElement
-    expect(wrapper?.className).toContain('text-rose-300')
-    expect(wrapper?.className).toContain('bg-neon-red/10')
-    expect(wrapper?.className).not.toContain('text-cyan-300')
+    expect(wrapper?.className).toContain('text-[var(--semantic-danger)]')
+    expect(wrapper?.className).toContain('bg-[var(--semantic-danger-bg)]')
+    expect(wrapper?.className).not.toContain('text-[var(--semantic-info)]')
   })
 
   it('degrades an out-of-range accent to the cyan fallback instead of crashing', () => {
@@ -136,7 +154,7 @@ describe('SafetySettingCard — accent branch', () => {
     expect(mount).not.toThrow()
 
     const wrapper = screen.getByTestId('card-icon').parentElement
-    expect(wrapper?.className).toContain('text-cyan-300')
+    expect(wrapper?.className).toContain('text-[var(--semantic-info)]')
   })
 })
 
@@ -167,14 +185,46 @@ describe('SafetySettingCard — docs anchor + a11y', () => {
     expect(link.querySelector('[aria-hidden="true"]')).not.toBeNull()
   })
 
-  it('exposes a keyboard-focusable docs link with a visible focus ring', () => {
+  it('preserves native link semantics and keyboard tab navigation', async () => {
+    const user = userEvent.setup()
     renderCard()
     const link = screen.getByRole('link', {
       name: 'Open documentation for Quiet hours',
     })
 
-    link.focus()
+    expect(link.tagName).toBe('A')
+    expect(link).not.toHaveAttribute('role')
+    expect(link).not.toHaveAttribute('tabindex')
+    await user.tab()
     expect(link).toHaveFocus()
-    expect(link.className).toContain('focus-visible:ring-cyan-400/40')
+    await user.tab()
+    expect(link).not.toHaveFocus()
+    await user.tab({ shift: true })
+    expect(link).toHaveFocus()
+  })
+
+  it('uses the theme focus role with a crisp 2px outline and 2px offset', () => {
+    renderCard({ accent: 'red' })
+    const link = screen.getByRole('link', {
+      name: 'Open documentation for Quiet hours',
+    })
+
+    expect(link).toHaveClass(
+      'focus-visible:outline',
+      'focus-visible:outline-2',
+      'focus-visible:outline-offset-2',
+      'focus-visible:outline-[var(--focus-ring)]',
+    )
+    expect(link.className).not.toMatch(/focus-visible:(?:ring-|outline-none)/)
+  })
+
+  it('uses a system-color focus outline when forced colors suppress shadows', () => {
+    renderCard()
+    const link = screen.getByRole('link', {
+      name: 'Open documentation for Quiet hours',
+    })
+
+    expect(link).toHaveClass('forced-colors:focus-visible:outline-[Highlight]')
+    expect(link.className).not.toContain('forced-color-adjust:none')
   })
 })

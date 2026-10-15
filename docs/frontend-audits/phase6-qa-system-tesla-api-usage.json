@@ -1,0 +1,1230 @@
+{
+  "item": "phase6-qa-system-tesla-api-usage",
+  "attempt": 1,
+  "status": "PARTIAL_COMMAND_TRANSCRIPT",
+  "reservation_utc": "2026-10-14T02:29:12.925Z",
+  "return_deadline_utc": "2026-10-14T02:49:12.925Z",
+  "hard_deadline_utc": "2026-10-14T02:54:12.925Z",
+  "inspection_started_utc": "2026-10-14T02:35:35.6605918Z",
+  "pin_started_utc": "2026-10-14T02:37:13.435089+00:00",
+  "input_pins": [
+    {
+      "file": ".github/copilot-instructions.md",
+      "sha256_before": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "bytes_before": 37483,
+      "lines_before": 707,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "bytes_after": 37483,
+      "unchanged": true
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "sha256_before": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "bytes_before": 3585,
+      "lines_before": 94,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "bytes_after": 3585,
+      "unchanged": true
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "sha256_before": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "bytes_before": 22645,
+      "lines_before": 629,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "bytes_after": 22645,
+      "unchanged": true
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "sha256_before": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "bytes_before": 6501,
+      "lines_before": 221,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "bytes_after": 6501,
+      "unchanged": true
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-199.json",
+      "sha256_before": "1a6342bef9c84fea47efec9b1932ea73654412ffe1f5e9a54628e3902af8eea4",
+      "bytes_before": 29116,
+      "lines_before": 189,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "1a6342bef9c84fea47efec9b1932ea73654412ffe1f5e9a54628e3902af8eea4",
+      "bytes_after": 29116,
+      "unchanged": true
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "sha256_before": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "bytes_before": 182554,
+      "lines_before": 2539,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "bytes_after": 182554,
+      "unchanged": true
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "sha256_before": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "bytes_before": 1743758,
+      "lines_before": 1460,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "bytes_after": 1743758,
+      "unchanged": true
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "sha256_before": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "bytes_before": 31079,
+      "lines_before": 1593,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "bytes_after": 31079,
+      "unchanged": true
+    },
+    {
+      "file": "docs/I18N_GUIDELINES.md",
+      "sha256_before": "9dafaa22475219a8ddb7e36905d428a6e0f7ef4a685006ee6d7f257878b8de94",
+      "bytes_before": 8039,
+      "lines_before": 216,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "9dafaa22475219a8ddb7e36905d428a6e0f7ef4a685006ee6d7f257878b8de94",
+      "bytes_after": 8039,
+      "unchanged": true
+    },
+    {
+      "file": "docs/orchestrator-loop.md",
+      "sha256_before": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "bytes_before": 16978,
+      "lines_before": 296,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "bytes_after": 16978,
+      "unchanged": true
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "sha256_before": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "bytes_before": 163930,
+      "lines_before": 2460,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "bytes_after": 163930,
+      "unchanged": true
+    },
+    {
+      "file": "migration-queue.md",
+      "sha256_before": "3170414ec86f9721305e1fb59ca6a181755f0302d9e16fddf348935cd53f76f2",
+      "bytes_before": 2602435,
+      "lines_before": 2308,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "8f4a383e3efe87500be2594aa8f5ebbac206be4e798f39def83940c0ed2d5c9f",
+      "bytes_after": 2609834,
+      "unchanged": false
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "sha256_before": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "bytes_before": 17825,
+      "lines_before": 458,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "bytes_after": 17825,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256_before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes_before": 15482,
+      "lines_before": 434,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes_after": 15482,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useSettings.ts",
+      "sha256_before": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "bytes_before": 13356,
+      "lines_before": 381,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "bytes_after": 13356,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useTeslaUsage.test.tsx",
+      "sha256_before": "387524e151979a5dfad524048cee79514af3c2207a94ee79cbcc24b215a083fd",
+      "bytes_before": 4949,
+      "lines_before": 87,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "387524e151979a5dfad524048cee79514af3c2207a94ee79cbcc24b215a083fd",
+      "bytes_after": 4949,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useTeslaUsage.ts",
+      "sha256_before": "4db5eecf2af504b946b08b113f3fc59bbcbd2356d5e4f0aa6da2fadb7c0752d9",
+      "bytes_before": 2996,
+      "lines_before": 72,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "4db5eecf2af504b946b08b113f3fc59bbcbd2356d5e4f0aa6da2fadb7c0752d9",
+      "bytes_after": 2996,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/queryClient.ts",
+      "sha256_before": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "bytes_before": 3802,
+      "lines_before": 86,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "bytes_after": 3802,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "sha256_before": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "bytes_before": 120243,
+      "lines_before": 4194,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "bytes_after": 120243,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/__tests__/ChartContainer.a11y.test.tsx",
+      "sha256_before": "afb081a085f02444ca52a65658239d5d03cd33998cd12446f15f54fd71dfadcc",
+      "bytes_before": 30324,
+      "lines_before": 719,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "afb081a085f02444ca52a65658239d5d03cd33998cd12446f15f54fd71dfadcc",
+      "bytes_after": 30324,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/__tests__/ChartContainer.test.tsx",
+      "sha256_before": "293d470532ea253b46cabecbbf02bbbbf8d1f62d1a5e1f904d21f6c3c49ddb53",
+      "bytes_before": 22342,
+      "lines_before": 440,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "293d470532ea253b46cabecbbf02bbbbf8d1f62d1a5e1f904d21f6c3c49ddb53",
+      "bytes_after": 22342,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "sha256_before": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "bytes_before": 41517,
+      "lines_before": 1006,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "bytes_after": 41517,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/ChartLegend.tsx",
+      "sha256_before": "e5f0b49f6f1159224d3b000ce2c57800dc13ce33c3053dc72ee1e35b2da67095",
+      "bytes_before": 6830,
+      "lines_before": 193,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "e5f0b49f6f1159224d3b000ce2c57800dc13ce33c3053dc72ee1e35b2da67095",
+      "bytes_after": 6830,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256_before": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "bytes_before": 11591,
+      "lines_before": 321,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "bytes_after": 11591,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/stat-reference/types.ts",
+      "sha256_before": "2da9c621692aad9afc216de4286532ffbbf848ba1e0570a8f05c0db97a6616c6",
+      "bytes_before": 2026,
+      "lines_before": 50,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "2da9c621692aad9afc216de4286532ffbbf848ba1e0570a8f05c0db97a6616c6",
+      "bytes_after": 2026,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/UsageCard.tsx",
+      "sha256_before": "3a5b460448adef6c1c7c4c79637751b43115c94a13ce0f0b868636ea7cc7c036",
+      "bytes_before": 13403,
+      "lines_before": 379,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "3a5b460448adef6c1c7c4c79637751b43115c94a13ce0f0b868636ea7cc7c036",
+      "bytes_after": 13403,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256_before": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "bytes_before": 4093,
+      "lines_before": 115,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "bytes_after": 4093,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/forms/RangePicker.tsx",
+      "sha256_before": "040141ea650ef6008891cf013bdf493be29303b2b55ff49594a6dca1806d2db3",
+      "bytes_before": 13531,
+      "lines_before": 368,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "040141ea650ef6008891cf013bdf493be29303b2b55ff49594a6dca1806d2db3",
+      "bytes_after": 13531,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256_before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes_before": 658,
+      "lines_before": 17,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes_after": 658,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256_before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes_before": 10783,
+      "lines_before": 259,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes_after": 10783,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+      "sha256_before": "161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891",
+      "bytes_before": 2399,
+      "lines_before": 63,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891",
+      "bytes_after": 2399,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/status/__tests__/TeslaApiUsageCard.test.tsx",
+      "sha256_before": "5fff428cf2e6f5762d6e1795fbf710877c1287b03cdcc2439a81be83da083897",
+      "bytes_before": 3899,
+      "lines_before": 65,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "5fff428cf2e6f5762d6e1795fbf710877c1287b03cdcc2439a81be83da083897",
+      "bytes_after": 3899,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/status/__tests__/TeslaApiUsageHistory.test.tsx",
+      "sha256_before": "da09c5af58864e5aa66ed6bb75e887528d63fee5d1e07227a2e6ff5934bf4d7f",
+      "bytes_before": 7188,
+      "lines_before": 110,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "da09c5af58864e5aa66ed6bb75e887528d63fee5d1e07227a2e6ff5934bf4d7f",
+      "bytes_after": 7188,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/status/TeslaApiUsageCard.tsx",
+      "sha256_before": "f3472541f2e14f6e6f223af2e9a7e6b0e48a6702683ee23567d96f5ce1226026",
+      "bytes_before": 6505,
+      "lines_before": 117,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "f3472541f2e14f6e6f223af2e9a7e6b0e48a6702683ee23567d96f5ce1226026",
+      "bytes_after": 6505,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+      "sha256_before": "12859a2b3fad820405d89ae5527809c80445770992075303541e14481ded6b6b",
+      "bytes_before": 11079,
+      "lines_before": 208,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "12859a2b3fad820405d89ae5527809c80445770992075303541e14481ded6b6b",
+      "bytes_after": 11079,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/pages/TeslaApiUsagePage.test.tsx",
+      "sha256_before": "016e102865b9df45b295b4e84e16032aac021dc93944d44a35c0e957cc5e2c07",
+      "bytes_before": 6632,
+      "lines_before": 114,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "016e102865b9df45b295b4e84e16032aac021dc93944d44a35c0e957cc5e2c07",
+      "bytes_after": 6632,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/pages/TeslaApiUsagePage.tsx",
+      "sha256_before": "566136e4094f6525c866e87c486f89e28b44ffb44059011da8f3d273c0583505",
+      "bytes_before": 3924,
+      "lines_before": 78,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "566136e4094f6525c866e87c486f89e28b44ffb44059011da8f3d273c0583505",
+      "bytes_after": 3924,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useChartPalette.ts",
+      "sha256_before": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "bytes_before": 2108,
+      "lines_before": 49,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "bytes_after": 2108,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256_before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "bytes_before": 2035,
+      "lines_before": 65,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "bytes_after": 2035,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "sha256_before": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "bytes_before": 4608,
+      "lines_before": 106,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "bytes_after": 4608,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256_before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "bytes_before": 2095,
+      "lines_before": 47,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "bytes_after": 2095,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256_before": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "bytes_before": 1161,
+      "lines_before": 24,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "bytes_after": 1161,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "sha256_before": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "bytes_before": 5253,
+      "lines_before": 146,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "bytes_after": 5253,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256_before": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "bytes_before": 6545,
+      "lines_before": 194,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "bytes_after": 6545,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "sha256_before": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "bytes_before": 1843667,
+      "lines_before": 39002,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "dc87a2c46dd3f82d84746b042d0c42d41e8a6d5b64487e543485f4aaaea35886",
+      "bytes_after": 1846735,
+      "unchanged": false
+    },
+    {
+      "file": "web/src/lib/colors.ts",
+      "sha256_before": "a5c53faeaaa3a2d07c6475f0d64f67ddce9e36e6c3405ac983584f4a1fcf5e93",
+      "bytes_before": 13999,
+      "lines_before": 388,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "a5c53faeaaa3a2d07c6475f0d64f67ddce9e36e6c3405ac983584f4a1fcf5e93",
+      "bytes_after": 13999,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256_before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "bytes_before": 18863,
+      "lines_before": 462,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "bytes_after": 18863,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "sha256_before": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "bytes_before": 31836,
+      "lines_before": 289,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "bytes_after": 31836,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256_before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes_before": 4411,
+      "lines_before": 168,
+      "pinned_at": "2026-10-14T02:37:13.435089+00:00",
+      "sha256_after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes_after": 4411,
+      "unchanged": true
+    },
+    {
+      "file": "internal/api/router.go",
+      "sha256_before": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "bytes_before": 260353,
+      "lines_before": 5363,
+      "pinned_at": "2026-10-14T02:39:00.570610+00:00",
+      "sha256_after": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "bytes_after": 260353,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256_before": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "bytes_before": 68125,
+      "lines_before": 919,
+      "pinned_at": "2026-10-14T02:39:00.570610+00:00",
+      "sha256_after": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "bytes_after": 68125,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/index.ts",
+      "sha256_before": "7c088add21d5d43f2d37f41c72517db9b2eb7738174914bd8bf21b9fbc62de5d",
+      "bytes_before": 3611,
+      "lines_before": 88,
+      "pinned_at": "2026-10-14T02:39:00.570610+00:00",
+      "sha256_after": "7c088add21d5d43f2d37f41c72517db9b2eb7738174914bd8bf21b9fbc62de5d",
+      "bytes_after": 3611,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/data-display/__tests__/UsageCard.test.tsx",
+      "sha256_before": "39c14df1762381c8d459a37697051330b4c7a19919ed2a16c8b5b0558f9c5f4a",
+      "bytes_before": 9598,
+      "lines_before": 243,
+      "pinned_at": "2026-10-14T02:39:00.570610+00:00",
+      "sha256_after": "39c14df1762381c8d459a37697051330b4c7a19919ed2a16c8b5b0558f9c5f4a",
+      "bytes_after": 9598,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/WorkspaceHeader.tsx",
+      "sha256_before": "b414ebcd4a69886a2e40f9ce24c06124f40d0552eeca10da881b72a78260b37c",
+      "bytes_before": 2737,
+      "lines_before": 74,
+      "pinned_at": "2026-10-14T02:39:00.570610+00:00",
+      "sha256_after": "b414ebcd4a69886a2e40f9ce24c06124f40d0552eeca10da881b72a78260b37c",
+      "bytes_after": 2737,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "sha256_before": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "bytes_before": 1493,
+      "lines_before": 39,
+      "pinned_at": "2026-10-14T02:39:00.570610+00:00",
+      "sha256_after": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "bytes_after": 1493,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "sha256_before": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "bytes_before": 4432,
+      "lines_before": 119,
+      "pinned_at": "2026-10-14T02:39:00.570610+00:00",
+      "sha256_after": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "bytes_after": 4432,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "sha256_before": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "bytes_before": 2081,
+      "lines_before": 49,
+      "pinned_at": "2026-10-14T02:39:00.570610+00:00",
+      "sha256_after": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "bytes_after": 2081,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256_before": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "bytes_before": 5230,
+      "lines_before": 148,
+      "pinned_at": "2026-10-14T02:39:39.893807+00:00",
+      "sha256_after": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "bytes_after": 5230,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "sha256_before": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "bytes_before": 11392,
+      "lines_before": 127,
+      "pinned_at": "2026-10-14T02:39:39.894088+00:00",
+      "sha256_after": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "bytes_after": 11392,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/Layout.tsx",
+      "sha256_before": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "bytes_before": 92115,
+      "lines_before": 1716,
+      "pinned_at": "2026-10-14T02:39:39.894630+00:00",
+      "sha256_after": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "bytes_after": 92115,
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/WorkspaceContextControl.tsx",
+      "sha256_before": "3e4515c2bd815fce5fedaa96cfe74b20f1c78b040cf2a4326a0ad63f39379662",
+      "bytes_before": 20413,
+      "lines_before": 487,
+      "pinned_at": "2026-10-14T02:39:39.894847+00:00",
+      "sha256_after": "3e4515c2bd815fce5fedaa96cfe74b20f1c78b040cf2a4326a0ad63f39379662",
+      "bytes_after": 20413,
+      "unchanged": true
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "sha256_before": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "bytes_before": 8608,
+      "lines_before": 152,
+      "pinned_at": "2026-10-14T02:41:06.031956+00:00",
+      "sha256_after": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "bytes_after": 8608,
+      "unchanged": true
+    },
+    {
+      "file": "docs/A11Y_GUIDELINES.md",
+      "sha256_before": "5d8ff67ca9cecab201c214d252304eedef653230d8463067a69b8b2c94697580",
+      "bytes_before": 10771,
+      "lines_before": 234,
+      "pinned_at": "2026-10-14T02:41:06.032255+00:00",
+      "sha256_after": "5d8ff67ca9cecab201c214d252304eedef653230d8463067a69b8b2c94697580",
+      "bytes_after": 10771,
+      "unchanged": true
+    }
+  ],
+  "pin_limit": "Initial exploratory reads preceded this pin; conclusions are against this snapshot and later rereads, with final byte-pin validation required. Queue/handoff may change concurrently.",
+  "sourceAudit": "DONE",
+  "page": "web/src/features/system/pages/TeslaApiUsagePage.tsx",
+  "routes": [
+    "/tesla-api-usage"
+  ],
+  "issues": [
+    {
+      "id": "TU01",
+      "rule": "retained-source-erasure",
+      "priority": "P1",
+      "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+      "line": 135,
+      "title": "Retained history plots/exports erased on refresh failure",
+      "sourceOnlyReproduction": "Input: valid retained total/points, loading=false, error=Error. Both frames receive raw error; ChartContainer error branch replaces plots and showExportMenu=false although summary/details retain data. Use fatalError only, retain plots/explicit scope, add nonblocking independent warning/retry.",
+      "reproductionExecution": "NOTRUN; analytical branch trace only",
+      "confidence": "confirmed source mechanism, native behavior NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 135,
+          "anchor": "error={invalid ?? error}",
+          "excerpt": "error={invalid ?? error}"
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "line": 483,
+          "anchor": "const showExportMenu =",
+          "excerpt": "const showExportMenu = exportableResolved && !loading && !error && !empty;"
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "line": 798,
+          "anchor": ") : error ? (",
+          "excerpt": ") : error ? ("
+        }
+      ]
+    },
+    {
+      "id": "TU02",
+      "rule": "unknown-as-zero",
+      "priority": "P1",
+      "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+      "line": 70,
+      "title": "Absent history totals become four fake zero-cost accessible rows",
+      "sourceOnlyReproduction": "Input: undefined data while loading/failing/unresolved. Four distribution rows still have usd=0; frame fallback table renders whenever rows/columns exist, independently of chart error/loading. Supply absent/unknown rows until authoritative total; preserve true measured zeros.",
+      "reproductionExecution": "NOTRUN; analytical branch trace only",
+      "confidence": "confirmed source mechanism, native behavior NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 70,
+          "anchor": "usd: totals ? categoryCost(totals, key) : 0",
+          "excerpt": "category: labels[key], usd: totals ? categoryCost(totals, key) : 0, color: CHART_COLORS[index],"
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "line": 503,
+          "anchor": "const hasFallbackTable =",
+          "excerpt": "const hasFallbackTable = !!("
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "line": 890,
+          "anchor": "{hasFallbackTable ? (",
+          "excerpt": "{hasFallbackTable ? ("
+        },
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 143,
+          "anchor": "formatCurrency(typeof value === 'number' ? value : 0)",
+          "excerpt": "format: (value: unknown) => formatCurrency(typeof value === 'number' ? value : 0) },"
+        }
+      ]
+    },
+    {
+      "id": "TU03",
+      "rule": "paused-source-trust",
+      "priority": "P1",
+      "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+      "line": 51,
+      "title": "History pause discarded; unresolved paused sources can claim emptiness",
+      "sourceOnlyReproduction": "Input: valid range, fetchStatus=paused, isLoading=false,error=null. Without data, history says no observed traffic; with data summary says Source available. Full query pause/time fields are discarded. Initial cycle pause also falls to empty because page forwards only loading/error and StaleRefreshWarning requires retained data. Use shared DataState to distinguish unresolved/paused/retained, not invented offline/error.",
+      "reproductionExecution": "NOTRUN; analytical branch trace only",
+      "confidence": "confirmed source mechanism, native behavior NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 51,
+          "anchor": "const { data, isLoading, error, refetch }",
+          "excerpt": "const { data, isLoading, error, refetch } = useTeslaUsageHistory("
+        },
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 108,
+          "anchor": "available={!!totals && !invalid}",
+          "excerpt": "available={!!totals && !invalid} loading={isLoading && !totals && !invalid} retained={!!error && !!totals}"
+        },
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 78,
+          "anchor": "t('teslaUsage.historyEmpty'",
+          "excerpt": "t('teslaUsage.historyEmpty', 'No observed Tesla billable traffic in this range. Try an older range.'))"
+        },
+        {
+          "file": "web/src/features/system/pages/TeslaApiUsagePage.tsx",
+          "line": 21,
+          "anchor": "const { data, isLoading } = query",
+          "excerpt": "const { data, isLoading } = query"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 59,
+          "anchor": "if (!state.hasData) return null",
+          "excerpt": "if (!state.hasData) return null;"
+        }
+      ]
+    },
+    {
+      "id": "TU04",
+      "rule": "missing-source-retry",
+      "priority": "P2",
+      "file": "web/src/features/system/pages/TeslaApiUsagePage.tsx",
+      "line": 37,
+      "title": "Fatal cycle has no independent retry action",
+      "sourceOnlyReproduction": "Input: data undefined, loading=false, fatal error and available query.refetch. Parent retained warning is absent; card only shows emptyMessage asking to refresh. Historical retry invokes its own query, not current cycle. Add existing page/source recovery bound to cycle refetch without gating other regions.",
+      "reproductionExecution": "NOTRUN; analytical branch trace only",
+      "confidence": "confirmed source mechanism, native behavior NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/TeslaApiUsagePage.tsx",
+          "line": 37,
+          "anchor": "<TeslaApiUsageCard apiUsage={data}",
+          "excerpt": "<TeslaApiUsageCard apiUsage={data} now={Date.now()} loading={isLoading}"
+        },
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageCard.tsx",
+          "line": 58,
+          "anchor": "if (error && !apiUsage) return",
+          "excerpt": "if (error && !apiUsage) return <>{summary}<UsageCard emptyMessage={errorMessage} /></>"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 59,
+          "anchor": "if (!state.hasData) return null",
+          "excerpt": "if (!state.hasData) return null;"
+        }
+      ]
+    },
+    {
+      "id": "TU05",
+      "rule": "currency-denomination",
+      "priority": "P1",
+      "file": "web/src/features/system/components/status/TeslaApiUsageCard.tsx",
+      "line": 37,
+      "title": "Raw USD relabeled as preferred non-USD currency",
+      "sourceOnlyReproduction": "Input: estimated_usd=4, saved symbol euro/EUR. Existing formatCurrency prefixes arbitrary settings symbol without conversion; selected chart/table metadata still says USD. Keep explicit source USD and reactive locale/precision at Tesla cost boundary; do not infer ISO from symbol, invent exchange rates or rewrite global formatter.",
+      "reproductionExecution": "NOTRUN; analytical branch trace only",
+      "confidence": "confirmed source mechanism, native behavior NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageCard.tsx",
+          "line": 37,
+          "anchor": "display: { formatter: (raw) => ({ value: formatCurrency(raw)",
+          "excerpt": "display: { formatter: (raw) => ({ value: formatCurrency(raw), unit: '' }) } },"
+        },
+        {
+          "file": "web/src/hooks/useFormatting.ts",
+          "line": 45,
+          "anchor": "const currencySymbol =",
+          "excerpt": "const currencySymbol = settings.currency_symbol && settings.currency_symbol.trim() ? settings.currency_symbol : '$'"
+        },
+        {
+          "file": "web/src/hooks/useFormatting.ts",
+          "line": 56,
+          "anchor": "return `${currencySymbol}${fmtNumber(amount",
+          "excerpt": "return `${currencySymbol}${fmtNumber(amount, d, unitPrefs.locale)}`"
+        },
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 145,
+          "anchor": "unitLabel: 'USD'",
+          "excerpt": "metadata={{ rangeLabel: `${range.start} – ${range.end} UTC`, sourceLabel: t('teslaUsage.estimated', 'Estimated'), unitLabel: 'USD' }}"
+        }
+      ]
+    },
+    {
+      "id": "TU06",
+      "rule": "date-preference-bypass",
+      "priority": "P2",
+      "file": "web/src/features/system/components/status/TeslaApiUsageCard.tsx",
+      "line": 23,
+      "title": "Cycle dates bypass saved application locale",
+      "sourceOnlyReproduction": "Input: host en-US, saved de-DE, same UTC dates. Undefined locale reads host default, not saved reactive preference. Reuse existing useDateFormat(utc) with deliberate UTC mode; do not move fixed cycle dates to vehicle timezone.",
+      "reproductionExecution": "NOTRUN; analytical branch trace only",
+      "confidence": "confirmed source mechanism, native behavior NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageCard.tsx",
+          "line": 23,
+          "anchor": "toLocaleDateString(undefined, { timeZone: 'UTC' })",
+          "excerpt": "const date = (iso: string) => new Date(iso).toLocaleDateString(undefined, { timeZone: 'UTC' })"
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 74,
+          "anchor": "const { settings, locale }",
+          "excerpt": "const { settings, locale } = useSettings()"
+        }
+      ]
+    },
+    {
+      "id": "TU07",
+      "rule": "chart-preference-bypass",
+      "priority": "P2",
+      "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+      "line": 70,
+      "title": "Static dark palette ignores saved chart palette/mode",
+      "sourceOnlyReproduction": "Input: saved chart_palette changes cb_safe to neon or light mode selected. Pie colors and Bar fills remain static CHART_COLORS (dark CB-safe), not reactive existing hook. Adopt useChartPalette in this domain adapter, preserving series order/key/data; no new shared palette engine.",
+      "reproductionExecution": "NOTRUN; analytical branch trace only",
+      "confidence": "confirmed source mechanism, native behavior NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 70,
+          "anchor": "color: CHART_COLORS[index]",
+          "excerpt": "category: labels[key], usd: totals ? categoryCost(totals, key) : 0, color: CHART_COLORS[index],"
+        },
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 197,
+          "anchor": "fill={CHART_COLORS[index]}",
+          "excerpt": "fill={CHART_COLORS[index]}"
+        },
+        {
+          "file": "web/src/lib/colors.ts",
+          "line": 110,
+          "anchor": "export const CHART_COLORS = CHART_COLORS_CB_SAFE",
+          "excerpt": "export const CHART_COLORS = CHART_COLORS_CB_SAFE"
+        },
+        {
+          "file": "web/src/hooks/useChartPalette.ts",
+          "line": 45,
+          "anchor": "export function useChartPalette()",
+          "excerpt": "export function useChartPalette(): readonly string[] {"
+        }
+      ]
+    },
+    {
+      "id": "TU08",
+      "rule": "workspace-vehicle-scope",
+      "priority": "P1",
+      "file": "web/src/lib/workspaceScope.ts",
+      "line": 166,
+      "title": "Fleet-only usage exposes a misleading header vehicle picker",
+      "sourceOnlyReproduction": "Input: /tesla-api-usage, choose any header vehicle. Route is not disabled; scope returns vehicle=true, range=false. Header renders vehicle picker but usage query keys/URLs contain no vehicle. Disable irrelevant fleet-only vehicle scope at existing workspace owner, do not invent filtering.",
+      "reproductionExecution": "NOTRUN; analytical branch trace only",
+      "confidence": "confirmed source mechanism, native behavior NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 166,
+          "anchor": "vehicle: !vehicleDisabled",
+          "excerpt": "vehicle: !vehicleDisabled,"
+        },
+        {
+          "file": "web/src/components/layout/WorkspaceHeader.tsx",
+          "line": 35,
+          "anchor": "const showVehicle =",
+          "excerpt": "const showVehicle = !workspaceScope.managed || workspaceScope.vehicle"
+        },
+        {
+          "file": "web/src/api/hooks/useTeslaUsage.ts",
+          "line": 48,
+          "anchor": "queryKey: ['system-status', 'api-usage']",
+          "excerpt": "queryKey: ['system-status', 'api-usage'],"
+        },
+        {
+          "file": "web/src/api/hooks/useTeslaUsage.ts",
+          "line": 61,
+          "anchor": "queryKey: ['system-status', 'tesla-usage-history'",
+          "excerpt": "queryKey: ['system-status', 'tesla-usage-history', start, end, bucket],"
+        }
+      ]
+    },
+    {
+      "id": "TU09",
+      "rule": "i18n-count-composition",
+      "priority": "P2",
+      "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+      "line": 112,
+      "title": "Singular count grammar and count-fragment composition are incorrect",
+      "sourceOnlyReproduction": "Input: points.length=1 or cycle/prior count=1. Catalog has only {{count}} observed buckets and noun fragments observed events/events, no _one/_other leaves. Bucket renders 1 observed buckets; card concatenates formatted count with untranslated plural logic. Add exact serialized plural templates plus formatted interpolation while preserving raw count and existing leaves.",
+      "reproductionExecution": "NOTRUN; analytical branch trace only",
+      "confidence": "confirmed source mechanism, native behavior NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 112,
+          "anchor": "context: t('teslaUsage.observedBuckets'",
+          "excerpt": "context: t('teslaUsage.observedBuckets', '{{count}} observed buckets', { count: points.length }),"
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "line": 108,
+          "anchor": "\"observedBuckets\":",
+          "excerpt": "\"observedBuckets\": \"{{count}} observed buckets\","
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "line": 78,
+          "anchor": "\"observedEvents\":",
+          "excerpt": "\"observedEvents\": \"observed events\","
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "line": 128,
+          "anchor": "\"eventsShort\":",
+          "excerpt": "\"eventsShort\": \"events\","
+        },
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageCard.tsx",
+          "line": 94,
+          "anchor": "t('teslaUsage.eventsShort'",
+          "excerpt": "label: `${date(c.start)} – ${date(c.end)} · ${fmtInt(count(c))} ${t('teslaUsage.eventsShort', 'events')}`,"
+        }
+      ]
+    },
+    {
+      "id": "TU10",
+      "rule": "mobile-target-default",
+      "priority": "P2",
+      "file": "web/src/components/forms/RangePicker.tsx",
+      "line": 243,
+      "title": "Range trigger default is below stronger 44px mobile target",
+      "sourceOnlyReproduction": "Input: mounted history picker default sm, standard16px root, below md. h-8 is2rem/32px with no mobile min-height override. Source-contract defect, not measured browser/WCAG floor failure. Narrow existing RangePicker mobile trigger sizing with covering test; raw shared button is an acceptable building-block exception.",
+      "reproductionExecution": "NOTRUN; analytical branch trace only",
+      "confidence": "confirmed source mechanism, native behavior NOTRUN",
+      "citations": [
+        {
+          "file": "web/src/components/forms/RangePicker.tsx",
+          "line": 243,
+          "anchor": "size === 'md' ? 'h-10",
+          "excerpt": "size === 'md' ? 'h-10 px-3 text-sm' : 'h-8 px-2.5 text-xs',"
+        },
+        {
+          "file": "web/src/components/forms/RangePicker.tsx",
+          "line": 140,
+          "anchor": "size = 'sm'",
+          "excerpt": "size = 'sm',"
+        },
+        {
+          "file": "web/src/features/system/components/status/TeslaApiUsageHistory.tsx",
+          "line": 83,
+          "anchor": "<RangePicker",
+          "excerpt": "<RangePicker"
+        }
+      ]
+    }
+  ],
+  "confirmedIssueCount": 10,
+  "acceptance": {
+    "tests": "NOTRUN",
+    "native": "NOTRUN",
+    "page": "NOTRUN",
+    "visual": "NOTRUN",
+    "keyboard": "NOTRUN",
+    "a11yRuntime": "NOTRUN",
+    "backend": "NOTRUN",
+    "provider": "NOTRUN",
+    "typecheck": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN"
+  },
+  "writeScope": [
+    "docs/frontend-audits/phase6-qa-system-tesla-api-usage.json",
+    "web/logs/phase6-qa-system-tesla-api-usage.log"
+  ],
+  "objectiveCheck": {
+    "item": "phase6-qa-system-tesla-api-usage",
+    "status": "[~]",
+    "attempt": 1,
+    "dependency": "phase5-page-system-tesla-api-usage [x]",
+    "duplicate": false,
+    "reason": "Historical audit-page-199 and completed migration are not this Phase6 QA objective. No existing authorized QA artifact at startup; exact active queue row checked before audit and after concurrent queue drift."
+  },
+  "summary": {
+    "byRule": {
+      "retained-source-erasure": 1,
+      "unknown-as-zero": 1,
+      "paused-source-trust": 1,
+      "missing-source-retry": 1,
+      "currency-denomination": 1,
+      "date-preference-bypass": 1,
+      "chart-preference-bypass": 1,
+      "workspace-vehicle-scope": 1,
+      "i18n-count-composition": 1,
+      "mobile-target-default": 1
+    },
+    "byPrimaryFile": {
+      "web/src/features/system/components/status/TeslaApiUsageHistory.tsx": 5,
+      "web/src/features/system/pages/TeslaApiUsagePage.tsx": 1,
+      "web/src/features/system/components/status/TeslaApiUsageCard.tsx": 2,
+      "web/src/lib/workspaceScope.ts": 1,
+      "web/src/components/forms/RangePicker.tsx": 1
+    },
+    "priority": [
+      "TU01",
+      "TU02",
+      "TU03",
+      "TU05",
+      "TU08"
+    ],
+    "confirmedIssueCount": 10,
+    "candidateCount": 6,
+    "ownerNeedCount": 8
+  },
+  "reproductionPolicy": "All example inputs above are analytical source-only traces; functions were not executed and no fixture/helper was created.",
+  "prohibitedActivity": "No source/test/catalog/queue/Git edits, agents/installs/helpers/test/lint/build/compiler/server/browser/network/API/token/provider/identity/paid calls. Inline Python used only for file inspection and the two documentation artifacts.",
+  "artifactWrittenUtc": "2026-10-14T02:48:39.880079+00:00",
+  "candidates": [
+    {
+      "id": "TC01",
+      "kind": "integration-conditional",
+      "detail": "Local UTC analysis range is independent of fixed cycles; header range currently false, so no duplicate visible header picker. Resolve MDC032 preservation mapping before moving local 1-366 day/presets/day-week selection into workspace."
+    },
+    {
+      "id": "TC02",
+      "kind": "native-conditional",
+      "detail": "UsageCard label now wraps, but long uninterrupted rate_source value lacks wrapping. Native overflow at320px/200% NOTRUN; historical cyan/36px footer defects are fixed, not re-reported."
+    },
+    {
+      "id": "TC03",
+      "kind": "malformed-payload-conditional",
+      "detail": "Hook finite-number/string guards accept negative/fractional/unsafe counts and invalid date strings. No invalid backend payload observed; determine contract before clamping/rejecting."
+    },
+    {
+      "id": "TC04",
+      "kind": "pricing-conditional",
+      "detail": "Category charts derive USD with fixed ratios; server estimated_usd supplies headline. Pricing/adjustment/disclaimer equivalence not proven. No provider/invoice/paid calls."
+    },
+    {
+      "id": "TC05",
+      "kind": "response-scope-conditional",
+      "detail": "isSeries checks response bounds as strings and bucket enum, not equality to requested range/bucket. Nonzero total with no points can show summary but empty details; actual server guarantees unverified."
+    },
+    {
+      "id": "TC06",
+      "kind": "native-NOTRUN",
+      "detail": "Actual mobile/open calendar/Select/drawers, keyboard/focus, exports/fullscreen/legend, RTL/200% text, dark/light/custom/forced-colors/reduced-motion/low-bandwidth acceptance NOTRUN at all ten mission widths."
+    }
+  ],
+  "ownerNeeds": [
+    {
+      "id": "TN01",
+      "findings": [
+        "TU01",
+        "TU02",
+        "TU03"
+      ],
+      "owner": "TeslaApiUsageHistory trust/unknown rendering"
+    },
+    {
+      "id": "TN02",
+      "findings": [
+        "TU03",
+        "TU04"
+      ],
+      "owner": "TeslaApiUsagePage initial pause/cycle retry"
+    },
+    {
+      "id": "TN03",
+      "findings": [
+        "TU05"
+      ],
+      "owner": "Tesla cycle/history USD boundary"
+    },
+    {
+      "id": "TN04",
+      "findings": [
+        "TU06"
+      ],
+      "owner": "Tesla cycle date consumer; reuse completed useDateFormat"
+    },
+    {
+      "id": "TN05",
+      "findings": [
+        "TU07"
+      ],
+      "owner": "Tesla history palette consumer; reuse completed palette policy"
+    },
+    {
+      "id": "TN06",
+      "findings": [
+        "TU08"
+      ],
+      "owner": "Existing workspaceScope fleet route classification"
+    },
+    {
+      "id": "TN07",
+      "findings": [
+        "TU09"
+      ],
+      "owner": "Exact Tesla count producers + parent-serialized English leaves/projections"
+    },
+    {
+      "id": "TN08",
+      "findings": [
+        "TU10"
+      ],
+      "owner": "Existing RangePicker mobile trigger sizing"
+    }
+  ],
+  "deduplication": "Exact queue item/files searches found no matching narrow fix objective. Historical audit-page-199, formatter repairs, phase3-usage-card, date/palette and Phase5 page stay complete. Needs only, no queue edits/dispatch; orchestrator must serialize overlapping history/card/catalog files and claim matching tests.",
+  "coverage": {
+    "sectionCount": 3,
+    "sections": [
+      "Current cycle/prior periods: raw counts/estimate, four category rates, UTC next cycle, every prior cycle including zero, source caveats/reference/API logs/review details",
+      "Selected history: 7d/30d/90d/1y/custom inclusive UTC converted to exclusive end, day/week bucket, total/four categories/distribution/sparse trend, chart fallback tables/export/fullscreen/trend legend/review drawer",
+      "Method: observed telemetry/qualifying responses/deduplication/undercount/fixed UTC-not-invoice/no credit-rounding-adjustment/rate-source fallback"
+    ],
+    "quotaProvider": "Tesla Fleet counts/USD only; types expose no token/quota cap/remaining/provider breakdown; no fabricated quota/credit/invoice inference.",
+    "SIpreferences": "No physical SI measurements here. Raw counts/USD and UTC instants retained, no legacy conversion. Reactive count/currency precision reused; denomination/date/palette defects recorded.",
+    "states": "All regions stay mounted on null/loading/error/empty. Current retained warning/retry exists; initial pause/fatal retry and history pause/retained plots/unknown accessible values defective. Valid zero differs from unavailable. Native behavior NOTRUN."
+  },
+  "testsInspected": {
+    "page": {
+      "literalDeclarations": 7,
+      "intendedCases": 9
+    },
+    "card": {
+      "literalDeclarations": 4,
+      "intendedCases": 4
+    },
+    "history": {
+      "literalDeclarations": 4,
+      "intendedCases": 6
+    },
+    "hook": {
+      "literalDeclarations": 4,
+      "intendedCases": 4
+    },
+    "totalIntendedSourceCases": 23,
+    "runtimeDiscovered": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "execution": "NOTRUN; source cases only. Page mocks domain children; history mocks ChartContainer/RangePicker; costs/translations mocked; these cannot prove real frame/native/preference behavior."
+  },
+  "grepChecks": {
+    "primaryScope": "Page/Card/History/useTeslaUsage/SystemSummaryBrief",
+    "matches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "fetch-useeffect": 0,
+      "hardcoded-string-candidate": 1
+    },
+    "exception": "Hardcoded candidate is numeric > comparator in filter, not English JSX. Shared raw elements/vendor motion import expected; PageLayout actually wraps PageContainer. Catalog63 literal keys/missing0, not a normal i18n gate pass."
+  },
+  "limits": [
+    "Command transcript PARTIAL: exploratory full inline bodies/ranges remain in caller tool transcript; log records operations/exits/raw outputs. Full write invocation3171 failed OS206 before start; split writes3214/3215 exited0.",
+    "rg2750 exit1 unavailable; corrected fallback. Python2798 innerexit1 UnicodeEncodeError despite shellexit0, corrected2806 exit0. chartUtils.ts view nonexistent; no process exit.",
+    "Full orchestrator read; large documentation outputs truncated, relevant contract/mission/inventory/handoff/instructions separately reviewed. Initial exploratory reads preceded pin; findings re-read/cited.",
+    "Pin list includes pinned-only bodies not all fully reviewed. Backend implementation/native/full application acceptance unverified; no Git status or global unchanged claim."
+  ],
+  "candidateCount": 6,
+  "validation": {
+    "json": "parsed",
+    "citationCount": 37,
+    "citationErrors": 0,
+    "pinCount": 63,
+    "changedPins": [
+      "migration-queue.md",
+      "web/src/i18n/en.json"
+    ],
+    "sourcePinsChanged": [
+      "web/src/i18n/en.json"
+    ],
+    "countsValid": true,
+    "exit": 1
+  },
+  "releaseUtc": "2026-10-14T02:49:28.617331+00:00",
+  "release": "ARTIFACT AND COMMAND RELEASE: both authorized files complete for partial delivery, no task commands or writers retained; all acceptance NOTRUN."
+}

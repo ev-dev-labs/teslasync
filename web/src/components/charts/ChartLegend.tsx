@@ -2,7 +2,7 @@ import { Legend } from 'recharts'
 import { useChartHiddenSeries } from './ChartHiddenSeriesContext'
 import type { ChartLegendState } from './useChartLegendState'
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/Button'
 
 /**
  * Recharts' Legend payload uses its `DataKey<any>` type (string | number |
@@ -115,7 +115,8 @@ export function LegendSeriesLabel({ resolved, value, entry }: LegendSeriesLabelP
         type="button"
         variant="ghost"
         size="sm"
-        className="h-auto min-h-0 rounded-none p-0 font-normal hover:bg-transparent"
+        wrapLabel
+        className="min-h-11 min-w-11 px-2 py-1 font-normal text-[var(--text-secondary)] md:min-h-9 md:min-w-9"
         aria-pressed={dimmed}
         onClick={(event) => {
           event.stopPropagation()
@@ -135,6 +136,7 @@ export function LegendSeriesLabel({ resolved, value, entry }: LegendSeriesLabelP
 
   return (
     <span
+      className="break-words text-[var(--text-secondary)]"
       {...sharedProps}
     >
       {value}

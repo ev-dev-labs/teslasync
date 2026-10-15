@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -348,6 +350,41 @@ func TestDriveDetail_StartSnapshot_PropagatesError(t *testing.T) {
 	}
 }
 
+func TestDriveDetailGetOdometerContract(t *testing.T) {
+	ptr := func(v float64) *float64 { return &v }
+	for _, tc := range []struct {
+		name       string
+		start, end *float64
+	}{
+		{"missing", nil, nil},
+		{"measured zero", ptr(0), ptr(0)},
+		{"SI endpoints", ptr(122360000), ptr(122374500)},
+		{"one missing endpoint", ptr(122360000), nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			start := time.Date(2026, 4, 30, 10, 0, 0, 0, time.UTC)
+			drive := completedDrive(7, 42, start, start.Add(15*time.Minute))
+			drive.StartOdometerM, drive.EndOdometerM = tc.start, tc.end
+			h := &driveDetailHandler{DriveHandler: &DriveHandler{}, state: &fakeStateReader{}, drives: &fakeDriveByIDFetcher{drive: drive}}
+			rec := httptest.NewRecorder()
+			h.Get(rec, newDriveDetailRequest(t, "7", ""))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status=%d, body=%s", rec.Code, rec.Body.String())
+			}
+			var body map[string]any
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			for name, want := range map[string]*float64{"start_odometer_m": tc.start, "end_odometer_m": tc.end} {
+				got, exists := body[name]
+				if !exists || (want == nil && got != nil) || (want != nil && got != *want) {
+					t.Errorf("%s=%v, exists=%v, want=%v", name, got, exists, want)
+				}
+			}
+		})
+	}
+}
+
 // TestDriveDetail_Get_EmbeddedPositions_AliasFields locks in that the
 // `positions` array embedded in the Get response uses the legacy frontend
 // contract (created_at + speed) rather than the raw signal_log column names
@@ -405,14 +442,14 @@ func TestDriveDetail_Get_EmbeddedPositions_AliasFields(t *testing.T) {
 	}
 }
 
-// TestDriveDetail_Telemetry_DerivesPowerKw locks in that the per-row
+// TestDriveDetail_Telemetry_DerivesPowerW locks in that the per-row
 // telemetry response includes a derived `power` field computed as
-// PackVoltage × PackCurrent / 1000 (kW). Tesla Fleet Telemetry does not
+// PackVoltage × PackCurrent (W). Tesla Fleet Telemetry does not
 // emit a PackPower signal, so without this derivation the Power Profile
 // chart renders a flat line at 0 even on drives with valid voltage and
 // current samples. Sign is preserved (positive = drive, negative = regen)
 // so the chart can distinguish power flow direction.
-func TestDriveDetail_Telemetry_DerivesPowerKw(t *testing.T) {
+func TestDriveDetail_Telemetry_DerivesPowerW(t *testing.T) {
 	t0 := time.Date(2026, 4, 30, 10, 0, 0, 0, time.UTC)
 	t1 := t0.Add(2 * time.Minute)
 	fake := &fakeStateReader{
@@ -443,22 +480,22 @@ func TestDriveDetail_Telemetry_DerivesPowerKw(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("response row count = %d, want 3", len(got))
 	}
-	if p, ok := got[0]["power"].(float64); !ok || p != 4.0 {
-		t.Errorf("row[0] power = %#v, want 4.0 (400V × 10A / 1000)", got[0]["power"])
+	if p, ok := got[0]["power"].(float64); !ok || p != 4000.0 {
+		t.Errorf("row[0] power = %#v, want 4000 W", got[0]["power"])
 	}
-	if p, ok := got[1]["power"].(float64); !ok || p != -8.0 {
-		t.Errorf("row[1] power = %#v, want -8.0 (400V × -20A / 1000, sign preserved for regen)", got[1]["power"])
+	if p, ok := got[1]["power"].(float64); !ok || p != -8000.0 {
+		t.Errorf("row[1] power = %#v, want -8000 W (sign preserved for regen)", got[1]["power"])
 	}
-	if _, has := got[2]["power"]; has {
-		t.Errorf("row[2] should NOT have power (pack_current missing); row=%v", got[2])
+	if p, has := got[2]["power"]; !has || p != nil {
+		t.Errorf("row[2] power = %#v, want explicit null (pack_current missing)", p)
 	}
 }
 
 // TestDriveDetail_RowShapesPreserveLegacyWireContract locks the exact JSON
 // keys of one telemetry row and one position row: the legacy frontend
 // shapes with "ts" renamed to "created_at", speed_mph aliased to "speed",
-// and per-row "power" present only when derivable (omitted — never null —
-// otherwise). Missing signals surface as explicit nulls (never missing
+// and per-row "power" in watts when derivable (null otherwise).
+// Missing signals surface as explicit nulls (never missing
 // keys) so the frontend's stable-shape decoding keeps working.
 func TestDriveDetail_RowShapesPreserveLegacyWireContract(t *testing.T) {
 	t0 := time.Date(2026, 8, 9, 10, 0, 0, 0, time.UTC)
@@ -512,9 +549,10 @@ func TestDriveDetail_RowShapesPreserveLegacyWireContract(t *testing.T) {
 			t.Fatalf("telemetry row missing key %q", k)
 		}
 	}
-	if got := teleRow["power"]; got != 4.0 {
-		t.Fatalf("power = %v, want 4.0", got)
+	if got := teleRow["power"]; got != 4000.0 {
+		t.Fatalf("power = %v, want 4000 W", got)
 	}
+
 	if teleRow["latitude"] != nil {
 		t.Fatalf("latitude = %v, want explicit null", teleRow["latitude"])
 	}
@@ -576,5 +614,53 @@ func TestDriveDetail_Telemetry_FieldMappingsCoverPageFields(t *testing.T) {
 		if !have[f] {
 			t.Errorf("driveTelemetryFieldMappings missing required field %q (frontend reads this); current mappings=%v", f, driveTelemetryFieldMappings)
 		}
+	}
+}
+
+func TestDriveTelemetryPowerValidity(t *testing.T) {
+	tests := []struct {
+		name   string
+		fields map[string]signal.SignalValue
+		want   *float64
+	}{
+		{"missing both", nil, nil},
+		{"missing voltage", map[string]signal.SignalValue{"pack_current": 10.0}, nil},
+		{"null current", map[string]signal.SignalValue{"pack_voltage": 400.0, "pack_current": nil}, nil},
+		{"invalid current", map[string]signal.SignalValue{"pack_voltage": 400.0, "pack_current": "invalid"}, nil},
+		{"boolean current", map[string]signal.SignalValue{"pack_voltage": 400.0, "pack_current": false}, nil},
+		{"boolean envelope", map[string]signal.SignalValue{"pack_voltage": 400.0, "pack_current": map[string]any{"value": false}}, nil},
+		{"invalid envelope", map[string]signal.SignalValue{"pack_voltage": 400.0, "pack_current": map[string]any{"value": 0.0, "invalid": true}}, nil},
+		{"nonfinite current", map[string]signal.SignalValue{"pack_voltage": 400.0, "pack_current": math.NaN()}, nil},
+		{"infinite voltage", map[string]signal.SignalValue{"pack_voltage": math.Inf(1), "pack_current": 0.0}, nil},
+		{"overflow", map[string]signal.SignalValue{"pack_voltage": math.MaxFloat64, "pack_current": 2.0}, nil},
+	}
+	for _, value := range []float64{0, 4000, -8000, 50.0625, -50.0625} {
+		tests = append(tests, struct {
+			name   string
+			fields map[string]signal.SignalValue
+			want   *float64
+		}{fmt.Sprintf("measured %g W", value), map[string]signal.SignalValue{"pack_voltage": 400.5, "pack_current": value / 400.5}, &value})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			row := timelineRowsToDriveTelemetry([]signal.TimelineRow{{Fields: tt.fields}})[0]
+			if tt.want == nil {
+				if row.Power != nil {
+					t.Fatalf("power = %v, want nil", *row.Power)
+				}
+			} else if row.Power == nil || math.Abs(*row.Power-*tt.want) > 1e-9 {
+				t.Fatalf("power = %v, want %g W", row.Power, *tt.want)
+			}
+			// Serialize power alone: unrelated raw pack fields may be nonfinite.
+			data, err := json.Marshal(struct {
+				Power *float64 `json:"power"`
+			}{row.Power})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.want == nil && string(data) != `{"power":null}` {
+				t.Fatalf("JSON = %s, want explicit null", data)
+			}
+		})
 	}
 }

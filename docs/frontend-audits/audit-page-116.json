@@ -1,0 +1,295 @@
+{
+  "item": "audit-page-116",
+  "page": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx",
+  "routes": ["/efficiency-target"],
+  "purpose": "Vehicle-scoped completed-week efficiency goal workspace using the observed, capped drive-history window.",
+  "primaryGoal": "Set a persisted consumption target and compare completed-week results, active-week observations, consistency, weekday patterns, recent ranking and coverage without implying lifetime completeness.",
+  "dataSources": [
+    {
+      "name": "useDriveHistory",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "lines": "47-48,140-152",
+      "endpoint": "/drives?vehicle_id=<selected vehicle>&limit=1000",
+      "routeEvidence": "internal\\api\\router.go:3463-3464 groups /drives with GET / mapped to driveHandler.ListByVehicle; HTTP slash normalization was not exercised.",
+      "behavior": "Vehicle-scoped query key ['drives', vehicleId, 'history', boundedLimit]; limit clamped to 1-1000; enabled only for a vehicle; request receives AbortSignal; MODERATE stale time; safeArray selection. Page supplies no date bounds or pagination.",
+      "backendUnknowns": "Server ordering, completeness, in-progress inclusion and query filtering were not traced beyond route binding; no backend measurement semantics or runtime correctness claim."
+    },
+    {
+      "name": "Selected vehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "evidence": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx:37-38,71-77",
+      "behavior": "Consume existing workspace vehicle selection; no second selector; missing selection returns NoVehicleSelected. Hook implementation not inspected."
+    },
+    {
+      "name": "Persisted target",
+      "owner": "web\\src\\hooks\\useStoredNumber.ts",
+      "lines": "12-54",
+      "evidence": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx:40-43,56-68",
+      "behavior": "Global localStorage key teslasync:efficiency-target:v1; default 160 Wh/km; finite-number fallback; cross-tab storage event; in-memory fallback on storage errors. Input accepts finite positive edits and converts Wh/mi back to Wh/km; persistence remains unchanged."
+    },
+    {
+      "name": "Target summary",
+      "owner": "web\\src\\features\\driving\\lib\\efficiencyTarget.ts",
+      "lines": "95-103,118-126,159-333",
+      "behavior": "Pure model over Drive energyUsedWh, distanceM and startTs; positive finite measured energy and >=1000 m qualify; invalid/future timestamps excluded. Browser-local Monday weeks, energy/distance weighting, completed-only grading/ranking/streaks, 10% near-miss band, trailing four-calendar-week weighted trend, nullable unknown consumption and hit rate, returned/eligible/excluded counts and cap indication."
+    },
+    {
+      "name": "Display preferences and trust",
+      "owner": "web\\src\\features\\driving\\components\\efficiency-target\\useEfficiencyTargetDisplay.ts",
+      "lines": "11-79",
+      "evidence": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx:39,46-47,56-62,79-85,115-121; web\\src\\hooks\\useDataState.ts:31-55",
+      "behavior": "Existing useUnits, useNumberFormatting, formatDayKey and convertDistanceToSI; display-only distance/consumption conversion with locale and precision. Historical useDataState provides fatal versus refresh distinction; retained data stays rendered with StaleRefreshWarning."
+    }
+  ],
+  "components": [
+    {
+      "category": "layout",
+      "owners": ["@/components/layout: PageLayout, Grid", "@/components/motion: FadeIn"],
+      "evidence": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx:88-171",
+      "props": "PageLayout title/subtitle/query/contextActions; Grid default=1,xl=5,gap=4; FadeIn delays 0,0.05,0.1,0.15,0.2.",
+      "implementationScope": "Shared implementations not rereviewed; preserve canonical contracts."
+    },
+    {
+      "category": "controls and feedback",
+      "owners": ["@/components/ui: Input, Badge, GlassPanel, typography, HelpTooltip, DataTable", "@/components/feedback: StaleRefreshWarning, QueryError, Skeleton, EmptyState", "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx"],
+      "evidence": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx:71-115; web\\src\\features\\driving\\components\\efficiency-target\\EfficiencyTargetSectionBody.tsx:15-46",
+      "props": "Input numeric,min=1,step=5,localized aria-label,suffix; existing retry callback; named regions; preserve existing empty states."
+    },
+    {
+      "category": "operational summaries",
+      "owners": ["web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyTargetBrief.tsx", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx", "@/components/data-display: OperationalBrief", "@/hooks/useOperationalMetrics"],
+      "evidence": "EfficiencyTargetBrief.tsx:11-49; DrivingSummaryBrief.tsx:26-53; NestedDrivingBrief.tsx:23-64",
+      "props": "Typed metrics, raw operands, specialist display formatter, title, description, scope/provenance or period, loading/error/retained/onRetry. Existing presentation owner; no new KPI wrapper."
+    },
+    {
+      "category": "domain sections",
+      "owners": ["GoalPulse", "TargetConsistencyChart", "WeeklyTargetChart", "WeekdayEfficiencyChart", "RecentWeekScorecard", "TargetMethodology", "EfficiencyTargetSectionBody", "useEfficiencyTargetDisplay"],
+      "directory": "web\\src\\features\\driving\\components\\efficiency-target",
+      "evidence": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx:125-169",
+      "props": "summary or section-specific arrays/consistency, targetWhPerKm where applicable, section state and optional className; methodology historyLimit."
+    },
+    {
+      "category": "chart and table pipelines",
+      "owners": ["@/components/charts: ChartContainer, ResponsiveContainer, ChartTooltip, ChartLegend, chartGrid, axisTick, CHART_COLORS", "@/components/ui: DataTable"],
+      "evidence": "WeeklyTargetChart.tsx:76-195; WeekdayEfficiencyChart.tsx:87-191; TargetConsistencyChart.tsx:76-169; RecentWeekScorecard.tsx:175-198",
+      "props": "Keep chart dataColumns/exportData/exportFilename, height, ariaLabel, query state, target reference, rolling series and weekly chartKey. DataTable tableId=efficiency-target:recent-weeks, compact density, maxHeight=360, stable week key, mobileColumns and seven-field export."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-target\\GoalPulse.tsx",
+      "line": 28,
+      "rule": "MDC-002 / reuse domain presentation",
+      "detail": "Band labels and semantic Badge variants recur in RecentWeekScorecard.tsx:45-56 and WeeklyTargetChart.tsx:34-40. This is local domain duplication, not evidence for a new application-wide registry.",
+      "fix": "If modernizing these owned dependencies, reuse a small domain band-label/variant helper while preserving active/ungraded differences and existing Badge semantics.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx",
+      "line": 56,
+      "rule": "MDC-033 / one formatter owner",
+      "detail": "Distance-unit consumption scale and unit labels repeat useEfficiencyTargetDisplay.ts:15-20.",
+      "fix": "Reuse existing domain display helper for target scale and labels; preserve saved Wh/km and current unit-switch behavior. No new conversion engine.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "EfficiencyTargetPage.tsx:31,126-136,149-159 stacks sections by default and uses 3/2 and 2/3 spans only at xl.",
+      "GoalPulse.tsx:78 uses one-to-two columns at md; TargetMethodology.tsx:115 uses an lg two-track grid with an 18rem minimum secondary track.",
+      "RecentWeekScorecard.tsx:180 explicitly retains rank/week/consumption/status as mobile columns; gap/distance/drives must remain reachable through existing table details and export.",
+      "All three charts use ResponsiveContainer and heights 300/380/360."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\efficiency-target\\WeekdayEfficiencyChart.tsx",
+        "line": 148,
+        "rule": "MDC-043 / long-label responsive validation",
+        "detail": "interval=0 forces all seven localized weekday ticks within the smaller xl panel and narrow mobile chart. Methodology.tsx:117 also fixes three count tiles at all widths. Potential crowding, not observed clipping.",
+        "fix": "Exercise all ten specified widths, allocated containers, long translations and 200% text. Use existing chart/layout options to reflow labels/tiles without losing data or accessible alternatives.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verifiedViewports": [],
+    "status": "Source-only; no viewport or mobile runtime acceptance."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "EfficiencyTargetPage.tsx:103-106 localizes the numeric control accessible name.",
+      "Named section/region labels and decorative aria-hidden icons are present in inspected domain sections.",
+      "EfficiencyTargetSectionBody.tsx:33-39 labels loading role=status; QueryError retains retry.",
+      "Charts expose ariaLabel and dataColumns; RecentWeekScorecard uses the canonical DataTable rather than raw table markup."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx",
+        "line": 64,
+        "rule": "MDC-021 / field feedback",
+        "detail": "Empty, nonfinite and nonpositive edits return silently; min=1 does not provide application feedback or restore the persisted target display. An invalid typed value can disagree with the target still used in analysis.",
+        "fix": "Use existing Input feedback with localized validation and an explicit draft/committed-value policy; preserve positive target acceptance and saved canonical value.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Keyboard/focus traversal", "Screen reader behavior", "Effective text/UI contrast", "44px touch targets", "Forced colors", "Reduced-motion animation", "Table hidden-column reachability", "Tooltip open/closed behavior"]
+  },
+  "states": {
+    "initialLoading": "sourceState.status=initial maps to section isLoading; section bodies show Skeleton, charts receive loading, summary suppresses unavailable evidence.",
+    "fatalError": "sourceState.fatalError passed to sections; bodies/charts show QueryError and retry; summary exposes Source unavailable.",
+    "refreshErrorAndStale": "Page retains history payload and summary with StaleRefreshWarning; summary brief receives retained boolean rather than dropping data.",
+    "empty": "Individual chart, pulse, scorecard and methodology placeholders remain; summary empty action navigates to /drives. Empty consumption/hit rate are null, not zero.",
+    "noVehicle": "NoVehicleSelected early return, preserving the hook's disabled query when vehicle absent.",
+    "partial": "History cap disclosed, active week distinguished and ungraded, eligible/excluded counts shown. No independent additional query sources.",
+    "offline": "No explicit page offline branch; shared query/layout/warning behavior not exercised.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\efficiency-target\\TargetMethodology.tsx",
+        "line": 103,
+        "rule": "MDC-026 / unknown is not completed evidence",
+        "detail": "Cap badge is outside EfficiencyTargetSectionBody. Before history arrives or during fatal failure, default empty summary yields 'Observed window below API cap'; this is not established source coverage.",
+        "fix": "Suppress the evidence assertion or label it pending/unavailable using existing state while preserving the badge and actual cap disclosure after data resolves.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\efficiency-target\\GoalPulse.tsx",
+        "line": 104,
+        "rule": "MDC-026 / retained trust propagation",
+        "detail": "Both NestedDrivingBrief calls omit existing retained prop, defaulting to false. During a refresh failure the page warning and main brief signal retained evidence while these nested briefs say Returned evidence.",
+        "fix": "Pass retained trust through the domain section state or props into existing NestedDrivingBrief.retained at both calls; do not discard usable data.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-target\\WeekdayEfficiencyChart.tsx",
+      "line": 183,
+      "rule": "MDC-010 / MDC-034 / mission 43",
+      "detail": "One consumption series rotates every weekday through CHART_COLORS by index with opacity 0.78. This is a rainbow encoding without additional category semantics. Actual palette saturation and rendered contrast were not measured.",
+      "fix": "Use one restrained existing series color for weekday consumption, keeping every category/value, target reference and accessible table. Preserve explicit saved chart palette preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-target\\GoalPulse.tsx",
+      "line": 139,
+      "rule": "MDC-010 / semantic surface restraint",
+      "detail": "Active-week panel fixes cyan-400 tinted border/background; TargetMethodology.tsx:152 fixes amber-400 tint even below the cap. These are low-opacity but page-local saturated-hue surfaces rather than canonical surface tokens.",
+      "fix": "Use current neutral surface/border tokens and reserve existing Badge semantics for active/warning meaning; only emphasize cap warnings when supported. Do not create shared palette variants.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx",
+      "line": 107,
+      "rule": "MDC-046 / persisted preference consistency",
+      "detail": "Input is uncontrolled via defaultValue, keyed only by distanceUnit. useStoredNumber handles storage-event updates, but a changed target in another tab will update computations without synchronizing the mounted input's value.",
+      "fix": "Use a controlled draft synchronized with target and units, with localized validation and an explicit commit policy. Keep the storage key, default, positive-value rule, canonical Wh/km and unit preference unchanged.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx",
+      "line": 45,
+      "rule": "MDC-045 / source calculation freshness",
+      "detail": "nowMs is captured once per mount. summarizeTarget excludes drives later than nowMs and determines active week from it (efficiencyTarget.ts:180-187,224). Later refetched drives can be omitted and a long-lived mount crossing Monday can keep old completed/active classification.",
+      "fix": "Resolve time freshness in the existing domain computation lifecycle on successful source updates and week rollover without changing local-week semantics or adding a competing clock/store. Validate deterministically.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Resolve uncontrolled saved-target mismatch, frozen analysis time and unsupported/contradictory trust labels before presentation acceptance; then reduce weekday rainbow and local tinted surfaces.",
+    "scope": "Source audit only. No implementation, source edits, runtime verification or migration-completion claim."
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "confirmed": [],
+    "assessment": "Page already uses existing PageLayout/Grid, Input, chart frame, DataTable and OperationalBrief owners. Proposed fixes use existing props/helpers. No new shared component, theme, formatter, overlay or query store is warranted from this single page.",
+    "unreviewed": "Barrel exports EfficiencyTargetKpis, but only its type is referenced by the mounted brief; its implementation and other production consumers were not inspected. No speculative competing-owner conclusion."
+  },
+  "preservation": {
+    "sourceHash": "F17CF1DEB80B9E12BFF152D97E8CB14C67A8083E03B4C856C495CA3DFA0EBB45",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 173,
+    "sectionCount": 7,
+    "sections": [
+      {"name": "Efficiency target summary metrics", "count": 1, "lines": "117-122", "metrics": ["Saved target", "Completed-week streak and longest run", "Completed-week hit rate and denominator", "Observed overall consumption and eligible/observed count"]},
+      {"name": "Goal pulse", "count": 1, "lines": "127-131", "subsections": ["Latest completed week, band and signed margin", "Active-week snapshot, consumption, distance and drive count"]},
+      {"name": "Target consistency", "count": 1, "lines": "132-136", "data": "Completed on-target/near-miss/off-track counts and share"},
+      {"name": "Weekly consumption vs target", "count": 1, "lines": "141-145", "data": "Latest 26 observed weeks, target reference, rolling four-week series, active/completed phase, status"},
+      {"name": "Weekday efficiency pattern", "count": 1, "lines": "150-155", "data": "All seven weekday categories, nullable distance-weighted consumption, distance, drives and target reference"},
+      {"name": "Recent completed-week scorecard", "count": 1, "lines": "156-160", "data": "Latest eight completed weeks newest-first; rank, week, consumption, signed target gap, distance, drives and status"},
+      {"name": "Coverage & methodology", "count": 1, "lines": "165-169", "data": "Returned/eligible/completed counts, exclusions, cap/below-cap disclosure, local calendar, measurement eligibility, weighting, active exclusion and rolling explanation"}
+    ],
+    "frameCounts": {"pageGlassPanel": 0, "pageChartContainer": 0, "mountedDomainGlassPanel": 3, "mountedDomainChartContainer": 3, "mountedSummarySection": 1},
+    "inspectedPresentationLineCount": 1366,
+    "actions": [
+      "Edit weekly target in preferred Wh/km or Wh/mi and persist under teslasync:efficiency-target:v1.",
+      "Use existing workspace vehicle selection; preserve NoVehicleSelected recovery surface.",
+      "Retry the drive history query from source error surfaces.",
+      "Browse drives via /drives in no-eligible-drive summary.",
+      "Preserve ChartContainer accessible data view and exports for consistency, weekly and weekday charts.",
+      "Preserve weekly legend series visibility with chartKey=efficiency-target-weekly.",
+      "Preserve DataTable controls, persistence identity and seven-column recent-week export.",
+      "Preserve coverage methodology HelpTooltip."
+    ],
+    "persistence": ["teslasync:efficiency-target:v1", "efficiency-target-weekly", "efficiency-target:recent-weeks"],
+    "dataBehavior": [
+      "Preserve selected vehicle, one capped 1000-row history request, existing keys/cancellation/stale policy; no silent claim of lifetime or full-window completeness.",
+      "Keep raw Drive meters and watt-hours intact; only display preferences convert values. Saved target remains Wh/km.",
+      "Retain positive measured-energy and >=1 km eligibility, timestamp filtering, local Monday-through-Sunday grouping, source-distance weighting and active-week exclusion.",
+      "Keep band thresholds, current/longest streak calculations, completed ranking, rolling four-calendar-week weighting and all metadata.",
+      "No automatic workspace range adoption: current page explicitly reports observed-history coverage, hook accepts no bounds, and scoped workspace registry search found no efficiency-target range entry. Any later range change is an integration decision, not a cosmetic rewrite.",
+      "Preserve loading, empty, fatal failure, retained refresh data, locale/precision, unit preferences, responsive spans and every section."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Static source inspection only; assigned route supplied by task, not mounted or independently verified.",
+    "notRun": ["Browser/runtime", "Visual/theme/viewport QA", "Keyboard/screen reader/contrast QA", "TypeScript", "Tests", "Full-repository lint/build", "Git operations"],
+    "auditScript": "Read scoped audit skill script but did not execute it because it unconditionally runs project TypeScript, outside this atomic source-only validation scope. Bounded source pattern checks executed instead.",
+    "sourceChecks": {
+      "command": "PowerShell Select-String over page and mounted presentation dependencies; raw-control regex rerun with -CaseSensitive to exclude shared <Input>.",
+      "exitCode": 0,
+      "output": ["neon_glow_white=0", "raw_controls_case_sensitive=0", "inline_styles=0", "direct_libraries=0", "legacy_api=0", "panel_chart=6"],
+      "qualification": "Literal neon/glow/white matches absent in these inspected call sites, not a shared-renderer or rendered-color certificate. First case-insensitive control count matched <Input>; corrected count is zero. Saturated palette references and rainbow use are separately flagged."
+    },
+    "backend": "Only endpoint hook and router binding read; handler/repository behavior, source payload validity and slash routing are unverified.",
+    "sharedOwners": "Global primitive, theme, shell, query, chart/export and formatter implementations remain outside this atomic audit; imported owner names are not acceptance evidence.",
+    "snapshot": "Concurrent source changes remain possible; final hash verification is required before release."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\EfficiencyTargetPage.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-target\\index.ts",
+    "web\\src\\features\\driving\\components\\efficiency-target\\types.ts",
+    "web\\src\\features\\driving\\components\\efficiency-target\\GoalPulse.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-target\\RecentWeekScorecard.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-target\\TargetConsistencyChart.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-target\\TargetMethodology.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-target\\WeekdayEfficiencyChart.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-target\\WeeklyTargetChart.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-target\\EfficiencyTargetSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-target\\useEfficiencyTargetDisplay.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyTargetBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\features\\driving\\lib\\efficiencyTarget.ts",
+    "web\\src\\hooks\\useStoredNumber.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "internal\\api\\router.go",
+    "web\\src\\lib\\workspaceScope.ts"
+  ]
+}

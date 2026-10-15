@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { CalendarDays } from 'lucide-react';
 
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { GlassPanel, HelpTooltip, PanelTitle, Caption } from '@/components/ui';
+import { EmptyState, Skeleton } from '@/components/feedback';
+import { Accordion, Table, HelpTooltip, Caption } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
 import { formatDayKey } from '@/lib/dateFormat';
@@ -14,10 +15,10 @@ import type { DriveCalendarSectionState } from './types';
 const WEEK_GRID = 'grid grid-flow-col auto-cols-[minmax(1.125rem,1fr)] gap-1';
 const LEVEL_CLASSES = [
   'bg-[var(--surface-2)]',
-  'bg-emerald-500/25',
-  'bg-emerald-500/45',
-  'bg-emerald-500/70',
-  'bg-emerald-400',
+  'bg-[var(--theme-primary)]/25',
+  'bg-[var(--theme-primary)]/45',
+  'bg-[var(--theme-primary)]/70',
+  'bg-[var(--theme-primary)]',
 ] as const;
 
 interface DriveCalendarHeatmapProps extends DriveCalendarSectionState {
@@ -38,18 +39,15 @@ export function DriveCalendarHeatmap({
   const weekdayLabels = getWeekdayLabels(t);
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <PanelTitle className="flex items-center gap-2">
-          <CalendarDays className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('driveCalendar.heatmap.title', 'Selected period')}
+    <div className={className}>
+    <LayoutCard title={t('driveCalendar.heatmap.title', 'Selected period')}
+      actions={<div className="flex min-w-0 flex-wrap items-center gap-2">
           <HelpTooltip
             size="sm"
             i18nKey="help.driveCalendar.body"
             defaultValue="Each cell is one day; darker means more distance, scaled against your 95th-percentile day so one road trip doesn't flatten the rest. Streaks count consecutive days with at least one drive."
             ariaLabel={t('help.driveCalendar.iconLabel', 'More info about the calendar')}
           />
-        </PanelTitle>
         {!isLoading && !error && (
           <Caption>
             {t('driveCalendar.heatmap.activeSummary', '{{active}} active days · {{drives}} drives', {
@@ -58,13 +56,15 @@ export function DriveCalendarHeatmap({
             })}
           </Caption>
         )}
-      </div>
-
-      {error ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : isLoading ? (
-        <Skeleton height={230} />
-      ) : calendar.totalDrives === 0 ? (
+      </div>}
+    >
+      <SourceContent
+        state={error ? 'error' : isLoading ? 'loading' : calendar.totalDrives === 0 ? 'empty' : 'ready'}
+        label={t('driveCalendar.heatmap.title', 'Selected period')}
+        emptyMessage={t('driveCalendar.noDrives', 'No drives in the selected period.')}
+        errorMessage={t('error.loadFailed', 'Failed to load data')} error={error}
+        errorRecovery={{ onRetry }} loadingContent={<Skeleton height={230} />}
+        emptyContent={(
         <EmptyState
           icon={<CalendarDays className="h-8 w-8" aria-hidden="true" />}
           message={t('driveCalendar.noDrives', 'No drives in the selected period.')}
@@ -73,7 +73,8 @@ export function DriveCalendarHeatmap({
             to: '/drives',
           }}
         />
-      ) : (
+        )}
+      >
         <div
           role="img"
           aria-label={t(
@@ -122,7 +123,7 @@ export function DriveCalendarHeatmap({
                                 style: 'long',
                                 locale: unitPrefs.locale,
                               }),
-                              distance: formatDistance(day.distanceM, { precision: 1 }),
+                              distance: formatDistance(day.distanceM),
                               count: day.drives,
                             },
                           )}
@@ -157,7 +158,30 @@ export function DriveCalendarHeatmap({
             <Caption>{t('driveCalendar.more', 'More')}</Caption>
           </div>
         </div>
-      )}
-    </GlassPanel>
+        <Accordion title={t('card.viewDetails', 'View details')} className="mt-3">
+          <Table variant="embedded" aria-label={t('driveCalendar.activity', 'Driving activity')}>
+            <thead>
+              <tr>
+                <th scope="col">{t('common.date', 'Date')}</th>
+                <th scope="col">{t('driveCalendar.distance', 'Distance')}</th>
+                <th scope="col">{t('driveCalendar.weekdayPattern.drives', 'Drives')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {calendar.days.map((day) => (
+                <tr key={day.date}>
+                  <th scope="row">
+                    {formatDayKey(day.date, { style: 'long', locale: unitPrefs.locale })}
+                  </th>
+                  <td>{formatDistance(day.distanceM)}</td>
+                  <td>{day.drives}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </Accordion>
+      </SourceContent>
+    </LayoutCard>
+    </div>
   );
 }

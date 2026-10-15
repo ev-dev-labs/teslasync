@@ -24,11 +24,12 @@ import { Gauge, TrendingUp, ServerCog, Layers, CheckCircle2, AlertTriangle } fro
 
 import { MetricCard } from '@/components/data-display'
 import { Skeleton } from '@/components/feedback'
-import { fmtInt, fmtPercent } from '@/lib/numberFormat'
+
 import type { NeonColor } from '@/lib/tokens'
 import type { useRateLimitStatus } from '@/api/hooks/useSystem'
 import type { useQueueStatus } from '@/api/hooks/useSystemQueues'
 import type { RateLimitSeverity } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type RateLimitQuery = ReturnType<typeof useRateLimitStatus>
 type QueueQuery = ReturnType<typeof useQueueStatus>
@@ -58,6 +59,7 @@ export interface SystemHealthOverviewProps {
 }
 
 export function SystemHealthOverview({ rateLimit, queue }: SystemHealthOverviewProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation()
 
   const scopes = rateLimit.data?.scopes ?? []
@@ -151,7 +153,7 @@ export function SystemHealthOverview({ rateLimit, queue }: SystemHealthOverviewP
       />
       <MetricCard
         label={t('system.overview.peakUsage', 'Peak budget usage')}
-        value={hasRate ? fmtPercent(peakUsagePct, 0) : dash}
+        value={hasRate ? fmtPercent(peakUsagePct) : dash}
         subtitle={t('system.overview.peakUsageHint', 'Of the tightest window')}
         icon={<TrendingUp className="h-5 w-5" aria-hidden="true" />}
         color={hasRate ? usageColor(peakUsagePct) : 'cyan'}

@@ -110,6 +110,7 @@ export function AIFeatureToggleList({ values, onToggle }: Props) {
                   type="button"
                   variant="ghost"
                   size="sm"
+                  wrapLabel
                   aria-expanded={isExpanded}
                   aria-controls={descriptionId}
                   onClick={() => setExpanded(previous => {
@@ -118,7 +119,7 @@ export function AIFeatureToggleList({ values, onToggle }: Props) {
                     else next.add(id)
                     return next
                   })}
-                  className="mt-1 min-h-6 px-0 text-xs text-[var(--theme-primary)]"
+                  className="mt-1 min-h-11 px-0 text-xs text-[var(--theme-primary)] md:min-h-6"
                 >
                   {isExpanded
                     ? t('ai.settings.feature.less', 'Less detail')
@@ -161,6 +162,7 @@ export function AIFeatureToggleList({ values, onToggle }: Props) {
         <div className="space-y-4">
           <Input
             type="search"
+            className="min-h-11 md:min-h-10"
             value={search}
             onChange={event => setSearch(event.target.value)}
             label={t('ai.settings.feature.search', 'Search AI features')}
@@ -172,10 +174,11 @@ export function AIFeatureToggleList({ values, onToggle }: Props) {
                 key={id}
                 type="button"
                 size="sm"
+                wrapLabel
                 variant={category === id ? 'primary' : 'ghost'}
                 aria-pressed={category === id}
                 onClick={() => setCategory(id)}
-                className="min-h-9 rounded-shape-lg border border-[var(--border-default)] px-3"
+                className="min-h-11 rounded-shape-lg border border-[var(--border-default)] px-3 md:min-h-9"
               >
                 {categoryLabel(id)}{id === 'enabled' ? ` (${enabledCount})` : ''}
               </Button>

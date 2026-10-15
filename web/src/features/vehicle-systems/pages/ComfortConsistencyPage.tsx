@@ -2,7 +2,8 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { FadeIn } from '@/components/motion';
 import {
   ComfortConsistencyCoverageCadence,
@@ -24,24 +25,32 @@ import {
   type TemperatureDeltaFormatter,
 } from '../components/comfort-consistency';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   convertTempFromSI,
   type TemperatureUnitPref,
 } from '@/lib/unitConversion';
 import { summarizeComfortConsistency } from '../lib/comfortConsistency';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const convertDeltaC = (valueC: number, unit: TemperatureUnitPref): number =>
   convertTempFromSI(valueC, unit) - convertTempFromSI(0, unit);
 export default function ComfortConsistencyPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('comfortConsistency.title', 'Comfort Consistency'));
+  usePageTitle(t('comfortConsistency.title', 'Comfort consistency'));
   const { vehicleId } = useSelectedVehicle();
+  const { startInstant, endInstantExclusive } = useRangeState();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
   const { unitPrefs, formatDuration } = useUnits();
-  const climateQuery = useClimateHistory(vehicleIdStr);
+  const climateQuery = useClimateHistory(vehicleIdStr, {
+    start: startInstant,
+    end: endInstantExclusive,
+  });
+  const climateSource = deriveDataState(climateQuery, { provenance: 'historical' });
   const summary = useMemo(
     () => summarizeComfortConsistency(climateQuery.data ?? []),
     [climateQuery.data],
@@ -55,44 +64,35 @@ export default function ComfortConsistencyPage() {
         precision,
       )} ${unitPrefs.temperature}`;
     },
-    [unitPrefs.precision, unitPrefs.temperature],
+    [unitPrefs.precision, unitPrefs.temperature, fmtNumber],
   );
-  const hasData = climateQuery.data !== undefined;
   const queryState = useMemo<ComfortConsistencyQueryState>(
     () => ({
       vehicleSelected: vehicleId != null,
-      isLoading: climateQuery.isLoading,
-      isResolved:
-        climateQuery.isSuccess
-        || hasData
-        || (!climateQuery.isLoading && !climateQuery.isError),
-      error:
-        climateQuery.isError && !hasData
-          ? climateQuery.error
-          : null,
-      refreshError:
-        climateQuery.isError && hasData
-          ? climateQuery.error
-          : null,
+      isLoading: climateQuery.isLoading && !climateSource.hasData,
+      isPaused: climateSource.isRefreshBlocked,
+      isResolved: climateSource.hasData,
+      error: climateSource.fatalError,
+      refreshError: climateSource.refreshError,
       onRetry: () => {
         void climateQuery.refetch();
       },
     }),
     [
-      climateQuery.error,
-      climateQuery.isError,
       climateQuery.isLoading,
-      climateQuery.isSuccess,
       climateQuery.refetch,
-      hasData,
+      climateSource.fatalError,
+      climateSource.refreshError,
+      climateSource.hasData,
+      climateSource.isRefreshBlocked,
       vehicleId,
     ],
   );
   const locale = unitPrefs.locale ?? 'en-US';
 
   return (
-    <PageContainer
-      title={t('comfortConsistency.title', 'Comfort Consistency')}
+    <PageLayout
+      title={t('comfortConsistency.title', 'Comfort consistency')}
       subtitle={t(
         'comfortConsistency.subtitle',
         'Evidence-qualified cabin-to-setpoint adherence, stabilization, and overshoot from the returned climate timeline',
@@ -194,8 +194,8 @@ export default function ComfortConsistencyPage() {
         <ComfortConsistencyDataAvailability summary={summary} state={queryState} />
       </FadeIn>
       <FadeIn delay={0.16}>
-        <ComfortConsistencyMethodology summary={summary} />
+        <ComfortConsistencyMethodology summary={summary} state={queryState} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

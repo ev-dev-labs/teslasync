@@ -60,7 +60,7 @@ describe('FavoritesBar', () => {
     );
 
     expect(container.firstChild).toBeNull();
-    expect(screen.queryByText('Quick Actions')).toBeNull();
+    expect(screen.queryByText('Quick actions')).toBeNull();
     expect(renderTile).not.toHaveBeenCalled();
   });
 
@@ -107,9 +107,9 @@ describe('FavoritesBar', () => {
       <FavoritesBar favorites={['wake', 'lock']} commands={ALL} renderTile={makeRenderTile()} />,
     );
 
-    const region = screen.getByRole('region', { name: 'Quick Actions' });
+    const region = screen.getByRole('region', { name: 'Quick actions' });
     expect(region).toBeInTheDocument();
-    expect(screen.getByText('Quick Actions')).toBeInTheDocument();
+    expect(screen.getByText('Quick actions')).toBeInTheDocument();
     expect(screen.getByText('(2)')).toBeInTheDocument();
   });
 
@@ -118,7 +118,7 @@ describe('FavoritesBar', () => {
       <FavoritesBar favorites={['wake']} commands={ALL} renderTile={makeRenderTile()} />,
     );
 
-    const region = screen.getByRole('region', { name: 'Quick Actions' });
+    const region = screen.getByRole('region', { name: 'Quick actions' });
     const star = region.querySelector('.text-neon-amber');
     expect(star).not.toBeNull();
     expect(star).toHaveAttribute('aria-hidden', 'true');

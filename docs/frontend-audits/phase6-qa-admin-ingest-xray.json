@@ -1,0 +1,616 @@
+{
+  "item": "phase6-qa-admin-ingest-xray",
+  "result": "DONE",
+  "acceptance": "Read-only source QA report delivered; page/source contract has confirmed failures. This is not native, deployed, visual, accessibility or application acceptance.",
+  "pageVerdict": "FAIL",
+  "nativeVerdict": "NOTRUN",
+  "startedAt": "2026-10-13T09:20:09.678-07:00",
+  "returnDeadline": "2026-10-13T09:40:09.678-07:00",
+  "hardDeadline": "2026-10-13T09:45:09.678-07:00",
+  "commandLimitSeconds": 480,
+  "page": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx",
+  "routes": ["/admin/ingest-xray"],
+  "purpose": "Read recent per-vehicle ingest sample volume and field metadata without capturing telemetry values or operating the ingest pipeline.",
+  "primaryGoal": "Choose a vehicle, diagnostic rolling window and bucket; inspect summary, bucket chart, ranked fields and sortable/filterable field statistics.",
+  "writeScope": [
+    "docs\\frontend-audits\\phase6-qa-admin-ingest-xray.json",
+    "web\\logs\\phase6-qa-admin-ingest-xray.log"
+  ],
+  "contractEvidence": [
+    "migration-queue.md:143-154 rolling finished-page source QA contract",
+    "migration-queue.md:204 existing item and exact report scope",
+    "migration-queue.md:1532 accepted original page SOURCE ONLY, composed inventory and external zero-case validation history",
+    "docs\\orchestrator-loop.md:100-134 bounded worker contract; no unchanged passing reruns",
+    "docs\\frontend-design-contract.md:419-442 asynchronous trust",
+    "docs\\frontend-design-contract.md:444-474 operational metrics",
+    "docs\\frontend-design-contract.md:476-500 localization, SI and privacy",
+    "docs\\frontend-design-contract.md:502-547 mobile and accessibility acceptance",
+    "docs\\frontend-mission.md:1416-1486 visual matrix and page definition of done",
+    "docs\\session-handoff.md:65-70 inherited supported-runtime build/typecheck receipts, not a new pass",
+    "docs\\frontend-inventory.md:14-32 source-only evidence and preservation limits"
+  ],
+  "instructionsRead": [
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    ".github\\skills\\verify-api-hooks\\contract-paths.cjs"
+  ],
+  "authorityResolution": "The current rolling QA contract and user report-only assignment supersede obsolete heartbeat/log-location examples. Current SI/design requirements supersede legacy source-unit conversion examples. No heartbeat, queue, catalog or source writes were authorized or performed.",
+  "dataSources": [
+    {
+      "hook": "useIngestXRay",
+      "sourceEvidence": ["web\\src\\api\\hooks\\useIngestXRay.ts:56-89", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:58-63"],
+      "method": "GET",
+      "path": "/system/ingest-xray/{vehicleID}",
+      "queryParameters": ["window", "bucket", "limit"],
+      "pageLimit": 100,
+      "routeEvidence": ["internal\\api\\router.go:3210", "internal\\api\\router.go:4395", "internal\\api\\router.go:4542-4544"],
+      "handler": "internal\\api\\ingestxray\\handler.go",
+      "repository": "internal\\database\\observability\\ingest_xray_repo.go",
+      "pathStatus": "PASS",
+      "responseAgreement": "FAIL",
+      "behavior": "Positive integer ID gate; key includes ID/window/bucket/limit; AbortSignal forwarded; raw DTO returned; REALTIME stale time; FAST polling; background polling disabled; retry 1. No placeholderData configured.",
+      "backendExecution": "NOTRUN"
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "sourceEvidence": ["web\\src\\hooks\\useSelectedVehicle.ts:48-83", "web\\src\\hooks\\useSelectedVehicle.ts:168-173", "web\\src\\api\\hooks\\useVehicles.ts:73-79"],
+      "method": "GET",
+      "path": "/vehicles",
+      "routeEvidence": ["internal\\api\\router.go:3362-3363"],
+      "pathStatus": "PASS",
+      "trustStatus": "FAIL",
+      "behavior": "URL/path then persisted selection then first fleet record; setter synchronizes vehicle_id URL/store; fleet normalization returns array. Selector discards fleet loading/error/paused/retry state.",
+      "backendExecution": "NOTRUN"
+    },
+    {
+      "hook": "ChartContainer annotation hooks",
+      "sourceEvidence": ["web\\src\\components\\charts\\ChartContainer.tsx:347", "web\\src\\components\\charts\\ChartContainer.tsx:391-398", "web\\src\\api\\hooks\\useAnnotations.ts:81-88"],
+      "method": "GET",
+      "path": "/annotations",
+      "routeEvidence": ["internal\\api\\router.go:3750-3755"],
+      "pathStatus": "PASS",
+      "behavior": "Ingest chart supplies no annotations configuration, so annotationsEnabled is false and annotation GET is disabled. Creating/deleting mutation hook objects does not execute mutations. No annotation operation was invoked.",
+      "runtime": "NOTRUN"
+    }
+  ],
+  "checks": [
+    {
+      "id": "section-preservation",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:139", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:164", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:171", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:189"],
+      "detail": "Four section invocations and four section boundaries remain; no all-page data/loading/error gate is passed to PageLayout. This confirms source structure, not mounted rendering."
+    },
+    {
+      "id": "initial-ingest-loading-and-fatal-error",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:80-82", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:141-146", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:159-175", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:186-189"],
+      "detail": "First active ingest fetch has summary loading, chart loading, ranked-list skeleton and table Loading copy. Fatal ingest failure owns chart/table/top-fields retry contents; summary receives fatal error without fabricated numeric readings. Fleet prerequisite states are separately failing."
+    },
+    {
+      "id": "successful-empty-ingest",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\ingest-xray\\XRayBucketChart.tsx:85-100", "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx:66-80", "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx:125-134"],
+      "detail": "Settled supplied empty arrays preserve chart/list/table placeholders. Empty validated bucket arrays yield peak/mean zero; absent bucket data yields unknown. A filtered no-match is not distinguished correctly, see XRAY-06."
+    },
+    {
+      "id": "retained-refresh-failure",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\api\\dataState.ts:234-242", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:80-82", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:142", "web\\src\\components\\feedback\\DataSourceNotice.tsx:81-82", "web\\src\\components\\feedback\\DataSourceNotice.tsx:190-205"],
+      "detail": "Retained payload remains; fatal-only section replacement does not blank it. Brief labels retained measurements; named source notice offers refresh-failure warning and retry."
+    },
+    {
+      "id": "retained-paused",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\api\\dataState.ts:245-252", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:142", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts:11-15", "web\\src\\components\\feedback\\DataSourceNotice.tsx:82", "web\\src\\components\\feedback\\DataSourceNotice.tsx:165-168"],
+      "detail": "Paused retained source becomes stale with no fabricated refresh error; summary retained flag now follows source.status. Historical audit-page-017 paused-summary defect is no longer present in this source. Native/offline behavior NOTRUN."
+    },
+    {
+      "id": "measurement-freshness-and-wire-metadata",
+      "status": "FAIL",
+      "kind": "source",
+      "findingIds": ["XRAY-01"],
+      "evidence": ["internal\\api\\ingestxray\\handler.go:50-62", "web\\src\\types\\admin-diagnostics.ts:253-263", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\IngestOperationalBrief.tsx:32-54"]
+    },
+    {
+      "id": "full-window-total-agreement",
+      "status": "FAIL",
+      "kind": "source",
+      "findingIds": ["XRAY-02"],
+      "evidence": ["internal\\api\\ingestxray\\handler.go:144-158", "internal\\database\\observability\\ingest_xray_repo.go:67-78"]
+    },
+    {
+      "id": "fleet-prerequisite-state",
+      "status": "FAIL",
+      "kind": "source",
+      "findingIds": ["XRAY-04"],
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:50", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:116-120"]
+    },
+    {
+      "id": "raw-si-and-no-values-exposed",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\api\\hooks\\useIngestXRay.ts:74-83", "web\\src\\types\\admin-diagnostics.ts:238-263", "web\\src\\features\\admin\\components\\ingest-xray\\XRayBucketChart.tsx:48-52"],
+      "detail": "Response/hook exposes sample counts, timestamps and kind integers, not physical telemetry measurements. Count values remain raw and dates/numbers format only at display. No deprecated physical conversion is called in the audited files; no telemetry values or identities were captured."
+    },
+    {
+      "id": "null-versus-zero-defensive-paths",
+      "status": "FAIL",
+      "kind": "source",
+      "findingIds": ["XRAY-05"],
+      "evidence": ["web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx:86-99", "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx:84-91", "web\\src\\lib\\numberFormat.ts:61-63"]
+    },
+    {
+      "id": "filtering-empty-reason",
+      "status": "FAIL",
+      "kind": "source",
+      "findingIds": ["XRAY-06"],
+      "evidence": ["web\\src\\components\\ui\\DataTable.tsx:536-547", "web\\src\\components\\ui\\DataTable.tsx:1602-1605", "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx:125-132"]
+    },
+    {
+      "id": "vehicle-window-bucket-selection",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:61-83", "web\\src\\hooks\\useSelectedVehicle.ts:132-166", "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx:105-141", "internal\\api\\ingestxray\\handler.go:97-123", "web\\src\\lib\\workspaceScope.ts:95-107"],
+      "detail": "Admin route intentionally disables header vehicle selection and is not range-enabled; local diagnostics selectors remain necessary. Window/bucket choices match server enums; incompatible buckets disabled and narrowing clamps to strictly smaller valid bucket. Query keys prevent cross-selection cache reuse; no placeholderData was found."
+    },
+    {
+      "id": "field-sort-filter-pagination",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx:45-66", "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx:114-135", "web\\src\\components\\ui\\DataTable.tsx:536-547", "web\\src\\components\\ui\\DataTable.tsx:653-659"],
+      "detail": "Copy sorting, value filters, loaded-row local search, 50-row default pagination and preference identity admin:xray-fields remain. Filtering acts only on capped loaded field rows, not chart/summary. Table selection is not enabled by this caller. This is not interaction acceptance."
+    },
+    {
+      "id": "mobile-kind-preservation",
+      "status": "FAIL",
+      "kind": "source",
+      "findingIds": ["XRAY-03"],
+      "evidence": ["web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx:134", "web\\src\\components\\ui\\DataTable.tsx:715-725", "web\\src\\components\\ui\\DataTable.tsx:1522"]
+    },
+    {
+      "id": "source-a11y-names-and-alternatives",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:95-104", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:152-153", "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx:151-169", "web\\src\\features\\admin\\components\\ingest-xray\\XRayBucketChart.tsx:69-82", "web\\src\\components\\ui\\DataTable.tsx:1463-1474", "web\\src\\components\\ui\\DataTable.tsx:1533-1545"],
+      "detail": "Localized refresh/select/section names, decorative refresh Icon, chart data columns and native table caption/headers/sort attributes are present. Native keyboard, focus, announcements and assistive-technology usability NOTRUN."
+    },
+    {
+      "id": "mobile-target-source",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:98", "web\\src\\components\\ui\\Select.tsx:36-39", "web\\src\\components\\ui\\Select.tsx:51"],
+      "detail": "Refresh supplies 44px minimum below md; current Select md default also supplies min-h-11 below md. Historical Select 40px-mobile defect is no longer present. This does not prove composed target rectangles or hit tests."
+    },
+    {
+      "id": "canonical-i18n-coverage",
+      "status": "FAIL",
+      "kind": "source",
+      "findingIds": ["XRAY-07"],
+      "evidence": ["web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx:101-109", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts:20-21", "web\\src\\i18n\\en.json:10946", "web\\src\\api\\hooks\\useIngestXRay.ts:108-130"],
+      "detail": "Canonical lookup checked 68 unique literal/finite-expanded keys: 48 exist, 20 duration-option/label keys missing. Kind fallback phrase is hardcoded; raw type tokens may legitimately stay technical. Locale/RTL runtime NOTRUN."
+    },
+    {
+      "id": "bounded-pattern-audit",
+      "status": "PASS",
+      "kind": "executed-source-scan",
+      "evidence": ["web\\logs\\phase6-qa-admin-ingest-xray.log"],
+      "detail": "Nine explicit production files scanned: static inline CSS variable patterns 0, corrected case-sensitive raw control patterns 0, direct vendor imports 0, old API imports 0, neon-body patterns 0, untyped any 0, direct fetch/EventSource 0. Fixed-white cursor has 1 match; a visual candidate, not a prohibited static-inline violation. Pattern counts are not full quality acceptance."
+    },
+    {
+      "id": "request-paths-and-parameters",
+      "status": "PASS",
+      "kind": "executed-source-scan",
+      "evidence": ["web\\src\\api\\hooks\\useIngestXRay.ts:74-83", "internal\\api\\router.go:4544", "web\\logs\\phase6-qa-admin-ingest-xray.log"],
+      "detail": "Existing extractor exit 0 produced /system/ingest-xray/{PARAM}?{PARAM}. Prefix/camelCase scans 0; because qs is opaque, actual URLSearchParams keys were inspected separately: window, bucket, limit. Method and nested route match; DTO agreement separately fails."
+    },
+    {
+      "id": "observability-source",
+      "status": "PASS",
+      "kind": "source",
+      "evidence": ["web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:21-49", "web\\src\\api\\hooks\\useIngestXRay.ts:74-83"],
+      "detail": "Audited page owns no RUM bootstrap or sensitive logging and uses the existing request path with cancellation. Backend span/SLO coverage, collectors and telemetry delivery were outside this bounded frontend QA and were not accepted."
+    },
+    {
+      "id": "typescript-build-lint-tests",
+      "status": "NOTRUN",
+      "evidence": ["docs\\frontend-worker-conventions.md:23-28", "docs\\session-handoff.md:65-70", ".github\\skills\\audit-violations\\audit.sh:121-129"],
+      "detail": "No source/test edits; no-change workers do not launch tests; full gates are parent-owned and unchanged passing reruns prohibited. No new npx tsc --noEmit, build, lint, test or audit.sh pass claimed."
+    },
+    {
+      "id": "native-mobile-visual-a11y-matrix",
+      "status": "NOTRUN",
+      "evidence": ["docs\\frontend-mission.md:1439-1462", "migration-queue.md:145-154"],
+      "detail": "No browser, screenshots, native keyboard/focus, target rectangles/hits, forced-colors, reduced-motion runtime, light/dark/custom-theme contrast, RTL, zoom or actual overflow checks. No native pass inferred from source/classes."
+    },
+    {
+      "id": "real-api-database-ingest-runtime",
+      "status": "NOTRUN",
+      "evidence": ["migration-queue.md:149-154"],
+      "detail": "No HTTP/API/database requests, payload captures, identities, ingest operations, mutations, Docker, servers or deployments."
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "XRAY-01",
+      "status": "FAIL",
+      "severity": "P1",
+      "title": "Routed DTO disagrees with summary metadata and distinct-field assumptions",
+      "file": "web\\src\\types\\admin-diagnostics.ts",
+      "line": 253,
+      "rule": "MDC-033/MDC-045",
+      "owner": "integration",
+      "evidence": ["internal\\api\\ingestxray\\handler.go:50-62", "internal\\api\\ingestxray\\handler.go:149-168", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts:29", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\IngestOperationalBrief.tsx:32-54", "web\\src\\api\\client.ts:288"],
+      "mechanism": "Handler sends now/window_start and optional last_seen_at/freshness_seconds, not generated_at or unique_fields. Typed request is a cast, not DTO validation, and camelCaseKeys cannot invent different semantic fields. Summary therefore omits server freshness/evidence, declares exact bounds not supplied despite supplied window_start/now metadata, and renders unknown distinct fields even with field rows. Page header freshness measures query receipt, not signal freshness.",
+      "repro": "Source trace of any successful payload constructed by the routed handler: generated_at and unique_fields are absent; generated_at freshness condition is false, rawValue unique_fields is undefined and the unconditional boundsUnknown text remains. No payload was requested or rendered.",
+      "reproStatus": "SOURCE_PROVEN; runtime NOTRUN",
+      "fix": "Assign existing typed DTO/hook/domain summary integration owners to preserve and display actual server metadata; decide a truthful full distinct-field contract without deriving completeness from the capped rows.",
+      "historicalRelation": "Still present from audit-page-017 architecture wire-contract finding; not a new cosmetic rewrite."
+    },
+    {
+      "id": "XRAY-02",
+      "status": "FAIL",
+      "severity": "P1",
+      "title": "Total samples is a capped-field subtotal labelled as the whole-window total",
+      "file": "internal\\api\\ingestxray\\handler.go",
+      "line": 144,
+      "rule": "MDC-033/MDC-045",
+      "owner": "integration",
+      "evidence": ["web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:62", "internal\\database\\observability\\ingest_xray_repo.go:67-78", "internal\\api\\ingestxray\\handler.go:144-158", "internal\\database\\observability\\ingest_xray_repo.go:120-129", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts:26-28"],
+      "mechanism": "FieldStats LIMIT applies before handler summation. Page limit is 100; total_samples sums only returned field rows. Bucket query does not apply that limit, while the summary says Total samples within selected window.",
+      "repro": "Synthetic arithmetic witness: 101 distinct fields each containing one sample would return 100 field rows and total_samples=100, while all-field bucket counts sum to 101. This is a source-derived counterexample, not an executed database test.",
+      "reproStatus": "SOURCE_PROVEN; runtime NOTRUN",
+      "fix": "Expose a full aggregate or explicit subtotal/truncation semantics through the existing backend contract and corresponding summary; do not silently invent complete totals or widen the page cap.",
+      "historicalRelation": "Still present from audit-page-017 aggregate-scope finding."
+    },
+    {
+      "id": "XRAY-03",
+      "status": "FAIL",
+      "severity": "P1",
+      "title": "Mobile field Kind and its header sort/filter controls are hidden without a detail replacement",
+      "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx",
+      "line": 134,
+      "rule": "MDC-023/MDC-040/MDC-043",
+      "owner": "page",
+      "evidence": ["web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx:99-108", "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx:114-135", "web\\src\\components\\ui\\DataTable.tsx:505", "web\\src\\components\\ui\\DataTable.tsx:715-725", "web\\src\\components\\ui\\DataTable.tsx:1162", "web\\src\\components\\ui\\DataTable.tsx:1522"],
+      "mechanism": "Explicit mobileColumns omits value_kind. Shared table applies hidden md:table-cell to both excluded cells and headers. Caller supplies no mobilePresentation, expandable detail or alternate Kind display. Column persistence cannot override the separate mobile allow-list.",
+      "repro": "Source-derived below-md branch for a field row with any Kind: its cell and header carry hidden; the existing caller offers no visible detail replacement. A Kind filter set on desktop can remain active while its own clearing header is hidden on mobile. Native viewport/control reachability was not exercised.",
+      "reproStatus": "SOURCE_PROVEN; native NOTRUN",
+      "fix": "Use the existing complete mobile detail/presentation capability or retain the fourth column in the bounded accessible table. Preserve sort/filter/pagination/tableId and preferences.",
+      "historicalRelation": "Still present from audit-page-017 mobile-information finding."
+    },
+    {
+      "id": "XRAY-04",
+      "status": "FAIL",
+      "severity": "P2",
+      "title": "Fleet loading, failure and paused states collapse to no vehicle selected",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 50,
+      "rule": "MDC-026",
+      "owner": "shared",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:50", "web\\src\\hooks\\useSelectedVehicle.ts:79-83", "web\\src\\hooks\\useSelectedVehicle.ts:168-173", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:65", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:116-132", "web\\src\\api\\hooks\\useVehicles.ts:73-79"],
+      "mechanism": "Selector keeps only fleet data and returns vehicles ?? []; no fleet state/error/retry reaches the page. With neither URL nor persisted ID and undefined fleet data, effective selection is null. Page disables ingest, renders Select a vehicle, and suppresses its sole source descriptor; it cannot explain or retry the failed prerequisite.",
+      "repro": "Source trace with URL/store selection absent and initial fleet query pending, paused or failed without data: all three map to empty options/no selection. The UI cannot distinguish these from a successfully empty fleet. No request was made.",
+      "reproStatus": "SOURCE_PROVEN; runtime NOTRUN",
+      "fix": "Reuse an agreed existing fleet query/source descriptor through the selector and register it independently; keep global URL/store selection behavior unchanged.",
+      "historicalRelation": "Still present from audit-page-017 independent-fleet-source finding."
+    },
+    {
+      "id": "XRAY-05",
+      "status": "FAIL",
+      "severity": "P2",
+      "title": "Defensive malformed-count paths turn unknown into measured zero",
+      "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx",
+      "line": 86,
+      "rule": "MDC-026/MDC-033",
+      "owner": "page",
+      "evidence": ["web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx:50-53", "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx:86-99", "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx:84-91", "web\\src\\lib\\numberFormat.ts:61-63", "web\\src\\lib\\numberFormat.ts:93-106", "web\\src\\components\\data-display\\MetricBar.tsx:51-65"],
+      "mechanism": "safeNumber(null/undefined/nonfinite) returns 0. Ranked list passes this fabricated reading and fmtInt(0) into MetricBar, defeating its existing unknown-reading branch. Table fmtInt directly shares the same zero coercion. Chart fallback data columns instead return an em dash for nonnumeric input.",
+      "repro": "Source-derived synthetic malformed row with sample_count=null: ranked bar receives numeric 0 and readout 0; table renders 0, although MetricBar(null) would omit aria-valuenow and label No reading.",
+      "reproStatus": "SOURCE_PROVEN defensive-path defect only; normal routed COUNT(*) DTO is nonnullable. No claim that a deployed null count was observed.",
+      "fix": "Keep malformed readings unknown through ranking/display; pass null to MetricBar and an em dash to table/labels. Preserve actual zero and rank only valid counts.",
+      "historicalRelation": "Ranked-list issue still present from audit-page-017; table formatter mechanism was directly inspected here."
+    },
+    {
+      "id": "XRAY-06",
+      "status": "FAIL",
+      "severity": "P2",
+      "title": "Loaded-row search/value-filter no-match reports no samples in the selected window",
+      "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx",
+      "line": 125,
+      "rule": "MDC-026",
+      "owner": "page",
+      "evidence": ["web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx:114-132", "web\\src\\components\\ui\\DataTable.tsx:536-547", "web\\src\\components\\ui\\DataTable.tsx:1602-1605"],
+      "mechanism": "Caller always supplies No samples in this window for settled state. Shared table uses the same emptyMessage when filteredData becomes empty, even if supplied data remains nonempty. Search can hide all rows while chart/summary still show samples; value-filter matching count is separate and does not replace the contradictory message.",
+      "repro": "Source-derived loaded-row scenario: nonempty fields plus a search term matching no column text produces filteredData.length=0, rendering No samples in this window instead of No fields match these filters. No interaction was executed.",
+      "reproStatus": "SOURCE_PROVEN; runtime NOTRUN",
+      "fix": "Reuse existing table/page filter-state APIs to distinguish filtered no-match from successful empty source, with a clear-filter recovery action and preserved loaded-row search scope."
+    },
+    {
+      "id": "XRAY-07",
+      "status": "FAIL",
+      "severity": "P2",
+      "title": "Twenty finite duration translation keys are absent from canonical English",
+      "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx",
+      "line": 101,
+      "rule": "MDC-044/frontend SI cutover i18n",
+      "owner": "integration",
+      "evidence": ["web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx:101-109", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts:5-10", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts:20-21", "web\\src\\i18n\\en.json:10946", "web\\logs\\phase6-qa-admin-ingest-xray.log"],
+      "mechanism": "Finite expanded admin.xray.windowOption/windowLabel keys for five windows and bucketOption/bucketLabel keys for five buckets are absent from canonical en.json. Summary fallback durations therefore have no canonical localized counterparts. formatValueKind also supplies the unlocalized human fallback kind N directly to badge/filter labels; raw type names are not classified as mistranslated data.",
+      "repro": "Executed read-only canonical lookup checked 68 unique keys: 48 present, 20 absent. Static t expressions select the listed missing keys for the declared duration enums. No browser language switch or catalog generation ran.",
+      "reproStatus": "EXECUTED source/catalog lookup; localized runtime NOTRUN",
+      "missingKeys": [
+        "admin.xray.windowOption.5m", "admin.xray.windowOption.15m", "admin.xray.windowOption.1h", "admin.xray.windowOption.6h", "admin.xray.windowOption.24h",
+        "admin.xray.windowLabel.5m", "admin.xray.windowLabel.15m", "admin.xray.windowLabel.1h", "admin.xray.windowLabel.6h", "admin.xray.windowLabel.24h",
+        "admin.xray.bucketOption.30s", "admin.xray.bucketOption.1m", "admin.xray.bucketOption.5m", "admin.xray.bucketOption.15m", "admin.xray.bucketOption.1h",
+        "admin.xray.bucketLabel.30s", "admin.xray.bucketLabel.1m", "admin.xray.bucketLabel.5m", "admin.xray.bucketLabel.15m", "admin.xray.bucketLabel.1h"
+      ],
+      "fix": "Catalog integration owner should add only these known finite keys through the normal canonical/split workflow and localize the human kind fallback without changing raw kind identity. No catalog edit was made here."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C-01",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts",
+      "line": 19,
+      "evidence": ["internal\\database\\observability\\ingest_xray_repo.go:120-129", "web\\src\\features\\admin\\pages\\IngestXRayPage.test.tsx:246-267"],
+      "observation": "Mean divides by returned nonempty bucket count, not full-window intervals; SQL has no gap-fill. For one populated bucket containing 60 samples it displays 60 regardless of quiet buckets.",
+      "whyCandidate": "Arithmetic is source-established, but existing tests explicitly expect mean of supplied buckets and the label does not establish a contractual zero-filled denominator. Decide observed-bucket versus full-window meaning before changing behavior; no invented bounds."
+    },
+    {
+      "id": "C-02",
+      "status": "NOTRUN",
+      "file": "internal\\database\\observability\\ingest_xray_repo.go",
+      "line": 126,
+      "evidence": ["internal\\database\\observability\\ingest_xray_repo.go:73-78", "internal\\database\\observability\\ingest_xray_repo.go:125-129", "internal\\api\\ingestxray\\handler.go:128-139"],
+      "observation": "Both queries use ts >= windowStart without an upper timestamp; future-dated rows could enter a nominal rolling window. Three scans are not a shared database snapshot.",
+      "whyCandidate": "SQL shape is proven, but admissibility of future timestamps and deployed effects were not traced or exercised; no actual ingest payload was inspected. Integration owner must establish expected bound/snapshot semantics."
+    },
+    {
+      "id": "C-03",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx",
+      "line": 98,
+      "evidence": ["web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx:62", "web\\src\\components\\data-display\\MetricBar.tsx:46", "web\\src\\components\\data-display\\MetricBar.tsx:90-91", "web\\src\\features\\admin\\components\\ingest-xray\\XRayBucketChart.tsx:131"],
+      "observation": "Rank-index colors, default gradient fill, fixed cyan title icon and fixed white-RGBA chart cursor remain.",
+      "whyCandidate": "These source expressions require restrained-palette and light/dark/custom-theme review. No rendered saturation, rainbow appearance, cursor visibility or contrast failure was measured; the cursor library style is an allowed inline-style exception."
+    },
+    {
+      "id": "C-04",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx",
+      "line": 145,
+      "evidence": ["web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:85", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:154", "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx:145-169"],
+      "observation": "Wrapping actions, min-w-0 hero and full-row mobile vehicle picker exist; window/bucket use 7rem minima and no visible label, only accessible names.",
+      "whyCandidate": "Long translated labels, 320px allocation, 200% text, RTL, narrow wide-viewport containers, chart fullscreen and actual focus/target geometry require native QA. No clipping or target failure inferred from classes."
+    },
+    {
+      "id": "C-05",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx",
+      "line": 141,
+      "evidence": ["web\\src\\api\\dataState.ts:203-220", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:164", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:189", "web\\src\\components\\feedback\\DataSourceNotice.tsx:82"],
+      "observation": "An initially paused query with no data has DataState initial and query isLoading false, so brief may show loading while chart/table use empty placeholders; a page source notice correctly identifies paused offline. Aged query isStale alone does not set summary retained without maxAgeMs.",
+      "whyCandidate": "Source-state difference exists, but global notice/header qualify it; no native false-success or erased-data behavior was demonstrated. Verify source-specific pending versus successful-empty semantics before assigning a fix."
+    },
+    {
+      "id": "C-06",
+      "status": "NOTRUN",
+      "file": "internal\\database\\observability\\ingest_xray_repo.go",
+      "line": 71,
+      "observation": "Kind is MAX(value_kind) over the field's window, not the latest sample's kind.",
+      "whyCandidate": "Current column label only says Kind, not latest kind. Preserve actual aggregation semantics and clarify operator interpretation; do not change to latest without an agreed contract."
+    }
+  ],
+  "preservation": {
+    "status": "PASS",
+    "kind": "executed source line/section inventory plus read-only unchanged-hash verification",
+    "baseline": "Existing accepted queue row, not a Git history comparison",
+    "pageLines": 196,
+    "acceptedPageLines": 196,
+    "historicalPhase0PageLines": 195,
+    "mountedPageAndRendererLines": 820,
+    "acceptedMountedPageAndRendererLines": 820,
+    "mountedDomainHelperLines": 62,
+    "composedIncludingHelpersLines": 882,
+    "preservationRatioAgainstAcceptedComposedSource": 1,
+    "minimumRequiredRatio": 0.7,
+    "lineCountMethod": "PowerShell Get-Content line arrays; no-newline/trailing-line conventions can differ from view line totals",
+    "sections": [
+      {"name": "Operational summary", "evidence": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:139"},
+      {"name": "Samples per bucket", "evidence": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:164"},
+      {"name": "Top fields by volume", "evidence": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:171"},
+      {"name": "Field statistics", "evidence": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:189"}
+    ],
+    "sectionCount": 4,
+    "GlassPanelOrChartContainerSourceOccurrences": 4,
+    "LayoutCardSourceOccurrences": 1,
+    "metricCount": 6,
+    "fieldColumns": ["field", "sample_count", "last_seen_at", "value_kind"],
+    "actions": ["Vehicle selection and URL/store synchronization", "Window selection", "Bucket selection and incompatible-value clamp", "Refresh and fatal/retained source retry", "Operational brief Review details", "Field sort", "Loaded-row search/value filters", "Pagination and table preference identity", "Chart data alternative", "Chart CSV/PNG export and fullscreen"],
+    "runtimePreservation": "NOTRUN",
+    "snapshotHashes": {
+      "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx": "c460ca342416e91281e0c5c3540e5cf15f6cae768364c6c15cdcc0e17c83deb7",
+      "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx": "0e013430f2185d9379074f2660ce3b589561bbe0a7b1fbb34ab11b9c45d4cfc5",
+      "web\\src\\features\\admin\\components\\ingest-xray\\XRayBucketChart.tsx": "90132c3999c6bde4f9315261f9c55fe89cc33118188b51e19f183f908303002d",
+      "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx": "421bb9ffbe84c75789415e4aba04dd9db9ec2ec23f9aac424253cb695bb17395",
+      "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx": "a3e7d85aa6d4af302ef9b6c7288903caf2691f941441184bd572043f1c0ec8aa",
+      "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\IngestOperationalBrief.tsx": "d03534ef7555094a65cbc4a9896047db7f80d2b3409fc6768deb837bb514d181",
+      "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts": "6130839041c105a7188628435acff219ac104c72ee908ba65e0267e4d294958d",
+      "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts": "e39ab556a887957095776a4af98a122c43bed2edaf9a71b021d67e2cf9e3900c",
+      "web\\src\\api\\hooks\\useIngestXRay.ts": "5cb4b6d27a641f174b9f0819f9e31ea4c294018a781cfd05ff9f1af148b9793d"
+    }
+  },
+  "executedCommands": [
+    {
+      "command": "Scoped PowerShell Select-String audit of nine explicit production files; Get-FileHash SHA256; Get-Content line counts; section/panel counts",
+      "startedAt": "2026-10-13T09:28:23.7477686-07:00",
+      "exitCode": 0,
+      "rawOutput": ["staticInline: 0", "rawControls: 4", "directLibraries: 0", "oldAPI: 0", "neonBody: 0", "fixedWhiteCursor: 1", "untypedAny: 0", "directFetch: 0", "composedPageAndMountedFeatureAdaptersLines=882", "GlassPanelOrChartContainerOccurrences=4", "LayoutCardOccurrences=1"],
+      "limitation": "Initial rawControls scan was case-insensitive and matched shared capitalized components; corrected separately without rerunning unchanged passing families."
+    },
+    {
+      "command": "Select-String '<(button|input|textarea|select|table)\\b' -CaseSensitive over the same explicit files",
+      "exitCode": 0,
+      "rawOutput": ["rawControlsCorrected: 0"],
+      "limitation": "Corrected false-positive scan, not an unchanged passing rerun."
+    },
+    {
+      "command": "Supported Node 26.11.1: .github\\skills\\verify-api-hooks\\contract-paths.cjs requests web\\src\\api\\hooks\\useIngestXRay.ts; exact router/source Select-String",
+      "exitCode": 0,
+      "rawOutput": ["v26.11.1", "web/src/api/hooks/useIngestXRay.ts:79\t/system/ingest-xray/{PARAM}?{PARAM}", "doublePrefixRequestPaths=0", "camelCaseQueryParams=0"],
+      "limitation": "Existing extractor is source-only; opaque query helper required separate exact key inspection. Script-emitted paths use forward slashes; commands and file operations used Windows paths."
+    },
+    {
+      "command": "Read-only canonical en.json ConvertFrom-Json lookup for literal t keys and finite declared duration-key expansions; exact live finding anchors",
+      "startedAt": "2026-10-13T09:29:53.5995253-07:00",
+      "exitCode": 0,
+      "rawOutput": ["checkedCanonicalKeys=68", "missingCanonicalKeys=20"],
+      "semanticResult": "FAIL",
+      "limitation": "Exit 0 means lookup completed, not that translation coverage passed."
+    },
+    {
+      "command": "Final receipt ConvertFrom-Json validation, nine snapshot SHA256 comparisons and evidence line-range checks",
+      "startedAt": "2026-10-13T09:35:15.0052307-07:00",
+      "exitCode": 1,
+      "rawOutput": ["validJSON=true", "snapshotFilesChecked=9", "sourceHashMismatches=0", "outOfRangeEvidence=1", "Out-of-range evidence: .github\\skills\\audit-violations\\audit.sh:140-148 (lines=141)"],
+      "correction": "Report-only citation corrected to actual TypeScript invocation at audit.sh:121-129. Hash/JSON success is separate from the failed citation validation; unchanged passing source scans/hashes were not rerun."
+    }
+  ],
+  "evidenceLimits": {
+    "typeScript": "NOTRUN; no fresh npx tsc --noEmit result",
+    "build": "NOTRUN",
+    "lint": "NOTRUN",
+    "tests": "NOTRUN; read existing named page/hook tests, did not change or execute them",
+    "testCounts": {"discovered": null, "executed": null, "passed": null, "failed": null, "skipped": null},
+    "native": "NOTRUN",
+    "visual": "NOTRUN",
+    "keyboard": "NOTRUN",
+    "focus": "NOTRUN",
+    "contrast": "NOTRUN",
+    "screenReader": "NOTRUN",
+    "forcedColors": "NOTRUN",
+    "reducedMotionRuntime": "NOTRUN",
+    "viewport": "NOTRUN",
+    "backendExecution": "NOTRUN",
+    "realPayloadsOrIdentities": "Not accessed or captured",
+    "noWholeRepositoryAcceptance": true,
+    "skillAuditScript": "NOTRUN because existing audit.sh unconditionally runs full TypeScript; bounded PowerShell counts are not an audit.sh pass",
+    "skillVerifyScript": "NOTRUN; used existing read-only request extractor and exact router hierarchy instead of Windows-incompatible Bash paths",
+    "historicalReceipts": "Original accepted page row and audit-page-017 provide inventory/history only; defects were traced against current source, and old corrected Select/paused findings were not copied as current failures.",
+    "sourceHashLimit": "Nine explicit mounted/domain/hook files pinned and rechecked. This is not an all-repository hash or Git cleanliness claim; other users' work was not attributed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Ingest DTO, freshness/bounds and complete aggregate agreement",
+      "owner": "integration",
+      "existingOwnerFiles": ["internal\\api\\ingestxray\\handler.go", "internal\\database\\observability\\ingest_xray_repo.go", "web\\src\\types\\admin-diagnostics.ts", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\IngestOperationalBrief.tsx", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts"],
+      "findingIds": ["XRAY-01", "XRAY-02"],
+      "usedBy": ["useIngestXRay", "IngestOperationalBrief", "bucket chart and field statistics"],
+      "dependsOn": ["Actual routed DTO", "Truthful full-window versus capped-field aggregates"],
+      "scope": "Reuse the existing typed endpoint and domain summary; no new API, formatter, page or telemetry pipeline."
+    },
+    {
+      "name": "Independent fleet prerequisite source state",
+      "owner": "shared",
+      "existingOwnerFiles": ["web\\src\\hooks\\useSelectedVehicle.ts", "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx"],
+      "findingIds": ["XRAY-04"],
+      "usedBy": ["Ingest x-ray local vehicle picker and source notice"],
+      "dependsOn": ["Existing useVehicles query", "Existing source descriptor and selector compatibility"],
+      "scope": "Retain selection/store/URL semantics; no competing query/store or guessed fleet status."
+    },
+    {
+      "name": "Exact finite duration canonical catalog coverage",
+      "owner": "integration",
+      "existingOwnerFiles": ["web\\src\\i18n\\en.json", "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts"],
+      "findingIds": ["XRAY-07"],
+      "usedBy": ["Window/bucket selector options and summary labels"],
+      "dependsOn": ["Existing canonical catalog serialization/split workflow"],
+      "scope": "Twenty enumerated existing callsite keys only; no broad translation campaign or catalog edits by this QA worker."
+    }
+  ],
+  "needs": "Narrow assigned corrections for XRAY-01 through XRAY-07, deduplicating the five retained original audit findings; resolve integration DTO/totals/fleet/i18n owners and local Kind/null/no-match owners. Separately authorize safe native QA. Candidate observations are not confirmed runtime failures.",
+  "receiptValidation": {
+    "sourceHashes": "PASS: nine compared, zero mismatches at 2026-10-13T09:35:15.0052307-07:00",
+    "initialEvidenceRanges": "FAIL: one out-of-range report-only audit.sh citation, corrected",
+    "unchangedPassingReruns": "None: raw-control false positives and the failing report citation are the only corrective validation repeats.",
+    "finalValidationEvidence": "web\\logs\\phase6-qa-admin-ingest-xray.log final receipt correction block"
+  },
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-inventory.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-audits\\audit-page-017.json",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    ".github\\skills\\verify-api-hooks\\contract-paths.cjs",
+    ".gitignore",
+    "web\\package.json (targeted engine and script reads)",
+    "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx",
+    "web\\src\\features\\admin\\pages\\IngestXRayPage.test.tsx (lines 1-440)",
+    "web\\src\\api\\hooks\\useIngestXRay.ts",
+    "web\\src\\api\\hooks\\useIngestXRay.test.tsx (lines 1-200)",
+    "web\\src\\features\\admin\\components\\ingest-xray\\index.ts",
+    "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx",
+    "web\\src\\features\\admin\\components\\ingest-xray\\XRayBucketChart.tsx",
+    "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx",
+    "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\IngestOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts",
+    "web\\src\\types\\admin-diagnostics.ts (X-ray DTO)",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts (lines 1-200 and targeted normalization reads)",
+    "web\\src\\api\\hooks\\useVehicles.ts (useVehicles source)",
+    "web\\src\\api\\hooks\\useAnnotations.ts (disabled chart source)",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useDateFormat.ts (lines 1-140)",
+    "web\\src\\lib\\numberFormat.ts (lines 1-190)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx (targeted filtering/mobile/rendering ranges)",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx (source trust owner)",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx (targeted imports/annotations/empty state reads)",
+    "web\\src\\App.tsx (lazy import and registered route)",
+    "web\\src\\lib\\routeMeta.ts (targeted route match)",
+    "web\\src\\lib\\routeRegistry.ts (targeted route match)",
+    "web\\src\\lib\\errorHelpLinks.ts (targeted route match)",
+    "web\\src\\i18n\\en.json (read-only key lookup)",
+    "internal\\api\\router.go (nested route registrations/imports)",
+    "internal\\api\\ingestxray\\handler.go",
+    "internal\\database\\observability\\ingest_xray_repo.go"
+  ],
+  "ownershipRelease": {
+    "effective": "Terminal return",
+    "allOwnershipReleased": true,
+    "sourceWriteOwnership": "None acquired; all application files were read-only.",
+    "reportAndLogOwnership": "Released on terminal return; no post-return writes.",
+    "commandOwnership": "All commands synchronous and completed; no ongoing process or shell retained.",
+    "browserOwnership": "None acquired; no browser/API run or screenshot lock.",
+    "resourcesStarted": [],
+    "followupWrites": "None"
+  }
+}

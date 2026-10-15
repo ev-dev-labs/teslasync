@@ -8,14 +8,16 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricBar, MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+import { Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+
 import type {
   BatteryPassportAnalysis,
   BatteryPassportThermalBand,
 } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportThermalProfileProps {
   analysis: BatteryPassportAnalysis;
@@ -60,28 +62,19 @@ export function BatteryPassportThermalProfile({
   analysis,
   state,
 }: BatteryPassportThermalProfileProps) {
+  const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const thermal = analysis.thermal;
 
   return (
     <section data-testid="battery-passport-thermal-profile">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Thermometer
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.thermal.title',
             'Thermal exposure profile',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.thermal.subtitle',
             'Reported shares of drives with ambient readings in three server bands; shares are not normalized in this workspace.',
-          )}
-        </Text>
+          )} actions={<Thermometer className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-4">
@@ -93,7 +86,7 @@ export function BatteryPassportThermalProfile({
                   max={100}
                   color={thermalColor(band)}
                   sublabel={band.valuePct != null
-                    ? fmtPercent(band.valuePct, 1)
+                    ? fmtPercent(band.valuePct)
                     : '—'}
                 />
               ))}
@@ -119,7 +112,7 @@ export function BatteryPassportThermalProfile({
                   'Exact reported sum',
                 )}
                 value={thermal.sumPct != null
-                  ? fmtPercent(thermal.sumPct, 1)
+                  ? fmtPercent(thermal.sumPct)
                   : '—'}
                 subtitle={t(
                   'batteryPassport.thermal.sumHint',
@@ -140,7 +133,6 @@ export function BatteryPassportThermalProfile({
                       {
                         value: fmtNumber(
                           thermal.differenceFrom100PctPoints,
-                          1,
                         ),
                       },
                     )
@@ -178,7 +170,7 @@ export function BatteryPassportThermalProfile({
             />
           ) : null}
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

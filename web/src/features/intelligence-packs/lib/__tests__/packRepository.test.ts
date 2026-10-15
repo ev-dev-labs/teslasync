@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { createInMemoryPackRepository, type InstalledPackRecord } from '../packRepository';
+import { describe, it, expect, vi } from 'vitest';
+import { createInMemoryPackRepository, createPackRepository, type InstalledPackRecord } from '../packRepository';
+import { createMemoryKvStore } from '../kvStore';
 import { buildAuditEntry, MAX_AUDIT_LOG_ENTRIES } from '../auditLog';
 import { EFFICIENCY_INSIGHTS_ENVELOPE, COMMUNITY_DRAFT_ENVELOPE } from '../catalogFixtures';
 import type { VerificationResult } from '../verifyEnvelope';
@@ -13,6 +14,44 @@ const dummyVerification: VerificationResult = {
   recognizedPublisherName: 'Test Publisher',
   summary: 'ok',
 };
+
+describe('createPackRepository — storage failures', () => {
+  it.each(['installed', 'trust', 'audit'] as const)('rejects corrupt %s reads and mutations without overwriting data', async (table) => {
+    for (const raw of ['', '{broken', '{}', 'null']) {
+      const kv = createMemoryKvStore();
+      await kv.setItem(table, raw);
+      const repo = createPackRepository(kv);
+      const read = () => table === 'installed' ? repo.listInstalled()
+        : table === 'trust' ? repo.getTrustDecision('p') : repo.listAuditLog();
+      const write = () => table === 'installed' ? repo.putInstalled(makeRecord())
+        : table === 'trust' ? repo.putTrustDecision({
+          packId: 'p', decision: 'blocked', publisherFingerprint: null,
+          decidedAtIso: 'now', approvedCapabilities: [],
+        }) : repo.appendAuditLog(buildAuditEntry({ packId: 'p', packName: 'P', action: 'install', detail: 'd' }));
+      await expect(read()).rejects.toThrow();
+      await expect(write()).rejects.toThrow();
+      expect(await kv.getItem(table)).toBe(raw);
+    }
+  });
+
+  it('propagates read, write and removal failures and recovers the operation lane', async () => {
+    const kv = createMemoryKvStore();
+    const repo = createPackRepository(kv);
+    const record = makeRecord();
+    await repo.putInstalled(record);
+    const error = new Error('Storage unavailable');
+    vi.spyOn(kv, 'getItem').mockRejectedValueOnce(error);
+    await expect(repo.listInstalled()).rejects.toBe(error);
+    vi.spyOn(kv, 'setItem').mockRejectedValueOnce(error);
+    await expect(repo.putInstalled({ ...record, enabled: true })).rejects.toBe(error);
+    expect(await repo.getInstalled(record.packId)).toEqual(record);
+    await repo.putInstalled({ ...record, enabled: true });
+    expect((await repo.getInstalled(record.packId))?.enabled).toBe(true);
+    vi.spyOn(kv, 'removeItem').mockRejectedValueOnce(error);
+    await expect(repo.clearAll()).rejects.toBe(error);
+    expect((await repo.getInstalled(record.packId))?.enabled).toBe(true);
+  });
+});
 
 function makeRecord(overrides: Partial<InstalledPackRecord> = {}): InstalledPackRecord {
   return {

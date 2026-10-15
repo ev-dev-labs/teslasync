@@ -46,6 +46,7 @@ const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 const ROOT_TESTID = 'ai-feature-auto-name-unnamed-locations-root'
 const DRAFT_TESTID = 'ai-feature-auto-name-unnamed-locations-draft'
 const APPLY_TESTID = 'ai-feature-auto-name-unnamed-locations-apply'
+const SUGGEST_TESTID = 'ai-feature-auto-name-unnamed-locations-suggest'
 
 const baseSettings: AppSettings = {
   unit_of_length: 'km',
@@ -257,6 +258,30 @@ describe('AIAutoNameUnnamedLocations — baseline panel content', () => {
     rerender(<AIAutoNameUnnamedLocations locationId={-3} onApplyName={vi.fn()} />)
     expect(screen.getByRole('button', { name: /Suggest name/i })).toBeDisabled()
   })
+
+  it.each([
+    ['zero', 0],
+    ['negative', -3],
+    ['fractional', 501.5],
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['negative infinity', Number.NEGATIVE_INFINITY],
+    ['unsafe integer', Number.MAX_SAFE_INTEGER + 1],
+  ])('does not suggest or fetch for a %s location identity', async (_label, locationId) => {
+    enableAi()
+    const onApplyName = vi.fn()
+    render(<AIAutoNameUnnamedLocations locationId={locationId} onApplyName={onApplyName} />)
+
+    const suggest = screen.getByTestId(SUGGEST_TESTID)
+    expect(suggest).toBeDisabled()
+    expect(suggest).toHaveAttribute('aria-disabled', 'true')
+    await act(async () => {
+      fireEvent.click(suggest)
+    })
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(onApplyName).not.toHaveBeenCalled()
+    expect(screen.queryByTestId(DRAFT_TESTID)).not.toBeInTheDocument()
+  })
 })
 
 describe('AIAutoNameUnnamedLocations — streaming wiring', () => {
@@ -360,12 +385,59 @@ describe('AIAutoNameUnnamedLocations — proposal envelope handling', () => {
     const apply = screen.getByTestId(APPLY_TESTID)
     expect(apply).toBeEnabled()
     expect(apply).toHaveAttribute('aria-disabled', 'false')
+    expect(apply).toHaveClass('min-h-11', 'md:min-h-9', 'min-w-11', 'md:min-w-0')
+    expect(apply).toHaveClass('h-auto', 'whitespace-normal', 'max-w-full')
+    expect(apply.firstElementChild).toHaveClass('min-w-0', 'break-words')
+    expect(apply.parentElement).toHaveClass('min-w-0', 'max-w-full')
+    expect(apply.parentElement?.parentElement).toHaveClass('flex-wrap', 'min-w-0')
 
     await act(async () => {
       fireEvent.click(apply)
     })
     expect(onApplyName).toHaveBeenCalledTimes(1)
     expect(onApplyName).toHaveBeenCalledWith('Frequent Stop — South Lake Union')
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['another location', 777],
+    ['zero', 0],
+    ['negative', -1],
+    ['fractional', 501.5],
+    ['unsafe integer', Number.MAX_SAFE_INTEGER + 1],
+  ])('ignores a draft carrying %s identity without applying or persisting it', async (_label, location_id) => {
+    enableAi()
+    const onApplyName = vi.fn()
+    stubFetch(toolResultBody(okEnvelope({ location_id })))
+    render(<AIAutoNameUnnamedLocations locationId={501} onApplyName={onApplyName} />)
+
+    await clickSuggest()
+    await waitFor(() => expect(screen.getByTestId(SUGGEST_TESTID)).toBeEnabled())
+    expect(screen.queryByTestId(DRAFT_TESTID)).not.toBeInTheDocument()
+    expect(screen.queryByTestId(APPLY_TESTID)).not.toBeInTheDocument()
+    expect(onApplyName).not.toHaveBeenCalled()
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores a mismatched draft then accepts only a subsequent current-location result', async () => {
+    enableAi()
+    const onApplyName = vi.fn()
+    const body =
+      sseFrame('tool_result', {
+        id: 'wrong-location',
+        name: 'draft_location_name',
+        ok: true,
+        data: okEnvelope({ location_id: 777, proposed_name: 'Other location draft' }),
+      }) + toolResultBody(okEnvelope())
+    stubFetch(body)
+    render(<AIAutoNameUnnamedLocations locationId={501} onApplyName={onApplyName} />)
+
+    await clickSuggest()
+    await waitFor(() => expect(screen.getByTestId(APPLY_TESTID)).toBeEnabled())
+    expect(screen.queryByText('Other location draft')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId(APPLY_TESTID))
+    expect(onApplyName).toHaveBeenCalledExactlyOnceWith('Frequent Stop — South Lake Union')
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
   })
 
   it('shows the rejected label, disables Apply, and never calls onApplyName for a rejected envelope', async () => {
@@ -394,6 +466,8 @@ describe('AIAutoNameUnnamedLocations — proposal envelope handling', () => {
 
     const apply = screen.getByTestId(APPLY_TESTID)
     expect(apply).toBeDisabled()
+    expect(apply).toHaveAttribute('aria-disabled', 'true')
+    expect(apply).toHaveClass('min-h-11', 'md:min-h-9', 'h-auto', 'whitespace-normal')
     await act(async () => {
       fireEvent.click(apply)
     })
@@ -494,5 +568,99 @@ describe('AIAutoNameUnnamedLocations — lifecycle', () => {
       expect(screen.queryByTestId(DRAFT_TESTID)).not.toBeInTheDocument(),
     )
     expect(screen.getByTestId(ROOT_TESTID)).toBeInTheDocument()
+  })
+
+  it.each([
+    ['another location', 777],
+    ['invalid zero', 0],
+    ['invalid fractional', 501.5],
+    ['invalid NaN', Number.NaN],
+  ])('cannot apply a previously accepted draft after changing to %s identity', async (_label, locationId) => {
+    enableAi()
+    const onApplyName = vi.fn()
+    stubFetch(toolResultBody(okEnvelope()))
+    const { rerender } = render(
+      <AIAutoNameUnnamedLocations locationId={501} onApplyName={onApplyName} />,
+    )
+    await clickSuggest()
+    await waitFor(() => expect(screen.getByTestId(APPLY_TESTID)).toBeEnabled())
+    const previousApply = screen.getByTestId(APPLY_TESTID)
+
+    rerender(<AIAutoNameUnnamedLocations locationId={locationId} onApplyName={onApplyName} />)
+    expect(screen.queryByTestId(DRAFT_TESTID)).not.toBeInTheDocument()
+    fireEvent.click(previousApply)
+    expect(onApplyName).not.toHaveBeenCalled()
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('aborts a pending old-location request, ignores its late result and accepts a fresh current draft', async () => {
+    enableAi()
+    const onApplyName = vi.fn()
+    let resolveOldResponse: (response: Response) => void = () => {
+      throw new Error('old request has not started')
+    }
+    const pendingResponse = new Promise<Response>((resolve) => {
+      resolveOldResponse = resolve
+    })
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockReturnValueOnce(pendingResponse)
+      .mockResolvedValueOnce(new Response(makeReadableStream([
+        toolResultBody(okEnvelope({ location_id: 777, proposed_name: 'Current location draft' })),
+      ]), { headers: { 'Content-Type': 'text/event-stream' } }))
+    globalThis.fetch = fetchMock
+    const { rerender, unmount } = render(
+      <AIAutoNameUnnamedLocations locationId={501} onApplyName={onApplyName} />,
+    )
+    await clickSuggest()
+    const oldSignal = fetchMock.mock.calls[0][1]?.signal
+    expect(oldSignal?.aborted).toBe(false)
+
+    rerender(<AIAutoNameUnnamedLocations locationId={777} onApplyName={onApplyName} />)
+    expect(oldSignal?.aborted).toBe(true)
+    await act(async () => {
+      resolveOldResponse(new Response(makeReadableStream([toolResultBody(okEnvelope())]), {
+        headers: { 'Content-Type': 'text/event-stream' },
+      }))
+      await pendingResponse
+    })
+    expect(screen.queryByTestId(DRAFT_TESTID)).not.toBeInTheDocument()
+    expect(onApplyName).not.toHaveBeenCalled()
+
+    await clickSuggest()
+    await waitFor(() => expect(screen.getByTestId(APPLY_TESTID)).toBeEnabled())
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/v1/ai/locations/777/name/draft')
+    fireEvent.click(screen.getByTestId(APPLY_TESTID))
+    expect(onApplyName).toHaveBeenCalledExactlyOnceWith('Current location draft')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    unmount()
+  })
+
+  it('aborts an in-flight request on unmount without applying its late result', async () => {
+    enableAi()
+    const onApplyName = vi.fn()
+    let signal: AbortSignal | null | undefined
+    let resolveResponse: (response: Response) => void = () => {
+      throw new Error('request has not started')
+    }
+    const pendingResponse = new Promise<Response>((resolve) => {
+      resolveResponse = resolve
+    })
+    globalThis.fetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      signal = init?.signal
+      return pendingResponse
+    })
+    const { unmount } = render(
+      <AIAutoNameUnnamedLocations locationId={501} onApplyName={onApplyName} />,
+    )
+    await clickSuggest()
+    expect(signal?.aborted).toBe(false)
+    unmount()
+    expect(signal?.aborted).toBe(true)
+    await act(async () => {
+      resolveResponse(new Response(makeReadableStream([toolResultBody(okEnvelope())])))
+      await pendingResponse
+    })
+    expect(onApplyName).not.toHaveBeenCalled()
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
   })
 })

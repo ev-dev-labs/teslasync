@@ -17,7 +17,11 @@
 package anomaly
 
 import (
+	"context"
 	"encoding/json"
+	"math"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -89,8 +93,8 @@ func TestGetAnomalies_WireShapeUnchanged(t *testing.T) {
 		if !strings.Contains(s, `"anomalies":[]`) {
 			t.Errorf(`nil-input wire shape missing "anomalies":[]; got=%s`, s)
 		}
-		if !strings.Contains(s, `"signals_monitored":0`) {
-			t.Errorf(`nil-input wire shape missing signals_monitored:0; got=%s`, s)
+		if !strings.Contains(s, `"signals_monitored":null`) {
+			t.Errorf(`nil-input wire shape must keep coverage unknown; got=%s`, s)
 		}
 	})
 
@@ -185,10 +189,165 @@ func TestGetAnomalies_WireShapeUnchanged(t *testing.T) {
 		if rt.Anomalies[0].Signal != "TpmsPressureFl" || rt.Anomalies[0].Severity != "critical" {
 			t.Errorf("round-trip Anomalies[0] = %+v", rt.Anomalies[0])
 		}
-		if rt.SignalsMonitored != 42 || rt.AnomaliesLast7d != 2 || rt.AnomaliesLast24h != 1 {
+		if *rt.SignalsMonitored != 42 || *rt.AnomaliesLast7d != 2 || *rt.AnomaliesLast24h != 1 {
 			t.Errorf("round-trip aggregates = %+v", rt)
 		}
+
 	})
+}
+
+func TestHealthSummaryDoesNotInferCoverage(t *testing.T) {
+	summary := buildHealthSummary(nil)
+	for category, status := range summary {
+		if status != "unknown" {
+			t.Fatalf("%s = %s, want unknown", category, status)
+		}
+	}
+	summary = buildHealthSummary([]anomalyEntry{
+		{Signal: "BatteryLevel", Severity: "info"},
+		{Signal: "BatteryLevel", Severity: "warning"},
+	})
+	if summary["battery"] != "warning" || summary["tires"] != "unknown" {
+		t.Fatalf("unexpected health summary: %v", summary)
+	}
+}
+
+func TestFiniteMeasurements(t *testing.T) {
+	for _, value := range []float64{0, -42, -0.125, 0.25} {
+		if !finiteMeasurements(value) {
+			t.Errorf("valid signed/fractional measurement rejected: %v", value)
+		}
+	}
+	for _, value := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
+		if finiteMeasurements(value) {
+			t.Errorf("invalid measurement accepted: %v", value)
+		}
+	}
+}
+
+func TestAnomalySignalUnitsAreAuthoritative(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		signal string
+		unit   string
+	}{
+		{"OutsideTemp", "°C"},
+		{"DiStatorTempF", "°C"},
+		{"TpmsPressureFl", "Pa"},
+		{"Odometer", "m"},
+		{"VehicleSpeed", "m/s"},
+		{"MaxSpeedToReachDestinationMph", "m/s"},
+		{"ChargeRateMilePerHour", "m/h"},
+		{"ACChargingEnergyIn", "Wh"},
+		{"NominalFullPackEnergyKwh", "Wh"},
+		{"DCChargingPower", "W"},
+		{"Soc", "%"},
+		{"UnknownTemperature", ""},
+		{"SettingTemperatureUnit", ""},
+		{"PackVoltage", ""},
+	} {
+		t.Run(tt.signal, func(t *testing.T) {
+			if got := anomalySignalUnit(tt.signal); got != tt.unit {
+				t.Fatalf("unit = %q, want %q", got, tt.unit)
+			}
+			out := anomalyContextResultToResponse(&aitools.AnomalyContextResult{
+				Anomalies: []aitools.AnomalyContextEntry{{
+					Signal: tt.signal, Value: -0.125, Baseline: 0, ZScore: 3.125,
+				}},
+			})
+			entry := out.Anomalies[0]
+			if entry.Unit != tt.unit || entry.Value != -0.125 || entry.Baseline != 0 || entry.ZScore != 3.125 {
+				t.Fatalf("wire metadata changed raw evidence: %+v", entry)
+			}
+			raw, err := json.Marshal(entry)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.unit == "" && strings.Contains(string(raw), `"unit"`) {
+				t.Fatalf("unknown unit must stay unspecified: %s", raw)
+			}
+		})
+	}
+}
+
+func TestTirePressureSafeRangesAreCanonicalPa(t *testing.T) {
+	t.Parallel()
+	for _, signal := range []string{"TpmsPressureFl", "TpmsPressureFr", "TpmsPressureRl", "TpmsPressureRr"} {
+		t.Run(signal, func(t *testing.T) {
+			bounds, ok := safeRanges[signal]
+			if !ok || bounds != ([2]float64{200000, 350000}) {
+				t.Fatalf("safe bounds = %v, present = %v; want [200000 350000] Pa", bounds, ok)
+			}
+			if midpoint := (bounds[0] + bounds[1]) / 2; midpoint != 275000 {
+				t.Fatalf("baseline = %v, want 275000 Pa", midpoint)
+			}
+			for _, tt := range []struct {
+				name      string
+				value     float64
+				violation bool
+			}{
+				{"low_pressure", 120000, true},
+				{"just_below_minimum", 199999, true},
+				{"minimum", 200000, false},
+				{"normal_pressure", 275000, false},
+				{"maximum", 350000, false},
+				{"just_above_maximum", 350001, true},
+				{"high_pressure", 400000, true},
+			} {
+				t.Run(tt.name, func(t *testing.T) {
+					if got := tt.value < bounds[0] || tt.value > bounds[1]; got != tt.violation {
+						t.Fatalf("pressure %v Pa: violation = %v, want %v", tt.value, got, tt.violation)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestSnapshotOutcomesPreserveZeroAndFractionalEvidence(t *testing.T) {
+	result := anomalyContextResultToResponse(&aitools.AnomalyContextResult{
+		Anomalies:     []aitools.AnomalyContextEntry{{Value: -0.00125, Baseline: 0, ZScore: 3.125}},
+		HealthSummary: buildHealthSummary(nil),
+	})
+	if result.SignalsMonitored == nil || *result.SignalsMonitored != 0 {
+		t.Fatal("successful measured zero lost")
+	}
+	if result.Anomalies[0].Value != -0.00125 || result.Anomalies[0].Baseline != 0 || result.Anomalies[0].ZScore != 3.125 {
+		t.Fatalf("signed/fractional evidence changed: %+v", result.Anomalies[0])
+	}
+	for stage, status := range result.DetectorStages {
+		if status != "completed" {
+			t.Errorf("%s: %s", stage, status)
+		}
+	}
+	missing := anomalyContextResultToResponse(nil)
+	if missing.SignalsMonitored != nil || missing.AnomaliesLast7d != nil || missing.AnomaliesLast24h != nil {
+		t.Fatal("missing result fabricated zero counts")
+	}
+	for stage, status := range missing.DetectorStages {
+		if status != "unavailable" {
+			t.Errorf("%s: %s", stage, status)
+		}
+	}
+}
+
+func TestDetectorFailureIsNotMeasuredZero(t *testing.T) {
+	h := NewHandler(nil)
+	for _, query := range []string{"", "?vehicle_id=no", "?vehicle_id=0", "?vehicle_id=-1", "?vehicle_id=1.5"} {
+		rec := httptest.NewRecorder()
+		h.GetAnomalies(rec, httptest.NewRequest(http.MethodGet, "/analytics/anomalies"+query, nil))
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("%q: status %d", query, rec.Code)
+		}
+	}
+	rec := httptest.NewRecorder()
+	h.GetAnomalies(rec, httptest.NewRequest(http.MethodGet, "/analytics/anomalies?vehicle_id=1", nil))
+	if rec.Code != http.StatusInternalServerError || strings.Contains(rec.Body.String(), `"signals_monitored":0`) {
+		t.Fatalf("unavailable detector fabricated success: %d %s", rec.Code, rec.Body.String())
+	}
+	if result, err := h.DetectAnomalies(context.Background(), 1, 7); err == nil || result != nil {
+		t.Fatalf("AI caller received fabricated result: %+v, %v", result, err)
+	}
 }
 
 // TestAnomalyContextResultToResponse_DefensiveCopy proves the

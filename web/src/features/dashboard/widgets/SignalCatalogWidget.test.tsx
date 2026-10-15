@@ -12,8 +12,8 @@
  *                catalog errors with no cached data (the bug fix — the pre-fix
  *                widget mislabeled a failed load as "no signals");
  *   • compact (cols ≤ 1) → a single big signal-count figure, no search box;
- *   • standard (cols ≥ 2) → a search box + a source-module-grouped, alpha-sorted
- *                list of signals with unit badges and per-signal observation
+ *   • standard (cols ≥ 2) → a search box + a destination-grouped, alpha-sorted
+ *                list of signals with value-kind badges and per-signal observation
  *                counts.
  *
  * What this file pins:
@@ -22,26 +22,28 @@
  *   - the ERROR fix — an errored initial load (no data) shows a "failed to load"
  *     message, NOT the misleading "no signals" empty state, while a
  *     background-refetch error over cached data keeps the list on screen;
- *   - the SEARCH filter across name / description / source_module, and its
+ *   - the SEARCH filter across field / destination / value_kind, and its
  *     "no matching signals" empty state;
  *   - the GROUPING + alpha SORT of categories and the observation-count join
  *     (matched by signal name, null-safe "0" for unmatched signals);
- *   - the NULL-SAFETY hardening — a malformed entry with an undefined `name`
- *     neither crashes the search filter nor the row render (it degrades to "—");
+ *   - the NULL-SAFETY boundary — missing required identities are source errors;
+ *     nullable aggregate metadata stays unknown without fabricating units;
  *   - the observations WIRING — the resolved vehicle id (`vehicleId` prop →
  *     first vehicle → 0) is what reaches `useSignalObservations`;
  *   - the a11y search label and the REFRESH control (freshness chip → refetch).
  *
  * Strategy: both data hooks are the network boundary and are fully controllable
- * via hoisted mocks. `react-i18next` echoes each `t(key, fallback)` fallback so
+ * via hoisted mocks. `react-i18next` uses the installed i18next interpolator on fallbacks so
  * assertions read against English copy. The freshness chip's display hooks
  * (`useDateFormat` / `useMotionPreference`) are stubbed so WidgetShell renders
- * synchronously without a Settings/QueryClient provider.
+ * synchronously without a Settings/QueryClient provider. The continuation file
+ * also mounts the actual query functions against a QueryClient/request boundary.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
-import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
+import type { SignalCatalogRow, SignalsCatalogResponse, SignalObservation } from '@/types/signals';
 import type { WidgetSize } from './types';
 
 // ── Hoisted mocks (referenced inside vi.mock factories) ─────────────────────────
@@ -62,19 +64,16 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => vehiclesMock(),
 }));
 
-// i18n → echo the developer fallback, interpolating `{{var}}` placeholders so
-// copy reads as English regardless of namespace.
+// Use the installed i18next interpolator for developer fallbacks, including
+// replacement operands, without loading catalogs into the original cases.
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  const interp = (tpl: string, opts?: Record<string, unknown>) =>
-    opts ? tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => (opts[k] != null ? String(opts[k]) : '')) : tpl;
+  const { createInstance } = await vi.importActual<typeof import('i18next')>('i18next');
+  const i18n = createInstance();
+  await i18n.init({ lng: 'en', resources: {}, interpolation: { escapeValue: false } });
   return {
     ...actual,
-    useTranslation: () => ({
-      t: (_key: string, fallback?: string, opts?: Record<string, unknown>) =>
-        typeof fallback === 'string' ? interp(fallback, opts) : _key,
-      i18n: { language: 'en', changeLanguage: vi.fn() },
-    }),
+    useTranslation: () => ({ t: i18n.getFixedT('en'), i18n }),
   };
 });
 
@@ -93,17 +92,20 @@ import SignalCatalogWidget from './SignalCatalogWidget';
 
 const NOW = '2026-07-05T12:00:00.000Z';
 
-function makeEntry(over: Partial<SignalCatalogEntry> = {}): SignalCatalogEntry {
+function makeEntry(over: Partial<SignalCatalogRow> = {}): SignalCatalogRow {
   return {
-    name: 'BatteryLevel',
-    value_type: 'numeric',
-    source_module: 'battery',
-    unit: '%',
-    description: 'State of charge',
-    first_seen_at: NOW,
-    last_seen_at: NOW,
+    field: 'BatteryLevel',
+    value_kind: 'ValueKindFloat',
+    destination: 'battery',
+    last_seen_at: null,
+    sample_count_total: null,
+    vehicle_count: null,
     ...over,
   };
+}
+
+function envelope(signals: SignalCatalogRow[]): SignalsCatalogResponse {
+  return { signals, generated_at: NOW };
 }
 
 function makeObs(over: Partial<SignalObservation> = {}): SignalObservation {
@@ -120,7 +122,7 @@ function makeObs(over: Partial<SignalObservation> = {}): SignalObservation {
 }
 
 interface CatalogOverrides {
-  data?: SignalCatalogEntry[];
+  data?: SignalsCatalogResponse;
   isLoading?: boolean;
   isFetching?: boolean;
   isStale?: boolean;
@@ -131,7 +133,7 @@ interface CatalogOverrides {
 
 function setCatalog(over: CatalogOverrides = {}) {
   const q = {
-    data: undefined as SignalCatalogEntry[] | undefined,
+    data: undefined as SignalsCatalogResponse | undefined,
     isLoading: false,
     isFetching: false,
     isStale: false,
@@ -152,14 +154,14 @@ const STANDARD: WidgetSize = { cols: 2, rows: 3 };
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 
 function renderWidget(size: WidgetSize = STANDARD, vehicleId?: number) {
-  return render(<SignalCatalogWidget size={size} vehicleId={vehicleId} />);
+  return render(<MemoryRouter><SignalCatalogWidget size={size} vehicleId={vehicleId} /></MemoryRouter>);
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   vehiclesMock.mockReturnValue({ data: [{ id: 7, display_name: 'Car' }] });
   setObservations([]);
-  setCatalog({ data: [makeEntry()] });
+  setCatalog({ data: envelope([makeEntry()]) });
 });
 
 // ── Loading / empty / error states ────────────────────────────────────────────
@@ -169,31 +171,31 @@ describe('SignalCatalogWidget — loading / empty / error states', () => {
     setCatalog({ isLoading: true, data: undefined });
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByRole('textbox')).toBeNull();
     expect(screen.queryByText('No signals in catalog')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 
   it('shows the empty state when the catalog loaded with zero entries and no error', () => {
-    setCatalog({ data: [] });
+    setCatalog({ data: envelope([]) });
     renderWidget(STANDARD);
 
     expect(screen.getByText('No signals in catalog')).toBeInTheDocument();
     expect(screen.queryByText('Failed to load signal catalog')).toBeNull();
-    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
 
   it('shows a distinct "failed to load" message (not "no signals") on an errored initial load', () => {
     setCatalog({ isError: true, data: undefined });
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Failed to load signal catalog')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByText('No signals in catalog')).toBeNull();
   });
 
   it('keeps the cached list visible (no error copy) when a background refetch errors', () => {
-    setCatalog({ isError: true, data: [makeEntry({ name: 'CachedSignal' })] });
+    setCatalog({ isError: true, data: envelope([makeEntry({ field: 'CachedSignal' })]) });
     renderWidget(STANDARD);
 
     expect(screen.getByText('CachedSignal')).toBeInTheDocument();
@@ -205,80 +207,84 @@ describe('SignalCatalogWidget — loading / empty / error states', () => {
 // ── Compact layout ────────────────────────────────────────────────────────────
 
 describe('SignalCatalogWidget — compact layout', () => {
-  it('renders the signal count and caption without a search box or title heading', () => {
-    setCatalog({ data: [makeEntry(), makeEntry({ name: 'VehicleSpeed' })] });
+  it('retains its title beside the signal count and caption without a search box', () => {
+    setCatalog({ data: envelope([makeEntry(), makeEntry({ field: 'VehicleSpeed' })]) });
     renderWidget(COMPACT);
 
     expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('signals available')).toBeInTheDocument();
+    expect(screen.getByText('Signals available')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.queryByRole('heading', { name: /Signal Catalog/i })).toBeNull();
+    expect(screen.getByRole('heading', { name: /Signal catalog/i })).toBeInTheDocument();
   });
 
   it('prefers the empty state over a "0" figure when the catalog is empty', () => {
-    setCatalog({ data: [] });
+    setCatalog({ data: envelope([]) });
     renderWidget(COMPACT);
 
     expect(screen.getByText('No signals in catalog')).toBeInTheDocument();
-    expect(screen.queryByText('signals available')).toBeNull();
+    expect(screen.getByText('Signals available')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
   });
 });
 
-// ── Standard layout — grouping, units, observation counts ─────────────────────
+// ── Standard layout — grouping, served metadata, observation counts ──────────
 
 describe('SignalCatalogWidget — standard layout', () => {
   it('exposes the title heading and an accessible search field', () => {
     renderWidget(STANDARD);
 
-    expect(screen.getByRole('heading', { name: /Signal Catalog/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Signal catalog/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Search signals' })).toBeInTheDocument();
   });
 
-  it('groups signals by source module and sorts the categories alphabetically', () => {
+  it('groups signals by destination and sorts the categories alphabetically', () => {
     // Supplied out of alpha order to prove the sort (zephyr before alpha).
     setCatalog({
-      data: [
-        makeEntry({ name: 'ZSignal', source_module: 'zephyr' }),
-        makeEntry({ name: 'ASignal', source_module: 'alpha' }),
-      ],
+      data: envelope([
+        makeEntry({ field: 'ZSignal', destination: 'zephyr' }),
+        makeEntry({ field: 'ASignal', destination: 'alpha' }),
+      ]),
     });
     renderWidget(STANDARD);
 
     const headers = screen.getAllByRole('heading', { level: 4 });
     expect(headers).toHaveLength(2);
-    expect(headers[0].textContent).toMatch(/^alpha/);
-    expect(headers[1].textContent).toMatch(/^zephyr/);
+    expect(headers[0].textContent).toMatch(/^Destination: alpha/);
+    expect(headers[1].textContent).toMatch(/^Destination: zephyr/);
   });
 
-  it('falls back to an "Uncategorized" group when a signal has no source module', () => {
-    setCatalog({ data: [makeEntry({ name: 'Orphan', source_module: '' })] });
+  it('uses the served destination without inventing an unsupported source module', () => {
+    setCatalog({ data: envelope([makeEntry({ field: 'Orphan', destination: 'signal_log' })]) });
     renderWidget(STANDARD);
 
-    expect(screen.getByRole('heading', { level: 4, name: /Uncategorized/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 4, name: /Destination: signal_log/ })).toBeInTheDocument();
+    expect(screen.queryByText('Uncategorized')).toBeNull();
     expect(screen.getByText('Orphan')).toBeInTheDocument();
   });
 
-  it('renders a unit badge only for signals that carry a unit', () => {
+  it('renders served value kinds without fabricating a unit or description', () => {
     setCatalog({
-      data: [
-        makeEntry({ name: 'BatteryLevel', unit: '%', source_module: 'battery' }),
-        makeEntry({ name: 'DoorState', unit: null, source_module: 'battery' }),
-      ],
+      data: envelope([
+        makeEntry({ field: 'BatteryLevel', value_kind: 'ValueKindFloat' }),
+        makeEntry({ field: 'DoorState', value_kind: 'ValueKindBool' }),
+      ]),
     });
     renderWidget(STANDARD);
 
-    expect(screen.getByText('%')).toBeInTheDocument();
-    // The unit-less signal still renders its row; its cell simply omits a badge.
-    const doorRow = screen.getByText('DoorState').closest('div') as HTMLElement;
+    expect(screen.getByText('Unit and description are not provided by this catalog.')).toBeInTheDocument();
+    expect(screen.getByText('ValueKindFloat')).toBeInTheDocument();
+    const doorRow = screen.getByText('DoorState').closest('div')?.parentElement as HTMLElement;
+    expect(within(doorRow).getByTitle('Value kind')).toHaveTextContent('ValueKindBool');
     expect(within(doorRow).queryByText('%')).toBeNull();
+    expect(screen.queryByText('State of charge')).toBeNull();
   });
 
   it('joins observation counts by signal name and shows 0 for signals with none', () => {
     setCatalog({
-      data: [
-        makeEntry({ name: 'BatteryLevel', source_module: 'battery' }),
-        makeEntry({ name: 'VehicleSpeed', source_module: 'battery' }),
-      ],
+      data: envelope([
+        makeEntry({ field: 'BatteryLevel' }),
+        makeEntry({ field: 'VehicleSpeed' }),
+      ]),
     });
     setObservations([
       makeObs({ signal_name: 'BatteryLevel' }),
@@ -287,8 +293,8 @@ describe('SignalCatalogWidget — standard layout', () => {
     ]);
     renderWidget(STANDARD);
 
-    const batteryRow = screen.getByText('BatteryLevel').closest('div') as HTMLElement;
-    const speedRow = screen.getByText('VehicleSpeed').closest('div') as HTMLElement;
+    const batteryRow = screen.getByText('BatteryLevel').closest('div')?.parentElement as HTMLElement;
+    const speedRow = screen.getByText('VehicleSpeed').closest('div')?.parentElement as HTMLElement;
     expect(within(batteryRow).getByText('3')).toBeInTheDocument();
     expect(within(speedRow).getByText('0')).toBeInTheDocument();
   });
@@ -299,10 +305,10 @@ describe('SignalCatalogWidget — standard layout', () => {
 describe('SignalCatalogWidget — search', () => {
   beforeEach(() => {
     setCatalog({
-      data: [
-        makeEntry({ name: 'BatteryLevel', source_module: 'battery', description: 'State of charge' }),
-        makeEntry({ name: 'VehicleSpeed', source_module: 'drive', description: 'Ground speed' }),
-      ],
+      data: envelope([
+        makeEntry({ field: 'BatteryLevel', destination: 'battery', value_kind: 'ValueKindFloat' }),
+        makeEntry({ field: 'VehicleSpeed', destination: 'drive', value_kind: 'ValueKindDouble' }),
+      ]),
     });
   });
 
@@ -317,16 +323,14 @@ describe('SignalCatalogWidget — search', () => {
     expect(screen.queryByText('VehicleSpeed')).toBeNull();
   });
 
-  it('also matches the description and the source module', () => {
+  it('also matches the value kind and the destination', () => {
     renderWidget(STANDARD);
     const input = screen.getByRole('textbox', { name: 'Search signals' });
 
-    // description match: "Ground speed" → VehicleSpeed
-    fireEvent.change(input, { target: { value: 'ground' } });
+    fireEvent.change(input, { target: { value: 'valuekinddouble' } });
     expect(screen.getByText('VehicleSpeed')).toBeInTheDocument();
     expect(screen.queryByText('BatteryLevel')).toBeNull();
 
-    // source-module match: "drive" → VehicleSpeed
     fireEvent.change(input, { target: { value: 'drive' } });
     expect(screen.getByText('VehicleSpeed')).toBeInTheDocument();
     expect(screen.queryByText('BatteryLevel')).toBeNull();
@@ -348,29 +352,23 @@ describe('SignalCatalogWidget — search', () => {
 // ── Null safety ───────────────────────────────────────────────────────────────
 
 describe('SignalCatalogWidget — null safety', () => {
-  it('renders a "—" placeholder for a malformed entry with no name instead of a blank row', () => {
-    const malformed = { ...makeEntry({ source_module: 'ghost', unit: null }), name: undefined as unknown as string };
-    setCatalog({ data: [malformed, makeEntry({ name: 'BatteryLevel' })] });
+  it('shows a source failure rather than a silent blank row when required field validation fails', () => {
+    setCatalog({ data: undefined, isError: true });
     renderWidget(STANDARD);
 
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('BatteryLevel')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('BatteryLevel')).toBeNull();
+    expect(screen.queryByText('No signals in catalog')).toBeNull();
   });
 
-  it('does not throw in the search filter when an entry has an undefined name', () => {
-    const malformed = {
-      ...makeEntry({ source_module: null as unknown as string, description: null }),
-      name: undefined as unknown as string,
-    };
-    setCatalog({ data: [malformed, makeEntry({ name: 'BatteryLevel', source_module: 'battery' })] });
+  it('searches valid retained identities after a malformed refresh without dropping rows', () => {
+    setCatalog({ data: envelope([makeEntry()]), isError: true });
     renderWidget(STANDARD);
 
     fireEvent.change(screen.getByRole('textbox', { name: 'Search signals' }), {
       target: { value: 'batter' },
     });
 
-    // The valid entry still filters correctly; the malformed one is excluded
-    // (an empty name matches nothing) without crashing the memoised filter.
     expect(screen.getByText('BatteryLevel')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 4 })).toHaveLength(1);
   });
@@ -382,6 +380,24 @@ describe('SignalCatalogWidget — observations wiring & refresh', () => {
   it('passes the explicit vehicleId prop through to useSignalObservations', () => {
     renderWidget(STANDARD, 42);
     expect(observationsMock).toHaveBeenCalledWith(42);
+  });
+
+  describe('SignalCatalogWidget — observation sample trust', () => {
+    it('shows unknown counts while observations are unavailable', () => {
+      setObservations(undefined);
+      renderWidget({ cols: 3, rows: 3 });
+      expect(screen.getByText('BatteryLevel')).toBeInTheDocument();
+      expect(screen.getByText('—')).toBeInTheDocument();
+      expect(screen.queryByText('0')).toBeNull();
+    });
+
+    it('keeps a cached observation sample while reporting its failed refresh', () => {
+      observationsMock.mockReturnValue({ data: [makeObs()], isError: true, error: new Error('refresh') });
+      const { container } = renderWidget(STANDARD);
+      expect(screen.getByText('BatteryLevel')).toBeInTheDocument();
+      expect(screen.getByTitle('Observations in fetched sample')).toHaveTextContent('1');
+      expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
+    });
   });
 
   it('falls back to the first vehicle id when no vehicleId prop is provided', () => {
@@ -397,7 +413,7 @@ describe('SignalCatalogWidget — observations wiring & refresh', () => {
   });
 
   it('invokes refetch when the accessible refresh control is activated', () => {
-    const q = setCatalog({ data: [makeEntry()], isFetching: false });
+    const q = setCatalog({ data: envelope([makeEntry()]), isFetching: false });
     renderWidget(STANDARD);
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));

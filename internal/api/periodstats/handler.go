@@ -11,6 +11,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -67,11 +69,9 @@ type PeriodStats struct {
 // "all time" (no date filter), mirroring the canonical
 // /analytics/period-stats?days=0 contract the SPA already uses.
 //
-// Returns (stats, queryErr). The queryErr is non-nil when the drives
-// query fails (or the database handle is nil); a charging-query failure
-// is logged and folded into a zero-energy/zero-cost envelope (parity with
-// the historical handler so the SPA never sees a 500 caused by a recent
-// charging-table schema drift).
+// Returns (stats, queryErr). The queryErr is non-nil when either aggregate
+// query fails (or the database handle is nil). Callers must not use stats
+// on error: unavailable measurements are not a successful zero aggregate.
 //
 // Extracted from Handler.Get so the AI period-compare-narration
 // adapter can ground its narration in the SAME deterministic envelope
@@ -117,22 +117,14 @@ func computePeriodStats(ctx context.Context, q statsQuerier, vehicleID int64, da
 	}
 
 	// Energy and cost from charging sessions (SI canonical
-	// total_energy_added_wh + NUMERIC cost_decimal). A charging-query failure
-	// is folded into a zero-energy / zero-cost envelope — parity with the
-	// historical handler so a charging-table schema drift never turns into a
-	// 500 for the SPA. Logged at Warn: degraded, not fatal.
+	// total_energy_added_wh + NUMERIC cost_decimal). Both aggregates must
+	// succeed before returning stats; a failed query is not measured zero.
 	var energyAddedWh, totalCost *float64
 	if err := q.QueryRow(ctx,
 		`SELECT COALESCE(SUM(total_energy_added_wh), 0), COALESCE(SUM(cost_decimal::float8), 0)
 		 FROM charging_sessions WHERE vehicle_id = $1`+dateFilter, args...,
 	).Scan(&energyAddedWh, &totalCost); err != nil {
-		log.Warn().
-			Err(err).
-			Int64("vehicle_id", vehicleID).
-			Int("days", days).
-			Msg("periodstats: charging aggregate query failed; folding to zero energy/cost")
-		energyAddedWh = new(float64)
-		totalCost = new(float64)
+		return PeriodStats{}, fmt.Errorf("periodstats: charging aggregate query: %w", err)
 	}
 
 	distM := 0.0
@@ -182,6 +174,9 @@ func roundStat(v float64) float64 {
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.periodstats.get")
+	defer span.End()
+
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
 		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
@@ -198,13 +193,16 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	// contract the SPA relies on.
 	days, _ := strconv.Atoi(r.URL.Query().Get("days"))
 
-	ctx, cancel := context.WithTimeout(r.Context(), computeTimeout)
+	ctx, cancel := context.WithTimeout(ctx, computeTimeout)
 	defer cancel()
 
 	stats, err := computePeriodStats(ctx, h.q, vehicleID, days)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "failed to query period stats")
 		log.Error().
 			Err(err).
+			Str("trace_id", span.SpanContext().TraceID().String()).
 			Int64("vehicle_id", vehicleID).
 			Int("days", days).
 			Msg("periodstats: period-stats query failed")

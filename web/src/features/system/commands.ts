@@ -11,6 +11,32 @@
 
 import type { LucideIcon } from '@/lib/icons';
 import { Icons } from '@/lib/icons';
+import type { DataState } from '@/api/dataState';
+import type { VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
+import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
+
+/** Only the selected vehicle's current maximum-request signal can bound amps. */
+export function getChargingCurrentMaximum(
+  source: DataState<VehicleLiveSignalsResponse>,
+  vehicleId: number,
+  now = Date.now(),
+): number | null {
+  if (source.status !== 'ok' || source.provenance !== 'live'
+    || source.data?.vehicle_id !== vehicleId) return null;
+  const signal = source.data.signals?.ChargeCurrentRequestMax;
+  if (signal == null || typeof signal !== 'object' || Array.isArray(signal)) return null;
+  const entry = signal as Record<string, unknown>;
+  if (entry.kind !== 'ValueKindFloat' || entry.source !== 'l1'
+    || typeof entry.value !== 'number' || !Number.isFinite(entry.value)
+    || entry.value < 0 || entry.value > Number.MAX_SAFE_INTEGER
+    || typeof entry.ts !== 'string' || typeof entry.age_ms !== 'number'
+    || !Number.isFinite(entry.age_ms) || entry.age_ms < 0
+    || entry.age_ms > TELEMETRY_STALE_AFTER_MS) return null;
+  const observedAt = Date.parse(entry.ts);
+  const age = now - observedAt;
+  return Number.isFinite(observedAt) && age >= 0 && age <= TELEMETRY_STALE_AFTER_MS
+    ? entry.value : null;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -98,7 +124,7 @@ export interface Vehicle {
 
 export interface VehicleState {
   vehicle_id?: number;
-  state?: string;
+  state?: string | null;
   battery_level?: number | null;
   rated_range?: number | null;
   is_locked?: boolean | null;
@@ -129,16 +155,16 @@ export const CATEGORY_ORDER: CommandCategory[] = [
 ];
 
 export const CATEGORY_META: Record<CommandCategory, { labelKey: string; fallback: string; icon: LucideIcon }> = {
-  security:           { labelKey: 'commands.cat.security',       fallback: 'Security & Access',  icon: Icons.security },
-  climate:            { labelKey: 'commands.cat.climate',        fallback: 'Climate & Comfort',  icon: Icons.wind },
-  climate_protection: { labelKey: 'commands.cat.climateProtect', fallback: 'Climate Protection', icon: Icons.securityAlert },
+  security:           { labelKey: 'commands.cat.security',       fallback: 'Security & access',  icon: Icons.security },
+  climate:            { labelKey: 'commands.cat.climate',        fallback: 'Climate & comfort',  icon: Icons.wind },
+  climate_protection: { labelKey: 'commands.cat.climateProtect', fallback: 'Climate protection', icon: Icons.securityAlert },
   charging:           { labelKey: 'commands.cat.charging',       fallback: 'Charging',           icon: Icons.charging },
-  doors:              { labelKey: 'commands.cat.doors',          fallback: 'Doors & Trunk',      icon: Icons.doorOpen },
+  doors:              { labelKey: 'commands.cat.doors',          fallback: 'Doors & trunk',      icon: Icons.doorOpen },
   drive:              { labelKey: 'commands.cat.drive',          fallback: 'Drive',              icon: Icons.vehicle },
   windows:            { labelKey: 'commands.cat.windows',        fallback: 'Windows',            icon: Icons.wind },
   sunroof:            { labelKey: 'commands.cat.sunroof',        fallback: 'Sunroof',            icon: Icons.arrowUpFromDot },
   schedules:          { labelKey: 'commands.cat.schedules',      fallback: 'Schedules',          icon: Icons.calendarPlus },
-  alerts:             { labelKey: 'commands.cat.alerts',         fallback: 'Alerts & Location',  icon: Icons.speaker },
+  alerts:             { labelKey: 'commands.cat.alerts',         fallback: 'Alerts & location',  icon: Icons.speaker },
   navigation:         { labelKey: 'commands.cat.navigation',     fallback: 'Navigation',         icon: Icons.navigation },
   software:           { labelKey: 'commands.cat.software',       fallback: 'Software',           icon: Icons.download },
   vehicle:            { labelKey: 'commands.cat.vehicle',        fallback: 'Vehicle',            icon: Icons.vehicle },
@@ -153,7 +179,7 @@ export const COMMANDS: CommandDef[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'wake_up', command: 'wake_up',
-    labelKey: 'commands.security.wakeUp', labelFallback: 'Wake Up',
+    labelKey: 'commands.security.wakeUp', labelFallback: 'Wake up',
     sublabelKey: 'commands.security.wakeVehicle', sublabelFallback: 'Wake vehicle',
     icon: Icons.power, category: 'security', type: 'action',
     variant: 'success', defaultFavorite: true,
@@ -172,7 +198,7 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'speed_limit_set', command: 'speed_limit_set_limit',
-    labelKey: 'commands.security.speedLimit', labelFallback: 'Speed Limit',
+    labelKey: 'commands.security.speedLimit', labelFallback: 'Speed limit',
     sublabelKey: 'commands.security.setMph', sublabelFallback: 'Set MPH',
     icon: Icons.speedCircle, category: 'security', type: 'input', variant: 'danger',
     inputConfig: {
@@ -184,7 +210,7 @@ export const COMMANDS: CommandDef[] = [
   {
     id: 'speed_limit_on', command: 'speed_limit_on',
     labelKey: 'commands.security.speedActivate', labelFallback: 'Activate',
-    sublabelKey: 'commands.security.speedLimitMode', sublabelFallback: 'Speed Limit',
+    sublabelKey: 'commands.security.speedLimitMode', sublabelFallback: 'Speed limit',
     icon: Icons.speedCircle, category: 'security', type: 'input', variant: 'danger',
     inputConfig: {
       promptKey: 'commands.security.enterSpeedPin',
@@ -195,7 +221,7 @@ export const COMMANDS: CommandDef[] = [
   {
     id: 'speed_limit_off', command: 'speed_limit_off',
     labelKey: 'commands.security.speedDeactivate', labelFallback: 'Deactivate',
-    sublabelKey: 'commands.security.speedLimitMode', sublabelFallback: 'Speed Limit',
+    sublabelKey: 'commands.security.speedLimitMode', sublabelFallback: 'Speed limit',
     icon: Icons.speedCircle, category: 'security', type: 'input',
     inputConfig: {
       promptKey: 'commands.security.enterSpeedPin',
@@ -205,7 +231,7 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'speed_limit_clear_pin', command: 'speed_limit_clear_pin',
-    labelKey: 'commands.security.clearSpeedPin', labelFallback: 'Clear Speed PIN',
+    labelKey: 'commands.security.clearSpeedPin', labelFallback: 'Clear speed PIN',
     sublabelKey: 'commands.security.requiresPin', sublabelFallback: 'Requires PIN',
     icon: Icons.speedCircle, category: 'security', type: 'input', variant: 'danger',
     inputConfig: {
@@ -216,7 +242,7 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'speed_limit_clear_pin_admin', command: 'speed_limit_clear_pin_admin',
-    labelKey: 'commands.security.clearSpeedPin', labelFallback: 'Clear Speed PIN',
+    labelKey: 'commands.security.clearSpeedPin', labelFallback: 'Clear speed PIN',
     sublabelKey: 'commands.security.admin', sublabelFallback: 'Admin',
     icon: Icons.speedCircle, category: 'security', type: 'action', variant: 'danger',
     dangerous: true,
@@ -225,7 +251,7 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'valet_mode', command: 'set_valet_mode', commandOff: 'valet_off',
-    labelKey: 'commands.security.valetMode', labelFallback: 'Valet Mode',
+    labelKey: 'commands.security.valetMode', labelFallback: 'Valet mode',
     icon: Icons.userCheck, iconOff: Icons.userX, category: 'security', type: 'toggle', variant: 'danger',
     inputConfig: {
       promptKey: 'commands.security.enterValetPin',
@@ -236,18 +262,18 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'reset_valet_pin', command: 'reset_valet_pin',
-    labelKey: 'commands.security.resetValetPin', labelFallback: 'Reset Valet PIN',
+    labelKey: 'commands.security.resetValetPin', labelFallback: 'Reset valet PIN',
     sublabelKey: 'commands.security.admin', sublabelFallback: 'Admin',
     icon: Icons.userX, category: 'security', type: 'action', variant: 'danger',
   },
   {
     id: 'guest_mode', command: 'guest_mode_on', commandOff: 'guest_mode_off',
-    labelKey: 'commands.security.guestMode', labelFallback: 'Guest Mode',
+    labelKey: 'commands.security.guestMode', labelFallback: 'Guest mode',
     icon: Icons.userPlus, iconOff: Icons.userX, category: 'security', type: 'toggle',
   },
   {
     id: 'erase_user_data', command: 'erase_user_data',
-    labelKey: 'commands.security.eraseData', labelFallback: 'Erase Data',
+    labelKey: 'commands.security.eraseData', labelFallback: 'Erase data',
     sublabelKey: 'commands.security.guestOnly', sublabelFallback: 'Guest mode only',
     icon: Icons.eraser, category: 'security', type: 'action', variant: 'danger',
     dangerous: true,
@@ -258,7 +284,7 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'pin_to_drive', command: 'set_pin_to_drive',
-    labelKey: 'commands.security.pinToDrive', labelFallback: 'PIN to Drive',
+    labelKey: 'commands.security.pinToDrive', labelFallback: 'PIN to drive',
     sublabelKey: 'commands.security.enable', sublabelFallback: 'Enable',
     icon: Icons.keyRound, category: 'security', type: 'input', variant: 'danger',
     inputConfig: {
@@ -271,7 +297,7 @@ export const COMMANDS: CommandDef[] = [
   {
     id: 'reset_pin_to_drive_pin', command: 'reset_pin_to_drive_pin',
     labelKey: 'commands.security.resetPin', labelFallback: 'Reset PIN',
-    sublabelKey: 'commands.security.pinToDrive', sublabelFallback: 'PIN to Drive',
+    sublabelKey: 'commands.security.pinToDrive', sublabelFallback: 'PIN to drive',
     icon: Icons.keyRound, category: 'security', type: 'action', variant: 'danger',
   },
   {
@@ -281,7 +307,7 @@ export const COMMANDS: CommandDef[] = [
     icon: Icons.keyRound, category: 'security', type: 'action', variant: 'danger',
     dangerous: true,
     confirmKey: 'commands.security.confirmClearDrivePin',
-    confirmFallback: 'Clear PIN to Drive without authentication?',
+    confirmFallback: 'Clear PIN to drive without authentication?',
   },
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -295,33 +321,33 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'set_temps', command: 'set_temps',
-    labelKey: 'commands.climate.setTemps', labelFallback: 'Set Temps',
-    sublabelKey: 'commands.climate.driverPassenger', sublabelFallback: 'Driver/Passenger',
+    labelKey: 'commands.climate.setTemps', labelFallback: 'Set temps',
+    sublabelKey: 'commands.climate.driverPassenger', sublabelFallback: 'Driver/passenger',
     icon: Icons.climate, category: 'climate', type: 'input',
     inputConfig: {
       promptKey: 'commands.climate.enterTemp',
-      promptFallback: 'Enter temperature in °C (e.g., 21):',
+      promptFallback: 'Enter temperature in °c (e.g., 21):',
       paramName: 'driver_temp', validation: 'decimal', min: 15, max: 30,
       buildParams: (values) => ({ driver_temp: values.driver_temp, passenger_temp: values.driver_temp }),
     },
   },
   {
     id: 'seat_heater', command: 'seat_heater',
-    labelKey: 'commands.climate.seatHeat', labelFallback: 'Seat Heat',
+    labelKey: 'commands.climate.seatHeat', labelFallback: 'Seat heat',
     sublabelKey: 'commands.climate.driver', sublabelFallback: 'Driver',
     icon: Icons.flame, category: 'climate', type: 'action',
     params: { heater: '0', level: '3' },
   },
   {
     id: 'seat_cooler', command: 'seat_cooler',
-    labelKey: 'commands.climate.seatCool', labelFallback: 'Seat Cool',
+    labelKey: 'commands.climate.seatCool', labelFallback: 'Seat cool',
     sublabelKey: 'commands.climate.driver', sublabelFallback: 'Driver',
     icon: Icons.cooling, category: 'climate', type: 'action',
     params: { seat_position: '0', seat_cooler_level: '3' },
   },
   {
     id: 'steering_wheel_heat', command: 'steering_wheel_heat',
-    labelKey: 'commands.climate.steeringHeat', labelFallback: 'Steering Heat',
+    labelKey: 'commands.climate.steeringHeat', labelFallback: 'Steering heat',
     sublabelKey: 'commands.climate.toggle', sublabelFallback: 'Toggle',
     icon: Icons.tirePressure, category: 'climate', type: 'action',
     params: { on: 'true' },
@@ -333,31 +359,31 @@ export const COMMANDS: CommandDef[] = [
   {
     id: 'bioweapon', command: 'bioweapon_on', commandOff: 'bioweapon_off',
     labelKey: 'commands.climate.bioweapon', labelFallback: 'Bioweapon',
-    sublabelKey: 'commands.climate.defenseMode', sublabelFallback: 'Defense Mode',
+    sublabelKey: 'commands.climate.defenseMode', sublabelFallback: 'Defense mode',
     icon: Icons.securityAlert, category: 'climate_protection', type: 'toggle', variant: 'danger',
   },
   {
     id: 'cop_on', command: 'cop_on',
-    labelKey: 'commands.climate.cop', labelFallback: 'Overheat Protect',
+    labelKey: 'commands.climate.cop', labelFallback: 'Overheat protect',
     sublabelKey: 'commands.climate.copOn', sublabelFallback: 'On (AC)',
     icon: Icons.climate, category: 'climate_protection', type: 'action',
   },
   {
     id: 'cop_fan_only', command: 'cop_fan_only',
-    labelKey: 'commands.climate.copFan', labelFallback: 'Overheat Protect',
+    labelKey: 'commands.climate.copFan', labelFallback: 'Overheat protect',
     sublabelKey: 'commands.climate.fanOnly', sublabelFallback: 'Fan only',
     icon: Icons.climate, category: 'climate_protection', type: 'action',
   },
   {
     id: 'cop_off', command: 'cop_off',
-    labelKey: 'commands.climate.copOff', labelFallback: 'Overheat Protect',
+    labelKey: 'commands.climate.copOff', labelFallback: 'Overheat protect',
     sublabelKey: 'commands.climate.off', sublabelFallback: 'OFF',
     icon: Icons.climate, category: 'climate_protection', type: 'action',
   },
   {
     id: 'set_cop_temp', command: 'set_cop_temp',
-    labelKey: 'commands.climate.copTemp', labelFallback: 'COP Temp',
-    sublabelKey: 'commands.climate.setLevel', sublabelFallback: 'Low/Med/High',
+    labelKey: 'commands.climate.copTemp', labelFallback: 'COP temp',
+    sublabelKey: 'commands.climate.setLevel', sublabelFallback: 'Low/med/high',
     icon: Icons.climate, category: 'climate_protection', type: 'input',
     selectConfig: {
       paramName: 'cop_temp',
@@ -367,50 +393,50 @@ export const COMMANDS: CommandDef[] = [
           labelKey: 'commands.climate.copLow',
           labelFallback: 'Low',
           descriptionKey: 'commands.climate.copLowTemperature',
-          descriptionFallback: '90°F / 30°C',
+          descriptionFallback: '90°f / 30°c',
         },
         {
           value: '1',
           labelKey: 'commands.climate.copMedium',
           labelFallback: 'Medium',
           descriptionKey: 'commands.climate.copMediumTemperature',
-          descriptionFallback: '95°F / 35°C',
+          descriptionFallback: '95°f / 35°c',
         },
         {
           value: '2',
           labelKey: 'commands.climate.copHigh',
           labelFallback: 'High',
           descriptionKey: 'commands.climate.copHighTemperature',
-          descriptionFallback: '100°F / 40°C',
+          descriptionFallback: '100°f / 40°c',
         },
       ],
     },
   },
   {
     id: 'climate_keeper', command: 'climate_keeper_on', commandOff: 'climate_keeper_off',
-    labelKey: 'commands.climate.climateKeeper', labelFallback: 'Climate Keeper',
+    labelKey: 'commands.climate.climateKeeper', labelFallback: 'Climate keeper',
     sublabelKey: 'commands.climate.keepMode', sublabelFallback: 'Keep',
     icon: Icons.wind, iconOff: Icons.close, category: 'climate_protection', type: 'toggle', variant: 'success',
   },
   {
     id: 'dog_mode', command: 'dog_mode',
-    labelKey: 'commands.climate.dogMode', labelFallback: 'Dog Mode',
+    labelKey: 'commands.climate.dogMode', labelFallback: 'Dog mode',
     icon: Icons.dog, category: 'climate_protection', type: 'action', variant: 'success',
   },
   {
     id: 'camp_mode', command: 'camp_mode',
-    labelKey: 'commands.climate.campMode', labelFallback: 'Camp Mode',
+    labelKey: 'commands.climate.campMode', labelFallback: 'Camp mode',
     icon: Icons.tent, category: 'climate_protection', type: 'action', variant: 'success',
   },
   {
     id: 'preconditioning_max', command: 'preconditioning_max',
-    labelKey: 'commands.climate.maxPrecondition', labelFallback: 'Max Precondition',
+    labelKey: 'commands.climate.maxPrecondition', labelFallback: 'Max precondition',
     sublabelKey: 'commands.climate.override', sublabelFallback: 'Override',
     icon: Icons.flame, category: 'climate_protection', type: 'action', variant: 'danger',
   },
   {
     id: 'preconditioning_reset', command: 'preconditioning_reset',
-    labelKey: 'commands.climate.resetPrecondition', labelFallback: 'Reset Precondition',
+    labelKey: 'commands.climate.resetPrecondition', labelFallback: 'Reset precondition',
     sublabelKey: 'commands.climate.default', sublabelFallback: 'Default',
     icon: Icons.flame, category: 'climate_protection', type: 'action',
   },
@@ -420,13 +446,13 @@ export const COMMANDS: CommandDef[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'charge_port_open', command: 'charge_port_open',
-    labelKey: 'commands.charging.chargePort', labelFallback: 'Charge Port',
+    labelKey: 'commands.charging.chargePort', labelFallback: 'Charge port',
     sublabelKey: 'commands.charging.open', sublabelFallback: 'Open',
     icon: Icons.charging, category: 'charging', type: 'action',
   },
   {
     id: 'close_charge_port', command: 'close_charge_port',
-    labelKey: 'commands.charging.chargePort', labelFallback: 'Charge Port',
+    labelKey: 'commands.charging.chargePort', labelFallback: 'Charge port',
     sublabelKey: 'commands.charging.close', sublabelFallback: 'Close',
     icon: Icons.charging, category: 'charging', type: 'action',
   },
@@ -438,7 +464,7 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'charge_max_range', command: 'charge_max_range',
-    labelKey: 'commands.charging.maxRange', labelFallback: 'Max Range',
+    labelKey: 'commands.charging.maxRange', labelFallback: 'Max range',
     sublabelKey: 'commands.charging.tripMode', sublabelFallback: 'Trip mode',
     icon: Icons.batteryFull, category: 'charging', type: 'action', variant: 'danger',
   },
@@ -450,24 +476,25 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'set_charging_amps', command: 'set_charging_amps',
-    labelKey: 'commands.charging.setAmps', labelFallback: 'Set Amps',
+    labelKey: 'commands.charging.setAmps', labelFallback: 'Set amps',
     sublabelKey: 'commands.charging.amperage', sublabelFallback: 'Amperage',
     icon: Icons.speed, category: 'charging', type: 'input',
     inputConfig: {
       promptKey: 'commands.charging.enterAmps',
       promptFallback: 'Enter charging amps (e.g., 16, 32, 48):',
-      paramName: 'charging_amps',
+      // CommandDialogs supplies the current ChargeCurrentRequestMax, never a model guess.
+      paramName: 'charging_amps', validation: 'number', min: 0,
     },
   },
   {
     id: 'set_charge_limit', command: 'set_charge_limit',
-    labelKey: 'commands.charging.setLimit', labelFallback: 'Set Limit',
+    labelKey: 'commands.charging.setLimit', labelFallback: 'Set limit',
     sublabelKey: 'commands.charging.percent', sublabelFallback: 'Charge %',
     icon: Icons.battery, category: 'charging', type: 'input',
     inputConfig: {
       promptKey: 'commands.charging.enterLimit',
       promptFallback: 'Enter charge limit % (50–100):',
-      paramName: 'percent', defaultValue: '80',
+      paramName: 'percent', defaultValue: '80', validation: 'number', min: 50, max: 100,
     },
   },
 
@@ -492,7 +519,7 @@ export const COMMANDS: CommandDef[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'remote_start_drive', command: 'remote_start_drive',
-    labelKey: 'commands.drive.remoteStart', labelFallback: 'Remote Start',
+    labelKey: 'commands.drive.remoteStart', labelFallback: 'Remote start',
     sublabelKey: 'commands.drive.keylessDrive', sublabelFallback: 'Keyless drive',
     icon: Icons.vehicle, category: 'drive', type: 'action', variant: 'danger',
     dangerous: true,
@@ -542,7 +569,7 @@ export const COMMANDS: CommandDef[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'add_charge_schedule', command: 'add_charge_schedule',
-    labelKey: 'commands.schedules.addCharge', labelFallback: 'Add Charge Schedule',
+    labelKey: 'commands.schedules.addCharge', labelFallback: 'Add charge schedule',
     sublabelKey: 'commands.schedules.midnight', sublabelFallback: 'Midnight daily',
     icon: Icons.calendarPlus, category: 'schedules', type: 'action', variant: 'success',
     params: {
@@ -553,18 +580,18 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'remove_charge_schedule', command: 'remove_charge_schedule',
-    labelKey: 'commands.schedules.removeCharge', labelFallback: 'Remove Schedule',
+    labelKey: 'commands.schedules.removeCharge', labelFallback: 'Remove schedule',
     sublabelKey: 'commands.schedules.byId', sublabelFallback: 'By ID',
     icon: Icons.calendarMinus, category: 'schedules', type: 'input', variant: 'danger',
     inputConfig: {
       promptKey: 'commands.schedules.enterScheduleId',
       promptFallback: 'Enter schedule ID to remove:',
-      paramName: 'id',
+      paramName: 'id', validation: 'number', min: 0,
     },
   },
   {
     id: 'add_precondition_schedule', command: 'add_precondition_schedule',
-    labelKey: 'commands.schedules.addPrecondition', labelFallback: 'Add Precondition',
+    labelKey: 'commands.schedules.addPrecondition', labelFallback: 'Add precondition',
     sublabelKey: 'commands.schedules.morning', sublabelFallback: '7 AM daily',
     icon: Icons.calendarPlus, category: 'schedules', type: 'action', variant: 'success',
     params: {
@@ -574,13 +601,13 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'remove_precondition_schedule', command: 'remove_precondition_schedule',
-    labelKey: 'commands.schedules.removePrecondition', labelFallback: 'Remove Precondition',
+    labelKey: 'commands.schedules.removePrecondition', labelFallback: 'Remove precondition',
     sublabelKey: 'commands.schedules.byId', sublabelFallback: 'By ID',
     icon: Icons.calendarMinus, category: 'schedules', type: 'input', variant: 'danger',
     inputConfig: {
       promptKey: 'commands.schedules.enterScheduleId',
       promptFallback: 'Enter schedule ID to remove:',
-      paramName: 'id',
+      paramName: 'id', validation: 'number', min: 0,
     },
   },
 
@@ -595,7 +622,7 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'flash_lights', command: 'flash_lights',
-    labelKey: 'commands.alerts.flashLights', labelFallback: 'Flash Lights',
+    labelKey: 'commands.alerts.flashLights', labelFallback: 'Flash lights',
     icon: Icons.location, category: 'alerts', type: 'action',
   },
   {
@@ -606,7 +633,7 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'boombox_ping', command: 'boombox_ping',
-    labelKey: 'commands.alerts.locatePing', labelFallback: 'Locate Ping',
+    labelKey: 'commands.alerts.locatePing', labelFallback: 'Locate ping',
     sublabelKey: 'commands.alerts.findMyCar', sublabelFallback: 'Find my car',
     icon: Icons.locate, category: 'alerts', type: 'action',
   },
@@ -620,8 +647,8 @@ export const COMMANDS: CommandDef[] = [
       promptFallback: 'Enter vehicle coordinates',
       paramName: '',
       fields: [
-        { name: 'lat', labelKey: 'commands.homelink.latitude', labelFallback: 'Latitude', placeholder: '37.7749', type: 'text', validation: 'decimal' as const },
-        { name: 'lon', labelKey: 'commands.homelink.longitude', labelFallback: 'Longitude', placeholder: '-122.4194', type: 'text', validation: 'decimal' as const },
+        { name: 'lat', labelKey: 'commands.homelink.latitude', labelFallback: 'Latitude', placeholder: '37.7749', type: 'text', validation: 'decimal' as const, min: -90, max: 90 },
+        { name: 'lon', labelKey: 'commands.homelink.longitude', labelFallback: 'Longitude', placeholder: '-122.4194', type: 'text', validation: 'decimal' as const, min: -180, max: 180 },
       ],
       buildParams: (values) => ({ lat: values.lat, lon: values.lon }),
     },
@@ -632,7 +659,7 @@ export const COMMANDS: CommandDef[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'navigation_request', command: 'navigation_request',
-    labelKey: 'commands.nav.sendAddress', labelFallback: 'Send Address',
+    labelKey: 'commands.nav.sendAddress', labelFallback: 'Send address',
     sublabelKey: 'commands.nav.toVehicleNav', sublabelFallback: 'To vehicle nav',
     icon: Icons.navigation, category: 'navigation', type: 'input',
     inputConfig: {
@@ -649,17 +676,17 @@ export const COMMANDS: CommandDef[] = [
   {
     id: 'navigation_gps_request', command: 'navigation_gps_request',
     labelKey: 'commands.nav.sendGPS', labelFallback: 'Send GPS',
-    sublabelKey: 'commands.nav.coordinates', sublabelFallback: 'Lat / Lon',
+    sublabelKey: 'commands.nav.coordinates', sublabelFallback: 'Lat / lon',
     icon: Icons.location, category: 'navigation', type: 'input',
     inputConfig: {
       promptKey: 'commands.nav.sendGPSTitle',
       promptFallback: 'Enter GPS coordinates',
       paramName: '',
       fields: [
-        { name: 'lat', labelKey: 'commands.nav.latitude', labelFallback: 'Latitude', placeholder: '37.7749', type: 'text', validation: 'decimal' as const },
-        { name: 'lon', labelKey: 'commands.nav.longitude', labelFallback: 'Longitude', placeholder: '-122.4194', type: 'text', validation: 'decimal' as const },
+        { name: 'lat', labelKey: 'commands.nav.latitude', labelFallback: 'Latitude', placeholder: '37.7749', type: 'text', validation: 'decimal' as const, min: -90, max: 90 },
+        { name: 'lon', labelKey: 'commands.nav.longitude', labelFallback: 'Longitude', placeholder: '-122.4194', type: 'text', validation: 'decimal' as const, min: -180, max: 180 },
       ],
-      buildParams: (values) => ({ lat: parseFloat(values.lat), lon: parseFloat(values.lon), order: 0 }),
+      buildParams: (values) => ({ lat: Number(values.lat), lon: Number(values.lon), order: 0 }),
     },
   },
   {
@@ -669,7 +696,7 @@ export const COMMANDS: CommandDef[] = [
     icon: Icons.charging, category: 'navigation', type: 'input',
     inputConfig: {
       promptKey: 'commands.nav.enterScId',
-      promptFallback: 'Enter Supercharger ID:',
+      promptFallback: 'Enter supercharger ID:',
       // Supercharger IDs are integers — validate before the parseInt transform
       // so a non-numeric entry can't post `id: NaN` (which serialises to null).
       paramName: 'id', validation: 'number', transform: (v) => parseInt(v, 10),
@@ -682,7 +709,7 @@ export const COMMANDS: CommandDef[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'schedule_software_update', command: 'schedule_software_update',
-    labelKey: 'commands.software.scheduleUpdate', labelFallback: 'Schedule Update',
+    labelKey: 'commands.software.scheduleUpdate', labelFallback: 'Schedule update',
     sublabelKey: 'commands.software.installNow', sublabelFallback: 'Install now',
     icon: Icons.download, category: 'software', type: 'input', variant: 'success',
     inputConfig: {
@@ -700,7 +727,7 @@ export const COMMANDS: CommandDef[] = [
   },
   {
     id: 'cancel_software_update', command: 'cancel_software_update',
-    labelKey: 'commands.software.cancelUpdate', labelFallback: 'Cancel Update',
+    labelKey: 'commands.software.cancelUpdate', labelFallback: 'Cancel update',
     sublabelKey: 'commands.software.stopPending', sublabelFallback: 'Stop pending',
     icon: Icons.error, category: 'software', type: 'action', variant: 'danger',
   },
@@ -727,42 +754,42 @@ export const COMMANDS: CommandDef[] = [
   // ══════════════════════════════════════════════════════════════════════════
   {
     id: 'media_toggle_playback', command: 'media_toggle_playback',
-    labelKey: 'commands.media.playPause', labelFallback: 'Play / Pause',
+    labelKey: 'commands.media.playPause', labelFallback: 'Play / pause',
     icon: Icons.play, category: 'media', type: 'action',
   },
   {
     id: 'media_prev_track', command: 'media_prev_track',
-    labelKey: 'commands.media.prevTrack', labelFallback: 'Prev Track',
+    labelKey: 'commands.media.prevTrack', labelFallback: 'Prev track',
     icon: Icons.skipBack, category: 'media', type: 'action',
   },
   {
     id: 'media_next_track', command: 'media_next_track',
-    labelKey: 'commands.media.nextTrack', labelFallback: 'Next Track',
+    labelKey: 'commands.media.nextTrack', labelFallback: 'Next track',
     icon: Icons.skipForward, category: 'media', type: 'action',
   },
   {
     id: 'media_prev_fav', command: 'media_prev_fav',
-    labelKey: 'commands.media.prevFav', labelFallback: 'Prev Favorite',
+    labelKey: 'commands.media.prevFav', labelFallback: 'Prev favorite',
     icon: Icons.heart, category: 'media', type: 'action',
   },
   {
     id: 'media_next_fav', command: 'media_next_fav',
-    labelKey: 'commands.media.nextFav', labelFallback: 'Next Favorite',
+    labelKey: 'commands.media.nextFav', labelFallback: 'Next favorite',
     icon: Icons.heart, category: 'media', type: 'action',
   },
   {
     id: 'adjust_volume', command: 'adjust_volume',
-    labelKey: 'commands.media.volumeUp', labelFallback: 'Volume Up',
+    labelKey: 'commands.media.volumeUp', labelFallback: 'Volume up',
     icon: Icons.volumeLow, category: 'media', type: 'input',
     inputConfig: {
       promptKey: 'commands.media.enterVolume',
       promptFallback: 'Enter volume level (0.0 – 11.0):',
-      paramName: 'volume', defaultValue: '5',
+      paramName: 'volume', defaultValue: '5', validation: 'decimal', min: 0, max: 11,
     },
   },
   {
     id: 'media_volume_down', command: 'media_volume_down',
-    labelKey: 'commands.media.volumeDown', labelFallback: 'Volume Down',
+    labelKey: 'commands.media.volumeDown', labelFallback: 'Volume down',
     icon: Icons.volumeOff, category: 'media', type: 'action',
   },
 ];

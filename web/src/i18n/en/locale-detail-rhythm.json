@@ -1,0 +1,141 @@
+{
+  "rhythm": {
+    "title": "Driving rhythm",
+    "subtitle": "When your car actually gets driven",
+    "kpis": "Driving rhythm summary metrics",
+    "totalDrives": "Drives",
+    "favoriteSlot": "Favorite slot",
+    "driveCount": "{{count}} drives",
+    "weekdayShare": "Weekday share",
+    "weekendCount": "{{count}} weekend drives",
+    "predictability": "Predictability",
+    "of100": "of 100",
+    "punchcard": "Weekly punchcard",
+    "departures": "Typical departure",
+    "noDrives": "No drives in this period yet.",
+    "browseDrives": "Browse drives",
+    "day": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "sections": {
+      "consistency": "Departure consistency by weekday",
+      "method": "Coverage and methodology",
+      "hourly": "Hourly departure distribution",
+      "monthly": "Monthly rhythm and predictability trend",
+      "slots": "Strongest departure time slots",
+      "comparison": "Weekday and weekend comparison",
+      "punchcard": "Weekly punchcard"
+    },
+    "consistency": {
+      "title": "Departure consistency",
+      "subtitle": "Typical 24-hour departure and median circular deviation by local weekday in {{timezone}}.",
+      "empty": "No valid departures are available for weekday profiles.",
+      "sampleBadge": "{{count}}/{{minimum}}",
+      "typical": "Circular median",
+      "deviation": "Median deviation",
+      "moreNeeded": "Below sample floor"
+    },
+    "kpi": {
+      "timestampCoverage": "{{included}} of {{observed}} returned rows included",
+      "returnedCoverage": "{{count}} returned rows included",
+      "noFavorite": "No valid departure starts",
+      "predictabilityFloor": "Needs at least {{count}} valid drives"
+    },
+    "method": {
+      "timezoneFallback": "The requested local timezone was invalid, so UTC is used for every weekday, hour, day, and month grouping.",
+      "timeSemantics": "The selected local dates are requested as exact instants in {{timezone}} (start inclusive, end exclusive). Returned instants are then grouped consistently by weekday, hour, day, and month in {{timezone}}.",
+      "timestampRules": "Blank or malformed starts are invalid; valid starts after the page’s frozen analysis clock are counted as future and excluded.",
+      "predictability": "Predictability is 100 minus normalized Shannon entropy across 24 local start hours. Overall and monthly scores require at least {{count}} valid starts.",
+      "consistency": "Typical departures use a circular median so midnight-adjacent times stay close. Median circular deviation requires {{count}} starts on that weekday.",
+      "distance": "Distance stays in canonical SI meters in the model. Only finite non-negative values feed distance totals, and display conversion follows your unit preference.",
+      "scope": "These are descriptive departure patterns. They do not identify causes or predict a specific future trip.",
+      "title": "Coverage & methodology",
+      "historyComplete": "Complete selected history",
+      "windowLabel": "{{start}} – {{end}} selected date scope",
+      "returned": "Rows returned",
+      "included": "Valid starts included",
+      "invalid": "Invalid timestamps",
+      "future": "Future timestamps",
+      "empty": "Coverage will appear when the selected date scope returns drives.",
+      "noIncluded": "Returned rows were accounted for, but none had an eligible non-future start.",
+      "observedSpan": "Included span: {{first}} to {{last}} · distance available for {{measured}} of {{included}} included drives.",
+      "coverage": "All {{count}} drives in the selected dates were fetched across API pages and accounted for."
+    },
+    "loading": "Loading driving rhythm evidence",
+    "hourly": {
+      "drives": "Drive starts",
+      "distance": "Logged distance",
+      "title": "Hourly departure distribution",
+      "subtitle": "Valid starts by local hour; the distance line shows measured SI distance converted to your display unit.",
+      "aria": "Drive starts and logged distance across all 24 local departure hours",
+      "hour": "Local hour",
+      "share": "Drive share",
+      "empty": "No valid departure hours are available in this window.",
+      "driveValue": "{{count}} drives",
+      "colHour": "Hour"
+    },
+    "monthly": {
+      "drives": "Valid drives",
+      "predictability": "Predictability score",
+      "driveValue": "{{count}} drives",
+      "scoreValue": "{{score}} of 100",
+      "title": "Monthly rhythm & predictability",
+      "subtitle": "Drive volume and local-hour concentration by month; scores require at least {{count}} valid drives in that month.",
+      "aria": "Monthly valid drive counts and departure-hour predictability scores",
+      "month": "Local month",
+      "activeDays": "Active local days",
+      "activeSlots": "Active weekday-hour slots",
+      "distance": "Logged distance",
+      "empty": "No valid local months are available for a trend.",
+      "colMonth": "Month"
+    },
+    "slots": {
+      "title": "Strongest time slots",
+      "subtitle": "Ranked by valid start count; ties resolve Monday-first, then by earlier local hour.",
+      "empty": "No occupied weekday-hour slots are available to rank.",
+      "rank": "#{{rank}}",
+      "slotLabel": "{{day}} at {{hour}}:00",
+      "evidence": "{{share}}% of valid starts · {{distance}} logged across {{measured}} measured drives",
+      "supported": "sample supported",
+      "sparse": "below {{count}}-drive floor"
+    },
+    "comparison": {
+      "weekday": "Weekdays",
+      "weekend": "Weekends",
+      "title": "Weekday vs weekend",
+      "normalized": "Calendar-day normalized",
+      "subtitle": "Per-day rates use every selected calendar day, including days with no drive.",
+      "empty": "No valid drives are available for a weekday/weekend comparison.",
+      "shareValue": "{{share}}%",
+      "drives": "Valid drives",
+      "perDay": "Drives / selected day",
+      "activeDays": "Active local days",
+      "averageDistance": "Avg measured distance",
+      "coverage": "{{active}} active of {{calendar}} selected calendar days · {{distance}} logged",
+      "noCalendarScope": "Selected calendar-day coverage is unavailable; raw counts remain valid.",
+      "interpretation": "Compare the per-selected-day rates rather than raw shares when judging weekday and weekend frequency."
+    },
+    "weeklyPunchcard": {
+      "scroll": "Weekly drive-start counts; scroll to see all hours",
+      "day": "Day",
+      "timezone": "24-hour departures grouped in {{timezone}}",
+      "aria": "Drive starts by local weekday and hour; strongest slot {{slot}}",
+      "cell": "{{day}} {{hour}} · {{count}} drives"
+    },
+    "brief": {
+      "departureUnit": "Minutes after local midnight; circular 24-hour median, not elapsed duration.",
+      "coverage": "Observed-history coverage",
+      "coverageScope": "Included non-future starts define the observed span; the selected date scope may be wider.",
+      "calendarDenominator": "{{count}} selected local calendar days define the rate denominator.",
+      "window": "{{start}}–{{end}} · {{timezone}}",
+      "description": "Departure timing in the selected local-time window; timestamp exclusions and evidence floors remain explicit.",
+      "source": "Returned calendar drive history; local departure timestamps."
+    }
+  }
+}

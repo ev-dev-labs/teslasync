@@ -2,11 +2,11 @@
  * AchievementBadge — behaviour + hardening contract.
  *
  * The badge renders one lifetime achievement in two mutually-exclusive states:
- *   - unlocked → a bright gold tile, the emoji at full opacity, no progress ring,
+ *   - unlocked → a semantic success tile, the emoji at full opacity, no progress ring,
  *     and the localized "✓ Unlocked" caption (never a "%" figure);
  *   - locked   → a muted tile with a <ProgressRing> behind a dimmed/grayscaled
- *     emoji and a "{pct}%" caption. When progress ≥ 0.8 the tile pulses and the
- *     ring switches from grey (#6b7280) to amber (#eab308).
+ *     emoji and a "{pct}%" caption. When progress ≥ 0.8 the tile and ring use
+ *     static semantic warning emphasis, without decorative looping.
  *
  * These tests also pin the null-safety hardening this file added. Achievements
  * come from a partial `stats?.achievements` payload, so the API's non-null
@@ -26,14 +26,17 @@
  * SummaryStats / FleetCostKpis convention). The component has no interactive
  * controls, so there is no userEvent surface to exercise.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 
 import { AchievementBadge, type AchievementData } from './AchievementBadge';
 
+const translations = vi.hoisted(() => new Map<string, string>());
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => (typeof fallback === 'string' ? fallback : key),
+    t: (key: string, fallback?: string) =>
+      translations.get(key) ?? (typeof fallback === 'string' ? fallback : key),
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -55,8 +58,56 @@ function makeAchievement(overrides: Partial<AchievementData> = {}): AchievementD
 }
 
 describe('AchievementBadge', () => {
+  beforeEach(() => translations.clear());
+
+  describe('achievement identity localization', () => {
+    it.each([
+      'first-drive', 'century', 'thousand', 'ten-thousand', 'fifty-thousand',
+      'hundred-thousand', 'first-charge', 'megawatt', 'gigawatt', 'hundred-saved',
+      'thousand-saved', 'five-thousand-saved', 'ton-co2', 'tree-planter',
+      'marathon', 'earth-orbit', 'supercharger',
+    ])('localizes the known ID %s for visible and accessible names without changing source data', (id) => {
+      translations.set(`lifetime.achievementNames.${id}`, 'Localized milestone');
+      const achievement = makeAchievement({
+        id, name: 'Source milestone', description: 'Save $100 or drive 100 km',
+        target: 123, current: 42, progress: 0.856,
+      });
+      const original = { ...achievement };
+      render(<AchievementBadge achievement={achievement} />);
+
+      expect(screen.getByText('Localized milestone')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Localized milestone' })).toBeInTheDocument();
+      expect(screen.getByText('Save $100 or drive 100 km')).toBeInTheDocument();
+      expect(screen.getByText('86%')).toBeInTheDocument();
+      expect(achievement).toEqual(original);
+    });
+
+    it('retains source text when a known identity has no translation', () => {
+      render(<AchievementBadge achievement={makeAchievement({ id: 'century', name: 'Source century' })} />);
+      expect(screen.getByText('Source century')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Source century' })).toBeInTheDocument();
+    });
+
+    it.each(['custom-milestone', 'toString', '__proto__'])('does not translate unknown ID %s or arbitrary weekday text', (id) => {
+      translations.set(`lifetime.achievementNames.${id}`, 'Not source text');
+      translations.set('common.days.long.monday', 'Localized Monday');
+      render(<AchievementBadge achievement={makeAchievement({ id, name: 'Monday', description: 'My Monday trip' })} />);
+      expect(screen.getByText('Monday')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Monday' })).toBeInTheDocument();
+      expect(screen.getByText('My Monday trip')).toBeInTheDocument();
+      expect(screen.queryByText('Not source text')).not.toBeInTheDocument();
+    });
+
+    it('preserves the missing-name fallback even for a known ID', () => {
+      translations.set('lifetime.achievementNames.century', 'Localized milestone');
+      render(<AchievementBadge achievement={makeAchievement({ id: 'century', name: '' })} />);
+      expect(screen.getByText('—')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Drive 10,000 km' })).toBeInTheDocument();
+    });
+  });
+
   describe('unlocked state', () => {
-    it('shows the gold tile, the "✓ Unlocked" caption, and no ring or percentage', () => {
+    it('shows the success tile, the "✓ Unlocked" caption, and no ring or percentage', () => {
       const { container } = render(
         <AchievementBadge
           achievement={makeAchievement({
@@ -77,8 +128,8 @@ describe('AchievementBadge', () => {
       expect(container.querySelector('svg')).toBeNull();
       expect(screen.queryByText(/%$/)).not.toBeInTheDocument();
 
-      // Gold tile + full-opacity, non-grayscaled emoji labelled by its name.
-      expect(container.firstChild).toHaveClass('bg-yellow-500/[0.08]');
+      // Success tile + full-opacity, non-grayscaled emoji labelled by its name.
+      expect(container.firstChild).toHaveClass('bg-[var(--semantic-success-bg)]');
       const icon = screen.getByRole('img', { name: 'Century' });
       expect(icon).toHaveTextContent('💯');
       expect(icon).not.toHaveClass('grayscale');
@@ -103,7 +154,7 @@ describe('AchievementBadge', () => {
       expect(screen.queryByText('✓ Unlocked')).not.toBeInTheDocument();
 
       // Muted tile + grayscaled, half-opacity emoji.
-      expect(container.firstChild).toHaveClass('bg-white/[0.03]');
+      expect(container.firstChild).toHaveClass('bg-[var(--surface-2)]');
       const icon = screen.getByRole('img', { name: 'Road Warrior' });
       expect(icon).toHaveClass('grayscale');
       expect(icon).toHaveClass('opacity-50');
@@ -115,24 +166,47 @@ describe('AchievementBadge', () => {
       expect(screen.getByText('86%')).toBeInTheDocument();
     });
 
-    it('pulses and paints the ring amber when near completion (progress ≥ 0.8)', () => {
+    it.each([0.8, 0.9, 1])('uses static warning emphasis at progress %s without claiming it is unlocked', (progress) => {
       const { container } = render(
-        <AchievementBadge achievement={makeAchievement({ progress: 0.9 })} />,
+        <AchievementBadge achievement={makeAchievement({ progress })} />,
       );
 
-      expect(container.firstChild).toHaveClass('animate-pulse');
-      expect(container.querySelector('circle[stroke="#eab308"]')).not.toBeNull();
-      expect(screen.getByText('90%')).toBeInTheDocument();
+      expect(container.firstChild).toHaveClass(
+        'bg-[var(--semantic-warning-bg)]', 'border-[var(--semantic-warning-border)]',
+      );
+      expect(container.firstChild).not.toHaveClass('animate-pulse');
+      expect(container.querySelector('circle[stroke="var(--semantic-warning)"]')).not.toBeNull();
+      expect(screen.getByText(`${Math.round(progress * 100)}%`)).toBeInTheDocument();
+      expect(screen.queryByText('✓ Unlocked')).not.toBeInTheDocument();
     });
 
-    it('keeps the grey ring and no pulse for mid progress', () => {
+    it.each([0.4, 0.799])('keeps the neutral ring and no pulse below the near-complete threshold at %s', (progress) => {
       const { container } = render(
-        <AchievementBadge achievement={makeAchievement({ progress: 0.4 })} />,
+        <AchievementBadge achievement={makeAchievement({ progress })} />,
       );
 
       expect(container.firstChild).not.toHaveClass('animate-pulse');
-      expect(container.querySelector('circle[stroke="#6b7280"]')).not.toBeNull();
-      expect(container.querySelector('circle[stroke="#eab308"]')).toBeNull();
+      expect(container.firstChild).toHaveClass('bg-[var(--surface-2)]');
+      expect(container.querySelector('circle[stroke="var(--text-secondary)"]')).not.toBeNull();
+      expect(container.querySelector('circle[stroke="var(--semantic-warning)"]')).toBeNull();
+    });
+
+    it('replaces near-complete emphasis with success when the achievement unlocks', () => {
+      const { container, rerender } = render(
+        <AchievementBadge achievement={makeAchievement({ progress: 0.9 })} />,
+      );
+
+      rerender(
+        <AchievementBadge achievement={makeAchievement({ progress: 1, unlocked: true })} />,
+      );
+
+      expect(container.firstChild).toHaveClass(
+        'bg-[var(--semantic-success-bg)]', 'border-[var(--semantic-success-border)]',
+      );
+      expect(container.firstChild).not.toHaveClass('bg-[var(--semantic-warning-bg)]', 'animate-pulse');
+      expect(screen.getByText('✓ Unlocked')).toBeInTheDocument();
+      expect(screen.queryByText(/%$/)).not.toBeInTheDocument();
+      expect(container.querySelector('svg')).toBeNull();
     });
   });
 
@@ -145,7 +219,7 @@ describe('AchievementBadge', () => {
       expect(screen.getByText('0%')).toBeInTheDocument();
       expect(container.textContent).not.toContain('NaN');
       // The ring's dash offset must be a real number, never "NaN".
-      const progressCircle = container.querySelector('circle[stroke="#6b7280"]');
+      const progressCircle = container.querySelector('circle[stroke="var(--text-secondary)"]');
       expect(progressCircle?.getAttribute('stroke-dashoffset')).not.toContain('NaN');
     });
 

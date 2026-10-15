@@ -15,6 +15,28 @@ import {
 
 const NOW_MS = Date.parse('2026-08-08T12:00:00.000Z');
 
+describe('certificate timestamp evidence', () => {
+  it('keeps UTC hash days and trend dates independent of display day boundaries', () => {
+    const source = passport({
+      issued_at: '2026-08-08T00:30:00Z',
+      first_observed_at: '2024-01-02T23:30:00-08:00',
+    });
+    const result = analyzeBatteryPassport(source, NOW_MS);
+    expect(result.hashFacts.issuedAtDay).toBe('2026-08-08');
+    expect(result.hashFacts.firstObservedDay).toBe('2024-01-03');
+    expect(result.trend.points.map(point => point.date)).toEqual(['2026-05-01', '2026-08-01']);
+    expect(toBatteryPassportCertificate(source).issued_at).toBe(source.issued_at);
+  });
+
+  it.each(['not-a-date', ''])('does not manufacture hash days from unavailable timestamps: %s', value => {
+    const source = passport({ issued_at: value, first_observed_at: value });
+    const result = analyzeBatteryPassport(source, NOW_MS);
+    expect(result.hashFacts.issuedAtDay).toBeNull();
+    expect(result.hashFacts.firstObservedDay).toBeNull();
+    expect(toBatteryPassportCertificate(source).issued_at).toBe(value);
+  });
+});
+
 function passport(
   overrides: Partial<BatteryPassport> = {},
 ): BatteryPassport {
@@ -273,6 +295,95 @@ describe('grade reconstruction', () => {
 });
 
 describe('thermal and whole-certificate analysis', () => {
+  it('withholds sentinel capacity without rewriting field, hash or export evidence', () => {
+    const source = passport({
+      soh_pct: 0,
+      health_grade: ' n/a ',
+      capacity_kwh: 0,
+      equivalent_full_cycles: 0,
+      fast_charge_ratio: 0,
+      avg_charge_limit_pct: 0,
+    });
+    const snapshot = structuredClone(source);
+    const result = analyzeBatteryPassport(source, NOW_MS);
+
+    expect(result.metrics).toMatchObject({
+      sohPct: null,
+      capacityKwh: null,
+      capacityRatio: null,
+      originalCapacityKwh: 75,
+      equivalentFullCycles: 0,
+      fastChargeRatio: 0,
+      avgChargeLimitPct: 0,
+      invalidNumericFieldCount: 2,
+    });
+    expect(result.support.coreFields.value).toBe(4);
+    expect(result.hashFacts.capacityKwh).toBe(0);
+    expect(toBatteryPassportCertificate(source).capacity_kwh).toBe(0);
+    expect(source).toEqual(snapshot);
+  });
+
+  it('preserves measured zero outside the no-estimate sentinel', () => {
+    const result = analyzeBatteryPassport(passport({
+      soh_pct: 0,
+      health_grade: 'F',
+      capacity_kwh: 0,
+      equivalent_full_cycles: 0,
+      fast_charge_ratio: 0,
+      avg_charge_limit_pct: 0,
+    }), NOW_MS);
+
+    expect(result.metrics).toMatchObject({
+      sohPct: 0,
+      capacityKwh: 0,
+      capacityRatio: 0,
+      equivalentFullCycles: 0,
+      fastChargeRatio: 0,
+      avgChargeLimitPct: 0,
+      invalidNumericFieldCount: 0,
+    });
+    expect(result.grade).toMatchObject({ status: 'available', score: 0, grade: 'F' });
+    expect(result.support.coreFields.value).toBe(6);
+  });
+
+  it.each([
+    undefined, null, Number.NaN, Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY, -1, 501, '0',
+  ])('rejects missing or invalid capacity %s separately from zero', (value) => {
+    const source = Object.assign(passport(), { capacity_kwh: value });
+    const result = analyzeBatteryPassport(source, NOW_MS);
+
+    expect(result.metrics.capacityKwh).toBeNull();
+    expect(result.metrics.capacityRatio).toBeNull();
+    expect(result.metrics.sohPct).toBe(91.2);
+    expect(result.metrics.invalidNumericFieldCount).toBe(1);
+    expect(toBatteryPassportCertificate(source).capacity_kwh).toBe(value);
+  });
+
+  it('retains fractional capacity even when SoH is unknown', () => {
+    const source = passport({
+      soh_pct: 0,
+      health_grade: 'N/A',
+      capacity_kwh: 0.25,
+    });
+    const result = analyzeBatteryPassport(source, NOW_MS);
+
+    expect(result.metrics.capacityKwh).toBe(0.25);
+    expect(result.metrics.capacityRatio).toBeCloseTo(0.25 / 75);
+    expect(result.hashFacts.capacityKwh).toBe(0.25);
+    expect(toBatteryPassportCertificate(source).capacity_kwh).toBe(0.25);
+  });
+
+  it.each([-0.25, 0, 0.25])('preserves valid signed trend changes %s', (change) => {
+    const result = analyzeBatteryPassportTrend([
+      { date: '2026-08-01', soh_pct: 90.25 },
+      { date: '2026-08-02', soh_pct: 90.25 + change },
+    ], NOW_MS);
+
+    expect(result.diagnostics.startToEndChangePctPoints).toBe(change);
+    expect(result.accounting.categories.included).toBe(2);
+  });
+
   it('reports the exact thermal sum without normalization', () => {
     const result = analyzeBatteryPassportThermal({
       cold_pct: 33.3,

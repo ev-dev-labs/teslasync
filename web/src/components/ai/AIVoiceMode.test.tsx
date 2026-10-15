@@ -34,6 +34,8 @@
 // mounted, so assertions read the defaults.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { createInstance } from 'i18next'
+import * as reactI18next from 'react-i18next'
 import {
   render,
   screen,
@@ -333,6 +335,95 @@ describe('AIVoiceMode — AI-off render gate', () => {
     expect(
       screen.getByRole('button', { name: SEND_BUTTON }),
     ).toBeInTheDocument()
+    const transcript = screen.getByTestId('ai-feature-voice-mode-transcript')
+    expect(transcript.tagName).toBe('DIV')
+    expect(transcript).toHaveAttribute('aria-live', 'polite')
+    expect(transcript).toHaveAttribute('aria-label', 'Voice transcript')
+    expect(transcript).toHaveClass(
+      'rounded-panel', 'bg-[var(--surface-1)]',
+      'border-[var(--border-default)]', 'min-h-14',
+      'whitespace-pre-wrap', 'break-words',
+    )
+    const mic = screen.getByRole('button', { name: 'Start listening' })
+    const toggle = screen.getByRole('button', { name: 'Mute spoken replies' })
+    expect(mic.parentElement).toHaveClass('flex-wrap', 'min-w-0')
+    for (const control of [mic, toggle]) {
+      expect(control).toHaveClass(
+        'min-h-11', 'min-w-11', 'md:min-h-9',
+        'h-auto', 'max-w-full', 'whitespace-normal',
+      )
+      const icon = control.querySelector('svg')
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      expect(icon).toHaveAttribute('focusable', 'false')
+      expect(icon).toHaveClass('shrink-0')
+      expect(control.querySelector('span.break-words')).not.toBeNull()
+    }
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  })
+})
+
+describe('AIVoiceMode — qualified browser processing disclosure', () => {
+  it.each([true, false])(
+    'discloses possible remote recognition before any action (speech support: %s)',
+    (supported) => {
+      mockUseSettings.mockReturnValue(enabledSettings())
+      if (!supported) removeSpeechRecognition()
+
+      render(<AIVoiceMode />)
+
+      const disclosure = screen.getByText(/TeslaSync sends transcribed text/i)
+      expect(disclosure).toHaveTextContent(
+        'TeslaSync sends transcribed text, not microphone audio, to the assistant.',
+      )
+      expect(disclosure).toHaveTextContent(
+        "Your browser's speech recognition service may process audio remotely; on-device recognition is not guaranteed.",
+      )
+      expect(disclosure).not.toHaveTextContent(/both stay on this device/i)
+      expect(recognitions).toHaveLength(0)
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+      expect(speakMock).not.toHaveBeenCalled()
+      expect(screen.getByRole('button', { name: SEND_BUTTON })).toBeDisabled()
+    },
+  )
+
+  it('uses the localized disclosure instead of the old on-device assurance key', async () => {
+    const i18n = createInstance()
+    const localizedDisclosure =
+      'TeslaSync sendet nur transkribierten Text an den Assistenten. Der Spracherkennungsdienst Ihres Browsers kann Audio auf entfernten Servern verarbeiten; eine Verarbeitung auf diesem Gerät ist nicht garantiert.'
+    await i18n.init({
+      lng: 'de',
+      fallbackLng: 'en',
+      resources: {
+        en: {
+          translation: {
+            voiceMode: {
+              description: 'Voice input and playback both stay on this device.',
+            },
+          },
+        },
+        de: {
+          translation: {
+            voiceMode: { processingDisclosure: localizedDisclosure },
+          },
+        },
+      },
+    })
+    vi.spyOn(reactI18next, 'useTranslation').mockReturnValue(
+      Object.assign([i18n.t, i18n, true] as [typeof i18n.t, typeof i18n, boolean], {
+        t: i18n.t,
+        i18n,
+        ready: true,
+      }),
+    )
+    mockUseSettings.mockReturnValue(enabledSettings())
+
+    render(<AIVoiceMode />)
+
+    expect(screen.getByText(localizedDisclosure)).toBeInTheDocument()
+    expect(screen.queryByText(/both stay on this device/i)).not.toBeInTheDocument()
+    expect(recognitions).toHaveLength(0)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(speakMock).not.toHaveBeenCalled()
   })
 })
 
@@ -345,6 +436,9 @@ describe('AIVoiceMode — speech-to-text transcript', () => {
     await act(async () => {
       fireEvent.click(micButton)
     })
+    const stopMic = screen.getByRole('button', { name: 'Stop listening' })
+    expect(stopMic).toHaveClass('min-h-11', 'min-w-11', 'whitespace-normal')
+    expect(stopMic.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
 
     // The engine re-fires the same index with a refined transcript until
     // it flips to isFinal. The old handler appended every fire, so this
@@ -443,6 +537,10 @@ describe('AIVoiceMode — send wiring', () => {
     expect(parsed.message).toBe('how full is my battery')
     expect(typeof parsed.session_id).toBe('string')
     expect(parsed.session_id.length).toBeGreaterThan(0)
+    expect(parsed).toEqual({
+      message: 'how full is my battery',
+      session_id: expect.any(String),
+    })
 
     const headers = new Headers(init?.headers)
     expect(headers.get('Accept')).toBe('text/event-stream')
@@ -543,6 +641,8 @@ describe('AIVoiceMode — text-to-speech playback', () => {
     // Muting cancels any in-flight utterance and flips the toggle state.
     expect(cancelMock).toHaveBeenCalled()
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    expect(toggle).toHaveAccessibleName('Unmute spoken replies')
+    expect(toggle.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
 
     await dictate([{ transcript: 'say hello', isFinal: true }])
     const sendButton = screen.getByRole('button', { name: SEND_BUTTON })
@@ -578,6 +678,9 @@ describe('AIVoiceMode — error and unsupported states', () => {
 
     const errorEl = screen.getByTestId('ai-feature-voice-mode-stt-error')
     expect(errorEl).toHaveTextContent(/Voice input failed/i)
+    expect(errorEl).toHaveAttribute('role', 'status')
+    expect(errorEl).toHaveTextContent('no-speech')
+    expect(errorEl).toHaveClass('text-[var(--semantic-danger)]')
     // The mic reverts to the start control once the error resets listening.
     expect(
       screen.getByTestId('ai-feature-voice-mode-mic-start'),
@@ -618,6 +721,11 @@ describe('AIVoiceMode — stop, persistence, and lifecycle', () => {
     })
 
     const stopButton = await screen.findByTestId('ai-feature-voice-mode-stop')
+    expect(stopButton).toHaveAccessibleName('Stop Helix')
+    expect(stopButton).toHaveClass(
+      'min-h-11', 'min-w-11', 'md:min-h-9', 'whitespace-normal',
+    )
+    expect(stopButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
     const cancelsBefore = cancelMock.mock.calls.length
     await act(async () => {
       fireEvent.click(stopButton)

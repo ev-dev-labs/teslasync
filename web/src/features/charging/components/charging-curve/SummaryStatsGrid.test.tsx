@@ -162,10 +162,22 @@ describe('SummaryStatsGrid — loading state', () => {
 
     // GlassPanel tags each panel root with data-print-card — one per card.
     expect(container.querySelectorAll('[data-print-card]')).toHaveLength(LABELS.length);
-    // Two Skeletons per panel, each animated.
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(LABELS.length * 2);
+    // Historical case title retained; each card now has two static placeholders.
+    const placeholders = screen.getByRole('status').querySelectorAll(
+      '[class~="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(placeholders.length).toBe(LABELS.length * 2);
+    placeholders.forEach((placeholder) => expect(placeholder).toHaveAttribute('aria-hidden', 'true'));
+    container.querySelectorAll('[data-print-card]').forEach((panel) => {
+      expect(panel.querySelectorAll('.h-3.w-16')).toHaveLength(1);
+      expect(panel.querySelectorAll('.h-7.w-20.mt-2')).toHaveLength(1);
+    });
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     // Loading takes precedence over data: no metric label/value leaks through.
     expect(screen.queryByText('Total Sessions')).toBeNull();
     expect(screen.queryByText('523.40 kWh')).toBeNull();
+    for (const label of LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
   });
 });

@@ -34,9 +34,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { render, screen, act, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import english from '@/i18n/en.json';
 import type { DriveDetail, DrivePosition } from '@/types/driving';
 
 /* ── react-i18next: deterministic English-fallback rendering ─────────────── */
@@ -166,6 +167,7 @@ interface MapStubProps {
   onSeekToIndex: (i: number) => void;
   reduceMotion?: boolean;
   height?: number | string;
+  embedded?: boolean;
 }
 interface ChartPoint {
   index: number;
@@ -183,8 +185,8 @@ interface ChartsStubProps {
 interface ElevationPoint {
   index: number;
   distance: number;
-  elevation: number;
-  speed: number;
+  elevation: number | null;
+  speed: number | null;
 }
 interface ElevationStubProps {
   data: ElevationPoint[];
@@ -217,8 +219,8 @@ vi.mock('@/features/trips/components/TripReplayCharts', () => ({
     return <div data-testid="trip-replay-charts" />;
   },
 }));
-vi.mock('@/components/charts/ElevationProfile', () => ({
-  ElevationProfile: (props: ElevationStubProps) => {
+vi.mock('@/features/trips/components/TripReplayElevation', () => ({
+  TripReplayElevation: (props: ElevationStubProps) => {
     elevationProps.last = props;
     return <div data-testid="elevation-profile" />;
   },
@@ -231,7 +233,16 @@ vi.mock('@/components/data-display/PlaybackControls', () => ({
   },
 }));
 
-import TripReplayPage from './TripReplayPage';
+import TripReplayPage from '@/features/trips/pages/TripReplayPage';
+
+it('offers keyboard-accessible power sign help in the canonical replay header', () => {
+  renderPage();
+  const help = screen.getByRole('button', { name: 'More info: Trip Replay' });
+  act(() => help.focus());
+  expect(help).toHaveFocus();
+  expect(help).toHaveAccessibleDescription(english.help.replay.power);
+  expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
+});
 
 /* ── Fixtures ────────────────────────────────────────────────────────────── */
 function makePos(overrides: Partial<DrivePosition> = {}): DrivePosition {
@@ -376,7 +387,7 @@ describe('TripReplayPage — page state branches', () => {
 
     // Drive-derived KPIs still render (they do not depend on the GPS trail)…
     expect(screen.getByText('Distance')).toBeInTheDocument();
-    expect(screen.getByText('32.00')).toBeInTheDocument();
+    expect(screen.getByText('32.00 km')).toBeInTheDocument();
     // …beside an explicit empty state instead of the replay surfaces.
     expect(screen.getByText(/No GPS data available for this drive/)).toBeInTheDocument();
     expect(screen.queryByTestId('trip-replay-map')).toBeNull();
@@ -406,22 +417,45 @@ describe('TripReplayPage — drive summary KPIs', () => {
   it('converts SI drive aggregates to the user unit (km) and formats them', () => {
     renderPage();
 
-    expect(screen.getByText('32.00')).toBeInTheDocument(); // 32000 m → 32 km
+    expect(screen.getByText('32.00 km')).toBeInTheDocument(); // 32000 m → 32 km
     expect(screen.getByText('45m')).toBeInTheDocument(); // 2700 s → 45 min
-    expect(screen.getByText('72.00')).toBeInTheDocument(); // 20 m/s → 72 km/h
-    expect(screen.getByText('108.00')).toBeInTheDocument(); // 30 m/s → 108 km/h
+    expect(screen.getByText('72.00 km/h')).toBeInTheDocument(); // 20 m/s → 72 km/h
+    expect(screen.getByText('108.00 km/h')).toBeInTheDocument(); // 30 m/s → 108 km/h
     expect(screen.getByText('82% → 68%')).toBeInTheDocument();
-    // Efficiency = (82-68)/32 * 1000 = 437.5, unit reflects the distance unit.
-    expect(screen.getByText('437.50')).toBeInTheDocument();
-    expect(screen.getByText('Wh/km')).toBeInTheDocument();
+    // Recorded energy, not SOC percentage, is the Wh numerator: 7200 / 32.
+    expect(screen.getByText('225.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('225.00 Wh/km')).toHaveTextContent(/Wh\/km$/);
+  });
+
+  it.each([
+    [null, '—'],
+    [0, '0.00 Wh/km'],
+  ] as const)('keeps recorded energy %s distinct without hiding replay sections', (energyUsedWh, expected) => {
+    driveState.current = loadedQuery({ energyUsedWh });
+    const bytes = JSON.stringify(driveState.current.data);
+    renderPage();
+
+    const summary = screen.getByRole('region', { name: 'Drive Summary' });
+    const value = within(summary).getByText('Efficiency').closest('[data-operational-metric]')?.querySelector('[data-operational-value]');
+    expect(value).toHaveTextContent(expected);
+    expect(value?.textContent).toBe(expected);
+    if (energyUsedWh === null) {
+      expect(within(summary).queryByText(/Wh\/km$/)).not.toBeInTheDocument();
+    } else {
+      expect(within(summary).getByText('0.00 Wh/km')).toBeInTheDocument();
+    }
+    expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
+    expect(screen.getByTestId('elevation-profile')).toBeInTheDocument();
+    expect(screen.getByTestId('trip-replay-charts')).toBeInTheDocument();
+    expect(JSON.stringify(driveState.current.data)).toBe(bytes);
   });
 
   it('derives elevation gain/loss from the SI position trail', () => {
     renderPage();
 
     // 1000→1050 (+50), 1050→1023 (-27), 1023→1088 (+65) → gain 115 / loss 27.
-    expect(screen.getByText('115')).toBeInTheDocument();
-    expect(screen.getByText('27')).toBeInTheDocument();
+    expect(screen.getByText('115 m')).toBeInTheDocument();
+    expect(screen.getByText('27 m')).toBeInTheDocument();
   });
 });
 
@@ -449,7 +483,11 @@ describe('TripReplayPage — live-position stats + seek', () => {
 
     expect(mapProps.last?.currentIndex).toBe(0);
     expect(mapProps.last?.positions).toHaveLength(4);
-    expect(mapProps.last?.height).toBe(440);
+    expect(mapProps.last?.height).toBe('100%');
+    expect(mapProps.last?.embedded).toBe(true);
+    expect(screen.getByTestId('trip-replay-map').parentElement).toHaveClass(
+      'h-[320px]', 'sm:h-[380px]', 'lg:h-[440px]',
+    );
     expect(chartsProps.last?.currentIndex).toBe(0);
     expect(chartsProps.last?.speedUnit).toBe('km/h');
     expect(elevationProps.last?.distanceUnit).toBe('km');
@@ -469,7 +507,7 @@ describe('TripReplayPage — live-position stats + seek', () => {
 
     // Index 2 → battery 78%, speed 30 m/s → 108 km/h.
     expect(screen.getByText('78%')).toBeInTheDocument();
-    expect(screen.getByText('108.00 km/h')).toBeInTheDocument();
+    expect(within(screen.getByTestId('replay-current-stats')).getByText('108.00 km/h')).toBeInTheDocument();
     expect(screen.queryByText('80%')).toBeNull();
   });
 
@@ -552,9 +590,10 @@ describe('TripReplayPage — miles preference', () => {
     renderPage();
 
     // 32000 m → 19.88 mi; efficiency label reflects the distance unit.
-    expect(screen.getByText('19.88')).toBeInTheDocument();
-    expect(screen.getByText('Wh/mi')).toBeInTheDocument();
-    expect(screen.queryByText('Wh/km')).toBeNull();
+    expect(screen.getByText('19.88 mi')).toBeInTheDocument();
+    expect(screen.getByText('362.10 Wh/mi')).toBeInTheDocument(); // 7200 Wh / (32000 m in mi)
+    expect(screen.getByText('362.10 Wh/mi')).toHaveTextContent(/Wh\/mi$/);
+    expect(screen.queryByText(/Wh\/km$/)).toBeNull();
     // Speed leaves the page in mph.
     expect(chartsProps.last?.speedUnit).toBe('mph');
     expect(elevationProps.last?.distanceUnit).toBe('mi');

@@ -8,6 +8,11 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, WidgetBigNumber } from './shared';
 import type { EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
+import { useDataState } from '@/hooks/useDataState';
+import { combineDataStates, type DataState } from '@/api/dataState';
+import { safeArray } from '@/lib/safeArray';
+import { gaugeTone } from '@/lib/tokens';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ── Severity → visual mapping ────────────────────────────────────────
 
@@ -18,9 +23,9 @@ const SEVERITY_ICON = {
 } as const;
 
 const SEVERITY_COLOR = {
-  info:     '#3b82f6',
-  warning:  '#f59e0b',
-  critical: '#ef4444',
+  info:     gaugeTone.info,
+  warning:  gaugeTone.warning,
+  critical: gaugeTone.danger,
 } as const;
 
 type Severity = 'info' | 'warning' | 'critical';
@@ -52,7 +57,7 @@ function buildSecurityTitle(
   t: TFn,
 ): string {
   const parts: string[] = [];
-  if (event.locked !== null) {
+  if (event.locked != null) {
     parts.push(
       event.locked
         ? t('widget.securityLocked', 'Vehicle locked')
@@ -69,14 +74,14 @@ function buildSecurityTitle(
       typeof event.doorState === 'string' ? event.doorState : t('widget.securityDoorOpen', 'Open');
     parts.push(`${t('widget.securityDoor', 'Door')}: ${doorLabel}`);
   }
-  if (event.guestMode !== null) {
+  if (event.guestMode != null) {
     parts.push(
       event.guestMode
         ? t('widget.securityGuestOn', 'Guest mode on')
         : t('widget.securityGuestOff', 'Guest mode off'),
     );
   }
-  if (event.valetModeEnabled !== null) {
+  if (event.valetModeEnabled != null) {
     parts.push(
       event.valetModeEnabled
         ? t('widget.securityValetOn', 'Valet mode on')
@@ -97,6 +102,7 @@ function CompactView({
   worstSeverity: Severity;
   t: TFn;
 }) {
+  const { fmtInt } = useNumberFormatting();
   const badgeLabel = worstSeverity === 'critical'
     ? t('widget.auditCritical', 'Critical')
     : worstSeverity === 'warning'
@@ -105,7 +111,7 @@ function CompactView({
 
   return (
     <WidgetBigNumber
-      value={totalEvents24h}
+      value={fmtInt(totalEvents24h)}
       label={t('widget.auditEvents24h', 'Events (24h)')}
       badge={{ text: badgeLabel, variant: worstSeverity === 'critical' ? 'error' : worstSeverity === 'warning' ? 'warning' : 'neutral' }}
     />
@@ -116,84 +122,101 @@ function CompactView({
 
 export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
-  const vid = vehicleId ?? vehicles?.[0]?.id;
-  const vidStr = vid != null ? String(vid) : '';
+  const vehiclesQuery = useVehicles();
+  const vid = vehicleId ?? safeArray(vehiclesQuery.data)[0]?.id;
+  const vidStr = Number.isSafeInteger(vid) && Number(vid) > 0 ? String(vid) : '';
 
+  const auditQuery = useAuditLogs();
   const {
     data: auditLogs,
-    isLoading: auditLoading,
     isFetching: auditFetching,
     isStale: auditStale,
     isError: auditIsError,
-    error: auditError,
-    dataUpdatedAt: auditUpdatedAt,
     refetch: auditRefetch,
-  } = useAuditLogs();
+  } = auditQuery;
 
+  const securityQuery = useSecurityEvents(vidStr);
   const {
     data: securityEvents,
-    isLoading: secLoading,
     isFetching: secFetching,
     isStale: secStale,
     isError: secIsError,
-    error: secError,
-    dataUpdatedAt: secUpdatedAt,
     refetch: secRefetch,
-  } = useSecurityEvents(vidStr);
+  } = securityQuery;
 
-  const isLoading = auditLoading || secLoading;
   const isFetching = auditFetching || secFetching;
   const isStale = auditStale || secStale;
   const isError = auditIsError || secIsError;
-  // Surface a genuine initial-load failure as a real error panel instead of a
-  // misleading "no events" empty state (TanStack keeps `error` null while cached
-  // data is present, so a transient background-refetch failure still shows data).
-  const error = auditError ?? secError;
-  const updatedAt = Math.max(auditUpdatedAt ?? 0, secUpdatedAt ?? 0);
 
   const isCompact = size.cols <= 1;
 
   const handleRefresh = useCallback(() => {
     auditRefetch();
-    secRefetch();
-  }, [auditRefetch, secRefetch]);
+    if (vidStr) secRefetch();
+    if (vehicleId == null) void vehiclesQuery.refetch?.();
+  }, [auditRefetch, secRefetch, vidStr, vehicleId, vehiclesQuery.refetch]);
+
+  const auditState = useDataState(auditQuery, { provenance: 'historical' });
+  const discoveryState = useDataState(vehiclesQuery);
+  const securityState = useDataState(
+    vidStr ? securityQuery : {
+      ...vehiclesQuery,
+      data: vehiclesQuery.data !== undefined ? [] : undefined,
+    },
+    { provenance: 'historical', unavailable: !vidStr && vehiclesQuery.data !== undefined },
+  );
+  const sourceStates: DataState<unknown>[] = [
+    auditState,
+    ...(vidStr || (vehicleId == null && vehiclesQuery.data === undefined) ? [securityState] : []),
+  ];
+  if (vehicleId == null && sourceStates.some((state) => state.hasData)) sourceStates.push(discoveryState);
+  const dataState = {
+    ...combineDataStates(sourceStates),
+    data: { auditLogs, securityEvents },
+    hasData: sourceStates.some((state) => state.hasData),
+    retry: handleRefresh,
+  };
 
   const feedItems = useMemo<EventFeedItem[]>(() => {
-    const logs = (auditLogs ?? []).map((entry) => {
+    const logs = safeArray(auditLogs).map((entry) => {
       const sev = inferAuditSeverity(entry.action);
       return {
         id: `audit-${entry.id}`,
         icon: SEVERITY_ICON[sev],
         title: entry.action ?? '—',
         subtitle: [entry.resource, entry.details].filter(Boolean).join(' · ') || '—',
-        timestamp: entry.createdAt ?? new Date(0).toISOString(),
+        timestamp: entry.createdAt ?? '',
         color: SEVERITY_COLOR[sev],
         severity: sev,
+        wrap: true,
       } satisfies EventFeedItem;
     });
 
-    const events = (securityEvents ?? []).map((event) => {
+    const events = (vidStr ? safeArray(securityEvents) : []).map((event) => {
       const sev = inferSecuritySeverity(event);
       return {
         id: `sec-${event.id}`,
         icon: <ShieldAlert className="h-3.5 w-3.5" />,
         title: buildSecurityTitle(event, t),
         subtitle: t('widget.auditSecurityEvent', 'Security event'),
-        timestamp: event.createdAt ?? new Date(0).toISOString(),
+        timestamp: event.createdAt ?? '',
         color: SEVERITY_COLOR[sev],
         severity: sev,
+        wrap: true,
       } satisfies EventFeedItem;
     });
 
     return [...logs, ...events];
-  }, [auditLogs, securityEvents, t]);
+  }, [auditLogs, securityEvents, t, vidStr]);
 
   // Compute 24h stats for compact view
   const { totalEvents24h, worstSeverity } = useMemo(() => {
     const now = Date.now();
     const dayAgo = now - 24 * 60 * 60 * 1000;
-    const recent = feedItems.filter((item) => new Date(item.timestamp).getTime() >= dayAgo);
+    const recent = feedItems.filter((item) => {
+      const at = new Date(item.timestamp).getTime();
+      return at >= dayAgo && at <= now;
+    });
     let worst: Severity = 'info';
     for (const item of recent) {
       if (item.severity === 'critical') { worst = 'critical'; break; }
@@ -204,11 +227,10 @@ export default function AuditLogWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.auditLog', 'Audit Log')}
-      icon={<FileSearch className="h-3.5 w-3.5 text-neon-cyan" />}
-      loading={isLoading}
-      error={error ? String(error) : null}
-      updatedAt={updatedAt}
+      title={t('widget.auditLog', 'Audit log')}
+      icon={<FileSearch className="h-3.5 w-3.5 text-[var(--text-secondary)]" />}
+      dataState={dataState}
+      updatedAt={dataState.updatedAt ?? 0}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}

@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Compass, Home, Search } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
-import { Button, GlassPanel } from '@/components/ui'
+import { PageLayout } from '@/components/layout'
+import { Button, BUTTON_BASE, GlassPanel, SectionTitle, Text, Caption } from '@/components/ui'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry'
 import { closestRoutes } from '@/lib/closestRoute'
@@ -17,7 +17,7 @@ import { closestRoutes } from '@/lib/closestRoute'
  * instead of an empty Outlet.
  *
  * Behavior:
- * - Logs the unmatched path via console.warn (helps spot 404 storms in dev)
+ * - Logs the unmatched path in development (helps spot 404 storms in dev)
  * - Suggests the closest matching routes via Levenshtein distance
  * - Offers escape hatches: back, dashboard, command palette
  */
@@ -29,7 +29,10 @@ export default function NotFoundPage() {
   usePageTitle(t('notFound.title', 'Page not found'))
 
   useEffect(() => {
-    console.warn('[404]', location.pathname + location.search)
+    // Preserve the development diagnostic without exposing URLs in production.
+    if (import.meta.env.DEV) {
+      console.warn('[404]', location.pathname + location.search)
+    }
   }, [location.pathname, location.search])
 
   const suggestions = useMemo(
@@ -56,41 +59,41 @@ export default function NotFoundPage() {
   }, [])
 
   return (
-    <PageContainer title={t('notFound.title', 'Page not found')}>
-      <GlassPanel className="mx-auto max-w-2xl px-6 py-12 text-center">
+    <PageLayout title={t('notFound.title', 'Page not found')}>
+      <GlassPanel className="mx-auto min-w-0 w-full max-w-2xl p-4 text-center sm:p-6">
         <Compass
           className="mx-auto mb-4 h-12 w-12 text-[var(--text-muted)]"
           aria-hidden="true"
         />
-        <h2 className="text-2xl font-semibold text-[var(--text-primary)]">
+        <SectionTitle>
           {t('notFound.heading', "We couldn't find that page")}
-        </h2>
-        <p className="mt-2 break-all text-[var(--text-secondary)]">
+        </SectionTitle>
+        <Text as="p" variant="body" className="mt-2 break-all">
           {t('notFound.body', {
             defaultValue: "{{path}} doesn't match any route.",
             path: location.pathname,
           })}
-        </p>
+        </Text>
 
         {suggestions.length > 0 && (
           <nav
             className="mt-6"
             aria-label={t('notFound.suggestionsLabel', 'Suggested pages')}
           >
-            <p className="mb-2 text-sm text-[var(--text-muted)]">
+            <Caption as="p" className="mb-2">
               {t('notFound.didYouMean', 'Did you mean:')}
-            </p>
-            <ul className="flex flex-col items-center gap-2">
+            </Caption>
+            <ul className="flex min-w-0 flex-col items-center gap-2">
               {suggestions.map((s) => (
-                <li key={s.path}>
+                <li key={s.path} className="min-w-0 max-w-full">
                   <Link
                     to={s.path}
-                    className="rounded px-1 text-cyan-300 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                    className={`${BUTTON_BASE} min-h-11 max-w-full flex-wrap px-3 py-2 text-[var(--text-primary)] hover:underline forced-colors:text-[LinkText]`}
                   >
                     {t(s.i18nKey, s.label)}
-                    <span className="ml-2 text-xs text-[var(--text-muted)]">
+                    <Caption as="span" className="max-w-full break-all">
                       {s.path}
-                    </span>
+                    </Caption>
                   </Link>
                 </li>
               ))}
@@ -101,6 +104,8 @@ export default function NotFoundPage() {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button
             variant="ghost"
+            wrapLabel
+            className="min-h-11 w-full sm:w-auto"
             onClick={handleGoBack}
             icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
           >
@@ -108,6 +113,8 @@ export default function NotFoundPage() {
           </Button>
           <Button
             variant="primary"
+            wrapLabel
+            className="min-h-11 w-full sm:w-auto"
             onClick={handleGoHome}
             icon={<Home className="h-4 w-4" aria-hidden="true" />}
           >
@@ -115,6 +122,8 @@ export default function NotFoundPage() {
           </Button>
           <Button
             variant="ghost"
+            wrapLabel
+            className="min-h-11 w-full sm:w-auto"
             onClick={openCommandPalette}
             icon={<Search className="h-4 w-4" aria-hidden="true" />}
           >
@@ -122,6 +131,6 @@ export default function NotFoundPage() {
           </Button>
         </div>
       </GlassPanel>
-    </PageContainer>
+    </PageLayout>
   )
 }

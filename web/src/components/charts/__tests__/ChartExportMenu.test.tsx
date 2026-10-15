@@ -66,6 +66,51 @@ describe('ChartExportMenu', () => {
     expect(items).toHaveLength(3);
   });
 
+  it('keeps mobile targets, wrapping labels and primitive focus outlines', () => {
+    render(
+      <ChartExportMenu
+        onExportPNG={onExportPNG}
+        onExportSVG={onExportSVG}
+        onCopyImage={onCopyImage}
+        onExportCsv={vi.fn()}
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Export chart' });
+    expect(trigger).toHaveClass('h-11', 'w-11', 'md:h-7', 'md:w-7');
+    expect(trigger.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    openMenu();
+    expect(screen.getByRole('menu')).toHaveClass('end-0', 'shadow-e2');
+    for (const item of screen.getAllByRole('menuitem')) {
+      expect(item).toHaveClass(
+        'min-h-11',
+        'md:min-h-9',
+        'whitespace-normal',
+        'text-start',
+        'focus-visible:outline-2',
+        'forced-colors:focus-visible:outline-[Highlight]',
+      );
+      expect(item).not.toHaveClass('focus-visible:outline-none');
+      expect(item.querySelector('.break-words')).toBeInTheDocument();
+      expect(item.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
+  it('retains focus on the trigger when Escape dismisses its menu', () => {
+    render(
+      <ChartExportMenu
+        onExportPNG={onExportPNG}
+        onExportSVG={onExportSVG}
+        onCopyImage={onCopyImage}
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Export chart' });
+    trigger.focus();
+    openMenu();
+    fireEvent.keyDown(trigger, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
   it('includes a CSV item when onExportCsv is supplied (rendered first)', () => {
     const onExportCsv = vi.fn();
     render(
@@ -108,6 +153,93 @@ describe('ChartExportMenu', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Save as SVG' }));
     expect(onExportSVG).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('offers CSV, PNG and copy for a CSS heatmap without inventing an SVG export', () => {
+    const onExportCsv = vi.fn();
+    render(
+      <figure>
+        <div data-html2canvas-ignore="true">
+          <svg aria-hidden="true" />
+          <ChartExportMenu
+            onExportPNG={onExportPNG}
+            onExportSVG={onExportSVG}
+            onCopyImage={onCopyImage}
+            onExportCsv={onExportCsv}
+          />
+        </div>
+        <div aria-label="Charging heatmap">Populated heatmap tiles</div>
+      </figure>,
+    );
+    openMenu();
+    expect(screen.queryByRole('menuitem', { name: 'Save as SVG' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'Save as PNG' })).toBeEnabled();
+    expect(screen.getByRole('menuitem', { name: 'Copy image to clipboard' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
+    expect(onExportCsv).toHaveBeenCalledOnce();
+    expect(onExportSVG).not.toHaveBeenCalled();
+  });
+
+  it('preserves real SVG bar exports and rechecks the plot when reopening', () => {
+    const { rerender } = render(
+      <figure>
+        <ChartExportMenu
+          onExportPNG={onExportPNG}
+          onExportSVG={onExportSVG}
+          onCopyImage={onCopyImage}
+        />
+        <svg className="recharts-surface"><rect width="10" height="20" /></svg>
+      </figure>,
+    );
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Save as SVG' }));
+    expect(onExportSVG).toHaveBeenCalledOnce();
+    rerender(
+      <figure>
+        <ChartExportMenu
+          onExportPNG={onExportPNG}
+          onExportSVG={onExportSVG}
+          onCopyImage={onCopyImage}
+        />
+        <div>Populated heatmap tiles</div>
+      </figure>,
+    );
+    openMenu();
+    expect(screen.queryByRole('menuitem', { name: 'Save as SVG' })).toBeNull();
+  });
+
+  it('omits SVG when a standalone caller supplies no SVG handler', () => {
+    render(<ChartExportMenu onExportPNG={onExportPNG} onCopyImage={onCopyImage} />);
+    openMenu();
+    expect(screen.getAllByRole('menuitem')).toHaveLength(2);
+    expect(screen.queryByRole('menuitem', { name: 'Save as SVG' })).toBeNull();
+  });
+
+  it('reports an unavailable SVG if the plot disappears while the menu is open', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const { container } = render(
+        <ToastProvider>
+          <figure>
+            <ChartExportMenu
+              onExportPNG={onExportPNG}
+              onExportSVG={onExportSVG}
+              onCopyImage={onCopyImage}
+            />
+            <svg className="recharts-surface"><rect width="10" height="20" /></svg>
+          </figure>
+        </ToastProvider>,
+      );
+      openMenu();
+      container.querySelector('.recharts-surface')?.remove();
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Save as SVG' }));
+      expect(await screen.findByText('Could not prepare the SVG export.')).toBeInTheDocument();
+      expect(onExportSVG).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Export chart' })).toBeEnabled();
+      expect(consoleError).toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('shows progress and blocks duplicate export requests while preparing a file', async () => {

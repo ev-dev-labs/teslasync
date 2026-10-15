@@ -1,8 +1,22 @@
 import type { ReactNode } from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from 'i18next';
 
 import type { Drive } from '@/types/driving';
+import type { DrivingRhythm } from '../lib/drivingRhythm';
+
+type SectionState = {
+  isLoading: boolean;
+  error: unknown;
+  onRetry: () => void;
+};
+
+type SectionProbe = {
+  summary: DrivingRhythm;
+  state: SectionState;
+  retained?: boolean;
+};
 
 const {
   pageTitleMock,
@@ -11,14 +25,20 @@ const {
   useHistoryMock,
   rangeOptionsMock,
   sharedRange,
+  brokenSectionMock,
+  layoutPropsMock,
 } = vi.hoisted(() => ({
   pageTitleMock: vi.fn(),
-  sectionPropsMock: vi.fn(),
+  sectionPropsMock: vi.fn<(id: string, probe: SectionProbe) => void>(),
   selectedVehicleMock: vi.fn(),
   useHistoryMock: vi.fn(),
   rangeOptionsMock: vi.fn(),
   sharedRange: { set: (_range: { start: string; end: string }) => {} },
+  brokenSectionMock: vi.fn<(id: string) => void>(),
+  layoutPropsMock: vi.fn(),
 }));
+
+vi.mock('@/lib/errorReporter', () => ({ reportFrontendError: vi.fn() }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -45,6 +65,7 @@ vi.mock('@/hooks/usePageTitle', () => ({
 
 vi.mock('@/hooks/useRangeState', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
+  const calendarHelpers = await vi.importActual<typeof import('@/lib/dateRange')>('@/lib/dateRange');
   return {
     useRangeState: (options: unknown) => {
       rangeOptionsMock(options);
@@ -53,9 +74,11 @@ vi.mock('@/hooks/useRangeState', async () => {
         end: '2026-08-07',
       });
       sharedRange.set = setRange;
+      const { calendarRangeToInstants } = calendarHelpers;
       return {
         ...range,
         timezone: 'America/Los_Angeles',
+        ...calendarRangeToInstants({ startDate: range.start, endDate: range.end, timezone: 'America/Los_Angeles' }),
         setRange,
       };
     },
@@ -90,29 +113,35 @@ vi.mock('@/components/forms', async () => {
 });
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     title,
     subtitle,
     actions,
     children,
+    query,
+    busy,
   }: {
     title: string;
     subtitle: string;
     actions: ReactNode;
     children: ReactNode;
-  }) => (
-    <main>
-      <h1>{title}</h1>
-      <p>{subtitle}</p>
-      {actions}
-      {children}
-    </main>
-  ),
+    query: { refetch: () => void };
+    busy?: boolean;
+  }) => {
+    layoutPropsMock({ query, busy });
+    return (
+      <main>
+        <h1>{title}</h1>
+        <p>{subtitle}</p>
+        <button type="button" aria-label="Refresh page" onClick={() => { void query.refetch(); }}>
+          Refresh page
+        </button>
+        {actions}
+        {children}
+      </main>
+    );
+  },
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock('@/components/motion', () => ({
-  FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@/features/onboarding/components/NoVehicleSelected', () => ({
@@ -127,12 +156,13 @@ vi.mock('../components/driving-rhythm', () => {
     error: unknown;
     onRetry: () => void;
   };
-  type Summary = { total: number };
   const renderSection = (
     testId: string,
-    summary: Summary,
+    summary: DrivingRhythm,
     state: State,
+    retained?: boolean,
   ) => {
+    brokenSectionMock(testId);
     const status = state.error
       ? 'error'
       : state.isLoading
@@ -140,38 +170,42 @@ vi.mock('../components/driving-rhythm', () => {
         : summary.total === 0
           ? 'empty'
           : 'ready';
-    sectionPropsMock(testId, { summary, state });
+    sectionPropsMock(testId, { summary, state, retained });
     return <section data-testid={testId}>{status}</section>;
   };
 
   return {
-    DrivingRhythmKpis: (props: Summary & State & { summary: Summary }) =>
+    DrivingRhythmKpis: (props: State & { summary: DrivingRhythm; retained?: boolean }) =>
       renderSection('driving-rhythm-kpis', props.summary, {
         isLoading: props.isLoading,
         error: props.error,
         onRetry: props.onRetry,
-      }),
-    WeeklyPunchcard: (props: { summary: Summary; state: State }) =>
+      }, props.retained),
+    WeeklyPunchcard: (props: { summary: DrivingRhythm; state: State }) =>
       renderSection('driving-rhythm-punchcard', props.summary, props.state),
-    HourlyDistribution: (props: { summary: Summary; state: State }) =>
+    HourlyDistribution: (props: { summary: DrivingRhythm; state: State }) =>
       renderSection('driving-rhythm-hourly', props.summary, props.state),
     WeekdayWeekendComparison: (props: {
-      summary: Summary;
+      summary: DrivingRhythm;
       state: State;
     }) =>
       renderSection('driving-rhythm-comparison', props.summary, props.state),
-    MonthlyRhythmTrend: (props: { summary: Summary; state: State }) =>
+    MonthlyRhythmTrend: (props: { summary: DrivingRhythm; state: State }) =>
       renderSection('driving-rhythm-monthly', props.summary, props.state),
-    DepartureConsistency: (props: { summary: Summary; state: State }) =>
+    DepartureConsistency: (props: { summary: DrivingRhythm; state: State }) =>
       renderSection('driving-rhythm-consistency', props.summary, props.state),
-    StrongestSlots: (props: { summary: Summary; state: State }) =>
+    StrongestSlots: (props: { summary: DrivingRhythm; state: State }) =>
       renderSection('driving-rhythm-slots', props.summary, props.state),
     DrivingRhythmMethodology: (props: {
-      summary: Summary;
+      summary: DrivingRhythm;
       state: State;
     }) => renderSection('driving-rhythm-method', props.summary, props.state),
   };
 });
+
+vi.mock('../components/operationalbrief-a-m/DrivingRhythmBrief', async () => ({
+  DrivingRhythmBrief: (await import('../components/driving-rhythm')).DrivingRhythmKpis,
+}));
 
 import DrivingRhythmPage from './DrivingRhythmPage';
 
@@ -232,8 +266,17 @@ const SECTION_IDS = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  brokenSectionMock.mockReset();
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
   useHistoryMock.mockReturnValue(query({ data: [drive(1)] }));
+});
+
+beforeAll(async () => {
+  await i18n.init({ lng: 'en', fallbackLng: 'en', resources: {} });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('DrivingRhythmPage', () => {
@@ -246,7 +289,8 @@ describe('DrivingRhythmPage', () => {
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
-    expect(useHistoryMock).toHaveBeenCalledWith('42', '2025-01-01', '2026-08-07');
+    // Exact Los Angeles window: local midnight start, exclusive next-day end.
+    expect(useHistoryMock).toHaveBeenCalledWith('42', '2025-01-01T08:00:00.000Z', '2026-08-08T07:00:00.000Z');
     expect(rangeOptionsMock).toHaveBeenCalledWith({
       persistKey: 'driving-rhythm.range',
       defaultPresetId: 'all',
@@ -262,7 +306,7 @@ describe('DrivingRhythmPage', () => {
     expect(screen.queryByTestId('driving-rhythm-range')).not.toBeInTheDocument();
 
     await waitFor(() =>
-      expect(useHistoryMock).toHaveBeenLastCalledWith('42', '2026-07-01', '2026-07-31'),
+      expect(useHistoryMock).toHaveBeenLastCalledWith('42', '2026-07-01T07:00:00.000Z', '2026-08-01T07:00:00.000Z'),
     );
   });
 
@@ -280,10 +324,10 @@ describe('DrivingRhythmPage', () => {
   });
 
   it.each([
-    ['loading', query({ isLoading: true })],
+    ['loading', query({ data: undefined, isLoading: true })],
     [
       'error',
-      query({ isError: true, error: new Error('rhythm unavailable') }),
+      query({ data: undefined, isError: true, error: new Error('rhythm unavailable') }),
     ],
   ])('propagates the %s state to every mounted section', (expected, result) => {
     useHistoryMock.mockReturnValue(result);
@@ -303,10 +347,116 @@ describe('DrivingRhythmPage', () => {
     }
   });
 
+  it('announces active initial fetching without paused feedback or an empty result', () => {
+    useHistoryMock.mockReturnValue(query({
+      data: undefined, isPending: true, isLoading: true,
+      isFetching: true, fetchStatus: 'fetching',
+    }));
+    render(<DrivingRhythmPage />);
+
+    expect(layoutPropsMock).toHaveBeenLastCalledWith(expect.objectContaining({ busy: true }));
+    expect(screen.queryByTestId('driving-rhythm-initial-paused')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('loading');
+    }
+  });
+
+  it('keeps paused initial evidence unresolved and retries only its source through recovery', () => {
+    const refetch = vi.fn();
+    const paused = query({
+      data: undefined, isPending: true, isLoading: false,
+      isFetching: false, fetchStatus: 'paused', refetch,
+    });
+    useHistoryMock.mockReturnValue(paused);
+    const { rerender } = render(<DrivingRhythmPage />);
+
+    const notice = screen.getByTestId('driving-rhythm-initial-paused');
+    expect(notice).toHaveTextContent('Driving Rhythm');
+    expect(notice).toHaveTextContent('The initial evidence query is paused; no empty result is inferred.');
+    expect(notice).not.toHaveTextContent(/offline|failed|service unavailable|connection lost/i);
+    expect(layoutPropsMock).toHaveBeenLastCalledWith({ query: paused, busy: false });
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('loading');
+    }
+    expect(sectionPropsMock.mock.calls.every(([, probe]) => probe.state.error == null)).toBe(true);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh page' }));
+    expect(refetch).toHaveBeenCalledTimes(2);
+
+    useHistoryMock.mockReturnValue(query({
+      data: undefined, isPending: true, isLoading: true,
+      isFetching: true, fetchStatus: 'fetching', refetch,
+    }));
+    rerender(<DrivingRhythmPage />);
+    expect(screen.queryByTestId('driving-rhythm-initial-paused')).not.toBeInTheDocument();
+    expect(layoutPropsMock).toHaveBeenLastCalledWith(expect.objectContaining({ busy: true }));
+
+    useHistoryMock.mockReturnValue(query({ data: [], isSuccess: true, refetch }));
+    rerender(<DrivingRhythmPage />);
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('empty');
+    }
+    expect(screen.queryByTestId('driving-rhythm-initial-paused')).not.toBeInTheDocument();
+    expect(layoutPropsMock).toHaveBeenLastCalledWith(expect.objectContaining({ busy: false }));
+  });
+
+  it('retains successful zero-distance evidence through refresh failure and recovery', () => {
+    const refetch = vi.fn();
+    const rows = [{ ...drive(1), distanceM: 0 }];
+    useHistoryMock.mockReturnValue(query({ data: rows, refetch }));
+    const { rerender } = render(<DrivingRhythmPage />);
+    useHistoryMock.mockReturnValue(query({
+      data: rows, refetch, isError: true, error: new Error('Synthetic refresh failure'),
+    }));
+    rerender(<DrivingRhythmPage />);
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    const brief = sectionPropsMock.mock.calls.filter(([id]) => id === SECTION_IDS[0]).at(-1)?.[1];
+    expect(brief?.summary).toMatchObject({ total: 1, totalDistanceM: 0, distanceMeasuredDrives: 1 });
+    expect(brief?.retained).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useHistoryMock.mockReturnValue(query({ data: rows, refetch, isSuccess: true }));
+    rerender(<DrivingRhythmPage />);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(sectionPropsMock.mock.calls.filter(([id]) => id === SECTION_IDS[0]).at(-1)?.[1].retained).toBe(false);
+    expect(layoutPropsMock).toHaveBeenLastCalledWith(expect.objectContaining({ query: expect.objectContaining({ refetch }) }));
+  });
+
+  it('retains an authoritative empty window through refresh failure and recovery', () => {
+    const refetch = vi.fn();
+    useHistoryMock.mockReturnValue(query({ data: [], isSuccess: true, refetch }));
+    const { rerender } = render(<DrivingRhythmPage />);
+
+    useHistoryMock.mockReturnValue(query({
+      data: [], isError: true, error: new Error('Synthetic refresh failure'), refetch,
+    }));
+    rerender(<DrivingRhythmPage />);
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('empty');
+    }
+    expect(screen.queryByTestId('driving-rhythm-initial-paused')).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useHistoryMock.mockReturnValue(query({ data: [], isSuccess: true, refetch }));
+    rerender(<DrivingRhythmPage />);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('empty');
+    }
+  });
+
   it('shares one retry callback across all error sections', () => {
     const refetch = vi.fn();
     useHistoryMock.mockReturnValue(
       query({
+        data: undefined,
         isError: true,
         error: new Error('offline'),
         refetch,
@@ -332,9 +482,116 @@ describe('DrivingRhythmPage', () => {
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent(
       'Driving Rhythm',
     );
-    expect(useHistoryMock).toHaveBeenCalledWith(undefined, '2025-01-01', '2026-08-07');
+    expect(useHistoryMock).toHaveBeenCalledWith(undefined, '2025-01-01T08:00:00.000Z', '2026-08-08T07:00:00.000Z');
     expect(
       screen.queryByTestId('driving-rhythm-punchcard'),
     ).not.toBeInTheDocument();
+  });
+
+  it.each(SECTION_IDS)('isolates and retries a render failure in %s without losing neighboring evidence', (failedId) => {
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    brokenSectionMock.mockImplementation((id) => {
+      if (id === failedId) throw new Error('Synthetic rhythm widget failure');
+    });
+    render(<DrivingRhythmPage />);
+
+    expect(screen.queryByTestId(failedId)).not.toBeInTheDocument();
+    expect(screen.getByText('Synthetic rhythm widget failure')).toBeInTheDocument();
+    for (const id of SECTION_IDS.filter((id) => id !== failedId)) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+    brokenSectionMock.mockReset();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+    expect(useHistoryMock.mock.results[0]?.value.refetch).not.toHaveBeenCalled();
+    expect(errorLog).toHaveBeenCalled();
+  });
+
+  it.each([
+    { case: 'failed refresh', result: { isError: true, error: new Error('Synthetic refresh failure') } },
+    { case: 'paused refresh', result: { fetchStatus: 'paused' } },
+  ])('retains historical analysis during $case and exposes source retry', ({ result }) => {
+    const refetch = vi.fn();
+    useHistoryMock.mockReturnValue(query({ data: [drive(1)], refetch, ...result }));
+    render(<DrivingRhythmPage />);
+
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+    const brief = sectionPropsMock.mock.calls.find(([id]) => id === 'driving-rhythm-kpis')?.[1];
+    expect(brief?.retained).toBe(true);
+    expect(brief?.state.error).toBeNull();
+    expect(brief?.summary).toMatchObject({ total: 1, totalDistanceM: 10_000, predictability: null });
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/connection lost|paused offline/i)).not.toBeInTheDocument();
+  });
+
+  it('preserves local DST grouping, chronological months, SI zero and missing-distance coverage', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2025-11-03T08:00:00Z'));
+    const rows = [
+      { ...drive(1), startTs: '2025-11-02T09:30:00Z', distanceM: null },
+      { ...drive(2), startTs: '2025-03-09T10:30:00Z', distanceM: 1250 },
+      { ...drive(3), startTs: '2025-11-02T08:30:00Z', distanceM: 0 },
+      { ...drive(4), startTs: 'invalid', distanceM: 500 },
+      { ...drive(5), startTs: '2025-11-04T08:00:00Z', distanceM: 500 },
+    ];
+    useHistoryMock.mockReturnValue(query({ data: rows }));
+    render(<DrivingRhythmPage />);
+
+    const summary = sectionPropsMock.mock.calls.find(([id]) => id === 'driving-rhythm-method')?.[1]?.summary;
+    expect(summary).toMatchObject({
+      total: 3, observed: 5, excluded: 2, invalidTimestampCount: 1,
+      futureTimestampCount: 1, totalDistanceM: 1250, distanceMeasuredDrives: 2,
+      invalidDistanceCount: 1, timeZone: 'America/Los_Angeles', predictability: null,
+      favorite: { day: 0, hour: 1, count: 2 },
+    });
+    expect(summary?.matrix[0]?.[1]).toBe(2);
+    expect(summary?.matrix[0]?.[3]).toBe(1);
+    expect(summary?.monthly.map(({ month, drives }) => ({ month, drives }))).toEqual([
+      { month: '2025-03', drives: 1 }, { month: '2025-11', drives: 2 },
+    ]);
+    expect(summary?.strongestSlots[0]).toMatchObject({
+      day: 0, hour: 1, count: 2, distanceM: 0, measuredDistanceDrives: 1, qualified: false,
+    });
+    expect(rows[0]?.distanceM).toBeNull();
+    expect(rows[2]?.distanceM).toBe(0);
+  });
+
+  it('keeps the timestamp eligibility clock frozen across shared range changes', () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2025-01-01T08:00:00Z'));
+    useHistoryMock.mockReturnValue(query({
+      data: [drive(1), { ...drive(2), startTs: '2025-01-01T08:00:01Z' }],
+    }));
+    render(<DrivingRhythmPage />);
+    clock.mockReturnValue(Date.parse('2025-01-03T08:00:00Z'));
+    act(() => sharedRange.set({ start: '2025-01-01', end: '2025-01-03' }));
+    const summary = sectionPropsMock.mock.calls.filter(([id]) => id === 'driving-rhythm-method').at(-1)?.[1]?.summary;
+    expect(summary).toMatchObject({ total: 1, futureTimestampCount: 1, analysisNowMs: Date.parse('2025-01-01T08:00:00Z') });
+  });
+
+  it.each([
+    { case: 'below predictability floor', count: 4, expected: null },
+    { case: 'at predictability floor', count: 5, expected: 100 },
+  ])('preserves source-derived scores $case without inventing missing values', ({ count, expected }) => {
+    useHistoryMock.mockReturnValue(query({
+      data: Array.from({ length: count }, (_, index) => ({
+        ...drive(index + 1), startTs: '2025-01-01T08:00:00Z', distanceM: 0,
+      })),
+    }));
+    render(<DrivingRhythmPage />);
+    const summary = sectionPropsMock.mock.calls.find(([id]) => id === 'driving-rhythm-method')?.[1]?.summary;
+    expect(summary?.predictability).toBe(expected);
+    expect(summary?.monthly[0]?.predictability).toBe(expected);
+    expect(summary?.dayProfiles.find(({ day }) => day === 3)).toMatchObject({
+      drives: count, medianDepartureMinute: 0, consistencyDeviationS: 0, consistencySupported: true,
+    });
+    expect(summary?.dayProfiles.find(({ day }) => day === 1)).toMatchObject({
+      drives: 0, medianDepartureMinute: null, consistencyDeviationS: null, consistencySupported: false,
+    });
+    expect(summary?.strongestSlots[0]).toMatchObject({ count, qualified: true, distanceM: 0, measuredDistanceDrives: count });
   });
 });

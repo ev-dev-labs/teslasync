@@ -1,0 +1,9 @@
+{
+  "scope": "Only this new pair; no inherited dirty paths claimed or released",
+  "released": true,
+  "paths": [
+    "web\\e2e\\operationalbrief-contracts\\specialized-diagnostics.supported.spec.ts",
+    "web\\e2e\\operationalbrief-contracts\\specialized-diagnostics.supported.fixtures.ts"
+  ],
+  "releasedUtc": "2026-10-07T06:26:37.8180278Z"
+}

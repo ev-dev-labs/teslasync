@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 
 /**
  * Static, in-process source of suggestion chips shown on an empty
@@ -71,13 +71,15 @@ export function SuggestedPrompts({ onPick }: SuggestedPromptsProps) {
         const translated = t(s.i18nKey, s.defaultValue);
         const text = translated.trim() ? translated : s.defaultValue;
         return (
-          <li key={s.i18nKey}>
+          <li key={s.i18nKey} className="min-w-0 max-w-full">
             <Button
+              type="button"
               variant="ghost"
               size="sm"
+              wrapLabel
               onClick={() => onPick(text)}
-              icon={<Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
-              className="rounded-full border border-[var(--border-subtle)] hover:border-purple-500/30 hover:text-purple-300"
+              icon={<Icon icon={Sparkles} size="sm" />}
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0 rounded-full border border-[var(--border-subtle)] hover:border-[var(--control-border-hover)]"
             >
               {text}
             </Button>

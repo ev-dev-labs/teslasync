@@ -150,8 +150,8 @@ describe('WidgetDetailCard — badges', () => {
     render(<WidgetDetailCard entries={entries} />);
 
     // `error` must resolve to the danger palette, `success` to the success one.
-    expect(screen.getByText('Critical').className).toContain('bg-red-100');
-    expect(screen.getByText('Good').className).toContain('bg-green-100');
+    expect(screen.getByText('Critical').className).toContain('bg-[var(--semantic-danger-bg)]');
+    expect(screen.getByText('Good').className).toContain('bg-[var(--semantic-success-bg)]');
   });
 
   it('renders no badge when an entry omits one', () => {
@@ -216,12 +216,39 @@ describe('WidgetDetailCard — presentation', () => {
       />,
     );
 
-    // n-1 separators for n rows: the final row omits the bottom border.
-    expect(container.querySelectorAll('.border-b')).toHaveLength(2);
-
-    // The last row (containing "C") carries no divider border.
+    // The canonical definition list owns inter-row dividers, not each row.
+    expect(container.querySelector('dl')).toHaveClass('divide-y');
+    expect(container.querySelectorAll('dl > div')).toHaveLength(3);
     const lastRow = within(screen.getByText('C').closest('div') as HTMLElement);
     expect(lastRow.getByText('3')).toBeInTheDocument();
     expect((screen.getByText('C').closest('div') as HTMLElement).className).not.toContain('border-b');
+  });
+
+  it('wraps long labels and values in the allocated widget and retains rich badges', () => {
+    const label = 'A deliberately long diagnostic label that must remain readable';
+    const value = 'firmware-build-with-a-very-long-unbroken-identifier';
+    const { container } = render(
+      <WidgetDetailCard entries={[{ id: 'firmware', label, value, mono: true, badge: { text: 'Verified', variant: 'success' } }]} />,
+    );
+    expect(container.querySelector('dl')).toHaveClass('@container/kv-list');
+    expect(screen.getByText(label)).toHaveClass('whitespace-normal');
+    expect(screen.getByText(value)).toHaveClass('[overflow-wrap:anywhere]', 'font-mono');
+    expect(screen.getByText('Verified')).toBeInTheDocument();
+    expect(container.querySelector('.truncate')).toBeNull();
+  });
+
+  it('keeps caller row identity when translated labels and order change', () => {
+    const { rerender } = render(<WidgetDetailCard entries={[
+      { id: 'battery', label: 'Battery', value: 0 },
+      { id: 'range', label: 'Range', value: null },
+    ]} />);
+    const original = screen.getByText('Battery').closest('div');
+    rerender(<WidgetDetailCard entries={[
+      { id: 'range', label: 'Reichweite', value: null },
+      { id: 'battery', label: 'Batterie', value: 0 },
+    ]} />);
+    expect(screen.getByText('Batterie').closest('div')).toBe(original);
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 });

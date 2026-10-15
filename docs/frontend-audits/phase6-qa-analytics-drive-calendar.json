@@ -1,0 +1,839 @@
+{
+  "item": "phase6-qa-analytics-drive-calendar",
+  "phase": 6,
+  "page": "web\\src\\features\\analytics\\pages\\DriveCalendarPage.tsx",
+  "routes": [
+    "/drive-calendar"
+  ],
+  "purpose": "Bounded read-only source QA of the accepted Drive Calendar and its six direct presentation parts.",
+  "primaryGoal": "Review truthful historical activity, source states, complete actions, SI quantities, calendar dates, workspace ownership, localization and accessible source structure without remigrating the page.",
+  "sourceReportCompletion": "PASS",
+  "sourceQA": "FAIL",
+  "pageAcceptance": "NOTRUN",
+  "native": "NOTRUN",
+  "browser": "NOTRUN",
+  "liveAPI": "NOTRUN",
+  "fullpage": "NOTRUN",
+  "documentValidation": "PASS",
+  "clock": {
+    "requestAt": "2026-10-13T10:58:34.786-07:00",
+    "firstActualClock": "2026-10-13T11:00:41.9772144-07:00",
+    "staticCheckClock": "2026-10-13T11:03:36.8092286-07:00",
+    "targetReturnAt": "2026-10-13T11:08:34.786-07:00",
+    "maximumReturnAt": "2026-10-13T11:18:34.786-07:00",
+    "hardDeadline": "2026-10-13T11:23:34.786-07:00",
+    "commandsOverEightMinutes": 0,
+    "finalValidationClock": "2026-10-13T11:09:04.1962424-07:00"
+  },
+  "authority": [
+    "migration-queue.md:159-168 rolling finished-page source QA; :214 exact existing item; :1596 accepted SOURCE ONLY receipt",
+    "docs\\orchestrator-loop.md:109-140 worker contract",
+    "docs\\frontend-worker-conventions.md:1-34 scope/no-change validation; :73-119 source audit guidance",
+    "docs\\frontend-design-contract.md:419-499 trust/numeric/SI/localization; :500-605 responsive/accessibility/evidence",
+    "docs\\frontend-mission.md:1-115 audit principles; :529-579 responsive/mobile; :702-794 loading/empty/error/stale/date; :921-944 accessibility",
+    "docs\\session-handoff.md:1-85 historical intake and source-versus-native distinctions; parent dispatch/scheduled-loop directions are not this worker's task",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh read only; not executed because it invokes a helper and full TypeScript"
+  ],
+  "scope": {
+    "versionedWrites": [
+      "docs\\frontend-audits\\phase6-qa-analytics-drive-calendar.json"
+    ],
+    "ignoredWrites": [
+      "web\\logs\\phase6-qa-analytics-drive-calendar.log"
+    ],
+    "applicationFiles": "READ_ONLY",
+    "breadth": "Page, six direct parts, their small barrel/labels/state contract and pure calendar model; narrow shared source/range/selection/chart/format owners; consumed history endpoint registration and its list-bound/model contract.",
+    "excluded": [
+      "Application/source/test/API/catalog/config/backend edits",
+      "Git, Docker, installs, servers, subagents, helpers, extensions and scheduled/parent dispatch work",
+      "Full TypeScript, audit script, lint, tests, builds or suites",
+      "Browser/native/fullpage execution, API requests, real data and fixture injection"
+    ],
+    "fixturePolicy": "Every reproduction below is a SOURCE-DERIVED thought experiment. None was run, injected into the application, sent to an API, rendered or captured."
+  },
+  "dataSources": [
+    {
+      "hook": "useDriveCalendarHistory",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\DriveCalendarPage.tsx:33-36",
+        "web\\src\\api\\hooks\\useDriving.ts:158-196",
+        "internal\\api\\router.go:3506-3507",
+        "internal\\api\\drives\\listing.go:24-60",
+        "internal\\api\\apiparams\\params.go:25-39,89-104",
+        "internal\\platform\\httputil\\date_range.go:9-41",
+        "internal\\database\\drive\\repo.go:165-189"
+      ],
+      "request": "GET /drives?vehicle_id=...&start=...&end=...&limit=1000&offset=...",
+      "agreement": "SOURCE_AGREEMENT",
+      "detail": "Registered list endpoint consumes vehicle_id, limit, offset, start and end. RFC3339 exclusive ends are shifted back one microsecond for the repository's inclusive started_at <= bound; starts use >=. Stable started_at DESC,id DESC ordering supports sequential offset pages. List nil is normalized to [].",
+      "cacheAndCancellation": "Vehicle/start/end calendar key; MODERATE stale time; query AbortSignal forwarded on every page. A short page completes the collection. Duplicate/invalid IDs reject the collection, preserving an earlier successful payload during refresh.",
+      "limits": "No transactional snapshot or live pagination consistency was demonstrated. Only IDs/array shape are validated by this hook. No network request was performed."
+    },
+    {
+      "hook": "useSelectedVehicle / useVehicles",
+      "evidence": [
+        "web\\src\\hooks\\useSelectedVehicle.ts:50-79,168-173",
+        "web\\src\\api\\hooks\\useVehicles.ts:73-76",
+        "internal\\api\\router.go:3363"
+      ],
+      "request": "GET /vehicles",
+      "detail": "Existing URL/store/first-known-vehicle owner is retained. The selected-vehicle result omits the fleet query's readiness/error state; DC03 concerns that consumer contract, not a demonstrated application mount."
+    },
+    {
+      "hook": "useRangeState / buildDriveCalendar / useUnits / useNumberFormatting",
+      "evidence": [
+        "web\\src\\hooks\\useRangeState.ts:299-414,571-578,656-688",
+        "web\\src\\features\\analytics\\lib\\driveCalendar.ts:80-261",
+        "web\\src\\hooks\\useUnits.ts:120-156",
+        "web\\src\\hooks\\useNumberFormatting.ts:20-47"
+      ],
+      "request": null,
+      "detail": "Shared range supplies both precise bounds and the browser-resolved timezone. Model buckets browser-local day keys and retains meters. Saved display preferences reach current formatters. Indirect settings API transport was not separately audited."
+    },
+    {
+      "hook": "request / camelCaseKeys / Drive wire model",
+      "evidence": [
+        "web\\src\\api\\client.ts:73-94,283-288",
+        "web\\src\\lib\\resilience.ts:22-40",
+        "internal\\models\\drive\\drive.go:30-38",
+        "web\\src\\types\\driving.ts:1-9"
+      ],
+      "detail": "Client adds /api/v1, and its transform preserves snake_case plus camelCase aliases. start_ts becomes startTs and canonical numeric distance_m becomes distanceM; no magnitude conversion is performed by this alias transform. This endpoint's Go distance is a non-nullable float64, not evidence of a real nullable distance."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Grid / FadeIn",
+      "owner": "Existing layout and motion category barrels",
+      "usage": "Page shell, two named activity/insight groups and six direct presentation callsites."
+    },
+    {
+      "name": "OperationalBrief / useOperationalMetrics",
+      "owner": "Existing data-display and numeric metric owners",
+      "usage": "Four summary metrics, source status, period/provenance and Review details."
+    },
+    {
+      "name": "LayoutCard / SourceContent",
+      "owner": "web\\src\\components\\layout\\layout-reference",
+      "usage": "Persistent heatmap/rhythm/top-days shells with loading, fatal retry and specialist empty content."
+    },
+    {
+      "name": "ChartCard / EmbeddedChart / ChartContainer",
+      "owner": "Existing canonical layout/charts owners",
+      "usage": "Two charts with four data columns, exports and monthly hidden-series key. EmbeddedChart defaults fullscreen to false; no nonexistent fullscreen action is claimed."
+    },
+    {
+      "name": "CalendarSummaryCards / DriveCalendarHeatmap / MonthlyActivityChart / WeekdayPatternChart / RhythmInsightsPanel / TopDrivingDaysPanel",
+      "owner": "web\\src\\features\\analytics\\components\\drive-calendar",
+      "usage": "Existing six source presentation owners, all preserved."
+    },
+    {
+      "name": "StaleRefreshWarning / EmptyState / QueryError / Skeleton / NoVehicleSelected",
+      "owner": "Existing feedback/onboarding owners",
+      "usage": "Retained-source notice, initial/fatal/empty and prerequisite recovery."
+    },
+    {
+      "name": "HelpTooltip / Caption / Text / MetricValue / useUnits / dateFormat",
+      "owner": "Existing UI/format owners",
+      "usage": "Localized help, semantic text and display-only physical/date formatting."
+    }
+  ],
+  "checks": [
+    {
+      "id": "inventory",
+      "status": "PASS",
+      "basis": "EXECUTED_STATIC_CHECK",
+      "detail": "Current page 160 lines; page plus six presentation parts 1011 lines; six page section references, one OperationalBrief, three LayoutCard and two ChartCard openings. Historical original 1008 composed lines/six sections remains historical inventory, not fresh native proof."
+    },
+    {
+      "id": "initial-loading",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\DriveCalendarPage.tsx:52-59",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:43-55"
+      ],
+      "detail": "All six sections receive initial loading while their shells stay mounted. Chart loading and specialist skeletons are wired; geometry is NOTRUN."
+    },
+    {
+      "id": "fatal-error-and-retry",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "detail": "Only source.fatalError reaches section replacements; all receive a refetch callback. SourceContent and QueryError recovery are wired, not exercised."
+    },
+    {
+      "id": "empty",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "detail": "Successful [] keeps all six sections. Four summary/domain empty surfaces offer Browse drives; both chart shells receive empty. Empty returned history is not proof of continuous vehicle coverage."
+    },
+    {
+      "id": "retained-refresh-failure",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "evidence": [
+        "web\\src\\api\\dataState.ts:224-243",
+        "web\\src\\features\\analytics\\pages\\DriveCalendarPage.tsx:65-68",
+        "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:63-115"
+      ],
+      "detail": "Retained payload survives failure. Nonblocking warning and refetch remain; summary status becomes retained. Current StaleRefreshWarning explicitly does not infer offline from a paused query; older contrary claims are not carried forward."
+    },
+    {
+      "id": "initial-paused",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": [
+        "DC02"
+      ],
+      "detail": "No-retained-data pause is rendered as loading with no visible paused state or recovery. Automatic reconnect may recover it; no persistent failure was observed."
+    },
+    {
+      "id": "vehicle-prerequisite",
+      "status": "FAIL",
+      "basis": "SOURCE_CONDITIONAL_CALLSITE",
+      "findings": [
+        "DC03"
+      ],
+      "detail": "When this page is mounted without a known selection and fleet resolution is pending/failed, its null branch offers setup. Global onboarding/auth mount behavior was not traced or executed."
+    },
+    {
+      "id": "SI-and-wire-shape",
+      "status": "PASS",
+      "basis": "SOURCE_AND_STATIC_CHECK",
+      "detail": "Canonical meters remain on wire/model/cache, with current SI converters/useUnits only at display. No legacy helper call found in the bounded scan. DC04 separately covers chart precision loss, not a unit-factor defect."
+    },
+    {
+      "id": "range-and-timezone",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "detail": "Route is range-enabled and vehicle-enabled. Page uses shared from/to and both precise hook bounds, without duplicate range/vehicle controls. Current browser-default range timezone agrees with browser-local model buckets and calendar-day rendering. Saved/vehicle timezone support, DST runtime and future non-browser overrides remain unverified."
+    },
+    {
+      "id": "calendar-year-navigation",
+      "status": "PASS",
+      "basis": "SOURCE",
+      "evidence": [
+        "web\\src\\components\\layout\\WorkspaceContextControl.tsx:82-89,178-185,303-348",
+        "web\\src\\features\\analytics\\pages\\DriveCalendarPage.tsx:131-160"
+      ],
+      "detail": "Preserve independent calendar-year business navigation: existing header full-year/previous/next controls keep 1900..current-year bounds and localized names/44px classes. Legacy year URLs become explicit custom Jan1..Dec31 bounds, current year capped to today; explicit from/to takes precedence and unrelated search parameters remain. This report does not characterize the business-year controls as prohibited duplicate workspace pickers."
+    },
+    {
+      "id": "midnight-memo-current-source",
+      "status": "PASS",
+      "basis": "SOURCE_ONLY_CORRECTION_PRESENT",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\DriveCalendarPage.tsx:38-44",
+        "web\\src\\features\\analytics\\pages\\DriveCalendarPage.test.tsx:260-304"
+      ],
+      "detail": "todayMs is computed outside useMemo and included in dependencies. The previous memo-only clock omission is not present in current source. Authored regression forces rerenders and was NOTRUN; unattended custom-range clock progression is not proved."
+    },
+    {
+      "id": "chart-data-and-actions",
+      "status": "PASS",
+      "basis": "SOURCE_WITH_PRECISION_EXCEPTION",
+      "detail": "Month distance/count dual axes, weekday profile, four data columns, exports and monthly hidden-series identity remain wired. Data-table/export interactions and files were not exercised. DC04 applies to both chart row models."
+    },
+    {
+      "id": "daily-accessibility",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": [
+        "DC01"
+      ],
+      "detail": "Heatmap complete daily values remain title-only on plain cells; aggregate monthly/weekday alternatives and top five days are not a complete per-day alternative."
+    },
+    {
+      "id": "localization-key-presence",
+      "status": "PASS",
+      "basis": "EXECUTED_STATIC_CHECK",
+      "detail": "79 unique literal plus explicit dynamic weekday keys checked against canonical English; zero missing. Does not prove locale projection, RTL or runtime translations."
+    },
+    {
+      "id": "count-plurals",
+      "status": "FAIL",
+      "basis": "SOURCE",
+      "findings": [
+        "DC05"
+      ],
+      "detail": "Count-sensitive English entries contain plural-only base text without singular variants; all keys existing is not evidence of correct singular grammar."
+    },
+    {
+      "id": "guideline-pattern-scan",
+      "status": "PASS",
+      "basis": "EXECUTED_STATIC_CHECK_ONLY",
+      "detail": "11 explicitly selected page/component/support/model files: static inline var=0, raw controls=0, direct libraries=0, old API imports=0, direct data fetch/EventSource=0, neon text=0 and legacy converter calls=0. Consumed hook double-prefix/camelCase-query counts=0. Pattern counts are not zero design violations or TypeScript acceptance."
+    },
+    {
+      "id": "native-keyboard-mobile-visual",
+      "status": "NOTRUN",
+      "detail": "No actual keyboard/touch, screen-reader, theme contrast, scrolling, mobile drawer, focus, screenshot, fullscreen/export, forced-colors or reduced-motion acceptance."
+    },
+    {
+      "id": "typescript",
+      "status": "NOTRUN",
+      "command": "npx tsc --noEmit",
+      "detail": "Explicit report-only worker restriction prohibits full TypeScript; no source change requiring a scoped compile."
+    },
+    {
+      "id": "tests-lint-build",
+      "status": "NOTRUN",
+      "detail": "No test, lint, build or suite executed. Historical/unexecuted fixtures are not fresh proof. discovered/executed/passed/failed/skipped are null, not zero."
+    }
+  ],
+  "findings": [
+    {
+      "id": "DC01",
+      "status": "CONFIRMED_SOURCE",
+      "priority": "P1",
+      "file": "web\\src\\features\\analytics\\components\\drive-calendar\\DriveCalendarHeatmap.tsx",
+      "line": 79,
+      "related": [
+        ":116-134",
+        "web\\src\\features\\analytics\\components\\drive-calendar\\TopDrivingDaysPanel.tsx:63-96"
+      ],
+      "rule": "MDC-040/MDC-043",
+      "detail": "The heatmap is a single role=img with an aggregate accessible name. Each cell's complete date/distance/drive-count text is only a native title on a plain div; there is no cell focus/activation/disclosure or complete daily-data alternative in this renderer.",
+      "mechanism": "Aggregate aria-label, color intensity and up to five ranked days cannot expose every selected day. Source lacks a keyboard/touch route to those title-only values.",
+      "sourceDerivedRepro": "Consider six distinct active days in a selected window. The sixth-ranked day is absent from TopDrivingDaysPanel and its exact daily values exist only in an unfocusable cell's title. Trace the DOM construction: Tab cannot activate that div; no complete daily alternative is rendered.",
+      "reproExecuted": false,
+      "fix": "A narrowly claimed heatmap followup should reuse existing semantic table/disclosure or accessible tooltip-selection owners to expose every day's date, distance and count to keyboard/touch users, without deleting the grid or adding arbitrary positive tabindex.",
+      "owner": "page",
+      "confidence": "high",
+      "limit": "Source accessibility gap, not an executed keyboard/screen-reader/touch reproduction."
+    },
+    {
+      "id": "DC02",
+      "status": "CONFIRMED_SOURCE",
+      "priority": "P2",
+      "file": "web\\src\\features\\analytics\\pages\\DriveCalendarPage.tsx",
+      "line": 53,
+      "related": [
+        "web\\src\\api\\dataState.ts:193-216",
+        "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:63-64",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:43-55"
+      ],
+      "rule": "MDC-026",
+      "detail": "The initial paused source flag is discarded by the section-state adapter. Initial pause is indistinguishable from an actively loading history request and has no visible source-specific recovery.",
+      "mechanism": "data undefined plus fetchStatus paused yields status initial and isRefreshBlocked true. Page passes only isLoading/error/onRetry; StaleRefreshWarning returns null without retained data, and loading bodies do not use onRetry.",
+      "sourceDerivedRepro": "With a selected synthetic vehicle and a query-like source {data:undefined,fetchStatus:'paused',error:null}, follow deriveDataState and the page branches. All six sections select loading and no paused notice or retry is visible.",
+      "reproExecuted": false,
+      "fix": "A narrow page/section-state followup should surface an initial refresh-paused state with existing source feedback/recovery while retaining the six shells. Do not label the device offline merely from fetchStatus.",
+      "owner": "page",
+      "confidence": "high",
+      "limit": "No offline network was exercised; reconnect can recover automatically. This does not claim a permanently stuck spinner."
+    },
+    {
+      "id": "DC03",
+      "status": "CONFIRMED_SOURCE_CONDITIONAL_CALLSITE",
+      "priority": "P2",
+      "file": "web\\src\\features\\analytics\\pages\\DriveCalendarPage.tsx",
+      "line": 48,
+      "related": [
+        "web\\src\\hooks\\useSelectedVehicle.ts:50-79,168-173",
+        "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx:54-72"
+      ],
+      "rule": "MDC-026",
+      "detail": "The page's null-vehicle prerequisite does not distinguish an unresolved or failed fleet query from an authoritatively empty fleet.",
+      "mechanism": "With no path/query/store selection and vehicles undefined, effectiveId is null. The hook does not return fleet loading/fatal state. A mounted calendar therefore replaces its six sections with Add a vehicle / Set up TeslaSync, despite fleet absence being unknown.",
+      "sourceDerivedRepro": "At the mounted-component boundary, leave URL/store selection absent and the fleet lookup pending or failed with no data. Trace effectiveId to null and the page's immediate NoVehicleSelected branch; it offers setup instead of fleet loading/retry.",
+      "reproExecuted": false,
+      "fix": "Resolve readiness/fatal-versus-empty through the existing selected-vehicle source owner and consume it here, preserving URL/store precedence and actual resolved-empty onboarding. Do not add a competing selector or duplicate fetch.",
+      "owner": "shared/integration",
+      "confidence": "high for the conditional callsite mechanism",
+      "limit": "Application OnboardingGate/auth mount ordering was not traced. No claim that the real route necessarily displays this transient surface."
+    },
+    {
+      "id": "DC04",
+      "status": "CONFIRMED_SOURCE",
+      "priority": "P2",
+      "file": "web\\src\\features\\analytics\\components\\drive-calendar\\MonthlyActivityChart.tsx",
+      "line": 51,
+      "related": [
+        "web\\src\\features\\analytics\\components\\drive-calendar\\WeekdayPatternChart.tsx:50-51",
+        "web\\src\\hooks\\useNumberFormatting.ts:28-29",
+        "web\\src\\hooks\\useUnits.ts:127-142"
+      ],
+      "rule": "MDC-033/MDC-044",
+      "detail": "Both chart row models round display distance to one decimal before the saved numeric formatter, accessible data columns and export pipeline receive it.",
+      "mechanism": "Math.round(convertDistanceFromSI(...)*10)/10 permanently removes digits. Updating decimal precision only changes formatting of the already-rounded row, not the underlying quantity.",
+      "sourceDerivedRepro": "For a legal 123-meter month/weekday total, select km and precision 3. SI conversion yields 0.123, but each chart row stores 0.1. Later formatting/export cannot recover the missing 0.023 km, while the summary's current useUnits formatter retains the 123-meter input.",
+      "reproExecuted": false,
+      "fix": "Keep full-precision converted display values in these existing chart rows and let the current numeric preferences format labels/tooltips/data columns. Preserve source meters, both chart series and export identities.",
+      "owner": "page",
+      "confidence": "high",
+      "limit": "No settings mutation, chart mount or exported file was executed."
+    },
+    {
+      "id": "DC05",
+      "status": "CONFIRMED_SOURCE",
+      "priority": "P2",
+      "file": "web\\src\\features\\analytics\\components\\drive-calendar\\CalendarSummaryCards.tsx",
+      "line": 40,
+      "related": [
+        ":49",
+        "web\\src\\features\\analytics\\components\\drive-calendar\\TopDrivingDaysPanel.tsx:86-88",
+        "web\\src\\features\\analytics\\components\\drive-calendar\\DriveCalendarHeatmap.tsx:118-130",
+        "web\\src\\i18n\\en.json:1962,1965,1975,2029,2037,2044"
+      ],
+      "rule": "MDC-044",
+      "detail": "Canonical English count-sensitive calendar strings use only plural base text, without singular variants.",
+      "mechanism": "driveCalendar.days='{{count}} days', driveCount/dayDetails='{{count}} drives' and the cell/rhythm descriptions likewise use drives. Existing numeric count interpolation does not supply singular catalog text; the inspected canonical subtree has no corresponding _one/_other variants.",
+      "sourceDerivedRepro": "For a one-drive, one-day streak calendar in English, trace count=1 into summary days/driveCount and top-day dayDetails. Their available base strings produce '1 days' and '1 drives'; heatmap/rhythm copy has the same singular mismatch.",
+      "reproExecuted": false,
+      "fix": "Use a separately claimed canonical-catalog/projection followup for proper count plurals, retaining all existing keys and values. Where two independent counts share a sentence, preserve both facts using the existing localization composition pattern rather than treating one count as both plural selectors.",
+      "owner": "catalog/integration",
+      "confidence": "high",
+      "limit": "Canonical source inspected; real i18next runtime, split projections and other locales were NOTRUN. This worker made no catalog change."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\drive-calendar\\MonthlyActivityChart.tsx",
+      "line": 47,
+      "rule": "MDC-002",
+      "detail": "Month/weekday conversion and data-column formatting repeat; DC04 is one shared calendar-specific defect, not two independent campaigns.",
+      "fix": "Keep a single narrow followup across both row builders if authorized; do not introduce a new global chart engine.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\drive-calendar\\RhythmInsightsPanel.tsx",
+      "line": 126,
+      "rule": "MDC-026",
+      "detail": "Repeated state branches already reuse SourceContent; this is not proof that another wrapper is needed.",
+      "fix": "Preserve the current shared source-state owner and specialist bodies.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web\\src\\features\\analytics\\components\\drive-calendar\\TopDrivingDaysPanel.tsx",
+      "line": 91,
+      "rule": "MDC-043",
+      "detail": "shrink-0 distance beside rank/date and the rhythm grid-cols-2 at RhythmInsightsPanel.tsx:142 may squeeze long localized or huge values in narrow containers.",
+      "confidence": "candidate only",
+      "neededEvidence": "Actual allocated mobile widths and 200% text/long locale measurement; no overflow or hidden field is asserted."
+    },
+    {
+      "id": "C02",
+      "file": "web\\src\\features\\analytics\\components\\drive-calendar\\DriveCalendarHeatmap.tsx",
+      "line": 15,
+      "rule": "MDC-043",
+      "detail": "Explicit week-column minimum geometry and both charts' height=310 are source sizing contracts, not fresh native acceptance. Historical two geometry candidates are not cleared or fabricated as current failures.",
+      "confidence": "candidate only",
+      "neededEvidence": "Ten viewport widths, narrow allocated cards, contained scroll reachability and shell layout."
+    },
+    {
+      "id": "C03",
+      "file": "web\\src\\features\\analytics\\lib\\driveCalendar.ts",
+      "line": 115,
+      "rule": "MDC-026",
+      "detail": "Non-finite/negative distances become zero; missing-day aggregates become zero at :142-143. Counts represent returned drives, and the summary explicitly disclaims continuous coverage. Invalid-distance/missing-coverage robustness remains an integration question, not a demonstrated real nullable Go payload or proof of unrecorded driving.",
+      "confidence": "conditional robustness/source-contract candidate",
+      "neededEvidence": "Actual supported invalid/coverage contract before changing aggregation or asserting a real source defect."
+    },
+    {
+      "id": "C04",
+      "file": "web\\src\\features\\analytics\\pages\\DriveCalendarPage.tsx",
+      "line": 43,
+      "rule": "MDC-045/MDC-046",
+      "detail": "Model receives start/end but not timezone. Current browser-default range and model agree. Vehicle/saved non-browser timezone behavior and an unattended custom full-year midnight transition are not proved; current todayMs dependency fixes the older on-rerender memo omission.",
+      "confidence": "candidate only",
+      "neededEvidence": "Explicit future timezone ownership plus DST/midnight runtime cases; preserve independent business-year navigation."
+    },
+    {
+      "id": "C05",
+      "file": "web\\src\\features\\analytics\\components\\drive-calendar\\RhythmInsightsPanel.tsx",
+      "line": 148,
+      "rule": "MDC-010/MDC-013/MDC-040",
+      "detail": "Source still contains fixed white tint, repeated cyan icon accents and text-xl override; top days has text-lg/fixed tint and heatmap hardcoded emerald levels. Source token/style concerns persist, but their composed contrast, saturation and theme readability were not measured.",
+      "confidence": "source styling concern; visual outcome unverified",
+      "neededEvidence": "Existing semantic token/palette owner review and actual light/dark/custom/forced-colors rendering; no cosmetic remigration authorized."
+    }
+  ],
+  "responsive": {
+    "basis": "SOURCE_ONLY",
+    "observed": [
+      "Base single-column activity layout; compact heatmap threshold <=16 weeks; larger periods allocate full-width heatmap with xl chart split.",
+      "Heatmap owns overflow-x-auto; top-day date is min-w-0/break-words; insight final item spans both columns.",
+      "Header business-year controls have min-h-11/min-w-11 classes and localized previous/next names."
+    ],
+    "issues": [
+      "C01",
+      "C02"
+    ],
+    "viewportMatrix": "320/375/390/430/768/1024/1280/1440/1920/2560: NOTRUN",
+    "other": "Mobile drawer, RTL, long labels, 200% text, safe areas, scroll ownership and 44px measured geometry: NOTRUN"
+  },
+  "accessibility": {
+    "basis": "SOURCE_ONLY",
+    "observed": [
+      "Two localized section names, chart aria labels/data columns, decorative aria-hidden icons and ranked ol/li.",
+      "Existing HelpTooltip and shared retry/details/export owners are retained; actual open-state behavior not exercised."
+    ],
+    "issues": [
+      "DC01"
+    ],
+    "native": "Keyboard/focus/screen reader/touch/contrast/forced colors/reduced motion: NOTRUN"
+  },
+  "states": {
+    "loading": "All six source shells receive loading; initial pause exception DC02.",
+    "fatal": "Independent panel replacement/retry, only without retained history.",
+    "retained": "Source payload remains, page nonblocking stale warning and retained summary label.",
+    "pausedRetained": "Payload retained, paused refresh flag present, warning does not assert device offline.",
+    "empty": "Six shells and existing useful Browse drives actions; returned-history coverage disclaimer remains.",
+    "prerequisite": "Resolved-null setup remains; unresolved/failed fleet callsite exception DC03.",
+    "unknownAndNull": "Hook enforces array/ID shape and backend [] contract; model guards missing/invalid timestamps and distance finiteness. Typical-day/weekend/favorite/peak values use null/dash guards. No real null payload or malformed row was executed."
+  },
+  "visualIssues": [
+    "C01",
+    "C02",
+    "C05"
+  ],
+  "architectureIssues": [
+    "DC02",
+    "DC03",
+    "DC04",
+    "DC05",
+    "C03",
+    "C04"
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Complete daily keyboard/touch information has a source gap. Other confirmed source mechanisms are bounded P2 state/precision/localization followups, not new runtime acceptance.",
+    "order": [
+      "DC01",
+      "DC02",
+      "DC03",
+      "DC04",
+      "DC05"
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Selected-vehicle source readiness",
+      "existingOwner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "props": [
+        "Retain vehicleId/vehicle/vehicles/setVehicleId",
+        "Expose existing fleet initial/fatal/retained readiness rather than collapse unknown into empty"
+      ],
+      "variants": [
+        "initial",
+        "fatal",
+        "resolved-empty",
+        "resolved-selected",
+        "retained"
+      ],
+      "states": [
+        "DC03 conditional mounted consumer"
+      ],
+      "usedBy": [
+        "DriveCalendarPage.tsx:48-49"
+      ],
+      "dependsOn": [
+        "Existing useVehicles source",
+        "Workspace URL/store precedence"
+      ],
+      "limit": "Proposal only; no global app mount or other consumer was audited."
+    },
+    {
+      "name": "Calendar count-plural canonical integration",
+      "existingOwner": "web\\src\\i18n\\en.json driveCalendar subtree and existing split-projection tooling",
+      "props": [
+        "Existing count/active/distance/date interpolations",
+        "Proper singular/plural variants without dropping base keys"
+      ],
+      "variants": [
+        "one",
+        "other"
+      ],
+      "states": [
+        "DC05"
+      ],
+      "usedBy": [
+        "CalendarSummaryCards",
+        "DriveCalendarHeatmap",
+        "RhythmInsightsPanel",
+        "TopDrivingDaysPanel"
+      ],
+      "dependsOn": [
+        "Separate exclusive catalog claim",
+        "Existing i18n projection workflow"
+      ],
+      "limit": "No catalog edit or projection run authorized here."
+    },
+    {
+      "name": "Existing daily-data/source/format primitives",
+      "existingOwner": "Existing Table/DataTable/disclosure, SourceContent/feedback and useUnits/useNumberFormatting owners",
+      "props": [
+        "Daily date/distance/count alternative",
+        "Initial refresh-paused notice/recovery",
+        "Unrounded converted chart rows"
+      ],
+      "variants": [
+        "Existing shared APIs only"
+      ],
+      "states": [
+        "DC01",
+        "DC02",
+        "DC04"
+      ],
+      "usedBy": [
+        "Drive calendar direct parts"
+      ],
+      "dependsOn": [
+        "Narrow separately claimed page followups"
+      ],
+      "limit": "No new shared engine or shared modification is established as necessary."
+    }
+  ],
+  "competingImplementations": {
+    "observed": "No new picker, fetch/client, converter, stat system, palette or chart frame introduced by this item.",
+    "avoid": [
+      "Source remigration",
+      "Second workspace selector",
+      "Deleting business-year navigation",
+      "New state/chart framework",
+      "Backend coverage invention"
+    ]
+  },
+  "preservation": {
+    "acceptedSourceCommit": "7301e56e5df3220959b241bdf4397ae87460f2a8",
+    "acceptedCommitBasis": "User assignment and existing queue receipt; no Git command run.",
+    "sourceHashAlgorithm": "SHA-256",
+    "currentRootHash": "455c8b946e93f348a990f55ca2dff0b8d01fe0bbc847f465d11b70c6233754e1",
+    "currentRootLines": 160,
+    "currentComposedPresentationLines": 1011,
+    "acceptedComposedPresentationLines": 1011,
+    "originalAuditComposedPresentationLines": 1008,
+    "minimumSeventyPercentOriginalLines": 706,
+    "sectionCount": 6,
+    "groupCount": 2,
+    "sections": [
+      {
+        "name": "Drive calendar summary metrics",
+        "content": [
+          "Active days",
+          "Current/end-of-period streak and longest streak",
+          "Distance/drive count",
+          "Busiest day/date",
+          "Status/scope/provenance/Review details"
+        ]
+      },
+      {
+        "name": "Selected period daily heatmap",
+        "content": [
+          "Sunday-first weeks",
+          "Month/weekday labels",
+          "p95 five-level intensity",
+          "Day date/distance/count titles",
+          "Summary/help/legend"
+        ]
+      },
+      {
+        "name": "Monthly distance & activity",
+        "content": [
+          "Distance bars",
+          "Drive-count line",
+          "Dual axes/legend/tooltip",
+          "Hidden-series key",
+          "Four data columns/export"
+        ]
+      },
+      {
+        "name": "Day-of-week pattern",
+        "content": [
+          "Seven distance bars",
+          "Tooltip",
+          "Weekday/distance/drives/active-days data columns/export"
+        ]
+      },
+      {
+        "name": "Driving rhythm",
+        "content": [
+          "Favorite weekday",
+          "Active rate",
+          "Typical active-day distance/average drives",
+          "Weekend share",
+          "Peak month"
+        ]
+      },
+      {
+        "name": "Top driving days",
+        "content": [
+          "Up to five ranks",
+          "Full date",
+          "Drive count",
+          "Formatted distance"
+        ]
+      }
+    ],
+    "frames": {
+      "OperationalBrief": 1,
+      "LayoutCard": 3,
+      "ChartCard": 2,
+      "GlassPanelDirect": 0,
+      "ChartContainerDirect": 0
+    },
+    "actions": [
+      "Shared header/drawer workspace range and vehicle ownership",
+      "Independent calendar-year full-year/previous/next business navigation and ytd quick preset",
+      "Legacy year bookmark migration and invalid-year recovery",
+      "Summary Review details and calendar HelpTooltip",
+      "Monthly hidden-series interaction",
+      "Monthly/weekday canonical data/export inputs and unchanged export filenames",
+      "Fatal source retry and retained warning refresh",
+      "Browse drives empty navigation and actual-empty vehicle onboarding"
+    ],
+    "dataBehavior": [
+      "Lazy /drive-calendar SafeRoute identity",
+      "Vehicle/start/exclusive-end cache separation and whole-window pagination",
+      "Raw SI meters and current display conversions",
+      "p95 scaling, Sunday-first padding, idle-today streak allowance and longest streak",
+      "Month/weekday totals, favorite drive-count tie-break, top-five distance/date ordering",
+      "Activity ratio, active-day averages and weekend share",
+      "Returned-history provenance and unknown continuous coverage",
+      "All six loading/fatal/empty shells and retained refresh payload"
+    ],
+    "presentationHashes": {
+      "DriveCalendarPage.tsx": "455c8b946e93f348a990f55ca2dff0b8d01fe0bbc847f465d11b70c6233754e1",
+      "CalendarSummaryCards.tsx": "c7f8fa4f407bde9b6353e0d48a67a27d787765cfcac2dbd1e23f1bb31f5adee1",
+      "DriveCalendarHeatmap.tsx": "17224ab267618c5d5b3da3e3e886ff8796a23584c6664116857cc96e3e47c8a5",
+      "MonthlyActivityChart.tsx": "74cee4d32d4331aaef71513ad3e8c30ff717ff27b9cca48fb194f25326bc9e27",
+      "WeekdayPatternChart.tsx": "e524c14a4f890d6c4b175e56d4c442028563b8a08793255469f34dbdf7e223a3",
+      "RhythmInsightsPanel.tsx": "22083f19d91a993cd046c4a23e033a4b1de2e824ac038ba934d48e855e5a7eef",
+      "TopDrivingDaysPanel.tsx": "59f4828ad1a55ceb2d236c090df9e2f5d772a520f2c3d80b775b666ba5318edb"
+    },
+    "historicalEvidenceNotCurrentProof": [
+      "Accepted commit/source receipt is SOURCE ONLY.",
+      "Earlier midnight memo issue was addressed in source; authored fixture was unexecuted due external startup, and remains NOTRUN here.",
+      "39 diagnostic PNGs and the historical 768 resource failure are not current native/fullpage proof.",
+      "Two inherited geometry candidates are not approved or cleared by line/frame counts."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "BOUNDED_SOURCE_ONLY",
+    "native": "NOTRUN",
+    "browser": "NOTRUN",
+    "API": "NOTRUN",
+    "realData": "NOTRUN",
+    "fullpage": "NOTRUN",
+    "testCounts": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "commands": [
+      {
+        "command": "Read-only Get-ChildItem contract/direct-part discovery",
+        "exitCode": 0
+      },
+      {
+        "command": "Get-Date; root .gitignore logs checks; optional web .gitignore check",
+        "exitCode": 1,
+        "output": "2026-10-13T11:00:41.9772144-07:00; root rules include *.test.log and logs/; optional web .gitignore is absent. No source edit or validation failure inferred."
+      },
+      {
+        "command": "Built-in Get-Content/Get-FileHash/Select-String/ConvertFrom-Json bounded page+six-parts/support/model scan and consumed-hook/catalog checks",
+        "exitCode": 0,
+        "output": "COMPOSED_PRESENTATION_LINES=1011; PAGE_SECTION_REFERENCES=6; FRAME OperationalBrief=1 LayoutCard=3 ChartCard=2 GlassPanel=0 ChartContainer=0; seven guideline pattern counts=0; HOOK doublePrefix=0 camelCaseQuery=0; I18N UNIQUE_KEYS=79 MISSING=0",
+        "rawOutput": "web\\logs\\phase6-qa-analytics-drive-calendar.log",
+        "qualification": "Initial hook line slice also printed the immediately following detail hook; final static validation isolates exactly useDriveCalendarHistory before rechecking both counts."
+      },
+      {
+        "command": "Final built-in JSON required-field/identity/evidence/hash validation and isolated hook/plural source checks",
+        "output": "JSON REQUIRED_FIELDS=19; SOURCE_HASH_MATCHES=7 SOURCE_DRIFT=0 PRESENTATION_LINES=1011; EXACT_HISTORY_HOOK doublePrefix=0 camelCaseQuery=0; SOURCE_FINDINGS=5 CANDIDATES=5; runtime/tests NOTRUN",
+        "rawOutput": "web\\logs\\phase6-qa-analytics-drive-calendar.log",
+        "exitCode": 0
+      }
+    ],
+    "notRun": [
+      "TypeScript",
+      "audit.sh",
+      "Lint",
+      "Build",
+      "Tests/suites",
+      "Native/browser/fullpage",
+      "API requests",
+      "Git/Docker/installs/server/subagents/helpers/extensions"
+    ],
+    "claims": "Confirmed means the inspected source mechanism, not an executed application reproduction. Candidate outcomes require further evidence. No whole-page/application acceptance, zero-design-violations claim or changed production behavior."
+  },
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-audits\\audit-page-043.json",
+    "docs\\frontend-audits\\phase6-qa-analytics-analytics.json",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".gitignore",
+    "web\\src\\features\\analytics\\pages\\DriveCalendarPage.tsx",
+    "web\\src\\features\\analytics\\pages\\DriveCalendarPage.test.tsx",
+    "web\\src\\features\\analytics\\components\\drive-calendar\\CalendarSummaryCards.tsx",
+    "web\\src\\features\\analytics\\components\\drive-calendar\\DriveCalendarHeatmap.tsx",
+    "web\\src\\features\\analytics\\components\\drive-calendar\\MonthlyActivityChart.tsx",
+    "web\\src\\features\\analytics\\components\\drive-calendar\\WeekdayPatternChart.tsx",
+    "web\\src\\features\\analytics\\components\\drive-calendar\\RhythmInsightsPanel.tsx",
+    "web\\src\\features\\analytics\\components\\drive-calendar\\TopDrivingDaysPanel.tsx",
+    "web\\src\\features\\analytics\\components\\drive-calendar\\index.ts",
+    "web\\src\\features\\analytics\\components\\drive-calendar\\labels.ts",
+    "web\\src\\features\\analytics\\components\\drive-calendar\\types.ts",
+    "web\\src\\features\\analytics\\components\\drive-calendar\\Phase4Presentation.test.tsx (search excerpt only)",
+    "web\\src\\features\\analytics\\lib\\driveCalendar.ts",
+    "web\\src\\api\\hooks\\useDriving.ts (consumed history slice; surrounding declarations only)",
+    "web\\src\\api\\hooks\\useVehicles.ts (fleet request excerpt only)",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts (URL/alias-transform excerpts only)",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\hooks\\useRangeState.ts (relevant range/clock excerpts)",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\dateFormat.ts (day-format excerpts)",
+    "web\\src\\lib\\unitConversion.ts (distance converter/formatter excerpts)",
+    "web\\src\\lib\\resilience.ts (alias-transform excerpt only)",
+    "web\\src\\components\\layout\\WorkspaceContextControl.tsx (business-year excerpts)",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx (data/export/identity search excerpts)",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\App.tsx (route/lazy search excerpts)",
+    "web\\src\\i18n\\en.json (parsed key checks and driveCalendar subtree only)",
+    "internal\\api\\router.go (drives/vehicles registration excerpts)",
+    "internal\\api\\drives\\listing.go (ListByVehicle contract)",
+    "internal\\api\\drives\\handler.go (pagination/date wrapper excerpt)",
+    "internal\\api\\apiparams\\params.go (pagination/date excerpts)",
+    "internal\\platform\\httputil\\date_range.go",
+    "internal\\database\\drive\\repo.go (GetByVehicle excerpt)",
+    "internal\\models\\drive\\drive.go (wire-model excerpt)"
+  ],
+  "release": {
+    "reportClaim": "RELEASED",
+    "sourceClaims": "READ_ONLY; RELEASED",
+    "commandClaims": "RELEASED",
+    "browserClaims": "NONE",
+    "apiClaims": "NONE",
+    "postReturnWrites": "NONE",
+    "continuation": "STOP after current report; do not follow parent dispatch or scheduled loop.",
+    "releasedAt": "2026-10-13T11:09:04.1962424-07:00"
+  }
+}

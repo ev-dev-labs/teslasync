@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   formatDayKey,
   formatDurationSecondsAsMinutes,
@@ -8,6 +9,7 @@ import {
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 export function useUtilizationDisplay() {
+  const { locale } = useDateFormat();
   const { unitPrefs, formatDistance, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
@@ -16,12 +18,12 @@ export function useUtilizationDisplay() {
     [distanceUnit],
   );
   const formatDay = useCallback(
-    (day: string) => formatDayKey(day, { style: 'long' }),
-    [],
+    (day: string | null | undefined) => formatDayKey(day, { style: 'long', locale }),
+    [locale],
   );
   const formatDayShort = useCallback(
-    (day: string) => formatDayKey(day, { style: 'short' }),
-    [],
+    (day: string | null | undefined) => formatDayKey(day, { style: 'short', locale }),
+    [locale],
   );
   const formatDuration = useCallback(
     (seconds: number | null | undefined) =>

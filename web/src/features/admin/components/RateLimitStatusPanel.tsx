@@ -19,12 +19,13 @@ import { GlassPanel, Button, Heading, Text, Caption } from '@/components/ui'
 import { MetricBar } from '@/components/data-display'
 import { ListSkeleton } from '@/components/feedback'
 import { formatCurrencyValue } from '@/lib/currencyFormat'
-import { fmtNumber, getGlobalLocale } from '@/lib/numberFormat'
-import { formatRelative, formatDurationMsLong } from '@/lib/dateFormat'
+import { getGlobalLocale } from '@/lib/numberFormat'
+import { formatRelative } from '@/lib/dateFormat'
 import {
   useRateLimitStatus,
 } from '@/api/hooks/useSystem'
 import type { RateLimitSeverity, ScopeBudget } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // Severity → hex colour passed into MetricBar (which expects a raw
 // string for its dynamic gradient + glow). Using hex here rather than
@@ -48,6 +49,8 @@ interface RateLimitRowProps {
 }
 
 function RateLimitRow({ scope }: RateLimitRowProps) {
+  const { formatDurationMsLong } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const color = SEVERITY_COLOR[scope.severity]
   const toneClass = SEVERITY_TONE_CLASS[scope.severity]
@@ -86,7 +89,7 @@ function RateLimitRow({ scope }: RateLimitRowProps) {
     return t(key, fallback, {
       duration: formatDurationMsLong(ms),
     })
-  }, [scope.reset_at, scope.unit, t])
+  }, [scope.reset_at, scope.unit, t, formatDurationMsLong])
 
   const severityLabel = t(
     `rateLimitStatus.severity.${scope.severity}`,

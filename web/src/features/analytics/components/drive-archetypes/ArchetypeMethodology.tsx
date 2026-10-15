@@ -9,13 +9,15 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+import { LayoutCard } from '@/components/layout';
+import { Heading, Text } from '@/components/ui';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type {
   ArchetypeDisplay,
   ArchetypeSectionProps,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArchetypeMethodologyProps extends ArchetypeSectionProps {
   display: ArchetypeDisplay;
@@ -26,6 +28,7 @@ export function ArchetypeMethodology({
   state,
   display,
 }: ArchetypeMethodologyProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const items = [
     {
@@ -109,11 +112,10 @@ export function ArchetypeMethodology({
 
   return (
     <section data-testid="drive-archetypes-methodology">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="flex items-center gap-2">
-          <BookOpenCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('archetypes.method.title', 'Methodology, heuristic labels, and interpretation limits')}
-        </PanelTitle>
+      <LayoutCard
+        title={t('archetypes.method.title', 'Methodology, heuristic labels, and interpretation limits')}
+        actions={<BookOpenCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
         <Text as="p" variant="caption" className="mb-4 mt-1">
           {t(
             'archetypes.method.subtitle',
@@ -154,7 +156,7 @@ export function ArchetypeMethodology({
             )}
           </AlertBanner>
         </ArchetypeSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

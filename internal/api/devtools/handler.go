@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
@@ -1001,19 +1002,24 @@ type redisSignalsMeta struct {
 	LiveSignalStoreMode string     `json:"live_signal_store_mode"`
 	RedisKey            string     `json:"redis_key"`
 	RedisFieldCount     int        `json:"redis_field_count"`
-	L1SignalCount       int        `json:"l1_signal_count"`
-	L1LastSeenAt        *time.Time `json:"l1_last_seen_at,omitempty"`
-	L2LastSeenAt        *time.Time `json:"l2_last_seen_at,omitempty"`
+	L1SignalCount       *int       `json:"l1_signal_count"`
+	L1LastSeenAt        *time.Time `json:"l1_last_seen_at"`
+	L2LastSeenAt        *time.Time `json:"l2_last_seen_at"`
 	VehicleVIN          string     `json:"vehicle_vin,omitempty"`
 }
 
 // RedisSignals returns all cached signal values from Redis for a vehicle,
 // alongside a diagnostic meta block (mode, raw HSET size, L1 size,
 // L1/L2 last-seen, VIN) so the viewer page can render structured empty
-// states instead of a generic "no signals cached" message.
+// states instead of a generic "no signals cached" message. Per-value source
+// identifies the cache layer, not the original producer. Synthetic hydration
+// timestamps are not observations; freshness remains unknown for those values.
 //
 // GET /api/v1/dev-tools/redis-signals?vehicle_id=X
 func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "devtools.RedisSignals")
+	defer span.End()
+
 	if h.redisCache == nil {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
 		return
@@ -1030,12 +1036,11 @@ func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-
 	// L2: HGETALL + decode (existing path).
 	signals, err := h.redisCache.GetAll(ctx, vehicleID)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: GetAll failed")
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Int64("vehicle_id", vehicleID).Msg("redis signal cache: GetAll failed")
 		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis is unreachable")
 		return
 	}
@@ -1044,26 +1049,38 @@ func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
 	// so meta degrades gracefully (the user-visible signals payload still
 	// returns).
 	var l2LastSeen *time.Time
+	var timestampedValues map[string]*signal.Value
 	if values, vErr := h.redisCache.GetAllValues(ctx, vehicleID); vErr == nil {
+		timestampedValues = values
 		if t := newestRedisSignalTime(values); !t.IsZero() {
 			tCopy := t
 			l2LastSeen = &tCopy
 		}
+	} else {
+		span.RecordError(vErr)
+		log.Warn().Err(vErr).Str("trace_id", span.SpanContext().TraceID().String()).Int64("vehicle_id", vehicleID).Msg("redis signal cache: last-seen diagnostic unavailable")
 	}
 
 	// L2: raw HSET size (HLEN) — distinguishes "Redis empty" from
 	// "Redis has fields the decoder couldn't parse".
-	rawCount, _ := h.redisCache.RawFieldCount(ctx, vehicleID)
+	rawCount, err := h.redisCache.RawFieldCount(ctx, vehicleID)
+	if err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Int64("vehicle_id", vehicleID).Msg("redis signal cache: RawFieldCount failed")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis field count is unavailable")
+		return
+	}
 
 	// L1: in-process Store snapshot. signalStore may be nil in builds
-	// that don't wire it (zero values for the diagnostic).
+	// that don't wire it (null means unknown, not a measured empty store).
 	var (
-		l1Count    int
+		l1Count    *int
 		l1LastSeen *time.Time
 	)
 	if h.signalStore != nil {
 		all := h.signalStore.GetAll(vehicleID)
-		l1Count = len(all)
+		count := len(all)
+		l1Count = &count
 		if t := h.signalStore.LastSeenAt(vehicleID); !t.IsZero() {
 			tCopy := t
 			l1LastSeen = &tCopy
@@ -1084,21 +1101,47 @@ func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type signalEntry struct {
-		Value interface{} `json:"value"`
-		Type  string      `json:"type"`
+		Value               interface{} `json:"value"`
+		Type                string      `json:"type"`
+		ObservedAt          *time.Time  `json:"observed_at"`
+		Source              string      `json:"source"`
+		TimestampProvenance string      `json:"timestamp_provenance"`
+		Freshness           string      `json:"freshness"`
+		ReadAvailability    string      `json:"read_availability"`
 	}
+	now := time.Now().UTC()
 	result := make(map[string]signalEntry, len(signals))
 	for name, val := range signals {
 		var sType string
 		switch val.(type) {
-		case float64:
-			sType = "number"
 		case bool:
 			sType = "boolean"
-		default:
+		case string:
 			sType = "string"
+		default:
+			if _, ok := signal.Float64(val); ok {
+				sType = "number"
+			} else {
+				sType = "string"
+			}
 		}
-		result[name] = signalEntry{Value: val, Type: sType}
+		entry := signalEntry{
+			Value: val, Type: sType, Source: "redis",
+			TimestampProvenance: "unknown", Freshness: "unknown",
+			ReadAvailability: "available",
+		}
+		if value := timestampedValues[name]; value != nil {
+			if !value.TimestampSynthetic && !value.Timestamp.IsZero() {
+				observedAt := value.Timestamp.UTC()
+				entry.ObservedAt = &observedAt
+				entry.TimestampProvenance = "observation"
+				entry.Freshness = "stale"
+				if signal.IsLiveSignalFresh(value, now) {
+					entry.Freshness = "fresh"
+				}
+			}
+		}
+		result[name] = entry
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
@@ -1141,6 +1184,9 @@ func newestRedisSignalTime(values map[string]*signal.Value) time.Time {
 //
 // GET /api/v1/dev-tools/redis-signals/keys?limit=50
 func (h *DevToolsHandler) RedisSignalKeys(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "devtools.RedisSignalKeys")
+	defer span.End()
+
 	if h.redisCache == nil {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
 		return
@@ -1153,9 +1199,10 @@ func (h *DevToolsHandler) RedisSignalKeys(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	ids, err := h.redisCache.ScanVehicleKeys(r.Context(), limit)
+	ids, err := h.redisCache.ScanVehicleKeys(ctx, limit)
 	if err != nil {
-		log.Error().Err(err).Msg("redis signal cache: ScanVehicleKeys failed")
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("redis signal cache: ScanVehicleKeys failed")
 		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis is unreachable")
 		return
 	}
@@ -1168,10 +1215,16 @@ func (h *DevToolsHandler) RedisSignalKeys(w http.ResponseWriter, r *http.Request
 	}
 	out := make([]keyEntry, 0, len(ids))
 	for _, id := range ids {
-		fc, _ := h.redisCache.RawFieldCount(r.Context(), id)
+		fc, err := h.redisCache.RawFieldCount(ctx, id)
+		if err != nil {
+			span.RecordError(err)
+			log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Int64("vehicle_id", id).Msg("redis signal cache: RawFieldCount failed")
+			httpx.WriteError(w, http.StatusServiceUnavailable, "Redis field count is unavailable")
+			return
+		}
 		entry := keyEntry{VehicleID: id, FieldCount: fc}
 		if h.vehicleRepo != nil {
-			if veh, vErr := h.vehicleRepo.GetByID(r.Context(), id); vErr == nil && veh != nil {
+			if veh, vErr := h.vehicleRepo.GetByID(ctx, id); vErr == nil && veh != nil {
 				entry.VehicleVIN = veh.VIN
 				entry.DisplayName = veh.DisplayName
 			}

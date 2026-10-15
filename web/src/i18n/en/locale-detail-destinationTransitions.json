@@ -1,0 +1,290 @@
+{
+  "destinationTransitions": {
+    "bands": {
+      "developing": "Developing evidence",
+      "none": "No evidence",
+      "strong": "Strong evidence",
+      "thin": "Thin evidence"
+    },
+    "directory": {
+      "activeDays": "Outgoing active days",
+      "concentration": "Concentration index",
+      "entropy": "Entropy bits",
+      "leader": "Historical leader: {{destination}}",
+      "leadingShare": "Leading observed share",
+      "noLeader": "No observed outgoing leader",
+      "outgoing": "Outgoing observations",
+      "recurrence": "Repeat observations",
+      "subtitle": "Observed leaders and distribution shape are shown with separate volume, recurrence, and support evidence.",
+      "successors": "Distinct successors",
+      "supportIndex": "Support index",
+      "title": "Historical leading successors by origin"
+    },
+    "edges": {
+      "frequencyDetail": "{{count}} accepted · {{conditional}} from origin · {{overall}} of all accepted transitions · {{days}} active days",
+      "informationDetail": "{{bits}} empirical information bits · {{count}} accepted · {{share}} observed origin share",
+      "route": "{{from}} → {{to}}"
+    },
+    "frequent": {
+      "subtitle": "Ranked by accepted count after adjacent-row endpoint continuity and time-order checks.",
+      "title": "Frequent accepted edges"
+    },
+    "information": {
+      "caveat": "Empirical information content equals −log₂(observed origin share). It describes in-sample rarity only and is not evidence of unusual future behavior.",
+      "subtitle": "Higher information content means a smaller observed share among that origin’s accepted outgoing transitions.",
+      "title": "Empirically rare accepted edges"
+    },
+    "kpis": {
+      "acceptedTransitions": "Accepted transitions",
+      "aria": "Destination transition evidence summary",
+      "candidatePairs": "{{count}} adjacent candidate pairs",
+      "capNotReached": "returned history below the 1,000-row cap",
+      "capReached": "latest 1,000-row cap reached",
+      "concentration": "Transition concentration index",
+      "entropyDetail": "{{bits}} weighted entropy bits · {{effective}} effective successors",
+      "includedVisits": "Included destination visits",
+      "latestDestination": "Latest observed destination",
+      "latestEmpty": "No returned row is available · {{capState}}",
+      "latestIndeterminate": "Latest row cannot be established because returned chronology is incomplete · {{capState}}",
+      "latestLeader": "Historical leading successor from latest observed destination: {{place}} · {{count}}/{{total}} observed · {{band}} · {{capState}}",
+      "latestNoLeader": "No accepted outgoing edge from this latest destination · {{capState}}",
+      "latestUnusable": "The actual latest row is unusable, so no historical successor is shown · {{capState}}",
+      "normalizedStates": "normalized end-location states",
+      "returnedRows": "{{count}} rows returned",
+      "supportedCoverage": "{{coverage}} of accepted transitions · at least 3 outgoing each",
+      "supportedOrigins": "Supported origin states",
+      "title": "Continuity-safe destination evidence",
+      "uniqueDestinations": "Unique destinations"
+    },
+    "matrix": {
+      "aria": "Counts and observed outgoing shares in the top destination transition matrix",
+      "belowGate": "Below gate",
+      "cellAria": "{{from}} to {{to}}: {{value}} observed, {{share}} of accepted outgoing transitions",
+      "cellUnsupportedAria": "{{from}} to {{to}}: {{value}} observed; origin is below the support gate",
+      "origin": "Origin",
+      "outgoing": "{{value}} outgoing",
+      "subtitle": "Counts among the most visited states; shares retain each origin’s full accepted denominator, and dashed cells mark origins below the three-transition support gate.",
+      "title": "Top transition matrix"
+    },
+    "method": {
+      "boundariesBody": "Incomplete, invalid, future, nonpositive-duration, and unknown-end rows remain chronological boundaries whenever their start can be placed. An unplaceable start creates a source-order boundary while unrelated placed segments remain analyzable. The model never bridges over a known unusable row.",
+      "boundariesTitle": "Sequence boundaries",
+      "calendarBody": "Hour, weekday, date, week, and month use {{timeZone}}. Multiple drives on one local day remain separate visits. Only the latest {{limit}} returned rows are requested.",
+      "calendarTitle": "Vehicle-local calendar and cap",
+      "continuityBody": "Adjacent rows connect only when normalized addresses match or valid coordinates are within {{meters}} m, and the current start does not overlap the previous end. {{maxGap}}",
+      "continuityTitle": "Endpoint continuity",
+      "entropyBody": "For each origin, concentration = 1 − entropy ÷ log₂(distinct observed successors); a one-successor row equals 1. The global 0–100 index weights row concentration by outgoing count, while support remains separate.",
+      "entropyTitle": "Entropy and concentration",
+      "limitsBody": "No driver identity, calendar, traffic, intent, or current live location is used. The latest insight requires the actual latest row to qualify. Results are not a calibrated future likelihood, personal forecast, recommendation, or guarantee.",
+      "limitsTitle": "Inputs and interpretation limits",
+      "locationsBody": "Addresses are normalized before rounded GPS fallback. Address edits, missing coordinates, and GPS tolerance can split one real place or merge nearby places.",
+      "locationsTitle": "Location normalization risk",
+      "maxGap": "Pairs beyond the configured {{hours}}-hour gap are excluded.",
+      "noMaxGap": "No elapsed-time maximum is configured; endpoint continuity and non-overlap define adjacency.",
+      "notice": "Use this workspace only as returned historical evidence; no future destination is promised.",
+      "orderBody": "Each accepted edge uses only the previous included drive’s end destination and the current included drive’s end destination. Higher-order history is not modeled.",
+      "orderTitle": "First-order description",
+      "sharesBody": "An edge share is its accepted count divided by all accepted outgoing transitions from that origin. Empirical information content is −log₂(share), an in-sample rarity description.",
+      "sharesTitle": "Observed shares and information",
+      "subtitle": "Definitions, continuity rules, descriptive formulas, evidence gates, calendar scope, and omitted inputs.",
+      "supportBody": "An origin needs at least {{count}} outgoing transitions. Volume, day, and week ingredients reach 1 at {{volume}}, {{days}}, and {{weeks}}; recurrence = max(0, outgoing − distinct successors) ÷ max(1, outgoing − 1). Thin is below the gate or below index 35; developing is 35–69; strong is 70–100.",
+      "supportTitle": "Support gate and ingredients",
+      "title": "Methodology and limitations"
+    },
+    "month": {
+      "aria": "Vehicle-local monthly trend of accepted transition counts and concentration",
+      "column": {
+        "concentration": "Transition concentration index",
+        "destinations": "Distinct destinations",
+        "leadingShare": "Leading edge share (%)",
+        "month": "Vehicle-local month",
+        "origins": "Distinct origins",
+        "samples": "Accepted transitions",
+        "support": "Sample support"
+      },
+      "description": "The accessible data includes distinct origins, destinations, historical leading-edge share, and monthly sample support.",
+      "series": {
+        "concentration": "Transition concentration index",
+        "count": "Accepted transitions"
+      },
+      "subtitle": "Accepted transition starts grouped by calendar month in {{timeZone}}.",
+      "title": "Local-month transition trend"
+    },
+    "originChart": {
+      "aria": "Transition concentration index and historical leading successor share by origin",
+      "column": {
+        "concentration": "Transition concentration index",
+        "leadingShare": "Leading successor share (%)",
+        "origin": "Origin destination",
+        "outgoing": "Outgoing transitions",
+        "successors": "Distinct observed successors",
+        "support": "Evidence band",
+        "supportIndex": "Support index"
+      },
+      "concentrationSeries": "Transition concentration index",
+      "description": "The accessible data also lists outgoing observations, distinct successors, support index, and evidence band.",
+      "leadingSeries": "Leading successor share",
+      "subtitle": "Concentration and leading-share shape stay separate from outgoing volume and support.",
+      "title": "Origin concentration and support"
+    },
+    "quality": {
+      "capWarning": "The 1,000-row return cap was reached. Accounting is complete for returned rows, not established lifetime history.",
+      "coverage": {
+        "activeDays": "Active local days",
+        "activeWeeks": "Active local weeks",
+        "includedFirst": "First included visit",
+        "includedLast": "Last included visit",
+        "includedSpan": "Included span (days)",
+        "recency": "Visit recency (days)",
+        "returnedFirst": "First parseable returned start",
+        "returnedLast": "Last parseable returned start",
+        "returnedSpan": "Returned span (days)",
+        "supportedOrigins": "Supported origins",
+        "supportedShare": "Supported-origin transition coverage",
+        "title": "Spans, recency, activity, and supported coverage",
+        "transitionFirst": "First accepted transition",
+        "transitionLast": "Last accepted transition",
+        "transitionSpan": "Accepted span (days)",
+        "unsupportedOrigins": "Unsupported origins"
+      },
+      "pairs": {
+        "accepted": "Accepted transitions",
+        "candidates": "Adjacent candidate pairs",
+        "excluded": "Excluded pairs",
+        "longGap": "Configured long-gap exclusions",
+        "maxGap": "Elapsed-time maximum",
+        "maxGapHours": "{{hours}} hours",
+        "meters": "{{count}} m",
+        "mismatch": "Endpoint mismatch",
+        "noMaxGap": "Not configured",
+        "overlap": "Overlap or negative gap",
+        "startUnknown": "Current start unlocatable",
+        "title": "Mutually exclusive adjacency and continuity accounting",
+        "tolerance": "GPS continuity tolerance",
+        "unusable": "Unusable row or indeterminate chronology"
+      },
+      "rows": {
+        "cap": "History cap state",
+        "capBelow": "Not reached",
+        "capReached": "Reached",
+        "excluded": "Excluded rows",
+        "future": "Future rows",
+        "included": "Included completed visits",
+        "incomplete": "Incomplete timestamps or completion",
+        "invalidDuration": "Invalid or nonpositive duration",
+        "invalidOrder": "Invalid timestamp or end order",
+        "placed": "Chronologically placed rows",
+        "returned": "Rows returned",
+        "title": "Mutually exclusive returned-row accounting",
+        "unlocatable": "Unlocatable end destination",
+        "unplaced": "Rows with unplaceable start"
+      },
+      "subtitle": "Every returned row and every chronologically adjacent candidate pair enters one mutually exclusive category.",
+      "support": {
+        "concentration": "Transition concentration index",
+        "dayIngredient": "Active-day ingredient",
+        "edgeConcentration": "Accepted edge concentration",
+        "effective": "Effective successor count",
+        "entropy": "Weighted entropy bits",
+        "latestAge": "Latest state age (days)",
+        "recurrenceIngredient": "Recurrence ingredient",
+        "stateConcentration": "Destination visit concentration",
+        "supportIndex": "Weighted origin support index",
+        "title": "Descriptive shape and separate support ingredients",
+        "volumeIngredient": "Outgoing-volume ingredient",
+        "weekIngredient": "Active-week ingredient",
+        "effectiveSource": "Entropy-derived effective successors can be fractional; this is not a counted event population. The existing rounded display is retained."
+      },
+      "supportFormula": "Origin support index = 100 × (0.40 × outgoing volume + 0.25 × active days + 0.20 × active weeks + 0.15 × recurrence). The displayed aggregate is weighted by accepted outgoing transitions.",
+      "title": "Evidence quality, accounting, and continuity",
+      "briefDescription": "Loaded visits and accepted adjacent pairs define this evidence. Entropy and weighted support are descriptive, not predicted destinations or continuous observation.",
+      "briefScope": "Loaded completed visits and accepted transition population; source timestamps, configuration and denominators are shown separately.",
+      "timestampSource": "Source epoch milliseconds, rendered in the selected display timezone."
+    },
+    "states": {
+      "capReached": "Exactly 1,000 rows were returned. Findings cover only the latest returned history and may be capped.",
+      "empty": "No drives were returned, so no destination or transition claim is made.",
+      "emptyPassive": "No drives were returned, so there is no destination evidence.",
+      "errorKpi": "Drive history is unavailable; use the status below to retry.",
+      "errorPassive": "Drive history is unavailable; retry from the evidence status above.",
+      "loading": "Loading up to 1,000 recent drives…",
+      "loadingAria": "Loading destination transition history",
+      "loadingKpi": "Waiting for returned drive history…",
+      "noContinuity": "Included destination visits are available, but no adjacent pair passed endpoint continuity and time-order checks.",
+      "noContinuityPassive": "Destination visits exist, but no adjacent returned pair passed endpoint continuity and time-order checks.",
+      "noMonthsPassive": "No accepted transition is available for a vehicle-local month.",
+      "noOriginsPassive": "No origin has accepted outgoing transition evidence.",
+      "noQualified": "Returned rows contained no completed, valid, non-future drive with a usable end destination.",
+      "noQualifiedPassive": "No returned row was a completed, valid, non-future drive with a usable end destination.",
+      "noVehicle": "Select a vehicle to analyze its returned destination visits and continuity-safe transitions.",
+      "noVehiclePassive": "Select a vehicle to make its returned destination evidence available.",
+      "pendingKpi": "Drive-history availability has not resolved.",
+      "pendingPassive": "Drive-history availability has not resolved.",
+      "refreshError": "Drive history could not refresh. Showing the most recently loaded destination evidence.",
+      "retry": "Retry",
+      "selectVehicleKpi": "Select a vehicle above to load destination evidence.",
+      "thinSupport": "Accepted transitions are descriptive, but no origin has the three outgoing observations required for supported evidence."
+    },
+    "subtitle": "Continuity-safe historical destination flows, support, temporal profiles, and complete returned-row accounting",
+    "title": "Destination transitions",
+    "twoHour": {
+      "aria": "Twelve-bin vehicle-local profile of accepted transition counts and concentration",
+      "column": {
+        "concentration": "Transition concentration index",
+        "destinations": "Distinct destinations",
+        "leadingShare": "Leading edge share (%)",
+        "origins": "Distinct origins",
+        "samples": "Accepted transitions",
+        "support": "Sample support",
+        "window": "Local two-hour window"
+      },
+      "description": "The accessible data includes distinct origins, destinations, historical leading-edge share, and sample support.",
+      "series": {
+        "concentration": "Transition concentration index",
+        "count": "Accepted transitions"
+      },
+      "subtitle": "Accepted transitions use the current drive start in {{timeZone}}; multiple drives per day remain separate samples.",
+      "title": "Vehicle-local two-hour transition profile"
+    },
+    "visitShare": {
+      "aria": "Visit share for the most common normalized end destinations",
+      "column": {
+        "activeDays": "Active local days",
+        "activeWeeks": "Active local weeks",
+        "destination": "Destination",
+        "share": "Visit share (%)",
+        "visits": "Included visits"
+      },
+      "description": "The accessible data includes visit counts and active vehicle-local days and weeks.",
+      "series": "Visit share",
+      "subtitle": "Included completed-drive arrivals by normalized end destination.",
+      "title": "Destination visit share"
+    },
+    "weekday": {
+      "aria": "Seven-day vehicle-timezone profile of accepted transition counts and concentration",
+      "column": {
+        "concentration": "Transition concentration index",
+        "destinations": "Distinct destinations",
+        "leadingShare": "Leading edge share (%)",
+        "origins": "Distinct origins",
+        "samples": "Accepted transitions",
+        "support": "Sample support",
+        "weekday": "Vehicle-local weekday"
+      },
+      "description": "The accessible data includes distinct origins, destinations, historical leading-edge share, and sample support.",
+      "series": {
+        "concentration": "Transition concentration index",
+        "count": "Accepted transitions"
+      },
+      "subtitle": "Accepted transition starts grouped by weekday in {{timeZone}}.",
+      "title": "Vehicle-timezone weekday profile"
+    },
+    "colLabel": "Category",
+    "profileTitle": "Destination transition profile",
+    "profileAria": "Destination transition profile showing sample count and concentration",
+    "brief": {
+      "description": "Accepted adjacent transitions retain chronology and continuity gates; historical successors describe past observations, not the next destination.",
+      "source": "Returned end-location states and accepted adjacent pairs; latest unusable rows are never replaced with older destinations."
+    }
+  }
+}

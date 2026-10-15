@@ -38,3 +38,8 @@ export type AutomationActionSetSettingStepInput = Extract<
   AutomationActionStepInput,
   { kind: 'action_set_setting' }
 >;
+
+export type AutomationActionWaitStepInput = Extract<
+  AutomationActionStepInput,
+  { kind: 'action_wait' }
+>;

@@ -1,10 +1,8 @@
 /**
  * LifetimeStatsPage — behaviour + hardening coverage.
  *
- * The page has a single default export (`LifetimeStatsPage`); its sub-
- * components (SectionCard, HeroChip, FunFactCard, SavingsBar, EnvStat,
- * RecordCard, MiniStat) are file-local and are exercised transitively
- * through the page render.
+ * The page's existing feature adapters are exercised transitively through
+ * its single default export.
  *
  * What is covered:
  *   1. READY  — hero, KPI band, fun facts, savings bar, environmental,
@@ -18,7 +16,7 @@
  *   5. ERROR  — every panel surfaces QueryError and the Retry action is
  *      wired to the query's refetch (failure/interaction path).
  *   6. DEEP-LINK — `?achievement=<id>` scrolls the badge into view and
- *      applies the pulse ring (user-journey + a11y).
+ *       applies the bounded static cue (user-journey + a11y).
  *
  * Network is never hit: the data hook is stubbed and the peripheral
  * vehicle picker / AI Q&A surfaces are isolated so the assertions focus
@@ -27,10 +25,11 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import english from '@/i18n/en.json';
 
 import type { LifetimeStats, LifetimeAchievement } from '@/api/hooks/useAnalytics';
 
@@ -41,6 +40,7 @@ import type { LifetimeStats, LifetimeAchievement } from '@/api/hooks/useAnalytic
 const h = vi.hoisted(() => ({
   query: undefined as unknown,
   unit: { distance: 'km', speed: 'km/h' } as { distance: string; speed: string },
+  lifetimeHook: vi.fn(),
 }));
 
 const refetchMock = vi.fn();
@@ -75,7 +75,10 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@/api/hooks/useAnalytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useAnalytics')>();
-  return { ...actual, useLifetimeStats: () => h.query };
+  return { ...actual, useLifetimeStats: (vehicleId?: string) => {
+    h.lifetimeHook(vehicleId);
+    return h.query;
+  } };
 });
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
@@ -118,6 +121,15 @@ vi.mock('@/components/ai/AILifetimeStatsQA', () => ({
 
 import LifetimeStatsPage from './LifetimeStatsPage';
 
+it('offers keyboard-accessible lifetime aggregate help without source data', () => {
+  h.query = makeQuery();
+  renderPage();
+  const help = screen.getByRole('button', { name: 'Lifetime stats' });
+  help.focus();
+  expect(help).toHaveFocus();
+  expect(help).toHaveAccessibleDescription(english.lifetime.brief.description);
+});
+
 // jsdom lacks matchMedia (framer-motion's useReducedMotion) and
 // scrollIntoView — polyfill/stub both so motion + deep-link paths run.
 if (!window.matchMedia) {
@@ -140,6 +152,8 @@ interface QueryStub {
   data: LifetimeStats | null | undefined;
   isLoading: boolean;
   isError: boolean;
+  isSuccess?: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   error: unknown;
   isFetching: boolean;
   isStale: boolean;
@@ -201,7 +215,12 @@ function makeStats(overrides: Partial<LifetimeStats> = {}): LifetimeStats {
   };
 }
 
-function renderPage(path = '/lifetime') {
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="route-location">{location.pathname}{location.search}{location.hash}</output>;
+}
+
+function renderPage(path = '/lifetime-stats') {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -209,6 +228,7 @@ function renderPage(path = '/lifetime') {
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[path]}>
         <LifetimeStatsPage />
+        <LocationProbe />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -227,6 +247,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -235,26 +256,26 @@ describe('LifetimeStatsPage', () => {
     renderPage();
 
     // Page shell.
-    expect(screen.getByRole('heading', { name: /Lifetime Stats/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Lifetime stats/i })).toBeInTheDocument();
 
     // KPI band (km identity: 12345 km stays 12,345 km).
     expect(screen.getByText('1,234')).toBeInTheDocument(); // total drives
-    expect(screen.getByText('12,345')).toBeInTheDocument(); // total distance
-    expect(screen.getByText('3,456.7')).toBeInTheDocument(); // total energy kWh
-    expect(screen.getByText('$543')).toBeInTheDocument(); // electric cost (savings bar)
-    expect(screen.getByText('$1,500')).toBeInTheDocument(); // gas-equivalent cost
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument(); // total distance
+    expect(screen.getByText('3,456.70 kWh')).toBeInTheDocument(); // total energy kWh
+    expect(screen.getByText('$543.21')).toBeInTheDocument(); // electric cost (savings bar)
+    expect(screen.getByText('$1,500.00')).toBeInTheDocument(); // gas-equivalent cost
 
     // Personal records — distance/speed converted, charge shown raw kWh.
-    expect(screen.getByText('456.7 km')).toBeInTheDocument();
-    expect(screen.getByText('201 km/h')).toBeInTheDocument();
-    expect(screen.getByText('75.5 kWh')).toBeInTheDocument();
+    expect(screen.getByText('456.70 km')).toBeInTheDocument();
+    expect(screen.getByText('201.00 km/h')).toBeInTheDocument();
+    expect(screen.getByText('75.50 kWh')).toBeInTheDocument();
 
     // Fun facts + activity summary.
-    expect(screen.getByText('250.0')).toBeInTheDocument(); // earth %
-    expect(screen.getByText('3.20')).toBeInTheDocument(); // moon %
+    expect(screen.getByText('250.00%')).toBeInTheDocument(); // earth %
+    expect(screen.getByText('3.20%')).toBeInTheDocument(); // moon %
     expect(screen.getByText('Saturday')).toBeInTheDocument();
     expect(screen.getByText('18:00')).toBeInTheDocument();
-    expect(screen.getByText('155 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('155.00 Wh/km')).toBeInTheDocument();
 
     // Trees appear in both the fun-fact card and the environmental panel.
     expect(screen.getAllByText('137').length).toBeGreaterThanOrEqual(2);
@@ -287,11 +308,11 @@ describe('LifetimeStatsPage', () => {
 
     renderPage();
 
-    expect(screen.getByText('1,000')).toBeInTheDocument(); // total distance in miles
-    expect(screen.getByText('500.0 mi')).toBeInTheDocument(); // longest drive record
-    expect(screen.getByText('100 mph')).toBeInTheDocument(); // highest speed record
+    expect(screen.getByText('1,000.00 mi')).toBeInTheDocument(); // total distance in miles
+    expect(screen.getByText('500.00 mi')).toBeInTheDocument(); // longest drive record
+    expect(screen.getByText('100.00 mph')).toBeInTheDocument(); // highest speed record
     // The km identity value must NOT appear once the preference is miles.
-    expect(screen.queryByText('12,345')).not.toBeInTheDocument();
+    expect(screen.queryByText('12,345.00 km')).not.toBeInTheDocument();
   });
 
   it('shows a skeleton in every panel while loading and leaks no ready values', () => {
@@ -300,24 +321,39 @@ describe('LifetimeStatsPage', () => {
     const { container } = renderPage();
 
     // Header still present; no resolved KPI values.
-    expect(screen.getByRole('heading', { name: /Lifetime Stats/i })).toBeInTheDocument();
-    expect(screen.queryByText('12,345')).not.toBeInTheDocument();
-    expect(screen.queryByText('456.7 km')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Lifetime stats/i })).toBeInTheDocument();
+    expect(screen.queryByText('12,345.00 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('456.70 km')).not.toBeInTheDocument();
     // Skeletons render across the page.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0);
   });
 
   it('renders a per-section EmptyState (never a blank panel) when the query resolves with no data', () => {
-    h.query = makeQuery({ data: null });
+    h.query = makeQuery({ data: null, isSuccess: true });
 
-    renderPage();
+    const { container } = renderPage();
 
     // Several sections share the generic "no data" copy.
     expect(screen.getAllByText(/No driving data yet/i).length).toBeGreaterThanOrEqual(3);
     // Achievements gallery has its own empty message.
     expect(screen.getByText(/Start driving to unlock achievements/i)).toBeInTheDocument();
-    // Hero degrades gracefully to a zero drive count rather than crashing.
-    expect(screen.getByText(/driven across 0 drives/i)).toBeInTheDocument();
+    // An absent payload is not a measured zero-drive history.
+    expect(screen.getByText(/driven across — drives/i)).toBeInTheDocument();
+    expect(screen.queryByText(/driven across 0 drives/i)).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes paused initial query state to every context brief without declaring empty', () => {
+    h.query = makeQuery({ fetchStatus: 'paused', dataUpdatedAt: 0 });
+    const { container } = renderPage();
+    expect(screen.getAllByText('Request paused')).toHaveLength(3);
+    const briefs = container.querySelectorAll('[data-operational-brief]');
+    for (const brief of Array.from(briefs).slice(1)) {
+      expect(brief).not.toHaveAttribute('aria-busy', 'true');
+      expect(brief.parentElement?.querySelector('[data-empty-state]')).toBeNull();
+    }
   });
 
   it('surfaces QueryError in every panel and wires Retry to the query refetch', () => {
@@ -335,19 +371,174 @@ describe('LifetimeStatsPage', () => {
     expect(refetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('scrolls to and pulses the deep-linked achievement badge', async () => {
+  it('scrolls to and highlights the deep-linked achievement badge without decorative looping', async () => {
     h.query = makeQuery({ data: makeStats() });
 
-    const { container } = renderPage('/lifetime?achievement=ach-1');
+    const { container } = renderPage('/lifetime-stats?achievement=ach-1');
 
     await waitFor(() => {
       expect(scrollSpy).toHaveBeenCalled();
       const wrapper = container.querySelector('[data-achievement-id="ach-1"]');
-      expect(wrapper?.className).toContain('ring-yellow-400');
+      expect(wrapper?.className).toContain('ring-[var(--semantic-info-border)]');
+      expect(wrapper?.className).not.toContain('animate-pulse');
     });
 
     expect(scrollSpy).toHaveBeenCalledWith(
       expect.objectContaining({ block: 'center' }),
     );
+  });
+
+  it('removes only the achievement cue after three seconds and preserves workspace query identity and hash', async () => {
+    vi.useFakeTimers();
+    renderPage('/lifetime-stats?vehicle_id=7&achievement=ach-1&from=2024-01-01&tag=a&tag=b#records');
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(2999); });
+    expect(screen.getByTestId('route-location')).toHaveTextContent('achievement=ach-1');
+    expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ block: 'center' }));
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(screen.getByTestId('route-location')).toHaveTextContent(
+      '/lifetime-stats?vehicle_id=7&from=2024-01-01&tag=a&tag=b#records',
+    );
+    expect(h.lifetimeHook).toHaveBeenCalledWith('7');
+  });
+
+  it('keeps missing hero counts, achievement counts and individual records unknown without removing sections', () => {
+    const stats = makeStats();
+    for (const key of ['total_drives', 'total_distance_km', 'achievements'] as const) {
+      Reflect.deleteProperty(stats, key);
+    }
+    Reflect.deleteProperty(stats.longest_drive_record, 'value');
+    stats.highest_speed_record.value = Number.NaN;
+    stats.max_charge_record.value = Number.POSITIVE_INFINITY;
+    h.query = makeQuery({ data: stats });
+    renderPage();
+
+    expect(screen.getByText('driven across — drives')).toBeInTheDocument();
+    expect(screen.getByText(/—\/—\s+unlocked/)).toBeInTheDocument();
+    for (const title of ['Longest drive', 'Highest speed', 'Biggest charge']) {
+      const record = screen.getByText(title).parentElement;
+      expect(record).not.toBeNull();
+      expect(within(record!).getByText('—')).toBeInTheDocument();
+    }
+    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 km/h')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 kWh')).not.toBeInTheDocument();
+    for (const title of ['Fun facts', 'Savings vs gasoline', 'Environmental impact', 'Personal records', 'Activity summary', 'Achievements']) {
+      expect(screen.getAllByText(title).length).toBeGreaterThan(0);
+    }
+    expect(screen.getByTestId('ai-lifetime-qa')).toBeInTheDocument();
+  });
+
+  it('retains known savings values and marks missing comparison readings unknown instead of fabricating zero', () => {
+    const stats = makeStats();
+    Reflect.deleteProperty(stats, 'total_charging_cost');
+    Reflect.deleteProperty(stats, 'co2_offset_kg');
+    h.query = makeQuery({ data: stats });
+    renderPage();
+
+    const electric = screen.getByText('Electric cost').closest('div');
+    const gas = screen.getByText('Gasoline equivalent').closest('div');
+    expect(electric).not.toBeNull();
+    expect(gas).not.toBeNull();
+    expect(within(electric!).getByText('—')).toBeInTheDocument();
+    expect(within(gas!).getByText('$1,500.00')).toBeInTheDocument();
+    expect(screen.getAllByText('$956.79').length).toBeGreaterThan(0);
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.queryByText(/0\.00 kg CO₂/)).not.toBeInTheDocument();
+    expect(screen.getByText('456.70 km')).toBeInTheDocument();
+  });
+
+  it('preserves genuine zero hero, record and savings readings', () => {
+    h.query = makeQuery({ data: makeStats({
+      total_drives: 0, total_distance_km: 0, total_charging_cost: 0,
+      total_savings: 0, co2_offset_kg: 0, achievements: [],
+      longest_drive_record: { value: 0, date: '2024-03-10T00:00:00Z' },
+      highest_speed_record: { value: 0, date: '2024-05-20T00:00:00Z' },
+      max_charge_record: { value: 0, date: '2024-06-01T00:00:00Z' },
+    }) });
+    renderPage();
+
+    expect(screen.getByText('driven across 0 drives')).toBeInTheDocument();
+    expect(screen.getByText(/0\/0\s+unlocked/)).toBeInTheDocument();
+    expect(screen.getByText('0.00 km/h')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
+    expect(screen.getAllByText('0.00 km').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('$0.00').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/0\.00 kg CO₂ avoided/)).toBeInTheDocument();
+  });
+
+  it.each([
+    { electric: 543.21, savings: -543.21, co2: 12.75 },
+    { electric: 0, savings: 0, co2: 0 },
+    { electric: -0.25, savings: 0.25, co2: -0.5 },
+  ])('keeps supplied scalars visible with a zero gasoline baseline: %j', ({ electric, savings, co2 }) => {
+    h.query = makeQuery({ data: makeStats({
+      total_charging_cost: electric, gas_equivalent_cost: 0,
+      total_savings: savings, co2_offset_kg: co2,
+    }) });
+    renderPage();
+
+    const panel = screen.getByText('Savings vs gasoline').closest('[data-card]');
+    expect(panel).not.toBeNull();
+    const scope = within(panel!);
+    for (const [label, value] of [
+      ['Electric cost', `$${electric.toFixed(2)}`],
+      ['Gasoline equivalent', '$0.00'],
+      ['You saved', `$${savings.toFixed(2)}`],
+      ['CO₂ offset', `${co2.toFixed(2)} kg`],
+    ]) {
+      expect(within(scope.getByText(label).closest('div')!).getByText(value)).toBeInTheDocument();
+    }
+    expect(scope.getByText(/Baseline comparison unavailable — Gasoline equivalent:/)).toHaveTextContent('$0.00');
+    expect(scope.queryByText('Complete some drives to see savings')).not.toBeInTheDocument();
+  });
+
+  it.each(['missing', 'null', 'nan', 'infinity'] as const)(
+    'keeps %s savings readings unknown while preserving supplied fractional and signed values',
+    (invalid) => {
+      const stats = makeStats({ total_charging_cost: -0.25, total_savings: 0.125 });
+      for (const field of ['gas_equivalent_cost', 'co2_offset_kg'] as const) {
+        if (invalid === 'missing') Reflect.deleteProperty(stats, field);
+        else Reflect.set(stats, field, invalid === 'null' ? null : invalid === 'nan' ? Number.NaN : Number.POSITIVE_INFINITY);
+      }
+      h.query = makeQuery({ data: stats });
+      renderPage();
+
+      const panel = screen.getByText('Savings vs gasoline').closest('[data-card]');
+      expect(panel).not.toBeNull();
+      const scope = within(panel!);
+      expect(scope.getByText('$-0.25')).toBeInTheDocument();
+      expect(scope.getByText('$0.13')).toBeInTheDocument();
+      for (const label of ['Gasoline equivalent', 'CO₂ offset']) {
+        expect(within(scope.getByText(label).closest('div')!).getByText('—')).toBeInTheDocument();
+      }
+      expect(scope.queryByText('$0.00')).not.toBeInTheDocument();
+      expect(scope.queryByText(/Baseline comparison unavailable/)).not.toBeInTheDocument();
+    },
+  );
+
+  it('preserves signed fractional savings with a valid positive gasoline baseline', () => {
+    h.query = makeQuery({ data: makeStats({
+      total_charging_cost: 1.75, gas_equivalent_cost: 0.5,
+      total_savings: -1.25, co2_offset_kg: -0.125,
+    }) });
+    renderPage();
+    expect(screen.getByText('$1.75')).toBeInTheDocument();
+    expect(screen.getByText('$0.50')).toBeInTheDocument();
+    expect(screen.getAllByText('$-1.25').length).toBeGreaterThan(0);
+    expect(screen.getByText(/-0\.13 kg CO₂ avoided/)).toBeInTheDocument();
+  });
+
+  it('retains all-time metrics and individual record values through a refresh failure with a working retry', () => {
+    h.query = makeQuery({ data: makeStats(), isError: true, error: new Error('refresh failed') });
+    renderPage();
+
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+    expect(screen.getByText('456.70 km')).toBeInTheDocument();
+    expect(screen.getByText('$543.21')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Road Warrior' })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /Retry/i })[0]);
+    expect(refetchMock).toHaveBeenCalledTimes(1);
   });
 });

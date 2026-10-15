@@ -10,6 +10,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useRef, useState } from 'react';
+import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
+import type { UseDialogFocusOptions } from '@/hooks/useDialogFocus';
 import {
   useDialogFocus,
   isFocusRestorable,
@@ -153,6 +156,94 @@ describe('useDialogFocus', () => {
     expect(document.activeElement).toBe(screen.getByTestId('main'));
   });
 });
+
+  function ExplicitDialog({
+    open,
+    getReturnFocusTarget,
+  }: Pick<UseDialogFocusOptions, 'open' | 'getReturnFocusTarget'>) {
+    const ref = useRef<HTMLDivElement>(null);
+    useDialogFocus({ open, containerRef: ref, getReturnFocusTarget });
+    return open ? <div ref={ref} role="dialog" tabIndex={-1}><input aria-label="Explicit draft" autoFocus /></div> : null;
+  }
+
+  describe('useDialogFocus — explicit return lifecycle', () => {
+    it('restores the original activation after real autoFocus, close, reopen and unmount', async () => {
+      const user = userEvent.setup();
+      let activation: HTMLElement | null = null;
+      const getter = vi.fn(() => activation);
+      function ExplicitHarness() {
+        const [open, setOpen] = useState(false);
+        return <>
+          <button onClick={(event) => { activation = event.currentTarget; setOpen(true); }}>Original activation</button>
+          <button onClick={() => setOpen(false)} tabIndex={-1} hidden>Hidden close</button>
+          <ExplicitDialog open={open} getReturnFocusTarget={getter} />
+        </>;
+      }
+      const view = render(<ExplicitHarness />);
+      await user.click(screen.getByRole('button', { name: 'Original activation' }));
+      expect(screen.getByLabelText('Explicit draft')).toHaveFocus();
+      expect(getter).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByText('Hidden close'));
+      expect(getter).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Original activation' })).toHaveFocus();
+      await user.click(screen.getByRole('button', { name: 'Original activation' }));
+      expect(screen.getByLabelText('Explicit draft')).toHaveFocus();
+      view.unmount();
+      expect(getter).toHaveBeenCalledTimes(2);
+    });
+
+    it('reads the replacement getter once at cleanup without refocusing on updates', async () => {
+      const user = userEvent.setup();
+      const original = vi.fn(() => screen.getByText('Original return'));
+      const replacement = vi.fn(() => screen.getByText('Latest return'));
+      const content = (open: boolean, getter: UseDialogFocusOptions['getReturnFocusTarget']) => <>
+        <button>Original return</button><button>Latest return</button>
+        <ExplicitDialog open={open} getReturnFocusTarget={getter} />
+      </>;
+      const view = render(content(true, original));
+      await user.type(screen.getByLabelText('Explicit draft'), 'retained');
+      view.rerender(content(true, replacement));
+      expect(screen.getByLabelText('Explicit draft')).toHaveFocus();
+      expect(screen.getByLabelText('Explicit draft')).toHaveValue('retained');
+      expect(original).not.toHaveBeenCalled();
+      expect(replacement).not.toHaveBeenCalled();
+      view.rerender(content(false, replacement));
+      expect(original).not.toHaveBeenCalled();
+      expect(replacement).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Latest return')).toHaveFocus();
+    });
+
+    it('treats getter removal after explicit open as no target, not passive capture', () => {
+      const getter = vi.fn(() => screen.getByText('Never substitute'));
+      const content = (open: boolean, getReturnFocusTarget?: () => HTMLElement | null) => <>
+        <main id="main-content" tabIndex={-1}>Safe main</main><button>Never substitute</button>
+        <ExplicitDialog open={open} getReturnFocusTarget={getReturnFocusTarget} />
+      </>;
+      const view = render(content(true, getter));
+      view.rerender(content(true));
+      expect(getter).not.toHaveBeenCalled();
+      view.rerender(content(false));
+      expect(getter).not.toHaveBeenCalled();
+      expect(screen.getByText('Safe main')).toHaveFocus();
+    });
+
+    it('does not adopt explicit mode until the next open lifecycle', () => {
+      const getter = vi.fn(() => screen.getByText('Explicit after reopen'));
+      const content = (open: boolean, getReturnFocusTarget?: () => HTMLElement | null) => <>
+        <main id="main-content" tabIndex={-1}>Default main</main><button>Explicit after reopen</button>
+        <ExplicitDialog open={open} getReturnFocusTarget={getReturnFocusTarget} />
+      </>;
+      const view = render(content(true));
+      view.rerender(content(true, getter));
+      view.rerender(content(false, getter));
+      expect(getter).not.toHaveBeenCalled();
+      expect(screen.getByText('Default main')).toHaveFocus();
+      view.rerender(content(true, getter));
+      view.rerender(content(false, getter));
+      expect(getter).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Explicit after reopen')).toHaveFocus();
+    });
+  });
 
 describe('isFocusRestorable', () => {
   it('rejects null and detached nodes', () => {

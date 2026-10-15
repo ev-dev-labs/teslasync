@@ -7,8 +7,8 @@ import {
   MetricValue,
   Text,
 } from '@/components/ui';
-import { formatDate } from '@/lib/dateFormat';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+
 import { useUnits } from '@/hooks/useUnits';
 
 import {
@@ -21,12 +21,15 @@ import {
 } from '../../lib/batteryCare';
 import { BatteryCareSection } from './BatteryCareSection';
 import type { BatteryCareSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryCareMethodologyProps {
   care: CareScore;
   state: BatteryCareSectionState;
   sessionLimit: number;
   driveLimit: number;
+  sessionsAvailable: boolean;
+  drivesAvailable: boolean;
   className?: string;
 }
 
@@ -36,10 +39,14 @@ export function BatteryCareMethodology({
   state,
   sessionLimit,
   driveLimit,
+  sessionsAvailable,
+  drivesAvailable,
   className,
 }: BatteryCareMethodologyProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatPower } = useUnits();
+  const { formatDate } = useDateFormat();
   const coverage = care.coverage;
   const hasData =
     coverage.returnedSessions > 0 || coverage.returnedDrives > 0;
@@ -72,10 +79,12 @@ export function BatteryCareMethodology({
               'Drive history filled its {{limit}}-row request cap; older drives may be absent.',
               { limit: driveLimit },
             )
-          : t(
-              'batteryCare.method.capOpen',
-              'Neither source filled its requested row cap, but the result is still a returned observation window rather than a lifetime claim.',
-            );
+          : !sessionsAvailable || !drivesAvailable
+            ? t('dataSources.partialMessage', 'Available sections remain visible. Source status is tracked independently below.')
+            : t(
+                'batteryCare.method.capOpen',
+                'Neither source filled its requested row cap, but the result is still a returned observation window rather than a lifetime claim.',
+              );
 
   return (
     <BatteryCareSection
@@ -87,7 +96,7 @@ export function BatteryCareMethodology({
       )}
       icon={
         <FlaskConical
-          className="h-4 w-4 text-purple-300"
+          className="h-4 w-4 text-[var(--text-secondary)]"
           aria-hidden="true"
         />
       }
@@ -109,25 +118,25 @@ export function BatteryCareMethodology({
     >
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{fmtInt(coverage.returnedSessions)}</MetricValue>
+          <MetricValue>{sessionsAvailable ? fmtInt(coverage.returnedSessions) : '—'}</MetricValue>
           <MetricLabel>
             {t('batteryCare.method.returnedSessions', 'Sessions returned')}
           </MetricLabel>
         </div>
         <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{fmtInt(care.sessionsAnalyzed)}</MetricValue>
+          <MetricValue>{sessionsAvailable ? fmtInt(care.sessionsAnalyzed) : '—'}</MetricValue>
           <MetricLabel>
             {t('batteryCare.method.eligibleSessions', 'End-SoC eligible')}
           </MetricLabel>
         </div>
         <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{fmtInt(coverage.returnedDrives)}</MetricValue>
+          <MetricValue>{drivesAvailable ? fmtInt(coverage.returnedDrives) : '—'}</MetricValue>
           <MetricLabel>
             {t('batteryCare.method.returnedDrives', 'Drives returned')}
           </MetricLabel>
         </div>
         <div className="rounded-xl bg-[var(--surface-2)] p-3">
-          <MetricValue>{fmtInt(care.drivesAnalyzed)}</MetricValue>
+          <MetricValue>{drivesAvailable ? fmtInt(care.drivesAnalyzed) : '—'}</MetricValue>
           <MetricLabel>
             {t('batteryCare.method.eligibleDrives', 'Arrival-SoC eligible')}
           </MetricLabel>
@@ -136,7 +145,7 @@ export function BatteryCareMethodology({
 
       <div className="mt-4 space-y-3">
         <div className="flex items-start gap-2">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
           <Text as="p" variant="bodySm">
             {t(
               'batteryCare.method.calibration',
@@ -147,34 +156,33 @@ export function BatteryCareMethodology({
                 energy: MIN_SCORE_ENERGY_SESSIONS,
                 coverage: fmtPercent(
                   MIN_ENERGY_CLASSIFICATION_COVERAGE * 100,
-                  0,
                 ),
               },
             )}
           </Text>
         </div>
         <div className="flex items-start gap-2">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
           <Text as="p" variant="bodySm">
             {t(
               'batteryCare.method.exclusions',
               'Excluded: {{sessions}} sessions without valid end SoC, {{drives}} drives without valid arrival SoC, and {{energy}} sessions without positive measured energy. {{unknown}} energy sessions remain unclassified.',
               {
-                sessions: coverage.excludedEndSocSessions,
-                drives: coverage.excludedArrivalDrives,
-                energy: coverage.excludedEnergySessions,
-                unknown: coverage.unclassifiedEnergySessions,
+                sessions: sessionsAvailable ? coverage.excludedEndSocSessions : '—',
+                drives: drivesAvailable ? coverage.excludedArrivalDrives : '—',
+                energy: sessionsAvailable ? coverage.excludedEnergySessions : '—',
+                unknown: sessionsAvailable ? coverage.unclassifiedEnergySessions : '—',
               },
             )}
           </Text>
         </div>
         <div className="flex items-start gap-2">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-indigo-300" aria-hidden="true" />
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
           <Text as="p" variant="bodySm">
             {t(
               'batteryCare.method.classification',
               'AC/DC classification uses explicit charger labels; an unlabeled session is treated as DC only when peak power exceeds {{power}}. Other energy remains unclassified.',
-              { power: formatPower(DC_INFERENCE_POWER_W, { precision: 0 }) },
+              { power: formatPower(DC_INFERENCE_POWER_W) },
             )}
           </Text>
         </div>

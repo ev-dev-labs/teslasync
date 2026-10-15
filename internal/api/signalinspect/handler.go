@@ -508,7 +508,8 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 // LiveState returns the current in-memory signal state for a vehicle
 // as the typed `{kind, value, ts}` envelope. The envelope is augmented
 // with `timestamp`, `source` ("l1" | "l2" | "stale"), and `age_ms` so
-// the FSM debugger can keep surfacing which layer satisfied each read.
+// the FSM debugger can surface freshness. The legacy source codes classify
+// timestamps, not the physical L1/L2 read layer, which this boundary does not expose.
 //
 // GET /api/v1/signals/{vehicleID}/live
 func (h *Handler) LiveState(w http.ResponseWriter, r *http.Request) {
@@ -598,17 +599,14 @@ func resolveLiveKind(name string, raw interface{}) string {
 	return protomodel.ValueKindUnknown.String()
 }
 
-// classifyLiveSource maps a live signal Value into the L1/L2/STALE
-// bucket the debugger UI uses (ADR-002 / "Signal Data — Layered
-// Live-State Contract"):
+// classifyLiveSource retains the debugger's legacy freshness codes:
 //
-//   - zero timestamp        → "l2" (legacy unknown-freshness Redis entry)
+//   - zero timestamp        → "l2" (unknown freshness)
 //   - age >  freshness      → "stale"
 //   - age <= freshness      → "l1"
 //
-// Strictly distinguishing L1 vs L2 would require the boundary to expose
-// its per-signal source; today we treat "fresh" as L1-equivalent because
-// the L1 hot path is what the debugger primarily cares about.
+// signal.Value has no physical read-layer metadata. Neither a timestamp nor
+// polling/SSE health identifies whether L1 or L2 satisfied the read.
 func classifyLiveSource(v *signal.Value, now time.Time) string {
 	if v == nil {
 		return "unknown"

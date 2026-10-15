@@ -45,7 +45,7 @@ export function RepairCaseCollaboration({
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             className="flex-1"
-            aria-label={t('dataRepair.cases.assignee', 'Assignee')}
+            label={t('dataRepair.cases.assignee', 'Assignee')}
             placeholder={t('dataRepair.cases.assigneePlaceholder', 'Operator name')}
             value={assignee}
             onChange={(event) => setAssignee(event.target.value)}

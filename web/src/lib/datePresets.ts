@@ -88,6 +88,16 @@ export const DATE_PRESETS: DatePreset[] = [
     }),
   },
   {
+    id: '6h',
+    i18nKey: 'workspace.analysis.presets.6h',
+    fallback: 'Last 6 hours.',
+    requiresExplicitSelection: true,
+    resolve: (now = new Date(), timeZone?) => ({
+      start: iso(new Date(now.getTime() - 6 * 60 * 60_000), timeZone),
+      end: iso(now, timeZone),
+    }),
+  },
+  {
     id: '24h',
     i18nKey: 'date.preset.last24h',
     fallback: 'Last 24 hours',

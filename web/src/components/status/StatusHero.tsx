@@ -2,7 +2,7 @@
  * StatusHero — large at-a-glance status card.
  *
  * Surfaces the answer to "is my instance healthy?" in <1 second.
- * Status drives icon, headline, ring colour, and (optionally) glow.
+ * Status drives icon, headline, and ring colour.
  *
  * Reusable across:
  *   - SystemStatusPage hero
@@ -23,14 +23,13 @@ const STATUS_CONFIG: Record<HeroStatus, {
   ring: string
   bg: string
   text: string
-  glowRgba: string
   defaultHeadline: string
 }> = {
-  healthy:     { icon: CheckCircle,  ring: 'ring-green-500/40',  bg: 'bg-green-500/15',  text: 'text-green-400',  glowRgba: 'rgba(34,197,94,0.35)',  defaultHeadline: 'All systems operational' },
-  degraded:    { icon: AlertTriangle, ring: 'ring-amber-500/40', bg: 'bg-amber-500/15', text: 'text-amber-400', glowRgba: 'rgba(245,158,11,0.35)', defaultHeadline: 'Degraded performance' },
-  unhealthy:   { icon: XCircle,      ring: 'ring-red-500/40',    bg: 'bg-red-500/15',    text: 'text-red-400',    glowRgba: 'rgba(239,68,68,0.35)',  defaultHeadline: 'Service outage' },
-  unknown:     { icon: HelpCircle,   ring: 'ring-zinc-500/40',   bg: 'bg-zinc-500/15',   text: 'text-zinc-400',   glowRgba: 'rgba(113,113,122,0.25)', defaultHeadline: 'Status unknown' },
-  maintenance: { icon: Wrench,       ring: 'ring-blue-500/40',   bg: 'bg-blue-500/15',   text: 'text-blue-400',   glowRgba: 'rgba(59,130,246,0.35)', defaultHeadline: 'Scheduled maintenance' },
+  healthy:     { icon: CheckCircle,  ring: 'ring-green-500/40',  bg: 'bg-green-500/15',  text: 'text-green-400',  defaultHeadline: 'All systems operational' },
+  degraded:    { icon: AlertTriangle, ring: 'ring-amber-500/40', bg: 'bg-amber-500/15', text: 'text-amber-400', defaultHeadline: 'Degraded performance' },
+  unhealthy:   { icon: XCircle,      ring: 'ring-red-500/40',    bg: 'bg-red-500/15',    text: 'text-red-400',    defaultHeadline: 'Service outage' },
+  unknown:     { icon: HelpCircle,   ring: 'ring-zinc-500/40',   bg: 'bg-zinc-500/15',   text: 'text-zinc-400',   defaultHeadline: 'Status unknown' },
+  maintenance: { icon: Wrench,       ring: 'ring-blue-500/40',   bg: 'bg-blue-500/15',   text: 'text-blue-400',   defaultHeadline: 'Scheduled maintenance' },
 }
 
 export interface StatusHeroProps {
@@ -65,7 +64,6 @@ export function StatusHero({
     <GlassPanel
       id={id}
       className={cn('p-4 md:p-5', className)}
-      style={{ boxShadow: `0 0 60px ${cfg.glowRgba}` }}
     >
       <div className="flex flex-col items-center gap-4 text-center md:flex-row md:items-center md:gap-6 md:text-left">
         <div

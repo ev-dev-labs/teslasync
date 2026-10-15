@@ -15,10 +15,10 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { useChartPalette } from '@/hooks/useChartPalette';
+import { chartTokens } from '@/lib/tokens';
 import { TrueCostSectionBody } from './TrueCostSectionBody';
 import type { TrueCostSectionProps } from './types';
-
-const DELTA_COLOR = '#f59e0b';
 
 export function TrueCostMonthlyDeltaChart({
   analysis,
@@ -26,6 +26,7 @@ export function TrueCostMonthlyDeltaChart({
   display,
 }: TrueCostSectionProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const rows = useMemo(
     () => analysis.eligibleMonthly
       .filter((row) => row.month && row.derivedFuelDelta != null)
@@ -83,17 +84,17 @@ export function TrueCostMonthlyDeltaChart({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value: number) => display.formatCurrency(value, 0)}
+                  tickFormatter={(value: number) => display.formatCurrency(value)}
                 />
                 <Tooltip
                   content={<ChartTooltip valueFormatter={(value) =>
                     display.formatSignedCurrency(Number(value))} />}
                 />
-                <ReferenceLine y={0} stroke="#94a3b8" />
+                <ReferenceLine y={0} stroke={chartTokens.axisStroke} />
                 <Bar
                   dataKey="derivedFuelDelta"
                   name={t('tco.charts.monthlyDelta.series', 'Derived fuel savings / loss')}
-                  fill={DELTA_COLOR}
+                  fill={palette[3]}
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>

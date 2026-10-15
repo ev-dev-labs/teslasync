@@ -1,0 +1,50 @@
+[      66ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'join-ad-interest-group'. @ :0
+[      66ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'run-ad-auction'. @ :0
+[     507ms] [INFO] 🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙 @ http://localhost:3119/assets/vendor-i18n-t0Cce1Jb.js:0
+[     744ms] [ERROR] Applying inline style violates the following Content Security Policy directive 'style-src-elem 'self' https://fonts.googleapis.com 'sha256-eC/LYFbFX0VPdH107k2WfWKmpi4owBWgEs9oH9HVTeI=' local.adguard.org 'unsafe-inline' 'nonce-8928e7a6f1b143faad8a1019e16''. Note that 'unsafe-inline' is ignored if either a hash or nonce value is present in the source list. The action has been blocked. @ http://localhost:3119/assets/index-D0Iyc0oT.js:1457
+[     744ms] [ERROR] Applying inline style violates the following Content Security Policy directive 'style-src-elem 'self' https://fonts.googleapis.com 'sha256-eC/LYFbFX0VPdH107k2WfWKmpi4owBWgEs9oH9HVTeI=' local.adguard.org 'unsafe-inline' 'nonce-8928e7a6f1b143faad8a1019e16''. Note that 'unsafe-inline' is ignored if either a hash or nonce value is present in the source list. The action has been blocked. @ http://localhost:3119/assets/index-D0Iyc0oT.js:1458
+[     973ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3119/drives?vehicle_id=1:0
+[    1074ms] [ERROR] Failed to load resource: the server responded with a status of 429 (Too Many Requests) @ http://localhost:3119/api/v1/settings:0
+[    1141ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/rbac/matrix:0
+[    1151ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[    1157ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3119/api/v1/push/public-key:0
+[    1265ms] [ERROR] Failed to load resource: the server responded with a status of 429 (Too Many Requests) @ http://localhost:3119/api/v1/settings:0
+[    1300ms] [ERROR] Failed to load resource: the server responded with a status of 429 (Too Many Requests) @ http://localhost:3119/api/v1/settings:0
+[    1320ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/rbac/matrix:0
+[    1320ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[    1320ms] [ERROR] Failed to load resource: the server responded with a status of 429 (Too Many Requests) @ http://localhost:3119/api/v1/settings:0
+[    1323ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3119/api/v1/push/public-key:0
+[    3366ms] [ERROR] Failed to load resource: the server responded with a status of 429 (Too Many Requests) @ http://localhost:3119/api/v1/settings:0
+[   31362ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[   31372ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[   61397ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[   61411ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[   91726ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[   92131ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  121886ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[  122163ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  122177ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  151962ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[  152203ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  152215ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  181989ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[  182226ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  182237ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  212014ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[  212250ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  212260ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  242050ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[  242276ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  242284ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  272073ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[  272294ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  272303ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  302093ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[  302316ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  302325ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  332117ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[  332337ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  332346ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  362148ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[  362361ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[  362369ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0

@@ -25,7 +25,7 @@ vi.mock('@/api/hooks/_toastHelpers', () => ({
 // HTTP client stub — captures POST/DELETE so the tests can assert wire shape.
 // Default GET responses to an empty array so post-mutation invalidation doesn't
 // trip TanStack Query's "data cannot be undefined" guard.
-const requestMock = vi.fn(async (path: string, init?: RequestInit) => {
+const requestMock = vi.fn(async (_path: string, init?: RequestInit): Promise<PinnedItem | PinnedItem[] | undefined> => {
   if (!init || !init.method || init.method === 'GET') return [];
   return undefined;
 });
@@ -189,5 +189,92 @@ describe('PinButton', () => {
 
     await fireEvent.click(screen.getByRole('button', { name: 'Pin' }));
     expect(onParentClick).not.toHaveBeenCalled();
+  });
+
+  it('preserves compact geometry and allows a localized name and opt-in 44px target', () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(pinnedKeys.list('vehicle'), []);
+    const { rerender } = render(<PinButton itemType="vehicle" itemId={42} />, { wrapper: wrap(qc) });
+    expect(screen.getByRole('button')).toHaveClass('h-7', 'w-7');
+    expect(screen.getByRole('button')).not.toHaveClass('min-h-11');
+    rerender(<PinButton itemType="vehicle" itemId={42} ariaLabel="Épingler le véhicule" minTargetSize={44} className="fleet-pin" />);
+    expect(screen.getByRole('button', { name: 'Épingler le véhicule' })).toHaveClass('min-h-11', 'min-w-11', 'fleet-pin');
+    expect(screen.getByRole('button')).toHaveAttribute('type', 'button');
+  });
+
+  it('does not represent pending reads as known unpinned or allow mutations', async () => {
+    requestMock.mockImplementation(() => new Promise(() => {}));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<PinButton itemType="vehicle" itemId={42} />, { wrapper: wrap(qc) });
+    const button = screen.getByRole('button', { name: 'Loading...' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).not.toHaveAttribute('aria-pressed');
+    fireEvent.click(button);
+    await waitFor(() => expect(requestMock).toHaveBeenCalledTimes(1));
+    expect(requestMock.mock.calls[0][1]).not.toHaveProperty('method');
+  });
+
+  it('retries an initial read error without pinning an unknown item', async () => {
+    requestMock.mockRejectedValueOnce(new Error('read failed'));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<PinButton itemType="vehicle" itemId={42} />, { wrapper: wrap(qc) });
+    const retry = await screen.findByRole('button', { name: 'Retry' });
+    expect(retry).not.toHaveAttribute('aria-pressed');
+    fireEvent.click(retry);
+    await screen.findByRole('button', { name: 'Pin' });
+    expect(requestMock.mock.calls.every(([, init]) => !init?.method)).toBe(true);
+  });
+
+  it('retains known pinned state on refresh failure', async () => {
+    requestMock.mockRejectedValue(new Error('refresh failed'));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(pinnedKeys.list('vehicle'), [{
+      id: 7, item_type: 'vehicle', item_id: '42', position: 0, pinned_at: new Date().toISOString(),
+    }] satisfies PinnedItem[]);
+    render(<PinButton itemType="vehicle" itemId={42} />, { wrapper: wrap(qc) });
+    await qc.refetchQueries({ queryKey: pinnedKeys.list('vehicle') });
+    expect(screen.getByRole('button', { name: 'Unpin' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button')).not.toBeDisabled();
+    expect(await screen.findByText('Unavailable')).toBeInTheDocument();
+  });
+
+  it('announces toggle pending and prevents duplicate submissions', async () => {
+    requestMock.mockImplementation(() => new Promise(() => {}));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(pinnedKeys.list('vehicle'), []);
+    render(<PinButton itemType="vehicle" itemId={42} />, { wrapper: wrap(qc) });
+    const button = screen.getByRole('button', { name: 'Pin' });
+    fireEvent.click(button);
+    await waitFor(() => expect(button).toBeDisabled());
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    fireEvent.click(button);
+    expect(requestMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains the state and action after mutation failure and exposes the error', async () => {
+    requestMock.mockRejectedValueOnce(new Error('mutation failed'));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(pinnedKeys.list('vehicle'), []);
+    render(<PinButton itemType="vehicle" itemId={42} showLabel />, { wrapper: wrap(qc) });
+    const button = screen.getByRole('button', { name: 'Pin' });
+    fireEvent.click(button);
+    await screen.findByText('Failed to pin');
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    expect(button).not.toBeDisabled();
+    expect(button).toHaveAttribute('aria-describedby', screen.getByRole('tooltip').id);
+    expect(button).toHaveClass('whitespace-normal', 'max-w-full');
+  });
+
+  it('keeps a focusable native button and shared focus styling', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    qc.setQueryData(pinnedKeys.list('vehicle'), []);
+    render(<PinButton itemType="vehicle" itemId={42} size="md" />, { wrapper: wrap(qc) });
+    const button = screen.getByRole('button', { name: 'Pin' });
+    button.focus();
+    expect(button).toHaveFocus();
+    expect(button).toHaveClass('h-8', 'w-8', 'focus-visible:outline-2');
+    fireEvent.click(button);
+    await waitFor(() => expect(requestMock).toHaveBeenCalledWith('/pinned', expect.objectContaining({ method: 'POST' })));
   });
 });

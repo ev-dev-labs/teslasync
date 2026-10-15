@@ -1,0 +1,627 @@
+- generic [ref=f29e2]:
+  - status [ref=f29e3]
+  - link "Skip to main content" [ref=f29e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f29e5]:
+    - status [ref=f29e6]
+    - alert [ref=f29e7]
+    - banner "Site header" [ref=f29e342]:
+      - button "Open sidebar" [ref=f29e343] [cursor=pointer]
+      - generic [ref=f29e345]: TeslaSync
+      - button "Notifications" [ref=f29e352] [cursor=pointer]
+      - button "Open theme picker" [ref=f29e357] [cursor=pointer]
+    - generic [ref=f29e205]:
+      - status [ref=f29e365]:
+        - generic [ref=f29e366]:
+          - generic [ref=f29e367]:
+            - text: Sample data present
+            - generic [ref=f29e368]: · Not live
+          - button "Details" [ref=f29e369] [cursor=pointer]
+      - main [ref=f29e249]:
+        - generic [ref=f29e250]:
+          - navigation "Breadcrumb" [ref=f29e372]:
+            - link "Dashboard" [ref=f29e373] [cursor=pointer]:
+              - /url: /
+            - generic [ref=f29e379]: Diagnostics
+            - generic [ref=f29e382]: API logs
+          - status [ref=f29e384]:
+            - generic [ref=f29e389]:
+              - paragraph [ref=f29e390]: Install TeslaSync
+              - paragraph [ref=f29e391]: Add to home screen for native experience
+            - button "Install" [ref=f29e392] [cursor=pointer]
+            - button "Dismiss install prompt" [ref=f29e393] [cursor=pointer]
+          - generic [ref=f29e397]:
+            - generic [ref=f29e398]:
+              - generic [ref=f29e402]:
+                - heading "API logs" [level=1] [ref=f29e403]
+                - generic [ref=f29e404]:
+                  - 'button "More info: API logs" [ref=f29e405] [cursor=pointer]'
+                  - tooltip "Record of all API calls with request/response details"
+              - group "Actions" [ref=f29e408]:
+                - button "Refresh data · Up to date · just now" [ref=f29e411] [cursor=pointer]:
+                  - generic [ref=f29e418]: just now
+                - button "Refresh" [ref=f29e421] [cursor=pointer]
+            - region "API logs" [ref=f29e428]:
+              - generic [ref=f29e429]:
+                - generic [ref=f29e430]: Total calls
+                - generic [ref=f29e436]: 15,741
+              - generic [ref=f29e438]:
+                - generic [ref=f29e439]: Error rate
+                - generic [ref=f29e444]: 15.9%
+                - generic [ref=f29e446]:
+                  - generic [aria-hidden] [ref=f29e447]: ↑
+                  - generic [ref=f29e448]: increased
+                  - generic [ref=f29e449]: "2500"
+              - generic [ref=f29e450]:
+                - generic [ref=f29e451]: Avg duration
+                - generic [ref=f29e457]: 1ms
+              - generic [ref=f29e459]:
+                - generic [ref=f29e460]: Last 24h
+                - generic [ref=f29e465]: 15,741
+            - generic [ref=f29e467]: API call totals and service counts use the View settings range. Service, method, status, endpoint, app key, and installation filters apply only to the request list.
+            - region "API call log" [ref=f29e470]:
+              - generic [ref=f29e472]:
+                - heading "By service" [level=3] [ref=f29e478]
+                - list [ref=f29e479]:
+                  - listitem [ref=f29e480]:
+                    - button "TeslaSync API 15,741" [ref=f29e1418] [cursor=pointer]:
+                      - generic [ref=f29e482]: TeslaSync API
+                      - generic [ref=f29e483]: 15,741
+                - generic [ref=f29e484]: 1 with data · 11 known
+              - generic [ref=f29e485]:
+                - generic [ref=f29e487]:
+                  - heading "API call log" [level=3] [ref=f29e488]
+                  - generic [ref=f29e489]: Showing 1–25 of 15,741
+                  - generic [ref=f29e490]: Newest first. Filters query all matching requests; exports include only this loaded page.
+                - generic [ref=f29e491]:
+                  - generic [ref=f29e492]:
+                    - generic [ref=f29e493]: Expand a request to inspect headers, bodies, and metadata.
+                    - combobox "Filter by endpoint..." [ref=f29e502]
+                    - generic [ref=f29e503]:
+                      - radiogroup "List density" [ref=f29e504]:
+                        - radio "Compact" [checked] [ref=f29e505] [cursor=pointer]
+                        - radio "Comfortable" [ref=f29e508] [cursor=pointer]
+                      - button "Export list" [ref=f29e512] [cursor=pointer]
+                      - button "Clear" [disabled]
+                      - button "Reorder or hide columns" [ref=f29e517] [cursor=pointer]:
+                        - generic [ref=f29e520]: Columns
+                  - table "API call log" [ref=f29e522]:
+                    - caption [ref=f29e523]: API call log
+                    - rowgroup [ref=f29e524]:
+                      - row [ref=f29e525]:
+                        - columnheader "Expand row" [ref=f29e526]
+                        - columnheader "Method" [ref=f29e527]:
+                          - generic [ref=f29e528]:
+                            - generic [ref=f29e537]: Method
+                            - button "Method filter" [ref=f29e538] [cursor=pointer]
+                          - separator "Resize column Method" [ref=f29e541]
+                        - columnheader "Endpoint" [ref=f29e542]:
+                          - generic [ref=f29e543]:
+                            - generic [ref=f29e552]: Endpoint
+                            - button "Endpoint filter" [ref=f29e553] [cursor=pointer]
+                          - separator "Resize column Endpoint" [ref=f29e556]
+                        - columnheader "Status" [ref=f29e557]:
+                          - generic [ref=f29e558]:
+                            - generic [ref=f29e567]: Status
+                            - button "Status filter" [ref=f29e568] [cursor=pointer]
+                          - separator "Resize column Status" [ref=f29e571]
+                        - columnheader "Service" [ref=f29e572]:
+                          - generic [ref=f29e573]:
+                            - generic [ref=f29e582]: Service
+                            - button "Service filter" [ref=f29e583] [cursor=pointer]
+                          - separator "Resize column Service" [ref=f29e586]
+                        - columnheader "App installation" [ref=f29e587]:
+                          - generic [ref=f29e588]:
+                            - generic [ref=f29e597]: App installation
+                            - button "App installation filter" [ref=f29e598] [cursor=pointer]
+                          - separator "Resize column App installation" [ref=f29e601]
+                    - rowgroup [ref=f29e602]:
+                      - row [ref=f29e1419]:
+                        - cell [ref=f29e1420]:
+                          - button "Expand row" [ref=f29e1421] [cursor=pointer]
+                        - cell "GET" [ref=f29e1424]
+                        - cell "/api/v1/settings GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e1426]:
+                          - generic [ref=f29e1427]:
+                            - generic "/api/v1/settings" [ref=f29e1428]
+                            - generic [ref=f29e1429]:
+                              - generic [ref=f29e1430]: GET
+                              - generic [ref=f29e1431]: TeslaSync API
+                              - generic [ref=f29e1432]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e1433]: 0ms
+                        - cell "200" [ref=f29e1434]
+                        - cell "TeslaSync API" [ref=f29e1437]
+                        - cell "—" [ref=f29e1439]
+                      - row [ref=f29e1442]:
+                        - cell [ref=f29e1443]:
+                          - button "Expand row" [ref=f29e1444] [cursor=pointer]
+                        - cell "GET" [ref=f29e1447]
+                        - cell "/api/v1/settings GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e1449]:
+                          - generic [ref=f29e1450]:
+                            - generic "/api/v1/settings" [ref=f29e1451]
+                            - generic [ref=f29e1452]:
+                              - generic [ref=f29e1453]: GET
+                              - generic [ref=f29e1454]: TeslaSync API
+                              - generic [ref=f29e1455]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e1456]: 0ms
+                        - cell "200" [ref=f29e1457]
+                        - cell "TeslaSync API" [ref=f29e1460]
+                        - cell "—" [ref=f29e1462]
+                      - row [ref=f29e603]:
+                        - cell [ref=f29e604]:
+                          - button "Expand row" [ref=f29e605] [cursor=pointer]
+                        - cell "GET" [ref=f29e608]
+                        - cell "/api/v1/vehicles GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e610]:
+                          - generic [ref=f29e611]:
+                            - generic "/api/v1/vehicles" [ref=f29e612]
+                            - generic [ref=f29e613]:
+                              - generic [ref=f29e614]: GET
+                              - generic [ref=f29e615]: TeslaSync API
+                              - generic [ref=f29e616]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e617]: 0ms
+                        - cell "200" [ref=f29e618]
+                        - cell "TeslaSync API" [ref=f29e621]
+                        - cell "—" [ref=f29e623]
+                      - row [ref=f29e626]:
+                        - cell [ref=f29e627]:
+                          - button "Expand row" [ref=f29e628] [cursor=pointer]
+                        - cell "GET" [ref=f29e631]
+                        - cell "/api/v1/settings GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e633]:
+                          - generic [ref=f29e634]:
+                            - generic "/api/v1/settings" [ref=f29e635]
+                            - generic [ref=f29e636]:
+                              - generic [ref=f29e637]: GET
+                              - generic [ref=f29e638]: TeslaSync API
+                              - generic [ref=f29e639]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e640]: 0ms
+                        - cell "200" [ref=f29e641]
+                        - cell "TeslaSync API" [ref=f29e644]
+                        - cell "—" [ref=f29e646]
+                      - row [ref=f29e649]:
+                        - cell [ref=f29e650]:
+                          - button "Expand row" [ref=f29e651] [cursor=pointer]
+                        - cell "GET" [ref=f29e654]
+                        - cell "/api/v1/system/errors/stats GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e656]:
+                          - generic [ref=f29e657]:
+                            - generic "/api/v1/system/errors/stats" [ref=f29e658]
+                            - generic [ref=f29e659]:
+                              - generic [ref=f29e660]: GET
+                              - generic [ref=f29e661]: TeslaSync API
+                              - generic [ref=f29e662]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e663]: 0ms
+                        - cell "200" [ref=f29e664]
+                        - cell "TeslaSync API" [ref=f29e667]
+                        - cell "—" [ref=f29e669]
+                      - row [ref=f29e672]:
+                        - cell [ref=f29e673]:
+                          - button "Expand row" [ref=f29e674] [cursor=pointer]
+                        - cell "GET" [ref=f29e677]
+                        - cell "/api/v1/admin/web-errors/summary GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e679]:
+                          - generic [ref=f29e680]:
+                            - generic "/api/v1/admin/web-errors/summary" [ref=f29e681]
+                            - generic [ref=f29e682]:
+                              - generic [ref=f29e683]: GET
+                              - generic [ref=f29e684]: TeslaSync API
+                              - generic [ref=f29e685]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e686]: 0ms
+                        - cell "200" [ref=f29e687]
+                        - cell "TeslaSync API" [ref=f29e690]
+                        - cell "—" [ref=f29e692]
+                      - row [ref=f29e695]:
+                        - cell [ref=f29e696]:
+                          - button "Expand row" [ref=f29e697] [cursor=pointer]
+                        - cell "GET" [ref=f29e700]
+                        - cell "/api/v1/vehicles/1/state GET TeslaSync API Oct 3, 2026, 11:55 AM 2ms" [ref=f29e702]:
+                          - generic [ref=f29e703]:
+                            - generic "/api/v1/vehicles/1/state" [ref=f29e704]
+                            - generic [ref=f29e705]:
+                              - generic [ref=f29e706]: GET
+                              - generic [ref=f29e707]: TeslaSync API
+                              - generic [ref=f29e708]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e709]: 2ms
+                        - cell "200" [ref=f29e710]
+                        - cell "TeslaSync API" [ref=f29e713]
+                        - cell "—" [ref=f29e715]
+                      - row [ref=f29e718]:
+                        - cell [ref=f29e719]:
+                          - button "Expand row" [ref=f29e720] [cursor=pointer]
+                        - cell "GET" [ref=f29e723]
+                        - cell "/api/v1/vehicles/states?limit=500&vehicle_ids=1%2C2 GET TeslaSync API Oct 3, 2026, 11:55 AM 2ms" [ref=f29e725]:
+                          - generic [ref=f29e726]:
+                            - generic "/api/v1/vehicles/states?limit=500&vehicle_ids=1%2C2" [ref=f29e727]
+                            - generic [ref=f29e728]:
+                              - generic [ref=f29e729]: GET
+                              - generic [ref=f29e730]: TeslaSync API
+                              - generic [ref=f29e731]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e732]: 2ms
+                        - cell "200" [ref=f29e733]
+                        - cell "TeslaSync API" [ref=f29e736]
+                        - cell "—" [ref=f29e738]
+                      - row [ref=f29e741]:
+                        - cell [ref=f29e742]:
+                          - button "Expand row" [ref=f29e743] [cursor=pointer]
+                        - cell "GET" [ref=f29e746]
+                        - cell "/api/v1/admin/impersonate GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e748]:
+                          - generic [ref=f29e749]:
+                            - generic "/api/v1/admin/impersonate" [ref=f29e750]
+                            - generic [ref=f29e751]:
+                              - generic [ref=f29e752]: GET
+                              - generic [ref=f29e753]: TeslaSync API
+                              - generic [ref=f29e754]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e755]: 0ms
+                        - cell "501" [ref=f29e756]
+                        - cell "TeslaSync API" [ref=f29e759]
+                        - cell "—" [ref=f29e761]
+                      - row [ref=f29e764]:
+                        - cell [ref=f29e765]:
+                          - button "Expand row" [ref=f29e766] [cursor=pointer]
+                        - cell "GET" [ref=f29e769]
+                        - cell "/api/v1/admin/impersonate GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e771]:
+                          - generic [ref=f29e772]:
+                            - generic "/api/v1/admin/impersonate" [ref=f29e773]
+                            - generic [ref=f29e774]:
+                              - generic [ref=f29e775]: GET
+                              - generic [ref=f29e776]: TeslaSync API
+                              - generic [ref=f29e777]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e778]: 0ms
+                        - cell "501" [ref=f29e779]
+                        - cell "TeslaSync API" [ref=f29e782]
+                        - cell "—" [ref=f29e784]
+                      - row [ref=f29e787]:
+                        - cell [ref=f29e788]:
+                          - button "Expand row" [ref=f29e789] [cursor=pointer]
+                        - cell "GET" [ref=f29e792]
+                        - cell "/api/v1/data-repair/cases/stats GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e794]:
+                          - generic [ref=f29e795]:
+                            - generic "/api/v1/data-repair/cases/stats" [ref=f29e796]
+                            - generic [ref=f29e797]:
+                              - generic [ref=f29e798]: GET
+                              - generic [ref=f29e799]: TeslaSync API
+                              - generic [ref=f29e800]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e801]: 0ms
+                        - cell "200" [ref=f29e802]
+                        - cell "TeslaSync API" [ref=f29e805]
+                        - cell "—" [ref=f29e807]
+                      - row [ref=f29e810]:
+                        - cell [ref=f29e811]:
+                          - button "Expand row" [ref=f29e812] [cursor=pointer]
+                        - cell "GET" [ref=f29e815]
+                        - cell "/api/v1/alerts GET TeslaSync API Oct 3, 2026, 11:55 AM 1ms" [ref=f29e817]:
+                          - generic [ref=f29e818]:
+                            - generic "/api/v1/alerts" [ref=f29e819]
+                            - generic [ref=f29e820]:
+                              - generic [ref=f29e821]: GET
+                              - generic [ref=f29e822]: TeslaSync API
+                              - generic [ref=f29e823]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e824]: 1ms
+                        - cell "200" [ref=f29e825]
+                        - cell "TeslaSync API" [ref=f29e828]
+                        - cell "—" [ref=f29e830]
+                      - row [ref=f29e833]:
+                        - cell [ref=f29e834]:
+                          - button "Expand row" [ref=f29e835] [cursor=pointer]
+                        - cell "GET" [ref=f29e838]
+                        - cell "/api/v1/pinned?type=navigation GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e840]:
+                          - generic [ref=f29e841]:
+                            - generic "/api/v1/pinned?type=navigation" [ref=f29e842]
+                            - generic [ref=f29e843]:
+                              - generic [ref=f29e844]: GET
+                              - generic [ref=f29e845]: TeslaSync API
+                              - generic [ref=f29e846]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e847]: 0ms
+                        - cell "200" [ref=f29e848]
+                        - cell "TeslaSync API" [ref=f29e851]
+                        - cell "—" [ref=f29e853]
+                      - row [ref=f29e856]:
+                        - cell [ref=f29e857]:
+                          - button "Expand row" [ref=f29e858] [cursor=pointer]
+                        - cell "GET" [ref=f29e861]
+                        - cell "/api/v1/status/ GET TeslaSync API Oct 3, 2026, 11:55 AM 2ms" [ref=f29e863]:
+                          - generic [ref=f29e864]:
+                            - generic "/api/v1/status/" [ref=f29e865]
+                            - generic [ref=f29e866]:
+                              - generic [ref=f29e867]: GET
+                              - generic [ref=f29e868]: TeslaSync API
+                              - generic [ref=f29e869]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e870]: 2ms
+                        - cell "200" [ref=f29e871]
+                        - cell "TeslaSync API" [ref=f29e874]
+                        - cell "—" [ref=f29e876]
+                      - row [ref=f29e879]:
+                        - cell [ref=f29e880]:
+                          - button "Expand row" [ref=f29e881] [cursor=pointer]
+                        - cell "GET" [ref=f29e884]
+                        - cell "/api/v1/system/health GET TeslaSync API Oct 3, 2026, 11:55 AM 1ms" [ref=f29e886]:
+                          - generic [ref=f29e887]:
+                            - generic "/api/v1/system/health" [ref=f29e888]
+                            - generic [ref=f29e889]:
+                              - generic [ref=f29e890]: GET
+                              - generic [ref=f29e891]: TeslaSync API
+                              - generic [ref=f29e892]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e893]: 1ms
+                        - cell "503" [ref=f29e894]
+                        - cell "TeslaSync API" [ref=f29e897]
+                        - cell "—" [ref=f29e899]
+                      - row [ref=f29e902]:
+                        - cell [ref=f29e903]:
+                          - button "Expand row" [ref=f29e904] [cursor=pointer]
+                        - cell "GET" [ref=f29e907]
+                        - cell "/api/v1/alerts?archived=false&limit=51&read=false&severity=critical GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e909]:
+                          - generic [ref=f29e910]:
+                            - generic "/api/v1/alerts?archived=false&limit=51&read=false&severity=critical" [ref=f29e911]
+                            - generic [ref=f29e912]:
+                              - generic [ref=f29e913]: GET
+                              - generic [ref=f29e914]: TeslaSync API
+                              - generic [ref=f29e915]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e916]: 0ms
+                        - cell "200" [ref=f29e917]
+                        - cell "TeslaSync API" [ref=f29e920]
+                        - cell "—" [ref=f29e922]
+                      - row [ref=f29e925]:
+                        - cell [ref=f29e926]:
+                          - button "Expand row" [ref=f29e927] [cursor=pointer]
+                        - cell "GET" [ref=f29e930]
+                        - cell "/api/v1/alerts?archived=false&limit=51&read=false&severity=warn GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e932]:
+                          - generic [ref=f29e933]:
+                            - generic "/api/v1/alerts?archived=false&limit=51&read=false&severity=warn" [ref=f29e934]
+                            - generic [ref=f29e935]:
+                              - generic [ref=f29e936]: GET
+                              - generic [ref=f29e937]: TeslaSync API
+                              - generic [ref=f29e938]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e939]: 0ms
+                        - cell "200" [ref=f29e940]
+                        - cell "TeslaSync API" [ref=f29e943]
+                        - cell "—" [ref=f29e945]
+                      - row [ref=f29e948]:
+                        - cell [ref=f29e949]:
+                          - button "Expand row" [ref=f29e950] [cursor=pointer]
+                        - cell "GET" [ref=f29e953]
+                        - cell "/api/v1/notifications/unread-count GET TeslaSync API Oct 3, 2026, 11:55 AM 0ms" [ref=f29e955]:
+                          - generic [ref=f29e956]:
+                            - generic "/api/v1/notifications/unread-count" [ref=f29e957]
+                            - generic [ref=f29e958]:
+                              - generic [ref=f29e959]: GET
+                              - generic [ref=f29e960]: TeslaSync API
+                              - generic [ref=f29e961]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e962]: 0ms
+                        - cell "200" [ref=f29e963]
+                        - cell "TeslaSync API" [ref=f29e966]
+                        - cell "—" [ref=f29e968]
+                      - row [ref=f29e971]:
+                        - cell [ref=f29e972]:
+                          - button "Expand row" [ref=f29e973] [cursor=pointer]
+                        - cell "GET" [ref=f29e976]
+                        - cell "/api/v1/onboarding/status GET TeslaSync API Oct 3, 2026, 11:55 AM 1ms" [ref=f29e978]:
+                          - generic [ref=f29e979]:
+                            - generic "/api/v1/onboarding/status" [ref=f29e980]
+                            - generic [ref=f29e981]:
+                              - generic [ref=f29e982]: GET
+                              - generic [ref=f29e983]: TeslaSync API
+                              - generic [ref=f29e984]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e985]: 1ms
+                        - cell "200" [ref=f29e986]
+                        - cell "TeslaSync API" [ref=f29e989]
+                        - cell "—" [ref=f29e991]
+                      - row [ref=f29e994]:
+                        - cell [ref=f29e995]:
+                          - button "Expand row" [ref=f29e996] [cursor=pointer]
+                        - cell "GET" [ref=f29e999]
+                        - cell "/api/v1/settings GET TeslaSync API Oct 3, 2026, 11:55 AM 1ms" [ref=f29e1001]:
+                          - generic [ref=f29e1002]:
+                            - generic "/api/v1/settings" [ref=f29e1003]
+                            - generic [ref=f29e1004]:
+                              - generic [ref=f29e1005]: GET
+                              - generic [ref=f29e1006]: TeslaSync API
+                              - generic [ref=f29e1007]: Oct 3, 2026, 11:55 AM
+                              - generic [ref=f29e1008]: 1ms
+                        - cell "200" [ref=f29e1009]
+                        - cell "TeslaSync API" [ref=f29e1012]
+                        - cell "—" [ref=f29e1014]
+                      - row [ref=f29e1017]:
+                        - cell [ref=f29e1018]:
+                          - button "Expand row" [ref=f29e1019] [cursor=pointer]
+                        - cell "GET" [ref=f29e1022]
+                        - cell "/api/v1/settings GET TeslaSync API Oct 3, 2026, 11:54 AM 0ms" [ref=f29e1024]:
+                          - generic [ref=f29e1025]:
+                            - generic "/api/v1/settings" [ref=f29e1026]
+                            - generic [ref=f29e1027]:
+                              - generic [ref=f29e1028]: GET
+                              - generic [ref=f29e1029]: TeslaSync API
+                              - generic [ref=f29e1030]: Oct 3, 2026, 11:54 AM
+                              - generic [ref=f29e1031]: 0ms
+                        - cell "200" [ref=f29e1032]
+                        - cell "TeslaSync API" [ref=f29e1035]
+                        - cell "—" [ref=f29e1037]
+                      - row [ref=f29e1040]:
+                        - cell [ref=f29e1041]:
+                          - button "Expand row" [ref=f29e1042] [cursor=pointer]
+                        - cell "GET" [ref=f29e1045]
+                        - cell "/api/v1/settings GET TeslaSync API Oct 3, 2026, 11:54 AM 0ms" [ref=f29e1047]:
+                          - generic [ref=f29e1048]:
+                            - generic "/api/v1/settings" [ref=f29e1049]
+                            - generic [ref=f29e1050]:
+                              - generic [ref=f29e1051]: GET
+                              - generic [ref=f29e1052]: TeslaSync API
+                              - generic [ref=f29e1053]: Oct 3, 2026, 11:54 AM
+                              - generic [ref=f29e1054]: 0ms
+                        - cell "200" [ref=f29e1055]
+                        - cell "TeslaSync API" [ref=f29e1058]
+                        - cell "—" [ref=f29e1060]
+                      - row [ref=f29e1063]:
+                        - cell [ref=f29e1064]:
+                          - button "Expand row" [ref=f29e1065] [cursor=pointer]
+                        - cell "GET" [ref=f29e1068]
+                        - cell "/api/v1/admin/web-errors/summary GET TeslaSync API Oct 3, 2026, 11:54 AM 0ms" [ref=f29e1070]:
+                          - generic [ref=f29e1071]:
+                            - generic "/api/v1/admin/web-errors/summary" [ref=f29e1072]
+                            - generic [ref=f29e1073]:
+                              - generic [ref=f29e1074]: GET
+                              - generic [ref=f29e1075]: TeslaSync API
+                              - generic [ref=f29e1076]: Oct 3, 2026, 11:54 AM
+                              - generic [ref=f29e1077]: 0ms
+                        - cell "200" [ref=f29e1078]
+                        - cell "TeslaSync API" [ref=f29e1081]
+                        - cell "—" [ref=f29e1083]
+                      - row [ref=f29e1086]:
+                        - cell [ref=f29e1087]:
+                          - button "Expand row" [ref=f29e1088] [cursor=pointer]
+                        - cell "GET" [ref=f29e1091]
+                        - cell "/api/v1/system/errors/stats GET TeslaSync API Oct 3, 2026, 11:54 AM 0ms" [ref=f29e1093]:
+                          - generic [ref=f29e1094]:
+                            - generic "/api/v1/system/errors/stats" [ref=f29e1095]
+                            - generic [ref=f29e1096]:
+                              - generic [ref=f29e1097]: GET
+                              - generic [ref=f29e1098]: TeslaSync API
+                              - generic [ref=f29e1099]: Oct 3, 2026, 11:54 AM
+                              - generic [ref=f29e1100]: 0ms
+                        - cell "200" [ref=f29e1101]
+                        - cell "TeslaSync API" [ref=f29e1104]
+                        - cell "—" [ref=f29e1106]
+                      - row [ref=f29e1109]:
+                        - cell [ref=f29e1110]:
+                          - button "Expand row" [ref=f29e1111] [cursor=pointer]
+                        - cell "GET" [ref=f29e1114]
+                        - cell "/api/v1/settings GET TeslaSync API Oct 3, 2026, 11:54 AM 0ms" [ref=f29e1116]:
+                          - generic [ref=f29e1117]:
+                            - generic "/api/v1/settings" [ref=f29e1118]
+                            - generic [ref=f29e1119]:
+                              - generic [ref=f29e1120]: GET
+                              - generic [ref=f29e1121]: TeslaSync API
+                              - generic [ref=f29e1122]: Oct 3, 2026, 11:54 AM
+                              - generic [ref=f29e1123]: 0ms
+                        - cell "200" [ref=f29e1124]
+                        - cell "TeslaSync API" [ref=f29e1127]
+                        - cell "—" [ref=f29e1129]
+                  - navigation "Pagination" [ref=f29e1179]:
+                    - generic [ref=f29e1180]:
+                      - generic [ref=f29e1181]: Showing 1–25 of 15,741
+                      - generic [ref=f29e1182]:
+                        - generic [ref=f29e1183]: Rows
+                        - combobox "Rows per page" [ref=f29e1185]:
+                          - option "25 / page" [selected]
+                          - option "50 / page"
+                          - option "100 / page"
+                    - generic [ref=f29e1186]:
+                      - generic [ref=f29e1187]:
+                        - generic [ref=f29e1188]:
+                          - button "First page" [disabled]
+                          - button "Previous page" [disabled]
+                        - generic [ref=f29e1189]:
+                          - button "Page 1 of 630" [ref=f29e1190] [cursor=pointer]: "1"
+                          - button "Page 2" [ref=f29e1191] [cursor=pointer]: "2"
+                          - button "Page 3" [ref=f29e1192] [cursor=pointer]: "3"
+                          - generic [aria-hidden] [ref=f29e1193]: …
+                          - button "Page 630" [ref=f29e1194] [cursor=pointer]: "630"
+                        - generic [ref=f29e1195]:
+                          - button "Next page" [ref=f29e1196] [cursor=pointer]
+                          - button "Last page" [ref=f29e1199] [cursor=pointer]
+                      - generic [ref=f29e1203]:
+                        - generic [ref=f29e1204]: Go to page
+                        - textbox "Go to page" [ref=f29e1208]: "1"
+                        - button "Go" [ref=f29e1209] [cursor=pointer]
+            - region "Error diagnostics" [ref=f29e1211]:
+              - region [ref=f29e1212]:
+                - generic [ref=f29e1213]:
+                  - heading "Backend runtime errors" [level=3] [ref=f29e1217]
+                  - generic [ref=f29e1218]: Since the current API process started; independent of API call filters.
+                  - generic [ref=f29e1219]:
+                    - generic [ref=f29e1220]:
+                      - generic [ref=f29e1221]: "665"
+                      - generic [ref=f29e1222]: Recorded errors
+                    - generic [ref=f29e1223]:
+                      - generic [ref=f29e1224]: Process uptime
+                      - paragraph [ref=f29e1225]: 1h36m19s
+                - generic [ref=f29e1226]:
+                  - generic [ref=f29e1227]: Error categories · most frequent first
+                  - region "Backend error categories" [ref=f29e1228]:
+                    - list "Backend error categories" [ref=f29e1229]:
+                      - listitem [ref=f29e1230]:
+                        - generic [ref=f29e1231]:
+                          - paragraph [ref=f29e1232]: ERROR
+                          - generic [ref=f29e1233]: "432"
+                        - paragraph [ref=f29e1234]: Not Implemented
+                        - generic [ref=f29e1235]: Last seen Oct 3, 2026, 11:55 AM
+                      - listitem [ref=f29e1236]:
+                        - generic [ref=f29e1237]:
+                          - paragraph [ref=f29e1238]: SERVICE_UNAVAILABLE
+                          - generic [ref=f29e1239]: "193"
+                        - paragraph [ref=f29e1240]: Service Unavailable
+                        - generic [ref=f29e1241]: Last seen Oct 3, 2026, 11:55 AM
+                      - listitem [ref=f29e1242]:
+                        - generic [ref=f29e1243]:
+                          - paragraph [ref=f29e1244]: NOT_FOUND
+                          - generic [ref=f29e1245]: "25"
+                        - paragraph [ref=f29e1246]: Not Found
+                        - generic [ref=f29e1247]: Last seen Oct 3, 2026, 11:54 AM
+                      - listitem [ref=f29e1248]:
+                        - generic [ref=f29e1249]:
+                          - paragraph [ref=f29e1250]: METHOD_NOT_ALLOWED
+                          - generic [ref=f29e1251]: "14"
+                        - paragraph [ref=f29e1252]: Method Not Allowed
+                        - generic [ref=f29e1253]: Last seen Oct 3, 2026, 11:38 AM
+                      - listitem [ref=f29e1254]:
+                        - generic [ref=f29e1255]:
+                          - paragraph [ref=f29e1256]: INTERNAL_ERROR
+                          - generic [ref=f29e1257]: "1"
+                        - paragraph [ref=f29e1258]: Internal Server Error
+                        - generic [ref=f29e1259]: Last seen Oct 3, 2026, 10:19 AM
+                  - link "Inspect system health" [ref=f29e1260] [cursor=pointer]:
+                    - /url: /system-status
+              - region [ref=f29e1265]:
+                - generic [ref=f29e1266]:
+                  - heading "Frontend error reports" [level=3] [ref=f29e1277]
+                  - generic [ref=f29e1278]: Last hour; independent of API call filters.
+                  - generic [ref=f29e1279]:
+                    - generic [ref=f29e1280]:
+                      - generic [ref=f29e1281]: "0"
+                      - generic [ref=f29e1282]: reported by browser sessions
+                    - generic [ref=f29e1283]:
+                      - generic [ref=f29e1284]: Summary as of
+                      - paragraph [ref=f29e1285]: Oct 3, 2026, 11:55 AM
+                - generic [ref=f29e1286]:
+                  - paragraph [ref=f29e1287]: No browser error reports received in this window.
+                  - generic [ref=f29e1288]: Only reports received from browser sessions are counted. Disabled or unavailable reporting can leave errors unobserved; zero reports does not prove there were no frontend errors.
+    - navigation "Quick navigation" [ref=f29e1289]:
+      - link "Home" [ref=f29e1290] [cursor=pointer]:
+        - /url: /
+      - link "Drives" [ref=f29e1297] [cursor=pointer]:
+        - /url: /drives
+      - link "Charging" [ref=f29e1303] [cursor=pointer]:
+        - /url: /charging
+      - link "Battery" [ref=f29e1309] [cursor=pointer]:
+        - /url: /battery
+      - link "Map" [ref=f29e1314] [cursor=pointer]:
+        - /url: /live
+      - link "More" [ref=f29e1323] [cursor=pointer]:
+        - /url: /explore
+    - contentinfo "Application status" [ref=f29e282]:
+      - generic [ref=f29e283]:
+        - generic [ref=f29e284]:
+          - 'link "API connection status: Online (10ms)" [ref=f29e1328] [cursor=pointer]':
+            - /url: /system-status
+          - tooltip "API connection · Online · 10ms"
+        - generic [ref=f29e292]:
+          - 'link "Live telemetry status: Live" [ref=f29e293] [cursor=pointer]':
+            - /url: /signal-diff
+          - tooltip "Live telemetry stream · Last message 0s ago"
+        - generic [ref=f29e301]:
+          - link "Telemetry honesty meter" [ref=f29e302] [cursor=pointer]:
+            - /url: /
+          - tooltip "Live 0 · Stale 0 · Guessed 2 · Missing 0 · Stream live"
+        - generic [ref=f29e307]:
+          - button "Current data with live actions available." [ref=f29e308] [cursor=pointer]
+          - tooltip "Current data with live actions available."
+      - generic [ref=f29e314]:
+        - generic [ref=f29e315]:
+          - button "Open recently viewed pages, 10 saved" [ref=f29e316] [cursor=pointer]
+          - tooltip "Recently viewed pages - 10 pages"
+        - generic [ref=f29e1329]:
+          - button "Open more status options. Update or release notes available" [ref=f29e1330] [cursor=pointer]
+          - tooltip "Update or release notes available"
+        - generic [ref=f29e336]:
+          - button "Open Helix chat" [ref=f29e337] [cursor=pointer]
+          - tooltip "Open Helix chat"
+    - status "Application status announcements" [ref=f29e341]: "Telemetry honesty: guessed"
+  - status [ref=f29e1465]:
+    - generic [ref=f29e1466]:
+      - paragraph [ref=f29e1471]: "Mode: Light"
+      - button "Dismiss notification" [ref=f29e1472] [cursor=pointer]

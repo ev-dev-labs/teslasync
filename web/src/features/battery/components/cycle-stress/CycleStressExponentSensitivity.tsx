@@ -16,6 +16,7 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import type { CycleStressResult } from '../../lib/cycleStress';
+import { cycleStressCycleEvidence } from '../cycle-stress-modernization/queryState';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
 
@@ -29,6 +30,7 @@ export function CycleStressExponentSensitivity({
   state,
 }: CycleStressExponentSensitivityProps) {
   const { t } = useTranslation();
+  const evidence = cycleStressCycleEvidence(result, state, t);
   const rows = useMemo(
     () =>
       result.exponentSensitivity.map((point) => ({
@@ -61,11 +63,10 @@ export function CycleStressExponentSensitivity({
         height={300}
         loading={state.isLoading}
         empty={false}
-        exportable={
-          state.isResolved && !state.error && result.cycles.length > 0
-        }
-        exportData={rows}
-        data={rows}
+        exportable={evidence.available}
+        exportData={evidence.available ? rows : []}
+        data={evidence.available ? rows : []}
+        ariaDescription={evidence.description}
         dataColumns={[
           {
             key: 'exponent',

@@ -1,0 +1,4 @@
+[i18n-split] OK — 31 grouped locale bundles, 117 per-namespace fallbacks, 1139 inlined shell keys, 21 known-missing keys (0 new, 0 resolved)
+[i18n-namespace-audit] 48 known dotted misses, 23 dotless labels, 0 new dotted, 0 new dotless, 3 newly resolved
+[i18n-namespace-audit] baseline entries no longer referenced (rerun with --write-baseline to prune): audit, explore, systemStatus
+JSON report written to F:/github/TeslaSync/web/precision-admin-analytics-bounded.json

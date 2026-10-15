@@ -7,9 +7,9 @@
  * genuinely exercised.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 // ── i18n stub ──
@@ -102,13 +102,15 @@ function idle(extra = {}) {
 
 function renderPanel() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = (value: JourneySession) => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <StopScorePanel session={session} />
+        <StopScorePanel session={value} />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const rendered = render(view(session));
+  return { ...rendered, rerenderSession: (value: JourneySession) => rendered.rerender(view(value)) };
 }
 
 beforeEach(() => {
@@ -118,6 +120,36 @@ beforeEach(() => {
 });
 
 describe('StopScorePanel', () => {
+  it('isolates pending work, rejection and drafts across sessions while retaining same-session results', async () => {
+    let resolve!: (value: typeof scores) => void;
+    let reject!: (reason: Error) => void;
+    mockScore.mockImplementation(() => useMutation({
+      mutationFn: () => new Promise<typeof scores>((yes, no) => { resolve = yes; reject = no; }),
+    }));
+    const { rerenderSession } = renderPanel();
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    await waitFor(() => expect(resolve).toBeTypeOf('function'));
+    rerenderSession({ ...session, id: 2 });
+    expect(screen.getByRole('button', { name: 'Score 0 stops' })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Charge needed' })).toHaveValue('40.00');
+    await act(async () => resolve(scores));
+    expect(screen.queryByText('Kettleman City wins')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Scoring stops…' })).toBeInTheDocument());
+    await act(async () => reject(new Error('rejected')));
+    await waitFor(() => expect(screen.getByText(/Stops could not be scored/)).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Score 1 stops' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Scoring stops…' })).toBeInTheDocument());
+    await act(async () => resolve({ ...scores, session_id: 2 }));
+    await waitFor(() => expect(screen.getByText('Kettleman City wins')).toBeInTheDocument());
+    rerenderSession({ ...session, id: 2, plan_version: 2 });
+    expect(screen.getByText('Kettleman City wins')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Score 1 stops' })).toBeEnabled();
+  });
+
   it('asks for coordinates when the session has none', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
@@ -171,5 +203,109 @@ describe('StopScorePanel', () => {
     renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('keeps nominations and the original payload available during a failed site refresh', () => {
+    const refetch = vi.fn();
+    const mutate = vi.fn();
+    mockSites.mockReturnValue(idle({
+      data: sites, error: new Error('site refresh failed'), isError: true, isFetching: true, refetch,
+    }));
+    mockScore.mockReturnValue({ mutate, isPending: false, data: scores });
+    renderPanel();
+    expect(screen.getByRole('heading', { name: 'Score stops' })).toBeInTheDocument();
+    expect(screen.getByText('Kettleman City wins')).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+      id: session.id, energy_wh: 40000,
+      candidates: [expect.objectContaining({ site: sites[0].name, lat: sites[0].lat, lng: sites[0].lng })],
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the twenty visible candidates and ten-nomination cap without reordering', () => {
+    mockSites.mockReturnValue(idle({
+      data: Array.from({ length: 25 }, (_, i) => ({ ...sites[0], name: `Stop ${i}` })),
+    }));
+    renderPanel();
+    const boxes = screen.getAllByRole('checkbox');
+    expect(boxes).toHaveLength(20);
+    for (const box of boxes.slice(0, 10)) fireEvent.click(box);
+    expect(screen.getByRole('button', { name: 'Score 10 stops' })).toBeEnabled();
+    expect(boxes[9]).toBeEnabled();
+    expect(boxes[10]).toBeDisabled();
+    fireEvent.click(boxes[0]);
+    expect(boxes[10]).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Score 9 stops' })).toBeEnabled();
+  });
+
+  it('keeps the saved ranking while rescoring and reports failure without another automatic write', () => {
+    const mutate = vi.fn();
+    mockScore.mockReturnValue({
+      mutate, isPending: true, data: scores, error: new Error('score unavailable'),
+    });
+    renderPanel();
+    expect(screen.getByText('Kettleman City wins')).toBeInTheDocument();
+    expect(screen.getByText('expected wait 5 min')).toBeInTheDocument();
+    expect(screen.getByText(/Stops could not be scored/)).toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+});
+
+describe('StopScorePanel canonical energy input', () => {
+  it('displays the default 40000 Wh as 40 kWh in the real shared control', () => {
+    const mutate = vi.fn();
+    mockScore.mockReturnValue({ mutate, isPending: false, data: undefined });
+    renderPanel();
+    expect(screen.getByRole('textbox', { name: 'Charge needed' })).toHaveValue('40.00');
+    expect(screen.getByTestId('unit-input-symbol')).toHaveTextContent('kWh');
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({ energy_wh: 40000 }));
+  });
+
+  it('submits exactly 25000 Wh after entering 25 kWh in the real shared control', () => {
+    const mutate = vi.fn();
+    mockScore.mockReturnValue({ mutate, isPending: false, data: undefined });
+    renderPanel();
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    fireEvent.change(screen.getByLabelText('Arrival'), { target: { value: '2026-09-10T12:00' } });
+    const energy = screen.getByRole('textbox', { name: 'Charge needed' });
+    fireEvent.focus(energy);
+    fireEvent.change(energy, { target: { value: '25' } });
+    fireEvent.blur(energy);
+    expect(energy).toHaveValue('25.00');
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate).toHaveBeenCalledWith({
+      id: session.id,
+      energy_wh: 25000,
+      candidates: [{
+        site: sites[0].name,
+        lat: sites[0].lat,
+        lng: sites[0].lng,
+        arrive_at: new Date('2026-09-10T12:00').toISOString(),
+      }],
+    });
+  });
+
+  it('disables scoring and sends no request after clearing the real shared control', () => {
+    const mutate = vi.fn();
+    mockScore.mockReturnValue({ mutate, isPending: false, data: undefined });
+    renderPanel();
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    const submit = screen.getByRole('button', { name: 'Score 1 stops' });
+    expect(submit).toBeEnabled();
+    const energy = screen.getByRole('textbox', { name: 'Charge needed' });
+    fireEvent.focus(energy);
+    fireEvent.change(energy, { target: { value: '' } });
+    fireEvent.blur(energy);
+    expect(submit).toBeDisabled();
+    fireEvent.click(submit);
+    expect(mutate).not.toHaveBeenCalled();
   });
 });

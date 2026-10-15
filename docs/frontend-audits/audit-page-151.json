@@ -1,0 +1,423 @@
+{
+  "item": "audit-page-151",
+  "page": "web\\src\\features\\notifications\\pages\\QuietHoursPage.tsx",
+  "routes": ["/notifications/quiet-hours"],
+  "purpose": "Configure per-user quiet-hours / do-not-disturb windows while retaining an optional, propose-only Helix advisor and policy explanations.",
+  "primaryGoal": "Review configured schedules and bypass rules; create, edit or delete a window using the deterministic form. AI suggestions may prefill a draft but never persist it.",
+  "dataSources": [
+    {
+      "name": "useQuietHours",
+      "owner": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 1364,
+      "endpoints": [{"method": "GET", "path": "/notifications/quiet-hours"}],
+      "consumers": ["QuietHoursPage", "QuietHoursSummary", "QuietHoursPanel"],
+      "behavior": "notification-quiet-hours query key shared by page and panel; request receives AbortSignal; response.windows normalized with safeArray; STALE_TIMES.MODERATE. Summary receives the parent's query, not a separate query.",
+      "sourceFields": ["id", "user_id", "enabled", "start_local", "end_local", "timezone", "weekdays", "bypass_severities", "created_at", "updated_at"],
+      "typeEvidence": "web\\src\\api\\types.ts:1171-1194",
+      "backendVerification": "NOT INSPECTED: endpoint strings and methods are frontend source evidence, not router or live-server verification."
+    },
+    {
+      "name": "useSaveQuietHours / useDeleteQuietHours",
+      "owner": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 1375,
+      "endpoints": [
+        {"method": "POST", "path": "/notifications/quiet-hours"},
+        {"method": "PATCH", "path": "/notifications/quiet-hours/{id}"},
+        {"method": "DELETE", "path": "/notifications/quiet-hours/{id}"}
+      ],
+      "consumers": ["QuietHoursPanel"],
+      "behavior": "Positive numeric id selects PATCH; otherwise POST. Both save and delete invalidate and broadcast notification-quiet-hours. Hooks emit mutation toasts in addition to the panel's per-call toasts.",
+      "backendVerification": "NOT INSPECTED; per-user authorization, server timezone behavior and validation remain unknown."
+    },
+    {
+      "name": "useAiStream",
+      "owner": "web\\src\\hooks\\useAiStream.ts",
+      "line": 335,
+      "endpoints": [{"method": "POST", "path": "/ai/settings/quiet-hours/draft"}],
+      "consumers": ["AIQuietHoursSuggestion"],
+      "behavior": "SSE POST adds the /api/v1 prefix in the hook, sends an empty object and uses auth headers, server credentials and AbortSignal. Advisor captures successful draft_quiet_hours_window tool_result frames, filters severity elements to strings, cancels on unmount and applies only typed draft scalars.",
+      "evidence": ["web\\src\\components\\ai\\AIQuietHoursSuggestion.tsx:89-181", "web\\src\\hooks\\useAiStream.ts:325-365"],
+      "backendVerification": "NOT INSPECTED. Trailing 30-day aggregate history and privacy claims appear in advisor copy/comments; actual server aggregation and privacy enforcement are not proved."
+    },
+    {
+      "name": "AI feature enablement",
+      "owner": "web\\src\\components\\ai\\withAiFeature.tsx",
+      "line": 46,
+      "consumers": ["AIQuietHoursSuggestion"],
+      "behavior": "Existing useAiEnabled(feature) gate returns null when disabled. Preserve this intentional AI-off boundary while retaining the deterministic panel and guide.",
+      "evidence": "web\\src\\components\\ai\\AIQuietHoursSuggestion.tsx:294-298",
+      "backendVerification": "Enablement hook/provider and configuration endpoints not expanded in this atomic audit."
+    },
+    {
+      "name": "Browser clock and timezone",
+      "owner": "web\\src\\features\\notifications\\components\\QuietHoursSummary.tsx",
+      "line": 46,
+      "consumers": ["QuietHoursSummary", "QuietHoursPanel"],
+      "behavior": "Summary uses browser-local getHours/getDay; panel next-change labels do likewise. Draft defaults resolve the browser IANA timezone or UTC. These are independent business scheduling times, not workspace date/vehicle scope.",
+      "evidence": ["web\\src\\features\\notifications\\components\\QuietHoursSummary.tsx:46-82", "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx:86-100,160-178"]
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "kind": "shared layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "props": ["title", "subtitle", "query", "copyLink", "children"],
+      "usage": "web\\src\\features\\notifications\\pages\\QuietHoursPage.tsx:54-78",
+      "contract": "Forwards PageContainer props; w-full min-w-0 @container child stack. PageContainer internals were not expanded."
+    },
+    {
+      "name": "QuietHoursSummary",
+      "kind": "feature presentation and derived policy summary",
+      "owner": "web\\src\\features\\notifications\\components\\QuietHoursSummary.tsx",
+      "line": 64,
+      "props": ["query: UseQueryResult<QuietHoursWindow[]>"],
+      "dependencies": ["useDataState", "useOperationalMetrics", "OperationalBrief", "DataProvenanceBadge", "StaleRefreshWarning", "QueryError", "StatGridSkeleton", "GlassPanel"],
+      "contract": "Four metrics, initial-load skeleton, fatal retry and retained-data stale warning. Uses current shared operational metric pipeline; do not create a competing KPI renderer."
+    },
+    {
+      "name": "QuietHoursPanel",
+      "kind": "existing settings-domain CRUD owner",
+      "owner": "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx",
+      "line": 202,
+      "props": ["seedDraft?: QuietHoursWindowInput | null", "onSeedConsumed?: () => void"],
+      "dependencies": ["SourceContent", "GlassPanel", "Input", "Select", "Toggle", "Button", "Badge", "ConfirmDialog", "useConfirm", "useDiscardChangesGuard", "useToast"],
+      "contract": "Retain this sole deterministic save owner; do not fork a notifications-specific form. Owns default drafts, validation, list actions and both confirmations."
+    },
+    {
+      "name": "AIQuietHoursSuggestion",
+      "kind": "shared AI domain integration",
+      "owner": "web\\src\\components\\ai\\AIQuietHoursSuggestion.tsx",
+      "line": 294,
+      "props": ["onApplyDraft: (patch: QuietHoursWindowInput) => void"],
+      "dependencies": ["AIFeatureCard", "withAiFeature", "useAiStream", "Button"],
+      "contract": "Optional gated advisor; applies a proposal only to the form. Captured proposal includes insufficient-history and existing-window context."
+    },
+    {
+      "name": "AIFeatureCard",
+      "kind": "existing shared composite",
+      "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 241,
+      "props": ["title", "description", "buttonLabel", "badgeLabel", "canStart", "stream", "onAction", "buttonPlacement", "buttonTestId", "children"],
+      "contract": "Existing shared Helix CTA, translated accessible name, streaming disabled/busy state and AiOutputPanel delegation. This consumer uses buttonPlacement=below."
+    },
+    {
+      "name": "QuietHoursGuide",
+      "kind": "feature static explanation",
+      "owner": "web\\src\\features\\notifications\\components\\QuietHoursGuide.tsx",
+      "line": 27,
+      "props": [],
+      "dependencies": ["GlassPanel", "IconBox", "PanelTitle", "Text", "Badge"],
+      "contract": "Labelled region, three guidance steps and three severity explanations. No query or data requirement."
+    },
+    {
+      "name": "IconBox",
+      "kind": "existing shared primitive",
+      "owner": "web\\src\\components\\ui\\IconBox.tsx",
+      "line": 19,
+      "props": ["color", "size", "className", "children"],
+      "dependencies": ["web\\src\\lib\\tokens.ts:13-27"],
+      "contract": "Panel and guide both pass purple. Applies mapped background/ring/text, not mapped glow."
+    },
+    {
+      "name": "FadeIn",
+      "kind": "existing shared motion owner",
+      "owner": "@/components/motion category export; implementation not expanded",
+      "props": ["children", "delay"],
+      "usage": ["web\\src\\features\\notifications\\pages\\QuietHoursPage.tsx:60,73", "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx:393"],
+      "contract": "Keep current animation owner; no page-local motion engine. Effective reduced-motion behavior unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx",
+      "line": 330,
+      "rule": "MDC-002 / mission 33: one mutation feedback owner",
+      "detail": "Panel success/error callbacks emit toasts while useSaveQuietHours and useDeleteQuietHours already emit them at useNotifications.ts:1394-1399,1411-1413. Two feedback paths exist for the same mutations; actual duplicate toast rendering was not exercised.",
+      "fix": "Choose one existing feedback owner without changing mutation/invalidation behavior; preserve contextual success and error details once.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\QuietHoursSummary.tsx",
+      "line": 31,
+      "rule": "Mission 33 / MDC-045: domain derivation must have a consistent owner",
+      "detail": "HH:MM parsing and clock-based schedule derivation also exist in QuietHoursPanel.tsx:145,160-184. Summary credits overnight time to yesterday; panel next-change checks only today's weekday. These related policies can diverge.",
+      "fix": "Consolidate only the shared schedule/time interpretation into a typed domain helper after confirming server semantics, leaving queries and localized labels in existing owners.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "Page: single column until xl, then CRUD spans two columns and advisor/guide occupy one; min-w-0 on both branches (QuietHoursPage.tsx:64-75).",
+      "Panel: wrapping headers/actions, break-words/overflow-wrap window labels, wrapping weekday chips and form actions; time fields stack until sm (QuietHoursPanel.tsx:395-417,450-501,527-568,657-684).",
+      "Guide: severity rows use flex with a shrink-0 badge and flowing Text, but real translated narrow-width wrapping is unverified (QuietHoursGuide.tsx:112-121).",
+      "AI card: wrapping header/action rows and break-words title/description; proposal preview has raw lists without explicit overflow wrapping (AIFeatureCard.tsx:317-349; AIQuietHoursSuggestion.tsx:231-276)."
+    ],
+    "requiredWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "verifiedWidths": [],
+    "issues": [
+      {
+        "file": "web\\src\\components\\ai\\AIQuietHoursSuggestion.tsx",
+        "line": 239,
+        "rule": "MDC-043: preserve full content at narrow allocated widths",
+        "detail": "Proposal timezone, severity list and explanatory text have no explicit anywhere-wrapping/min-width treatment in the raw preview list. Overflow with long source strings is a source-indicated risk, not observed clipping.",
+        "fix": "Use existing Text roles and safe wrapping in the preview; retain every proposal field and warning. Verify 320px and xl right-rail container widths with long locale/source content.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Summary has a localized section label; loading/fatal states keep the named section (QuietHoursSummary.tsx:129-140).",
+      "Guide useId ties region and severity list to localized labels; decorative guide/summary icons are aria-hidden (QuietHoursGuide.tsx:32-33,84-90,112; QuietHoursSummary.tsx:105-125).",
+      "Weekday/severity editing uses fieldset/legend, aria-pressed and min-h-11/min-w-11; weekday error association and assertive validation announcement are present (QuietHoursPanel.tsx:583-654).",
+      "Existing shared Input/Select/Toggle and ConfirmDialog owners are used; no raw button/input/select controls in the scoped source.",
+      "Helix CTA has a contextual aria-label, aria-disabled and streaming aria-busy (AIFeatureCard.tsx:296-301)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx",
+        "line": 492,
+        "rule": "MDC-040 / MDC-025: do not encode selection by color alone",
+        "detail": "Read-only weekday chips display all seven labels and indicate configured days only through tint/ring/weight. Unlike editor buttons, these spans have no programmatic selected-day text or aria-pressed.",
+        "fix": "Retain all weekday information and add localized selected/unselected or aggregate schedule text with a non-color cue; editor button semantics remain unchanged.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Keyboard order and reachability", "Dialog trapping/restoration", "Screen-reader announcements", "Actual control sizes outside explicitly sized weekday/severity buttons", "AA composed contrast", "Forced colors", "Reduced motion", "200% text", "RTL"]
+  },
+  "states": {
+    "loading": "Summary initial no-data loading gives four-card skeleton (QuietHoursSummary.tsx:90,129-130); panel SourceContent initial gives two-row ListSkeleton (QuietHoursPanel.tsx:425-435).",
+    "empty": "Summary zero known schedules, missing enabled/bypass context and No schedules status (QuietHoursSummary.tsx:103-125,150-151); panel explanatory EmptyState with Add window header action retained (QuietHoursPanel.tsx:384-390,410-419,437-441).",
+    "fatalError": "Summary QueryError with query.refetch (QuietHoursSummary.tsx:132-136); panel error SourceContent with retry (QuietHoursPanel.tsx:425-431). Guide and deterministic draft form are not page-level gated by data.",
+    "refreshErrorAndStale": "Summary StaleRefreshWarning plus provenance badge and stale status; panel maps stale to retained (QuietHoursSummary.tsx:141,148-156; QuietHoursPanel.tsx:425). Exact inherited offline/partial handling was not expanded.",
+    "mutation": "Save pending controls, validation errors, toast success/error, delete pending per row and destructive confirmation; cancel uses dirty-draft confirmation (QuietHoursPanel.tsx:281-362,641-688).",
+    "ai": "Advisor idle/streaming/paused-confirm/done/error come from useAiStream and AIFeatureCard. Applying is disabled while streaming/paused; feature-off intentionally hides only advisor. Proposal warnings/context retained (AIQuietHoursSuggestion.tsx:169-181,210-279,294-298).",
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\components\\QuietHoursSummary.tsx",
+        "line": 69,
+        "rule": "MDC-026: truthful current-state freshness",
+        "detail": "Right now status is memoized only on windows identity. There is no clock dependency or timer, so crossing a time boundary without changed window data can leave the computed status unchanged. Panel labels also update only on render.",
+        "fix": "Use a bounded shared/domain clock or next-boundary refresh and retain query provenance separately from schedule-time freshness; do not imply notification-delivery verification.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx",
+        "line": 504,
+        "rule": "Null safety / MDC-026",
+        "detail": "List directly accesses w.bypass_severities.length and .map at lines 504-507 while draft and summary already tolerate missing lists. The TS type requires an array, but runtime null/missing fields are not normalized here; backend occurrence is unknown.",
+        "fix": "Normalize this optional runtime list once per row or at the existing typed data adapter, preserving a genuinely empty bypass list as no allowed severities.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx",
+        "line": 244,
+        "rule": "MDC-046: preserve user draft state",
+        "detail": "AI seed effect unconditionally replaces draft and resets initialDraft/editingId. startEdit/startCreate also replace drafts directly; the discard guard is called only for Cancel. Applying another proposal while dirty can discard manual changes without that existing guard.",
+        "fix": "Route replacement actions through the existing dirty-draft confirmation before consuming a seed or replacing edits; preserve one-shot seed consumption and explicit Save-only persistence.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\ui\\IconBox.tsx",
+      "line": 30,
+      "rule": "MDC-010 / mission 43: remove decorative neon",
+      "detail": "Guide and CRUD panel purple IconBox callsites inherit bg-neon-purple/10 and ring-neon-purple/20 through tokens.ts:24. This is decorative heading chrome. IconBox does not apply the map's glow property; no actual icon-box glow is claimed.",
+      "fix": "Existing shared IconBox/token owner should provide subdued neutral/theme-semantic icon chrome while keeping size/color compatibility and saved theme/chart choices intact.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 294,
+      "rule": "MDC-010 / MDC-012: restrained theme-aware controls",
+      "detail": "Helix action imposes cyan-400 borders/focus, cyan-500 backgrounds and dark cyan-100 text rather than inherited outline treatment. AIBadge at line 217 also supplies fixed cyan tinted chrome. Saturation and theme contrast are source concerns, not measured failures.",
+      "fix": "Subdue shared CTA/badge chrome through existing semantic control tokens, retaining meaningful Helix identity, focus visibility, contextual accessible names and busy/disabled states.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIQuietHoursSuggestion.tsx",
+      "line": 231,
+      "rule": "MDC-013 / MDC-012",
+      "detail": "Proposal uses text-sm/text-xs/font-medium raw wrappers and fixed emerald-300 text across themes. The explanatory preview is not a measured success state; weekday read-only chips also impose purple-300 body text at QuietHoursPanel.tsx:495.",
+      "fix": "Reuse existing Text/PanelTitle roles and theme-aware primary/secondary text with restrained semantic warning treatment; preserve all preview and weekday content.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\components\\QuietHoursSummary.tsx",
+      "line": 51,
+      "rule": "MDC-045 / MDC-026: source-backed timezone semantics",
+      "detail": "Configured windows carry timezone, but summary uses browser-local clock/weekday and never reads w.timezone. Panel next-change labels also use browser-local time and ignore previous-day overnight eligibility at QuietHoursPanel.tsx:160-178. Current copy explicitly says local weekday/time; equivalence with configured IANA timezone/server suppression is not proved.",
+      "fix": "Confirm authoritative server semantics before consolidating a timezone-aware domain derivation; keep HH:MM/IANA timezone/weekday bitmask raw and distinct from workspace dates. Preserve overnight behavior and accurate unknown status rather than claiming browser time equals policy time.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx",
+      "line": 172,
+      "rule": "MDC-044: localize user-visible derived labels",
+      "detail": "nextWindowChangeLabel returns hardcoded English starts at / ends at / ends tomorrow at / starts tomorrow at, then renders directly at line 459. Summary/row bypass also expose raw warn/critical/info identifiers as display text.",
+      "fix": "Return structured transition data and render through current localized catalogs; reuse existing severity translation mappings while retaining raw request identifiers.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Source-confirmed timezone/clock consistency, unguarded draft replacement and runtime array assumptions outrank decorative modernization.",
+    "order": ["Preserve draft changes and source truth", "Resolve schedule-time derivation and localization", "Deduplicate mutation feedback", "Make read-only weekday state accessible", "Subdue inherited icon/Helix chrome and preview typography", "Run centralized actual responsive/theme/accessibility acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Consistent quiet-hours schedule interpretation",
+      "existingOwnerFile": "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx",
+      "missingOwner": "No common timezone-aware pure schedule helper observed in the inspected dependencies; existing nextWindowChangeLabel is panel-owned.",
+      "propsVariantsStates": {
+        "inputs": ["QuietHoursWindow", "explicit current instant"],
+        "outputs": ["active/unknown", "next transition kind", "next transition time", "schedule timezone"],
+        "states": ["enabled/disabled", "invalid time/timezone", "same-day", "overnight", "previous-day weekday eligibility", "boundary change", "DST"],
+        "constraints": ["Preserve raw HH:MM, IANA timezone, weekday mask and severity identifiers", "Keep localized labels in callers", "Do not add queries or persistence", "Validate server equivalence first"]
+      },
+      "usedBy": ["QuietHoursSummary", "QuietHoursPanel"],
+      "dependsOn": ["Authoritative server schedule semantics (not inspected)", "Existing localization and clock/lifecycle mechanisms"],
+      "evidence": ["web\\src\\features\\notifications\\components\\QuietHoursSummary.tsx:31-82", "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx:160-184"]
+    },
+    {
+      "name": "Subdued IconBox chrome",
+      "existingOwnerFile": "web\\src\\components\\ui\\IconBox.tsx",
+      "propsVariantsStates": {
+        "preserveProps": ["color", "size", "children", "className"],
+        "variants": ["Existing color/size compatibility; neutral/theme-semantic presentation"],
+        "states": ["Light", "Dark", "Forced colors"],
+        "constraints": ["No new icon wrapper", "No global chart/theme preference reset", "No glow escalation"]
+      },
+      "usedBy": ["QuietHoursGuide", "QuietHoursPanel"],
+      "dependsOn": ["web\\src\\lib\\tokens.ts:13-27", "MDC-010 / MDC-011"],
+      "evidence": ["web\\src\\features\\notifications\\components\\QuietHoursGuide.tsx:86", "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx:397", "web\\src\\components\\ui\\IconBox.tsx:25-30"]
+    },
+    {
+      "name": "Restrained existing Helix card/preview presentation",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "propsVariantsStates": {
+        "preserveProps": ["title", "description", "buttonLabel", "badgeLabel", "canStart", "stream", "onAction", "buttonPlacement", "buttonTestId", "children"],
+        "variants": ["inline", "below"],
+        "states": ["idle", "streaming", "paused-confirm", "done", "error", "disabled", "feature-off outside card", "insufficient-history proposal"],
+        "constraints": ["Use existing typography/control tokens", "Keep full child proposal context", "Keep labelled CTA, focus, busy/disabled behavior and feature gate"]
+      },
+      "usedBy": ["AIQuietHoursSuggestion"],
+      "dependsOn": ["Existing Button, Text/PanelTitle and semantic tokens", "Preview caller web\\src\\components\\ai\\AIQuietHoursSuggestion.tsx:231-276"],
+      "evidence": ["web\\src\\components\\ai\\AIFeatureCard.tsx:217-220,279-305", "web\\src\\components\\ai\\AIQuietHoursSuggestion.tsx:184-280"],
+      "scopeNote": "No new shared composite proposed from a single consumer. Extend/reuse existing owner only; broader consumer validation belongs to its designated owner."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\notifications\\pages\\QuietHoursPage.tsx",
+      "line": 66,
+      "rule": "MDC-002: reuse existing domain owners",
+      "detail": "Page already composes the settings QuietHoursPanel and shared AIFeatureCard rather than a duplicate notifications CRUD form or AI scaffold. No competing layout/theme/query implementation observed in the inspected graph.",
+      "fix": "Keep these existing owners; consolidate only the confirmed duplicate time/feedback paths reported above.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "ECBD1A44D0B2968C512CE02D6F1E7D9164D980258452566CD09BE85A46757BA1",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 80,
+    "sectionCount": 4,
+    "sectionNames": ["Quiet-hours summary", "Quiet-hours CRUD list/editor", "Optional Helix suggestion advisor", "How quiet hours work and severity guide"],
+    "sections": [
+      {"name": "Quiet-hours summary", "file": "web\\src\\features\\notifications\\pages\\QuietHoursPage.tsx", "line": 61, "contents": ["Windows count", "Enabled/total", "Right now Quiet/Delivering and active count context", "Always allowed severities", "Freshness/provenance", "Missing reasons", "Retry and retained stale warning"]},
+      {"name": "Quiet-hours CRUD list/editor", "file": "web\\src\\features\\notifications\\pages\\QuietHoursPage.tsx", "line": 66, "contents": ["Enabled status", "Start/end and timezone", "Next-change label", "All weekday selections", "Bypass severity badges", "Add/edit/delete actions", "Time/timezone/enabled/weekday/severity draft controls", "Validation", "Save/update/cancel", "Discard/delete confirmations", "Empty/loading/error/retry"]},
+      {"name": "Optional Helix suggestion advisor", "file": "web\\src\\features\\notifications\\pages\\QuietHoursPage.tsx", "line": 72, "contents": ["Ask Helix contextual CTA", "Streaming/error output delegated to existing card", "Apply to form", "Start/end/timezone proposal", "Weekday mask", "Bypass list", "Insufficient-history warning", "Existing-window count", "Propose-only explanation", "Intentional feature-off invisibility"]},
+      {"name": "How quiet hours work and severity guide", "file": "web\\src\\features\\notifications\\pages\\QuietHoursPage.tsx", "line": 74, "contents": ["Deferral step", "Severity bypass step", "Helix review/save step", "Critical explanation", "Warning explanation", "Info explanation"]}
+    ],
+    "sectionCountExplanation": "Four rendered domain components; introductory comment groups advisor and guide into one right rail, yielding three layout groups. No content is discarded by distinguishing these counts.",
+    "sourceCounts": {
+      "page": {"lines": 80, "GlassPanel": 0, "ChartContainer": 0},
+      "QuietHoursSummary": {"lines": 161, "GlassPanel": 1, "ChartContainer": 0},
+      "QuietHoursGuide": {"lines": 127, "GlassPanel": 1, "ChartContainer": 0},
+      "QuietHoursPanel": {"lines": 692, "GlassPanel": 1, "ChartContainer": 0},
+      "AIQuietHoursSuggestion": {"lines": 298, "GlassPanel": 0, "ChartContainer": 0},
+      "pagePlusNotificationFeatureComponentsLines": 368,
+      "allFourDirectDomainComponentsPlusPageLines": 1358,
+      "sharedAIFeatureCardGlassPanel": 1,
+      "notes": "Source occurrence counts, not simultaneous mounted panels. Summary GlassPanel is fatal-error-only; shared card is intentionally gated. No charts/maps/tables/exports observed."
+    },
+    "actions": [
+      "Copy page link (PageLayout copyLink at page line 58; inherited implementation not expanded)",
+      "Add window; edit existing window; destructive confirmed delete",
+      "Enable/disable in draft; edit start/end, IANA timezone, weekday bitmask and bypass severities",
+      "Create/update only via canonical form submission; loading and mutation recovery",
+      "Cancel with dirty-draft discard confirmation",
+      "Retry failed quiet-hours query",
+      "Ask Helix; review captured proposal; apply scalars to form; explicit Save required"
+    ],
+    "dataBehavior": [
+      "Keep single notification-quiet-hours query identity, AbortSignal, stale policy, safeArray normalization and mutation invalidate-and-broadcast.",
+      "Keep per-user schedule fields, positive-id PATCH selection, POST creation and DELETE identity; do not invent backend filters.",
+      "Keep draft defaults enabled=true, 23:00 to 07:00, browser timezone/UTC fallback, all weekdays=127, critical bypass.",
+      "Keep validation of HH:MM, unequal endpoints, required timezone and at least one weekday; empty bypass remains allowed.",
+      "Keep one-shot parent pendingSeed -> panel seedDraft -> onSeedConsumed handoff, propose-only AI and no AI direct persistence.",
+      "Keep AI-off isolation, cancellation on unmount, successful typed tool-frame checks, string severity filtering, proposal warning/context and authenticated SSE transport.",
+      "Keep unknown distinct from zero; only genuinely resolved empty schedules justify total=0. Do not treat browser-derived Delivering as measured delivery success.",
+      "No SI measurement conversion is needed for HH:MM business schedules; retain raw schedule data and existing operational metric formatting/persistence."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Atomic source-only Phase0 inspection of assigned page and its direct presentation/data contracts.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "routeMounting": "Assigned route recorded exactly; router/lazy-route mounting not inspected.",
+    "backend": "Not inspected; hook endpoint strings are known, backend matching/authorization/time semantics are not claimed.",
+    "sharedInternals": "PageLayout/AIFeatureCard/IconBox immediate implementations inspected; PageContainer, AiOutputPanel, operational metrics, data-state internals, primitive focus/contrast, enablement providers and motion internals not expanded.",
+    "validation": {
+      "sourceCountsCommand": "PowerShell Get-Content plus case-sensitive [regex]::Matches over the page and four direct domain components",
+      "exitCode": 0,
+      "output": ["directLibraries=0", "rawControls=0", "neonGlowWhite=0", "staticInline=0"],
+      "countLimits": "Text-pattern counts only. neonGlowWhite=0 applies to those five files, not inherited shared chrome; IconBox token map and AIFeatureCard colors were separately inspected and flagged. Initial case-insensitive Select-String probe matched capitalized shared controls; final counts intentionally use case-sensitive regex.",
+      "notRun": ["TypeScript", "full-repository lint/build", "tests", "browser/runtime/visual QA", "Git", "full audit.sh"],
+      "reason": "Assignment authorizes source audit only and forbids source edits/Git/full-repository lint/build. audit.sh includes project-wide TypeScript and is not a source-only scoped command; script was read but not executed."
+    },
+    "historicalAcceptance": "Not used as current proof.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-151.json", ".agent-status\\audit-page-151.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\notifications\\pages\\QuietHoursPage.tsx",
+    "web\\src\\features\\notifications\\components\\QuietHoursSummary.tsx",
+    "web\\src\\features\\notifications\\components\\QuietHoursGuide.tsx",
+    "web\\src\\features\\settings\\components\\QuietHoursPanel.tsx",
+    "web\\src\\components\\ai\\AIQuietHoursSuggestion.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\api\\hooks\\useNotifications.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\lib\\tokens.ts"
+  ]
+}

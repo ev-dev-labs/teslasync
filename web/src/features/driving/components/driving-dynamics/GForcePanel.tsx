@@ -8,7 +8,8 @@ import { StatCard } from '@/components/data-display';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { useDriveDynamicsLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
-import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface GForcePanelProps {
   vehicleId: number | null | undefined;
@@ -33,6 +34,7 @@ interface GForcePanelProps {
  * QueryError with retry, no signals → empty state, otherwise the values.
  */
 export default function GForcePanel({ vehicleId }: GForcePanelProps) {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
 
   const { data, isLoading, isError, error, refetch } = useDriveDynamicsLatest(
@@ -54,7 +56,7 @@ export default function GForcePanel({ vehicleId }: GForcePanelProps) {
       magnitude: lat != null && lon != null ? Math.sqrt(lat * lat + lon * lon) : null,
       hasAny: lat != null || lon != null,
     };
-  }, [data?.lateral_acceleration, data?.longitudinal_acceleration]);
+  }, [data?.lateral_acceleration, data?.longitudinal_acceleration, displayPrecision, displayLocale]);
 
   const handleRetry = useCallback(() => {
     void refetch();
@@ -83,19 +85,19 @@ export default function GForcePanel({ vehicleId }: GForcePanelProps) {
           <StatCard
             icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
             label={lateralLabel}
-            value={lateral != null ? fmtNumber(lateral, 2) : '—'}
+            value={lateral != null ? fmtNumber(lateral) : '—'}
             unit="g"
           />
           <StatCard
             icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
             label={longitudinalLabel}
-            value={longitudinal != null ? fmtNumber(longitudinal, 2) : '—'}
+            value={longitudinal != null ? fmtNumber(longitudinal) : '—'}
             unit="g"
           />
           <StatCard
             icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
             label={combinedLabel}
-            value={magnitude != null ? fmtNumber(magnitude, 2) : '—'}
+            value={magnitude != null ? fmtNumber(magnitude) : '—'}
             unit="g"
           />
         </Grid>

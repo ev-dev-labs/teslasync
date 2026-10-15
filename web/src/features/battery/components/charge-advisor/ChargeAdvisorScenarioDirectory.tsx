@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
 import { Badge, Text } from '@/components/ui';
-import { fmtPercent } from '@/lib/numberFormat';
+
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorScenarioDirectory({ analysis, state }: ChargeAdvisorComponentProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const days = analysis.scenarios.meanPath;
 
@@ -49,19 +51,19 @@ export function ChargeAdvisorScenarioDirectory({ analysis, state }: ChargeAdviso
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <div>
                   <Text variant="caption">{t('chargeAdvisor.directory.mean', 'Mean use')}</Text>
-                  <Text className="font-semibold">{fmtPercent(day.meanBurnPct, 1)}</Text>
+                  <Text className="font-semibold">{fmtPercent(day.meanBurnPct)}</Text>
                 </div>
                 <div>
                   <Text variant="caption">{t('chargeAdvisor.directory.p75', 'Calendar-day p75')}</Text>
-                  <Text className="font-semibold">{fmtPercent(day.p75BurnPct, 1)}</Text>
+                  <Text className="font-semibold">{fmtPercent(day.p75BurnPct)}</Text>
                 </div>
                 <div>
                   <Text variant="caption">{t('chargeAdvisor.directory.meanEnd', 'Mean end SoC')}</Text>
-                  <Text className="font-semibold text-cyan-300">{fmtPercent(day.meanEndSocPct, 0)}</Text>
+                  <Text className="font-semibold text-cyan-300">{fmtPercent(day.meanEndSocPct)}</Text>
                 </div>
                 <div>
                   <Text variant="caption">{t('chargeAdvisor.directory.p75End', 'Calendar-day p75 end SoC')}</Text>
-                  <Text className="font-semibold text-amber-300">{fmtPercent(day.p75EndSocPct, 0)}</Text>
+                  <Text className="font-semibold text-amber-300">{fmtPercent(day.p75EndSocPct)}</Text>
                 </div>
               </div>
             </article>

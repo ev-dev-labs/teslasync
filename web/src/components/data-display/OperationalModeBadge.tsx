@@ -1,6 +1,8 @@
 import { Database, History, Radio } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Tooltip } from '@/components/ui';
+import { Badge } from '@/components/ui/Badge';
+import { Icon } from '@/components/ui/Icon';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { cn } from '@/lib/cn';
 
@@ -36,8 +38,6 @@ export function OperationalModeBadge({
       shortLabel: t('operationalMode.asOf.shortLabel', 'As of'),
     },
   }[operationalMode.mode];
-  const Icon = config.Icon;
-
   return (
     <Tooltip content={operationalMode.description} multiline>
       <Badge
@@ -47,7 +47,7 @@ export function OperationalModeBadge({
         data-operational-mode={operationalMode.mode}
         className={cn('shrink-0 gap-1.5', className)}
       >
-        <Icon className="h-3 w-3" aria-hidden="true" />
+        <Icon icon={config.Icon} size="xs" aria-hidden />
         {compact ? config.shortLabel : operationalMode.label}
       </Badge>
     </Tooltip>

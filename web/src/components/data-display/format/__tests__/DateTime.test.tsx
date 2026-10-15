@@ -11,6 +11,10 @@ import type { DateTimeVariant } from '../DateTime';
 // a deterministic zone AND capture the mode the component resolved.
 // `importActual` keeps the real resolveTimezone / TzMode for type-compat.
 const tzMock = vi.hoisted(() => ({ tz: 'UTC', lastMode: undefined as string | undefined }));
+const settingsMock = vi.hoisted(() => ({ locale: 'en-US', tz_display_default: 'vehicle' }));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: settingsMock }),
+}));
 vi.mock('@/lib/timezone', async () => {
   const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
   return {
@@ -35,6 +39,51 @@ const ALL_VARIANTS: DateTimeVariant[] = ['full', 'date', 'time', 'relative', 'sh
 beforeEach(() => {
   tzMock.tz = 'UTC';
   tzMock.lastMode = undefined;
+  settingsMock.locale = 'en-US';
+});
+
+describe('DateTime — publication business days', () => {
+  it.each(['America/Los_Angeles', 'Pacific/Kiritimati'])(
+    'preserves the publication day without resolving the %s instant timezone',
+    (tz) => {
+      tzMock.tz = tz;
+      const { container } = render(
+        <DateTime value="2026-07-02" variant="day" in="vehicle" showTz clock={{ second: '2-digit' }} />,
+      );
+      expect(container.textContent).toBe('Jul 2, 2026');
+      expect(outer(container)?.getAttribute('title')).toBe('2026-07-02');
+      expect(abbrev(container)).toBeNull();
+      expect(tzMock.lastMode).toBeUndefined();
+    },
+  );
+
+  it('uses the selected locale and responds to preference changes', () => {
+    settingsMock.locale = 'de-DE';
+    const { container, rerender } = render(<DateTime value="2026-07-02" variant="day" />);
+    expect(container.textContent).toBe('2. Juli 2026');
+    settingsMock.locale = 'en-US';
+    rerender(<DateTime value="2026-07-02" variant="day" />);
+    expect(container.textContent).toBe('Jul 2, 2026');
+  });
+
+  it.each([null, undefined, '', '2026-02-30', ISO, new Date(ISO)])(
+    'does not invent an instant or date for invalid business-day input %s',
+    (value) => {
+      const { container } = render(<DateTime value={value} variant="day" />);
+      expect(container.textContent).toBe('—');
+      expect(outer(container)?.hasAttribute('title')).toBe(false);
+    },
+  );
+
+  it('continues converting true instants at midnight boundaries', () => {
+    tzMock.tz = 'America/Los_Angeles';
+    const { container } = render(
+      <DateTime value="2026-07-02T00:00:00Z" variant="date" in="vehicle" />,
+    );
+    expect(container.textContent).toBe('Jul 1, 2026');
+    expect(outer(container)?.getAttribute('title'))
+      .toBe('2026-07-02T00:00:00.000Z (America/Los_Angeles)');
+  });
 });
 
 describe('DateTime — pure (browser locale/tz) path', () => {
@@ -124,6 +173,21 @@ describe('DateTime — pure (browser locale/tz) path', () => {
 });
 
 describe('DateTime — timezone-aware path (in / showTz)', () => {
+  it('uses the preference-aware path for explicit seconds without changing the pure default', () => {
+    tzMock.tz = 'America/Los_Angeles';
+    const instant = '2026-04-05T02:30:47Z';
+    const { container, rerender } = render(
+      <DateTime value={instant} clock={{ second: '2-digit', hour12: false }} />,
+    );
+    expect(tzMock.lastMode).toBe('vehicle');
+    expect(container.textContent).toContain('Apr 4, 2026');
+    expect(container.textContent).toContain('19:30:47');
+    expect(outer(container)?.getAttribute('title')).toBe('2026-04-05T02:30:47.000Z (America/Los_Angeles)');
+    rerender(<DateTime value={instant} />);
+    expect(container.textContent).not.toContain(':47');
+    expect(outer(container)?.getAttribute('title')).toBe('2026-04-05T02:30:47.000Z');
+  });
+
   it('renders the instant in UTC and tags the title with the zone', () => {
     tzMock.tz = 'UTC';
     const { container } = render(<DateTime value={ISO} in="utc" />);

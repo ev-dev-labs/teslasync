@@ -15,14 +15,16 @@
 
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel } from '@/components/ui';
-import { DataStateNotice, ErrorDisplay } from '@/components/feedback';
+import { PageLayout } from '@/components/layout';
+import { Button, GlassPanel, PanelTitle } from '@/components/ui';
+import { AlertBanner, DataStateNotice, EmptyState, ErrorDisplay, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { ApiError } from '@/lib/resilience';
 import { useMyRecentActivity } from '@/api/hooks/useUser';
@@ -38,26 +40,55 @@ import {
 const ACTIVITY_LIMIT = 200;
 
 export default function MyActivityPage() {
-  const { t } = useTranslation();
-  usePageTitle(t('activity.myActivity.title', 'My Activity'));
+  const location = useLocation();
+  const [params] = useSearchParams();
+  const legacyStart = params.get('start');
+  const legacyEnd = params.get('end');
+  const validDate = (value: string | null): value is string =>
+    !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    !Number.isNaN(Date.parse(`${value}T00:00:00`));
 
-  const { start, end } = useRangeState({
+  if (!params.has('from') && !params.has('to') && !params.has('time_scope') &&
+      validDate(legacyStart) && validDate(legacyEnd) && legacyStart <= legacyEnd) {
+    const next = new URLSearchParams(params);
+    next.set('from', legacyStart);
+    next.set('to', legacyEnd);
+    next.set('time_scope', 'custom');
+    next.delete('start');
+    next.delete('end');
+    return <Navigate replace to={{ pathname: location.pathname, search: `?${next}`, hash: location.hash }} />;
+  }
+
+  return <MyActivityContent />;
+}
+
+function MyActivityContent() {
+  const { t } = useTranslation();
+  usePageTitle(t('activity.myActivity.title', 'My activity'));
+
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'my-activity.range',
-    fromKey: 'start',
-    toKey: 'end',
   });
 
-  const query = useMyRecentActivity({ start, end, limit: ACTIVITY_LIMIT });
-  const { data, isLoading, isError, error, refetch } = query;
+  const query = useMyRecentActivity({
+    start: startInstant,
+    end: endInstantExclusive,
+    limit: ACTIVITY_LIMIT,
+  });
+  const { data, isLoading, refetch } = query;
+  const state = useDataState(query, { provenance: 'historical' });
+  const error = state.fatalError;
+  const isError = !!error;
 
   // Stabilise the array identity so the derived-analytics memo below and the
   // feed panel don't churn on every render while the query is pending (when
   // `data` is undefined, `data ?? []` would otherwise be a fresh array each time).
   const entries = useMemo(() => data ?? [], [data]);
-  const apiError = error instanceof ApiError ? error : null;
+  const apiError = query.error instanceof ApiError ? query.error : null;
   const featureDisabled = apiError?.status === 503;
   const unauthenticated = apiError?.status === 401;
-  const hardGate = featureDisabled || unauthenticated;
+  // Retained deployment failures warn without erasing data; identity gates still protect it.
+  const hardGate = (featureDisabled && !state.hasData) || unauthenticated;
 
   const analytics = useMemo(
     () => deriveMyActivityAnalytics(entries, { start, end }),
@@ -70,18 +101,20 @@ export default function MyActivityPage() {
     void refetch();
   }, [refetch]);
   const sectionIsError = isError && !hardGate;
-  const isEmpty = !isLoading && !sectionIsError && entries.length === 0;
+  const initialUnknown = state.status === 'initial' && query.fetchStatus !== 'fetching';
+  const isEmpty = state.hasData && entries.length === 0;
 
 
   return (
-    <PageContainer
-      title={t('activity.myActivity.title', 'My Activity')}
+    <PageLayout
+      title={t('activity.myActivity.title', 'My activity')}
       subtitle={t(
         'activity.myActivity.subtitle',
         'Recent actions you have taken in TeslaSync.',
       )}
       query={query}
     >
+      <StaleRefreshWarning state={state} />
       {hardGate ? (
         <FadeIn>
           <GlassPanel className="p-4 sm:p-6">
@@ -94,20 +127,56 @@ export default function MyActivityPage() {
                 )}
                 message={t(
                   'activity.myActivity.disabled.description',
-                  'Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER.',
+                  'Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure FORWARD_AUTH_HEADER.',
                 )}
               />
             ) : (
-              <ErrorDisplay error={error} />
+              <ErrorDisplay error={query.error} />
             )}
           </GlassPanel>
         </FadeIn>
       ) : (
         <>
           <FadeIn>
-            <MyActivityKpiBand kpis={analytics.kpis} isLoading={isLoading} />
+            <MyActivityKpiBand kpis={analytics.kpis} isLoading={isLoading && !state.hasData}
+              available={state.hasData} retained={state.hasData && query.isError}
+              scope={t('activity.myActivity.brief.range', 'Loaded activity for {{start}} – {{end}}; at most {{limit}} actions.', { start, end, limit: ACTIVITY_LIMIT })} />
           </FadeIn>
 
+          {initialUnknown ? (
+            <FadeIn>
+              <AlertBanner
+                variant="info"
+                role="status"
+                title={query.fetchStatus === 'paused'
+                  ? t('dataSources.status.paused', 'Refresh paused')
+                  : t('dataSources.status.pending', 'Pending')}
+              >
+                {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+                <div className="mt-3">
+                  <Button variant="ghost" onClick={retry}>{t('common.refresh', 'Refresh')}</Button>
+                </div>
+              </AlertBanner>
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {[
+                  { title: t('activity.myActivity.trend.title', 'Activity over time'), className: 'md:col-span-2' },
+                  { title: t('activity.myActivity.topActions.title', 'Top actions'), className: '' },
+                  { title: t('activity.myActivity.byCategory.title', 'By category'), className: '' },
+                  { title: t('activity.myActivity.byHour.title', 'By hour of day'), className: '' },
+                  { title: t('activity.myActivity.feed.title', 'Activity feed'), className: 'md:col-span-2 xl:col-span-3' },
+                ].map(({ title, className }) => (
+                  <GlassPanel key={title} className={className}>
+                    <div className="p-4 sm:p-5">
+                      <PanelTitle className="mb-3">{title}</PanelTitle>
+                      <EmptyState variant="informational" message={t('common.unknown', 'Unknown')}
+                        description={t('activity.myActivity.pendingHelp', 'This panel fills after the activity feed returns data for the selected period.')} />
+                    </div>
+                  </GlassPanel>
+                ))}
+              </div>
+            </FadeIn>
+          ) : (
+          <>
           <FadeIn delay={0.1}>
             <section
               aria-label={t('activity.myActivity.trend.title', 'Activity over time')}
@@ -124,7 +193,7 @@ export default function MyActivityPage() {
               />
               <ActivityBreakdownPanel
                 title={t('activity.myActivity.topActions.title', 'Top actions')}
-                icon={<Icons.workflow className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                icon={<Icons.workflow className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
                 slices={analytics.topActions}
                 isLoading={isLoading}
                 isError={sectionIsError}
@@ -144,7 +213,7 @@ export default function MyActivityPage() {
             >
               <ActivityBreakdownPanel
                 title={t('activity.myActivity.byCategory.title', 'By category')}
-                icon={<Icons.layoutGrid className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                icon={<Icons.layoutGrid className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
                 slices={analytics.byCategory}
                 isLoading={isLoading}
                 isError={sectionIsError}
@@ -174,8 +243,10 @@ export default function MyActivityPage() {
               onRetry={retry}
             />
           </FadeIn>
+          </>
+          )}
         </>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

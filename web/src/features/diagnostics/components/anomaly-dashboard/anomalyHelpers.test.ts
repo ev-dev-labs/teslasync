@@ -8,6 +8,7 @@ import {
   HEALTH_ICONS,
   HEALTH_FALLBACK_ICON,
   healthSeverity,
+  healthStatus,
   anomalyTypeLabel,
 } from './anomalyHelpers';
 import { severityTokens } from '@/lib/tokens';
@@ -109,8 +110,18 @@ describe('healthSeverity', () => {
     expect(healthSeverity('warning')).toBe('warn');
   });
 
-  it("surfaces the seeded 'normal' state as a green success (the only healthy tone)", () => {
-    expect(healthSeverity('normal')).toBe('success');
+  it("keeps legacy seeded 'normal' neutral without category coverage", () => {
+    expect(healthSeverity('normal')).toBe('info');
+  });
+
+  describe('healthStatus', () => {
+    it.each([null, undefined, '', 'normal', 'unknown', 'completed', 'unrecognized'])(
+      'does not promote %s into an all-clear',
+      (status) => expect(healthStatus(status)).toBe('unknown'),
+    );
+    it.each(['info', 'warning', 'critical'])('preserves the established %s outcome', (status) => {
+      expect(healthStatus(status)).toBe(status);
+    });
   });
 
   it("maps an 'info'-level category to info, NOT a false green success (regression guard)", () => {

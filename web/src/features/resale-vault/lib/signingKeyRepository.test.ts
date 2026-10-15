@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   detectKeyPersistenceCapability,
   generateSigningKey,
@@ -8,8 +8,11 @@ import {
   revokeSigningKey,
   rotateSigningKey,
   __resetKeyRepositoryForTests,
+  subscribeSigningKeys,
+  getSigningKeysSnapshot,
 } from './signingKeyRepository';
 import { installFakeIndexedDb, uninstallFakeIndexedDb } from './fakeIndexedDb';
+import { openVaultDb, STORE_SIGNING_KEYS, STORE_KEY_REGISTRY } from './vaultDb';
 
 describe('signingKeyRepository — no IndexedDB (secure-session-only fallback)', () => {
   beforeEach(() => {
@@ -73,14 +76,90 @@ describe('signingKeyRepository — no IndexedDB (secure-session-only fallback)',
   it('getPrivateKeyHandle returns null for an unknown key id (e.g. lost session-only key after reload)', async () => {
     expect(await getPrivateKeyHandle('key_does_not_exist')).toBeNull();
   });
+
+  it('publishes automatic generation and revocation without requiring a refresh', async () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeSigningKeys(listener);
+    try {
+      const record = await generateSigningKey();
+      expect(getSigningKeysSnapshot()).toEqual([record]);
+      expect(listener).toHaveBeenCalledOnce();
+      const revoked = await revokeSigningKey(record.key_id, 'manual');
+      expect(getSigningKeysSnapshot()).toEqual([revoked]);
+      expect(listener).toHaveBeenCalledTimes(2);
+      unsubscribe();
+      await generateSigningKey();
+      expect(listener).toHaveBeenCalledTimes(2);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it('publishes a partially applied rotation while preserving its generation rejection', async () => {
+    const original = await generateSigningKey();
+    const listener = vi.fn();
+    const unsubscribe = subscribeSigningKeys(listener);
+    const generate = vi.spyOn(crypto.subtle, 'generateKey').mockRejectedValueOnce(new Error('Generation denied'));
+    try {
+      await expect(rotateSigningKey()).rejects.toThrow('Generation denied');
+      expect(listener).toHaveBeenCalledOnce();
+      expect(getSigningKeysSnapshot()[0]?.revoked_reason).toBe('rotated');
+      expect(getSigningKeysSnapshot()[0]?.key_id).toBe(original.key_id);
+      expect(await getActiveSigningKeyRecord()).toBeNull();
+    } finally {
+      generate.mockRestore();
+      unsubscribe();
+    }
+  });
 });
 
 describe('signingKeyRepository — with fake IndexedDB installed (persisted path)', () => {
-  beforeEach(() => {
+  let failWrite: 'abort' | 'error' | 'registry' | null;
+  let holdWrite: boolean;
+  let completeWrite: (() => void) | undefined;
+  let writeStores: string | string[];
+
+  beforeEach(async () => {
     __resetKeyRepositoryForTests();
     installFakeIndexedDb();
+    failWrite = null;
+    holdWrite = false;
+    completeWrite = undefined;
+    const db = await openVaultDb();
+    const transaction = db.transaction.bind(db);
+    // The existing fake models requests only. Add transaction lifecycle events
+    // here so request success cannot stand in for a committed write.
+    vi.spyOn(db, 'transaction').mockImplementation((stores, mode) => {
+      const tx = transaction(stores, mode);
+      if (mode !== 'readwrite') return tx;
+      writeStores = stores;
+      tx.abort = vi.fn();
+      const failure = failWrite;
+      if (failure === 'registry') {
+        const objectStore = tx.objectStore.bind(tx);
+        vi.spyOn(tx, 'objectStore').mockImplementation((name) => {
+          const store = objectStore(name);
+          if (name === STORE_KEY_REGISTRY) {
+            vi.spyOn(store, 'put').mockImplementation(() => {
+              throw new Error('Registry write denied');
+            });
+          }
+          return store;
+        });
+      }
+      const finish = () => {
+        const event = new Event(failure === 'abort' ? 'abort' : failure === 'error' ? 'error' : 'complete');
+        if (failure === 'abort') tx.onabort?.call(tx, event);
+        else if (failure === 'error') tx.onerror?.call(tx, event);
+        else if (failure !== 'registry') tx.oncomplete?.call(tx, event);
+      };
+      if (holdWrite) completeWrite = finish;
+      else setTimeout(finish, 0);
+      return tx;
+    });
   });
   afterEach(() => {
+    vi.restoreAllMocks();
     uninstallFakeIndexedDb();
   });
 
@@ -93,6 +172,48 @@ describe('signingKeyRepository — with fake IndexedDB installed (persisted path
   it('marks generated keys persisted:true', async () => {
     const record = await generateSigningKey();
     expect(record.persisted).toBe(true);
+  });
+
+  it('does not publish a persisted key until the key and registry transaction completes', async () => {
+    await listSigningKeys();
+    holdWrite = true;
+    let settled = false;
+    const pending = generateSigningKey().then((record) => {
+      settled = true;
+      return record;
+    });
+    await vi.waitFor(() => expect(completeWrite).toBeDefined());
+    expect(writeStores).toEqual([STORE_SIGNING_KEYS, STORE_KEY_REGISTRY]);
+    expect(settled).toBe(false);
+    expect(await listSigningKeys()).toEqual([]);
+    completeWrite!();
+    expect((await pending).persisted).toBe(true);
+  });
+
+  it.each(['abort', 'error', 'registry'] as const)(
+    'downgrades %s after request success to a usable session-only key',
+    async (failure) => {
+      await listSigningKeys();
+      failWrite = failure;
+      const record = await generateSigningKey();
+      expect(record.persisted).toBe(false);
+      expect((await getActiveSigningKeyRecord())?.persisted).toBe(false);
+      expect(await getPrivateKeyHandle(record.key_id)).not.toBeNull();
+      expect(await detectKeyPersistenceCapability()).toEqual({
+        supported: false,
+        reason: expect.stringMatching(/persistence failed.*session-only/i),
+      });
+    },
+  );
+
+  it('downgrades a failed revocation registry commit without losing the populated history', async () => {
+    const record = await generateSigningKey();
+    failWrite = 'abort';
+    const revoked = await revokeSigningKey(record.key_id, 'compromised');
+    expect(revoked?.persisted).toBe(false);
+    expect(revoked?.revoked_reason).toBe('compromised');
+    expect(await getActiveSigningKeyRecord()).toBeNull();
+    expect(await listSigningKeys()).toEqual([revoked]);
   });
 
   it('survives a simulated reload: memory cache reset + IndexedDB re-hydration restores the key and registry', async () => {

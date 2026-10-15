@@ -7,13 +7,13 @@
  *
  *   1. micro-cents → dollars conversion + the "$spent / $cap" readout.
  *   2. The three colour/level branches (ok < 80% ≤ warn < 100% ≤ critical) and
- *      their matching hint copy + `data-spend-level` + fill class.
+ *      their matching hint copy + `data-spend-level` + semantic fill color.
  *   3. `pct` is clamped to [0, 100] so a spend over the cap can never blow past
  *      100% or produce an out-of-range `aria-valuenow`.
  *   4. Loading and error states each render distinct copy — an error must NOT
  *      surface a falsely-reassuring "$0.00", because the cap is still enforced
  *      server-side even when we can't display the number.
- *   5. A corrupt / NaN payload degrades to 0% instead of `width: NaN%`.
+ *   5. Corrupt or absent spend stays unknown instead of inventing zero.
  *   6. The progressbar exposes a proper a11y contract (role + aria-value* +
  *      aria-label).
  *
@@ -23,10 +23,14 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import type { AiUsageToday } from '@/api/hooks/useAiUsage'
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
+}))
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -61,6 +65,8 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { AICostCapSpendBar } from './AICostCapSpendBar'
+import { gaugeTone } from '@/lib/tokens'
+import { aiUsageKeys } from '@/api/hooks/useAiUsage'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
@@ -81,11 +87,12 @@ function renderBar(capCents: number) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   })
-  return render(
+  const rendered = render(
     <QueryClientProvider client={qc}>
       <AICostCapSpendBar capCents={capCents} />
     </QueryClientProvider>,
   )
+  return { ...rendered, client: qc }
 }
 
 function panel() {
@@ -97,8 +104,7 @@ function progressbar() {
 }
 
 function fill() {
-  // The single child of the progressbar is the animated fill div.
-  return progressbar().firstElementChild as HTMLElement
+  return progressbar().querySelector('[data-metric-fill]') as HTMLElement
 }
 
 beforeEach(() => {
@@ -123,6 +129,7 @@ describe('AICostCapSpendBar — request wiring + conversion', () => {
     renderBar(1000)
 
     expect(await screen.findByText('$1.23 / $10.00')).toBeInTheDocument()
+    expect(Number(progressbar().getAttribute('aria-valuenow'))).toBeCloseTo(12.3456, 5)
   })
 })
 
@@ -133,9 +140,9 @@ describe('AICostCapSpendBar — level branches', () => {
 
     await screen.findByText('$5.00 / $10.00')
     expect(panel()).toHaveAttribute('data-spend-level', 'ok')
-    expect(fill().className).toContain('bg-cyan-300')
+    expect(fill()).toHaveStyle({ background: gaugeTone.info })
     expect(progressbar()).toHaveAttribute('aria-valuenow', '50')
-    expect(fill().style.width).toBe('50%')
+    await waitFor(() => expect(fill().style.width).toBe('50%'))
     // No warn/critical hint copy at the "ok" level.
     expect(screen.queryByText(/nearing today/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Cap reached/i)).not.toBeInTheDocument()
@@ -147,7 +154,7 @@ describe('AICostCapSpendBar — level branches', () => {
 
     await screen.findByText('$8.50 / $10.00')
     expect(panel()).toHaveAttribute('data-spend-level', 'warn')
-    expect(fill().className).toContain('bg-amber-300')
+    expect(fill()).toHaveStyle({ background: gaugeTone.warning })
     expect(progressbar()).toHaveAttribute('aria-valuenow', '85')
     expect(screen.getByText(/nearing today/i)).toBeInTheDocument()
     expect(screen.queryByText(/Cap reached/i)).not.toBeInTheDocument()
@@ -160,10 +167,10 @@ describe('AICostCapSpendBar — level branches', () => {
 
     await screen.findByText('$12.00 / $10.00')
     expect(panel()).toHaveAttribute('data-spend-level', 'critical')
-    expect(fill().className).toContain('bg-rose-300')
+    expect(fill()).toHaveStyle({ background: gaugeTone.danger })
     // Clamped: aria-valuenow never exceeds 100 and the fill never overflows.
     expect(progressbar()).toHaveAttribute('aria-valuenow', '100')
-    expect(fill().style.width).toBe('100%')
+    await waitFor(() => expect(fill().style.width).toBe('100%'))
     expect(screen.getByText(/Cap reached/i)).toBeInTheDocument()
     expect(screen.queryByText(/nearing today/i)).not.toBeInTheDocument()
   })
@@ -184,8 +191,9 @@ describe('AICostCapSpendBar — loading + error states', () => {
     renderBar(1000)
 
     expect(screen.getByText('Loading…')).toBeInTheDocument()
-    // Bar sits at 0% until data arrives — no misleading fill.
-    expect(progressbar()).toHaveAttribute('aria-valuenow', '0')
+    // Unknown is not a real zero spend reading.
+    expect(progressbar()).not.toHaveAttribute('aria-valuenow')
+    expect(progressbar().querySelector('[data-metric-fill]')).toBeNull()
     expect(screen.queryByText(/\$0\.00/)).not.toBeInTheDocument()
   })
 
@@ -198,24 +206,24 @@ describe('AICostCapSpendBar — loading + error states', () => {
     expect(screen.queryByText(/\$0\.00/)).not.toBeInTheDocument()
     // The user is told the cap is still enforced even though the number is gone.
     expect(screen.getByText(/still enforced server-side/i)).toBeInTheDocument()
-    // No warn/critical hints in the error state, bar pinned to 0%.
+    // No warning thresholds or measured fill when the source is unknown.
     expect(screen.queryByText(/Cap reached/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/nearing today/i)).not.toBeInTheDocument()
-    expect(progressbar()).toHaveAttribute('aria-valuenow', '0')
+    expect(progressbar()).not.toHaveAttribute('aria-valuenow')
+    expect(progressbar().querySelector('[data-metric-fill]')).toBeNull()
   })
 })
 
 describe('AICostCapSpendBar — robustness', () => {
-  it('degrades a NaN spend to 0% instead of "NaN%"', async () => {
+  it('keeps a NaN spend unknown instead of inventing zero or "NaN%"', async () => {
     mockedRequest.mockResolvedValue(todayPayload(Number.NaN))
     renderBar(1000)
 
     // Wait for the resolved (NaN) payload — the readout leaves "Loading…".
-    expect(await screen.findByText('$0.00 / $10.00')).toBeInTheDocument()
-    expect(panel()).toHaveAttribute('data-spend-level', 'ok')
-    expect(fill().style.width).toBe('0%')
-    expect(fill().style.width).not.toContain('NaN')
-    expect(progressbar()).toHaveAttribute('aria-valuenow', '0')
+    expect(await screen.findByText('Spend unavailable')).toBeInTheDocument()
+    expect(panel()).toHaveAttribute('data-spend-level', 'unknown')
+    expect(progressbar().querySelector('[data-metric-fill]')).toBeNull()
+    expect(progressbar()).not.toHaveAttribute('aria-valuenow')
   })
 
   it('clamps a negative spend up to 0%', async () => {
@@ -247,5 +255,47 @@ describe('AICostCapSpendBar — accessibility', () => {
     expect(bar).toHaveAttribute('aria-valuemin', '0')
     expect(bar).toHaveAttribute('aria-valuemax', '100')
     expect(bar).toHaveAttribute('aria-valuenow', '50')
+  })
+
+  describe('AICostCapSpendBar — nullable and retained readings', () => {
+    it.each([null, undefined, Number.POSITIVE_INFINITY])(
+      'does not turn an unavailable spend %s into a real zero',
+      async cost => {
+        mockedRequest.mockResolvedValue({ ...todayPayload(0), cost_micro_cents: cost })
+        renderBar(1000)
+        expect(await screen.findByText('Spend unavailable')).toBeInTheDocument()
+        expect(progressbar()).not.toHaveAttribute('aria-valuenow')
+        expect(progressbar()).toHaveAttribute('aria-valuetext', 'No reading')
+        expect(progressbar().querySelector('[data-metric-fill]')).toBeNull()
+        expect(screen.queryByText('$0.00 / $10.00')).toBeNull()
+      },
+    )
+
+    it('preserves a measured zero and shows exactly one passive compact bar', async () => {
+      mockedRequest.mockResolvedValue(todayPayload(0))
+      renderBar(1000)
+      expect(await screen.findByText('$0.00 / $10.00')).toBeInTheDocument()
+      expect(screen.getAllByRole('progressbar')).toHaveLength(1)
+      expect(progressbar()).toHaveAttribute('aria-valuenow', '0')
+      expect(progressbar()).not.toHaveAttribute('aria-valuetext')
+      expect(progressbar().querySelector('[data-metric-track]')).toHaveClass('h-1')
+    })
+
+    it('keeps the last measured amount and cap warning after a failed refresh', async () => {
+      mockedRequest.mockResolvedValue(todayPayload(8_500_000))
+      const { client } = renderBar(1000)
+      await screen.findByText('$8.50 / $10.00')
+      mockedRequest.mockRejectedValue(new Error('Refresh unavailable'))
+
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: aiUsageKeys.today() })
+      })
+      await waitFor(() => expect(client.getQueryState(aiUsageKeys.today())?.status).toBe('error'))
+      expect(screen.getByText('$8.50 / $10.00')).toBeInTheDocument()
+      expect(screen.getByText('Data may be stale')).toBeInTheDocument()
+      expect(screen.getByText(/nearing today/i)).toBeInTheDocument()
+      expect(screen.queryByText('Spend unavailable')).toBeNull()
+      expect(progressbar()).toHaveAttribute('aria-valuenow', '85')
+    })
   })
 })

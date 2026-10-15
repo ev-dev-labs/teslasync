@@ -3,20 +3,25 @@ import { useTranslation } from 'react-i18next'
 import { Timer } from 'lucide-react'
 import { Input, Button, Badge } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
-import { describeCron, getNextCronRuns } from '../helpers'
-import { formatDateTime } from '@/lib/dateFormat'
+import { describeCron, getNextCronRuns, isValidCron } from '../helpers'
+import { useDateFormat } from '@/hooks/useDateFormat'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 
-const CRON_FIELD_COUNT = 5
 const NEXT_RUN_COUNT = 5
 
 export function CronParserTool() {
   const { t } = useTranslation()
+  const { formatDateTime, locale } = useDateFormat()
+  const { fmtInt } = useNumberFormatting()
   const [expr, setExpr] = useState('')
 
   const trimmed = expr.trim()
   const parts = useMemo(() => (trimmed === '' ? [] : trimmed.split(/\s+/)), [trimmed])
-  const isValid = parts.length === CRON_FIELD_COUNT
-  const description = useMemo(() => (isValid ? describeCron(parts) : ''), [isValid, parts])
+  const isValid = isValidCron(parts)
+  const description = useMemo(
+    () => (isValid ? describeCron(parts, t, locale) : ''),
+    [isValid, parts, t, locale],
+  )
   const nextRuns = useMemo(
     () => (isValid ? getNextCronRuns(parts, NEXT_RUN_COUNT) : []),
     [isValid, parts],
@@ -24,11 +29,11 @@ export function CronParserTool() {
 
   const presets = useMemo(
     () => [
-      { label: t('devtools.utils.cronEveryMinute', 'Every Minute'), value: '* * * * *' },
-      { label: t('devtools.utils.cronEveryHour', 'Every Hour'), value: '0 * * * *' },
-      { label: t('devtools.utils.cronEveryDay', 'Every Day'), value: '0 0 * * *' },
-      { label: t('devtools.utils.cronEveryWeek', 'Every Week'), value: '0 0 * * 0' },
-      { label: t('devtools.utils.cronEveryMonth', 'Every Month'), value: '0 0 1 * *' },
+      { label: t('devtools.utils.cronEveryMinute', 'Every minute'), value: '* * * * *' },
+      { label: t('devtools.utils.cronEveryHour', 'Every hour'), value: '0 * * * *' },
+      { label: t('devtools.utils.cronEveryDay', 'Every day'), value: '0 0 * * *' },
+      { label: t('devtools.utils.cronEveryWeek', 'Every week'), value: '0 0 * * 0' },
+      { label: t('devtools.utils.cronEveryMonth', 'Every month'), value: '0 0 1 * *' },
     ],
     [t],
   )
@@ -36,10 +41,10 @@ export function CronParserTool() {
   const applyPreset = useCallback((value: string) => setExpr(value), [])
 
   return (
-    <ToolCard icon={Timer} color="green" title={t('devtools.utils.cron', 'Cron Parser')} description={t('devtools.utils.cronDesc', 'Cron Parser Desc')}>
+    <ToolCard icon={Timer} color="green" title={t('devtools.utils.cron', 'Cron parser')} description={t('devtools.utils.cronDesc', 'Cron parser desc')}>
       <div className="space-y-3">
         <Input
-          label={t('devtools.utils.cronExpression', 'Cron Expression')}
+          label={t('devtools.utils.cronExpression', 'Cron expression')}
           placeholder="*/5 * * * *"
           value={expr}
           onChange={(e) => setExpr(e.target.value)}
@@ -62,6 +67,7 @@ export function CronParserTool() {
         {trimmed !== '' && !isValid && (
           <div role="alert" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
             <p className="text-sm text-amber-300">
+              {t('devtools.utils.cronInvalid', 'Invalid cron expression')}.{' '}
               {t('devtools.utils.cronFieldsHint', 'Enter all 5 cron fields: minute, hour, day, month, weekday')}
             </p>
           </div>
@@ -74,11 +80,11 @@ export function CronParserTool() {
               <p className="text-sm text-emerald-300">{description || '—'}</p>
             </div>
             <div className="space-y-1">
-              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.cronNextRuns', 'Next Runs')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.cronNextRuns', 'Next runs')}</span>
               {nextRuns.length > 0 ? (
                 nextRuns.map((d, i) => (
                   <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
-                    <Badge variant="info" size="sm">{i + 1}</Badge>
+                    <Badge variant="info" size="sm">{fmtInt(i + 1)}</Badge>
                     <span className="text-xs font-mono text-[var(--text-secondary)]">{formatDateTime(d)}</span>
                   </div>
                 ))

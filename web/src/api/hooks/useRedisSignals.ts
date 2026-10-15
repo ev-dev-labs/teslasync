@@ -1,11 +1,13 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, type QueryFunctionContext } from '@tanstack/react-query';
 
 import { INTERVALS } from '@/lib/constants';
 import {
   getRedisSignals,
+  getRedisSignalKeys,
   purgeAllRedisSignals,
   purgeRedisSignals,
   type RedisSignalEntry,
+  type RedisSignalValue,
   type RedisSignalsMeta,
   type RedisSignalsResponse,
   type RedisSignalsPurgeResponse,
@@ -30,7 +32,7 @@ export const redisSignalKeys = {
   keys: ['redis-signal-keys'] as const,
 };
 
-export type { RedisSignalEntry, RedisSignalsMeta, RedisSignalsResponse };
+export type { RedisSignalEntry, RedisSignalValue, RedisSignalsMeta, RedisSignalsResponse };
 
 /**
  * A vehicle id is queryable only when it is a real, positive whole number.
@@ -62,7 +64,7 @@ export function redisSignalsQueryOptions(
     queryKey: redisSignalKeys.detail(vehicleId),
     // `enabled` below guarantees a positive integer id before this runs,
     // so the cast never widens past what the guard already proved.
-    queryFn: () => getRedisSignals(vehicleId as number),
+    queryFn: ({ signal }: QueryFunctionContext) => getRedisSignals(vehicleId as number, { signal }),
     enabled: isQueryableVehicleId(vehicleId),
     refetchInterval: autoRefresh ? INTERVALS.REALTIME : (false as const),
   };
@@ -76,6 +78,14 @@ export function redisSignalsQueryOptions(
  */
 export function useRedisSignals(vehicleId: number | null, autoRefresh: boolean) {
   return useQuery(redisSignalsQueryOptions(vehicleId, autoRefresh));
+}
+
+export function useRedisSignalKeys() {
+  return useQuery({
+    queryKey: redisSignalKeys.keys,
+    queryFn: ({ signal }) => getRedisSignalKeys(50, { signal }),
+    staleTime: 30_000,
+  });
 }
 
 /** Purges a single vehicle's Redis L2 HSET. Returns the raw response so the

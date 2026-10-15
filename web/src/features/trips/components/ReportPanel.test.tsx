@@ -10,6 +10,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { formatDateTime } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...actual, useSettings: () => ({ ...actual.useSettings(), locale: datePreferences.locale }) };
+});
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return { ...actual, useTimezone: () => datePreferences.tz };
+});
 
 // ── i18n stub ──
 vi.mock('react-i18next', () => {
@@ -44,9 +55,16 @@ vi.mock('@/api/hooks/useJourney', () => ({
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
+    unitPrefs: {
+      distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar',
+      energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2,
+    },
     formatDistance: (m: number) => `${m} m`,
     formatDuration: (s: number) => `${s} s`,
   }),
+}));
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
 }));
 
 import { useReport, type JourneySession } from '@/api/hooks/useJourney';
@@ -88,23 +106,57 @@ function idle(extra = {}) {
   };
 }
 
-function renderPanel() {
+function renderPanel(s: JourneySession = session) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <ReportPanel session={session} />
+        <ReportPanel session={s} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
 beforeEach(() => {
+  Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC' });
   vi.clearAllMocks();
   mockReport.mockReturnValue(idle({ data: report }));
 });
 
 describe('ReportPanel', () => {
+  it('formats report scope and review details using report timestamps and display preferences', () => {
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    const reportTimes = { started_at: '2026-09-15T01:00:00Z', ended_at: '2026-09-15T03:00:00Z' };
+    mockReport.mockReturnValue(idle({ data: { ...report, ...reportTimes } }));
+    renderPanel();
+    const scope = `Journey #1 · ${formatDateTime(reportTimes.started_at, datePreferences)} – ${formatDateTime(reportTimes.ended_at, datePreferences)}`;
+    expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent(scope);
+  });
+
+  it('formats session fallback dates and preserves the in-progress label', () => {
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    mockReport.mockReturnValue(idle({ data: { ...report, started_at: null, ended_at: null } }));
+    renderPanel({ ...session, started_at: null, ended_at: null, status: 'active' });
+    expect(screen.getAllByText(`Journey #1 · ${formatDateTime(session.created_at, datePreferences)} – In progress`).length).toBeGreaterThan(0);
+  });
+
+  it('uses the session start and end when the report has no timestamps', () => {
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    mockReport.mockReturnValue(idle({ data: { ...report, started_at: null, ended_at: null } }));
+    renderPanel();
+    expect(screen.getAllByText(`Journey #1 · ${formatDateTime(session.started_at, datePreferences)} – ${formatDateTime(session.ended_at, datePreferences)}`).length).toBeGreaterThan(0);
+  });
+
+  it('shows all seven busy brief placeholders without presenting them as measurements', () => {
+    mockReport.mockReturnValue(idle({ isLoading: true, isPending: true, fetchStatus: 'fetching' }));
+    const { container } = renderPanel();
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
+    expect(container.querySelector('[data-operational-value]')).toBeNull();
+  });
+
   it('renders the card stats and evidence', () => {
     renderPanel();
     expect(screen.getByText('900000 m')).toBeInTheDocument();
@@ -133,5 +185,45 @@ describe('ReportPanel', () => {
     renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('retains all seven detail rows and complete evidence when the report refresh fails', () => {
+    mockReport.mockReturnValue(idle({
+      data: report, error: new Error('report refresh failed'), isError: true, isFetching: true,
+    }));
+    const { container } = renderPanel();
+    expect(screen.getByRole('heading', { name: 'Trip report' })).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(7);
+    expect(screen.getByText('900000 m')).toBeInTheDocument();
+    expect(screen.getByText('9000 s')).toBeInTheDocument();
+    expect(screen.getByText('1.13×')).toBeInTheDocument();
+    expect(screen.getByText('1.05× over 3 trips')).toBeInTheDocument();
+    expect(screen.getByText('1 of 2 plans')).toBeInTheDocument();
+    expect(screen.getByText('4 of 5')).toBeInTheDocument();
+    for (const line of report.evidence) expect(screen.getByText(`· ${line}`)).toBeInTheDocument();
+    expect(screen.getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0);
+  });
+
+  it('does not turn known zero distance, duration or detour into missing data', () => {
+    mockReport.mockReturnValue(idle({
+      data: { ...report, distance_m: 0, duration_s: 0, detour: 0 },
+    }));
+    renderPanel();
+    expect(screen.getByText('0 m')).toBeInTheDocument();
+    expect(screen.getByText('0 s')).toBeInTheDocument();
+    expect(screen.getByText('0.00×')).toBeInTheDocument();
+  });
+
+  it('opens the real review drawer with all report denominators and route-history context', () => {
+    renderPanel();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('900000 m');
+    expect(drawer).toHaveTextContent('9000 s');
+    expect(drawer).toHaveTextContent('1 of 2 plans');
+    expect(drawer).toHaveTextContent('1.05× over 3 trips');
+    expect(drawer).toHaveTextContent('4 of 5');
+    expect(drawer).toHaveTextContent('route-history trips have a separate denominator');
   });
 });

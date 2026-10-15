@@ -75,14 +75,17 @@ describe('isValidLatLng', () => {
     expect(isValidLatLng(-33.8688, 151.2093)).toBe(true)
   })
 
-  it('rejects the (0, 0) "GPS not yet fixed" placeholder', () => {
-    expect(isValidLatLng(0, 0)).toBe(false)
+  it('accepts measured zero coordinates, including signed zero', () => {
+    expect(isValidLatLng(0, 0)).toBe(true)
+    expect(isValidLatLng(-0, 0)).toBe(true)
+    expect(isValidLatLng(0, -0)).toBe(true)
   })
 
   it('accepts a valid point that sits on the equator or prime meridian', () => {
-    // Only (0,0) is the placeholder — a genuine equator/meridian point is fine.
     expect(isValidLatLng(0, 10)).toBe(true)
     expect(isValidLatLng(10, 0)).toBe(true)
+    expect(isValidLatLng(0, -10.25)).toBe(true)
+    expect(isValidLatLng(-10.25, 0)).toBe(true)
   })
 
   it('accepts the exact global bounds', () => {
@@ -104,10 +107,18 @@ describe('isValidLatLng', () => {
     expect(isValidLatLng(10, -Infinity)).toBe(false)
   })
 
-  it('tolerates being called with null/undefined coordinates at runtime', () => {
-    // Position bags come from telemetry JSON where a field may be absent.
-    expect(isValidLatLng(null as unknown as number, 10)).toBe(false)
-    expect(isValidLatLng(10, undefined as unknown as number)).toBe(false)
+  it.each([null, undefined, '', '0', '12.5', false, true, {}, []])(
+    'rejects an absent or non-numeric coordinate %j without coercing it to zero',
+    (value) => {
+      expect(isValidLatLng(value, 0)).toBe(false)
+      expect(isValidLatLng(0, value)).toBe(false)
+      expect(isValidLatLng(value, value)).toBe(false)
+    },
+  )
+
+  it('preserves signed fractional measurements', () => {
+    expect(isValidLatLng(-0.0001, 0.0001)).toBe(true)
+    expect(isValidLatLng(0.0001, -0.0001)).toBe(true)
   })
 })
 
@@ -121,7 +132,7 @@ describe('hasMeaningfulRoute', () => {
   })
 
   it('returns false when every sample is invalid', () => {
-    expect(hasMeaningfulRoute([at(0, 0), at(0, 0), at(NaN, NaN)])).toBe(false)
+    expect(hasMeaningfulRoute([at(NaN, 0), at(0, NaN), at(NaN, NaN)])).toBe(false)
   })
 
   it('returns false for a stationary cluster (all samples within 10 m)', () => {
@@ -141,12 +152,12 @@ describe('hasMeaningfulRoute', () => {
   })
 
   it('anchors on the first valid sample, skipping leading invalid ones', () => {
-    const route = [at(0, 0), at(NaN, NaN), at(37.5, -122.3), at(37.5002, -122.3)]
+    const route = [at(NaN, 0), at(NaN, NaN), at(37.5, -122.3), at(37.5002, -122.3)]
     expect(hasMeaningfulRoute(route)).toBe(true)
   })
 
   it('ignores invalid samples interleaved between valid ones', () => {
-    const route = [at(37.5, -122.3), at(0, 0), at(37.50003, -122.3)]
+    const route = [at(37.5, -122.3), at(NaN, 0), at(37.50003, -122.3)]
     // Remaining valid sample is only ~3.3 m away → still a cluster.
     expect(hasMeaningfulRoute(route)).toBe(false)
   })
@@ -154,6 +165,12 @@ describe('hasMeaningfulRoute', () => {
   it('returns false for null/undefined lists instead of throwing', () => {
     expect(hasMeaningfulRoute(null)).toBe(false)
     expect(hasMeaningfulRoute(undefined)).toBe(false)
+  })
+
+  it('recognizes routes through measured zero and signed fractional coordinates', () => {
+    expect(hasMeaningfulRoute([at(0, 0), at(0, 0.0002)])).toBe(true)
+    expect(hasMeaningfulRoute([at(0, 0), at(-0.0002, 0)])).toBe(true)
+    expect(hasMeaningfulRoute([at(0, 0), at(0, 0)])).toBe(false)
   })
 
   it('skips null/undefined samples inside the list without throwing', () => {
@@ -173,7 +190,7 @@ describe('firstValidIndex', () => {
   })
 
   it('returns -1 when no sample is valid', () => {
-    expect(firstValidIndex([at(0, 0), at(NaN, 5), at(200, 400)])).toBe(-1)
+    expect(firstValidIndex([at(NaN, 0), at(NaN, 5), at(200, 400)])).toBe(-1)
   })
 
   it('returns 0 when the first sample is already valid', () => {
@@ -181,7 +198,20 @@ describe('firstValidIndex', () => {
   })
 
   it('returns the index of the first valid sample past leading invalid ones', () => {
-    expect(firstValidIndex([at(0, 0), at(NaN, NaN), at(37.5, -122.3)])).toBe(2)
+    expect(firstValidIndex([at(NaN, 0), at(NaN, NaN), at(37.5, -122.3)])).toBe(2)
+  })
+
+  it('uses measured zero as the map anchor instead of inventing a center', () => {
+    expect(firstValidIndex([at(0, 0)])).toBe(0)
+    expect(firstValidIndex([at(NaN, 0), at(0, -0.25)])).toBe(1)
+    expect(firstValidIndex([at(-0.25, 0)])).toBe(0)
+  })
+
+  it('reports no supported map position when all GPS fields are absent', () => {
+    const missing = [{}, { latitude: 0 }, { longitude: 0 },
+      { latitude: null, longitude: null }] as unknown as LatLngLike[]
+    expect(firstValidIndex(missing)).toBe(-1)
+    expect(hasMeaningfulRoute(missing)).toBe(false)
   })
 
   it('returns -1 for null/undefined lists instead of throwing', () => {

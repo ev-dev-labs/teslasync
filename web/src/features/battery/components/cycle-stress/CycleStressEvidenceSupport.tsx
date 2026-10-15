@@ -18,6 +18,7 @@ import {
 } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressEvidenceSupportProps {
   result: CycleStressResult;
@@ -30,6 +31,7 @@ export function CycleStressEvidenceSupport({
   state,
   locale,
 }: CycleStressEvidenceSupportProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const support = result.coverage.support;
 
@@ -38,7 +40,7 @@ export function CycleStressEvidenceSupport({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <ShieldCheck
-            className="h-4 w-4 text-cyan-300"
+            className="h-4 w-4 text-[var(--text-secondary)]"
             aria-hidden="true"
           />
           {t(
@@ -59,17 +61,18 @@ export function CycleStressEvidenceSupport({
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
             <MetricCard
+              compact
               label={t('cycleStress.support.index', 'Support index')}
               value={`${cycleStressNumber(
                 support.index,
                 locale,
-                1,
               )}/100`}
               subtitle={cycleStressBandLabel(t, support.band)}
               icon={<ShieldCheck className="h-5 w-5" />}
-              color="purple"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.support.intervals',
                 'Accepted intervals',
@@ -77,7 +80,6 @@ export function CycleStressEvidenceSupport({
               value={cycleStressNumber(
                 support.intervals.value,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.support.target',
@@ -85,9 +87,10 @@ export function CycleStressEvidenceSupport({
                 { value: support.intervals.target },
               )}
               icon={<Database className="h-5 w-5" />}
-              color="cyan"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.support.cycles',
                 'Weighted cycles',
@@ -95,7 +98,6 @@ export function CycleStressEvidenceSupport({
               value={cycleStressNumber(
                 support.cycles.value,
                 locale,
-                1,
               )}
               subtitle={t(
                 'cycleStress.support.target',
@@ -103,9 +105,10 @@ export function CycleStressEvidenceSupport({
                 { value: support.cycles.target },
               )}
               icon={<Activity className="h-5 w-5" />}
-              color="green"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.support.weeks',
                 'Active local weeks',
@@ -113,7 +116,6 @@ export function CycleStressEvidenceSupport({
               value={cycleStressNumber(
                 support.activeWeeks.value,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.support.target',
@@ -121,9 +123,10 @@ export function CycleStressEvidenceSupport({
                 { value: support.activeWeeks.target },
               )}
               icon={<CalendarRange className="h-5 w-5" />}
-              color="blue"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t('cycleStress.support.recency', 'Recency')}
               value={
                 result.coverage.daysSinceLastObservation == null
@@ -135,7 +138,6 @@ export function CycleStressEvidenceSupport({
                         value: cycleStressNumber(
                           result.coverage.daysSinceLastObservation,
                           locale,
-                          1,
                         ),
                       },
                     )
@@ -145,9 +147,10 @@ export function CycleStressEvidenceSupport({
                 'since latest retained endpoint',
               )}
               icon={<Clock3 className="h-5 w-5" />}
-              color="amber"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.support.sources',
                 'Sources represented',
@@ -155,14 +158,13 @@ export function CycleStressEvidenceSupport({
               value={cycleStressNumber(
                 support.sourceCoverage.value,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.support.outOfTwo',
                 'of 2 requested histories',
               )}
               icon={<Layers3 className="h-5 w-5" />}
-              color="red"
+              color="neutral"
             />
           </div>
           <AlertBanner className="mt-4" variant="info">

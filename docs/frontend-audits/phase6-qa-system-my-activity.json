@@ -1,0 +1,1771 @@
+{
+  "item": "phase6-qa-system-my-activity",
+  "attempt": 1,
+  "status": "PARTIAL",
+  "partialReason": "Source QA inspected, but artifact construction/inspection assertion failures consumed original return boundary. Compact preservation only; full literal command journal and expanded dependency before/after closure incomplete. No task-clock reset.",
+  "reservedAt": "2026-10-14T02:29:12.925Z",
+  "returnAt": "2026-10-14T02:49:12.925Z",
+  "hardAt": "2026-10-14T02:54:12.925Z",
+  "artifactCreatedAt": "2026-10-14T02:51:40.563380Z",
+  "artifactReleaseAt": "2026-10-14T02:51:40.678042Z",
+  "commandReleaseAt": "2026-10-14T02:51:40.678042Z",
+  "page": "web/src/features/system/pages/MyActivityPage.tsx",
+  "routes": [
+    "/me/activity"
+  ],
+  "writeScope": [
+    "docs/frontend-audits/phase6-qa-system-my-activity.json",
+    "web/logs/phase6-qa-system-my-activity.log"
+  ],
+  "objectiveCheck": {
+    "initial": "Exact in-progress attempt1 row observed line190, no completed duplicate QA; Phase5 accepted/not remigrated",
+    "latestMatches": [
+      {
+        "line": 212,
+        "text": "| phase6-qa-system-my-activity | 71218178-bd8f-4516-b255-238d945e6079 |"
+      },
+      {
+        "line": 280,
+        "text": "| [~] | 6 | phase6-qa-system-my-activity | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-my-activity.json; web\\logs\\phase6-qa-system-my-activity.log | phase5-page-system-my-activity | 1 | reserved02:29:12.925Z; actor pending | - | MyActivityPage; no actual identity/events/provider/network access. |"
+      }
+    ],
+    "queueHash": "87ab7de17e8e58448e661b790fcd294b20a8adca1d618ee2d9bc511fe7d09713"
+  },
+  "confirmedFindings": [
+    {
+      "id": "MA-01",
+      "rule": "MDC-032",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/MyActivityPage.tsx",
+          "line": 45,
+          "excerpt": "const { start, end } = useRangeState({",
+          "needle": "const { start, end } = useRangeState"
+        }
+      ],
+      "detail": "Custom start/end opts disable canonical header ownership; date-only bounds omit precise rolling/selected-zone instants. Shared change-event bridge exists.",
+      "sourceOnlyRepro": "Actual /me/activity with rolling24h or non-UTC calendar selection: source selects YYYY-MM-DD, parser uses UTC calendar bounds.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Canonical range/instant adoption preserving legacy URLs/preferences; parser already supports RFC3339.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    },
+    {
+      "id": "MA-02",
+      "rule": "MDC-044/MDC-046",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/my-activity/myActivityAnalytics.ts",
+          "line": 145,
+          "excerpt": "const dayKey = ymdInTz(date);",
+          "needle": "const dayKey = ymdInTz(date)"
+        }
+      ],
+      "detail": "Browser-local day/hour and labels bypass effective locale/timezone; KPI/feed formatRelative omit tz; feed memo omits formatter dependency.",
+      "sourceOnlyRepro": "UTC browser + Los_Angeles preference,2026-04-02T01Z: Apr2/hour01 versus Apr1/hour18; older labels formatDate without tz.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Reuse useDateFormat/options at analytics/KPI/feed; preserve raw/order.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    },
+    {
+      "id": "MA-03",
+      "rule": "MDC-026",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/MyActivityPage.tsx",
+          "line": 78,
+          "excerpt": "const isEmpty = !isLoading && !sectionIsError && entries.length === 0;",
+          "needle": "const isEmpty = !isLoading"
+        }
+      ],
+      "detail": "Initial paused no-data can falsely show authoritative empties while KPI stays unknown.",
+      "sourceOnlyRepro": "dataundefined,isLoadingfalse,errornull,fetchStatuspaused -> stateinitial/hasDatafalse, entries[], isEmptytrue; stale warning skips no data.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Show truthful initial-paused/unknown with shells, not no-records/offline inference.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    },
+    {
+      "id": "MA-04",
+      "rule": "MDC-034",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/my-activity/myActivityAnalytics.ts",
+          "line": 101,
+          "excerpt": "for (let cur = start; cur <= end && days.length < MAX_TREND_DAYS; cur += 86_400_000) {",
+          "needle": "days.length < MAX_TREND_DAYS"
+        }
+      ],
+      "detail": "366 earliest-day cap silently omits later loaded observations and understates accessible trend total.",
+      "sourceOnlyRepro": "2020-01-01..2025-01-01 plus one2025-01-01 event -> KPI1/feed1/trend0 over earliest366days.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Preserve loaded observations and disclose actual coverage using bounded existing chart contract.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    },
+    {
+      "id": "MA-05",
+      "rule": "MDC-026",
+      "citations": [
+        {
+          "file": "internal/api/audit/log_handler.go",
+          "line": 113,
+          "excerpt": "httpx.WriteJSON(w, http.StatusOK, []userActivityEntry{})",
+          "needle": "httpx.WriteJSON(w, http.StatusOK, []userActivityEntry{})"
+        }
+      ],
+      "detail": "DB failure becomes success200[]; scan failures skipped/rows.Err unchecked. Unknown/partial can become measured zero; successful empty refresh replaces retained rows.",
+      "sourceOnlyRepro": "Source trace Pool.Query error->200[]->hook[]->hasData/zero KPI; no DB/identity/events access.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Exact backend trust correction preserving actor/context/parameterized SQL.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    },
+    {
+      "id": "MA-06",
+      "rule": "MDC-045",
+      "citations": [
+        {
+          "file": "web/src/types/admin.ts",
+          "line": 189,
+          "excerpt": "entity_id: string | null;",
+          "needle": "entity_id: string | null;"
+        }
+      ],
+      "detail": "Frontend entity_id string|null and mandatory extra fields do not mirror optional numeric ID/detail and absent ip/user_agent endpoint shape.",
+      "sourceOnlyRepro": "Compare actual Go int64-pointer JSON to TS; string fixtures cannot establish wire agreement.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Exact DTO/hook/caller reconciliation; zero-link case remains conditional.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    },
+    {
+      "id": "MA-07",
+      "rule": "MDC-010/MDC-012",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/my-activity/ActivityFeedPanel.tsx",
+          "line": 47,
+          "excerpt": "<Icons.history className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />",
+          "needle": "text-cyan-300"
+        }
+      ],
+      "detail": "Decorative heading glyph fixed cyan rather than neutral theme role.",
+      "sourceOnlyRepro": "Every heading render carries fixed cyan; no composed contrast proof.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Existing text-secondary role; preserve labels/icons/series.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    },
+    {
+      "id": "MA-08",
+      "rule": "MDC-010/MDC-012",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/my-activity/ActivityHourPanel.tsx",
+          "line": 61,
+          "excerpt": "<Icons.clock className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />",
+          "needle": "text-cyan-300"
+        }
+      ],
+      "detail": "Decorative heading glyph fixed cyan rather than neutral theme role.",
+      "sourceOnlyRepro": "Every heading render carries fixed cyan; no composed contrast proof.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Existing text-secondary role; preserve labels/icons/series.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    },
+    {
+      "id": "MA-09",
+      "rule": "MDC-010/MDC-012",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/my-activity/ActivityTrendPanel.tsx",
+          "line": 82,
+          "excerpt": "<Icons.analytics className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />",
+          "needle": "text-cyan-300"
+        }
+      ],
+      "detail": "Decorative heading glyph fixed cyan rather than neutral theme role.",
+      "sourceOnlyRepro": "Every heading render carries fixed cyan; no composed contrast proof.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Existing text-secondary role; preserve labels/icons/series.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    },
+    {
+      "id": "MA-10",
+      "rule": "MDC-044",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/my-activity/ActivityTrendPanel.tsx",
+          "line": 89,
+          "excerpt": "'{{total}} actions across {{days}} days',",
+          "needle": "'{{total}} actions across {{days}} days'"
+        }
+      ],
+      "detail": "Accessible name/canonical text lacks two-dimensional plurals; test pins incorrect singular.",
+      "sourceOnlyRepro": "One day count1 predicts1 actions across1 days; not AT execution.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Serialized whole-message copy/numeric decision then narrow panel adoption.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    },
+    {
+      "id": "MA-11",
+      "rule": "MDC-044",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/MyActivityPage.tsx",
+          "line": 103,
+          "excerpt": "'Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER.',",
+          "needle": "Ask your administrator to configure AUTH_FORWARD_HEADER"
+        }
+      ],
+      "detail": "Recovery copy names AUTH_FORWARD_HEADER but source config binds FORWARD_AUTH_HEADER; canonical/generated copy repeats error.",
+      "sourceOnlyRepro": "Initial503 guidance versus config.go:533; no environment/provider read.",
+      "reproExecution": "NOTRUN/manual source trace",
+      "fix": "Exact disabled.description leaf/generated outputs plus separate fallback adoption.",
+      "classification": "source-confirmed mechanism; runtime NOTRUN"
+    }
+  ],
+  "conditionalNativeCandidates": [
+    {
+      "id": "MC-01",
+      "detail": "NumericID0 loses link unlike string0fixture; real valid zeroID unestablished.",
+      "classification": "conditional/native NOTRUN"
+    },
+    {
+      "id": "MC-02",
+      "detail": "Null/non-array success safeArray=>[]; normal backend returns arrays; no observed malformed payload.",
+      "classification": "conditional/native NOTRUN"
+    },
+    {
+      "id": "MC-03",
+      "detail": "MissingID entity-count policy may denote singleton settings, not confirmed inflation.",
+      "classification": "conditional/native NOTRUN"
+    },
+    {
+      "id": "MC-04",
+      "detail": "Invalid timestamps temporal coverage/>8category tail require policy; technical IDs not automatically English violations.",
+      "classification": "conditional/native NOTRUN"
+    },
+    {
+      "id": "MC-05",
+      "detail": "Native/mobile/narrow allocation/RTL200%/contrast/focus/touch/theme/forced-colors/chart/reduced-motion unmeasured.",
+      "classification": "conditional/native NOTRUN"
+    }
+  ],
+  "requiredSharedChanges": [
+    {
+      "name": "range",
+      "exactOwners": [
+        "web/src/features/system/pages/MyActivityPage.tsx"
+      ],
+      "queueMatches": [
+        {
+          "line": 1036,
+          "status": "[x]",
+          "item": "audit-page-190"
+        },
+        {
+          "line": 2290,
+          "status": "[x]",
+          "item": "phase5-page-system-my-activity"
+        }
+      ],
+      "disposition": "Report need only; no queue write/dispatch. Completed migrations/catalog closure do not duplicate corrective capability; parent must serialize overlapping leases and matching tests."
+    },
+    {
+      "name": "date-preferences",
+      "exactOwners": [
+        "web/src/features/system/components/my-activity/myActivityAnalytics.ts",
+        "web/src/features/system/components/my-activity/MyActivityKpiBand.tsx",
+        "web/src/components/data-display/RecentActivityFeed.tsx"
+      ],
+      "queueMatches": [
+        {
+          "line": 1752,
+          "status": "[x]",
+          "item": "phase3-recent-activity-feed"
+        }
+      ],
+      "disposition": "Report need only; no queue write/dispatch. Completed migrations/catalog closure do not duplicate corrective capability; parent must serialize overlapping leases and matching tests."
+    },
+    {
+      "name": "initial-paused",
+      "exactOwners": [
+        "web/src/features/system/pages/MyActivityPage.tsx"
+      ],
+      "queueMatches": [
+        {
+          "line": 1036,
+          "status": "[x]",
+          "item": "audit-page-190"
+        },
+        {
+          "line": 2290,
+          "status": "[x]",
+          "item": "phase5-page-system-my-activity"
+        }
+      ],
+      "disposition": "Report need only; no queue write/dispatch. Completed migrations/catalog closure do not duplicate corrective capability; parent must serialize overlapping leases and matching tests."
+    },
+    {
+      "name": "analytics-coverage",
+      "exactOwners": [
+        "web/src/features/system/components/my-activity/myActivityAnalytics.ts",
+        "web/src/features/system/components/my-activity/ActivityTrendPanel.tsx"
+      ],
+      "queueMatches": [],
+      "disposition": "Report need only; no queue write/dispatch. Completed migrations/catalog closure do not duplicate corrective capability; parent must serialize overlapping leases and matching tests."
+    },
+    {
+      "name": "backend-trust",
+      "exactOwners": [
+        "internal/api/audit/log_handler.go"
+      ],
+      "queueMatches": [],
+      "disposition": "Report need only; no queue write/dispatch. Completed migrations/catalog closure do not duplicate corrective capability; parent must serialize overlapping leases and matching tests."
+    },
+    {
+      "name": "wire-contract",
+      "exactOwners": [
+        "web/src/types/admin.ts",
+        "web/src/api/hooks/useUser.ts"
+      ],
+      "queueMatches": [],
+      "disposition": "Report need only; no queue write/dispatch. Completed migrations/catalog closure do not duplicate corrective capability; parent must serialize overlapping leases and matching tests."
+    },
+    {
+      "name": "decorative-icons",
+      "exactOwners": [
+        "web/src/features/system/components/my-activity/ActivityFeedPanel.tsx",
+        "web/src/features/system/components/my-activity/ActivityHourPanel.tsx",
+        "web/src/features/system/components/my-activity/ActivityTrendPanel.tsx"
+      ],
+      "queueMatches": [],
+      "disposition": "Report need only; no queue write/dispatch. Completed migrations/catalog closure do not duplicate corrective capability; parent must serialize overlapping leases and matching tests."
+    },
+    {
+      "name": "trend-copy",
+      "exactOwners": [
+        "web/src/i18n/en.json",
+        "web/src/i18n/en/locale-detail-activity.json",
+        "web/src/i18n/en/locale-system.json"
+      ],
+      "queueMatches": [
+        {
+          "line": 184,
+          "status": "[~]",
+          "item": "phase6-fix-admin-manifest-dlq-caller-catalog"
+        },
+        {
+          "line": 358,
+          "status": "[x]",
+          "item": "phase6-fix-charger-milestone-canonical-leaves"
+        },
+        {
+          "line": 658,
+          "status": "[x]",
+          "item": "phase6-fix-dlq-toast-catalog"
+        },
+        {
+          "line": 672,
+          "status": "[-]",
+          "item": "phase6-fix-gdpr-status-catalog"
+        },
+        {
+          "line": 681,
+          "status": "[x]",
+          "item": "phase6-fix-action-center-provider-plural"
+        },
+        {
+          "line": 685,
+          "status": "[ ]",
+          "item": "phase6-fix-disk-forecast-contracts"
+        },
+        {
+          "line": 711,
+          "status": "[x]",
+          "item": "phase6-fix-causal-journey-hint-catalog"
+        },
+        {
+          "line": 768,
+          "status": "[ ]",
+          "item": "phase6-fix-evidence-sample-count-plurals"
+        },
+        {
+          "line": 804,
+          "status": "[x]",
+          "item": "phase6-native-drives-count-catalog-integration"
+        },
+        {
+          "line": 841,
+          "status": "[x]",
+          "item": "phase5-dashboards-description-catalog"
+        },
+        {
+          "line": 844,
+          "status": "[x]",
+          "item": "phase5-current-source-catalog-closure"
+        },
+        {
+          "line": 1172,
+          "status": "[x]",
+          "item": "repair-summary-catalog-integration"
+        },
+        {
+          "line": 1242,
+          "status": "[x]",
+          "item": "phase3-annotation-authority-copy"
+        },
+        {
+          "line": 1404,
+          "status": "[x]",
+          "item": "phase3-error-fallback-catalog"
+        },
+        {
+          "line": 1762,
+          "status": "[x]",
+          "item": "phase3-resources-panel-canonical-copy"
+        },
+        {
+          "line": 1766,
+          "status": "[x]",
+          "item": "phase3-retained-query-copy-and-source-catalog"
+        },
+        {
+          "line": 2107,
+          "status": "[x]",
+          "item": "phase6-driving-efficiency-excluded-plural"
+        },
+        {
+          "line": 2342,
+          "status": "[x]",
+          "item": "phase5-integration-generated-i18n-closure"
+        },
+        {
+          "line": 2366,
+          "status": "[x]",
+          "item": "phase5-integration-wave2-i18n-closure"
+        }
+      ],
+      "disposition": "Report need only; no queue write/dispatch. Completed migrations/catalog closure do not duplicate corrective capability; parent must serialize overlapping leases and matching tests."
+    },
+    {
+      "name": "disabled-copy",
+      "exactOwners": [
+        "web/src/i18n/en.json",
+        "web/src/features/system/pages/MyActivityPage.tsx"
+      ],
+      "queueMatches": [
+        {
+          "line": 184,
+          "status": "[~]",
+          "item": "phase6-fix-admin-manifest-dlq-caller-catalog"
+        },
+        {
+          "line": 358,
+          "status": "[x]",
+          "item": "phase6-fix-charger-milestone-canonical-leaves"
+        },
+        {
+          "line": 658,
+          "status": "[x]",
+          "item": "phase6-fix-dlq-toast-catalog"
+        },
+        {
+          "line": 672,
+          "status": "[-]",
+          "item": "phase6-fix-gdpr-status-catalog"
+        },
+        {
+          "line": 681,
+          "status": "[x]",
+          "item": "phase6-fix-action-center-provider-plural"
+        },
+        {
+          "line": 685,
+          "status": "[ ]",
+          "item": "phase6-fix-disk-forecast-contracts"
+        },
+        {
+          "line": 711,
+          "status": "[x]",
+          "item": "phase6-fix-causal-journey-hint-catalog"
+        },
+        {
+          "line": 768,
+          "status": "[ ]",
+          "item": "phase6-fix-evidence-sample-count-plurals"
+        },
+        {
+          "line": 804,
+          "status": "[x]",
+          "item": "phase6-native-drives-count-catalog-integration"
+        },
+        {
+          "line": 841,
+          "status": "[x]",
+          "item": "phase5-dashboards-description-catalog"
+        },
+        {
+          "line": 844,
+          "status": "[x]",
+          "item": "phase5-current-source-catalog-closure"
+        },
+        {
+          "line": 1036,
+          "status": "[x]",
+          "item": "audit-page-190"
+        },
+        {
+          "line": 1172,
+          "status": "[x]",
+          "item": "repair-summary-catalog-integration"
+        },
+        {
+          "line": 1242,
+          "status": "[x]",
+          "item": "phase3-annotation-authority-copy"
+        },
+        {
+          "line": 1404,
+          "status": "[x]",
+          "item": "phase3-error-fallback-catalog"
+        },
+        {
+          "line": 1762,
+          "status": "[x]",
+          "item": "phase3-resources-panel-canonical-copy"
+        },
+        {
+          "line": 1766,
+          "status": "[x]",
+          "item": "phase3-retained-query-copy-and-source-catalog"
+        },
+        {
+          "line": 2107,
+          "status": "[x]",
+          "item": "phase6-driving-efficiency-excluded-plural"
+        },
+        {
+          "line": 2290,
+          "status": "[x]",
+          "item": "phase5-page-system-my-activity"
+        },
+        {
+          "line": 2342,
+          "status": "[x]",
+          "item": "phase5-integration-generated-i18n-closure"
+        },
+        {
+          "line": 2366,
+          "status": "[x]",
+          "item": "phase5-integration-wave2-i18n-closure"
+        }
+      ],
+      "disposition": "Report need only; no queue write/dispatch. Completed migrations/catalog closure do not duplicate corrective capability; parent must serialize overlapping leases and matching tests."
+    }
+  ],
+  "testInventory": [
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityBreakdownPanel.test.tsx",
+      "declarationSites": 11,
+      "authoredExpandedCases": 11,
+      "declarations": [
+        {
+          "line": 62,
+          "literal": "it('renders the title as a heading and forwards the icon and className', () => {"
+        },
+        {
+          "line": 75,
+          "literal": "it('shows an accessible loading state with five skeletons while loading', () => {"
+        },
+        {
+          "line": 93,
+          "literal": "it('prioritises the loading state over the error and empty flags', () => {"
+        },
+        {
+          "line": 106,
+          "literal": "it('renders the error state and calls onRetry when Retry is clicked', () => {"
+        },
+        {
+          "line": 120,
+          "literal": "it('never renders a blank body when isError is set without an error object', () => {"
+        },
+        {
+          "line": 130,
+          "literal": "it('shows the empty state (message + icon) when isEmpty even if slices exist', () => {"
+        },
+        {
+          "line": 139,
+          "literal": "it('falls back to the empty state when there are no slices even if isEmpty is false', () => {"
+        },
+        {
+          "line": 146,
+          "literal": "it('renders a ranked list with resolved labels and count · percent sublabels', () => {"
+        },
+        {
+          "line": 172,
+          "literal": "it('prefers the i18n fallback chain: fallback → label → key', () => {"
+        },
+        {
+          "line": 188,
+          "literal": "it('is null-safe: renders — for a missing label and 0 · 0% for null count/percent', () => {"
+        },
+        {
+          "line": 205,
+          "literal": "it('tolerates a nullish slices prop without throwing', () => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityFeedPanel.test.tsx",
+      "declarationSites": 8,
+      "authoredExpandedCases": 8,
+      "declarations": [
+        {
+          "line": 75,
+          "literal": "it('renders the panel heading with its decorative icon and the empty message', () => {"
+        },
+        {
+          "line": 85,
+          "literal": "it('shows an accessible busy status with skeleton placeholders while loading', () => {"
+        },
+        {
+          "line": 96,
+          "literal": "it('renders each entry, with a click-through link for routable entities', () => {"
+        },
+        {
+          "line": 119,
+          "literal": "it('falls back to the empty state when entries is undefined (null safety)', () => {"
+        },
+        {
+          "line": 128,
+          "literal": "it('renders an error region and calls onRetry when the user clicks Retry', () => {"
+        },
+        {
+          "line": 140,
+          "literal": "it('never renders a blank body when isError is set without an error object', () => {"
+        },
+        {
+          "line": 154,
+          "literal": "it('prioritises the loading branch over error and content', () => {"
+        },
+        {
+          "line": 168,
+          "literal": "it('forwards a custom className to the outer glass panel', () => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityHourPanel.test.tsx",
+      "declarationSites": 11,
+      "authoredExpandedCases": 11,
+      "declarations": [
+        {
+          "line": 145,
+          "literal": "it('renders the skeleton while loading and suppresses the chart + empty state', () => {"
+        },
+        {
+          "line": 155,
+          "literal": "it('renders a retryable QueryError when isError and wires the retry callback', () => {"
+        },
+        {
+          "line": 169,
+          "literal": "it('shows the empty state (not a blank panel) when isEmpty, even with 24 populated buckets', () => {"
+        },
+        {
+          "line": 176,
+          "literal": "it('shows the empty state when the derived series is an empty array', () => {"
+        },
+        {
+          "line": 185,
+          "literal": "it('degrades to the empty state (no crash) when data is undefined', () => {"
+        },
+        {
+          "line": 198,
+          "literal": "it('feeds the full 24-bucket histogram straight into the bar chart', () => {"
+        },
+        {
+          "line": 209,
+          "literal": "it('binds the count series to the \"Actions\" name, series colour, and hoisted radius', () => {"
+        },
+        {
+          "line": 220,
+          "literal": "it('plots the zero-padded hour label on the X axis', () => {"
+        },
+        {
+          "line": 226,
+          "literal": "it('exposes the chart to assistive tech as a labelled image region', () => {"
+        },
+        {
+          "line": 237,
+          "literal": "it('marks the decorative title icon as aria-hidden', () => {"
+        },
+        {
+          "line": 247,
+          "literal": "it('forwards the className to the outer GlassPanel', () => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityTrendPanel.test.tsx",
+      "declarationSites": 11,
+      "authoredExpandedCases": 11,
+      "declarations": [
+        {
+          "line": 126,
+          "literal": "it('renders a single labelled chart region summarising total actions × days', () => {"
+        },
+        {
+          "line": 149,
+          "literal": "it('renders the chart (not the empty state) for a quiet window of all-zero days', () => {"
+        },
+        {
+          "line": 162,
+          "literal": "it('shows a busy skeleton (keeping the title) and no chart while loading', () => {"
+        },
+        {
+          "line": 174,
+          "literal": "it('renders an error alert and invokes onRetry when the retry control is used', () => {"
+        },
+        {
+          "line": 187,
+          "literal": "it('never collapses to a blank panel when isError is set without an error payload', () => {"
+        },
+        {
+          "line": 201,
+          "literal": "it('gives loading precedence over error when both flags are set', () => {"
+        },
+        {
+          "line": 211,
+          "literal": "it('shows the empty placeholder when the isEmpty flag is set, even with data present', () => {"
+        },
+        {
+          "line": 220,
+          "literal": "it('shows the empty placeholder for a zero-length window', () => {"
+        },
+        {
+          "line": 227,
+          "literal": "it('degrades to the empty state instead of throwing when data is null', () => {"
+        },
+        {
+          "line": 238,
+          "literal": "it('coerces NaN / null / negative / fractional counts so the summary total is exact and NaN-free', () => {"
+        },
+        {
+          "line": 255,
+          "literal": "it('applies the caller className to the panel shell and marks the header icon decorative', () => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/MyActivityKpiBand.test.tsx",
+      "declarationSites": 6,
+      "authoredExpandedCases": 6,
+      "declarations": [
+        {
+          "line": 37,
+          "literal": "it('renders every KPI card with its label and formatted value', () => {"
+        },
+        {
+          "line": 71,
+          "literal": "it('formats large counts with locale thousands separators', () => {"
+        },
+        {
+          "line": 79,
+          "literal": "it('renders a relative \"last active\" label from a recent timestamp', () => {"
+        },
+        {
+          "line": 93,
+          "literal": "it('shows an em-dash when there is no last activity timestamp', () => {"
+        },
+        {
+          "line": 107,
+          "literal": "it('renders an accessible loading state and hides the metrics', () => {"
+        },
+        {
+          "line": 126,
+          "literal": "it('is null-safe: a missing kpis payload retains unknown readings without throwing', () => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/myActivityAnalytics.test.ts",
+      "declarationSites": 14,
+      "authoredExpandedCases": 14,
+      "declarations": [
+        {
+          "line": 43,
+          "literal": "it('exposes a stable OTHER_CATEGORY sentinel', () => {"
+        },
+        {
+          "line": 47,
+          "literal": "it('returns a zeroed, gap-filled shape for empty input', () => {"
+        },
+        {
+          "line": 71,
+          "literal": "it('treats null and undefined entries like an empty array', () => {"
+        },
+        {
+          "line": 81,
+          "literal": "it('aggregates KPI totals across days, actions, and entities', () => {"
+        },
+        {
+          "line": 97,
+          "literal": "it('gap-fills the daily trend and counts entries per local day', () => {"
+        },
+        {
+          "line": 121,
+          "literal": "it('returns an empty trend for an inverted or malformed range but still computes KPIs', () => {"
+        },
+        {
+          "line": 133,
+          "literal": "it('does not throw when the range is missing', () => {"
+        },
+        {
+          "line": 143,
+          "literal": "it('caps the daily trend at MAX_TREND_DAYS for oversized ranges', () => {"
+        },
+        {
+          "line": 150,
+          "literal": "it('ranks the top actions with percent, palette colour, and i18n metadata', () => {"
+        },
+        {
+          "line": 178,
+          "literal": "it('ranks categories, humanises labels, and buckets null entity types as other', () => {"
+        },
+        {
+          "line": 202,
+          "literal": "it('normalises blank and whitespace-only entity types into the other bucket', () => {"
+        },
+        {
+          "line": 224,
+          "literal": "it('bins entries into 24 local-hour buckets with padded labels', () => {"
+        },
+        {
+          "line": 241,
+          "literal": "it('ignores unparseable timestamps for time-based metrics but still counts them overall', () => {"
+        },
+        {
+          "line": 257,
+          "literal": "it('collapses blank or missing actions into a single \"unknown\" action', () => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    {
+      "file": "web/src/features/system/pages/MyActivityPage.test.tsx",
+      "declarationSites": 15,
+      "authoredExpandedCases": 16,
+      "declarations": [
+        {
+          "line": 194,
+          "literal": "it('renders panel shells + skeletons while the feed query is pending', () => {"
+        },
+        {
+          "line": 238,
+          "literal": "it('derives the KPI band from the single activity payload', async () => {"
+        },
+        {
+          "line": 253,
+          "literal": "it('ranks + labels the top-actions and by-category breakdowns', async () => {"
+        },
+        {
+          "line": 273,
+          "literal": "it('lists feed entries with entity click-through links', async () => {"
+        },
+        {
+          "line": 288,
+          "literal": "it('shows per-section empty states and zeroed KPIs when there is no activity', async () => {"
+        },
+        {
+          "line": 303,
+          "literal": "it('surfaces the feature-disabled notice on a 503 and suppresses the sections', async () => {"
+        },
+        {
+          "line": 318,
+          "literal": "it('surfaces the identity-required notice on a 401 and suppresses the sections', async () => {"
+        },
+        {
+          "line": 329,
+          "literal": "it('keeps sections visible and reports permission denial on a 403', async () => {"
+        },
+        {
+          "line": 340,
+          "literal": "it('renders inline section errors (not the gate) on a non-gate 500 and retries on demand', async () => {"
+        },
+        {
+          "line": 364,
+          "literal": "it('requests a default 30-day ISO window with limit=200', async () => {"
+        },
+        {
+          "line": 375,
+          "literal": "it('forwards start/end URL params verbatim as snake_case query params', async () => {"
+        },
+        {
+          "line": 386,
+          "literal": "it('refetches when the shared header changes the URL range', async () => {"
+        },
+        {
+          "line": 401,
+          "literal": "it('uses neutral decorative icons without changing section labels', async () => {"
+        },
+        {
+          "line": 415,
+          "literal": "it('does not present unavailable activity as measured zero after an initial failure', async () => {"
+        },
+        {
+          "line": 429,
+          "literal": "it.each([500, 503])('retains every populated section after a failed %i refresh and recovers through the shared retry', async (status) => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    {
+      "file": "web/src/components/data-display/RecentActivityFeed.test.tsx",
+      "declarationSites": 27,
+      "authoredExpandedCases": 36,
+      "declarations": [
+        {
+          "line": 85,
+          "literal": "it.each(ROUTES)("
+        },
+        {
+          "line": 96,
+          "literal": "it('URL-encodes entity ids that contain reserved characters', () => {"
+        },
+        {
+          "line": 103,
+          "literal": "it('renders the title as plain text (no link) for an unknown entity_type', () => {"
+        },
+        {
+          "line": 111,
+          "literal": "it('renders plain text when entity_id is missing even for a routable type', () => {"
+        },
+        {
+          "line": 121,
+          "literal": "it('renders the default empty state for an empty list', () => {"
+        },
+        {
+          "line": 127,
+          "literal": "it('prefers a caller-supplied emptyMessage over the default', () => {"
+        },
+        {
+          "line": 133,
+          "literal": "it('does not throw and shows the empty state when entries is undefined', () => {"
+        },
+        {
+          "line": 141,
+          "literal": "it('does not throw and shows the empty state when entries is null', () => {"
+        },
+        {
+          "line": 148,
+          "literal": "it('renders the registry label for a known action', () => {"
+        },
+        {
+          "line": 153,
+          "literal": "it('falls back to the generic label for an unknown action', () => {"
+        },
+        {
+          "line": 158,
+          "literal": "it('renders one row per entry', () => {"
+        },
+        {
+          "line": 173,
+          "literal": "it('combines entity_type, entity_id and detail with the middot/dash separators', () => {"
+        },
+        {
+          "line": 187,
+          "literal": "it('shows the entity_type alone when there is no id', () => {"
+        },
+        {
+          "line": 195,
+          "literal": "it('shows only the detail when entity_type is absent', () => {"
+        },
+        {
+          "line": 202,
+          "literal": "it('renders no subtitle paragraph when neither entity nor detail exist', () => {"
+        },
+        {
+          "line": 212,
+          "literal": "it('renders a relative timestamp for a recent entry', () => {"
+        },
+        {
+          "line": 219,
+          "literal": "it('renders the \"—\" placeholder for an unparseable timestamp', () => {"
+        },
+        {
+          "line": 228,
+          "literal": "it('marks the row icon as decorative (aria-hidden)', () => {"
+        },
+        {
+          "line": 235,
+          "literal": "it(\"tints the icon with the action's registry accent colour\", () => {"
+        },
+        {
+          "line": 245,
+          "literal": "it('exposes the click-through link with an accessible name matching its title', () => {"
+        },
+        {
+          "line": 255,
+          "literal": "it('forwards className to the Timeline root when populated', () => {"
+        },
+        {
+          "line": 263,
+          "literal": "it('forwards className to the EmptyState root when empty', () => {"
+        },
+        {
+          "line": 270,
+          "literal": "it('keeps supplied chronology rather than sorting by timestamp or id', () => {"
+        },
+        {
+          "line": 286,
+          "literal": "it('keeps a measured zero entity identifier linked and visible', () => {"
+        },
+        {
+          "line": 294,
+          "literal": "it('keeps complete long RTL content and escapes supplied detail', () => {"
+        },
+        {
+          "line": 305,
+          "literal": "it('uses semantic link and visible keyboard focus roles without adding motion', async () => {"
+        },
+        {
+          "line": 323,
+          "literal": "it('updates caller-supplied rows without inventing a source status or changing entries', () => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    {
+      "file": "web/src/api/hooks/useUser.test.tsx",
+      "declarationSites": 5,
+      "authoredExpandedCases": 5,
+      "declarations": [
+        {
+          "line": 233,
+          "literal": "it('GETs /users/me/activity with no query string when called with no params', async () => {"
+        },
+        {
+          "line": 246,
+          "literal": "it('builds a snake_case query string, including limit=0, and URL-encodes values', async () => {"
+        },
+        {
+          "line": 266,
+          "literal": "it('omits an unset bound while still emitting the one that is provided', async () => {"
+        },
+        {
+          "line": 281,
+          "literal": "it('coerces a null payload to an empty array via safeArray (never undefined)', async () => {"
+        },
+        {
+          "line": 290,
+          "literal": "it('surfaces the backend 503 (no ForwardAuth) as an ApiError with its status', async () => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    }
+  ],
+  "beforePins": [
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityBreakdownPanel.test.tsx",
+      "sha256": "3a260d385ae540f9eb2ab2b0ab54602ddfea76e659df1f7afae07c47a6601984",
+      "bytes": 8482,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityBreakdownPanel.tsx",
+      "sha256": "4e4bec993cb29a4f9439365e29ead81cf5826bec932323391b4e8178bc002ff5",
+      "bytes": 3594,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityFeedPanel.test.tsx",
+      "sha256": "732d21123df28bab4f44d268c747d3da602af43c78fdd5f99c34a6d6a3c10fe8",
+      "bytes": 7177,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityFeedPanel.tsx",
+      "sha256": "84516d268521c828421dc5441d7d79d36084f2a34ce203f7eb3c9945b0e8c77f",
+      "bytes": 2406,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityHourPanel.test.tsx",
+      "sha256": "3166ac5727348ce8fa54defd3b7c17287bef96c46d5ee70451b9f197eb7c62ec",
+      "bytes": 10019,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityHourPanel.tsx",
+      "sha256": "8c22a5a6a6d57c907270442063353b2d0ff33aa45a57d64bfebfd84ed68dec7e",
+      "bytes": 3327,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityTrendPanel.test.tsx",
+      "sha256": "8d60b73801c68eaf624d5569a85967e2708f65cf12434a88ea3732efb008a050",
+      "bytes": 11108,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityTrendPanel.tsx",
+      "sha256": "0f0722e1ebdfd00667e1a07cda9ba75939fc048cbae9fb171197a947127e5a0e",
+      "bytes": 4348,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/index.ts",
+      "sha256": "339c501fc7c06e98751bc534cf316c25b9373df4e4b91ed6b833bcf20810c420",
+      "bytes": 645,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/myActivityAnalytics.test.ts",
+      "sha256": "b9e0945720490773e38c2e75ef87178cb432f577cd619368c9074603aa3ce35a",
+      "bytes": 10678,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/myActivityAnalytics.ts",
+      "sha256": "d8336f2bb81fbb8734400aa3e0ecbc4960f8cb32799e563e6f5fdd9ba9464a74",
+      "bytes": 7268,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/MyActivityKpiBand.test.tsx",
+      "sha256": "9eddfd8094e5dcebe60ac1427e10edb309e5c45d74c7e3bffb4afb7060a81167",
+      "bytes": 5339,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/MyActivityKpiBand.tsx",
+      "sha256": "a7bcd23cbb2663afda8aec4724f2d3b438d5d18ee33e2241813ead931a4af3f1",
+      "bytes": 2869,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/pages/MyActivityPage.tsx",
+      "sha256": "e44f3fa0f810f313dfbe1934e8feea92cb16f5d1a8eb0586dcf04796624eed0d",
+      "bytes": 7373,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    },
+    {
+      "file": "web/src/features/system/pages/MyActivityPage.test.tsx",
+      "sha256": "bb52fd9081889847f01cecc45a83a4be46a66c37791fa1140048fe3e2f74c8e0",
+      "bytes": 20962,
+      "observedAt": "2026-10-14T02:36:10.5970868Z"
+    }
+  ],
+  "afterPins": [
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityBreakdownPanel.test.tsx",
+      "sha256": "3a260d385ae540f9eb2ab2b0ab54602ddfea76e659df1f7afae07c47a6601984",
+      "bytes": 8482,
+      "lines": 212
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityBreakdownPanel.tsx",
+      "sha256": "4e4bec993cb29a4f9439365e29ead81cf5826bec932323391b4e8178bc002ff5",
+      "bytes": 3594,
+      "lines": 101
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityFeedPanel.test.tsx",
+      "sha256": "732d21123df28bab4f44d268c747d3da602af43c78fdd5f99c34a6d6a3c10fe8",
+      "bytes": 7177,
+      "lines": 175
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityFeedPanel.tsx",
+      "sha256": "84516d268521c828421dc5441d7d79d36084f2a34ce203f7eb3c9945b0e8c77f",
+      "bytes": 2406,
+      "lines": 72
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityHourPanel.test.tsx",
+      "sha256": "3166ac5727348ce8fa54defd3b7c17287bef96c46d5ee70451b9f197eb7c62ec",
+      "bytes": 10019,
+      "lines": 252
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityHourPanel.tsx",
+      "sha256": "8c22a5a6a6d57c907270442063353b2d0ff33aa45a57d64bfebfd84ed68dec7e",
+      "bytes": 3327,
+      "lines": 100
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityTrendPanel.test.tsx",
+      "sha256": "8d60b73801c68eaf624d5569a85967e2708f65cf12434a88ea3732efb008a050",
+      "bytes": 11108,
+      "lines": 267
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/ActivityTrendPanel.tsx",
+      "sha256": "0f0722e1ebdfd00667e1a07cda9ba75939fc048cbae9fb171197a947127e5a0e",
+      "bytes": 4348,
+      "lines": 127
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/index.ts",
+      "sha256": "339c501fc7c06e98751bc534cf316c25b9373df4e4b91ed6b833bcf20810c420",
+      "bytes": 645,
+      "lines": 14
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/myActivityAnalytics.test.ts",
+      "sha256": "b9e0945720490773e38c2e75ef87178cb432f577cd619368c9074603aa3ce35a",
+      "bytes": 10678,
+      "lines": 270
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/myActivityAnalytics.ts",
+      "sha256": "d8336f2bb81fbb8734400aa3e0ecbc4960f8cb32799e563e6f5fdd9ba9464a74",
+      "bytes": 7268,
+      "lines": 221
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/MyActivityKpiBand.test.tsx",
+      "sha256": "9eddfd8094e5dcebe60ac1427e10edb309e5c45d74c7e3bffb4afb7060a81167",
+      "bytes": 5339,
+      "lines": 135
+    },
+    {
+      "file": "web/src/features/system/components/my-activity/MyActivityKpiBand.tsx",
+      "sha256": "a7bcd23cbb2663afda8aec4724f2d3b438d5d18ee33e2241813ead931a4af3f1",
+      "bytes": 2869,
+      "lines": 65
+    },
+    {
+      "file": "web/src/features/system/pages/MyActivityPage.tsx",
+      "sha256": "e44f3fa0f810f313dfbe1934e8feea92cb16f5d1a8eb0586dcf04796624eed0d",
+      "bytes": 7373,
+      "lines": 189
+    },
+    {
+      "file": "web/src/features/system/pages/MyActivityPage.test.tsx",
+      "sha256": "bb52fd9081889847f01cecc45a83a4be46a66c37791fa1140048fe3e2f74c8e0",
+      "bytes": 20962,
+      "lines": 462
+    }
+  ],
+  "pinLimits": [
+    "Only15 core source/test before/final interval closed; support/route/catalog pins were inspected but not fully closed in compact artifact.",
+    "Sequential non-atomic; no Git/original/full-tree delta proof.",
+    "Parent queue changed concurrently/line190->236; not attributed to audit.",
+    "Actual actor creation unavailable; reservation enforced, no reset."
+  ],
+  "preservation": {
+    "sectionCount": 6,
+    "sections": [
+      "Activity summary",
+      "Activity over time",
+      "Top actions",
+      "By category",
+      "By hour of day",
+      "Activity feed"
+    ],
+    "pageLines": 189,
+    "pagination": "Page200cap/nooffset; hook offset present, no new pagination invented; loaded cap disclosed/fulltotal/hasMore unknown.",
+    "actions": "Shared one-query retry/header refresh; entity routes inspected; no mutation/export/fullscreen/local duplicated picker/filter.",
+    "states": "All loading shells/unknown KPIs/500-403 retry/real[]zero/retained500-503 preserved. Initial503 unsupported/401 privacy hide acceptable exceptions. Initial-paused/backend falseempty findings.",
+    "SI": "Dimensionless counts/percent, rawtimestamps/IDs/details retained; no physical unit/sign conversion applicable. Numberformat reused/date preference gap.",
+    "acceptance": "NOTRUN native/page/browser/mobile/keyboard/AT/contrast/forcedcolors/reducedmotion"
+  },
+  "documentsRead": [
+    "orchestrator-loop entire",
+    "design contract entire2540lines with truncated ranges resumed",
+    "mission entire/relevant0,2,15-17,22-26,30,33,37,43-45",
+    "inventory authority+MyActivity/G181/G184/G193/G194 exact rows",
+    "handoff currentPhase6/recovery+2186-2355 conventions, historical chronology not full",
+    "worker conventions/copilot/React/SI/unit/CONTRIBUTING entire",
+    "I18N1-200"
+  ],
+  "inspectionFailures": [
+    {
+      "shellId": "2848",
+      "exit": 1,
+      "raw": "ConvertFrom-Json rejects different casing subFSMs/subFsms. Corrected -AsHashtable shell2896exit0; not malformed application JSON."
+    },
+    {
+      "shellId": "3149",
+      "exit": 1,
+      "raw": "The filename or extension is too long. (os error206). Did not reach Python/artifact writes."
+    },
+    {
+      "shellId": "3211",
+      "exit": 1,
+      "raw": "UnicodeEncodeError: cp1252 cannot encode U+2192 at position36798. Failed before artifact writes."
+    },
+    {
+      "shellId": "3243",
+      "exit": 1,
+      "raw": "AssertionError at inline Python line33. Compact preservation command failed before artifact writes; exact failed assertion not diagnosed within original time box."
+    }
+  ],
+  "checks": {
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "compiler": "NOTRUN",
+    "preservationCLI": "NOTRUN",
+    "browser": "NOTRUN",
+    "nativePageAcceptance": "NOTRUN",
+    "server": "NOTRUN",
+    "networkAPIIdentityEventsProvider": "NOTRUN",
+    "Git": "NOTRUN",
+    "agents": "NOTRUN",
+    "installs": "NOTRUN",
+    "helperFiles": "NOTRUN"
+  },
+  "evidenceLimits": [
+    "Tests source declarations only; mocks/fake /my-activity header do not prove mounted /me/activity/canonical from-to behavior.",
+    "Earlier34literalcatalogkeys/0missing/activitysubtreeEqualTrue source inspection; no generator/runtimeguard executed.",
+    "Initial mixed PS table format reread with explicit lines; missing guessed locale-activity path corrected to actual existing outputs.",
+    "Full literal exploratory command transcript retained in tools but incompletely journaled here.",
+    "Original return boundary missed during failed preservation; preserving partial only before hard cap."
+  ],
+  "summary": {
+    "confirmedFindings": 11,
+    "conditionalCandidates": 5,
+    "ownerNeeds": 9,
+    "byRule": {
+      "MDC-032": 1,
+      "MDC-044/MDC-046": 1,
+      "MDC-026": 2,
+      "MDC-034": 1,
+      "MDC-045": 1,
+      "MDC-010/MDC-012": 3,
+      "MDC-044": 2
+    },
+    "testDeclarationSites": 108,
+    "authoredExpandedCases": 118
+  },
+  "validation": {
+    "corePinCount": 15,
+    "coreDrift": [],
+    "citationInvalid": [],
+    "expandedPins": "NOTCLOSED/PARTIAL",
+    "json": "PASS actual written JSON reread",
+    "counts": "PASS actual arrays counted"
+  },
+  "queueDispositionClosure": {
+    "status": "DONE_ORIGINAL_FINDING_DISPOSITIONS_ONLY",
+    "preparedAt": "2026-10-14T05:11:46.290777+00:00",
+    "scope": "Complete only the original eleven findings' missing queue dispositions. No repeat source audit, new findings, implementation, test execution or native/application acceptance.",
+    "alreadyDoneCheck": {
+      "result": "Missing closure; no change needed is not justified for this report.",
+      "evidence": "The original report has 28 top-level fields and nine generic report-need-only dispositions, but no exact finding-to-queue closure, test-owner mapping or conditional/duplicate disposition block.",
+      "completedWorkNotRepeated": [
+        "audit-page-190",
+        "phase3-recent-activity-feed",
+        "phase3-activity-icon-accents",
+        "phase3-date-format",
+        "phase5-page-system-my-activity",
+        "Original phase6-qa-system-my-activity source inspection and test-declaration inventory"
+      ]
+    },
+    "clock": {
+      "actor": "daee9535-85d3-4cb7-9514-00f0da753bda",
+      "queueStartedAt": "2026-10-14T05:06:00Z",
+      "returnAt": "2026-10-14T05:26:00Z",
+      "hardAt": "2026-10-14T05:31:00Z",
+      "attempt": 1,
+      "authority": "Current canonical row 346 gives this continuation's actor and conservative absolute 20/25-minute boundaries. Original reservedAt/returnAt/hardAt, missed return boundary, release, failures and PARTIAL status above remain unchanged; neither historical clocks nor attempts are reset."
+    },
+    "preservedOriginal": {
+      "reportSha256Before": "77bdd933918bbd29b7772f066644e48b66f1cf18a489a5706b5913a1158a45fd",
+      "originalTopLevelFields": 28,
+      "semanticSha256Before": "8d213505cf012005a229b4c6169801e03821dcced3eb839e1019d5830a757d66",
+      "semanticEncoding": "UTF-8 json.dumps(original, sort_keys=True, separators=(',', ':'), ensure_ascii=True); remove only queueDispositionClosure when comparing.",
+      "logSha256Before": "31fae3ac2e53dd0e5e7a00e32600ce03af37d3e056da5b76faa3e0771c6aae81",
+      "logBytesBefore": 112274,
+      "policy": "Append this closure; do not replace original citations, evidence timestamps, pins, declarations, commands, failed inspections, partial limitations or NOTRUN classifications."
+    },
+    "canonicalQueueRead": {
+      "file": "migration-queue.md",
+      "observedAt": "2026-10-14T05:10:20.332502+00:00",
+      "sha256": "7d486e556799a3765b4655e7a051baf28570737955d972961b9fb411e65784f3",
+      "parsedTaskRows": 1892,
+      "ownRow": {
+        "line": 346,
+        "status": "[~]",
+        "item": "phase6-qa-system-my-activity",
+        "files": "docs\\frontend-audits\\phase6-qa-system-my-activity.json; web\\logs\\phase6-qa-system-my-activity.log",
+        "dependsOn": "phase5-page-system-my-activity",
+        "attempts": 1,
+        "started": "2026-10-14T05:06:00Z",
+        "actor": "daee9535-85d3-4cb7-9514-00f0da753bda"
+      },
+      "method": "Read the complete canonical task table, inspect exact original finding IDs, MyActivity/RecentActivity/UserActivity owners, backend owner and exact copy leaves, then distinguish mechanism-related tasks and catalog/type file collisions from equivalent objectives.",
+      "findingIdOrExactCopyLeafMatches": [],
+      "otherPhase6OriginalOwnerOrCopyObjectiveMatches": [],
+      "queueWrites": 0,
+      "limitation": "Snapshot is sequential and can change concurrently. Row status is not an independently observed lifecycle census. No running/idle count, source delta or current runtime correctness is inferred."
+    },
+    "confirmedFindingDispositions": [
+      {
+        "findingId": "MA-01",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N01",
+        "equivalentQueueItems": [],
+        "reason": "Completed audit-page-190 and Phase5 page acceptance explicitly leave header-instant/shared concerns unowned. A different route's exact-range integration is not a MyActivity fix."
+      },
+      {
+        "findingId": "MA-02",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N02",
+        "equivalentQueueItems": [],
+        "reason": "Completed date formatter capability and RecentActivityFeed migration do not establish these domain/feed callers' effective timezone adoption or formatter memo reactivity."
+      },
+      {
+        "findingId": "MA-03",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N03",
+        "equivalentQueueItems": [],
+        "reason": "Historical loading/query-trust fixture repairs and retained-error page acceptance address different states, not the original cold-paused no-data false empty."
+      },
+      {
+        "findingId": "MA-04",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N04",
+        "equivalentQueueItems": [],
+        "reason": "The completed analytics fixture repair preserves original tests; it does not correct the source's earliest-366-day observation loss."
+      },
+      {
+        "findingId": "MA-05",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N05",
+        "equivalentQueueItems": [],
+        "reason": "No equivalent canonical UserActivity query/scan/iteration error-trust correction is represented. Frontend retained-state work cannot repair a successful false-empty producer."
+      },
+      {
+        "findingId": "MA-06",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N06",
+        "equivalentQueueItems": [],
+        "reason": "The completed same-hook Tesla profile live-write guard is a file collision, not UserActivity DTO reconciliation. MC-01's valid-zero-ID policy is not promoted."
+      },
+      {
+        "findingId": "MA-07",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N07",
+        "equivalentQueueItems": [],
+        "reason": "Registry accent and page-owned icon fixes do not include this feature panel's fixed decorative heading glyph."
+      },
+      {
+        "findingId": "MA-08",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N07",
+        "equivalentQueueItems": [],
+        "reason": "Same bounded presentation mechanism as MA-07, different exact panel owner; combine into one need rather than duplicate the root."
+      },
+      {
+        "findingId": "MA-09",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N07",
+        "equivalentQueueItems": [],
+        "reason": "Same bounded presentation mechanism as MA-07/08; preserve the independent trend chart and data-series roles."
+      },
+      {
+        "findingId": "MA-10",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N08",
+        "equivalentQueueItems": [],
+        "reason": "Generic generated-catalog closure and other domains' plurals are not this exact two-dimensional whole-message correction. Existing recovery tests pin the old leaf, not correctness for singular counts."
+      },
+      {
+        "findingId": "MA-11",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "needId": "MA-N09",
+        "equivalentQueueItems": [],
+        "reason": "No canonical task covers this exact disabled.description leaf and page fallback's AUTH_FORWARD_HEADER versus FORWARD_AUTH_HEADER mismatch."
+      }
+    ],
+    "unrepresentedNeeds": [
+      {
+        "id": "MA-N01",
+        "originalNeed": "range",
+        "findingIds": ["MA-01"],
+        "objective": "Adopt existing header-owned useRangeState instants at /me/activity and pass exact bounds to the existing typed hook; explicitly preserve reachable legacy start/end URLs and saved page-range compatibility rather than silently resetting them.",
+        "sourceOwners": ["web\\src\\features\\system\\pages\\MyActivityPage.tsx"],
+        "testOwners": ["web\\src\\features\\system\\pages\\MyActivityPage.test.tsx"],
+        "readOnlyCapabilities": ["web\\src\\hooks\\useRangeState.ts", "web\\src\\lib\\workspaceScope.ts", "web\\src\\api\\hooks\\useUser.ts"],
+        "coveringProofNeeded": "Actual /me/activity route, canonical from/to header changes, rolling 24h, custom and non-UTC/DST bounds, legacy URL compatibility and all six retained sections. Existing fake /my-activity test routing is not mounted-route proof.",
+        "queueDisposition": "No equivalent corrective row; report to parent only."
+      },
+      {
+        "id": "MA-N02",
+        "originalNeed": "date-preferences",
+        "findingIds": ["MA-02"],
+        "objective": "Reuse existing effective locale/timezone formatting in analytics day/hour buckets and labels, KPI last-active and shared feed times; include formatter dependencies so preference changes update displayed rows without changing raw timestamps or chronology.",
+        "sourceOwners": [
+          "web\\src\\features\\system\\components\\my-activity\\myActivityAnalytics.ts",
+          "web\\src\\features\\system\\components\\my-activity\\MyActivityKpiBand.tsx",
+          "web\\src\\components\\data-display\\RecentActivityFeed.tsx"
+        ],
+        "testOwners": [
+          "web\\src\\features\\system\\components\\my-activity\\myActivityAnalytics.test.ts",
+          "web\\src\\features\\system\\components\\my-activity\\MyActivityKpiBand.test.tsx",
+          "web\\src\\components\\data-display\\RecentActivityFeed.test.tsx"
+        ],
+        "coveringProofNeeded": "Browser/effective-zone disagreement, day-boundary/DST grouping, locale and 12/24-hour preference changes, same-array feed reformatting and unchanged raw order/links.",
+        "queueDisposition": "No equivalent corrective row. Parent must separate the shared feed pair from the domain analytics/KPI owner or explicitly grant one exclusive combined scope; no shared formatter rewrite."
+      },
+      {
+        "id": "MA-N03",
+        "originalNeed": "initial-paused",
+        "findingIds": ["MA-03"],
+        "objective": "Distinguish cold-paused/no-payload from successful empty: retain six source-shaped shells and unknown KPI readings with truthful existing query-state explanation; do not invent offline/error facts.",
+        "sourceOwners": ["web\\src\\features\\system\\pages\\MyActivityPage.tsx"],
+        "testOwners": ["web\\src\\features\\system\\pages\\MyActivityPage.test.tsx"],
+        "coveringProofNeeded": "data undefined, isLoading false, fetchStatus paused and no error must not announce no records; resolved [] still means measured zero; initial and retained errors keep their existing privacy/retry behavior.",
+        "queueDisposition": "No equivalent corrective row; share one page/test lease with MA-N01 and MA-N09 caller adoption or serialize those scopes."
+      },
+      {
+        "id": "MA-N04",
+        "originalNeed": "analytics-coverage",
+        "findingIds": ["MA-04"],
+        "objective": "Keep bounded existing chart geometry while preserving loaded observations beyond the earliest 366 days and accurately disclosing actual represented coverage; do not silently label a partial series as complete or fabricate unloaded/full-lifetime totals.",
+        "sourceOwners": [
+          "web\\src\\features\\system\\components\\my-activity\\myActivityAnalytics.ts",
+          "web\\src\\features\\system\\components\\my-activity\\ActivityTrendPanel.tsx"
+        ],
+        "testOwners": [
+          "web\\src\\features\\system\\components\\my-activity\\myActivityAnalytics.test.ts",
+          "web\\src\\features\\system\\components\\my-activity\\ActivityTrendPanel.test.tsx"
+        ],
+        "coveringProofNeeded": "Original multi-year example's late loaded event remains represented and accessible totals agree with the disclosed series; retain empty/inverted/invalid range and genuine zero-day behavior without unbounded enumeration.",
+        "queueDisposition": "No equivalent corrective row. Analytics overlaps MA-N02; panel overlaps MA-N07/08. Combine coherent same-file changes or serialize exact leases. Any new coverage wording requires a separate exact canonical leaf need, not invented keys here."
+      },
+      {
+        "id": "MA-N05",
+        "originalNeed": "backend-trust",
+        "findingIds": ["MA-05"],
+        "objective": "Correct only UserActivity query, scan and rows.Err failure handling so failure/partial iteration cannot return a trustworthy 200 empty/partial list; preserve requesting actor, context, parameterized SQL, bounds, pagination and successful empty [] semantics.",
+        "sourceOwners": ["internal\\api\\audit\\log_handler.go"],
+        "testOwners": ["internal\\api\\audit\\log_handler_test.go"],
+        "coveringProofNeeded": "Query failure, scan failure, iteration failure, genuine empty success and unchanged identity-required/ForwardAuth protections; use safe source fixtures under a future authorized worker, never actual identity/events/database access by this report worker.",
+        "queueDisposition": "No equivalent corrective row. Dedicated backend authority is required; this report neither changes nor claims the admin-wide AuditLog method."
+      },
+      {
+        "id": "MA-N06",
+        "originalNeed": "wire-contract",
+        "findingIds": ["MA-06"],
+        "objective": "Reconcile UserActivityEntry with the exact endpoint JSON's numeric nullable/optional entity_id, optional detail and absent ip/user_agent rather than retain required phantom fields; adapt only actual affected typed hook/caller fixtures while preserving opaque/raw identity and routes.",
+        "sourceOwners": ["web\\src\\types\\admin.ts", "web\\src\\api\\hooks\\useUser.ts"],
+        "testOwners": ["web\\src\\types\\admin.test.ts", "web\\src\\api\\hooks\\useUser.test.tsx"],
+        "affectedCallerFixtureOwners": [
+          "web\\src\\features\\system\\pages\\MyActivityPage.test.tsx",
+          "web\\src\\features\\system\\components\\my-activity\\myActivityAnalytics.test.ts",
+          "web\\src\\features\\system\\components\\my-activity\\ActivityFeedPanel.test.tsx",
+          "web\\src\\components\\data-display\\RecentActivityFeed.test.tsx"
+        ],
+        "readOnlyProducer": "internal\\api\\audit\\log_handler.go",
+        "coveringProofNeeded": "Canonical numeric and omitted optional wire fixture, retained chronology/entities/links and no fabricated extra fields. String-only fixtures do not prove wire agreement. Do not make numeric zero a real-valid-ID policy without MC-01 evidence.",
+        "queueDisposition": "No equivalent corrective row. Shared type owner needs explicit parent/integration authority; useUser's completed profile guard is preserved. List caller fixture ownership precisely before adaptation; no broad caller/source rewrite is authorized."
+      },
+      {
+        "id": "MA-N07",
+        "originalNeed": "decorative-icons",
+        "findingIds": ["MA-07", "MA-08", "MA-09"],
+        "objective": "Replace only the three feature-owned decorative fixed-cyan heading glyph roles with the existing neutral text-secondary role; preserve icon identity, aria-hidden, titles, semantic status and data-series colors.",
+        "sourceOwners": [
+          "web\\src\\features\\system\\components\\my-activity\\ActivityFeedPanel.tsx",
+          "web\\src\\features\\system\\components\\my-activity\\ActivityHourPanel.tsx",
+          "web\\src\\features\\system\\components\\my-activity\\ActivityTrendPanel.tsx"
+        ],
+        "testOwners": [
+          "web\\src\\features\\system\\components\\my-activity\\ActivityFeedPanel.test.tsx",
+          "web\\src\\features\\system\\components\\my-activity\\ActivityHourPanel.test.tsx",
+          "web\\src\\features\\system\\components\\my-activity\\ActivityTrendPanel.test.tsx"
+        ],
+        "coveringProofNeeded": "Neutral heading role/icon identity/decorative semantics with unchanged labels, state branches and chart series; no claim of measured theme/contrast/native acceptance.",
+        "queueDisposition": "Three original findings, one combined mechanism need; no equivalent corrective row. Serialize the trend panel pair against MA-N04 and MA-N08."
+      },
+      {
+        "id": "MA-N08",
+        "originalNeed": "trend-copy",
+        "findingIds": ["MA-10"],
+        "objective": "Establish one canonical whole-message contract that correctly handles both action and day cardinalities, keeping raw numeric plural decisions separate from localized interpolation; then adopt the exact contract in the trend panel.",
+        "canonicalLeaf": "activity.myActivity.trend.aria",
+        "canonicalSourceOwners": ["web\\src\\i18n\\en.json"],
+        "knownGeneratedProjectionOwners": [
+          "web\\src\\i18n\\en\\locale-detail-activity.json",
+          "web\\src\\i18n\\en\\locale-system.json"
+        ],
+        "callerSourceOwners": ["web\\src\\features\\system\\components\\my-activity\\ActivityTrendPanel.tsx"],
+        "testOwners": [
+          "web\\src\\features\\system\\components\\my-activity\\ActivityTrendPanel.test.tsx",
+          "web\\src\\i18n\\resolved-baseline-producer.test.ts",
+          "web\\src\\i18n\\excluded-consistent-defaults.test.ts"
+        ],
+        "testOwnerEvidence": [
+          {"file": "web\\src\\i18n\\resolved-baseline-producer.test.ts", "line": 111, "detail": "Existing exact old trend.aria leaf oracle."},
+          {"file": "web\\src\\i18n\\excluded-consistent-defaults.test.ts", "line": 70, "detail": "Existing exact old trend.aria leaf oracle."}
+        ],
+        "coveringProofNeeded": "0/1/many actions crossed with 0/1/many days, localized counts and accessible whole-message name; preserve unrelated original recovery/default cases rather than relax guards or claim their historical passes cover new wording.",
+        "queueDisposition": "No equivalent corrective row. Parent serializes the exact canonical contract and normal changed projections first; separate caller/test adoption follows that capability. Do not hand-edit generated files or preinvent unused plural keys; normal manifest changes are conditional on actual generator output."
+      },
+      {
+        "id": "MA-N09",
+        "originalNeed": "disabled-copy",
+        "findingIds": ["MA-11"],
+        "objective": "Correct only the existing disabled recovery message from AUTH_FORWARD_HEADER to the actual FORWARD_AUTH_HEADER, then align the page's exact fallback; do not add, rename, inspect or configure an environment variable/provider.",
+        "canonicalLeaf": "activity.myActivity.disabled.description",
+        "canonicalSourceOwners": ["web\\src\\i18n\\en.json"],
+        "knownGeneratedProjectionOwners": [
+          "web\\src\\i18n\\en\\locale-detail-activity.json",
+          "web\\src\\i18n\\en\\locale-system.json"
+        ],
+        "callerSourceOwners": ["web\\src\\features\\system\\pages\\MyActivityPage.tsx"],
+        "testOwners": ["web\\src\\features\\system\\pages\\MyActivityPage.test.tsx"],
+        "readOnlyConfigurationEvidence": "Original MA-11 config.go:533 citation only; no fresh environment/provider read.",
+        "coveringProofNeeded": "Initial 503 guidance uses the actual configuration name and canonical fallback agrees; 401 privacy gate and retained 503 sections remain unchanged.",
+        "queueDisposition": "No equivalent corrective row. Combine exact catalog lease with MA-N08 if parent grants it; caller adoption shares/serializes the page/test lease with MA-N01/03. No configuration-sync task is justified because no variable change is proposed."
+      }
+    ],
+    "nonEquivalentQueueEvidence": [
+      {"line": 1102, "status": "[x]", "item": "audit-page-190", "reason": "Original inventory audit, not a completed corrective implementation."},
+      {"line": 2356, "status": "[x]", "item": "phase5-page-system-my-activity", "reason": "Accepted page and covering historical tests; row explicitly preserves unowned headerinstant/timezone/shared concerns."},
+      {"line": 1818, "status": "[x]", "item": "phase3-recent-activity-feed", "reason": "Completed shared migration/public behavior preservation; not the original MA-02 formatter-dependency correction."},
+      {"line": 1278, "status": "[x]", "item": "phase3-activity-icon-accents", "reason": "Registry presentation, not the three exact panel-owned heading roles."},
+      {"line": 1455, "status": "[x]", "item": "phase3-date-format", "reason": "Existing reusable capability; caller adoption gap does not justify redoing the formatter."},
+      {"line": 1673, "status": "[x]", "item": "phase3-full-test-system-loading-fixtures", "reason": "Historical loading selectors/original fixture preservation, not MA-03 cold-paused source behavior."},
+      {"line": 1674, "status": "[x]", "item": "phase3-full-test-system-query-trust-fixtures", "reason": "Historical resolved-query fixture wait, not MA-03 source correction."},
+      {"line": 2022, "status": "[x]", "item": "phase3-suite939-file-146", "reason": "Historical analytics test repair, not MA-04 chart observation coverage."},
+      {"line": 237, "status": "[x]", "item": "phase6-fix-tesla-profile-live-write", "reason": "Same useUser hook/test files, unrelated profile write-live guard; preserve it."},
+      {"line": 772, "status": "[x]", "item": "phase6-fix-advanced-evidence-date-preferences", "reason": "Other production owners, not the MyActivity/RecentActivity callers."},
+      {"line": 2457, "status": "[x]", "item": "phase6-drivetrain-exact-range-integration", "reason": "Other route, typed hook and producer; no /me/activity ownership."},
+      {"line": 250, "status": "[x]", "item": "phase6-fix-admin-manifest-dlq-caller-catalog", "reason": "Admin exact leaves; global en.json collision is not either MyActivity copy objective."},
+      {"line": 910, "status": "[x]", "item": "phase5-current-source-catalog-closure", "reason": "Generated reference/coherence closure is not semantic correctness of the two exact leaves."},
+      {"line": 2408, "status": "[x]", "item": "phase5-integration-generated-i18n-closure", "reason": "Historical generated-artifact startup root, not MA-10/11 copy."},
+      {"line": 2432, "status": "[x]", "item": "phase5-integration-wave2-i18n-closure", "reason": "Historical split-catalog reference closure, not MA-10/11 copy."},
+      {"line": 2574, "status": "[x]", "item": "phase6-fix-evidence-plural-catalog", "reason": "Exact advancedIntelligence.evidence.sampleLine plurals only, not trend action/day cardinalities."}
+    ],
+    "conditionalDispositions": [
+      {"candidateId": "MC-01", "disposition": "CONDITIONAL_NOT_QUEUED", "reason": "Real valid numeric zero ID is unestablished; keep separate from confirmed DTO shape mismatch.", "native": "NOTRUN"},
+      {"candidateId": "MC-02", "disposition": "CONDITIONAL_NOT_QUEUED", "reason": "No observed malformed null/non-array success; normal producer returns arrays. Do not invent a payload-normalization repair.", "native": "NOTRUN"},
+      {"candidateId": "MC-03", "disposition": "CONDITIONAL_NOT_QUEUED", "reason": "Missing-ID entity-count semantics require domain policy; singleton settings may be legitimate.", "native": "NOTRUN"},
+      {"candidateId": "MC-04", "disposition": "CONDITIONAL_NOT_QUEUED", "reason": "Invalid timestamps/category-tail policy and technical identifier localization are unconfirmed. MA-04's confirmed loaded-observation loss remains independently represented.", "native": "NOTRUN"},
+      {"candidateId": "MC-05", "disposition": "NATIVE_NOTRUN_NOT_QUEUED_AS_SOURCE_FIX", "reason": "No measured native/mobile/RTL/zoom/contrast/focus/touch/theme/forced-colors/chart/reduced-motion failure; absence of acceptance evidence is not a confirmed source defect.", "native": "NOTRUN"}
+    ],
+    "ownershipAndDependencies": {
+      "queueDispatch": "Parent only; these nine needs are report candidates, not inserted queue rows, active claims, completed fixes or an authorization to edit source.",
+      "sameFileSerialization": [
+        "MyActivityPage source/test: MA-N01, MA-N03 and MA-N09 caller adoption; MA-N06 affected fixture adaptation must not overlap.",
+        "myActivityAnalytics source/test: MA-N02 and MA-N04; MA-N06 affected fixture adaptation must not overlap.",
+        "RecentActivityFeed source/test: MA-N02 shared adoption and MA-N06 affected fixture adaptation must not overlap.",
+        "ActivityTrendPanel source/test: MA-N04, MA-N07 and MA-N08 caller adoption.",
+        "ActivityFeedPanel test: MA-N07 and MA-N06 affected fixture adaptation.",
+        "Canonical en.json and normal changed projections: MA-N08 and MA-N09 under one expressly serialized catalog authority."
+      ],
+      "realCapabilityDependencies": [
+        "Exact canonical trend whole-message contract before MA-N08 panel adoption.",
+        "Exact canonical disabled.description correction before MA-N09 page fallback adoption."
+      ],
+      "notDependencies": [
+        "Historical full gates, completed page migrations, native acceptance or validation commands are not new source-capability prerequisites.",
+        "A file collision requires an exclusive combined lease or serialization, not automatic duplicate/obsolete classification.",
+        "MA-N05 producer error trust and MA-N06 frontend DTO truth are separate corrections; neither justifies a broad endpoint rewrite."
+      ]
+    },
+    "inspectionReceipts": [
+      {"shellId": "4175", "exit": 0, "operation": "Read clock/report/log/queue SHA256 values and existing logs/ ignore declaration."},
+      {"shellId": "4230", "exit": 0, "operation": "Parse complete canonical queue; first output exceeded tool display limit. Tool-managed overflow was not opened or copied. This was a readonly extraction, not an audit/test pass."},
+      {"shellId": "4246", "exit": 0, "operation": "Read compact complete-queue mechanism/owner/copy match results and current queue hash."},
+      {"shellId": "4259", "exit": 0, "operation": "Check missing closure and existence of named existing test owners; read current exact row."},
+      {"shellId": "4272", "exit": 0, "operation": "Pin all original report values' semantic hash and original log prefix; confirm zero other Phase6 exact-owner/copy objective matches."}
+    ],
+    "artifactValidationReceipt": {
+      "shellId": "4347",
+      "exit": 0,
+      "validatedAt": "2026-10-14T05:15:48.089592+00:00",
+      "jsonParse": "OK",
+      "originalFieldsPreserved": 28,
+      "originalSemanticSha256": "8d213505cf012005a229b4c6169801e03821dcced3eb839e1019d5830a757d66",
+      "originalLogPrefixSha256": "31fae3ac2e53dd0e5e7a00e32600ce03af37d3e056da5b76faa3e0771c6aae81",
+      "confirmedFindingDispositions": 11,
+      "unrepresentedNeeds": 9,
+      "conditionalDispositions": 5,
+      "namedExistingOwnerPaths": 25,
+      "finalQueueReadSha256": "e357a55b9dbdd0109446b643262414a52881e1946cecf3b2d1f11b1a660a66df",
+      "finalOtherPhase6ExactObjectiveMatches": [],
+      "metadataErrors": [],
+      "limitations": "Artifact metadata only, not source re-audit or application test/native acceptance. Queue changed concurrently between readonly snapshots; no queue write or attribution claimed."
+    },
+    "summary": {
+      "originalConfirmedFindings": 11,
+      "confirmedFindingsDispositioned": 11,
+      "unrepresentedConfirmedFindings": 11,
+      "unrepresentedOwnerNeeds": 9,
+      "equivalentCorrectiveQueueItems": 0,
+      "duplicateOriginalFindings": 0,
+      "conditionalCandidatesRetained": 5,
+      "newFindings": 0,
+      "queueWrites": 0,
+      "sourceOrCatalogWrites": 0,
+      "originalQAStatus": "PARTIAL",
+      "nativePageAcceptance": "NOTRUN"
+    },
+    "checks": {
+      "repeatAudit": "NOTRUN",
+      "tests": "NOTRUN",
+      "lint": "NOTRUN",
+      "compiler": "NOTRUN",
+      "build": "NOTRUN",
+      "browser": "NOTRUN",
+      "networkIdentityBusinessActions": "NOTRUN",
+      "Git": "NOTRUN",
+      "helpersServersInstallsDockerNestedAgents": "NOTRUN",
+      "artifactValidation": "Actual metadata-only shell4347 exit0: written JSON parsed, original28 fields/semantic hash and entire original log prefix preserved, all11 findings/9needs/5candidates mapped,25 existing owner paths present. Raw output retained in the matching ignored log; no application check executed.",
+      "historicalLimitations": "Original incomplete expanded pin closure, command journal and missed return boundary remain PARTIAL. This continuation does not reconstruct or rerun them."
+    }
+  }
+}

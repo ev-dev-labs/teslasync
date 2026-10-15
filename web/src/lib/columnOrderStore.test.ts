@@ -78,19 +78,25 @@ describe('columnOrderStore — applyColumnLayout', () => {
   it('drops hidden keys', () => {
     const layout: ColumnLayout = { order: [], hidden: ['name'] }
     const out = applyColumnLayout(COLS, layout).map((c) => c.key)
-    expect(out).toEqual(['id', 'status', 'detail'])
+    expect(out).toEqual(['id', 'status'])
   })
 
   it('reorders by stored order, then appends remaining keys in source order', () => {
     const layout: ColumnLayout = { order: ['status', 'id'], hidden: [] }
     const out = applyColumnLayout(COLS, layout).map((c) => c.key)
-    expect(out).toEqual(['status', 'id', 'name', 'detail'])
+    expect(out).toEqual(['status', 'id', 'name'])
   })
 
   it('ignores stored keys that are no longer present', () => {
     const layout: ColumnLayout = { order: ['gone', 'name'], hidden: ['ghost'] }
     const out = applyColumnLayout(COLS, layout).map((c) => c.key)
-    expect(out).toEqual(['name', 'id', 'status', 'detail'])
+    expect(out).toEqual(['name', 'id', 'status'])
+  })
+
+  it('preserves an explicitly enabled optional column in a saved layout', () => {
+    const layout: ColumnLayout = { order: ['status', 'id', 'name', 'detail'], hidden: [] }
+    expect(applyColumnLayout(COLS, layout).map((column) => column.key))
+      .toEqual(['status', 'id', 'name', 'detail'])
   })
 
   it('falls back to defaults when the stored layout would render zero columns', () => {

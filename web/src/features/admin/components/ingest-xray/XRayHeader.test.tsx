@@ -67,7 +67,7 @@ describe('XRayHeader', () => {
     renderHeader({ data: makeResponse() });
 
     const region = screen.getByRole('region', {
-      name: /ingest summary metrics/i,
+      name: /Ingest Summary metrics/i,
     });
     expect(region).toBeInTheDocument();
 
@@ -116,7 +116,7 @@ describe('XRayHeader', () => {
     expect(valueFor('Distinct fields')).toBe('87');
     // Buckets [10, 41, 25]: peak = max = 41, avg = 76 / 3 = 25.3 (1 dp).
     expect(valueFor('Peak / bucket')).toBe('41');
-    expect(valueFor('Avg / bucket')).toBe('25.3');
+    expect(valueFor('Avg / bucket')).toBe('25.33');
     // Nothing should be dashed once real data is in.
     expect(screen.queryByText(DASH)).toBeNull();
   });
@@ -126,7 +126,7 @@ describe('XRayHeader', () => {
 
     expect(valueFor('Total samples')).toBe('12,345');
     expect(valueFor('Peak / bucket')).toBe('0');
-    expect(valueFor('Avg / bucket')).toBe('0.0');
+    expect(valueFor('Avg / bucket')).toBe('0.00');
   });
 
   it('coerces missing totals and bucket counts to zero (null-safety)', () => {
@@ -145,7 +145,7 @@ describe('XRayHeader', () => {
     expect(valueFor('Total samples')).toBe('0');
     expect(valueFor('Distinct fields')).toBe('0');
     expect(valueFor('Peak / bucket')).toBe('0');
-    expect(valueFor('Avg / bucket')).toBe('0.0');
+    expect(valueFor('Avg / bucket')).toBe('0.00');
   });
 
   it('maps every window/bucket selection to its human label', () => {

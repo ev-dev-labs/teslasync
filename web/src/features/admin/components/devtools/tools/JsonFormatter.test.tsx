@@ -51,7 +51,7 @@ vi.mock('react-i18next', async () => {
 
 import { JsonFormatterTool } from './JsonFormatter'
 
-const INPUT_LABEL = 'JSON Input'
+const INPUT_LABEL = 'JSON input'
 const EMPTY_MSG = 'Paste JSON above to validate and pretty-print it.'
 const INVALID_MSG = 'Invalid JSON'
 
@@ -80,7 +80,7 @@ describe('JsonFormatterTool', () => {
     render(<JsonFormatterTool />)
 
     expect(
-      screen.getByRole('heading', { name: 'JSON Formatter' }),
+      screen.getByRole('heading', { name: 'JSON formatter' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText(

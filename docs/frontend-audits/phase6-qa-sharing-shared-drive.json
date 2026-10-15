@@ -1,0 +1,1188 @@
+{
+  "item": "phase6-qa-sharing-shared-drive",
+  "attempt": 1,
+  "status": "PARTIAL",
+  "acceptance": "SOURCE_QA_REPORT_ONLY",
+  "page": "web/src/features/sharing/pages/SharedDrivePage.tsx",
+  "routes": [
+    "/s/:token"
+  ],
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-sharing-shared-drive.json",
+    "web/logs/phase6-qa-sharing-shared-drive.log"
+  ],
+  "clock": {
+    "reservationUtc": "2026-10-14T02:29:12.925Z",
+    "returnUtc": "2026-10-14T02:49:12.925Z",
+    "hardUtc": "2026-10-14T02:54:12.925Z",
+    "firstObservedCommandUtc": "2026-10-14T02:35:20.4355075Z",
+    "actualCreationUtc": null,
+    "rule": "Earlier creation+20/25 wins; actual creation unavailable; conservative reservation used without renewal."
+  },
+  "actorIdFromQueue": "2a395521-d37d-4b4f-b17a-1c640d86ea81",
+  "duplicateCheck": {
+    "initialReportExists": false,
+    "initialLogExists": false,
+    "initialQueueLine": 184,
+    "lastInspectedQueueLine": 230,
+    "status": "[~]",
+    "dependency": "phase5-page-sharing-shared-drive",
+    "attempt": 1,
+    "note": "SharedDrivePage; no actual share/token/identity/location/network access.",
+    "decision": "Not already met: original audit-page-178 and completed Phase5 source migration explicitly leave combined Phase6 QA open. No migration repeated.",
+    "finalQueueLine": 255,
+    "exactQueueRow": "| [~] | 6 | phase6-qa-sharing-shared-drive | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-sharing-shared-drive.json; web\\logs\\phase6-qa-sharing-shared-drive.log | phase5-page-sharing-shared-drive | 1 | reserved02:29:12.925Z; actor pending | - | SharedDrivePage; no actual share/token/identity/location/network access. |"
+  },
+  "governingEvidence": {
+    "orchestrator": "Fully read296lines",
+    "designContract": "Fully read2539lines; oversized output gaps recovered",
+    "mission": "principles/architecture and43-45 at1416-1517",
+    "inventory": "frontend-inventory.md:229 /s/:token original audit-page-178",
+    "handoff": "Current recovery1-141; complete raw handoff read",
+    "instructions": [
+      "docs/frontend-worker-conventions.md",
+      "docs/CONTRIBUTING.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "authority": "Explicit source-only restrictions supersede general test/compiler/server suggestions; current design overrides historical neon/legacy examples."
+  },
+  "purpose": "Guest chrome-less owner-disclosed drive report,delegating charging-session payloads without acquiring private substitutes.",
+  "confirmedIssueCount": 7,
+  "confirmedSiteCount": 16,
+  "conditionalCandidateCount": 4,
+  "needsCount": 6,
+  "confirmedIssues": [
+    {
+      "id": "F01",
+      "rule": "public-trust-classification",
+      "file": "web/src/features/sharing/pages/SharedDrivePage.tsx",
+      "line": 223,
+      "siteCount": 1,
+      "priority": "P1",
+      "owner": "integration",
+      "detail": "Any error becomes expired/revoked copy at88 with no retry/paused differentiation and suppresses retained drive/session. Confirmed token failure MUST stay fail-closed.",
+      "fix": "Define public-safe response/cache policy distinguishing token unavailability from transient/paused failure; do not blindly restore cached revoked reports.",
+      "repro": "UNEXECUTED synthetic fixture: retained payload + Error('temporary failure'),isLoading false -> ExpiredShareView;403 must still remove report/drawer. Paused no-data must not falsely assert expiry."
+    },
+    {
+      "id": "F02",
+      "rule": "hidden-section",
+      "file": "web/src/features/sharing/pages/SharedDrivePage.tsx",
+      "line": 261,
+      "evidenceLines": [
+        261,
+        319,
+        366
+      ],
+      "siteCount": 3,
+      "priority": "P2",
+      "owner": "page",
+      "detail": "Map/elevation/speed shells disappear independently; combined fallback411 only explains combined absence.",
+      "fix": "Named neutral owner-not-included shells preserving privacy; no private geometry fetch. Optional vehicle/metrics remain owner-withheld.",
+      "repro": "UNEXECUTED fixture map_points=null,elevation with2points,speed=null: elevation survives,but no route/speed absence explanation. Repeat only-speed/only-map."
+    },
+    {
+      "id": "F03",
+      "rule": "public-preference-config-boundary",
+      "file": "web/src/hooks/useSettings.ts",
+      "line": 82,
+      "siteCount": 2,
+      "priority": "P1",
+      "owner": "integration",
+      "evidence": [
+        "SharedDrivePage.tsx:145",
+        "useUnits.ts:119",
+        "useSettings.ts:82-88,116-122",
+        "MapTileLayer.tsx:56-60",
+        "api/settings.ts:24,133"
+      ],
+      "detail": "Public page mounts unconditional settings/refetch/broadcast and conditional map-config queries. Isolated public metric bridge does not prove page-safe wiring. Guest responses/disclosure NOTRUN.",
+      "fix": "Explicit public-safe units/locale/precision/config contract at existing owners; no auth widening,credential exposure,new store or workspace subscription.",
+      "repro": "UNEXECUTED synthetic request-intercepted component seam forbidding settings/config queries while mounting real public page hooks; no actual token/network/identity operation."
+    },
+    {
+      "id": "F04",
+      "rule": "color-only-map-endpoints",
+      "file": "web/src/features/sharing/pages/SharedDrivePage.tsx",
+      "line": 279,
+      "evidenceLines": [
+        279,
+        286
+      ],
+      "siteCount": 2,
+      "priority": "P2",
+      "owner": "page",
+      "detail": "Fixed green/red first/last disclosed markers have no localized visible/text endpoint distinction at call site.",
+      "fix": "Existing restrained map roles plus start/end-of-disclosed-trace labels,retain points/privacy; reuse completed color root.",
+      "repro": "UNEXECUTED synthetic3point map under indistinguishable colors/forced-colors and keyboard/screenreader review. Native Leaflet/contrast NOTRUN."
+    },
+    {
+      "id": "F05",
+      "rule": "localized-number-display",
+      "file": "web/src/features/sharing/pages/SharedDrivePage.tsx",
+      "line": 343,
+      "siteCount": 6,
+      "priority": "P2",
+      "owner": "display consumers",
+      "evidence": [
+        "SharedDrivePage.tsx:343,390",
+        "SharedSessionReport.tsx:111,116,123",
+        "PublicSessionBrief.tsx:40"
+      ],
+      "detail": "Two drive Y ticks,three session ticks and session battery endpoint statement directly stringify Math.round rather than locale formatter.",
+      "fix": "Format rounded display values with existing explicit public fmtNumber preserving rounding/signs/precision and SI. Derived socDelta arithmetic20 unchanged.",
+      "repro": "UNEXECUTED Arabic-locale/large/negative-valid elevation fixture:compare ticks/endpoints with existing tooltip/card formatter; no locale/browser operation executed."
+    },
+    {
+      "id": "F06",
+      "rule": "session-chart-alternative-gap",
+      "file": "web/src/features/sharing/pages/SharedSessionReport.tsx",
+      "line": 94,
+      "siteCount": 1,
+      "priority": "P1",
+      "owner": "session support",
+      "detail": "ChartCard toolbar/exportable/ariaLabel has no data/dataColumns/exportData; comment92 exempts dense trace from table. ChartCard14-41 forwards supplied props,not inferred samples. Drive frames already supply complete alternatives.",
+      "fix": "Complete disclosed curve alternative/raw authorized export through existing frame; preserve all samples. Actual export behavior NOTRUN.",
+      "repro": "UNEXECUTED synthetic charging_session37curve points:real chart alternative and export must retain every sample,not only mocked props."
+    },
+    {
+      "id": "F07",
+      "rule": "restrained-chart-ink",
+      "file": "web/src/features/sharing/pages/SharedSessionReport.tsx",
+      "line": 143,
+      "siteCount": 1,
+      "priority": "P2",
+      "owner": "session support",
+      "detail": "Delegated battery series retains fixed electric cyan #00f0ff; drive uses chartTokens. No composed contrast failure claimed.",
+      "fix": "Existing restrained series role preserving battery/power identity and saved choices; no new palette/sampling.",
+      "repro": "UNEXECUTED safe synthetic session light/dark/custom visual review; native acceptance NOTRUN. contentStyle126 is Recharts API exception,not static-inline-style violation."
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "evidence": "SharedDrivePage.tsx:270,273; MapTileLayer.tsx:67-85",
+      "detail": "Fixed dark style/CSS-variable polyline need actual SVG/Canvas/theme/tiles/forced-colors/low-bandwidth proof; no default Canvas bug inferred.",
+      "repro": "UNEXECUTED authorized synthetic renderer matrix,never actual locations or network."
+    },
+    {
+      "id": "C02",
+      "evidence": "SharedDrivePage.tsx:114,263,333,380; SharedSessionReport.tsx:166-173",
+      "detail": "50vh/fixed chart heights,zoom7,drawer/table/export focus,long headers/session44px targets need measured geometry,not source-class assertions.",
+      "repro": "UNEXECUTED320/375/390/430/768/1024/1280/1440/1920/2560,narrow containers,RTL,200%text,safeareas,keyboard,forced-colors,reduced-motion/low-bandwidth."
+    },
+    {
+      "id": "C03",
+      "evidence": "SharedDrivePage.tsx:163-206;unitConversion.ts:130-141;PublicDriveBrief.tsx:43-49",
+      "detail": "Per-point schema declares numbers; malformed null/nonfinite/coordinates/end-battery need boundary proof. Arithmetic can coerce null;backend emission not established.",
+      "repro": "UNEXECUTED synthetic invalid points/paired endpoints:unknown must not become measured zero or erase valid neighbor."
+    },
+    {
+      "id": "C04",
+      "evidence": "App.tsx:523-565; historical audit-page-178",
+      "detail": "Global auth/gates,view-count mutation/privacy,efficiency backend provenance unverified. Historical approximation observation not independently reconfirmed,no fresh backend finding counted.",
+      "repro": "UNEXECUTED separately authorized synthetic public acceptance with read-count mutation guard/redaction; all live share/token/identity/location/network operations forbidden."
+    }
+  ],
+  "tests": {
+    "status": "NOTRUN",
+    "runnerDiscovery": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "declaredTotal": 33,
+    "files": [
+      {
+        "file": "web/src/features/sharing/pages/SharedDrivePage.test.tsx",
+        "literalDeclarations": 29,
+        "eachDeclarations": 1,
+        "literalEachRows": 2,
+        "declaredExpandedCases": 30,
+        "executed": 0,
+        "evidence": "930 it.each drive/session;all979lines inspected;exact names/lines raw log2843/3013",
+        "limitations": "Settings/share hook/Leaflet/Recharts/fallback i18n mocks;real drawer subset is not native/network/catalog proof."
+      },
+      {
+        "file": "web/src/features/sharing/components/operationalbrief-public/PublicReportBrief.test.tsx",
+        "declaredExpandedCases": 3,
+        "executed": 0,
+        "limitations": "Bridge-only no-auth/unit/workspace test does not establish real page wiring."
+      }
+    ]
+  },
+  "commands": {
+    "rawLog": "web/logs/phase6-qa-sharing-shared-drive.log",
+    "format": "Exact early command ledger plus COMMAND/body/EXIT/RAW blocks;cached full raw outputs retained;small initial stdout also in tool responses.",
+    "failures": [
+      {
+        "shellId": "2790",
+        "exit": 1,
+        "error": "Nonexistent web/src/routes path; recovered actual App/routeLoaders reads."
+      },
+      {
+        "shellId": "2826",
+        "exit": 1,
+        "error": "Extra closing parenthesis PowerShell parse;body not executed;corrected2843."
+      },
+      {
+        "shellId": "2933",
+        "exit": 1,
+        "error": "Case-colliding JSON subFSMs/subFsms;recovered -AsHashtable2980/3080."
+      },
+      {
+        "shellId": "3193",
+        "exit": 1,
+        "error": "Artifact serialization command rejected before execution: The filename or extension is too long (os206). Split artifact writes;no output/snapshots inferred from rejected command."
+      },
+      {
+        "error": "Artifact validation detected changed canonical English catalog pin:25web inputs,24matched;7mechanisms/6needs valid. Honest failure,not bypassed source acceptance.",
+        "shellId": "3246",
+        "exit": 1
+      }
+    ],
+    "prohibited": "Tests/compiler/lint/suites/helpers/servers/browser/network/API/share/token/identity/location/Git/subagents/installs NOTRUN"
+  },
+  "nativeAcceptance": "NOTRUN",
+  "pageAcceptance": "NOTRUN",
+  "evidenceLimits": [
+    "DONE only means assigned source-QA report,not page/application acceptance.",
+    "All reproduction steps unexecuted;source mechanism distinguished from conditional/native candidates.",
+    "No historical immutable source snapshot available;queue original400->437/8sections receipt is historical,not freshly verified.",
+    "Queue whole-file hash/line numbers changed concurrently;no worker queue/Git writes or attribution of another writer.",
+    "Pins cover inspected inputs,not repository-clean claim;shared internals/global gates not exhaustive.",
+    "Canonical English catalog drift prevents an all-input preservation pass;source page/test/support/hook/route inputs remain matched. Report PARTIAL,not whole-page acceptance.",
+    "Conservative return crossed during large artifact write failure/recovery;hard limit not renewed."
+  ],
+  "issues": [
+    {
+      "id": "F01",
+      "rule": "public-trust-classification",
+      "file": "web/src/features/sharing/pages/SharedDrivePage.tsx",
+      "line": 223,
+      "siteCount": 1,
+      "priority": "P1",
+      "owner": "integration",
+      "detail": "Any error becomes expired/revoked copy at88 with no retry/paused differentiation and suppresses retained drive/session. Confirmed token failure MUST stay fail-closed.",
+      "fix": "Define public-safe response/cache policy distinguishing token unavailability from transient/paused failure; do not blindly restore cached revoked reports.",
+      "repro": "UNEXECUTED synthetic fixture: retained payload + Error('temporary failure'),isLoading false -> ExpiredShareView;403 must still remove report/drawer. Paused no-data must not falsely assert expiry."
+    },
+    {
+      "id": "F02",
+      "rule": "hidden-section",
+      "file": "web/src/features/sharing/pages/SharedDrivePage.tsx",
+      "line": 261,
+      "evidenceLines": [
+        261,
+        319,
+        366
+      ],
+      "siteCount": 3,
+      "priority": "P2",
+      "owner": "page",
+      "detail": "Map/elevation/speed shells disappear independently; combined fallback411 only explains combined absence.",
+      "fix": "Named neutral owner-not-included shells preserving privacy; no private geometry fetch. Optional vehicle/metrics remain owner-withheld.",
+      "repro": "UNEXECUTED fixture map_points=null,elevation with2points,speed=null: elevation survives,but no route/speed absence explanation. Repeat only-speed/only-map."
+    },
+    {
+      "id": "F03",
+      "rule": "public-preference-config-boundary",
+      "file": "web/src/hooks/useSettings.ts",
+      "line": 82,
+      "siteCount": 2,
+      "priority": "P1",
+      "owner": "integration",
+      "evidence": [
+        "SharedDrivePage.tsx:145",
+        "useUnits.ts:119",
+        "useSettings.ts:82-88,116-122",
+        "MapTileLayer.tsx:56-60",
+        "api/settings.ts:24,133"
+      ],
+      "detail": "Public page mounts unconditional settings/refetch/broadcast and conditional map-config queries. Isolated public metric bridge does not prove page-safe wiring. Guest responses/disclosure NOTRUN.",
+      "fix": "Explicit public-safe units/locale/precision/config contract at existing owners; no auth widening,credential exposure,new store or workspace subscription.",
+      "repro": "UNEXECUTED synthetic request-intercepted component seam forbidding settings/config queries while mounting real public page hooks; no actual token/network/identity operation."
+    },
+    {
+      "id": "F04",
+      "rule": "color-only-map-endpoints",
+      "file": "web/src/features/sharing/pages/SharedDrivePage.tsx",
+      "line": 279,
+      "evidenceLines": [
+        279,
+        286
+      ],
+      "siteCount": 2,
+      "priority": "P2",
+      "owner": "page",
+      "detail": "Fixed green/red first/last disclosed markers have no localized visible/text endpoint distinction at call site.",
+      "fix": "Existing restrained map roles plus start/end-of-disclosed-trace labels,retain points/privacy; reuse completed color root.",
+      "repro": "UNEXECUTED synthetic3point map under indistinguishable colors/forced-colors and keyboard/screenreader review. Native Leaflet/contrast NOTRUN."
+    },
+    {
+      "id": "F05",
+      "rule": "localized-number-display",
+      "file": "web/src/features/sharing/pages/SharedDrivePage.tsx",
+      "line": 343,
+      "siteCount": 6,
+      "priority": "P2",
+      "owner": "display consumers",
+      "evidence": [
+        "SharedDrivePage.tsx:343,390",
+        "SharedSessionReport.tsx:111,116,123",
+        "PublicSessionBrief.tsx:40"
+      ],
+      "detail": "Two drive Y ticks,three session ticks and session battery endpoint statement directly stringify Math.round rather than locale formatter.",
+      "fix": "Format rounded display values with existing explicit public fmtNumber preserving rounding/signs/precision and SI. Derived socDelta arithmetic20 unchanged.",
+      "repro": "UNEXECUTED Arabic-locale/large/negative-valid elevation fixture:compare ticks/endpoints with existing tooltip/card formatter; no locale/browser operation executed."
+    },
+    {
+      "id": "F06",
+      "rule": "session-chart-alternative-gap",
+      "file": "web/src/features/sharing/pages/SharedSessionReport.tsx",
+      "line": 94,
+      "siteCount": 1,
+      "priority": "P1",
+      "owner": "session support",
+      "detail": "ChartCard toolbar/exportable/ariaLabel has no data/dataColumns/exportData; comment92 exempts dense trace from table. ChartCard14-41 forwards supplied props,not inferred samples. Drive frames already supply complete alternatives.",
+      "fix": "Complete disclosed curve alternative/raw authorized export through existing frame; preserve all samples. Actual export behavior NOTRUN.",
+      "repro": "UNEXECUTED synthetic charging_session37curve points:real chart alternative and export must retain every sample,not only mocked props."
+    },
+    {
+      "id": "F07",
+      "rule": "restrained-chart-ink",
+      "file": "web/src/features/sharing/pages/SharedSessionReport.tsx",
+      "line": 143,
+      "siteCount": 1,
+      "priority": "P2",
+      "owner": "session support",
+      "detail": "Delegated battery series retains fixed electric cyan #00f0ff; drive uses chartTokens. No composed contrast failure claimed.",
+      "fix": "Existing restrained series role preserving battery/power identity and saved choices; no new palette/sampling.",
+      "repro": "UNEXECUTED safe synthetic session light/dark/custom visual review; native acceptance NOTRUN. contentStyle126 is Recharts API exception,not static-inline-style violation."
+    }
+  ],
+  "generatedUtc": "2026-10-14T02:49:42.6969078Z",
+  "returnLimitation": "Conservative20-minute return crossed during artifact serialization/OS206 recovery; no clock renewal. Findings and pin receipts delivered before hard limit; runtime remains NOTRUN.",
+  "sections": {
+    "session": "Delegated header/place/charger/description,brief,optional vehicle,complete returned curve,empty fallback,footer30-181",
+    "count": 8,
+    "items": [
+      "Header/description/route metadata240-258",
+      "Hero map260-292",
+      "Owner measurement brief296-307",
+      "Optional vehicle309-316",
+      "Elevation318-363",
+      "Speed365-408",
+      "Combined empty fallback410-418",
+      "Footer420-433"
+    ],
+    "countUnit": "Named drive JSX comment sections,not simultaneous mount count"
+  },
+  "actions": [
+    "Native unavailable home anchor90-95",
+    "PublicBrief review/details/close:PublicReportBrief34-62;declared real drawer tests840-908",
+    "Drive chart alternatives/toolbar/rawSI exports321-333,368-380",
+    "Existing map controls/gestures264-286,no scrollWheelZoom",
+    "Native external protected link424-430",
+    "Session curve advertised toolbar/export94-100,alternatives gapF06"
+  ],
+  "states": {
+    "empty": "Combined fallback411 only when no drawable map/both profiles empty;individual gapsF02",
+    "recovery": "Only successful hook response restores;no Retry action",
+    "loading": "Guest-branded role=status aria-busy skeleton101-129,218-220;no invented readings",
+    "error": "Any error223 suppresses cached drive/session before branch;confirmed token suppression mandatory",
+    "retained": "Error-free cached payload renders;all errors suppress;no transient warning/last-success/retry differentiation",
+    "trust": "Owner-selected event,date not freshness,not_scored/no score,omitted not zero,observedAt null",
+    "null": "normalizeSharedDriveData null/undefined -> undefined;optional owner data withheld,not zero",
+    "independence": "Returned map/elevation/speed must survive omitted neighbor",
+    "paused": "No fetchStatus/isPaused/isRefreshBlocked consumed;no paused presentation,no authoritative offline claim"
+  },
+  "siPreferencesWorkspace": {
+    "SI": "Versioned SI reference retained;legacy share transition normalizes once types/sharing183-216 onward. Meters/seconds/mps/Wh-per-m on wire;distance/speed converted only display,elevation/0.3048 feet,efficiency*1000 then*1.609344 imperial. Exports original distance_m/elevation_m/speed_mps208-215.",
+    "workspace": "App565 mounts s/:token outside Layout574;routeLoaders lazy SharedDrive;PublicReportBrief42 no workspace range/vehicle filter. Standalone main/PageHeader is intentional PageContainer exception.",
+    "preferences": "useUnits saved units/locale/precision;numberFormatting existing subscription;public bridge itself no auth/workspace queries but page wiringF03. Never reset saved theme/density/palette/units.",
+    "session": "Summary Wh/W SI;existing curve t_s/power_kw/battery_pct/energy_kwh stays its explicit existing units. Source currency/efficiency rounding preserved,no inference/conversion."
+  },
+  "accessibilityMobileLocalization": {
+    "mobile": "w-full/min-w-0/px4,50vh hero,200px drive220px session charts;mission widths/narrow allocation/RTL/200%text/longlabels/safeareas allNOTRUN",
+    "source": "Main landmarks/status,localized heading/chart names,drive data alternatives,protected anchors with44px classes;FadeIn24-33 uses reduced-motion hook. No native keyboard/focus/contrast proof.",
+    "localization": "63immediate canonical share keys,generated locale-sharing share parityTrue;raw technical SI fields and Tesla brand not new English violations. Locale number gapF05."
+  },
+  "dataSources": [
+    {
+      "policy": "token query key,enabled!!token,retryfalse,staleTimeSLOW,AbortSignal;no actual token/request",
+      "evidence": "useSharing115-123",
+      "hook": "useSharedDrive",
+      "endpoint": "/share/${token}"
+    },
+    {
+      "policy": "unconditional query/refetch/broadcast mechanism,guest response unverified",
+      "evidence": "useUnits119;useSettings82-88,116-122;api/settings24",
+      "hook": "useUnits -> useSettings",
+      "endpoint": "/settings"
+    },
+    {
+      "policy": "Conditional disclosed map;provider/low-bandwidth selection,no config/tile requests executed",
+      "evidence": "MapTileLayer56-60;api/settings133",
+      "hook": "MapTileLayer",
+      "endpoint": "/system/map-config"
+    }
+  ],
+  "requiredSharedChanges": [
+    {
+      "owner": "SharedDrivePage/useSharing integration",
+      "need": "Public token/trust response and cached privacy policy;copy only if genuinely missing",
+      "id": "N01",
+      "findings": [
+        "F01"
+      ],
+      "queue": "audit-page-178 historical need carried forward once;no exact pending repair found;never duplicate Phase5"
+    },
+    {
+      "owner": "Existing useUnits/useSettings/MapTileLayer public integration and consumers",
+      "need": "Explicit guest-safe units/locale/precision/map config,without credentials/workspace/auth widening/new store",
+      "id": "N02",
+      "findings": [
+        "F03"
+      ],
+      "queue": "audit-page-178 same root;completed map-tile-layer/bridge tests not page integration;no exact pending root found"
+    },
+    {
+      "owner": "SharedDrivePage.tsx + adjacent existing test",
+      "need": "Independent disclosed-profile empty shells,no private substitutes",
+      "id": "N03",
+      "findings": [
+        "F02"
+      ],
+      "queue": "No exact pending repair;not original migration retry"
+    },
+    {
+      "owner": "SharedDrivePage.tsx + adjacent existing test",
+      "need": "Disclosed endpoint labels and existing restrained map roles",
+      "id": "N04",
+      "findings": [
+        "F04"
+      ],
+      "queue": "phase3-map-renderer-color-root[x] already met;reuse,no root redispatch;no exact consumer fix found"
+    },
+    {
+      "owner": "SharedDrivePage/SharedSessionReport/PublicSessionBrief display boundaries",
+      "need": "Existing locale formatter at rounded display;separate exact test leases",
+      "id": "N05",
+      "findings": [
+        "F05"
+      ],
+      "queue": "phase3-full-test-public-metric-language[x] different scope;no exact display repair found;serialize overlapping page claims"
+    },
+    {
+      "owner": "SharedSessionReport.tsx;covering test ownership must be separately reserved",
+      "need": "Complete disclosed curve data alternative/authorized raw export plus restrained ink",
+      "id": "N06",
+      "findings": [
+        "F06",
+        "F07"
+      ],
+      "queue": "Combine same-owner curve needs once;no exact pending repair found;no new palette/frame root"
+    }
+  ],
+  "ruleReceipts": {
+    "pageContainer": "Standalone public exception135/App565,not7 violations",
+    "counts": {
+      "sessionInk": 1,
+      "publicPreferencesConfig": 2,
+      "hidden": 3,
+      "localizedNumber": 6,
+      "trust": 1,
+      "sessionAlternative": 1,
+      "endpointMeaning": 2
+    },
+    "hiddenSection": "Broad5matches:derived179 not JSX,vehicle310 privacy exception,261/319/366 three gaps;optional metric groups deliberately owner-withheld with limitation",
+    "patternScope": "Five production page/domain files",
+    "backend": "All four Go rules NOTAPPLICABLE",
+    "rawPatternOutput": "shell3013/3080 log:raw-html/vendorimport/oldAPI/doubleprefix/camelparam/fetchEffect no matches;contentStyle126 broad style match1 is Recharts exception"
+  },
+  "preservation": {
+    "matchedWebInputCount": 24,
+    "inputs": [
+      {
+        "lines": 332,
+        "beforeSha256": "E856DD5EA5BF141C161BFA3EF8527BA3062DBC9D1C15EF2A72213B620173BF47",
+        "file": "docs/frontend-audits/audit-page-178.json",
+        "unchanged": true,
+        "bytes": 29549,
+        "afterSha256": "E856DD5EA5BF141C161BFA3EF8527BA3062DBC9D1C15EF2A72213B620173BF47"
+      },
+      {
+        "lines": 2539,
+        "beforeSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+        "file": "docs/frontend-design-contract.md",
+        "unchanged": true,
+        "bytes": 182554,
+        "afterSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E"
+      },
+      {
+        "lines": 1460,
+        "beforeSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+        "file": "docs/frontend-inventory.md",
+        "unchanged": true,
+        "bytes": 1743758,
+        "afterSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA"
+      },
+      {
+        "lines": 1593,
+        "beforeSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "file": "docs/frontend-mission.md",
+        "unchanged": true,
+        "bytes": 31079,
+        "afterSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F"
+      },
+      {
+        "lines": 152,
+        "beforeSha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+        "file": "docs/frontend-worker-conventions.md",
+        "unchanged": true,
+        "bytes": 8608,
+        "afterSha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871"
+      },
+      {
+        "lines": 296,
+        "beforeSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+        "file": "docs/orchestrator-loop.md",
+        "unchanged": true,
+        "bytes": 16978,
+        "afterSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767"
+      },
+      {
+        "lines": 2460,
+        "beforeSha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+        "file": "docs/session-handoff.md",
+        "unchanged": true,
+        "bytes": 163930,
+        "afterSha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2"
+      },
+      {
+        "lines": 2308,
+        "beforeSha256": "3170414EC86F9721305E1FB59CA6A181755F0302D9E16FDDF348935CD53F76F2",
+        "file": "migration-queue.md",
+        "unchanged": false,
+        "bytes": 2602435,
+        "afterSha256": "8F4A383E3EFE87500BE2594AA8F5EBBAC206BE4E798F39DEF83940C0ED2D5C9F"
+      },
+      {
+        "lines": 458,
+        "beforeSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+        "file": "web/src/api/client.ts",
+        "unchanged": true,
+        "bytes": 17825,
+        "afterSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5"
+      },
+      {
+        "lines": 124,
+        "beforeSha256": "20ADF68CFB261BE90B21F191920EBCD2252FB6AEC172F783C3BF8DE2BAD5A049",
+        "file": "web/src/api/hooks/useSharing.ts",
+        "unchanged": true,
+        "bytes": 4659,
+        "afterSha256": "20ADF68CFB261BE90B21F191920EBCD2252FB6AEC172F783C3BF8DE2BAD5A049"
+      },
+      {
+        "lines": 133,
+        "beforeSha256": "CA29E09F902EFC13D6C97D735BFC824871B73FA147AF6A7EE98DE572F1B25817",
+        "file": "web/src/api/settings.ts",
+        "unchanged": true,
+        "bytes": 7750,
+        "afterSha256": "CA29E09F902EFC13D6C97D735BFC824871B73FA147AF6A7EE98DE572F1B25817"
+      },
+      {
+        "lines": 919,
+        "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "file": "web/src/App.tsx",
+        "unchanged": true,
+        "bytes": 68125,
+        "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C"
+      },
+      {
+        "lines": 48,
+        "beforeSha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+        "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+        "unchanged": true,
+        "bytes": 1958,
+        "afterSha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67"
+      },
+      {
+        "lines": 198,
+        "beforeSha256": "9F63C7228617637CD37A2C02D9FB1420C67A3FD5826A32A93F39CB60B37F5B44",
+        "file": "web/src/components/maps/MapTileLayer.tsx",
+        "unchanged": true,
+        "bytes": 8099,
+        "afterSha256": "9F63C7228617637CD37A2C02D9FB1420C67A3FD5826A32A93F39CB60B37F5B44"
+      },
+      {
+        "lines": 39,
+        "beforeSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "unchanged": true,
+        "bytes": 1493,
+        "afterSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F"
+      },
+      {
+        "lines": 3,
+        "beforeSha256": "D6628FF980ED37808D4250615A41923A4B1D365F23F8EDEF36CC8E9EA3919BAA",
+        "file": "web/src/features/sharing/components/operationalbrief-public/index.ts",
+        "unchanged": true,
+        "bytes": 171,
+        "afterSha256": "D6628FF980ED37808D4250615A41923A4B1D365F23F8EDEF36CC8E9EA3919BAA"
+      },
+      {
+        "lines": 90,
+        "beforeSha256": "95C0256C5E6141A5A629ED4798E28ED065B278EA46AC0CF3985543BD2CD3F5AB",
+        "file": "web/src/features/sharing/components/operationalbrief-public/PublicDriveBrief.tsx",
+        "unchanged": true,
+        "bytes": 5081,
+        "afterSha256": "95C0256C5E6141A5A629ED4798E28ED065B278EA46AC0CF3985543BD2CD3F5AB"
+      },
+      {
+        "lines": 129,
+        "beforeSha256": "9437D53C41F54E299AECF2A53F2465C04B42EF9F4AB71BE8A7C4A4200F444D5A",
+        "file": "web/src/features/sharing/components/operationalbrief-public/PublicReportBrief.test.tsx",
+        "unchanged": true,
+        "bytes": 8074,
+        "afterSha256": "9437D53C41F54E299AECF2A53F2465C04B42EF9F4AB71BE8A7C4A4200F444D5A"
+      },
+      {
+        "lines": 64,
+        "beforeSha256": "58B8C121ECFA0997C7A505033C53D09899E5A9C79915208AF65D151243065EA8",
+        "file": "web/src/features/sharing/components/operationalbrief-public/PublicReportBrief.tsx",
+        "unchanged": true,
+        "bytes": 2553,
+        "afterSha256": "58B8C121ECFA0997C7A505033C53D09899E5A9C79915208AF65D151243065EA8"
+      },
+      {
+        "lines": 84,
+        "beforeSha256": "52B2BD69097F3473F651AB3C57F79FFFD424093E174AB06FB4043A5BA4821157",
+        "file": "web/src/features/sharing/components/operationalbrief-public/PublicSessionBrief.tsx",
+        "unchanged": true,
+        "bytes": 5016,
+        "afterSha256": "52B2BD69097F3473F651AB3C57F79FFFD424093E174AB06FB4043A5BA4821157"
+      },
+      {
+        "lines": 979,
+        "beforeSha256": "5C9906889E194D16C1E4E3D9CD893290D4AC6048FB3D153B1B2EC564B7C66A5E",
+        "file": "web/src/features/sharing/pages/SharedDrivePage.test.tsx",
+        "unchanged": true,
+        "bytes": 41764,
+        "afterSha256": "5C9906889E194D16C1E4E3D9CD893290D4AC6048FB3D153B1B2EC564B7C66A5E"
+      },
+      {
+        "lines": 437,
+        "beforeSha256": "E0A07799FF880A1A2C85723E2EC2D7A8D63124C7E6B91B6A7F392E70D53DACAF",
+        "file": "web/src/features/sharing/pages/SharedDrivePage.tsx",
+        "unchanged": true,
+        "bytes": 17414,
+        "afterSha256": "E0A07799FF880A1A2C85723E2EC2D7A8D63124C7E6B91B6A7F392E70D53DACAF"
+      },
+      {
+        "lines": 179,
+        "beforeSha256": "D83DA4D3CDC0D724E90F4BE1DC4ABBB480C6CE63D72FBFDB31854B68B597F815",
+        "file": "web/src/features/sharing/pages/SharedSessionReport.tsx",
+        "unchanged": true,
+        "bytes": 6991,
+        "afterSha256": "D83DA4D3CDC0D724E90F4BE1DC4ABBB480C6CE63D72FBFDB31854B68B597F815"
+      },
+      {
+        "lines": 47,
+        "beforeSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "unchanged": true,
+        "bytes": 2095,
+        "afterSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"
+      },
+      {
+        "lines": 15,
+        "beforeSha256": "57C3896D953DB7DD5978D042E01C3821577213279EDDF80D239835B91EC02E7F",
+        "file": "web/src/hooks/usePublicOperationalMetrics.ts",
+        "unchanged": true,
+        "bytes": 680,
+        "afterSha256": "57C3896D953DB7DD5978D042E01C3821577213279EDDF80D239835B91EC02E7F"
+      },
+      {
+        "lines": 146,
+        "beforeSha256": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+        "file": "web/src/hooks/useSettings.ts",
+        "unchanged": true,
+        "bytes": 5253,
+        "afterSha256": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3"
+      },
+      {
+        "lines": 194,
+        "beforeSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+        "file": "web/src/hooks/useUnits.ts",
+        "unchanged": true,
+        "bytes": 6545,
+        "afterSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14"
+      },
+      {
+        "lines": 39002,
+        "beforeSha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+        "file": "web/src/i18n/en.json",
+        "unchanged": false,
+        "bytes": 1843667,
+        "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886"
+      },
+      {
+        "lines": 2113,
+        "beforeSha256": "94D37FFEBCFB94BE85208DB551CC3873CF1EA8BEB7578E18A267C01734E53ECE",
+        "file": "web/src/i18n/en/locale-sharing.json",
+        "unchanged": true,
+        "bytes": 93653,
+        "afterSha256": "94D37FFEBCFB94BE85208DB551CC3873CF1EA8BEB7578E18A267C01734E53ECE"
+      },
+      {
+        "lines": 127,
+        "beforeSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+        "file": "web/src/lib/routeLoaders.ts",
+        "unchanged": true,
+        "bytes": 11392,
+        "afterSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58"
+      },
+      {
+        "lines": 500,
+        "beforeSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+        "file": "web/src/lib/unitConversion.ts",
+        "unchanged": true,
+        "bytes": 16774,
+        "afterSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE"
+      },
+      {
+        "lines": 168,
+        "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "file": "web/src/lib/workspaceScope.ts",
+        "unchanged": true,
+        "bytes": 4411,
+        "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+      },
+      {
+        "lines": 254,
+        "beforeSha256": "8BF1A4491DCC639C2297A5C9D57AB80C2FC42D928A28CEE5DAA5250B47803ECF",
+        "file": "web/src/types/sharing.ts",
+        "unchanged": true,
+        "bytes": 8151,
+        "afterSha256": "8BF1A4491DCC639C2297A5C9D57AB80C2FC42D928A28CEE5DAA5250B47803ECF"
+      }
+    ],
+    "snapshotPolicy": "24matched web input full-byte snapshots in permitted log match earlier before hashes;changed canonical catalog full pre-drift bytes not preserved,only original hash and relevant share text read. Do not claim full original catalog byte preservation.",
+    "webInputCount": 25,
+    "inputCount": 33
+  },
+  "filesRead": [
+    "docs/frontend-audits/audit-page-178.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "web/src/api/client.ts",
+    "web/src/api/hooks/useSharing.ts",
+    "web/src/api/settings.ts",
+    "web/src/App.tsx",
+    "web/src/components/layout/layout-reference/ChartCard.tsx",
+    "web/src/components/maps/MapTileLayer.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/features/sharing/components/operationalbrief-public/index.ts",
+    "web/src/features/sharing/components/operationalbrief-public/PublicDriveBrief.tsx",
+    "web/src/features/sharing/components/operationalbrief-public/PublicReportBrief.test.tsx",
+    "web/src/features/sharing/components/operationalbrief-public/PublicReportBrief.tsx",
+    "web/src/features/sharing/components/operationalbrief-public/PublicSessionBrief.tsx",
+    "web/src/features/sharing/pages/SharedDrivePage.test.tsx",
+    "web/src/features/sharing/pages/SharedDrivePage.tsx",
+    "web/src/features/sharing/pages/SharedSessionReport.tsx",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/usePublicOperationalMetrics.ts",
+    "web/src/hooks/useSettings.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-sharing.json",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/types/sharing.ts",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/CONTRIBUTING.md"
+  ],
+  "release": {
+    "artifactAndCommandUtc": "2026-10-14T02:51:26.1013235Z",
+    "artifacts": "Only two owned artifacts written",
+    "sourceWrites": "NONE,all source/test/catalog/route inputs readonly",
+    "commands": "RELEASE: no background or outstanding own commands; this bounded serialization/release command is final.",
+    "validation": "JSON reparse/count check only;source preservation partial24/25webpins due catalog drift"
+  },
+  "pinLimitations": {
+    "snapshots": "24matched web input full-byte snapshots in permitted log match earlier before hashes;changed canonical catalog full pre-drift bytes not preserved,only original hash and relevant share text read. Do not claim full original catalog byte preservation.",
+    "changedInputs": [
+      "migration-queue.md",
+      "web/src/i18n/en.json"
+    ],
+    "catalogParity": "True only at shell3080 pinned earlier revision;NOT fresh final parity after catalog drift. No generator,compiler or guard run.",
+    "status": "PARTIAL",
+    "catalog": "Before183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07;afterDC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886.24of25webpinsmatched at final comparison;no catalog writes by this worker. Concurrent writer identity/intent unverified."
+  },
+  "queueDispositionContinuation": {
+    "status": "DONE_ORIGINAL_FINDINGS_QUEUE_DISPOSITIONS",
+    "acceptance": "REPORT_COMPLETION_ONLY",
+    "completedUtc": "2026-10-14T05:17:11.5153013Z",
+    "originalAuditStatus": "PARTIAL",
+    "decision": "The existing report already contains the original audit. Do not repeat it. Its missing final queue dispositions are completed here; the historical PARTIAL status, failed pin check, clocks, findings, unexecuted reproductions and native/page NOTRUN remain unchanged.",
+    "scope": {
+      "writableFiles": [
+        "docs\\frontend-audits\\phase6-qa-sharing-shared-drive.json",
+        "web\\logs\\phase6-qa-sharing-shared-drive.log"
+      ],
+      "sourceAndCatalogWrites": "NONE",
+      "sourceReinspection": "NOTRUN",
+      "queueWrites": "NONE",
+      "newFindings": 0,
+      "repeatedAuditsOrPasses": 0,
+      "prohibitedOperations": "Tests, lint, compiler, audit scripts, helpers, browser, network, API, actual share/token/identity/location/business operations, Git, nested agents, installs, servers and Docker NOTRUN.",
+      "privacy": "Use only existing report citations and queue ownership metadata. No actual share identifier, viewer identity, private measurement or location is acquired or added. Omitted owner data must never be replaced by authenticated/private data."
+    },
+    "clock": {
+      "attemptPreserved": 1,
+      "actorIdFromCurrentQueue": "4ed3b6bd-7d81-4a2c-b41c-a8676db17600",
+      "startUtcFromCurrentQueue": "2026-10-14T05:06:00Z",
+      "returnDueUtc": "2026-10-14T05:26:00Z",
+      "hardDueUtc": "2026-10-14T05:31:00Z",
+      "rule": "Use the current continuation's fixed queue reservation; do not renew it. The original audit's separate clock and exceeded-return limitation above remain historical evidence, not a new running claim."
+    },
+    "queueEvidence": {
+      "file": "migration-queue.md",
+      "exactRowLineAtInspection": 340,
+      "exactRow": "| [~] | 6 | phase6-qa-sharing-shared-drive | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-sharing-shared-drive.json; web\\logs\\phase6-qa-sharing-shared-drive.log | phase5-page-sharing-shared-drive | 1 | 2026-10-14T05:06:00Z | - | SharedDrivePage; no actual share/token/identity/location/network access.; Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot.; Actually running actor 4ed3b6bd-7d81-4a2c-b41c-a8676db17600; no idle/completed counted; conservative return05:26/hard05:31 for new30, Docker original+20/25 unchanged. |",
+      "method": "Read exact current row; enumerate item/file ownership matches for sharing, shared-drive, public preferences/trust/units/settings/config, useSharing, useUnits, useSettings, MapTileLayer, public briefs and ChartCard; inspect relevant completed rows and related ShareCard report. No source audit, queue edit or historical test rerun.",
+      "concurrentChange": "The first read showed this item pending with the preserved old reservation. A subsequent read showed the actual current continuation actor/start above. This is queue drift, not worker ownership/status modification.",
+      "matchedRepairItems": [],
+      "dedupLimit": "No exact repair representing the six original needs was found in the inspected current item/file/semantic queue matches. This is a bounded queue disposition, not a claim that the whole repository has no related issue or that historical findings are freshly reproduced."
+    },
+    "confirmedDispositions": [
+      {
+        "finding": "F01",
+        "need": "N01",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "owner": "SharedDrivePage/useSharing public-trust integration",
+        "evidence": "Original F01: SharedDrivePage.tsx:88,223; no new source inspection.",
+        "requiredOutcome": "Distinguish authoritative token unavailability from transient/paused retrieval using an explicit public-safe response/cache policy. Confirmed revocation/denial remains fail-closed and removes report/drawer. Never restore cached revoked content merely to satisfy ordinary retained-source guidance.",
+        "alreadyCompletedNotThisFix": [
+          "audit-page-178",
+          "phase5-page-sharing-shared-drive"
+        ],
+        "queueState": "NOT_QUEUED_NEEDS_ORCHESTRATOR"
+      },
+      {
+        "finding": "F02",
+        "need": "N03",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "owner": "SharedDrivePage page consumer",
+        "evidence": "Original F02: SharedDrivePage.tsx:261,319,366; three independently hidden section shells.",
+        "requiredOutcome": "Keep named map/elevation/speed shells independently present with neutral owner-not-included explanations. Preserve a disclosed neighbor and intentionally optional owner-withheld vehicle/metrics. No private geometry fetch or fabricated trace.",
+        "alreadyCompletedNotThisFix": [
+          "phase5-page-sharing-shared-drive"
+        ],
+        "queueState": "NOT_QUEUED_NEEDS_ORCHESTRATOR"
+      },
+      {
+        "finding": "F03",
+        "need": "N02",
+        "disposition": "UNREPRESENTED_CONFIRMED_INTEGRATION_FIX",
+        "owner": "Existing public-page/useUnits/useSettings/MapTileLayer integration",
+        "evidence": "Original F03: SharedDrivePage.tsx:145; useUnits.ts:119; useSettings.ts:82-88,116-122; MapTileLayer.tsx:56-60; api/settings.ts:24,133.",
+        "requiredOutcome": "Wire explicit existing guest-safe units/locale/precision and map configuration without authenticated settings/refetch/broadcast/workspace subscriptions. Guest response/disclosure policy is still unverified; do not infer credential exposure or widen authentication. Reuse the existing providerless public metric bridge rather than creating a new store.",
+        "alreadyCompletedNotThisFix": [
+          "phase3-map-tile-layer",
+          "phase3-full-test-public-metric-language",
+          "phase3-suite939-file-144",
+          "phase4-category-hook-public-contract"
+        ],
+        "queueState": "NOT_QUEUED_NEEDS_ORCHESTRATOR"
+      },
+      {
+        "finding": "F04",
+        "need": "N04",
+        "disposition": "UNREPRESENTED_CONFIRMED_CONSUMER_FIX",
+        "owner": "SharedDrivePage map consumer",
+        "evidence": "Original F04: SharedDrivePage.tsx:279,286; two color-only disclosed endpoints.",
+        "requiredOutcome": "Label the start/end of the disclosed trace with localized non-color meaning and existing restrained map roles; retain all disclosed points and privacy. Do not imply the disclosed endpoints are the complete private trip.",
+        "alreadyCompletedNotThisFix": [
+          "phase3-map-renderer-color-root"
+        ],
+        "queueState": "NOT_QUEUED_NEEDS_ORCHESTRATOR"
+      },
+      {
+        "finding": "F05",
+        "need": "N05",
+        "disposition": "UNREPRESENTED_CONFIRMED_DISPLAY_FIX",
+        "owner": "SharedDrivePage/SharedSessionReport/PublicSessionBrief display consumers",
+        "evidence": "Original F05: drive ticks343,390; session ticks111,116,123; PublicSessionBrief.tsx:40; six display sites.",
+        "requiredOutcome": "Use the existing explicit public locale formatter after the existing rounding at every listed display site. Preserve SI inputs, signs, precision, existing conversions and socDelta arithmetic; do not rewrite source data or resurrect legacy converters.",
+        "alreadyCompletedNotThisFix": [
+          "phase3-full-test-public-metric-language",
+          "phase3-suite939-file-144"
+        ],
+        "queueState": "NOT_QUEUED_NEEDS_ORCHESTRATOR"
+      },
+      {
+        "finding": "F06",
+        "need": "N06",
+        "disposition": "UNREPRESENTED_CONFIRMED_CONSUMER_FIX",
+        "owner": "SharedSessionReport session support",
+        "evidence": "Original F06: SharedSessionReport.tsx:92-100; ChartCard.tsx:14-41 forwards supplied alternative/export props, not inferred curve samples.",
+        "requiredOutcome": "Supply the complete owner-disclosed session curve to existing chart alternatives and authorized raw export, retaining every sample. Use the existing frame; do not add a competing chart/table/export root or sample away dense data.",
+        "alreadyCompletedNotThisFix": [
+          "phase3-chart-card"
+        ],
+        "queueState": "NOT_QUEUED_NEEDS_ORCHESTRATOR"
+      },
+      {
+        "finding": "F07",
+        "need": "N06",
+        "disposition": "COMBINED_UNREPRESENTED_CONFIRMED_FIX_SAME_OWNER",
+        "owner": "SharedSessionReport session support",
+        "evidence": "Original F07: SharedSessionReport.tsx:143 fixed electric cyan battery series; no composed contrast failure asserted.",
+        "requiredOutcome": "Use an existing restrained series role while preserving power/battery identity and saved choices. Combine with F06 in N06 once; no separate palette or contrast campaign.",
+        "queueState": "NOT_QUEUED_NEEDS_ORCHESTRATOR"
+      }
+    ],
+    "needs": [
+      {
+        "id": "N01",
+        "findings": ["F01"],
+        "proposedItem": "phase6-fix-public-share-trust",
+        "state": "PROPOSAL_ONLY_NOT_A_QUEUE_ROW",
+        "ownerFiles": [
+          "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+          "web\\src\\api\\hooks\\useSharing.ts"
+        ],
+        "existingCoveringTest": "web\\src\\features\\sharing\\pages\\SharedDrivePage.test.tsx",
+        "needs": "Parent must claim the exact consumer/integration files and define authoritative token-failure versus transient/paused cache policy. No backend or catalog change is authorized by this report."
+      },
+      {
+        "id": "N02",
+        "findings": ["F03"],
+        "proposedItem": "phase6-fix-public-share-preference-boundary",
+        "state": "PROPOSAL_ONLY_NOT_A_QUEUE_ROW",
+        "ownerFiles": [
+          "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+          "web\\src\\hooks\\useUnits.ts",
+          "web\\src\\hooks\\useSettings.ts",
+          "web\\src\\components\\maps\\MapTileLayer.tsx"
+        ],
+        "existingCoveringTest": "web\\src\\features\\sharing\\pages\\SharedDrivePage.test.tsx",
+        "needs": "Parent must reserve a public integration owner and any exact existing covering-test leases before source work. These are implicated existing owners, not permission to rewrite every file. Reuse the public metric bridge; guest map/settings response policy remains an integration unknown, never an auth-widening instruction."
+      },
+      {
+        "id": "N03",
+        "findings": ["F02"],
+        "proposedItem": "phase6-fix-shared-drive-independent-shells",
+        "state": "PROPOSAL_ONLY_NOT_A_QUEUE_ROW",
+        "ownerFiles": [
+          "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx"
+        ],
+        "existingCoveringTest": "web\\src\\features\\sharing\\pages\\SharedDrivePage.test.tsx",
+        "needs": "Exact page/test claim for three independent owner-withheld shells, preserving all disclosed neighbors and privacy exceptions."
+      },
+      {
+        "id": "N04",
+        "findings": ["F04"],
+        "proposedItem": "phase6-fix-shared-drive-endpoint-labels",
+        "state": "PROPOSAL_ONLY_NOT_A_QUEUE_ROW",
+        "ownerFiles": [
+          "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx"
+        ],
+        "existingCoveringTest": "web\\src\\features\\sharing\\pages\\SharedDrivePage.test.tsx",
+        "needs": "Exact consumer/test claim for localized disclosed-trace endpoint labels and existing restrained map roles. No completed renderer-root redispatch."
+      },
+      {
+        "id": "N05",
+        "findings": ["F05"],
+        "proposedItem": "phase6-fix-public-share-locale-numbers",
+        "state": "PROPOSAL_ONLY_NOT_A_QUEUE_ROW",
+        "ownerFiles": [
+          "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+          "web\\src\\features\\sharing\\pages\\SharedSessionReport.tsx",
+          "web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicSessionBrief.tsx"
+        ],
+        "existingCoveringTests": [
+          "web\\src\\features\\sharing\\pages\\SharedDrivePage.test.tsx",
+          "web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicReportBrief.test.tsx"
+        ],
+        "needs": "Reserve exact display-consumer/test leases for all six sites. Use existing public numeric formatting; completed language/bridge fixture work is not this consumer repair."
+      },
+      {
+        "id": "N06",
+        "findings": ["F06", "F07"],
+        "proposedItem": "phase6-fix-shared-session-curve-alternatives-ink",
+        "state": "PROPOSAL_ONLY_NOT_A_QUEUE_ROW",
+        "ownerFiles": [
+          "web\\src\\features\\sharing\\pages\\SharedSessionReport.tsx"
+        ],
+        "existingCoveringTest": "web\\src\\features\\sharing\\pages\\SharedDrivePage.test.tsx",
+        "needs": "One session-support claim combines complete curve alternative/export and restrained battery ink. The delegated-session covering test needs its own exact parent lease; no fresh test or export operation was performed."
+      }
+    ],
+    "serialization": {
+      "overlap": "N01-N05 share SharedDrivePage and/or its test; N05-N06 share SharedSessionReport; every delegated-session page test overlaps the existing SharedDrivePage.test.tsx lease.",
+      "rule": "Parent may combine compatible exact scopes or serialize them. Never launch overlapping source/test writers, manufacture whole-feature dependencies, repeat the accepted migration or treat a proposed item as already queued.",
+      "catalog": "Any genuinely missing localized copy is a separate parent-owned canonical integration need after exact keys are reported. This continuation did not inspect or modify catalogs or infer that keys are missing.",
+      "laterVerification": "All proposed reproductions and covering/native/privacy acceptance remain UNEXECUTED. An authorized future owner may exercise safe synthetic seams only under its assigned permissions; this disposition does not authorize live share, identity, location, network or mutation operations."
+    },
+    "duplicateOrCompletedObjectives": [
+      {
+        "item": "audit-page-178",
+        "lineAtInspection": 1090,
+        "status": "[x]",
+        "disposition": "KEEP_COMPLETED_NO_REAUDIT",
+        "reason": "Historical Phase0 audit, not a repair representing F01-F07."
+      },
+      {
+        "item": "phase5-page-sharing-shared-drive",
+        "lineAtInspection": 2344,
+        "status": "[x]",
+        "disposition": "KEEP_COMPLETED_NO_MIGRATION_RETRY",
+        "reason": "Accepted source migration explicitly leaves combined Phase6 QA open; historical startup failure/zero cases and native NOTRUN are not passing acceptance."
+      },
+      {
+        "item": "phase3-map-renderer-color-root",
+        "lineAtInspection": 1750,
+        "status": "[x]",
+        "disposition": "REUSE_COMPLETED_ROOT_NO_REDISPATCH",
+        "reason": "Renderer-color root is complete; F04 needs page-level non-color endpoint semantics, while C01 native renderer/theme/tiles behavior is still conditional."
+      },
+      {
+        "item": "phase3-map-tile-layer",
+        "lineAtInspection": 1751,
+        "status": "[x]",
+        "disposition": "KEEP_COMPLETED_DISTINCT_PUBLIC_INTEGRATION",
+        "reason": "Retained tile URLs/geometry/fullscreen and its historical passes do not establish the public page's preference/config wiring or guest response policy in F03."
+      },
+      {
+        "item": "phase3-full-test-public-metric-language",
+        "lineAtInspection": 1646,
+        "status": "[x]",
+        "disposition": "KEEP_COMPLETED_NO_PASS_RERUN",
+        "reason": "Accepted real-i18n fixture correction leaves its hook unchanged. It is neither the real-page F03 integration nor six F05 rounded display sites."
+      },
+      {
+        "item": "phase3-suite939-file-144",
+        "lineAtInspection": 2020,
+        "status": "[x]",
+        "disposition": "KEEP_COMPLETED_NO_PASS_RERUN",
+        "reason": "PublicReportBrief fixture acceptance is bridge-only evidence; not a repair of page preference wiring or PublicSessionBrief numeric display."
+      },
+      {
+        "item": "phase3-chart-card",
+        "lineAtInspection": 1407,
+        "status": "[x]",
+        "disposition": "REUSE_COMPLETED_FRAME_NO_REDISPATCH",
+        "reason": "Existing frame/capability acceptance does not supply missing consumer curve data/export props in F06."
+      },
+      {
+        "item": "phase4-category-hook-public-contract",
+        "lineAtInspection": 2088,
+        "status": "[x]",
+        "disposition": "KEEP_COMPLETED_DISTINCT_EXPORT_CONTRACT",
+        "reason": "Hook definition/nested-export evidence explicitly made no shipping or validation claim; not a guest-safe preference fix."
+      },
+      {
+        "item": "phase6-qa-sharing-share-card",
+        "lineAtInspection": 137,
+        "status": "[x]",
+        "disposition": "KEEP_COMPLETED_DIFFERENT_PAGE",
+        "reason": "Its existing needs are ShareCard consumer/workspace/drives-shape objectives, not the public SharedDrive/session findings here. No report or shared-domain audit is repeated."
+      }
+    ],
+    "conditionalDispositions": [
+      {
+        "candidate": "C01",
+        "disposition": "CONDITIONAL_NOT_A_CONFIRMED_FIX",
+        "owner": "Authorized existing map consumer/native acceptance owner",
+        "reason": "Concrete SVG/Canvas/theme/tile/forced-colors/low-bandwidth behavior has no executed proof. Completed renderer root remains complete; no default Canvas bug or separate palette repair is inferred.",
+        "verification": "NOTRUN"
+      },
+      {
+        "candidate": "C02",
+        "disposition": "CONDITIONAL_NOT_A_CONFIRMED_FIX",
+        "owner": "Authorized public report responsive/accessibility acceptance owner",
+        "reason": "Height/zoom classes alone do not prove measured overflow, targets, focus or long-header behavior. Keep the original viewport/RTL/zoom/safe-area matrix; no fresh QA campaign created.",
+        "verification": "NOTRUN"
+      },
+      {
+        "candidate": "C03",
+        "disposition": "CONDITIONAL_NOT_A_CONFIRMED_FIX",
+        "owner": "Existing public payload/normalization integration owner",
+        "reason": "Malformed per-point/null/nonfinite/coordinate/paired-battery emission is unestablished. Retain original boundary-proof need, but do not invent a backend emission bug or turn unknown into measured zero.",
+        "verification": "NOTRUN"
+      },
+      {
+        "candidate": "C04",
+        "disposition": "CONDITIONAL_NOT_A_CONFIRMED_FIX",
+        "owner": "Authorized public-route/privacy/backend provenance acceptance owners",
+        "reason": "Global authorization/gates, view-count mutation and efficiency provenance were not independently confirmed. Historical audit observations are not new backend findings, and live share/token/identity/location/network operations remain forbidden.",
+        "verification": "NOTRUN"
+      }
+    ],
+    "completion": {
+      "originalConfirmedFindingsDisposed": 7,
+      "originalConfirmedSitesPreserved": 16,
+      "deduplicatedUnrepresentedNeeds": 6,
+      "conditionalCandidatesDisposed": 4,
+      "newQueueRowsCreated": 0,
+      "sourceFixesPerformed": 0,
+      "testsExecutedThisContinuation": 0,
+      "nativeAcceptance": "NOTRUN",
+      "pageAcceptance": "NOTRUN",
+      "allInputPreservationClaim": "NONE: the original 24/25 web-pin result and catalog drift remain PARTIAL historical evidence. No fresh source/catalog comparison was run.",
+      "reportBeforeSha256": "D2258C5629932E8B85B2422C0D3E17719C2C73BB8CA3B182A38A543D0C6A59C5",
+      "originalLogBytes": 4626444,
+      "originalLogSha256": "0DC1B1E3D00E29C03E019D83FB354396947C6BF7B2CBC1394335DB6F5C07A8E2",
+      "ownedArtifactValidation": {
+        "firstValidationShell": "4325",
+        "firstValidationExit": 1,
+        "failure": "Original log byte-prefix hash differs after apply_patch: A5298C1F3C0CF3FF0D5693912E4081119B67A49A134692DDB3569138105C8F9F. This is an owned-artifact preservation failure, not a test or source audit result.",
+        "recoveryInspectionShell": "4338",
+        "recoveryInspectionExit": 0,
+        "originalReportContentHashRecovered": true,
+        "originalReportContentRecovery": "Removing only the appended continuation and restoring original CRLF/final CRLF reproduces D2258C5629932E8B85B2422C0D3E17719C2C73BB8CA3B182A38A543D0C6A59C5. Original report fields/receipts are preserved.",
+        "logBytePreservation": "PARTIAL_NOT_VERIFIED",
+        "logLimitation": "The text patch appended only the continuation but normalized historical log newlines. Current historical text before the continuation is 4623026 UTF-8 bytes with one LF terminator; its hash is 9F88FE3822BEB0617AA8FA433A941466F2B10FE73E7986092831CED3F897D457. Neither uniform LF nor uniform CRLF reconstruction matched the original log pin. Preserve the original hash and failed check; do not invent exact original bytes or claim byte-identical preservation.",
+        "remainingArtifactNeed": "If exact original log bytes are required for intake, the parent needs an existing immutable original log copy. This worker has no such copy and will not use Git, host temporary output, or regenerated evidence. The original findings/command receipts remain in the log; no substantive historical receipt was intentionally edited.",
+        "finalStructuralValidationShell": "4365",
+        "finalStructuralValidationExit": 0,
+        "finalStructuralValidation": "JSON parse OK; original report content hash reconstructs exactly; normalized historical log text hash unchanged; original seven confirmed findings/six needs/four conditional candidates fully disposed; proposed repair queue rows present zero; historical PARTIAL/tests0/native-pageNOTRUN preserved. This does not certify original log byte identity or application behavior.",
+        "applicationValidation": "NOTRUN"
+      },
+      "release": "Only the report and matching ignored log are written. No source claim, nested agent, background command or other resource was acquired. Parent owns queue/intake and any future exact repair reservation."
+    },
+    "filesReadThisContinuation": [
+      "docs\\orchestrator-loop.md",
+      "docs\\frontend-audits\\phase6-qa-sharing-shared-drive.json",
+      "docs\\frontend-audits\\phase6-qa-sharing-share-card.json",
+      "docs\\frontend-worker-conventions.md",
+      "docs\\CONTRIBUTING.md",
+      "docs\\session-handoff.md",
+      "docs\\frontend-design-contract.md",
+      "docs\\frontend-mission.md",
+      "migration-queue.md",
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".gitignore",
+      "web\\.gitignore",
+      "web\\logs\\phase6-qa-sharing-shared-drive.log"
+    ]
+  }
+}

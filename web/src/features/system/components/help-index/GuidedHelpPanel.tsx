@@ -33,6 +33,7 @@ export function GuidedHelpPanel() {
           type="button"
           variant="secondary"
           size="sm"
+          className="max-md:min-h-11 max-md:min-w-11"
           onClick={() => setIntroOpen(true)}
           data-testid="open-product-intro"
         >
@@ -43,6 +44,7 @@ export function GuidedHelpPanel() {
           type="button"
           variant="ghost"
           size="sm"
+          className="max-md:min-h-11 max-md:min-w-11"
           onClick={() => dispatchTourLauncherOpen()}
           data-testid="open-tour-launcher"
         >

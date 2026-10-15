@@ -137,6 +137,7 @@ export function useBulkUpdateFeedback() {
 function updateFeedback(id: number, update: FeedbackUpdateInput) {
   return request<FeedbackEntry>(`/admin/feedback/${id}`, {
     method: 'PATCH',
+    requiresLiveMode: true,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(update),
   })

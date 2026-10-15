@@ -1,0 +1,1423 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-system-command-reliability",
+  "attempt": 1,
+  "status": "PARTIAL",
+  "page": "web/src/features/system/pages/CommandReliabilityPage.tsx",
+  "routes": [
+    "/command-reliability"
+  ],
+  "writeScope": [
+    "docs/frontend-audits/phase6-qa-system-command-reliability.json",
+    "web/logs/phase6-qa-system-command-reliability.log"
+  ],
+  "clock": {
+    "firstObserved": "2026-10-14T02:35:25.2940105Z",
+    "reserved": "2026-10-14T02:29:12.925Z",
+    "actualCreation": null,
+    "returnBy": "2026-10-14T02:49:12.925Z",
+    "noReset": true,
+    "hard": "2026-10-14T02:54:12.925Z"
+  },
+  "objectiveAlreadyMet": {
+    "met": false,
+    "artifactsAbsentBeforeWrite": true,
+    "sourceMigrationAlreadyClosed": true,
+    "historicalReceipt": "phase5-page-system-command-reliability [x] source ONLY; no remigration"
+  },
+  "inputPins": [
+    {
+      "afterSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "matches": true,
+      "beforeSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "file": "docs/orchestrator-loop.md"
+    },
+    {
+      "afterSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "matches": true,
+      "beforeSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "file": "docs/frontend-design-contract.md"
+    },
+    {
+      "afterSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "matches": true,
+      "beforeSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "file": "docs/frontend-mission.md"
+    },
+    {
+      "afterSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "matches": true,
+      "beforeSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "file": "docs/frontend-inventory.md"
+    },
+    {
+      "afterSha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+      "matches": true,
+      "beforeSha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+      "file": "docs/session-handoff.md"
+    },
+    {
+      "afterSha256": "8F4A383E3EFE87500BE2594AA8F5EBBAC206BE4E798F39DEF83940C0ED2D5C9F",
+      "matches": false,
+      "beforeSha256": "3170414EC86F9721305E1FB59CA6A181755F0302D9E16FDDF348935CD53F76F2",
+      "file": "migration-queue.md"
+    },
+    {
+      "afterSha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "matches": true,
+      "beforeSha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "file": "docs/frontend-worker-conventions.md"
+    },
+    {
+      "afterSha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "matches": true,
+      "beforeSha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "file": ".github/copilot-instructions.md"
+    },
+    {
+      "afterSha256": "2FE04AC794F28381A916E22EBDA75FFEF483C6AF200576C516B2A58C909C27A7",
+      "matches": true,
+      "beforeSha256": "2FE04AC794F28381A916E22EBDA75FFEF483C6AF200576C516B2A58C909C27A7",
+      "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+    },
+    {
+      "afterSha256": "19BD65D6F616F84BCAC2A8A220209DF9AA69DDCB3944ADA0389AFB9526987A58",
+      "matches": true,
+      "beforeSha256": "19BD65D6F616F84BCAC2A8A220209DF9AA69DDCB3944ADA0389AFB9526987A58",
+      "file": "web/src/features/system/pages/CommandReliabilityPage.test.tsx"
+    },
+    {
+      "afterSha256": "C09666A01C890D0980C74B302A396F052D6CE5CF76AE641C22CE0A6E2CF0EAED",
+      "matches": true,
+      "beforeSha256": "C09666A01C890D0980C74B302A396F052D6CE5CF76AE641C22CE0A6E2CF0EAED",
+      "file": "web/src/features/system/lib/commandReliability.ts"
+    },
+    {
+      "afterSha256": "BC04954FB755B2DB9165DFC7139E5C72ECDD6FEB3A9BDDEC0537C963B792EA07",
+      "matches": true,
+      "beforeSha256": "BC04954FB755B2DB9165DFC7139E5C72ECDD6FEB3A9BDDEC0537C963B792EA07",
+      "file": "web/src/features/system/lib/commandReliability.test.ts"
+    },
+    {
+      "afterSha256": "B1DB8677BD0BC014B1FA5CAF4B392E8A18D2D67FFA5053AE831732ABD2303BC8",
+      "matches": true,
+      "beforeSha256": "B1DB8677BD0BC014B1FA5CAF4B392E8A18D2D67FFA5053AE831732ABD2303BC8",
+      "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx"
+    },
+    {
+      "afterSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "matches": true,
+      "beforeSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "file": "web/src/hooks/useOperationalMetrics.tsx"
+    },
+    {
+      "afterSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "matches": true,
+      "beforeSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "file": "web/src/lib/routeRegistry.ts"
+    },
+    {
+      "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "matches": true,
+      "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "file": "web/src/lib/workspaceScope.ts"
+    },
+    {
+      "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "matches": false,
+      "beforeSha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "file": "web/src/i18n/en.json"
+    },
+    {
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "matches": true,
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "file": "web/src/api/dataState.ts"
+    },
+    {
+      "afterSha256": "BA78ADF8AD75E41252D7639F56AEED9DB3C18C5B9C69162240B85A84EC4C54E1",
+      "matches": true,
+      "beforeSha256": "BA78ADF8AD75E41252D7639F56AEED9DB3C18C5B9C69162240B85A84EC4C54E1",
+      "file": "web/src/api/hooks/useCommands.ts"
+    },
+    {
+      "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "matches": true,
+      "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "file": "web/src/hooks/useDataState.ts"
+    },
+    {
+      "afterSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "matches": true,
+      "beforeSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "file": "web/src/hooks/useSelectedVehicle.ts"
+    },
+    {
+      "afterSha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "matches": true,
+      "beforeSha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "file": "web/src/hooks/useRangeState.ts"
+    },
+    {
+      "afterSha256": "2F6DD2AC3E6492FA0DE6AB60CE1A0F5BF9B626551B1C3CAF876B58781E10F276",
+      "matches": true,
+      "beforeSha256": "2F6DD2AC3E6492FA0DE6AB60CE1A0F5BF9B626551B1C3CAF876B58781E10F276",
+      "file": "web/src/hooks/useProductPreferences.ts"
+    },
+    {
+      "afterSha256": "4DE9F4981D65173697E16DB705CA06B279E9CCB700AC6C98D0D27439F25D5F02",
+      "matches": true,
+      "beforeSha256": "4DE9F4981D65173697E16DB705CA06B279E9CCB700AC6C98D0D27439F25D5F02",
+      "file": "web/src/lib/timezone.ts"
+    },
+    {
+      "afterSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "matches": true,
+      "beforeSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "file": "web/src/lib/dateFormat.ts"
+    },
+    {
+      "afterSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "matches": true,
+      "beforeSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx"
+    },
+    {
+      "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "matches": true,
+      "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx"
+    },
+    {
+      "afterSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "matches": true,
+      "beforeSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "file": "web/src/components/charts/ChartContainer.tsx"
+    },
+    {
+      "afterSha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "matches": true,
+      "beforeSha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "file": "web/src/components/data-display/OperationalBrief.tsx"
+    },
+    {
+      "afterSha256": "FB02522F977A14146921E3E1979C1C5C363109F131C9E6C4FCD1C68683CA3B9C",
+      "matches": true,
+      "beforeSha256": "FB02522F977A14146921E3E1979C1C5C363109F131C9E6C4FCD1C68683CA3B9C",
+      "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.test.ts"
+    },
+    {
+      "afterSha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "matches": true,
+      "beforeSha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx"
+    },
+    {
+      "afterSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "matches": true,
+      "beforeSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "file": "web/src/api/client.ts"
+    },
+    {
+      "afterSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "matches": true,
+      "beforeSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "file": "internal/api/router.go"
+    },
+    {
+      "afterSha256": "5B88108C4CB396DE1F94E9E5471D3AA07A5A9251B104362736FF487A2B06FB0C",
+      "matches": true,
+      "beforeSha256": "5B88108C4CB396DE1F94E9E5471D3AA07A5A9251B104362736FF487A2B06FB0C",
+      "file": "internal/api/command/handler.go"
+    },
+    {
+      "afterSha256": "AA5D2FB7ED29672955B966B654B4A581534762B0DE9819989E14849D1A4D8346",
+      "matches": true,
+      "beforeSha256": "AA5D2FB7ED29672955B966B654B4A581534762B0DE9819989E14849D1A4D8346",
+      "file": "web/src/api/hooks/useCommands.test.tsx"
+    },
+    {
+      "afterSha256": "AEECB425F606A0D3CC9569A3296DE5D39D0A3D19A45EE76907989625484F3F8F",
+      "matches": true,
+      "beforeSha256": "AEECB425F606A0D3CC9569A3296DE5D39D0A3D19A45EE76907989625484F3F8F",
+      "file": "web/src/i18n/en/locale-system.json"
+    },
+    {
+      "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "matches": true,
+      "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "file": "web/src/App.tsx"
+    },
+    {
+      "afterSha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "matches": true,
+      "beforeSha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "file": "web/src/lib/metric-reference/formatMetric.ts"
+    },
+    {
+      "afterSha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "matches": true,
+      "beforeSha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "file": ".github/instructions/react-frontend.instructions.md"
+    },
+    {
+      "afterSha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "matches": true,
+      "beforeSha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "file": ".github/instructions/frontend-si-cutover.instructions.md"
+    },
+    {
+      "afterSha256": "8804718879D0CCB02C876B64B139DA56E67B7D117E34E5DE914904242DE3EC17",
+      "matches": true,
+      "beforeSha256": "8804718879D0CCB02C876B64B139DA56E67B7D117E34E5DE914904242DE3EC17",
+      "file": "web/src/i18n/index.ts"
+    },
+    {
+      "afterSha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "matches": true,
+      "beforeSha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "file": "web/src/lib/numberFormat.ts"
+    },
+    {
+      "afterSha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "matches": true,
+      "beforeSha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "file": "web/src/lib/operationalMetrics.tsx"
+    },
+    {
+      "matches": true,
+      "afterSha256": "504E6794EC0F2AFAD5F6ECAB34F3E70E4339D457A228197E3E01383A3BB0129F",
+      "beforeSha256": "504E6794EC0F2AFAD5F6ECAB34F3E70E4339D457A228197E3E01383A3BB0129F",
+      "file": "docs/frontend-audits/audit-page-183.json"
+    }
+  ],
+  "filesRead": [
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "docs/frontend-worker-conventions.md",
+    ".github/copilot-instructions.md",
+    "web/src/features/system/pages/CommandReliabilityPage.tsx",
+    "web/src/features/system/pages/CommandReliabilityPage.test.tsx",
+    "web/src/features/system/lib/commandReliability.ts",
+    "web/src/features/system/lib/commandReliability.test.ts",
+    "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/i18n/en.json",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useCommands.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/hooks/useProductPreferences.ts",
+    "web/src/lib/timezone.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.test.ts",
+    "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+    "web/src/api/client.ts",
+    "internal/api/router.go",
+    "internal/api/command/handler.go",
+    "web/src/api/hooks/useCommands.test.tsx",
+    "web/src/i18n/en/locale-system.json",
+    "web/src/App.tsx",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    "web/src/i18n/index.ts",
+    "web/src/lib/numberFormat.ts",
+    "web/src/lib/operationalMetrics.tsx",
+    "docs/frontend-audits/audit-page-183.json"
+  ],
+  "testInspection": {
+    "passed": null,
+    "execution": "NOTRUN",
+    "executedTotal": 0,
+    "runnerDiscovered": null,
+    "skipped": null,
+    "declaredTotal": 53,
+    "files": [
+      {
+        "executed": 0,
+        "declared": 12,
+        "execution": "NOTRUN",
+        "names": [
+          {
+            "line": 94,
+            "declaration": "it('preserves the zero-attempt record and every original caption and section', () => {"
+          },
+          {
+            "line": 114,
+            "declaration": "it('shows source failure and read retry in every section without empty-history claims', () => {"
+          },
+          {
+            "line": 128,
+            "declaration": "it('keeps an initially paused read unknown rather than claiming no records', () => {"
+          },
+          {
+            "line": 139,
+            "declaration": "it('retains paused history and every confidence row without replacing it with empty content', () => {"
+          },
+          {
+            "line": 152,
+            "declaration": "it('preserves full colliding command names in the fallback table and CSV action', () => {"
+          },
+          {
+            "line": 168,
+            "declaration": "it('distinguishes pending-only confidence from measured zero success in the chart and detail', () => {"
+          },
+          {
+            "line": 190,
+            "declaration": "it('keeps full normalized failure evidence in semantic definition pairs', () => {"
+          },
+          {
+            "line": 204,
+            "declaration": "it('uses the vehicle timezone for range, last-used date and retained fetch time', async () => {"
+          },
+          {
+            "line": 223,
+            "declaration": "it('preserves resolved-success rates, all attempts and collapsed retry-intent definitions', () => {"
+          },
+          {
+            "line": 238,
+            "declaration": "it('keeps loading and missing sources distinct from measured zero', () => {"
+          },
+          {
+            "line": 252,
+            "declaration": "it('keeps retained values, source warning and the existing retry action on refresh failure', () => {"
+          },
+          {
+            "line": 264,
+            "declaration": "it('retains the fatal source retry rather than fabricating summary values', () => {"
+          }
+        ],
+        "file": "web/src/features/system/pages/CommandReliabilityPage.test.tsx"
+      },
+      {
+        "executed": 0,
+        "declared": 21,
+        "execution": "NOTRUN",
+        "names": [
+          {
+            "line": 42,
+            "declaration": "it('never leaves the unit interval, even at the extremes', () => {"
+          },
+          {
+            "line": 57,
+            "declaration": "it('is wide with little evidence and narrow with a lot', () => {"
+          },
+          {
+            "line": 64,
+            "declaration": "it('matches the published value for 3 of 3 successes', () => {"
+          },
+          {
+            "line": 69,
+            "declaration": "it('is symmetric about a half', () => {"
+          },
+          {
+            "line": 75,
+            "declaration": "it('degrades safely with no observations', () => {"
+          },
+          {
+            "line": 81,
+            "declaration": "it('recognises the success vocabulary the backend uses', () => {"
+          },
+          {
+            "line": 87,
+            "declaration": "it('treats unresolved statuses as pending, not failure', () => {"
+          },
+          {
+            "line": 93,
+            "declaration": "it('treats anything else as failure', () => {"
+          },
+          {
+            "line": 101,
+            "declaration": "it('renders snake, kebab and camel case as words', () => {"
+          },
+          {
+            "line": 109,
+            "declaration": "it('is empty and safe with no data', () => {"
+          },
+          {
+            "line": 117,
+            "declaration": "it('grades a consistently working command as excellent', () => {"
+          },
+          {
+            "line": 124,
+            "declaration": "it('grades a mostly-failing command as unreliable', () => {"
+          },
+          {
+            "line": 135,
+            "declaration": "it('refuses to grade a command with too little evidence', () => {"
+          },
+          {
+            "line": 143,
+            "declaration": "it('does not let a lucky small sample outrank a large solid one', () => {"
+          },
+          {
+            "line": 156,
+            "declaration": "it('excludes pending attempts from the success rate', () => {"
+          },
+          {
+            "line": 167,
+            "declaration": "it('collapses a retry storm into one intent', () => {"
+          },
+          {
+            "line": 186,
+            "declaration": "it('keeps well-separated attempts as distinct intents', () => {"
+          },
+          {
+            "line": 194,
+            "declaration": "it('reports the dominant error and groups near-identical text', () => {"
+          },
+          {
+            "line": 211,
+            "declaration": "it('tracks a recent-trend rate distinct from the lifetime rate', () => {"
+          },
+          {
+            "line": 221,
+            "declaration": "it('identifies the worst judged command and counts unreliable ones', () => {"
+          },
+          {
+            "line": 234,
+            "declaration": "it('ignores rows with unusable timestamps or blank commands', () => {"
+          }
+        ],
+        "file": "web/src/features/system/lib/commandReliability.test.ts"
+      },
+      {
+        "executed": 0,
+        "declared": 3,
+        "execution": "NOTRUN",
+        "names": [
+          {
+            "line": 11,
+            "declaration": "it('does not coerce history counts and rates into formatted text', () => {"
+          },
+          {
+            "line": 29,
+            "declaration": "it('retains the original empty-history zeros while text measurements remain missing', () => {"
+          },
+          {
+            "line": 38,
+            "declaration": "it('keeps reliability definitions in the existing analyzer, with rounded percentage points only at display', () => {"
+          }
+        ],
+        "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.test.ts"
+      },
+      {
+        "executed": 0,
+        "declared": 17,
+        "execution": "NOTRUN",
+        "names": [
+          {
+            "line": 78,
+            "declaration": "it('describes a full command-log row', () => {"
+          },
+          {
+            "line": 93,
+            "declaration": "it('produces distinct, prefixed tuples per domain', () => {"
+          },
+          {
+            "line": 100,
+            "declaration": "it('normalises a numeric id to the same key as its string form', () => {"
+          },
+          {
+            "line": 109,
+            "declaration": "it('preserves undefined so a disabled query keeps a distinct key', () => {"
+          },
+          {
+            "line": 122,
+            "declaration": "it('GETs the history endpoint with limit and threads the AbortSignal', async () => {"
+          },
+          {
+            "line": 138,
+            "declaration": "it('accepts a numeric vehicle id and builds the same URL', async () => {"
+          },
+          {
+            "line": 145,
+            "declaration": "it('URL-encodes an id containing path-breaking characters', async () => {"
+          },
+          {
+            "line": 153,
+            "declaration": "it('coerces a null body to an empty array at the fetch boundary', async () => {"
+          },
+          {
+            "line": 160,
+            "declaration": "it('coerces an undefined (204/no-content) body to an empty array', async () => {"
+          },
+          {
+            "line": 170,
+            "declaration": "it('is disabled when the vehicle id is undefined', async () => {"
+          },
+          {
+            "line": 178,
+            "declaration": "it('is disabled when the vehicle id is the empty string', async () => {"
+          },
+          {
+            "line": 184,
+            "declaration": "it('surfaces request failures as isError', async () => {"
+          },
+          {
+            "line": 197,
+            "declaration": "it('pages through every attempt in the selected window without a 200-row cutoff', async () => {"
+          },
+          {
+            "line": 215,
+            "declaration": "it('GETs the latest endpoint and passes the array through', async () => {"
+          },
+          {
+            "line": 228,
+            "declaration": "it('accepts a numeric vehicle id and encodes the path segment', async () => {"
+          },
+          {
+            "line": 235,
+            "declaration": "it('coerces a missing (undefined) payload to an empty array', async () => {"
+          },
+          {
+            "line": 243,
+            "declaration": "it('is disabled when the vehicle id is undefined', async () => {"
+          }
+        ],
+        "file": "web/src/api/hooks/useCommands.test.tsx"
+      }
+    ],
+    "failed": null
+  },
+  "finalSourceCheck": {
+    "exit": 0,
+    "rawOutput": "web/logs/phase6-qa-system-command-reliability.log",
+    "command": "$root='D:\\repos\\teslasync'; $ErrorActionPreference='Stop'\n'FINAL SOURCE CHECK UTC'; Get-Date -AsUTC -Format o\n$files=@('web/src/features/system/pages/CommandReliabilityPage.tsx','web/src/features/system/lib/commandReliability.ts','web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx','web/src/api/hooks/useCommands.ts')\n$patterns=[ordered]@{'static-inline-style-literal-var'='(?<![A-Za-z])style\\s*=\\s*\\{\\{[^}]*var\\(--';'raw-html'='<\\s*(button|input|textarea|select|table)\\b';'direct-library-import'='from\\s+[''\\\"](recharts|react-leaflet|framer-motion)[''\\\"]';'old-api-import'='from\\s+[''\\\"](?:\\.\\./)+api[''\\\"]';'double-prefix'='/api/v1/';'camelcase-param'='[?&][A-Za-z_]*[a-z][A-Z][A-Za-z_]*=';'hidden-section'='\\b(data|summary)\\s*&&\\s*<';'fetch-useeffect'='\\b(fetch|useEffect)\\s*\\('}\nforeach($e in $patterns.GetEnumerator()){$m=@(Select-String -LiteralPath ($files | ForEach-Object {Join-Path $root $_}) -Pattern $e.Value -CaseSensitive);'{0}|matches={1}' -f $e.Key,$m.Count}\n$page=Get-Content \"$root\\web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx\";'pageLines={0}' -f $page.Count;foreach($name in @('FadeIn','ChartContainer','GlassPanel','OperationalBrief','QueryError','EmptyState','HelpTooltip')){'{0}|count={1}' -f $name,@($page | Select-String -Pattern ('<'+$name+'\\b') -CaseSensitive).Count}\n'DECLARED TESTS / NOTRUN';foreach($f in @('web/src/features/system/pages/CommandReliabilityPage.test.tsx','web/src/features/system/lib/commandReliability.test.ts','web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.test.ts','web/src/api/hooks/useCommands.test.tsx')){$m=@(Select-String -LiteralPath (Join-Path $root $f) -Pattern '^\\s*it\\(' -CaseSensitive);'{0}|declared={1}|executed=0|NOTRUN' -f $f,$m.Count;$m | ForEach-Object {'{0}:{1}' -f $_.LineNumber,$_.Line}}\n$en=Get-Content \"$root\\web\\src\\i18n\\en.json\" -Raw | ConvertFrom-Json -AsHashtable;foreach($g in @('excellent','good','flaky','unreliable','unproven')){'commandReliability.grade.{0}|exists={1}' -f $g,($en['commandReliability'].Contains('grade') -and $en['commandReliability']['grade'].Contains($g))}\n$q=Get-Content \"$root\\migration-queue.md\";$q | Select-String -Pattern '^\\|[^|]*\\| 6 \\| phase6-qa-system-command-reliability \\|' | ForEach-Object {'{0}:{1}' -f $_.LineNumber,$_.Line};foreach($lit in @('commandSummaryMetrics','commandReliability.ts','commandReliability.grade','CommandReliabilityPage')){$m=@($q | Select-String -SimpleMatch $lit);'{0}|queueMatches={1}' -f $lit,$m.Count;$m | ForEach-Object {$c=$_.Line -split '\\|';'{0}|{1}|{2}' -f $_.LineNumber,$c[1].Trim(),$c[3].Trim()}}\n'TEST/LINT/BUILD/COMPILER/SERVER/BROWSER/NETWORK/API/VEHICLE/AUTH/PROVIDER EXECUTION=NOTRUN';'EXIT=0'"
+  },
+  "validation": {
+    "supportingCatalogCitations": "Original inspected canonical lines38274-38322 are snapshot citations; concurrent catalog drift disclosed",
+    "declaredTests": "53/0/NOTRUN",
+    "native": "NOTRUN",
+    "json": "PASS",
+    "primaryCitations": "PASS file/line bounds and exact source lines",
+    "exit": 1,
+    "pins": "FAILED_STABILITY",
+    "counts": "PASS"
+  },
+  "release": {
+    "source": "READONLY throughout; no source/test/catalog/routes/queue/Git lease acquired",
+    "artifact": "RELEASE docs/frontend-audits/phase6-qa-system-command-reliability.json and web/logs/phase6-qa-system-command-reliability.log",
+    "nativePageAcceptance": "NOT ACCEPTED",
+    "releasedUtc": "2026-10-14T02:49:32.6523485Z",
+    "command": "RELEASE all synchronous inspection/artifact commands; no agents/services/helpers/tests/server/browser/network operations started"
+  },
+  "confirmedIssues": [
+    {
+      "detail": "Defined pending-only history becomes measured Overall success 0%, although no resolved trial exists. Chart/detail already show unknown confidence.",
+      "severity": "high",
+      "sourceOnlyRepro": "Reasoning only/NOTRUN: one valid wake_up row status=pending has success=0,failure=0,pending=1,totalAttempts=1,totalResolved=0,overallSuccessRate=0. Defined summary yields rawValue0 and percent0%. A resolved failed row has measured0%; do not conflate them.",
+      "fix": "Adapter presents nonempty/no-resolved evidence as missing, retaining all counts/status/Wilson definitions and declared empty-array legacy convention.",
+      "id": "CR-01",
+      "line": 72,
+      "rule": "MDC-026",
+      "owner": "domain adapter",
+      "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx",
+      "needs": "NEED-01",
+      "confidence": "Confirmed source mechanism; current inspected backend writes success/failed only; no claim of observed pending data",
+      "citations": [
+        {
+          "line": 112,
+          "file": "web/src/features/system/lib/commandReliability.ts"
+        },
+        {
+          "line": 317,
+          "file": "web/src/features/system/lib/commandReliability.ts"
+        },
+        {
+          "line": 75,
+          "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+        },
+        {
+          "line": 89,
+          "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+        }
+      ]
+    },
+    {
+      "detail": "Nothing failing follows from no judged worstCommand, not from absence of recorded failures. Real failed outcomes below the five-resolved-attempt threshold still receive this reassuring caption.",
+      "severity": "high",
+      "sourceOnlyRepro": "Reasoning only/NOTRUN: one valid lock row status=failed,error=Vehicle offline gives failure1,resolved1,unproven,worstCommand=null,unreliableCount0; caption falls through to Nothing failing. Existing mixed-status adapter test also declares that caption; not executed.",
+      "fix": "Keep graded unreliable count/threshold unchanged; caption must express insufficient evidence rather than absence of failure.",
+      "id": "CR-02",
+      "line": 92,
+      "rule": "MDC-026",
+      "owner": "domain adapter",
+      "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx",
+      "needs": "NEED-01",
+      "confidence": "Confirmed source mechanism with current backend failed vocabulary",
+      "citations": [
+        {
+          "line": 257,
+          "file": "web/src/features/system/lib/commandReliability.ts"
+        },
+        {
+          "line": 309,
+          "file": "web/src/features/system/lib/commandReliability.ts"
+        },
+        {
+          "line": 319,
+          "file": "web/src/features/system/lib/commandReliability.ts"
+        },
+        {
+          "line": 275,
+          "file": "internal/api/command/handler.go"
+        },
+        {
+          "line": 51,
+          "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.test.ts"
+        }
+      ]
+    },
+    {
+      "detail": "Accessible fallback table receives raw English/internal grade enums, not translated human grade labels; CSV uses same object.",
+      "severity": "medium",
+      "sourceOnlyRepro": "Reasoning only/NOTRUN: one failed attempt produces unproven. String(grade) survives into data={exportData}; shared table uses String(raw), so its visible/accessible grade stays unproven independent of language. Page test178-181 declares this raw enum; NOTRUN.",
+      "fix": "Translate user-facing table grades; retain stable raw identities and optionally explicit machine-oriented CSV enums separately. Stable CSV codes alone are not asserted as a violation.",
+      "id": "CR-03",
+      "line": 85,
+      "rule": "hardcoded-string",
+      "owner": "page",
+      "file": "web/src/features/system/pages/CommandReliabilityPage.tsx",
+      "needs": "NEED-02",
+      "confidence": "Confirmed source mechanism",
+      "citations": [
+        {
+          "line": 170,
+          "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+        },
+        {
+          "line": 178,
+          "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+        },
+        {
+          "line": 261,
+          "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+        },
+        {
+          "line": 934,
+          "file": "web/src/components/charts/ChartContainer.tsx"
+        }
+      ]
+    },
+    {
+      "fix": "Catalog owner integrates exactly5canonical grade leaves and normal generated system projection; preserve all other leaves/guards/baselines.",
+      "citations": [
+        {
+          "line": 39,
+          "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+        },
+        {
+          "line": 38274,
+          "file": "web/src/i18n/en.json"
+        }
+      ],
+      "rule": "i18n-missing-key",
+      "severity": "medium",
+      "confidence": "Confirmed missing leaves, not executed guard failure",
+      "sourceOnlyRepro": "Executed read-only JSON parse/Contains checks printed exists=False for all5keys; system subtree exists, grade subtree absent. No generator/guard/test executed.",
+      "needs": "NEED-03",
+      "id": "CR-04",
+      "owner": "serialized canonical catalog integration",
+      "file": "web/src/features/system/pages/CommandReliabilityPage.tsx",
+      "detail": "All five computed grade keys are missing in canonical English and system projection; badge falls back to English.",
+      "missingKeys": [
+        "commandReliability.grade.excellent",
+        "commandReliability.grade.good",
+        "commandReliability.grade.flaky",
+        "commandReliability.grade.unreliable",
+        "commandReliability.grade.unproven"
+      ],
+      "line": 261
+    },
+    {
+      "detail": "Detail/caption numbers bypass locale formatting. Table numeric columns omit kind/format and therefore use String(raw), unlike locale-aware KPI values.",
+      "severity": "medium",
+      "sourceOnlyRepro": "Reasoning only/NOTRUN: three attempts in two intents yield attemptsPerIntent1.5. de-DE detail passes1.5 to plain {{n}} (no format), retaining dot rather than decimal comma. Numeric chart cells also stringify83.8; context1234attempts lacks locale grouping. No locale mount executed.",
+      "fix": "Use existing effective locale/number formatter for presentation and numeric column kind/format. Preserve raw CSV numbers, precision, rates/counts and SI/wire/cache.",
+      "id": "CR-05",
+      "line": 286,
+      "rule": "MDC-044",
+      "owner": "page and existing adapter context",
+      "file": "web/src/features/system/pages/CommandReliabilityPage.tsx",
+      "needs": [
+        "NEED-01",
+        "NEED-02"
+      ],
+      "confidence": "Confirmed source bypass; native appearance NOTRUN",
+      "citations": [
+        {
+          "line": 172,
+          "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+        },
+        {
+          "line": 269,
+          "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+        },
+        {
+          "line": 279,
+          "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+        },
+        {
+          "line": 303,
+          "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+        },
+        {
+          "line": 75,
+          "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx"
+        },
+        {
+          "line": 929,
+          "file": "web/src/components/charts/ChartContainer.tsx"
+        },
+        {
+          "line": 136,
+          "file": "web/src/i18n/index.ts"
+        },
+        {
+          "line": 47,
+          "file": "web/src/lib/operationalMetrics.tsx"
+        }
+      ]
+    }
+  ],
+  "confirmedIssueCount": 5,
+  "countsByRule": {
+    "MDC-026": 2,
+    "hardcoded-string": 1,
+    "MDC-044": 1,
+    "i18n-missing-key": 1
+  },
+  "missingCatalogLeafCount": 5,
+  "conditionalCandidates": [
+    {
+      "id": "C-01",
+      "file": "web/src/features/system/pages/CommandReliabilityPage.tsx",
+      "line": 63,
+      "detail": "Literal-null mocked data can disagree with hasData=data!==undefined and empty rendering.",
+      "citations": [
+        "api/dataState.ts191-194",
+        "page89/98",
+        "api/hooks/useCommands.ts77"
+      ],
+      "disposition": "NOT confirmed production defect: reliability hook rejects null/nonarray as source error; do not infer native reachability."
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "detail": "Absent URL/store selection plus unresolved/failed fleet can give null and setup guidance.",
+      "line": 83,
+      "id": "C-02",
+      "disposition": "Global onboarding/auth gate not mounted or fully audited; conditional only, no duplicate shared need."
+    },
+    {
+      "file": "web/src/features/system/lib/commandReliability.ts",
+      "detail": "Unknown future/legacy status maps to failure.",
+      "line": 138,
+      "id": "C-03",
+      "disposition": "Intentional declared behavior; inspected current producer emits supported success/failed. Other producers/real records NOTRUN; no speculative remap."
+    }
+  ],
+  "conditionalCandidateCount": 3,
+  "nativeCandidates": [
+    {
+      "file": "web/src/features/system/pages/CommandReliabilityPage.tsx",
+      "detail": "80/150px category rails, visual-only tick truncation, full table names, dynamic chart heights and wrapping grid are source-evidenced.",
+      "line": 197,
+      "id": "N-01",
+      "disposition": "320/375/390/430/768/1024/1280/1440/1920/2560, narrow allocations, long labels/RTL/200%text overflow/readability NOTRUN; no native failure inferred."
+    },
+    {
+      "file": "web/src/features/system/pages/CommandReliabilityPage.tsx",
+      "detail": "Localized region/chart names, semantic dl/dt/dd, textual badges, fallback table, review drawer and shared retry are source-evidenced.",
+      "line": 154,
+      "id": "N-02",
+      "disposition": "Keyboard/focus/screen-reader/touch/composed dark-light-custom-forced-colors/reduced-motion/low-bandwidth/help-export open states and actual12/24h preference NOTRUN."
+    }
+  ],
+  "nativeCandidateCount": 2,
+  "requiredOwnerNeeds": [
+    {
+      "action": "One narrow adapter truth/caption/locale followup; no domain status/threshold changes, retain empty-array convention.",
+      "queueDedup": "Exact commandSummaryMetrics/statstrip-command-summaries searches0; false0percent acknowledged in closed migration receipt, not an open claimed fix. Consolidate needs; no source redispatch/queue edit here.",
+      "issues": [
+        "CR-01",
+        "CR-02",
+        "CR-05 caption"
+      ],
+      "id": "NEED-01",
+      "exactFiles": [
+        "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx",
+        "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.test.ts"
+      ]
+    },
+    {
+      "action": "One narrow translated grade/locale display followup preserving three sections/full identities/6columns/retries/null confidence/raw numeric exports.",
+      "queueDedup": "Literal CommandReliabilityPage has3matches: this QA and closed audit/migration. No open exact fix; parent must register/claim narrow followup, not redo migration.",
+      "issues": [
+        "CR-03",
+        "CR-05 page/table"
+      ],
+      "id": "NEED-02",
+      "exactFiles": [
+        "web/src/features/system/pages/CommandReliabilityPage.tsx",
+        "web/src/features/system/pages/CommandReliabilityPage.test.tsx"
+      ]
+    },
+    {
+      "action": "Exactly5grade leaves: excellent=Excellent;good=Good;flaky=Flaky;unreliable=Unreliable;unproven=Not enough attempts; normal generator/guards by catalog owner only.",
+      "queueDedup": "commandReliability.grade literal0. Closed general catalog closure does not evidence these dynamic missing leaves.",
+      "issues": [
+        "CR-04"
+      ],
+      "id": "NEED-03",
+      "exactFiles": [
+        "web/src/i18n/en.json",
+        "web/src/i18n/en/locale-system.json"
+      ]
+    }
+  ],
+  "queueEvidence": {
+    "exactClaim": "[~] phase6-qa-system-command-reliability;attempt1;reserved02:29:12.925Z;actor pending; exact two artifacts; depends on completed phase5-page-system-command-reliability",
+    "concurrentDrift": "Queue changed externally; row moved187->233; exact claim preserved and reread. No attribution to QA or Git operation.",
+    "refreshedLine": 233,
+    "initialLine": 187
+  },
+  "preservation": {
+    "pageLines": 319,
+    "actions": [
+      "Read retries: page120/160/240",
+      "Retained Refresh: StaleRefreshWarning96-110",
+      "Review drawer: OperationalBrief156-175,248-281",
+      "PNG/SVG/copy image/CSV: page170-171 -> ChartContainer721-726",
+      "Help: page230-237/adapter78-85",
+      "Header vehicle/range scope: page52-59/workspaceScope36",
+      "Setup navigation: NoVehicleSelected70-77"
+    ],
+    "historicalAuditLines": 312,
+    "countNote": "Literal source occurrences, not mounted panel counts; branches exclusive/shared wrappers composed.",
+    "sections": [
+      {
+        "name": "KPI summary",
+        "metrics": [
+          "Overall success + attempts/help",
+          "Unreliable + worst-command caption",
+          "Distinct intents",
+          "Retry storms"
+        ],
+        "line": 113
+      },
+      {
+        "name": "Confidence chart",
+        "reference": "95%",
+        "series": [
+          "Wilson lower bound",
+          "raw-success scatter"
+        ],
+        "line": 146,
+        "columns": [
+          "Command",
+          "Lower (%)",
+          "Raw (%)",
+          "Upper (%)",
+          "Attempts",
+          "Grade"
+        ]
+      },
+      {
+        "name": "Command breakdown",
+        "line": 224,
+        "fields": [
+          "full label",
+          "grade",
+          "ok/failed",
+          "95%interval",
+          "attempts per intent/retried",
+          "last used",
+          "optional normalized usual failure/count"
+        ]
+      }
+    ],
+    "jsxCounts": {
+      "QueryError": 2,
+      "ChartContainer": 1,
+      "GlassPanel": 2,
+      "FadeIn": 3,
+      "EmptyState": 2,
+      "HelpTooltip": 1,
+      "OperationalBrief": 1
+    },
+    "sectionCount": 3,
+    "absentCapabilities": "No page fullscreen/brush/zoom/annotations/persisted legend toggle or command mutation evidenced; do not invent them."
+  },
+  "dataContract": {
+    "endpoint": "GET /api/v1/vehicles/{vehicleID}/commands/history",
+    "actualProducer": "handler272-288:success/failed; failure paths218/248 also failed; no other real statuses inferred",
+    "scope": "Header-selected vehicle and RFC3339[from,to) bounds, query key normalized vehicle+bothbounds, enabled vehicle/from/to;1000rows/page plus before_created_at/before_id, all pages appended, AbortSignal threaded each read, nonarray/nonadvancing cursor failures propagated",
+    "SI": "Counts/rates dimensionless; timestamps raw UTC; no physical measurement conversions or wire/cache/mutation edits.",
+    "analysis": "success/(success+failure), pending excluded, minAttempts5, Wilson95%, consecutive5minute retry grouping and error normalization retained",
+    "citations": [
+      "web/src/api/hooks/useCommands.ts57-90",
+      "internal/api/router.go3381",
+      "internal/api/command/handler.go349-357,413-421"
+    ]
+  },
+  "stateMatrix": [
+    {
+      "result": "existing setup guidance; C-02 caveat",
+      "state": "no vehicle",
+      "line": 92
+    },
+    {
+      "result": "3sections/loading geometry/missing metric inputs, no fabricated readings",
+      "state": "undefined/initial loading",
+      "line": 96
+    },
+    {
+      "result": "3sections remain; original explicitly declared empty0% convention retained",
+      "state": "empty []",
+      "line": 136
+    },
+    {
+      "result": "hook77 rejects nonarray; C-01 only",
+      "state": "literal null",
+      "line": 63
+    },
+    {
+      "result": "fatal-only error in each section/3read retries",
+      "state": "initial error",
+      "line": 118
+    },
+    {
+      "result": "unavailable/unknown not empty, metrics missing",
+      "state": "paused initial",
+      "line": 98
+    },
+    {
+      "result": "shared trust retains content/freshness; warning/refresh, not fatal replacement",
+      "state": "retained paused/error",
+      "line": 112
+    },
+    {
+      "result": "chart/detail unknown; summary gapCR-01",
+      "state": "pending only",
+      "line": 75
+    },
+    {
+      "result": "0% measured; small sample caption gapCR-02",
+      "state": "resolved all failed",
+      "line": 76
+    }
+  ],
+  "preferencesWorkspace": {
+    "citations": [
+      "page52-59,99,131,139-140,295",
+      "hooks/useRangeState.ts298-331",
+      "lib/workspaceScope.ts36",
+      "lib/timezone.ts52-55",
+      "lib/dateFormat.ts55-89",
+      "hooks/useOperationalMetrics.tsx14-24"
+    ],
+    "native": "Actual12/24h, saved theme/custom/palette/density/RTL/mobile settings reachability NOTRUN",
+    "source": "Header owns scope/default/shared URL preference; vehicle timezone and i18n date locale consumed, no duplicate selectors or preference resets. Existing KPI numeric preference formatter retained; detail/table gaps CR-05."
+  },
+  "instructionsRead": [
+    "docs/orchestrator-loop.md FULL",
+    "docs/frontend-design-contract.md core/relevant MDC026/033/040-046/060-070; later headings inspected",
+    "docs/frontend-mission.md principles/architecture/state/responsive/a11y/43-45",
+    "docs/frontend-inventory.md exact page entry",
+    "docs/session-handoff.md current recovery and QA conventions",
+    "docs/frontend-worker-conventions.md FULL",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md FULL",
+    ".github/instructions/frontend-si-cutover.instructions.md FULL"
+  ],
+  "ruleScan": {
+    "exceptions": [
+      "Legend.wrapperStyle206 Recharts API",
+      "PageLayout104 -> PageContainer11;NoVehicleSelected53 -> PageContainer",
+      "Raw shared component table/building blocks expected",
+      "Dynamic heights/width/tokens not static inline style",
+      "GRADE_DEFAULT passed to t is fallback, not itself an unlocalized-string violation"
+    ],
+    "scope": "4full page/domain/adapter/hook sources; not repository-wide/backend audit",
+    "counts": "Exact case-sensitive raw grep in log; zero matches for8mechanical patterns, not zero total issues"
+  },
+  "priority": {
+    "filesWithMostIssues": [
+      {
+        "count": 3,
+        "file": "web/src/features/system/pages/CommandReliabilityPage.tsx"
+      },
+      {
+        "count": 2,
+        "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx"
+      }
+    ],
+    "first": [
+      "CR-01",
+      "CR-02"
+    ],
+    "next": [
+      "CR-03",
+      "CR-04",
+      "CR-05"
+    ]
+  },
+  "evidenceLimits": [
+    "Source logical repro only; no domain/app/render/test execution",
+    "53declared bodies:12page+21lib+3adapter+17hook; actual discovery null/execution NOTRUN/0executed, no passed assertions",
+    "Historical catalog startup1/zero cases and blocked capture are NOT this attempt evidence; no guard rerun",
+    "No source/test/route/catalog/queue/Git edits; no agent/install/helper/server/browser/network/API/vehicle/command/auth/provider operation",
+    "Native/page acceptance NOT ACCEPTED; conditional3/native2 separate from5confirmed mechanisms"
+  ],
+  "commandLedger": {
+    "failures": [
+      {
+        "shellId": "2760",
+        "exit": 0,
+        "error": "Nonterminating missing commandSummaryMetrics.ts; actual .tsx subsequently pinned/read"
+      },
+      {
+        "shellId": "2797",
+        "exit": 1,
+        "error": "ConvertFrom-Json casing conflict subFSMs/subFsms; corrected -AsHashtable read only"
+      },
+      {
+        "shellId": "2837",
+        "exit": 1,
+        "error": "Missing operationalMetrics.ts; actual .tsx subsequently pinned/read"
+      },
+      {
+        "shellId": "3115",
+        "exit": 1,
+        "error": "Tool launch filename/extension too long (os206); oversized artifact script did not run or write. Split into permitted inline artifact writes; no helper files."
+      },
+      {
+        "error": "Read-only source/test/catalog/document drift; validator stopped before finalization, raw exception printed in caller transcript",
+        "exit": 1,
+        "shellId": "3198"
+      }
+    ],
+    "sourceReadShellsExit0": [
+      "2674",
+      "2675",
+      "2696",
+      "2695",
+      "2726",
+      "2727",
+      "2728",
+      "2744",
+      "2774",
+      "2785",
+      "2784",
+      "2808",
+      "2836",
+      "2890",
+      "2889",
+      "2948"
+    ],
+    "initialGrep": "2836 case-insensitive camelCase false candidate and newline component counts superseded by2890/finalcase-sensitive counts; Legend wrapperStyle exception retained",
+    "artifactInitialWrite": {
+      "exit": 0,
+      "shellId": "3139"
+    },
+    "actualCommands": "Source-read commands/raw output in caller tool transcript; final grep/count/catalog/queue command text and raw output persisted in log",
+    "unexecuted": [
+      "tests",
+      "lint",
+      "build",
+      "compiler",
+      "server",
+      "browser",
+      "network",
+      "API",
+      "vehicle",
+      "command",
+      "auth",
+      "provider",
+      "Git"
+    ],
+    "artifactContentWrite": {
+      "shellId": "3174",
+      "exit": 0
+    },
+    "pinDiagnosis": {
+      "command": "Get-FileHash each recorded input; print before/after mismatches",
+      "exit": 0,
+      "result": "queue and canonical en.json only",
+      "shellId": "3200"
+    }
+  },
+  "completionScope": "Source-only QA findings/artifacts delivered; full catalog input stability failed. No native/page acceptance.",
+  "pinValidation": {
+    "matched": 42,
+    "result": "FAILED_STABILITY",
+    "driftFiles": [
+      "migration-queue.md",
+      "web/src/i18n/en.json"
+    ],
+    "detail": "Canonical en.json and queue changed concurrently; never written by this QA. Page/direct source/test/projection pins matched. Missing5grade keys rechecked still absent, but whole canonical input not stable. Do not accept frozen-input sweep.",
+    "total": 44,
+    "observedUtc": "2026-10-14T02:49:32.6523485Z"
+  },
+  "sourceTestCatalogQueueGitEdits": 0,
+  "queueDispositionContinuation": {
+    "status": "COMPLETE_METADATA_ONLY",
+    "purpose": "Finish only the original findings' missing queue dispositions; not another audit, source fix, application pass or page acceptance.",
+    "attempt": 1,
+    "clock": {
+      "conservativeLaunchUtc": "2026-10-14T05:06:00Z",
+      "returnByUtc": "2026-10-14T05:26:00Z",
+      "hardUtc": "2026-10-14T05:31:00Z",
+      "originalClockPreserved": true
+    },
+    "alreadyDoneCheck": {
+      "dispositionsAlreadyComplete": false,
+      "reason": "The retained report has five confirmed findings and three grouped owner needs but no complete finding-by-finding queue disposition. Add only this missing metadata.",
+      "designContractChangeNeeded": false,
+      "designContractReason": "Existing MDC-026 and MDC-044 already specify unknown versus measured zero, truthful uncertainty and localized presentation. No new design decision, contract edit or repeated migration is needed.",
+      "sourceMigration": "phase5-page-system-command-reliability remains [x], SOURCE ONLY. Its retained false-zero finding was outside that page claim, not a completed correction."
+    },
+    "preservedEvidence": {
+      "originalReportSha256": "95F5BF9DF6C2530F8ADB0C9AEFB2EDC3B85AA68F42B6D8A7661B3D94870075D1",
+      "originalReportSemanticSha256": "B53EC2424256AE6DDC809641A71BAC04CCFF47AF8BF628FCDD5B981286439CA8",
+      "originalLogBytes": 24943,
+      "originalLogSha256": "89A72C0D2992541DF3FF9EB9B204648220697FC617C604EFE74FFE9AB1A80FC3",
+      "policy": "All original report fields, findings, citations, receipts, failed stability, clocks, counts and NOTRUN/native limits remain historical evidence unchanged. Only this continuation is added; log is append-only.",
+      "currentCodeOrCatalogReinspection": "NOTRUN; original confirmed mechanisms are retained findings, not newly verified current defects or fixes."
+    },
+    "queueSnapshot": {
+      "observedUtc": "2026-10-14T05:10:03.0847990Z",
+      "sha256": "A2D3EC0FF19F823D5AA844D1D975D873A720618AA184B6C509AC89BD077A22C5",
+      "exactClaimLine": 343,
+      "exactClaim": "| [~] | 6 | phase6-qa-system-command-reliability | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-command-reliability.json; web\\logs\\phase6-qa-system-command-reliability.log | phase5-page-system-command-reliability | 1 | 2026-10-14T05:06:00Z | - | CommandReliabilityPage; no actual commands/vehicle/auth/provider/network actions.; Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot.; Actually running actor 97f8592d-e55b-4771-8099-e182f9d598fd; no idle/completed counted; conservative return05:26/hard05:31 for new30, Docker original+20/25 unchanged. |",
+      "method": "Read existing queue rows only. Match exact item, exact original owner source/test paths, commandReliability.grade keys and original IDs; inspect related Phase6 catalog/locale/command scopes. Ignore aggregate dependency mentions as representation.",
+      "exactSourceOwnerMatches": [
+        {
+          "item": "audit-page-183",
+          "line": 1095,
+          "status": "[x]",
+          "disposition": "Historical source audit, not a fix owner or duplicate Phase6 finding."
+        },
+        {
+          "item": "phase5-page-system-command-reliability",
+          "line": 2349,
+          "status": "[x]",
+          "disposition": "Closed migration, not a correction for CR-01 through CR-05. Receipt explicitly retains outside-claim false-zero debt."
+        },
+        {
+          "item": "phase6-qa-system-command-reliability",
+          "line": 343,
+          "status": "[~]",
+          "disposition": "This artifact-only continuation, not an implementation lease."
+        }
+      ],
+      "exactAdapterOwnerMatches": 0,
+      "exactGradeKeyMatches": 0,
+      "relatedNonrepresentingItems": [
+        "phase6-qa-system-commands",
+        "phase6-rescue-system-command-history",
+        "phase6-fix-admin-manifest-dlq-caller-catalog",
+        "phase6-fix-active-catalog-projections",
+        "phase6-fix-dlq-toast-catalog",
+        "phase6-fix-gdpr-status-catalog",
+        "phase6-fix-causal-journey-hint-catalog",
+        "phase6-native-drives-count-catalog-integration",
+        "phase6-fix-evidence-plural-catalog"
+      ],
+      "relatedReason": "Different pages/keys or normal derived projection closure. No exact command-reliability correction or five-grade-leaf integration is represented. A generic catalog path match or completed generator check does not prove these missing leaves were installed.",
+      "limitation": "Queue snapshot only; concurrent external queue edits remain possible. No queue writes or current source/catalog validation."
+    },
+    "confirmedDispositions": [
+      {
+        "finding": "CR-01",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "ownerNeed": "NEED-01",
+        "proposedItem": "phase6-fix-command-reliability-summary-truth-locale",
+        "owner": "Existing commandSummaryMetrics domain-adapter owner, separately assigned by parent",
+        "reason": "Pending-only nonempty history presents measured zero without resolved evidence. Closed page migration acknowledges the gap outside its claim; no adapter correction row exists.",
+        "qualification": "Preserve original confidence: source mechanism confirmed, but inspected backend emitted success/failed only; no observed pending production data or native reproduction claimed."
+      },
+      {
+        "finding": "CR-02",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "ownerNeed": "NEED-01",
+        "proposedItem": "phase6-fix-command-reliability-summary-truth-locale",
+        "owner": "Existing commandSummaryMetrics domain-adapter owner, separately assigned by parent",
+        "reason": "No judged worstCommand does not prove nothing failed below the grading threshold. Consolidate with CR-01 at the same owner; do not create a second overlapping fix."
+      },
+      {
+        "finding": "CR-03",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "ownerNeed": "NEED-02",
+        "proposedItem": "phase6-fix-command-reliability-grade-locale-display",
+        "owner": "CommandReliabilityPage presentation owner, separately assigned by parent",
+        "reason": "Raw grade enum reaches the accessible fallback table. Closed audit/migration and Commands/CommandHistory rows do not own this correction; preserve machine-oriented CSV codes separately."
+      },
+      {
+        "finding": "CR-04",
+        "disposition": "UNREPRESENTED_CONFIRMED_OWNER_NEED",
+        "ownerNeed": "NEED-03",
+        "proposedItem": "phase6-fix-command-reliability-grade-catalog",
+        "owner": "Serialized canonical English catalog owner, separately assigned by parent",
+        "reason": "The original report confirms exactly five missing computed grade leaves. Related completed catalog rows cover other keys/projection coherence, not these leaves. No new absence check or catalog repair was performed here.",
+        "catalogExecution": "NOTRUN"
+      },
+      {
+        "finding": "CR-05",
+        "disposition": "UNREPRESENTED_CONFIRMED_FIX",
+        "ownerNeeds": [
+          "NEED-01",
+          "NEED-02"
+        ],
+        "proposedItems": [
+          "phase6-fix-command-reliability-summary-truth-locale",
+          "phase6-fix-command-reliability-grade-locale-display"
+        ],
+        "owner": "Existing adapter context and page/table presentation owners",
+        "reason": "Locale bypass spans caption context and detail/table numbers. Split only by the two existing exclusive source/test pairs; do not duplicate the locale objective or invent a shared formatter root."
+      }
+    ],
+    "candidateDispositions": [
+      {
+        "finding": "C-01",
+        "disposition": "UNCERTAIN_NOT_QUEUED",
+        "reason": "Original hook rejects null/nonarray as source error. Mocked literal-null reachability is not a confirmed production defect."
+      },
+      {
+        "finding": "C-02",
+        "disposition": "UNCERTAIN_NOT_QUEUED",
+        "reason": "Original global onboarding/auth gate was not mounted or fully audited. Do not create a speculative shared selection fix."
+      },
+      {
+        "finding": "C-03",
+        "disposition": "DECLARED_BEHAVIOR_NO_FIX",
+        "reason": "Original unknown-status mapping is intentional declared behavior; inspected producer used supported success/failed. Do not change domain status policy speculatively."
+      },
+      {
+        "finding": "N-01",
+        "disposition": "NATIVE_NOTRUN_NO_CONFIRMED_FIX",
+        "reason": "Original viewport/RTL/text-overflow observations remain unexecuted candidates. No browser pass, failure or new audit task inferred."
+      },
+      {
+        "finding": "N-02",
+        "disposition": "NATIVE_NOTRUN_NO_CONFIRMED_FIX",
+        "reason": "Original keyboard/focus/screen-reader/theme/open-state/preference acceptance remains NOTRUN. No native/page approval or speculative implementation need."
+      }
+    ],
+    "parentNeeds": [
+      {
+        "need": "NEED-01",
+        "proposedItem": "phase6-fix-command-reliability-summary-truth-locale",
+        "queueState": "PROPOSED_ONLY_NOT_REGISTERED",
+        "owner": "Existing domain adapter",
+        "exactFiles": [
+          "web\\src\\features\\system\\components\\statstrip-command-summaries\\commandSummaryMetrics.tsx",
+          "web\\src\\features\\system\\components\\statstrip-command-summaries\\commandSummaryMetrics.test.ts"
+        ],
+        "findings": [
+          "CR-01",
+          "CR-02",
+          "CR-05 caption"
+        ],
+        "action": "Preserve declared empty-array convention and all raw counts, pending/status/Wilson/threshold definitions. Nonempty no-resolved evidence must be missing, not measured zero; small-sample failures must not read Nothing failing; format caption numbers through existing effective locale.",
+        "dependencyDisposition": "No new design/domain/backend/shared-formatter root; required presentation copy, if any is proven missing by this separately assigned owner, must be reported precisely to the catalog owner."
+      },
+      {
+        "need": "NEED-02",
+        "proposedItem": "phase6-fix-command-reliability-grade-locale-display",
+        "queueState": "PROPOSED_ONLY_NOT_REGISTERED",
+        "owner": "Existing page presentation",
+        "exactFiles": [
+          "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+          "web\\src\\features\\system\\pages\\CommandReliabilityPage.test.tsx"
+        ],
+        "findings": [
+          "CR-03",
+          "CR-05 page/table"
+        ],
+        "action": "Translate visible table grades and use existing effective locale/number formatting for detail and numeric columns. Keep three sections, six columns, full identities, raw numeric CSV values, precision, rates, retries and unknown confidence.",
+        "dependencyDisposition": "Installed canonical grade copy is a direct prerequisite for fully localized grade acceptance (NEED-03). Page numeric presentation and adapter truth corrections are separate scopes; neither requires the other as a blanket prerequisite."
+      },
+      {
+        "need": "NEED-03",
+        "proposedItem": "phase6-fix-command-reliability-grade-catalog",
+        "queueState": "PROPOSED_ONLY_NOT_REGISTERED",
+        "owner": "Serialized canonical catalog integration",
+        "exactFiles": [
+          "web\\src\\i18n\\en.json",
+          "web\\src\\i18n\\en\\locale-system.json"
+        ],
+        "findings": [
+          "CR-04"
+        ],
+        "exactLeaves": {
+          "commandReliability.grade.excellent": "Excellent",
+          "commandReliability.grade.good": "Good",
+          "commandReliability.grade.flaky": "Flaky",
+          "commandReliability.grade.unreliable": "Unreliable",
+          "commandReliability.grade.unproven": "Not enough attempts"
+        },
+        "action": "Integrate only these five retained leaf requirements through the existing serialized canonical owner and normal generation/guards. Preserve all other leaves/ratchets/known-missing baselines. Normal generation must establish any further derived manifest outputs before parent grants their exact leases; no speculative manifest list or generator execution here.",
+        "dependencyDisposition": "Catalog root does not wait on page acceptance. Parent must serialize canonical ownership and confirm current absence/representation in the actual separately authorized correction, not reopen completed unrelated catalog work."
+      }
+    ],
+    "totals": {
+      "originalConfirmedFindingsDispositioned": 5,
+      "unrepresentedConfirmedFindings": 5,
+      "representedDuplicateConfirmedFindings": 0,
+      "originalConditionalCandidatesDispositioned": 3,
+      "originalNativeCandidatesDispositioned": 2,
+      "groupedParentNeeds": 3,
+      "newFindings": 0,
+      "newQueueRowsWritten": 0
+    },
+    "limits": {
+      "tests": "NOTRUN",
+      "lint": "NOTRUN",
+      "compiler": "NOTRUN",
+      "repeatAuditOrPasses": "NOTRUN",
+      "browserNetworkVehicleCommandBusinessActions": "NOTRUN",
+      "sourceCatalogQueueGitHelperServerInstallDockerNestedAgentOperations": "NOTRUN",
+      "nativePageAcceptance": "NOT ACCEPTED",
+      "validation": "Document JSON, disposition coverage and original-evidence/log-prefix preservation only; not application testing.",
+      "release": "Only assigned report and ignored log were writable; all code remained unread and readonly during this continuation. Parent alone registers/deduplicates future exact correction leases."
+    },
+    "documentValidation": {
+      "shellId": "4311",
+      "exit": 0,
+      "observedUtc": "2026-10-14T05:13:42.1377683Z",
+      "json": "PASS",
+      "originalReportSemanticEvidence": "UNCHANGED",
+      "originalLogPrefix": "UNCHANGED: exact first24943 bytes/SHA256 preserved",
+      "dispositionCoverage": "10/10: original confirmed5, conditional3, native2; no duplicate IDs",
+      "groupedNeeds": "3 proposed only; no queue changes or new findings",
+      "initialCheck": {
+        "shellId": "4279",
+        "exit": 1,
+        "rawException": "Original log prefix changed",
+        "reason": "Patch tool normalized retained mixed CRLF/LF log endings; not a source or application failure."
+      },
+      "correctiveRecovery": {
+        "shellId": "4296",
+        "exit": 0,
+        "result": "Restored original mixed command-text LF/rest CRLF bytes only after candidate length24943 and SHA25689A72C0D2992541DF3FF9EB9B204648220697FC617C604EFE74FFE9AB1A80FC3 exactly matched the pre-edit pin; appended continuation separately."
+      },
+      "rawReceipt": "web\\logs\\phase6-qa-system-command-reliability.log",
+      "applicationAcceptance": "NOTRUN; original PARTIAL/FAILED_STABILITY/native NOTRUN not upgraded"
+    },
+    "releaseUtc": "2026-10-14T05:13:42.1377683Z"
+  }
+}

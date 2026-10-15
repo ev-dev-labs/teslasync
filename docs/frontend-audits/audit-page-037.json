@@ -1,0 +1,639 @@
+{
+  "item": "audit-page-037",
+  "phase": 0,
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+  "routes": [
+    "/intelligence/road-hazards"
+  ],
+  "purpose": "Inspect privacy-preserving road-hazard clusters and supporting evidence for the workspace-selected vehicle.",
+  "primaryGoal": "Assess hazard severity, confidence, observation coverage and recency without exposing precise locations or implying navigation or vehicle control capabilities.",
+  "identity": {
+    "component": "RoadHazardMeshPage",
+    "routeEvidence": "web\\src\\App.tsx:232,766",
+    "mount": "Lazy component within SafeRoute; source registration confirmed, browser mounting unverified.",
+    "rootSHA256": "B3577AE825381592BC597123911C0FBC9136389CC807A0FF944512908D7FDDB8"
+  },
+  "dataSources": [
+    {
+      "hook": "useRoadHazards",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 91,
+      "endpoint": "GET /api/v1/advanced-intelligence/road-hazards?vehicle_id=<id>&limit=18&offset=<page-derived>",
+      "sourceOwner": "internal\\app\\advancedintelligencesvc\\survival_security_charging.go:144-202",
+      "routeOwner": "internal\\handler\\v1\\advancedintelligence\\handler.go:69-75,144-159",
+      "routerIntegration": "internal\\api\\router.go:3917",
+      "contract": "HazardPage / HazardCluster in web\\src\\types\\advancedIntelligence.ts:132-146",
+      "queryBehavior": "Query key includes vehicle, limit and offset. Positive vehicle enables query. AbortSignal forwarded to request. Existing inherited retry/stale policies are untouched.",
+      "knownBackendBehavior": "Service reads ListHazardEvidence over a rolling 90-day interval with a 1000-row input limit; omits uncorrelated coarse cells; derives confidence; sorts by last_seen descending; paginates clusters; returns quality, limitations and generated_at. Evidence source labels security_events_and_signal_log. Repository SQL and deployed responses were not inspected.",
+      "units": "Confidence is a percentage; observations are counts; coarse_cell is an identifier, not coordinates. No physical measurement conversion is performed."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 52,
+      "endpoint": "useVehicles dependency; its HTTP contract was not traced in this bounded audit.",
+      "sourceOwner": "Workspace selection hook and existing selectedVehicle store",
+      "behavior": "URL/path selection, persisted selection and fleet fallback; page consumes vehicleId without introducing a local picker.",
+      "workspace": "web\\src\\lib\\workspaceScope.ts:22-78,165-179 establishes range=false and vehicle=true for the assigned route. Current backend owns its fixed observation interval; do not invent client-only date filtering."
+    },
+    {
+      "hook": "useNumberFormatting / formatRelative / formatDateTime",
+      "file": "web\\src\\hooks\\useNumberFormatting.ts",
+      "line": 18,
+      "sourceOwner": "Existing formatter preference bridge and web\\src\\lib\\dateFormat.ts",
+      "behavior": "Counts and percentages use saved precision/locale; timestamps use centralized helpers. Numeric source values and wire timestamps remain unchanged."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "role": "Existing PageContainer adapter; full-width min-w-0 container; shell owns workspace controls."
+    },
+    {
+      "name": "InsightPanel",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "role": "Domain panel composing LayoutCard, SourceContent and useDataState."
+    },
+    {
+      "name": "EvidencePanel",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "role": "Domain owner of quality, supporting sources, limitations and unsupported capability explanations."
+    },
+    {
+      "name": "SourceContent",
+      "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "role": "Loading, fatal error, empty and retained content presentation with retry."
+    },
+    {
+      "name": "Table",
+      "owner": "web\\src\\components\\ui\\Table.tsx",
+      "role": "Semantic key/value matrix with bounded horizontal scrolling; not a sortable/exportable dataset."
+    },
+    {
+      "name": "Pagination",
+      "owner": "web\\src\\components\\ui\\Pagination.tsx",
+      "role": "Caller-owned server pagination, first/previous/current/next/last and direct destination input."
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "role": "Existing entrance motion using reduced-motion preference."
+    },
+    {
+      "name": "AlertBanner, Badge, Text, EmptyState, KVList",
+      "owner": "Existing category barrels and EvidencePanel imports",
+      "role": "Privacy notice, textual severity, typography, source emptiness and quality matrix. Individual implementations not all inspected."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 71,
+      "rule": "MDC-002/MDC-015",
+      "detail": "Feature-local white-alpha article frame duplicates the evidence-source frame in EvidencePanel:82; both bypass neutral surface tokens.",
+      "fix": "Reuse existing Card/LayoutCard surface or existing neutral surface utilities; keep articles and evidence details. No new HazardCard surface system.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "Hazard cards stack then use md two-column and xl three-column viewport grids; EvidencePanel stacks then lg three-column. Table owns horizontal scrolling; Pagination uses container-aware controls.",
+    "verifiedWidths": [],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+        "line": 69,
+        "rule": "MDC-031/MDC-043",
+        "detail": "Grid follows viewport breakpoints rather than allocated PageLayout container width; card flex headers and coarse identifiers do not set min-w-0 or explicit long-text wrapping. Narrow shell allocation and long backend strings are source-visible overflow risks, not observed failures.",
+        "fix": "Use existing CardGrid/container strategy with min-w-0 and non-lossy wrapping; exercise long hazard types, identifiers and severity at all contract widths.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "h3 hazard headings through Text as override",
+      "Table row headers use scope=row",
+      "Decorative icons use aria-hidden",
+      "Severity is exposed as text, not color alone",
+      "Evidence sections have localized aria-labels",
+      "Shared Pagination has named native controls and aria-current",
+      "FadeIn respects the existing motion preference"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+        "line": 79,
+        "rule": "MDC-040",
+        "detail": "Every cluster matrix repeats the same generic accessible table name, so table navigation does not identify which hazard/coarse cell the matrix belongs to.",
+        "fix": "Use a localized source-specific table label including hazard type and coarse cell, or associate the matrix with a unique hazard heading; keep all four row headers.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": [
+      "Keyboard interaction",
+      "Focus restoration",
+      "Screen reader output",
+      "Effective contrast",
+      "Forced colors",
+      "44px target reachability",
+      "200% text",
+      "RTL",
+      "Reduced-motion browser behavior"
+    ]
+  },
+  "states": {
+    "initialLoading": "Hazard query passes into InsightPanel and SourceContent skeleton. EvidencePanel is independent and immediately renders no-data descriptions.",
+    "empty": "Resolved empty hazards retain panel shell and threshold explanation plus source retry. No selected vehicle shows a selection prerequisite. Empty evidence retains EmptyState.",
+    "fatalError": "Hazard panel isolates fatalError and offers retry; evidence panel does not receive the failure state.",
+    "retained": "InsightPanel retains rows on refresh failure/paused fetch and SourceContent provides a generic retained warning and retry.",
+    "offline": "Initial paused hazard query gets unresolved/paused copy rather than claiming resolved emptiness. Retained paused data maps to retained state.",
+    "unknown": "Missing quality currently says unsupported even before query resolution; missing evidence says none returned; absent limitations says no additional limitations.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+        "line": 121,
+        "rule": "MDC-026",
+        "detail": "EvidencePanel receives only optional payload, not the hazard query trust state. During first load, fatal failure or no selection it displays unsupported quality/no returned evidence/no additional limitations as though the source answered. Retained refresh failure is not annotated within this second panel.",
+        "fix": "Extend the existing EvidencePanel with an optional query/DataState presentation contract and source-specific prerequisite state; pass the same hazard query while preserving independent section shells and every unsupported explanation.",
+        "owner": "shared",
+        "confidence": "high",
+        "relatedEvidence": [
+          "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:26-45,68-71,95-101,115-120",
+          "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx:37-52"
+        ]
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "line": 61,
+        "rule": "MDC-026/MDC-046",
+        "detail": "The DataState adapter is reduced to a five-state SourceContent enum; last-success time, refreshing flag, blocked refresh and refresh-error details are not surfaced. Generic retained copy cannot distinguish offline from failed refresh or show freshness.",
+        "fix": "Compose the existing trust warning/presentation mechanisms with retained payload, updatedAt and retry; preserve fatal-only replacement and avoid introducing another trust registry.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 71,
+      "rule": "MDC-010/MDC-011/MDC-015",
+      "detail": "border-white/[0.08] and bg-white/[0.025] hardcode white-alpha presentation across themes. The same pattern exists at EvidencePanel:82. No page neon, glow or saturated gradient was found by the bounded source inspection.",
+      "fix": "Use neutral existing surface/border tokens without changing saved palette/theme settings; retain semantic danger/warning badges and subdued hierarchy.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "line": 29,
+      "rule": "MDC-032/MDC-046",
+      "detail": "Pagination state survives workspace vehicle changes. Switching from page N to a vehicle with fewer clusters sends the old offset. If items is empty, InsightPanel hides its children including Pagination, so the user cannot return to page 1 through the table controls. Shared Pagination clamps displayed page but does not correct caller-owned query offset.",
+      "fix": "Scope/reset pagination to selected vehicle and recover when returned total makes the offset invalid; retain 18-row server paging, exact offsets and all navigation actions.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx:30,61,109-115",
+        "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx:72",
+        "web\\src\\components\\ui\\Pagination.tsx:25-29"
+      ]
+    },
+    {
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "line": 129,
+      "rule": "MDC-044",
+      "detail": "formatRelative emits hardcoded English 'just now' and 'm/h/d ago'; the page's localized label does not localize relative recency. Evidence timestamp formatting defaults to browser locale rather than explicit formatter preference.",
+      "fix": "Extend the existing date formatting owner with locale-aware relative output and consume existing saved locale/timezone policy; do not add a page-specific date formatter.",
+      "owner": "shared",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx:103",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:90-92"
+      ]
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "order": [
+      "Repair workspace-pagination recovery",
+      "Make evidence metadata state truthful",
+      "Expose existing freshness/offline distinctions",
+      "Replace fixed-white surfaces",
+      "Localize recency and improve unique table naming",
+      "Validate long-content/container responsiveness"
+    ],
+    "reason": "Source-confirmed trust and pagination risks precede restrained presentation modernization; no runtime failure is claimed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "EvidencePanel source-state integration",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "props": [
+        "Optional query or existing DataStateSource<unknown>",
+        "Explicit prerequisite/unresolved state",
+        "Existing quality/evidence/limitations/unsupported payload props unchanged"
+      ],
+      "variants": [
+        "Existing domain evidence panel, not a replacement global panel"
+      ],
+      "states": [
+        "initial",
+        "paused initial",
+        "fatal failure",
+        "resolved empty",
+        "ready",
+        "retained refresh failure",
+        "retained offline"
+      ],
+      "usedBy": [
+        "RoadHazardMeshPage",
+        "Existing advanced-intelligence EvidencePanel consumers; exact other consumer list not audited"
+      ],
+      "dependsOn": [
+        "Existing InsightPanel",
+        "useDataState",
+        "SourceContent"
+      ],
+      "acceptance": "Keep all three evidence sections and unsupported statements visible; unknown availability cannot become unsupported/empty; refresh failure never removes retained metadata."
+    },
+    {
+      "name": "InsightPanel retained trust details",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "props": [
+        "Existing query",
+        "Existing onRetry",
+        "Existing empty/emptyMessage"
+      ],
+      "variants": [
+        "Existing panel"
+      ],
+      "states": [
+        "retained failed refresh",
+        "retained paused/offline",
+        "refreshing",
+        "last successful observation"
+      ],
+      "usedBy": [
+        "RoadHazardMeshPage hazard cluster panel",
+        "EvidencePanel composition"
+      ],
+      "dependsOn": [
+        "web\\src\\api\\dataState.ts",
+        "Existing shared trust presentation"
+      ],
+      "acceptance": "Show source freshness and cause-specific trust without replacing retained data or creating a competing state vocabulary."
+    },
+    {
+      "name": "Locale-aware relative timestamp formatting",
+      "owner": "web\\src\\lib\\dateFormat.ts",
+      "props": [
+        "Existing timestamp input",
+        "Existing FormatOptions.locale/tz"
+      ],
+      "variants": [
+        "Relative timestamp"
+      ],
+      "states": [
+        "Valid recency",
+        "Missing/invalid placeholder"
+      ],
+      "usedBy": [
+        "RoadHazardMeshPage last_seen",
+        "EvidencePanel observed_at/window timestamp localization policy"
+      ],
+      "dependsOn": [
+        "Existing formatter preference bridge and localization policy"
+      ],
+      "acceptance": "Localized recency with unchanged wire UTC values and safe missing timestamps; no competing formatter."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Surfaces",
+      "evidence": "RoadHazardMeshPage.tsx:71 and EvidencePanel.tsx:82 define white-alpha frames despite existing Card/LayoutCard/Table surface ownership.",
+      "decision": "Reuse existing owners; no new component or palette."
+    },
+    {
+      "pattern": "Workspace",
+      "evidence": "Page consumes useSelectedVehicle and renders no local range or vehicle controls.",
+      "decision": "Preserve header ownership; fixed backend rolling interval does not authorize a second picker."
+    },
+    {
+      "pattern": "Trust",
+      "evidence": "InsightPanel already uses useDataState and SourceContent; EvidencePanel currently bypasses query annotation.",
+      "decision": "Extend existing composition, not a second query/error/state pipeline."
+    }
+  ],
+  "preservation": {
+    "sourceSHA256": "B3577AE825381592BC597123911C0FBC9136389CC807A0FF944512908D7FDDB8",
+    "currentLineCount": 133,
+    "ownedPageComponentCount": 1,
+    "sectionNames": [
+      "Privacy notice",
+      "Hazard clusters",
+      "Evidence, quality, and limitations",
+      "Data quality",
+      "Evidence sources",
+      "Limitations",
+      "Explicitly unsupported"
+    ],
+    "sectionCounts": {
+      "topLevelContentBlocks": 3,
+      "domainPanels": 2,
+      "evidenceSubsections": 3,
+      "unsupportedSubblock": 1,
+      "fieldsPerHazard": 6,
+      "matrixRowsPerHazard": 4,
+      "GlassPanel": 0,
+      "ChartContainer": 0,
+      "InsightPanelCallsInRoot": 1,
+      "EvidencePanelCallsInRoot": 1
+    },
+    "fields": [
+      "hazard_type",
+      "severity",
+      "coarse_cell",
+      "confidence_pct",
+      "observation_count",
+      "last_seen"
+    ],
+    "evidenceFields": [
+      "quality status",
+      "sample_count",
+      "coverage_pct",
+      "window_start/window_end",
+      "quality reasons",
+      "evidence source",
+      "summary",
+      "sample_count",
+      "observed_at",
+      "limitations",
+      "unsupported capabilities"
+    ],
+    "actions": [
+      "Source retry/refresh through InsightPanel",
+      "Pagination first/previous/current/next/last and direct page jump",
+      "Workspace vehicle change through existing shell"
+    ],
+    "dataBehavior": [
+      "Preserve coarse-cell-only privacy boundary; never map identifiers to coordinates",
+      "No route reconstruction, automatic rerouting or vehicle commands",
+      "No inferred hazard-free claim for empty results",
+      "Preserve raw percent/count/timestamps and SI wire/cache data",
+      "Preserve source ordering, evidence flattening per loaded page, query keys, enablement, cancellation, inherited retry and caching",
+      "Keep real zero distinguishable from unavailable values",
+      "Preserve all localized privacy/evidence/unsupported explanations and saved formatter/theme/motion preferences",
+      "Do not invent exports, charts, live telemetry or backend range support"
+    ],
+    "existingTestEvidence": "AdvancedIntelligenceClosure.test.tsx:237-257,282-296 contains mocked retained-refresh, exact offset, zero and coarse-cell matrix/privacy assertions. InsightPanel.test.tsx checks recovery and informational emptiness. Tests were inspected, not executed."
+  },
+  "evidenceLimits": {
+    "method": "Bounded read-only source audit; source counts/hash and artifact validation only.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendRuntime": "unverified",
+    "notRun": [
+      "TypeScript",
+      "Lint",
+      "Build",
+      "Vitest",
+      "Browser",
+      "Git",
+      "Full audit-violations script"
+    ],
+    "reason": "Assignment prohibits full gates and runtime is explicitly unverified. audit-violations script was read but not executed because it unconditionally invokes project-wide tsc. Scoped equivalent source counts were run instead.",
+    "coverage": "Only assigned page and directly relevant presentation/data/route dependencies. Shared barrel consumers and backend repository SQL are not exhaustively audited.",
+    "sourceCounts": {
+      "staticInlineStyles": 0,
+      "rawControls": 0,
+      "directChartMapMotionImports": 0,
+      "fixedWhiteClasses": 2
+    },
+    "countsScope": "Assigned root TSX only; regex/static checks are not full semantic compliance or runtime proof."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.test.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\AdvancedIntelligenceClosure.test.tsx",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\app\\advancedintelligencesvc\\survival_security_charging.go"
+  ],
+  "inventoryMethod": "filesRead records full reads or explicitly relevant source excerpts/search matches; inventory SHA-256 values pin file bytes at release, not whole-file semantic review.",
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-037.json",
+    ".agent-status\\audit-page-037.txt"
+  ],
+  "sourceInventory": [
+    {
+      "path": "docs\\frontend-design-contract.md",
+      "sha256": "17B542389CD4E98A0DFB7B4D2F2C4E2727F221AF0AC5ACB738DB5E987B282255",
+      "lineCount": 394,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "docs\\frontend-worker-conventions.md",
+      "sha256": "6CF8194644A7820926082FC065E9CBF87C1E1E2D8258C4D092DA8C962707ADC3",
+      "lineCount": 80,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "docs\\frontend-mission.md",
+      "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "lineCount": 1593,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": ".github\\skills\\audit-violations\\audit.sh",
+      "sha256": "3E5937AB2A4EA2F303A0152111794D5A3A45C24ABFE7B11400079BC4AC3DFE46",
+      "lineCount": 141,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\pages\\RoadHazardMeshPage.tsx",
+      "sha256": "B3577AE825381592BC597123911C0FBC9136389CC807A0FF944512908D7FDDB8",
+      "lineCount": 133,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+      "sha256": "59128FF5C6963DD4E04B1A5370F8634197986893D79AD74FC3BA67FE48DACFC1",
+      "lineCount": 6,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "sha256": "7B774AE98C6BFED41D47605B36045A61A7C4AB0C6E41BF2D6770FEB59B52D8DD",
+      "lineCount": 72,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "sha256": "667BCE14E068B5C386E2E3F524295532E62F8D3033218808DB6E60D213E3898E",
+      "lineCount": 130,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.test.tsx",
+      "sha256": "F97AF7D8348A4E9E88EB25477EC2FE0E7A281C39662E05639E55CEE98F6CB2B1",
+      "lineCount": 44,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\pages\\AdvancedIntelligenceClosure.test.tsx",
+      "sha256": "769758252F2484C36F1E6279B7599587ACB449775C95D7C7A001299C0F147C6A",
+      "lineCount": 920,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "sha256": "DAC2B5A3C62F8E0B7D366A11BA11115818895D3A751B482C9361D6647D967067",
+      "lineCount": 251,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\api\\client.ts",
+      "sha256": "A9732175455ED2DC207CC59CB42DCF7E66065453303E68593EFE317A8C233428",
+      "lineCount": 478,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\api\\dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lineCount": 434,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\types\\advancedIntelligence.ts",
+      "sha256": "CC6E80B16F9119E2D322D662A2EBE2718A195FFDA67738A1B0C59402CAEE8F13",
+      "lineCount": 431,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "lineCount": 174,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\hooks\\useNumberFormatting.ts",
+      "sha256": "CA9C9CE0D895CF31F23A17405FA4D4132F99FD524F970ECC75922903DEC27DD9",
+      "lineCount": 47,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "lineCount": 65,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\lib\\dateFormat.ts",
+      "sha256": "F86CBF7BA2D84CA11D93BF9A9253E96CFD44B907A275A7790EB174C632F5C53E",
+      "lineCount": 442,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lineCount": 168,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\components\\ui\\Table.tsx",
+      "sha256": "FF644452047B5C88F1BF5093601CFEC8E64C61E58DD6247AB521BC4016202A02",
+      "lineCount": 41,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\components\\ui\\Pagination.tsx",
+      "sha256": "A1C576C190C75CF74944E28BF1DF78BAB874C6871E63D9FFA64A6626178831C0",
+      "lineCount": 138,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "8DF73DE2D4B3FF7485019389F547D863FE8729AA0C95FA1F497487389D6B87F6",
+      "lineCount": 17,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "sha256": "283583E259342620CB0E24429E3F66FB6385F16498D869192F36CFFCFF9EEC43",
+      "lineCount": 72,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\components\\motion\\FadeIn.tsx",
+      "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "lineCount": 39,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "web\\src\\App.tsx",
+      "sha256": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3",
+      "lineCount": 918,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "internal\\api\\router.go",
+      "sha256": "98B92853EBADE3DB74AD361D098BBA4472039884A407D61CE901DC3BF1FE3750",
+      "lineCount": 5366,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "internal\\handler\\v1\\advancedintelligence\\handler.go",
+      "sha256": "5717254A401F668DBB29F6B1A7826AEA19888C7789E2C20D9EBB6CD850BE4F66",
+      "lineCount": 460,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    },
+    {
+      "path": "internal\\app\\advancedintelligencesvc\\survival_security_charging.go",
+      "sha256": "1821EC86625CCAD0CACE09D378126E86F0725F4CDBBAB627E2350D8378145D05",
+      "lineCount": 380,
+      "evidenceType": "source-only; full read or bounded excerpt/search as recorded in report"
+    }
+  ],
+  "validation": [
+    {
+      "command": "Scoped PowerShell regex counts on assigned root TSX",
+      "exitCode": 0,
+      "output": "staticInlineStyles=0; rawControls=0; directChartMapMotionImports=0; fixedWhiteClasses=2; GlassPanel=0; ChartContainer=0; InsightPanel=1; EvidencePanel=1"
+    },
+    {
+      "command": "ConvertFrom-Json; validate required schema keys, item/routes, SHA256 and source inventory",
+      "exitCode": 0,
+      "output": "Valid JSON; all 20 required keys present; exact item/routes; page SHA256 unchanged; 28 source inventory entries"
+    }
+  ]
+}

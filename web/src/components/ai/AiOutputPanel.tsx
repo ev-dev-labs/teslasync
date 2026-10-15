@@ -30,10 +30,12 @@
 
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'
 import { AIThinkingIndicator } from '@/components/ai/AIThinkingIndicator'
 import { HelixEvidenceTrail } from '@/components/ai/HelixEvidenceTrail'
+import { Text } from '@/components/ui/Typography'
 import type {
   AiStreamState,
   AiToolActivity,
@@ -60,6 +62,35 @@ export interface AiOutputPanelProps {
   pendingChild?: ReactNode | null
 }
 
+function errorRecovery(t: TFunction, error: string | null) {
+  // Only hook-owned transport codes are classified; arbitrary failures do not
+  // establish connectivity, provider health, or a supported recovery reason.
+  if (
+    error !== 'stream_no_body' &&
+    error !== 'stream_incomplete' &&
+    !/^stream_http_[45]\d{2}$/.test(error ?? '')
+  ) return null
+
+  if (error === 'stream_http_401') {
+    return {
+      title: t('error.unauthorized.title', 'Sign in required'),
+      nextStep: t('error.unauthorized.cta', 'Sign in'),
+    }
+  }
+  if (error === 'stream_http_403') {
+    return {
+      title: t('error.forbidden.title', 'Permission denied'),
+      nextStep: t('error.forbidden.message', 'Your account does not have permission to view or change this resource.'),
+    }
+  }
+  return {
+    title: t('ai.limit.title.generic', 'Helix temporarily unavailable'),
+    nextStep: error === 'stream_http_429'
+      ? t('error.waiting.retryMessage', 'Requests are paused briefly. Wait before retrying.')
+      : t('errorBoundary.body', 'An unexpected error occurred. Please try again.'),
+  }
+}
+
 export function AiOutputPanel({
   text,
   state,
@@ -69,6 +100,7 @@ export function AiOutputPanel({
   pendingChild,
 }: AiOutputPanelProps): JSX.Element | null {
   const { t } = useTranslation()
+  const recovery = state === 'error' ? errorRecovery(t, error) : null
   const hasAnything =
     text.length > 0 ||
     activity.length > 0 ||
@@ -78,36 +110,54 @@ export function AiOutputPanel({
   if (!hasAnything) return null
   return (
     <div
-      className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4"
+      className="min-w-0 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4"
       data-testid="ai-output-panel"
     >
-      {state === 'error' ? (
-        <p role="alert" className="text-sm text-red-300 flex items-start gap-2">
+      {state === 'error' && (
+        <Text as="p" variant="body" role="alert" className="flex items-start gap-2 text-[var(--semantic-danger)]">
           <HelixMark
-            className="h-4 w-4 text-red-300 shrink-0 mt-0.5"
+            className="h-4 w-4 shrink-0 mt-0.5"
             aria-hidden="true"
           />
-          <span>
-            <span className="font-medium">{t('helix.errorLabel', 'Helix error:')}</span>{' '}
-            {error ?? t('ai.common.errorUnknown', 'unknown')}
+          <span className="min-w-0 break-words">
+            <Text weight="medium">{t('helix.errorLabel', 'Helix error:')}</Text>{' '}
+            {recovery ? (
+              <>
+                <Text weight="medium">{recovery.title}</Text>
+                <Text as="span" variant="body" className="block">
+                  {recovery.nextStep}
+                </Text>
+                <Text as="span" variant="bodySm" className="block">
+                  {t('ai.limit.desc.generic', 'Helix features are temporarily unavailable. The non-Helix baseline continues to work.')}
+                </Text>
+                <Text as="code" variant="code" className="block whitespace-pre-wrap break-words">
+                  {error}
+                </Text>
+              </>
+            ) : (
+              error ?? t('ai.common.errorUnknown', 'unknown')
+            )}
           </span>
-        </p>
-      ) : text.length === 0 && state === 'streaming' ? (
+        </Text>
+      )}
+      {/* Failed-stream deltas remain readable, not a completed or verified answer.
+          The error stays first; no success/freshness metadata is inferred. */}
+      {text.length > 0 ? (
+        <Text as="p" variant="body" className="whitespace-pre-wrap break-words leading-relaxed">{text}</Text>
+      ) : state === 'error' ? null : state === 'streaming' ? (
         pendingChild === undefined ? (
           <AIThinkingIndicator />
         ) : (
           pendingChild
         )
-      ) : text.length === 0 ? (
+      ) : (
         // Reachable only when state === 'done' with no accumulated text
         // (idle / paused-confirm without text return null above, streaming
         // and error are handled by the branches above). Show a placeholder
         // instead of an empty paragraph so the panel is never blank.
-        <p className="text-sm text-[var(--text-muted)]">
+        <Text as="p" variant="bodySm" className="break-words">
           {t('ai.common.noOutput', 'No output was generated.')}
-        </p>
-      ) : (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-primary)]">{text}</p>
+        </Text>
       )}
       <HelixEvidenceTrail activity={activity} state={state} usage={usage} />
     </div>

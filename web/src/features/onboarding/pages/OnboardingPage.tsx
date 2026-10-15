@@ -11,11 +11,17 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { PersonaSelect } from '@/components/forms';
-import { GlassPanel, Button, IconBox, SectionTitle, Text } from '@/components/ui';
+import { GlassPanel, Button, BUTTON_BASE, BUTTON_VARIANTS, IconBox, SectionTitle, Text } from '@/components/ui';
+import { AnnouncerRegion, VisuallyHidden } from '@/components/a11y';
 import { FadeIn } from '@/components/motion';
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { deriveDataState } from '@/api/dataState';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDocumentHidden } from '@/hooks/useRefreshPolicy';
+import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
 import { cn } from '@/lib/cn';
@@ -37,7 +43,7 @@ import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
  *   2. Waiting for vehicles to sync from the Fleet API.
  *   3. Waiting for the first telemetry batch to arrive.
  *
- * Laid out as a full-width bento: a setup-status KPI band, a hero row
+ * Laid out as a full-width bento: a compact setup-status OperationalBrief, a hero row
  * pairing the setup checklist with a resources panel, a preview of what
  * unlocks once setup completes, and a footer action band. The page is
  * intentionally self-contained — it does NOT pull in the vehicle picker
@@ -49,9 +55,22 @@ export default function OnboardingPage() {
   const { t } = useTranslation();
   usePageTitle(t('onboarding.pageTitle', 'Welcome to TeslaSync'));
   const navigate = useNavigate();
-  const { data, isLoading, isError, error, refetch, isFetching } = useOnboardingStatus();
+  const onboardingQuery = useOnboardingStatus();
+  const { data, isLoading, refetch, isFetching } = onboardingQuery;
+  const onboardingState = deriveDataState(onboardingQuery);
+  useLoadAnnouncement({
+    label: t('onboarding.status.sectionLabel', 'Setup status'),
+    isLoading: !onboardingState.hasData && !onboardingState.fatalError,
+    isError: Boolean(onboardingState.fatalError),
+  });
   const { skip } = useOnboardingSkip();
   const { preferences, updatePreferences } = useProductPreferences();
+  const { reduce } = useMotionPreference();
+  const documentHidden = useDocumentHidden();
+  const refreshIconClassName = cn(
+    'h-4 w-4 motion-reduce:animate-none',
+    isFetching && !reduce && 'animate-spin',
+  );
 
   const teslaConnected = data?.tesla_connected ?? false;
   const vehicleCount = data?.vehicle_count ?? 0;
@@ -59,6 +78,11 @@ export default function OnboardingPage() {
   const telemetryHealth = data?.telemetry_health ?? 'unknown';
   const setupComplete = data?.setup_complete ?? data?.is_complete ?? false;
   const isComplete = setupComplete;
+  const pausedTitle = t('dataSources.status.paused', 'Refresh paused');
+  const pausedRetainedMessage = t(
+    'maintenance.sources.refreshBlocked',
+    'Refresh is paused. Retained data remains available.',
+  );
 
   const steps = useMemo<OnboardingStep[]>(
     () => [
@@ -69,7 +93,7 @@ export default function OnboardingPage() {
           'onboarding.tesla.desc',
           'TeslaSync needs Fleet API access to read vehicle data. Sign in with your Tesla account to authorize the connection.',
         ),
-        done: setupComplete || teslaConnected,
+        done: onboardingState.hasData ? setupComplete || teslaConnected : null,
         cta: {
           label: t('onboarding.tesla.cta', 'Connect Tesla account'),
           to: '/tesla-account',
@@ -82,7 +106,8 @@ export default function OnboardingPage() {
           'onboarding.vehicle.desc',
           'Vehicles linked to your Tesla account will sync automatically. This usually takes less than a minute after connecting.',
         ),
-        done: setupComplete || vehicleCount > 0,
+        done: onboardingState.hasData ? setupComplete || vehicleCount > 0 : null,
+        busy: isFetching,
         cta: {
           label: isFetching
             ? t('onboarding.vehicle.checking', 'Checking…')
@@ -100,14 +125,14 @@ export default function OnboardingPage() {
           'onboarding.telemetry.desc',
           'Once your vehicle uploads its first signal batch (usually within 5 minutes of driving), live data will appear across the app. See the Fleet Telemetry setup guide if it does not arrive.',
         ),
-        done: setupComplete || dataFlowing,
+        done: onboardingState.hasData ? setupComplete || dataFlowing : null,
         cta: {
           label: t('onboarding.telemetry.docs', 'Setup guide'),
           href: '/docs/fleet-telemetry-setup',
         },
       },
     ],
-    [setupComplete, teslaConnected, vehicleCount, dataFlowing, refetch, isFetching, t],
+    [onboardingState.hasData, setupComplete, teslaConnected, vehicleCount, dataFlowing, refetch, isFetching, t],
   );
 
   const renderCta = (step: OnboardingStep): ReactNode => {
@@ -116,9 +141,11 @@ export default function OnboardingPage() {
       return (
         <Button
           variant="primary"
+          wrapLabel
           size="sm"
+          className="min-h-11 md:min-h-9"
           onClick={() => navigate(step.cta!.to!)}
-          icon={<ArrowRight className="h-4 w-4" />}
+          icon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
         >
           {step.cta.label}
         </Button>
@@ -130,30 +157,41 @@ export default function OnboardingPage() {
           href={step.cta.href}
           target="_blank"
           rel="noreferrer noopener"
-          className="block w-full sm:inline-block sm:w-auto"
+          aria-labelledby={`onboarding-step-${step.key}-cta-label onboarding-step-${step.key}-cta-new-tab`}
+          className={cn(
+            BUTTON_BASE,
+            BUTTON_VARIANTS.outline,
+            'h-auto min-h-11 w-full min-w-0 max-w-full whitespace-normal px-3 py-1.5 md:min-h-9 sm:w-auto',
+            reduce && 'transition-none',
+          )}
         >
-          <Button
-            variant="outline"
+          <BookOpen className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <Text
+            id={`onboarding-step-${step.key}-cta-label`}
+            as="span"
             size="sm"
-            className="w-full sm:w-auto"
-            icon={<BookOpen className="h-4 w-4" />}
+            weight="medium"
+            color="primary"
+            className="min-w-0 break-words"
           >
-            <span className="inline-flex items-center gap-1.5">
-              {step.cta.label}
-              <ExternalLink className="h-3 w-3" aria-hidden="true" />
-            </span>
-          </Button>
+            {step.cta.label}
+          </Text>
+          <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+          <VisuallyHidden id={`onboarding-step-${step.key}-cta-new-tab`}>
+            {t('onboarding.resources.newTab', '(opens in a new tab)')}
+          </VisuallyHidden>
         </a>
       );
     }
     return (
       <Button
         variant="outline"
+        wrapLabel
         size="sm"
-        className="w-full sm:w-auto"
+        className="min-h-11 w-full md:min-h-9 sm:w-auto"
         onClick={step.cta.onClick}
         disabled={step.cta.disabled}
-        icon={<RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />}
+        icon={<RefreshCw className={refreshIconClassName} aria-hidden="true" />}
       >
         {step.cta.label}
       </Button>
@@ -165,7 +203,9 @@ export default function OnboardingPage() {
       data-testid="onboarding-scroll-container"
       className="h-screen h-dvh overflow-y-auto overscroll-y-contain bg-[var(--bg)] px-3 py-4 pb-safe [touch-action:pan-y] sm:px-5 sm:py-6 lg:px-8 lg:py-8"
     >
-      <PageContainer
+      {/* This standalone route does not mount Layout's announcer. */}
+      <AnnouncerRegion />
+      <PageLayout
         title={t('onboarding.welcome', 'Welcome to TeslaSync')}
         subtitle={
           setupComplete
@@ -175,9 +215,17 @@ export default function OnboardingPage() {
               )
             : t('onboarding.subtitle', 'Three quick steps before your dashboard is ready.')
         }
-        className="mx-auto w-full max-w-[1600px] pb-8 sm:pb-10"
+        className="w-full min-w-0 pb-8 sm:pb-10"
+        busy={isLoading || isFetching}
+        announce={false}
       >
-        {/* 1 — Setup-status KPI band (full-width responsive grid) */}
+        <StaleRefreshWarning
+          state={onboardingState}
+          title={onboardingState.isRefreshBlocked ? pausedTitle : undefined}
+          message={onboardingState.isRefreshBlocked ? pausedRetainedMessage : undefined}
+          hideRetry
+        />
+        {/* 1 — Existing setup-status summary; the checklist remains interactive below. */}
         <FadeIn>
           <OnboardingSetupStatusBand
             teslaConnected={teslaConnected}
@@ -186,7 +234,9 @@ export default function OnboardingPage() {
             setupComplete={setupComplete}
             isLoading={isLoading}
             hasData={Boolean(data)}
-            error={isError ? error : null}
+            retained={onboardingState.status === 'stale'}
+            lastTelemetryAt={data?.last_telemetry_at ?? null}
+            error={onboardingState.fatalError}
             onRetry={() => void refetch()}
           />
         </FadeIn>
@@ -202,7 +252,7 @@ export default function OnboardingPage() {
           <GlassPanel className="p-4 sm:p-5">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
               <div className="flex min-w-0 items-start gap-3">
-                <IconBox color="cyan" size="md">
+                <IconBox color="neutral" size="md">
                   <SlidersHorizontal className="h-5 w-5" aria-hidden />
                 </IconBox>
                 <div className="min-w-0">
@@ -238,8 +288,8 @@ export default function OnboardingPage() {
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <GlassPanel className="p-4 sm:p-6 xl:col-span-2">
               <div className="mb-5 flex items-start gap-3">
-                <IconBox color="cyan" size="md">
-                  <Sparkles className="h-5 w-5" />
+                <IconBox color="neutral" size="md">
+                  <Sparkles className="h-5 w-5" aria-hidden="true" />
                 </IconBox>
                 <div className="min-w-0">
                   <SectionTitle>{t('onboarding.intro.title', 'Setup checklist')}</SectionTitle>
@@ -252,6 +302,22 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
+              {!onboardingState.hasData && (
+                <AlertBanner
+                  variant="info"
+                  title={onboardingState.isRefreshBlocked
+                    ? pausedTitle
+                    : t('onboarding.brief.notReceived', 'Setup status not yet received')}
+                  className="mb-5"
+                  data-testid="onboarding-status-pending"
+                  data-refresh-blocked={onboardingState.isRefreshBlocked || undefined}
+                >
+                  {t(
+                    'onboarding.brief.missing',
+                    'Setup status has not been received; no completed-step or vehicle count is known.',
+                  )}
+                </AlertBanner>
+              )}
               <Stepper steps={steps} renderCta={renderCta} />
             </GlassPanel>
 
@@ -274,24 +340,28 @@ export default function OnboardingPage() {
               <Text variant="bodySm" as="p">
                 {isComplete
                   ? t('onboarding.ready', 'You are all set — your dashboard is ready.')
-                  : t('onboarding.polling', 'This page refreshes automatically every 30 seconds.')}
+                  : onboardingState.isRefreshBlocked || documentHidden
+                    ? pausedTitle
+                    : t('onboarding.polling', 'This page refreshes automatically every 30 seconds.')}
               </Text>
               <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
                 <Button
                   variant="ghost"
-                  className="w-full sm:w-auto"
+                  wrapLabel
+                  className="min-h-11 w-full md:min-h-10 sm:w-auto"
                   onClick={() => {
                     void refetch();
                   }}
                   disabled={isFetching}
-                  icon={<RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />}
+                  icon={<RefreshCw className={refreshIconClassName} aria-hidden="true" />}
                 >
                   {t('onboarding.checkAgain', 'Check again')}
                 </Button>
                 {!isComplete && (
                   <Button
                     variant="outline"
-                    className="w-full sm:w-auto"
+                    wrapLabel
+                    className="min-h-11 w-full md:min-h-10 sm:w-auto"
                     onClick={() => {
                       skip();
                       navigate('/');
@@ -300,7 +370,7 @@ export default function OnboardingPage() {
                       'onboarding.skipHint',
                       'Explore the app — you can finish setup later from this page.',
                     )}
-                    icon={<SkipForward className="h-4 w-4" />}
+                    icon={<SkipForward className="h-4 w-4" aria-hidden="true" />}
                   >
                     {t('onboarding.skip', 'Skip for now')}
                   </Button>
@@ -308,9 +378,10 @@ export default function OnboardingPage() {
                 {isComplete && (
                   <Button
                     variant="primary"
-                    className="w-full sm:w-auto"
+                    wrapLabel
+                    className="min-h-11 w-full md:min-h-10 sm:w-auto"
                     onClick={() => navigate('/')}
-                    icon={<ArrowRight className="h-4 w-4" />}
+                    icon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
                   >
                     {t('onboarding.continue', 'Continue to dashboard')}
                   </Button>
@@ -319,7 +390,7 @@ export default function OnboardingPage() {
             </div>
           </GlassPanel>
         </FadeIn>
-      </PageContainer>
+      </PageLayout>
     </main>
   );
 }

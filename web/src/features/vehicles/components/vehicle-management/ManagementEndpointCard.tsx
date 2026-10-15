@@ -1,15 +1,16 @@
 import type { ReactNode } from 'react'
+import type { DataStateSource } from '@/api/dataState'
 import { useTranslation } from 'react-i18next'
 import {
   Badge,
   Button,
   Code,
-  GlassPanel,
-  PanelTitle,
   Text,
 } from '@/components/ui'
 import { AlertBanner } from '@/components/feedback'
-import { formatDateTime } from '@/lib/dateFormat'
+import { LayoutCard } from '@/components/layout'
+import { useDateFormat } from '@/hooks/useDateFormat'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { Icons } from '@/lib/icons'
 import type { ManagementEndpointKind } from './managementJson'
 import { ManagementEndpointBody } from './ManagementEndpointBody'
@@ -23,6 +24,7 @@ interface ManagementEndpointCardProps {
   endpoint: string
   prerequisite: Prerequisite
   data: unknown
+  source?: DataStateSource<unknown>
   fetchedAt?: string | null
   loading?: boolean
   error?: unknown
@@ -63,6 +65,7 @@ export function ManagementEndpointCard({
   endpoint,
   prerequisite,
   data,
+  source,
   fetchedAt,
   loading = false,
   error,
@@ -78,6 +81,9 @@ export function ManagementEndpointCard({
   onRefresh,
 }: ManagementEndpointCardProps) {
   const { t } = useTranslation()
+  const { formatDateTime } = useDateFormat()
+  const { canWrite, writeBlockReason } = useOperationalMode()
+  const liveActionBlocked = (kind === 'specs' || kind === 'payer') && !canWrite
   const prerequisiteLabel = {
     user: t('vehicleManagement.prerequisite.user', 'User access'),
     partner: t('vehicleManagement.prerequisite.partner', 'Partner token'),
@@ -86,29 +92,30 @@ export function ManagementEndpointCard({
   const EndpointIcon = endpointIcon[kind]
 
   return (
-    <GlassPanel
-      className="flex flex-col gap-4 p-4 sm:p-5"
-      data-management-endpoint={endpointId}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
-          <div className="rounded-xl bg-cyan-500/10 p-2 text-cyan-300">
-            <EndpointIcon className="h-4 w-4" aria-hidden="true" />
-          </div>
-          <div className="min-w-0 space-y-1">
-            <PanelTitle>{title}</PanelTitle>
-            <Text variant="bodySm" as="p">{description}</Text>
-          </div>
-        </div>
+    <div className="min-w-0" data-management-endpoint={endpointId}>
+      <LayoutCard title={title} actions={
         <Badge variant={prerequisiteVariant[prerequisite]}>
           {prerequisiteLabel}
         </Badge>
-      </div>
+      }>
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="rounded-xl bg-[var(--surface-2)] p-2 text-[var(--text-secondary)]">
+            <EndpointIcon className="h-4 w-4" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 space-y-1">
+            <Text variant="bodySm" as="p">{description}</Text>
+          </div>
+        </div>
 
       <Code className="w-fit max-w-full break-all rounded-md bg-[var(--surface-2)] px-2 py-1 text-[var(--text-secondary)]">
         {endpoint}
       </Code>
       {warning}
+      {liveActionBlocked && (
+        <Text variant="helper" as="p" role="status">
+          {writeBlockReason}
+        </Text>
+      )}
       {operationSucceeded && !error && (
         <AlertBanner
           variant="success"
@@ -124,6 +131,7 @@ export function ManagementEndpointCard({
       <div className="flex-1">
         <ManagementEndpointBody
           data={data}
+          source={source}
           loading={loading}
           error={error}
           unavailable={unavailable}
@@ -148,14 +156,16 @@ export function ManagementEndpointCard({
             variant="secondary"
             size="sm"
             loading={refreshPending}
-            disabled={refreshDisabled || unavailable}
+            disabled={refreshDisabled || unavailable || liveActionBlocked}
             icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
             onClick={onRefresh}
+            wrapLabel
           >
             {actionLabel ?? t('vehicleManagement.action.refresh', 'Refresh from Tesla')}
           </Button>
         )}
       </div>
-    </GlassPanel>
+      </LayoutCard>
+    </div>
   )
 }

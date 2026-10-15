@@ -116,6 +116,7 @@ export function ArrivalReliabilityDepartureWindowProfile({
             skeletonHeight={320}
           >
             <ArrivalReliabilityProfilePlot
+              chartKey="arrival-window-profile"
               rows={rows}
               normalizedName={t(
                 'arrivalReliability.profiles.normalizedSeries',

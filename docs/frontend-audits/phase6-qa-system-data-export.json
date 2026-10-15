@@ -1,0 +1,2167 @@
+{
+  "item": "phase6-qa-system-data-export",
+  "attempt": 1,
+  "deliveryStatus": "PARTIAL_RECEIPT_SOURCE_QA_COMPLETE",
+  "page": "web/src/features/system/pages/DataExportPage.tsx",
+  "routes": [
+    "/data-export"
+  ],
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-system-data-export.json",
+    "web/logs/phase6-qa-system-data-export.log"
+  ],
+  "clock": {
+    "reservedUtc": "2026-10-14T02:29:12.925Z",
+    "returnDueUtc": "2026-10-14T02:49:12.925Z",
+    "hardDueUtc": "2026-10-14T02:54:12.925Z",
+    "hostActorCreationUtc": "UNKNOWN/not exposed: earlier actual creation remains authoritative, no renewal",
+    "firstObservedInspectionUtc": "2026-10-14T02:35:27.805Z",
+    "reportCreatedUtc": "2026-10-14T02:47:03.758891+00:00",
+    "releaseUtc": "2026-10-14T02:49:56.002923+00:00"
+  },
+  "objectiveCheck": {
+    "exactQueueLine": 234,
+    "exactQueueRow": "| [~] | 6 | phase6-qa-system-data-export | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-data-export.json; web\\logs\\phase6-qa-system-data-export.log | phase5-page-system-data-export | 1 | reserved02:29:12.925Z; actor pending | - | DataExportPage; no actual export/job/download/user/vehicle/network actions. |",
+    "rowSha256": "f95122936c3dc05ff96ef9dbc4f59d631a7a96765ddd3d9eba559a98eba2c07a",
+    "duplicateCompletedQA": false,
+    "evidence": "Whole queue objective/page/export/schedule/drawer/auth owner matches inspected. Existing audit-page-185, phase5 migration and selector/source-only fixes are not duplicate combined/native QA acceptance. No exact account/type/date/schedule/drawer/RequiresAuth corrective owner found. Palette/breakdown/bulk fixes preserved; existing relative-future-dates owner not duplicated."
+  },
+  "confirmedIssueCount": 16,
+  "confirmedIssues": [
+    {
+      "id": "F01",
+      "rule": "export-type-contract",
+      "severity": "high",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 111,
+      "detail": "Wizard full_backup/maintenance/energy submit unchanged; mounted SubmitJob accepts backup, not those three values, and returns 400.",
+      "fix": "Resolve backup wire ID and missing maintenance/energy capability with integration owner, without deleting intentions or inventing backend support.",
+      "sourceReproNotExecuted": "Inspect the would-be payload for each choice against validTypes; no POST.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 111,
+          "endLine": 113,
+          "source": "  { value: 'maintenance', labelKey: 'dataExport.types.maintenance', label: 'Maintenance', icon: Icons.maintenance, descKey: 'dataExport.types.maintenanceDesc', desc: 'Export maintenance and service records' },\n  { value: 'energy', labelKey: 'dataExport.types.energy', label: 'Energy', icon: Icons.battery, descKey: 'dataExport.types.energyDesc', desc: 'Export energy consumption and efficiency data' },\n];"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 542,
+          "endLine": 546,
+          "source": "  const handleSubmit = useCallback(() => {\n    const payload: ExportSubmitPayload = {\n      type: exportType,\n      format: exportFormat,\n    };"
+        },
+        {
+          "file": "internal/api/exports/handler.go",
+          "line": 141,
+          "endLine": 150,
+          "source": "\tvalidTypes := map[string]bool{\n\t\t\"drives\": true, \"charging\": true, \"trips\": true, \"backup\": true, \"analytics\": true,\n\t\t\"import_drives\": true, \"import_charging\": true,\n\t\t\"account\": true,\n\t}\n\tif !validTypes[req.Type] {\n\t\tvalidationErr := errors.New(\"invalid type: must be one of drives, charging, trips, backup, analytics, account\")\n\t\tspan.RecordError(validationErr)\n\t\twriteError(w, http.StatusBadRequest, validationErr.Error())\n\t\treturn"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F02",
+      "rule": "export-format-contract",
+      "severity": "high",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 234,
+      "detail": "Analytics CSV selection is forwarded, but SubmitJob forces analytics JSON. Selected format and artifact contract diverge.",
+      "fix": "Expose actual supported formats through existing domain owner, preserving choice semantics.",
+      "sourceReproNotExecuted": "Compare Analytics+CSV would-be payload to req.Format override; no job.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 234,
+          "endLine": 239,
+          "source": "            onClick={() => onChange(f.value)}\n          >\n            {t(f.labelKey, f.label)}\n          </Button>\n        );\n      })}"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 542,
+          "endLine": 546,
+          "source": "  const handleSubmit = useCallback(() => {\n    const payload: ExportSubmitPayload = {\n      type: exportType,\n      format: exportFormat,\n    };"
+        },
+        {
+          "file": "internal/api/exports/handler.go",
+          "line": 153,
+          "endLine": 158,
+          "source": "\tif req.Format == \"\" {\n\t\treq.Format = \"csv\"\n\t}\n\tif req.Type == \"backup\" || req.Type == \"analytics\" {\n\t\treq.Format = \"json\"\n\t}"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F03",
+      "rule": "export-date-contract",
+      "severity": "high",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1079,
+      "detail": "Account inputs convert YYYY-MM-DD to ISO timestamps, while mounted SubmitAccountJob parses only date-only strings. Either populated bound is rejected; existing test covers empty body only.",
+      "fix": "Align both bounds to actual endpoint contract; separately establish timezone/end inclusivity.",
+      "sourceReproNotExecuted": "Reason about 2026-10-01 becoming 2026-10-01T00:00:00.000Z versus time.Parse date-only; no submission.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 1074,
+          "endLine": 1082,
+          "source": "    const payload: { vehicle_id?: number; start?: string; end?: string } = {};\n    if (vehicleId !== 'all') {\n      const id = Number(vehicleId);\n      if (!Number.isNaN(id)) payload.vehicle_id = id;\n    }\n    if (startDate) payload.start = new Date(startDate).toISOString();\n    if (endDate) payload.end = new Date(endDate).toISOString();\n    createAccount.mutate(payload);\n  }, [vehicleId, startDate, endDate, createAccount]);"
+        },
+        {
+          "file": "internal/api/exports/handler.go",
+          "line": 404,
+          "endLine": 419,
+          "source": "\tvar startDate, endDate *time.Time\n\tif req.Start != \"\" {\n\t\tt, err := time.Parse(\"2006-01-02\", req.Start)\n\t\tif err != nil {\n\t\t\twriteError(w, http.StatusBadRequest, \"invalid start date format (expected YYYY-MM-DD)\")\n\t\t\treturn\n\t\t}\n\t\tstartDate = &t\n\t}\n\tif req.End != \"\" {\n\t\tt, err := time.Parse(\"2006-01-02\", req.End)\n\t\tif err != nil {\n\t\t\twriteError(w, http.StatusBadRequest, \"invalid end date format (expected YYYY-MM-DD)\")\n\t\t\treturn\n\t\t}\n\t\tendDate = &t"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.test.tsx",
+          "line": 411,
+          "endLine": 423,
+          "source": "\n  it('queues a full account export against /export/jobs/account', async () => {\n    renderPage();\n    await screen.findByText('Download my data');\n\n    fireEvent.click(screen.getByRole('button', { name: 'Start full export' }));\n\n    await waitFor(() => {\n      expect(postCalls.some((c) => c.url === '/export/jobs/account')).toBe(true);\n    });\n    // No vehicle/date scoping selected â†’ empty payload body.\n    expect(lastPostBody('/export/jobs/account')).toEqual({});\n  });"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F04",
+      "rule": "hidden-section",
+      "severity": "high",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 600,
+      "detail": "Vehicle selector disappears without nonempty vehicles, while local vehicleId initializes from saved scope and remains submit-able. Loading/fatal failure prevents inspecting/changing that target; account source lacks its own trust presentation.",
+      "fix": "Keep section with loading/error/empty/unknown target feedback; never silently broaden to all.",
+      "sourceReproNotExecuted": "Assume saved vehicle 7 and unresolved vehicles; trace hidden control and would-be vehicle_id 7. No vehicle action.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 497,
+          "endLine": 515,
+          "source": "    vehicleId: globalVehicleId,\n    setVehicleId: setGlobalVehicleId,\n  } = useSelectedVehicle();\n  const [exportType, setExportType] = useState<ExportType>('drives');\n  const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');\n  const [vehicleId, setVehicleId] = useState(\n    globalVehicleId == null ? '' : String(globalVehicleId),\n  );\n  const [presetDays, setPresetDays] = useState(30);\n  const [customStart, setCustomStart] = useState('');\n  const [customEnd, setCustomEnd] = useState('');\n  const [useCustomRange, setUseCustomRange] = useState(false);\n  // Column allowlist state. `null` means \"user has not\n  // touched the picker; submit without `columns` so backend preserves\n  // legacy byte-for-byte behaviour\". A non-null value is the explicit\n  // ordered allowlist the backend should honour.\n  const [selectedColumns, setSelectedColumns] = useState<string[] | null>(null);\n\n  useEffect(() => {"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 547,
+          "endLine": 549,
+          "source": "    if (vehicleId) {\n      payload.vehicle_id = Number(vehicleId);\n    }"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 600,
+          "endLine": 611,
+          "source": "      {vehicles && vehicles.length > 0 && (\n        <div className=\"mb-5 max-w-xs\">\n          <Label className=\"mb-2 block\">{t('dataExport.wizard.step3', 'STEP 3 â€” select vehicle')}</Label>\n          <Select\n            aria-label={t('dataExport.wizard.step3', 'STEP 3 â€” select vehicle')}\n            options={vehicleOptions}\n            value={vehicleId}\n            onChange={(e) => handleVehicleChange(e.target.value)}\n            placeholder={t('dataExport.allVehicles', 'All vehicles')}\n          />\n        </div>\n      )}"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 1248,
+          "endLine": 1264,
+          "source": "      {/* Non-blocking load error â€” the History panel below also renders its\n          own QueryError so each section stays self-sufficient. */}\n      {jobsError && (\n        <AlertBanner variant=\"danger\" icon={<Icons.alertCircle className=\"h-5 w-5\" aria-hidden=\"true\" />}>\n          {t('dataExport.loadError', 'Failed to load export jobs')}\n        </AlertBanner>\n      )}\n\n      {/* 1 â€” KPI band */}\n      <FadeIn>\n        <StatsRow jobs={jobs} isLoading={jobsLoading} retained={jobsState.hasData && jobsQuery.isError} />\n      </FadeIn>\n\n      {/* 2 â€” Primary bento: export wizard (hero) + context rail */}\n      <FadeIn delay={0.05}>\n        <section\n          aria-label={t('dataExport.create.aria', 'Create a new export')}"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F05",
+      "rule": "asynchronous-trust",
+      "severity": "high",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1170,
+      "detail": "Initial paused query has data undefined/isLoading false (isPending && isFetching). History and schedules show empty; supported columns hide. StaleRefreshWarning hides without retained data.",
+      "fix": "Use initial/refresh-blocked state before authoritative empty, independently per source.",
+      "sourceReproNotExecuted": "Trace fetchStatus paused/data undefined through each branch without offline simulation.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 1163,
+          "endLine": 1171,
+          "source": "  const queryClient = useQueryClient();\n  const toast = useToast();\n\n  usePageTitle(t('dataExport.title', 'Data export'));\n\n  /* --- Queries --- */\n\n  const jobsQuery = useQuery<ExportJobSummary[]>({\n    queryKey: ['export-jobs'],"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 1004,
+          "endLine": 1017,
+          "source": "          />\n        </div>\n      ) : isLoading && (!jobs || jobs.length === 0) ? (\n        <div className=\"space-y-3 p-5\">\n          {Array.from({ length: 5 }).map((_, i) => (\n            <Skeleton key={i} height={40} />\n          ))}\n        </div>\n      ) : !jobs || jobs.length === 0 ? (\n        <EmptyState /* no-action: transient empty state â€” surfaces when source data is missing; no specific recovery action available */\n          icon={<Icons.fileDown className=\"h-10 w-10\" />}\n          title={t('dataExport.noExports', 'No exports yet')}\n          message={t('dataExport.noExportsMessage', 'Create your first export above to get started.')}\n        />"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 694,
+          "endLine": 712,
+          "source": "  }\n  if (catalogQuery.isLoading && !catalogState.hasData) {\n    return (\n      <div className=\"mb-5\">\n        <Label className=\"mb-2 block\">{t('dataExport.columns.title', 'STEP 2Â½ â€” columns')}</Label>\n        <Skeleton className=\"h-24 w-full\" />\n      </div>\n    );\n  }\n  if (catalogState.fatalError) {\n    return (\n      <div className=\"mb-5\">\n        <Label className=\"mb-2 block\">{t('dataExport.columns.title', 'STEP 2Â½ â€” columns')}</Label>\n        <QueryError error={catalogState.fatalError} onRetry={() => { void catalogQuery.refetch(); }} />\n      </div>\n    );\n  }\n  if (!data || !data.supports_selection || (data.columns?.length ?? 0) === 0) {\n    return null;"
+        },
+        {
+          "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+          "line": 353,
+          "endLine": 382,
+          "source": "            <Skeleton className=\"h-12 w-full\" />\n            <Skeleton className=\"h-12 w-full\" />\n          </div>\n        ) : isError && rows.length === 0 ? (\n          // A failed load must not masquerade as \"no schedules yet\" â€” surface\n          // an actionable error with retry instead of the empty placeholder.\n          <QueryError\n            error={error}\n            onRetry={handleRetry}\n            resourceName={t('dataExport.scheduled.resourceName', 'Scheduled exports')}\n          />\n        ) : rows.length === 0 ? (\n          // no-action: panel header already exposes a \"New schedule\" button\n          <EmptyState\n            title={t('dataExport.scheduled.empty', 'No schedules yet')}\n            message={t(\n              'dataExport.scheduled.emptyMessage',\n              'Create a schedule to receive recurring exports automatically.',\n            )}\n          />\n        ) : (\n          <div className=\"max-w-full overflow-x-auto\" data-testid=\"scheduled-exports-table\">\n            <Table>\n              <thead>\n                <tr>\n                  <th scope=\"col\">{t('dataExport.scheduled.table.name', 'Name')}</th>\n                  <th scope=\"col\">{t('dataExport.scheduled.table.type', 'Type')}</th>\n                  <th scope=\"col\">{t('dataExport.scheduled.table.cron', 'Cron')}</th>\n                  <th scope=\"col\">{t('dataExport.scheduled.table.delivery', 'Delivery')}</th>\n                  <th scope=\"col\">{t('dataExport.scheduled.table.nextRun', 'Next run')}</th>"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 190,
+          "endLine": 219,
+          "source": "  const data = source.data\n  const hasData = data !== undefined\n  const error = toError(source.error)\n  const isPaused = source.fetchStatus === 'paused'\n  const isRefreshing = hasData && (source.isFetching ?? false)\n  const updatedAt =\n    hasData && typeof source.dataUpdatedAt === 'number' && source.dataUpdatedAt > 0\n      ? source.dataUpdatedAt\n      : null\n  const ageMs = updatedAt == null ? null : Math.max(0, now() - updatedAt)\n  const retry = typeof source.refetch === 'function'\n    ? () => { void source.refetch?.() }\n    : null\n\n  if (!hasData) {\n    const failed = error != null || (source.isError ?? false)\n    return {\n      data: undefined,\n      hasData: false,\n      status: failed ? 'initialFailure' : 'initial',\n      // A failed or not-yet-resolved load has established nothing about\n      // provenance â€” claiming `live` here would be a lie.\n      provenance: 'unknown',\n      isRefreshing: false,\n      isRefreshBlocked: isPaused,\n      refreshError: null,\n      fatalError: failed ? (error ?? new Error('Request failed')) : null,\n      updatedAt: null,\n      ageMs: null,\n      retry,"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 57,
+          "endLine": 60,
+          "source": "  // `initial` and `initialFailure` mean there is nothing retained; those are\n  // the skeleton's and the page error surface's job, not this component's.\n  if (!state.hasData) return null;\n  if (state.status === 'ok') return null;"
+        },
+        {
+          "file": "web/node_modules/@tanstack/query-core/src/queryObserver.ts",
+          "line": 688,
+          "endLine": 692,
+          "source": "    const isFetching = newState.fetchStatus === 'fetching'\n    const isPending = status === 'pending'\n    const isError = status === 'error'\n\n    const isLoading = isPending && isFetching"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F06",
+      "rule": "hidden-section",
+      "severity": "medium",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 711,
+      "detail": "Supported missing catalog and supports_selection=true/empty columns return null with unsupported capability, without empty/unknown explanation. Explicit unsupported type is a separate acceptable exception.",
+      "fix": "Keep supported section fallback and distinguish missing/empty from unsupported.",
+      "sourceReproNotExecuted": "Consider drives supports_selection true/columns []; trace absent Step 2.5, no request.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 684,
+          "endLine": 712,
+          "source": "  const catalogType = catalogTypeFor(exportType);\n  const catalogQuery = useExportColumns(catalogType || undefined);\n  const catalogState = useDataState(catalogQuery);\n  const data = catalogState.data;\n\n  // Hide the picker entirely when the export type doesn't publish a\n  // catalog. The backend will continue to write all of its native\n  // columns â€” this matches today's behaviour exactly.\n  if (!catalogType) {\n    return null;\n  }\n  if (catalogQuery.isLoading && !catalogState.hasData) {\n    return (\n      <div className=\"mb-5\">\n        <Label className=\"mb-2 block\">{t('dataExport.columns.title', 'STEP 2Â½ â€” columns')}</Label>\n        <Skeleton className=\"h-24 w-full\" />\n      </div>\n    );\n  }\n  if (catalogState.fatalError) {\n    return (\n      <div className=\"mb-5\">\n        <Label className=\"mb-2 block\">{t('dataExport.columns.title', 'STEP 2Â½ â€” columns')}</Label>\n        <QueryError error={catalogState.fatalError} onRetry={() => { void catalogQuery.refetch(); }} />\n      </div>\n    );\n  }\n  if (!data || !data.supports_selection || (data.columns?.length ?? 0) === 0) {\n    return null;"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F07",
+      "rule": "missing-sort-wiring",
+      "severity": "medium",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1032,
+      "detail": "Five columns declare sortable but DataTable receives no onSort/sortKey/sortDir. Real header sort branch requires onSort and renders plain spans. Display keys records/size/time differ from raw fields.",
+      "fix": "Wire controlled sorting with raw accessors/null/source-order policy, retaining table pipeline.",
+      "sourceReproNotExecuted": "Inspect sortable header with undefined onSort; no click.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 873,
+          "endLine": 881,
+          "source": "      {\n        key: 'type',\n        filterValue: (row) => row.type ?? null,\n        header: t('dataExport.type', 'Type'),\n        sortable: true,\n        render: (row) => <TypeBadge type={row.type} />,\n      },\n      {\n        key: 'format',"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 1032,
+          "endLine": 1043,
+          "source": "    </GlassPanel>\n  );\n}\n\n/* ------------------------------------------------------------------ */\n/*  Account Export Panel                                             */\n/* ------------------------------------------------------------------ */\n\ninterface AccountExportPanelProps {\n  vehicles: Vehicle[] | undefined;\n}\n"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1571,
+          "endLine": 1593,
+          "source": "                      {col.sortable && onSort ? (\n                        <Button\n                          type=\"button\"\n                          variant=\"ghost\"\n                          size=\"sm\"\n                          onClick={() => onSort?.(col.key)}\n                          className={cn(\n                            'h-auto min-h-11 gap-1 p-0 text-size-inherit font-semibold select-none md:min-h-6',\n                            'hover:text-[var(--text-secondary)]',\n                          )}\n                        >\n                          <span>{col.header}</span>\n                          {sortKey === col.key && (\n                            sortDir === 'asc'\n                              ? <ChevronUp className=\"h-3 w-3\" aria-hidden=\"true\" />\n                              : <ChevronDown className=\"h-3 w-3\" aria-hidden=\"true\" />\n                          )}\n                          {sortKey !== col.key && <ArrowUpDown className=\"h-3 w-3 opacity-50\" aria-hidden=\"true\" />}\n                        </Button>\n                      ) : (\n                        <span className=\"inline-flex items-center gap-1\">\n                          {col.header}\n                        </span>"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F08",
+      "rule": "mutation-settlement",
+      "severity": "high",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 132,
+      "detail": "Schedule save awaits then unconditionally closeForm; Cancel/New/Edit/fields stay operable while pending. Old settlement can reset edits or close newer form; pending cancellation loses failed draft.",
+      "fix": "Retain draft/context with pending and instance settlement authority; block destructive replacement or reject stale local authority.",
+      "sourceReproNotExecuted": "Imagine deferred save A, Cancel/open B, fulfill A; trace closeForm clearing B. No action.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+          "line": 118,
+          "endLine": 154,
+          "source": "  function startCreate() {\n    setForm(emptyInput());\n    setEditingId(null);\n    setShowForm(true);\n  }\n\n  function startEdit(row: ScheduledExport) {\n    setForm(inputFromRow(row));\n    setEditingId(row.id);\n    setShowForm(true);\n  }\n\n  function closeForm() {\n    setShowForm(false);\n    setEditingId(null);\n    setForm(emptyInput());\n  }\n\n  async function submit(ev: FormEvent) {\n    ev.preventDefault();\n    const payload: ScheduledExportInput = {\n      ...form,\n      // Drop the optional target field for download deliveries so we\n      // don't round-trip an unused string.\n      delivery:\n        form.delivery.kind === 'download'\n          ? { kind: 'download' }\n          : { kind: form.delivery.kind, target: (form.delivery.target ?? '').trim() },\n    };\n    try {\n      if (editingId == null) {\n        await create.mutateAsync(payload);\n      } else {\n        await update.mutateAsync({ id: editingId, payload });\n      }\n      closeForm();\n    } catch {"
+        },
+        {
+          "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+          "line": 183,
+          "endLine": 188,
+          "source": "          </Text>\n        </div>\n        <Button\n          variant=\"primary\"\n          size=\"sm\"\n          onClick={startCreate}"
+        },
+        {
+          "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+          "line": 326,
+          "endLine": 342,
+          "source": "          </div>\n          <div className=\"flex justify-end gap-2\">\n            <Button\n              type=\"button\"\n              variant=\"ghost\"\n              size=\"sm\"\n              onClick={closeForm}\n            >\n              {t('dataExport.scheduled.form.cancel', 'Cancel')}\n            </Button>\n            <Button\n              type=\"submit\"\n              variant=\"primary\"\n              size=\"sm\"\n              loading={create.isPending || update.isPending}\n              data-testid=\"scheduled-exports-form-submit\"\n            >"
+        },
+        {
+          "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+          "line": 456,
+          "endLine": 464,
+          "source": "                          variant=\"danger\"\n                          onClick={() => setPendingDelete(row)}\n                          data-testid={`scheduled-exports-delete-${row.id}`}\n                        >\n                          {t('dataExport.scheduled.actions.delete', 'Delete')}\n                        </Button>\n                      </div>\n                    </td>\n                  </tr>"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F09",
+      "rule": "mutation-settlement",
+      "severity": "high",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 481,
+      "detail": "Delete calls mutate then immediately clears confirmation, before server success. Rejection loses original confirmation/retry context; shared ConfirmDialog already supports loading.",
+      "fix": "Keep pending confirmation and success-only close/rejection recovery through existing API.",
+      "sourceReproNotExecuted": "Reason about rejected DELETE after immediate pendingDelete=null; no DELETE.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+          "line": 472,
+          "endLine": 490,
+          "source": "      <ConfirmDialog\n        open={pendingDelete !== null}\n        title={t('dataExport.scheduled.deleteConfirmTitle', 'Delete schedule?')}\n        message={t(\n          'dataExport.scheduled.deleteConfirmBody',\n          'This will stop future runs of {{name}}.',\n          { name: pendingDelete?.name ?? '' },\n        )}\n        variant=\"danger\"\n        confirmLabel={t('dataExport.scheduled.actions.delete', 'Delete')}\n        onConfirm={() => {\n          if (pendingDelete) {\n            remove.mutate(pendingDelete.id);\n          }\n          setPendingDelete(null);\n        }}\n        onCancel={() => setPendingDelete(null)}\n      />\n    </GlassPanel>"
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 21,
+          "endLine": 27,
+          "source": "  variant?: 'danger' | 'warning';\n  /**\n   * When true, both buttons are disabled and the confirm button shows a spinner.\n   * Use this when the parent keeps the dialog open while a mutation is in flight.\n   */\n  loading?: boolean;\n  /** Disable confirmation until caller-owned validation (for example, a required reason) passes. */"
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 119,
+          "endLine": 140,
+          "source": "  }, [open, silenceHonored, silenceKey, onConfirm]);\n\n  // Escape key triggers cancel (Modal already handles backdrop click via\n  // its overlay onClose). Suppressed while loading to prevent dismissing a\n  // mutation in flight.\n  useEffect(() => {\n    if (!open) return;\n    const handler = (e: KeyboardEvent) => {\n      if (e.key === 'Escape' && !loading) {\n        onCancel();\n      }\n    };\n    window.addEventListener('keydown', handler);\n    return () => window.removeEventListener('keydown', handler);\n  }, [open, loading, onCancel]);\n\n  const typedMatches = !requireTypedConfirmation || typed === requireTypedConfirmation;\n  const confirmDisabled = loading || disabledByCaller || !typedMatches;\n\n  // While loading we swallow the backdrop-click close handler to keep the\n  // dialog mounted until the mutation resolves; otherwise route to onCancel.\n  const handleModalClose = useCallback(() => {"
+        },
+        {
+          "file": "web/src/api/hooks/useExports.ts",
+          "line": 340,
+          "endLine": 354,
+          "source": "\nexport function useDeleteScheduledExport() {\n  const qc = useQueryClient();\n  const { success, error } = useMutationToast();\n  return useMutation({\n    mutationFn: (id: number) =>\n      request<void>(`/scheduled-exports/${id}`, { method: 'DELETE' }),\n    onSuccess: () => {\n      invalidateAndBroadcast(qc, { queryKey: exportKeys.scheduled });\n      success('toast.export.scheduled.delete.success', 'Schedule deleted');\n    },\n    onError: (err: Error) =>\n      error(err, 'toast.export.scheduled.delete.error', 'Failed to delete schedule'),\n  });\n}"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F10",
+      "rule": "hidden-job-error",
+      "severity": "medium",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 419,
+      "detail": "ScheduledExport.last_error exists but failed row renders only Failed; supplied reason is never rendered.",
+      "fix": "Expose full source error in reachable text/detail using existing support.",
+      "sourceReproNotExecuted": "Consider last_status failed/last_error disk full; inspect row, no job.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useExports.ts",
+          "line": 266,
+          "endLine": 273,
+          "source": "  last_status: 'ok' | 'failed' | null;\n  last_error: string | null;\n  next_run_at: string | null;\n  created_at: string;\n  updated_at: string;\n}\n\n/** Create / update payload. The `owner_subject` field is intentionally"
+        },
+        {
+          "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+          "line": 419,
+          "endLine": 429,
+          "source": "                      {row.last_status === 'ok' ? (\n                        <Badge variant=\"success\">{t('dataExport.scheduled.status.ok', 'OK')}</Badge>\n                      ) : row.last_status === 'failed' ? (\n                        <Badge variant=\"danger\">{t('dataExport.scheduled.status.failed', 'Failed')}</Badge>\n                      ) : (\n                        <Text as=\"span\" color=\"muted\">â€”</Text>\n                      )}\n                    </td>\n                    <td>\n                      <div className=\"flex justify-end gap-1\">\n                        <Button"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F11",
+      "rule": "asynchronous-trust",
+      "severity": "high",
+      "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+      "line": 97,
+      "detail": "Drawer consumes only data/isLoading. Initial failure/paused hides it; retained failed refresh shows cached jobs without trust warning or own retry.",
+      "fix": "Reuse useDataState and feedback beside retained jobs, preserving dismiss/minimize preferences.",
+      "sourceReproNotExecuted": "Trace initial/retained rejection and paused result through destructuring/hide branches, no request.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+          "line": 95,
+          "endLine": 99,
+          "source": "export function JobProgressDrawer({ maxRecent = 5, className }: JobProgressDrawerProps) {\n  const { t } = useTranslation();\n  const { data: jobs, isLoading } = useExportJobs();\n  const allJobs = jobs ?? [];\n"
+        },
+        {
+          "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+          "line": 124,
+          "endLine": 125,
+          "source": "  if (state === 'dismissed' && activeJobs.length === 0) return null;\n  if (allJobs.length === 0 && !isLoading) return null;"
+        },
+        {
+          "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+          "line": 217,
+          "endLine": 237,
+          "source": "              label={t('export.jobDrawer.activeHeading', 'In progress')}\n              emptyLabel={t('export.jobDrawer.activeEmpty', 'No active exports')}\n              jobs={activeJobs}\n            />\n            <DrawerSection\n              label={t('export.jobDrawer.recentHeading', 'Recent')}\n              emptyLabel={t('export.jobDrawer.recentEmpty', 'No recent exports')}\n              jobs={recentJobs}\n            />\n          </>\n        )}\n      </div>\n    </div>\n  );\n}\n\nfunction DrawerSection({\n  label,\n  emptyLabel,\n  jobs,\n}: {"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F12",
+      "rule": "color-only-status",
+      "severity": "medium",
+      "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+      "line": 286,
+      "detail": "Recent rows show size/time rather than status; icons aria-hidden. Failed/expired/unknown rows without error text lack textual status. Active rows have status text.",
+      "fix": "Render readable localized known status and neutral unknown/raw fallback alongside error/download.",
+      "sourceReproNotExecuted": "Consider expired/failed/no-error and unknown recent rows; inspect text, no screen-reader run.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+          "line": 68,
+          "endLine": 83,
+          "source": "}\n\nfunction statusIcon(status: ExportJobSummary['status']): React.ReactNode {\n  switch (status) {\n    case 'queued':\n      return <Clock className=\"h-3.5 w-3.5 text-[var(--text-muted)]\" aria-hidden=\"true\" />;\n    case 'processing':\n      return <Loader2 className=\"h-3.5 w-3.5 text-cyan-300 animate-spin\" aria-hidden=\"true\" />;\n    case 'ready':\n      return <CheckCircle2 className=\"h-3.5 w-3.5 text-emerald-300\" aria-hidden=\"true\" />;\n    case 'failed':\n      return <XCircle className=\"h-3.5 w-3.5 text-rose-300\" aria-hidden=\"true\" />;\n    case 'expired':\n      return <AlertTriangle className=\"h-3.5 w-3.5 text-amber-300\" aria-hidden=\"true\" />;\n    default:\n      return <Clock className=\"h-3.5 w-3.5 text-[var(--text-muted)]\" aria-hidden=\"true\" />;"
+        },
+        {
+          "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+          "line": 272,
+          "endLine": 296,
+          "source": "    >\n      <div className=\"shrink-0\">{statusIcon(job.status)}</div>\n      <div className=\"min-w-0 flex-1\">\n        <div className=\"flex items-center gap-2 min-w-0\">\n          <span className=\"font-medium text-[var(--text-primary)] truncate\">\n            {typeLabel}\n          </span>\n          <span className=\"text-2xs tracking-wider text-[var(--text-muted)]\">\n            {job.format === 'csv' ? 'CSV' : job.format === 'json' ? 'JSON' : job.format}\n          </span>\n        </div>\n        <div className=\"text-2xs text-[var(--text-muted)] truncate\">\n          {bucket === 'active'\n            ? t('export.jobDrawer.statusLine', '{{status}} Â· started {{relative}}', {\n                status: prettyStatus(job.status, t),\n                relative: formatRelative(job.created_at),\n              })\n            : t('export.jobDrawer.completedLine', '{{size}} Â· {{relative}}', {\n                size: formatBytes(job.file_size, { zeroAsEmpty: true }) || 'â€”',\n                relative: formatRelative(job.completed_at ?? job.created_at),\n              })}\n        </div>\n        {job.error_message && (\n          <p className=\"mt-0.5 text-2xs text-rose-300 truncate\" title={job.error_message}>\n            {job.error_message}"
+        },
+        {
+          "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+          "line": 315,
+          "endLine": 318,
+          "source": "          {t('export.jobDrawer.download', 'Download')}\n        </a>\n      )}\n      {job.status === 'failed' && ("
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F13",
+      "rule": "zero-as-empty",
+      "severity": "medium",
+      "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+      "line": 290,
+      "detail": "Drawer zeroAsEmpty=true collapses measured 0 bytes to missing dash, unlike fixed history/summary.",
+      "fix": "Use zeroAsEmpty=false for measured bytes; retain invalid/missing placeholders.",
+      "sourceReproNotExecuted": "Compare would-be zero and missing sizes through formatter branch; no formatter execution.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+          "line": 286,
+          "endLine": 291,
+          "source": "                status: prettyStatus(job.status, t),\n                relative: formatRelative(job.created_at),\n              })\n            : t('export.jobDrawer.completedLine', '{{size}} Â· {{relative}}', {\n                size: formatBytes(job.file_size, { zeroAsEmpty: true }) || 'â€”',\n                relative: formatRelative(job.completed_at ?? job.created_at),"
+        },
+        {
+          "file": "web/src/lib/numberFormat.ts",
+          "line": 163,
+          "endLine": 167,
+          "source": "export function formatBytes(bytes: number | null | undefined, options: FormatBytesOptions = {}): string {\n  const empty = options.empty ?? 'â€”'\n  if (bytes == null || !Number.isFinite(bytes)) return empty\n  if (options.zeroAsEmpty && bytes === 0) return empty\n  if (bytes < 1024) return `${bytes} B`"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 922,
+          "endLine": 928,
+          "source": "        filterValueLabel: (_value, row) => formatBytes(row.file_size, { zeroAsEmpty: false }),\n        align: 'right',\n        header: t('dataExport.size', 'Size'),\n        sortable: true,\n        render: (row) => (\n          <Text size=\"xs\" color=\"secondary\">\n            {formatBytes(row.file_size, { zeroAsEmpty: false })}"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F14",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 447,
+      "detail": "Most-exported humanizes known type with underscore replacement rather than translated known labels; account fallback Vehicle ${id} is unlocalized. Two presentation sites; unknown raw technical IDs/CSV/JSON/sample data excepted.",
+      "fix": "Reuse existing known type labels; request complete interpolated vehicle fallback only if genuinely absent at existing catalog owner.",
+      "sourceReproNotExecuted": "Consider translated known full_backup or empty display_name/vin fallback; inspect produced labels, no locale action.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 439,
+          "endLine": 448,
+          "source": "\n  const mostExportedType = useMemo(() => {\n    if (!jobs || jobs.length === 0) return 'â€”';\n    const counts: Record<string, number> = {};\n    for (const j of jobs) {\n      counts[j.type] = (counts[j.type] ?? 0) + 1;\n    }\n    const max = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];\n    return max ? max[0].replace(/_/g, ' ') : 'â€”';\n  }, [jobs]);"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 1085,
+          "endLine": 1092,
+          "source": "    () => [\n      { value: 'all', label: t('dataExport.account.allVehicles', 'All vehicles') },\n      ...(vehicles ?? []).map((v) => ({\n        value: String(v.id),\n        label: v.display_name || v.vin || `Vehicle ${v.id}`,\n      })),\n    ],\n    [vehicles, t],"
+        }
+      ],
+      "violationSiteCount": 2
+    },
+    {
+      "id": "F15",
+      "rule": "mobile-target",
+      "severity": "medium",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 258,
+      "detail": "Page sm/md targets lack mobile minimum (shared h-9/h-10:36/40px at 16px root), schedules uses sm, drawer forces !h-6 !w-6:24px. Source mismatch versus below-md44 contract, not measured rectangles or WCAG verdict.",
+      "fix": "Separate caller owners adopt existing min-h-11/min-w-11/wrapping with desktop density restored; native proof remains.",
+      "sourceReproNotExecuted": "Inspect utilities at assumed 16px root without browser measurements.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 255,
+          "endLine": 263,
+          "source": "        const active = selected === p.days;\n        return (\n          <Button\n            key={p.days}\n            size=\"sm\"\n            variant={active ? 'primary' : 'ghost'}\n            aria-pressed={active}\n            onClick={() => onChange(p.days)}\n          >"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 982,
+          "endLine": 985,
+          "source": "  return (\n    <GlassPanel className=\"overflow-hidden p-0\">\n      <div className=\"flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-4 sm:px-5\">\n        <div className=\"flex min-w-0 flex-wrap items-center gap-3\">"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 1139,
+          "endLine": 1145,
+          "source": "              'Large signal histories are capped per table to keep the ZIP under control. Track progress in the floating widget that appears once your export starts.',\n            )}\n          </Text>\n        </div>\n        <Button\n          variant=\"primary\"\n          size=\"md\""
+        },
+        {
+          "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+          "line": 179,
+          "endLine": 188,
+          "source": "            {t(\n              'dataExport.scheduled.subtitle',\n              'Cron-driven recurring exports.',\n            )}\n          </Text>\n        </div>\n        <Button\n          variant=\"primary\"\n          size=\"sm\"\n          onClick={startCreate}"
+        },
+        {
+          "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+          "line": 433,
+          "endLine": 467,
+          "source": "                          loading={runNow.isPending && runNow.variables === row.id}\n                          data-testid={`scheduled-exports-run-${row.id}`}\n                        >\n                          {t('dataExport.scheduled.actions.runNow', 'Run now')}\n                        </Button>\n                        <Button\n                          size=\"sm\"\n                          variant=\"ghost\"\n                          onClick={() => toggleEnabled(row)}\n                        >\n                          {row.enabled\n                            ? t('dataExport.scheduled.actions.disable', 'Disable')\n                            : t('dataExport.scheduled.actions.enable', 'Enable')}\n                        </Button>\n                        <Button\n                          size=\"sm\"\n                          variant=\"ghost\"\n                          onClick={() => startEdit(row)}\n                        >\n                          {t('dataExport.scheduled.actions.edit', 'Edit')}\n                        </Button>\n                        <Button\n                          size=\"sm\"\n                          variant=\"danger\"\n                          onClick={() => setPendingDelete(row)}\n                          data-testid={`scheduled-exports-delete-${row.id}`}\n                        >\n                          {t('dataExport.scheduled.actions.delete', 'Delete')}\n                        </Button>\n                      </div>\n                    </td>\n                  </tr>\n                ))}\n              </tbody>\n            </Table>"
+        },
+        {
+          "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+          "line": 195,
+          "endLine": 211,
+          "source": "            aria-label={t('export.jobDrawer.minimize', 'Minimize')}\n          />\n          <Button\n            variant=\"ghost\"\n            size=\"sm\"\n            className=\"!h-6 !w-6 !p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]\"\n            icon={<X className=\"h-3.5 w-3.5\" />}\n            onClick={() => persist('dismissed')}\n            aria-label={t('export.jobDrawer.close', 'Dismiss')}\n          />\n        </div>\n      </div>\n\n      {/* Body */}\n      <div className=\"max-h-[60vh] overflow-y-auto p-2 space-y-2\">\n        {isLoading && allJobs.length === 0 ? (\n          <p className=\"px-2 py-4 text-center text-xs text-[var(--text-muted)]\">"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 35,
+          "endLine": 48,
+          "source": "const sizes = {\n  sm: 'h-9 px-3 text-sm',\n  md: 'h-10 px-4 text-sm',\n  lg: 'h-12 px-6 text-base',\n  // Density-aware sizing follows the user's `ui_density` setting via the\n  // density Tailwind utilities (`min-h-d-row px-d-pad-x text-d-base`).\n  auto: 'min-h-d-row px-d-pad-x text-d-base',\n} as const;\n\nconst wrappingSizes = {\n  sm: 'h-auto min-h-9 py-1.5',\n  md: 'h-auto min-h-10 py-2',\n  lg: 'h-auto min-h-12 py-2.5',\n  auto: 'h-auto py-d-pad-y',"
+        }
+      ],
+      "violationSiteCount": 1
+    },
+    {
+      "id": "F16",
+      "rule": "asynchronous-trust",
+      "severity": "medium",
+      "file": "web/src/components/feedback/RequiresAuth.tsx",
+      "line": 75,
+      "detail": "Auth wrapper renders same confirmed-config limitation placeholder for loading/missing/failed auth contract, without error/paused trust/retry. Retained capability data mounts without warning.",
+      "fix": "Separately owned wrapper distinguishes trust from authoritative open/capability denial, preserving auth boundary.",
+      "sourceReproNotExecuted": "Consider auth-mode transport failure/no data, then retained forward_auth refresh failure; no identity action.",
+      "reproductionExecuted": false,
+      "confidence": "source-confirmed",
+      "evidence": [
+        {
+          "file": "web/src/components/feedback/RequiresAuth.tsx",
+          "line": 68,
+          "endLine": 94,
+          "source": "\nexport function RequiresAuth({ capability, feature, children, className }: RequiresAuthProps) {\n  const { t } = useTranslation();\n  const { data, isLoading } = useAuthMode();\n\n  // While the contract resolves, render the placeholder rather than\n  // the children â€” flashing a fully-mounted section and then hiding\n  // it would tear down any in-progress queries the children kicked\n  // off, double-fetch when it remounts, and look broken.\n  if (isLoading || !data) {\n    return (\n      <RequiresAuthPlaceholder\n        capability={capability}\n        feature={feature}\n        providerHint={undefined}\n        className={className}\n        t={t}\n      />\n    );\n  }\n\n  // forward-auth mode + capability enabled â†’ mount the section.\n  if (data.mode === 'forward_auth' && data.capabilities[capability]) {\n    return <>{children}</>;\n  }\n\n  // Open mode, OR forward-auth mode where the operator has somehow"
+        },
+        {
+          "file": "web/src/components/feedback/RequiresAuth.tsx",
+          "line": 135,
+          "endLine": 144,
+          "source": "    feature,\n    provider: providerHint,\n  });\n  const title = t('requiresAuth.title', {\n    defaultValue: '{{feature}} requires authentication mode',\n    feature,\n  });\n\n  return (\n    // We wrap the empty state in a plain <div> rather than reusing"
+        },
+        {
+          "file": "web/src/api/hooks/useAuthMode.ts",
+          "line": 51,
+          "endLine": 64,
+          "source": "/**\n * Status query. Always succeeds (the contract endpoint is designed\n * to never 4xx/5xx â€” see internal/api/system_auth_mode_handler.go).\n * Surfaces ApiError on transport-level failures so consumers can\n * render a generic offline state.\n */\nexport function useAuthMode() {\n  return useQuery<AuthModeResponse, ApiError>({\n    queryKey: authModeKeys.all,\n    queryFn: ({ signal }) => request<AuthModeResponse>('/system/auth-mode', { signal }),\n    staleTime: AUTH_MODE_STALE_MS,\n    refetchOnWindowFocus: false,\n    refetchInterval: false,\n  })"
+        },
+        {
+          "file": "web/src/features/system/pages/DataExportPage.tsx",
+          "line": 1313,
+          "endLine": 1318,
+          "source": "            capability=\"session_list\"\n            feature={t('dataExport.scheduled.feature', 'Scheduled exports')}\n          >\n            <ScheduledExportsPanel />\n          </RequiresAuth>\n        </section>"
+        }
+      ],
+      "violationSiteCount": 1
+    }
+  ],
+  "ruleSummary": {
+    "export-type-contract": 1,
+    "export-format-contract": 1,
+    "export-date-contract": 1,
+    "hidden-section": 2,
+    "asynchronous-trust": 3,
+    "missing-sort-wiring": 1,
+    "mutation-settlement": 2,
+    "hidden-job-error": 1,
+    "color-only-status": 1,
+    "zero-as-empty": 1,
+    "hardcoded-string": 1,
+    "mobile-target": 1
+  },
+  "nativeAcceptance": "NOTRUN",
+  "applicationAcceptance": "NOTRUN",
+  "validation": {
+    "json": "PASS",
+    "citations": "FAIL",
+    "citationCount": 56,
+    "citationErrors": [
+      "F03",
+      "F04",
+      "F04",
+      "F05",
+      "F05",
+      "F05",
+      "F05",
+      "F06",
+      "F10",
+      "F12",
+      "F13",
+      "F13",
+      "F14",
+      "F16",
+      "F16"
+    ],
+    "counts": "PASS",
+    "exactQueueAttemptScope": "PASS",
+    "pinCount": 25,
+    "unchangedPinCount": 24,
+    "driftFiles": [
+      "web/src/i18n/en.json"
+    ],
+    "pins": "DRIFT",
+    "limits": "Concurrent readonly drift unowned; prior UTF8 decode1 and drift assertion1 retained. Early exact command reconstruction incomplete."
+  },
+  "candidateCount": 7,
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "kind": "conditional-source",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 278,
+      "detail": "Ordinary STATUS_CONFIG object can resolve prototype names constructor/toString; requires out-of-contract server status, not a confirmed current crash.",
+      "sourceReproNotExecuted": "Future separately authorized source fixture/native owner inspects this exact branch; no simulation/action here.",
+      "reproductionExecuted": false
+    },
+    {
+      "id": "C02",
+      "kind": "conditional-source",
+      "file": "web/src/api/hooks/useExports.ts",
+      "line": 161,
+      "detail": "Fixed origin-relative download URL bypasses getApiBase/authHeaders remote/demo boundary. Actual remote/native download authorization and intended base remain unverified.",
+      "sourceReproNotExecuted": "Future separately authorized source fixture/native owner inspects this exact branch; no simulation/action here.",
+      "reproductionExecuted": false
+    },
+    {
+      "id": "C05",
+      "kind": "conditional-source",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1163,
+      "detail": "Local job/vehicle queries lack safeArray/schema check; malformed nonarray could reach filter/iteration. Actual shape violation unproven.",
+      "sourceReproNotExecuted": "Future separately authorized source fixture/native owner inspects this exact branch; no simulation/action here.",
+      "reproductionExecuted": false
+    },
+    {
+      "id": "C06",
+      "kind": "conditional-source",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 158,
+      "detail": "Toggle lacks pending latch/disabled state; overlapping toggle/edit may use stale full-row payload. Actual lost update requires deferred fixture proof.",
+      "sourceReproNotExecuted": "Future separately authorized source fixture/native owner inspects this exact branch; no simulation/action here.",
+      "reproductionExecuted": false
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "C03",
+      "kind": "native-only",
+      "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+      "line": 127,
+      "detail": "bottom-4/right-4/z-40 ignores shell bottom-chrome/safe-area; actual overlap/reachability requires mounted proof.",
+      "sourceReproNotExecuted": "Future separately authorized source fixture/native owner inspects this exact branch; no simulation/action here.",
+      "reproductionExecuted": false
+    },
+    {
+      "id": "C04",
+      "kind": "native-only",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 175,
+      "detail": "Nonwrapping p-6 schedule header and opacity-50 disabled rows require narrow/RTL/200%/contrast proof; table scroll has no named focusable region.",
+      "sourceReproNotExecuted": "Future separately authorized source fixture/native owner inspects this exact branch; no simulation/action here.",
+      "reproductionExecuted": false
+    },
+    {
+      "id": "C07",
+      "kind": "native-only",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 299,
+      "detail": "Direct animate-spin source, reduced-motion/low-bandwidth suppression, OS forced colors and composed theme/focus contrast require native proof.",
+      "sourceReproNotExecuted": "Future separately authorized source fixture/native owner inspects this exact branch; no simulation/action here.",
+      "reproductionExecuted": false
+    }
+  ],
+  "sectionCoverage": [
+    {
+      "name": "Export summary metrics",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 472,
+      "mechanism": "Four metrics, loaded-job scope, recorded bytes and latest creation not completion; retained-on-error; F05/F14.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "name": "Export wizard",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 573,
+      "mechanism": "Seven types/two formats/columns/local vehicle/five presets/custom dates/Start retained; F01/F02/F04/F05/F06/F15.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "name": "Data overview",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1221,
+      "mechanism": "Drive/charging record sums explicitly disclaim overlap/unique database totals.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "name": "CSV preview",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 330,
+      "mechanism": "Neutral static SI sample distance_m/efficiency_wh_per_m; explanatory not live.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "name": "JSON preview",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 351,
+      "mechanism": "Static example retained; real writer schema/efficiency unit parity UNKNOWN.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "name": "Download my data",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1095,
+      "mechanism": "Optional vehicle/two dates/account ZIP cap warning and real hook; F03/F04/F14/F15; artifact contents NOTRUN.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "name": "Export history",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 975,
+      "mechanism": "Nine columns/full error/ready download/stable tableId/value filters/pagination/contained scroll, no mobile hide; F05/F07/F15.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "name": "Scheduled exports",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 95,
+      "mechanism": "Independent auth-gated source/table/form/cron/delivery/time/status/actions; stored vehicle/columns round-trip; F05/F08/F09/F10/F15/F16.",
+      "nativeAcceptance": "NOTRUN"
+    },
+    {
+      "name": "Floating job drawer",
+      "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+      "line": 95,
+      "mechanism": "Persisted open/minimized/dismissed/maxRecent5/active+recent/ready links/loading/auto-promote; F11/F12/F13/F15.",
+      "nativeAcceptance": "NOTRUN"
+    }
+  ],
+  "actionCoverage": [
+    {
+      "action": "Header/history refresh",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1201,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Seven type radios/reset columns",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 532,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "CSV/JSON pressed choice",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 226,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Columns required/select-all/clear/toggle/order",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 735,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Local all/specific vehicle target",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 519,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Five date presets",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 136,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Custom start/end",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 551,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Start export success/error/pending",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1183,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Start account archive",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1074,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Ready-only download",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1197,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "History raw value filters",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 872,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "History internal pagination",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1042,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "History sorting intent/no callback",
+      "file": "web/src/features/system/pages/DataExportPage.tsx",
+      "line": 1032,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "New/edit schedule defaults/round-trip",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 118,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Save/cancel schedule",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 136,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Run now id/queued toast",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 437,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Enable/disable full-row input",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 158,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Delete confirmation",
+      "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "line": 472,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Drawer expand/minimize/dismiss/persist",
+      "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+      "line": 116,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Summary review details existing OperationalBrief",
+      "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+      "line": 36,
+      "execution": "NOTRUN"
+    }
+  ],
+  "ownerNeeds": [
+    {
+      "id": "N01",
+      "findingIds": [
+        "F01",
+        "F02",
+        "F03"
+      ],
+      "objective": "Page/domain wire/date reconciliation",
+      "existingOwnerFile": "web/src/features/system/pages/DataExportPage.tsx",
+      "deduplication": "No exact corrective objective/file owner in whole queue matches; completed migration/selector/palette/bulk/future-date work not reopened. Serialize overlapping page/support pairs; shared/canonical catalog only after separate explicit lease.",
+      "authorization": "REPORT_ONLY; queue/source/tests/catalog READONLY"
+    },
+    {
+      "id": "N02",
+      "findingIds": [
+        "F04",
+        "F05",
+        "F06"
+      ],
+      "objective": "Page initial/paused/target visibility",
+      "existingOwnerFile": "web/src/features/system/pages/DataExportPage.tsx",
+      "deduplication": "No exact corrective objective/file owner in whole queue matches; completed migration/selector/palette/bulk/future-date work not reopened. Serialize overlapping page/support pairs; shared/canonical catalog only after separate explicit lease.",
+      "authorization": "REPORT_ONLY; queue/source/tests/catalog READONLY"
+    },
+    {
+      "id": "N03",
+      "findingIds": [
+        "F07"
+      ],
+      "objective": "Controlled history sorting",
+      "existingOwnerFile": "web/src/features/system/pages/DataExportPage.tsx",
+      "deduplication": "No exact corrective objective/file owner in whole queue matches; completed migration/selector/palette/bulk/future-date work not reopened. Serialize overlapping page/support pairs; shared/canonical catalog only after separate explicit lease.",
+      "authorization": "REPORT_ONLY; queue/source/tests/catalog READONLY"
+    },
+    {
+      "id": "N04",
+      "findingIds": [
+        "F05",
+        "F08",
+        "F09"
+      ],
+      "objective": "Schedule pending/initial recovery",
+      "existingOwnerFile": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "deduplication": "No exact corrective objective/file owner in whole queue matches; completed migration/selector/palette/bulk/future-date work not reopened. Serialize overlapping page/support pairs; shared/canonical catalog only after separate explicit lease.",
+      "authorization": "REPORT_ONLY; queue/source/tests/catalog READONLY"
+    },
+    {
+      "id": "N05",
+      "findingIds": [
+        "F10"
+      ],
+      "objective": "Full scheduled failure explanation",
+      "existingOwnerFile": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+      "deduplication": "No exact corrective objective/file owner in whole queue matches; completed migration/selector/palette/bulk/future-date work not reopened. Serialize overlapping page/support pairs; shared/canonical catalog only after separate explicit lease.",
+      "authorization": "REPORT_ONLY; queue/source/tests/catalog READONLY"
+    },
+    {
+      "id": "N06",
+      "findingIds": [
+        "F11",
+        "F12",
+        "F13"
+      ],
+      "objective": "Drawer trust/status/known-zero",
+      "existingOwnerFile": "web/src/components/feedback/JobProgressDrawer.tsx",
+      "deduplication": "No exact corrective objective/file owner in whole queue matches; completed migration/selector/palette/bulk/future-date work not reopened. Serialize overlapping page/support pairs; shared/canonical catalog only after separate explicit lease.",
+      "authorization": "REPORT_ONLY; queue/source/tests/catalog READONLY"
+    },
+    {
+      "id": "N07",
+      "findingIds": [
+        "F14"
+      ],
+      "objective": "Reuse known localized labels; one conditional vehicle fallback leaf",
+      "existingOwnerFile": "web/src/features/system/pages/DataExportPage.tsx",
+      "deduplication": "No exact corrective objective/file owner in whole queue matches; completed migration/selector/palette/bulk/future-date work not reopened. Serialize overlapping page/support pairs; shared/canonical catalog only after separate explicit lease.",
+      "authorization": "REPORT_ONLY; queue/source/tests/catalog READONLY"
+    },
+    {
+      "id": "N08",
+      "findingIds": [
+        "F15"
+      ],
+      "objective": "Separate caller mobile sizing, no global Button rewrite",
+      "existingOwnerFile": "web/src/features/system/pages/DataExportPage.tsx; web/src/features/system/pages/ScheduledExportsPanel.tsx; web/src/components/feedback/JobProgressDrawer.tsx",
+      "deduplication": "No exact corrective objective/file owner in whole queue matches; completed migration/selector/palette/bulk/future-date work not reopened. Serialize overlapping page/support pairs; shared/canonical catalog only after separate explicit lease.",
+      "authorization": "REPORT_ONLY; queue/source/tests/catalog READONLY"
+    },
+    {
+      "id": "N09",
+      "findingIds": [
+        "F16"
+      ],
+      "objective": "Shared RequiresAuth trust presentation",
+      "existingOwnerFile": "web/src/components/feedback/RequiresAuth.tsx",
+      "deduplication": "No exact corrective objective/file owner in whole queue matches; completed migration/selector/palette/bulk/future-date work not reopened. Serialize overlapping page/support pairs; shared/canonical catalog only after separate explicit lease.",
+      "authorization": "REPORT_ONLY; queue/source/tests/catalog READONLY"
+    }
+  ],
+  "testInspection": {
+    "status": "INSPECTED_ONLY",
+    "files": [
+      {
+        "file": "web/src/features/system/pages/DataExportPage.test.tsx",
+        "declaredCount": 22,
+        "assertionSites": 113,
+        "eachDeclarations": 0,
+        "declarations": [
+          {
+            "line": 257,
+            "name": "uses a native grouped radio for every export type while retaining descriptions and selection"
+          },
+          {
+            "line": 272,
+            "name": "renders the KPI band, export wizard and history once data resolves"
+          },
+          {
+            "line": 290,
+            "name": "aggregates the stat tiles from job data (count, summed bytes, top type)"
+          },
+          {
+            "line": 303,
+            "name": "opens the real export review drawer with recorded bytes and by-count type context"
+          },
+          {
+            "line": 317,
+            "name": "keeps all four export metrics and creation/download controls after a failed background refresh"
+          },
+          {
+            "line": 334,
+            "name": "submits a new export with the chosen type, format and default 30-day window"
+          },
+          {
+            "line": 354,
+            "name": "omits the date range when the \"All Time\" preset is selected"
+          },
+          {
+            "line": 371,
+            "name": "forwards a custom date range when the user supplies one"
+          },
+          {
+            "line": 389,
+            "name": "locks required columns and drops unchecked ones from the submit payload"
+          },
+          {
+            "line": 412,
+            "name": "queues a full account export against /export/jobs/account"
+          },
+          {
+            "line": 425,
+            "name": "shows empty states when there are no export jobs"
+          },
+          {
+            "line": 436,
+            "name": "surfaces a load-error banner without crashing the rest of the page"
+          },
+          {
+            "line": 447,
+            "name": "opens the artifact URL for a ready job"
+          },
+          {
+            "line": 458,
+            "name": "renders an unrecognized job status as a neutral chip instead of crashing"
+          },
+          {
+            "line": 483,
+            "name": "renders jobs with unknown / missing formats without throwing"
+          },
+          {
+            "line": 501,
+            "name": "gates the scheduled-exports section behind auth mode (open mode → placeholder)"
+          },
+          {
+            "line": 513,
+            "name": "names the wizard vehicle selector and preserves all seven export choices"
+          },
+          {
+            "line": 544,
+            "name": "keeps every history field and download action reachable without mobile hiding"
+          },
+          {
+            "line": 564,
+            "name": "shows a failed column catalog independently and recovers with its own retry"
+          },
+          {
+            "line": 579,
+            "name": "retains catalog selections through a failed refresh and submits the same ordered allowlist"
+          },
+          {
+            "line": 595,
+            "name": "uses neutral preview surfaces and a theme-aware account separator without dropping content"
+          },
+          {
+            "line": 611,
+            "name": "forwards cancellation to the jobs and vehicle reads"
+          }
+        ],
+        "executed": 0
+      },
+      {
+        "file": "web/src/features/system/pages/ScheduledExportsPanel.test.tsx",
+        "declaredCount": 24,
+        "assertionSites": 73,
+        "eachDeclarations": 0,
+        "declarations": [
+          {
+            "line": 244,
+            "name": "renders a row per schedule with name, type/format, and cron"
+          },
+          {
+            "line": 256,
+            "name": "renders delivery kind, with a target arrow only for email/webhook"
+          },
+          {
+            "line": 267,
+            "name": "renders status badges and the never/last-run placeholders"
+          },
+          {
+            "line": 275,
+            "name": "dims disabled rows and swaps the toggle affordance"
+          },
+          {
+            "line": 289,
+            "name": "shows no table or empty state while loading"
+          },
+          {
+            "line": 299,
+            "name": "surfaces an actionable error — not the empty state — when the load fails"
+          },
+          {
+            "line": 310,
+            "name": "shows the empty state when there are genuinely no schedules"
+          },
+          {
+            "line": 318,
+            "name": "keeps the table when a background refetch errors but data is present"
+          },
+          {
+            "line": 330,
+            "name": "opens the form with emptyInput() defaults"
+          },
+          {
+            "line": 343,
+            "name": "hides the delivery target for download and reveals it per non-download kind"
+          },
+          {
+            "line": 357,
+            "name": "submits a create payload (download drops the target) and closes the form"
+          },
+          {
+            "line": 378,
+            "name": "trims and keeps the delivery target for email deliveries"
+          },
+          {
+            "line": 394,
+            "name": "keeps the form open when the create mutation rejects"
+          },
+          {
+            "line": 407,
+            "name": "locks the submit button while a create is pending"
+          },
+          {
+            "line": 421,
+            "name": "pre-fills the form from the selected row (inputFromRow)"
+          },
+          {
+            "line": 435,
+            "name": "submits an update payload scoped to the row id"
+          },
+          {
+            "line": 461,
+            "name": "triggers Run now with the row id"
+          },
+          {
+            "line": 467,
+            "name": "toggles an enabled row off via the update mutation"
+          },
+          {
+            "line": 478,
+            "name": "toggles a disabled row on via the update mutation"
+          },
+          {
+            "line": 489,
+            "name": "does not throw when a toggle mutation rejects"
+          },
+          {
+            "line": 505,
+            "name": "confirms then deletes the schedule"
+          },
+          {
+            "line": 521,
+            "name": "does not delete when the confirm dialog is dismissed"
+          },
+          {
+            "line": 535,
+            "name": "exposes an accessible New schedule action"
+          },
+          {
+            "line": 541,
+            "name": "gives every row action an accessible name"
+          }
+        ],
+        "executed": 0
+      },
+      {
+        "file": "web/src/api/hooks/useExports.test.ts",
+        "declaredCount": 5,
+        "assertionSites": 41,
+        "eachDeclarations": 0,
+        "declarations": [
+          {
+            "line": 83,
+            "name": "warns on partial deletion and returns exact failed IDs and deleted count"
+          },
+          {
+            "line": 111,
+            "name": "announces complete success only when the server reports no failed IDs"
+          },
+          {
+            "line": 129,
+            "name": "does not invent successes when every requested deletion fails"
+          },
+          {
+            "line": 156,
+            "name": "preserves request rejection and retained jobs without success invalidation"
+          },
+          {
+            "line": 176,
+            "name": "retains cached jobs and emits no completion feedback while deletion is pending"
+          }
+        ],
+        "executed": 0
+      },
+      {
+        "file": "web/src/api/hooks/useExports.test.tsx",
+        "declaredCount": 14,
+        "assertionSites": 39,
+        "eachDeclarations": 0,
+        "declarations": [
+          {
+            "line": 74,
+            "name": "produces a stable per-type key tuple"
+          },
+          {
+            "line": 81,
+            "name": "fetches the catalog for the given type"
+          },
+          {
+            "line": 97,
+            "name": "URL-encodes the type parameter"
+          },
+          {
+            "line": 108,
+            "name": "is disabled when type is undefined"
+          },
+          {
+            "line": 117,
+            "name": "is disabled when type is the empty string"
+          },
+          {
+            "line": 123,
+            "name": "surfaces request errors as isError"
+          },
+          {
+            "line": 165,
+            "name": "produces a stable identity-free key tuple"
+          },
+          {
+            "line": 171,
+            "name": "GETs /scheduled-exports and surfaces the array"
+          },
+          {
+            "line": 183,
+            "name": "coerces a missing payload to an empty array via safeArray"
+          },
+          {
+            "line": 192,
+            "name": "POSTs the payload and surfaces the created row"
+          },
+          {
+            "line": 203,
+            "name": "does NOT include owner_subject in the request body"
+          },
+          {
+            "line": 219,
+            "name": "PUTs to /scheduled-exports/{id}"
+          },
+          {
+            "line": 234,
+            "name": "DELETEs /scheduled-exports/{id}"
+          },
+          {
+            "line": 245,
+            "name": "POSTs /scheduled-exports/{id}/run and returns the updated row"
+          }
+        ],
+        "executed": 0
+      },
+      {
+        "file": "web/src/components/feedback/JobProgressDrawer.test.tsx",
+        "declaredCount": 10,
+        "assertionSites": 38,
+        "eachDeclarations": 0,
+        "declarations": [
+          {
+            "line": 104,
+            "name": "preserves format acronyms without forcing the casing of other format values"
+          },
+          {
+            "line": 118,
+            "name": "hits the correct endpoint and renders nothing once an empty list settles"
+          },
+          {
+            "line": 130,
+            "name": "shows a minimized chip with the active count by default"
+          },
+          {
+            "line": 142,
+            "name": "expands to the full drawer and persists the open state when the chip is clicked"
+          },
+          {
+            "line": 158,
+            "name": "renders active + recent sections and a labelled download link for ready jobs"
+          },
+          {
+            "line": 186,
+            "name": "surfaces a failed job error message with no download link"
+          },
+          {
+            "line": 205,
+            "name": "collapses to the chip on Minimize and fully hides on Dismiss when idle"
+          },
+          {
+            "line": 235,
+            "name": "auto-promotes a dismissed drawer to the chip when an active job appears"
+          },
+          {
+            "line": 248,
+            "name": "shows a loading message while the jobs request is in flight"
+          },
+          {
+            "line": 257,
+            "name": "renders every status branch and pretty type/status label"
+          }
+        ],
+        "executed": 0
+      }
+    ],
+    "declaredTotal": 75,
+    "assertionSitesTotal": 304,
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "limits": "No runner discovery/execution. English/request/hook doubles do not prove backend validation, real localization or native geometry."
+  },
+  "preservation": {
+    "sectionCount": 9,
+    "actionCount": 20,
+    "pageLines": 1325,
+    "pageGlassPanels": 5,
+    "pageExplicitSections": 4,
+    "pageSystemSummaryBriefs": 2,
+    "historyColumns": 9,
+    "exportTypes": 7,
+    "datePresets": 5,
+    "hashes": [
+      {
+        "file": "internal/api/exports/handler.go",
+        "before": "68cd7b106defd6a7505c243fe46ec6cb86ac1ef7566b444ff5d97e7124fb466e",
+        "after": "68cd7b106defd6a7505c243fe46ec6cb86ac1ef7566b444ff5d97e7124fb466e",
+        "unchanged": true
+      },
+      {
+        "file": "internal/api/router.go",
+        "before": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+        "after": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/App.tsx",
+        "before": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "after": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "before": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "after": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useExports.test.ts",
+        "before": "cff62dc0a42a199e67e7287e7fac7419bfbf5524471b81ef133fd37ddd136545",
+        "after": "cff62dc0a42a199e67e7287e7fac7419bfbf5524471b81ef133fd37ddd136545",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useExports.test.tsx",
+        "before": "e088df49d1ed5eb5153101f14bdf688df8f1813c46d005556b3f164deb00dd19",
+        "after": "e088df49d1ed5eb5153101f14bdf688df8f1813c46d005556b3f164deb00dd19",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useExports.ts",
+        "before": "ab81ec1f5a18828005e582e4d07a4c100d2d8152f14e742bb08744b38a52b5fe",
+        "after": "ab81ec1f5a18828005e582e4d07a4c100d2d8152f14e742bb08744b38a52b5fe",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/feedback/JobProgressDrawer.test.tsx",
+        "before": "fd9ffac53ed0af1517863747289375bfdd40fb6a501a7079db1433bd0d9f1100",
+        "after": "fd9ffac53ed0af1517863747289375bfdd40fb6a501a7079db1433bd0d9f1100",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/feedback/JobProgressDrawer.tsx",
+        "before": "c099bd5c01196a42d4c509f2d4a45ef554b878faedba2fe8baccd473f4f028c8",
+        "after": "c099bd5c01196a42d4c509f2d4a45ef554b878faedba2fe8baccd473f4f028c8",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "before": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "after": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "after": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "before": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "after": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+        "before": "161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891",
+        "after": "161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/pages/DataExportPage.test.tsx",
+        "before": "3eed4d5fd2cc4943f456384fc44556fc95d2921bf92ae9108ed629740c174b4b",
+        "after": "3eed4d5fd2cc4943f456384fc44556fc95d2921bf92ae9108ed629740c174b4b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/pages/DataExportPage.tsx",
+        "before": "171a6e6450f162b559952670981967c5976540d20e0d1182007484fd25fdc732",
+        "after": "171a6e6450f162b559952670981967c5976540d20e0d1182007484fd25fdc732",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/pages/ScheduledExportsPanel.test.tsx",
+        "before": "f54ecc6e43f11bccc497a4a470f5796814ed6546d7215ba206842652c1aecd16",
+        "after": "f54ecc6e43f11bccc497a4a470f5796814ed6546d7215ba206842652c1aecd16",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+        "before": "a16d17fc9bad0b1036389131a801a4e94bc5b80dd2c47de3451679515ddc90fc",
+        "after": "a16d17fc9bad0b1036389131a801a4e94bc5b80dd2c47de3451679515ddc90fc",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "after": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "after": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "before": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+        "after": "dc87a2c46dd3f82d84746b042d0c42d41e8a6d5b64487e543485f4aaaea35886",
+        "unchanged": false
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/numberFormat.ts",
+        "before": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+        "after": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "unchanged": true
+      }
+    ],
+    "changesByWorkerSourceTestsCatalogQueueGit": 0,
+    "hashLimits": "Primary baseline 02:36:53Z captured after first source reads, before substantive support/test review. Supplemental HASH_BEFORE logged; extra hook fixture pin followed initial inspection. No earlier immutable snapshot claimed."
+  },
+  "sourceStateMatrix": {
+    "loading": "Contextual jobs/columns/schedule skeletons and summary loading; vehicle selector absent F04.",
+    "error": "Page fatal-only jobs banner/history retry; separate vehicle/catalog/schedule retry; drawer/auth gaps F11/F16.",
+    "emptyNullUnknown": "Jobs [] counts/bytes are measured zero; unsupported columns intentionally absent; supported null/empty catalog F06; malformed payload only C05.",
+    "paused": "Retained data warning preserves content/data-refresh-blocked; initial unresolved wrongly empty F05. No offline/job/API action here.",
+    "retained": "Jobs/vehicles/catalog/schedule retain usable source on refresh failures; column selections/order stay intact. Drawer omits trust F11.",
+    "SI": "Wire/cache raw columns/SI preview untouched; summaries count loaded records not unique sessions; ZIP/table caps/writer schema unknown. No display conversion enters payload.",
+    "preferencesScope": "useNumberFormatting subscribes locale/precision; existing TimeStamp/duration/date owners reused. Local business dates/vehicle selectors legitimate: /data-export has no header range and disables header vehicle. Positive local choice updates saved selection; all choice does not clear it, preserved not invented defect. Drawer storage key unchanged.",
+    "mobileA11yI18n": "All fields/actions source-reachable; radio/labels/pressed states/full failed text positive. Native widths/themes/RTL/200%/forced-colors/contrast/keyboard/reduced-motion/12-24h/timezone NOTRUN; F12/F14/F15 remain."
+  },
+  "sourcePatternChecks": {
+    "method": "Executed regex grep, raw outputs logged; not AST/lint/compiler",
+    "staticInlineStyle": 0,
+    "rawHtmlMatches": 1,
+    "rawHtmlViolations": 0,
+    "rawException": "Drawer button inside components building block",
+    "directLibraryImports": 0,
+    "oldApiImports": 0,
+    "camelcaseQueryParams": 0,
+    "prefixMatches": 1,
+    "doublePrefixViolations": 0,
+    "prefixException": "Native browser download URL is not passed to request",
+    "useEffectMatches": 3,
+    "fetchUseEffectViolations": 0,
+    "effectExceptions": "Two selection sync effects and one drawer preference effect, not loading",
+    "missingPageContainerViolations": 0,
+    "wrapper": "PageLayout delegates PageContainer at line11",
+    "hiddenSectionConfirmedSites": 2,
+    "hardcodedStringConfirmedSites": 2,
+    "literalCatalogKeys": [
+      72,
+      37,
+      29
+    ],
+    "literalCatalogMissing": [
+      0,
+      0,
+      0
+    ],
+    "catalogLimits": "Literal t lookup only; no generated catalog guard/dynamic/mutation key completeness claim",
+    "backend": "Handler grep Println/panic/context-call patterns zero; 11 fmt.Sprintf sites are IDs/headers/CSV values not SQL. No whole-backend gate."
+  },
+  "documentsRead": {
+    "full": [
+      "docs/orchestrator-loop.md",
+      "docs/frontend-design-contract.md",
+      "docs/frontend-mission.md",
+      "docs/frontend-worker-conventions.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      ".github/instructions/observability.instructions.md",
+      "docs/frontend-audits/audit-page-185.json"
+    ],
+    "relevant": [
+      "docs/frontend-inventory.md:236/related ownership",
+      "docs/session-handoff.md:1-140/source-QA conventions",
+      "migration-queue.md:exact row and matching corrective objectives",
+      "docs/I18N_GUIDELINES.md:1-170"
+    ]
+  },
+  "evidenceLimits": {
+    "nativeAcceptance": "NOTRUN",
+    "testsLintCompilerBuildBrowserNetworkAPIExportJobDownloadIdentityVehicle": "NOTRUN",
+    "GitSubagentsInstallsHelpersServers": "NOTRUN",
+    "failures": [
+      "Initial UnicodeEncodeError exit1, UTF8 recovery0.",
+      "Long report-write tool prelaunch failed Windows OS206 filename/extension too long, exit1; no process/source action.",
+      "Exact queue assertion failed exit1 because parent added actor ledger second item match; recovered strict status row filter0.",
+      "Missing SourceContent feedback path; wrong ConfirmDialog feedback path corrected ui; optional example resilience report absent.",
+      "Large tool previews truncated; logged raw outputs and relevant range reads.",
+      "READONLY canonical en.json changed concurrently between before/after pins; not written or attributed to this worker. Catalog proof is snapshot-limited.",
+      "Final validation initially UnicodeDecodeError exit1 then hash-drift assertion exit1; explicit UTF8/no-waiver recovery now records actual drift instead of demanding catalog-only changes."
+    ],
+    "receiptLimit": "Early discovery PowerShell inputs/raw outputs remain in tool transcript; large raw outputs will be copied into log, but exact early command-text reconstruction is incomplete. Failed overlong planned command was never executed and full planned text not reserialized. Delivery therefore PARTIAL_RECEIPT, not fully compliant DONE."
+  },
+  "filesRead": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/I18N_GUIDELINES.md",
+    "docs/frontend-audits/audit-page-185.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "internal/api/exports/handler.go",
+    "internal/api/router.go",
+    "migration-queue.md",
+    "web/src/App.tsx",
+    "web/src/api/client.ts",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useAuthMode.ts",
+    "web/src/api/hooks/useExports.test.ts",
+    "web/src/api/hooks/useExports.test.tsx",
+    "web/src/api/hooks/useExports.ts",
+    "web/src/components/feedback/JobProgressDrawer.test.tsx",
+    "web/src/components/feedback/JobProgressDrawer.tsx",
+    "web/src/components/feedback/RequiresAuth.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/ConfirmDialog.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+    "web/src/features/system/pages/DataExportPage.test.tsx",
+    "web/src/features/system/pages/DataExportPage.tsx",
+    "web/src/features/system/pages/ScheduledExportsPanel.test.tsx",
+    "web/src/features/system/pages/ScheduledExportsPanel.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/i18n/en.json",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/numberFormat.ts",
+    "web/src/lib/workspaceScope.ts"
+  ],
+  "commandReleaseUtc": "2026-10-14T02:49:56.002923+00:00",
+  "queueMappingContinuation": {
+    "status": "COMPLETE_REPORT_ONLY_MAPPING",
+    "item": "phase6-qa-system-data-export",
+    "attempt": 1,
+    "authorization": "Only this report and its existing ignored log are writable. Queue, source, tests, catalogs and all business operations remain untouched.",
+    "objective": "Complete missing queue/owner mapping for retained F01-F16 only; do not repeat the source audit or proven checks.",
+    "clock": {
+      "queueStartUtc": "2026-10-14T05:06:00Z",
+      "returnDueUtc": "2026-10-14T05:26:00Z",
+      "hardDueUtc": "2026-10-14T05:31:00Z",
+      "firstObservedUtc": "2026-10-14T05:08:56.0109710Z",
+      "mappingSnapshotUtc": "2026-10-14T05:12:18.3077991Z",
+      "authority": "Conservative current queue deadlines are unchanged; the original 02:29 reservation and 02:49 source-QA release above remain historical evidence, not renewed clocks."
+    },
+    "queueSnapshot": {
+      "file": "migration-queue.md",
+      "sha256At051100Utc": "7d486e556799a3765b4655e7a051baf28570737955d972961b9fb411e65784f3",
+      "exactQueueLine": 344,
+      "exactQueueRow": "| [~] | 6 | phase6-qa-system-data-export | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-data-export.json; web\\logs\\phase6-qa-system-data-export.log | phase5-page-system-data-export | 1 | 2026-10-14T05:06:00Z | - | DataExportPage; no actual export/job/download/user/vehicle/network actions.; Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot.; Actually running actor 0e9b7cc6-2af3-48ca-ac7d-7ae8759705ad; no idle/completed counted; conservative return05:26/hard05:31 for new30, Docker original+20/25 unchanged. |",
+      "rowSha256Utf8WithoutNewline": "e62b16af1e912fb8b58d23e1c33ba03f770c70fc2c90564004ffe79a41484b64",
+      "exactRowCount": 1,
+      "statusRowsRead": 1892,
+      "objectiveOrOwnerNameMatchCount": 8,
+      "method": "Read canonical status rows and compare original finding objectives with item/file scopes and relevant notes. Also inspected export/domain and shared-trust item matches; actor ledgers are not corrective items.",
+      "exactExistingCorrectiveItems": [],
+      "limits": "Snapshot only: another orchestrator may subsequently change line numbers/statuses. No queue row was created, claimed, completed or excluded by this worker; proposed IDs below are requests, not existing queued work."
+    },
+    "summary": {
+      "retainedConfirmedFindings": 16,
+      "mappedFindingIds": 16,
+      "missingExactCorrectiveFindingMappings": 16,
+      "originalFindingsProvenFixedByExistingQueueItems": 0,
+      "originalFindingsProvenDuplicateOfExistingCorrectiveItems": 0,
+      "proposedExclusiveOwnerScopes": 11,
+      "retainedConditionalOrNativeCandidates": 7,
+      "newFindings": 0,
+      "sourceAuditsRepeated": 0,
+      "provenChecksRepeated": 0
+    },
+    "findingMapping": [
+      {
+        "findingId": "F01",
+        "ownerNeedIds": ["N01"],
+        "queueNeedIds": ["Q01"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Map the existing full_backup UI choice to the mounted backup wire ID. Resolve the confirmed maintenance/energy capability mismatch with the existing export integration owner; neither invent support nor remove those user intentions.",
+        "integrationBoundary": "internal\\api\\exports\\handler.go:141-150 is the retained validator evidence, not permission for a backend edit. Missing capability semantics need an explicit integration decision before claiming those choices work."
+      },
+      {
+        "findingId": "F02",
+        "ownerNeedIds": ["N01"],
+        "queueNeedIds": ["Q01"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Make format choice and submitted artifact contract agree with the existing analytics JSON behavior. Preserve supported choices; do not claim that the current endpoint produces analytics CSV."
+      },
+      {
+        "findingId": "F03",
+        "ownerNeedIds": ["N01"],
+        "queueNeedIds": ["Q01"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Send each populated account start/end bound as the endpoint's YYYY-MM-DD contract rather than an ISO timestamp, preserving optional/all-vehicle scope.",
+        "integrationBoundary": "Timezone and inclusive/exclusive end semantics are unresolved separately; this retained parser mismatch alone does not authorize changing server filtering or date interpretation."
+      },
+      {
+        "findingId": "F04",
+        "ownerNeedIds": ["N02"],
+        "queueNeedIds": ["Q02"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Keep wizard/account vehicle-target controls and source-shaped loading/error/empty/unknown-target feedback reachable. Preserve saved target identity and retry; never silently broaden an unresolved target to all vehicles.",
+        "notDuplicateOf": "phase6-fix-data-export-select-regression corrected one selection test oracle, not unresolved vehicle-source visibility/trust."
+      },
+      {
+        "findingId": "F05",
+        "ownerNeedIds": ["N02", "N04"],
+        "queueNeedIds": ["Q02", "Q04"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEMS_AT_TWO_CALLER_OWNERS",
+        "confirmedFix": "At the page's jobs/columns sources and the schedule source independently, use unresolved initial state and refresh-blocked state before authoritative empty. Preserve retained data, independent retry and existing query policies.",
+        "boundary": "The original shared useDataState evidence already distinguishes paused initial state. This is caller adoption, not a new generic state framework or a StaleRefreshWarning root rewrite."
+      },
+      {
+        "findingId": "F06",
+        "ownerNeedIds": ["N02"],
+        "queueNeedIds": ["Q02"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Keep the supported column-selection section with missing/empty-catalog explanation. Explicit unsupported capability remains a separate acceptable absence; do not conflate it with an unresolved supported catalog."
+      },
+      {
+        "findingId": "F07",
+        "ownerNeedIds": ["N03"],
+        "queueNeedIds": ["Q03"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Wire controlled onSort/sortKey/sortDir for the existing history table, with raw records/bytes/time accessors and explicit null/stable source-order policy. Preserve tableId, filters, pagination, all nine fields and download actions.",
+        "boundary": "The retained DataTable header already supports the callback. No shared DataTable rewrite is justified by this missing caller wiring."
+      },
+      {
+        "findingId": "F08",
+        "ownerNeedIds": ["N04"],
+        "queueNeedIds": ["Q04"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Retain the schedule draft/target while saving, prevent destructive pending replacement, and grant reset/close authority only to the submitting live form instance after real success. Rejection keeps editable recovery context.",
+        "boundary": "Do not promote conditional overlapping enable/disable lost-update candidate C06 to an additional confirmed defect."
+      },
+      {
+        "findingId": "F09",
+        "ownerNeedIds": ["N04"],
+        "queueNeedIds": ["Q04"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Keep the schedule-delete confirmation/target pending via existing ConfirmDialog loading; close only after success and retain confirmation/retry context on rejection. Do not claim that dismissal aborts an in-flight request."
+      },
+      {
+        "findingId": "F10",
+        "ownerNeedIds": ["N05"],
+        "queueNeedIds": ["Q05"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Expose the supplied last_error in reachable full text/detail beside the scheduled row's failed status, preserving the source reason and all row actions."
+      },
+      {
+        "findingId": "F11",
+        "ownerNeedIds": ["N06"],
+        "queueNeedIds": ["Q06"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Use existing DataState/feedback in the floating job drawer for initial failure, unresolved/paused state and retained failed refresh, with source retry. Preserve dismiss/minimize/auto-promote preferences and cached jobs."
+      },
+      {
+        "findingId": "F12",
+        "ownerNeedIds": ["N06"],
+        "queueNeedIds": ["Q06"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Render readable localized known status and neutral unknown/raw fallback for recent drawer jobs as well as size/time/error/download. Do not rely on decorative status icons or color alone."
+      },
+      {
+        "findingId": "F13",
+        "ownerNeedIds": ["N06"],
+        "queueNeedIds": ["Q06"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM",
+        "confirmedFix": "Use the existing byte formatter without zero-as-empty at the drawer's measured file-size display; zero bytes remains 0 B and missing/invalid sizes remain unknown.",
+        "notDuplicateOf": "repair-export-formatter fixed the page's zero-byte presentation, not the separately owned JobProgressDrawer callsite."
+      },
+      {
+        "findingId": "F14",
+        "ownerNeedIds": ["N07"],
+        "queueNeedIds": ["Q07"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEM_WITH_CONDITIONAL_COPY_PREREQUISITE",
+        "confirmedFix": "Reuse existing translated known export-type labels for most-exported type; localize the complete interpolated account vehicle-ID fallback. Retain raw unknown technical IDs and existing vehicle display-name/VIN precedence.",
+        "catalogBoundary": "No catalog was read or edited in this continuation. A missing complete fallback key is NOT confirmed here: request a separately leased canonical-copy owner only if the source owner establishes that the necessary existing key is absent."
+      },
+      {
+        "findingId": "F15",
+        "ownerNeedIds": ["N08"],
+        "queueNeedIds": ["Q08", "Q09", "Q10"],
+        "disposition": "MISSING_EXACT_CORRECTIVE_ITEMS_AT_THREE_CALLER_OWNERS",
+        "confirmedFix": "At page, schedule and drawer owners separately, adopt existing below-md min-h-11/min-w-11 and wrapping as needed while explicitly restoring existing desktop density. Preserve every control and readable label; do not globally resize Button.",
+        "evidenceBoundary": "The original 36/40/24px figures are source/rem arithmetic at an assumed 16px root, not measured targets, a WCAG verdict or native acceptance. Mounted proof remains NOTRUN."
+      },
+      {
+        "findingId": "F16",
+        "ownerNeedIds": ["N09"],
+        "queueNeedIds": ["Q11"],
+        "disposition": "MISSING_EXACT_SHARED_CORRECTIVE_ITEM",
+        "confirmedFix": "At RequiresAuth, distinguish auth-contract initial/paused/failure from authoritative open-mode or capability denial, and expose independent retry/retained-source warning without erasing usable children or weakening the auth boundary.",
+        "boundary": "This is the actual shared wrapper owner, not a DataExport-local duplicate auth implementation or authorization-policy change."
+      }
+    ],
+    "ownerQueueNeeds": [
+      {
+        "id": "Q01",
+        "proposedItemId": "phase6-fix-data-export-contract",
+        "existingQueueItem": null,
+        "ownerKind": "page with existing export-domain integration decision",
+        "findingIds": ["F01", "F02", "F03"],
+        "requestedExclusiveFiles": [
+          "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+          "web\\src\\features\\system\\pages\\DataExportPage.test.tsx"
+        ],
+        "existingIntegrationOwnerFile": "internal\\api\\exports\\handler.go",
+        "integrationNeed": "Resolve maintenance/energy capability and unsupported format/date-bound semantics without fabricated backend support. No handler/hook write lease or backend test path is assigned by this report.",
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      },
+      {
+        "id": "Q02",
+        "proposedItemId": "phase6-fix-data-export-initial-target-catalog",
+        "existingQueueItem": null,
+        "ownerKind": "page",
+        "findingIds": ["F04", "F05", "F06"],
+        "requestedExclusiveFiles": [
+          "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+          "web\\src\\features\\system\\pages\\DataExportPage.test.tsx"
+        ],
+        "scope": "Wizard/account vehicle-source trust and supported columns/jobs initial-paused presentation only; schedule portion of F05 belongs to Q04.",
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      },
+      {
+        "id": "Q03",
+        "proposedItemId": "phase6-fix-data-export-history-sort",
+        "existingQueueItem": null,
+        "ownerKind": "page",
+        "findingIds": ["F07"],
+        "requestedExclusiveFiles": [
+          "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+          "web\\src\\features\\system\\pages\\DataExportPage.test.tsx"
+        ],
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      },
+      {
+        "id": "Q04",
+        "proposedItemId": "phase6-fix-scheduled-exports-initial-settlement",
+        "existingQueueItem": null,
+        "ownerKind": "existing feature panel",
+        "findingIds": ["F05", "F08", "F09"],
+        "requestedExclusiveFiles": [
+          "web\\src\\features\\system\\pages\\ScheduledExportsPanel.tsx",
+          "web\\src\\features\\system\\pages\\ScheduledExportsPanel.test.tsx"
+        ],
+        "scope": "Schedule-source initial-paused trust and save/delete settlement only. Existing mutation/ConfirmDialog APIs suffice; C06 is not a confirmed extension.",
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      },
+      {
+        "id": "Q05",
+        "proposedItemId": "phase6-fix-scheduled-exports-failure-detail",
+        "existingQueueItem": null,
+        "ownerKind": "existing feature panel",
+        "findingIds": ["F10"],
+        "requestedExclusiveFiles": [
+          "web\\src\\features\\system\\pages\\ScheduledExportsPanel.tsx",
+          "web\\src\\features\\system\\pages\\ScheduledExportsPanel.test.tsx"
+        ],
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      },
+      {
+        "id": "Q06",
+        "proposedItemId": "phase6-fix-job-progress-drawer-trust-status-zero",
+        "existingQueueItem": null,
+        "ownerKind": "shared feedback",
+        "findingIds": ["F11", "F12", "F13"],
+        "requestedExclusiveFiles": [
+          "web\\src\\components\\feedback\\JobProgressDrawer.tsx",
+          "web\\src\\components\\feedback\\JobProgressDrawer.test.tsx"
+        ],
+        "scope": "Trust/retry, readable recent status and measured-zero bytes only. Source-owned geometry candidate C03 is not native-confirmed.",
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      },
+      {
+        "id": "Q07",
+        "proposedItemId": "phase6-fix-data-export-known-labels",
+        "existingQueueItem": null,
+        "ownerKind": "page",
+        "findingIds": ["F14"],
+        "requestedExclusiveFiles": [
+          "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+          "web\\src\\features\\system\\pages\\DataExportPage.test.tsx"
+        ],
+        "conditionalPrerequisite": "Only a demonstrated missing complete interpolated fallback message requires a separate canonical-copy lease; no unconditional catalog/generator job is requested.",
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      },
+      {
+        "id": "Q08",
+        "proposedItemId": "phase6-fix-data-export-mobile-targets",
+        "existingQueueItem": null,
+        "ownerKind": "page",
+        "findingIds": ["F15"],
+        "requestedExclusiveFiles": [
+          "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+          "web\\src\\features\\system\\pages\\DataExportPage.test.tsx"
+        ],
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      },
+      {
+        "id": "Q09",
+        "proposedItemId": "phase6-fix-scheduled-exports-mobile-targets",
+        "existingQueueItem": null,
+        "ownerKind": "existing feature panel",
+        "findingIds": ["F15"],
+        "requestedExclusiveFiles": [
+          "web\\src\\features\\system\\pages\\ScheduledExportsPanel.tsx",
+          "web\\src\\features\\system\\pages\\ScheduledExportsPanel.test.tsx"
+        ],
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      },
+      {
+        "id": "Q10",
+        "proposedItemId": "phase6-fix-job-progress-drawer-mobile-targets",
+        "existingQueueItem": null,
+        "ownerKind": "shared feedback",
+        "findingIds": ["F15"],
+        "requestedExclusiveFiles": [
+          "web\\src\\components\\feedback\\JobProgressDrawer.tsx",
+          "web\\src\\components\\feedback\\JobProgressDrawer.test.tsx"
+        ],
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      },
+      {
+        "id": "Q11",
+        "proposedItemId": "phase6-fix-requires-auth-source-trust",
+        "existingQueueItem": null,
+        "ownerKind": "shared feedback",
+        "findingIds": ["F16"],
+        "requestedExclusiveFiles": [
+          "web\\src\\components\\feedback\\RequiresAuth.tsx",
+          "web\\src\\components\\feedback\\RequiresAuth.test.tsx"
+        ],
+        "testOwnerEvidence": "Existing matching test filename confirmed by glob only; no body read or execution in this continuation.",
+        "queueState": "NEEDS_PARENT_QUEUE_MAPPING_NOT_CREATED"
+      }
+    ],
+    "serialization": [
+      {
+        "exclusivePairOwner": "DataExportPage",
+        "queueNeedIds": ["Q01", "Q02", "Q03", "Q07", "Q08"],
+        "rule": "One released source/test pair at a time. Parent may consolidate these exact original findings into one bounded corrective item; do not dispatch overlapping writers or infer prerequisite dependencies from this list."
+      },
+      {
+        "exclusivePairOwner": "ScheduledExportsPanel",
+        "queueNeedIds": ["Q04", "Q05", "Q09"],
+        "rule": "One released source/test pair at a time; preserve the split page/schedule F05 identity rather than counting it as two new findings."
+      },
+      {
+        "exclusivePairOwner": "JobProgressDrawer",
+        "queueNeedIds": ["Q06", "Q10"],
+        "rule": "One released source/test pair at a time; caller mobile adoption is not a global Button rewrite."
+      },
+      {
+        "exclusivePairOwner": "RequiresAuth",
+        "queueNeedIds": ["Q11"],
+        "rule": "Separate shared owner; no artificial dependency on page/drawer fixes. Preserve capability/privacy boundary and independently retained sources."
+      }
+    ],
+    "existingWorkDisposition": [
+      {
+        "item": "audit-page-185",
+        "queueLine": 1097,
+        "queueStatus": "[x]",
+        "recordedCommit": "514520f8cc",
+        "disposition": "ALREADY_DONE_NO_CHANGE",
+        "reason": "Phase0 source inventory is complete historical context, not duplicate Phase6 combined/native acceptance or a corrective owner for F01-F16."
+      },
+      {
+        "item": "phase5-page-system-data-export",
+        "queueLine": 2351,
+        "queueStatus": "[x]",
+        "recordedCommit": "25832a674029135511aef792cb7e072be0fd15d4",
+        "disposition": "ALREADY_DONE_NO_CHANGE",
+        "reason": "Accepted original page/source migration is not reopened. Its later recorded 22/21/1 result and source-only limits remain historical, not a fresh run or acceptance of retained contract defects."
+      },
+      {
+        "item": "regression-export-test",
+        "queueLine": 1185,
+        "queueStatus": "[x]",
+        "recordedCommit": "b1a0fa53f9",
+        "disposition": "ALREADY_DONE_NO_CHANGE",
+        "reason": "Completed exact selector/source/refresh oracle repair does not wire sort callbacks, correct account dates or accept unresolved source state."
+      },
+      {
+        "item": "phase6-fix-data-export-select-regression",
+        "queueLine": 2444,
+        "queueStatus": "[x]",
+        "recordedCommit": "d3f176a8b611cabb8b1ad78b990b1942f4be8574",
+        "disposition": "ALREADY_DONE_NO_CHANGE",
+        "reason": "Recorded narrow test-only correction and 22/22 covering result are preserved without rerun. It proves selection values/submission, not F04 missing-control trust or F15 native target size."
+      },
+      {
+        "item": "repair-export-formatter",
+        "queueLine": 1216,
+        "queueStatus": "[x]",
+        "recordedCommit": "5f79cc6e7b",
+        "disposition": "ALREADY_DONE_NO_CHANGE",
+        "reason": "Page formatter/known-zero correction is complete; F13 is at a different owner in JobProgressDrawer and must not be dismissed as that page fix."
+      },
+      {
+        "item": "phase6-export-status-palette",
+        "queueLine": 2428,
+        "queueStatus": "[x]",
+        "recordedCommit": "3d690e416a7fb3d0b0c5a754d5fbf87c57019d04",
+        "disposition": "ALREADY_DONE_NO_CHANGE",
+        "reason": "Accepted exportStats semantic-palette correction is outside these exact original findings; do not create another palette objective or equate it with F12 readable drawer status."
+      },
+      {
+        "item": "phase6-export-breakdown-fill",
+        "queueLine": 2429,
+        "queueStatus": "[x]",
+        "recordedCommit": "34ad2efe14aeefda0de5b85713654a8ab45011d2",
+        "disposition": "ALREADY_DONE_NO_CHANGE",
+        "reason": "Accepted solid-fill source correction is separate. Its recorded zero-discovery catalog-startup failure is preserved, not converted to 14 passes or rerun here."
+      },
+      {
+        "item": "phase6-export-bulk-outcome-toast",
+        "queueLine": 2430,
+        "queueStatus": "[x]",
+        "recordedCommit": "73fd473ae8a3abbffab471cb081bab05ce3bfdf5",
+        "disposition": "ALREADY_DONE_NO_CHANGE",
+        "reason": "Latest queue note records real 19/19 covering acceptance after earlier retained 14/5 failure. Preserve both; no rerun or whole-useExports restart. Bulk deletion feedback does not fix schedule-save/delete settlement F08/F09."
+      },
+      {
+        "item": "phase6-fix-relative-future-dates",
+        "queueLine": 737,
+        "queueStatus": "[x]",
+        "recordedCommit": "pending exact fixture receipt",
+        "disposition": "ALREADY_DONE_NO_CHANGE",
+        "reason": "Recorded shared relative-date behavior/23-pass receipt is not repeated or given an invented commit. It is not F03's account submission date-parser mismatch or a blanket acceptance of drawer timestamps."
+      },
+      {
+        "item": "phase5-current-source-catalog-closure",
+        "queueLine": 910,
+        "queueStatus": "[x]",
+        "recordedCommit": "91650fc9de1b96f60f00a01e24f2f73a716bd817",
+        "disposition": "ALREADY_DONE_NO_CHANGE",
+        "reason": "Generated closure is not a semantic caller-label fix for F14 or authority to reopen canonical catalogs. This continuation does not repeat guards or declare a missing fallback key."
+      },
+      {
+        "item": "phase6-qa-exports-exports",
+        "queueLine": 319,
+        "queueStatus": "[x]",
+        "recordedCommit": "-",
+        "disposition": "DISTINCT_PAGE_NOT_DUPLICATE",
+        "reason": "ExportsPage is a different mounted page. Shared export-domain overlap and its reported browser/HTTP500 limits do not satisfy DataExportPage's original queue mapping or native acceptance."
+      }
+    ],
+    "candidateDisposition": [
+      {
+        "candidateId": "C01",
+        "disposition": "RETAIN_CONDITIONAL_NOT_A_CONFIRMED_FIX",
+        "reason": "Prototype-name status branch needs out-of-contract status evidence; no fixture or crash was executed."
+      },
+      {
+        "candidateId": "C02",
+        "disposition": "RETAIN_CONDITIONAL_NOT_A_CONFIRMED_FIX",
+        "reason": "Remote/demo download-base and auth behavior remain unverified; no download/network action or API-base rewrite is requested."
+      },
+      {
+        "candidateId": "C03",
+        "disposition": "RETAIN_NATIVE_NOTRUN_NOT_A_CONFIRMED_FIX",
+        "reason": "Drawer shell/safe-area overlap needs mounted evidence, not inferred geometry acceptance or a new overlay engine."
+      },
+      {
+        "candidateId": "C04",
+        "disposition": "RETAIN_NATIVE_NOTRUN_NOT_A_CONFIRMED_FIX",
+        "reason": "Schedule header reflow, dimmed-row contrast and scroll-region reachability remain native proof needs; do not promote them from a source-only suggestion."
+      },
+      {
+        "candidateId": "C05",
+        "disposition": "RETAIN_CONDITIONAL_NOT_A_CONFIRMED_FIX",
+        "reason": "Malformed nonarray response was not established; no speculative schema/transport repair is added."
+      },
+      {
+        "candidateId": "C06",
+        "disposition": "RETAIN_CONDITIONAL_NOT_A_CONFIRMED_FIX",
+        "reason": "Overlapping toggle/full-row lost update needs deferred fixture proof and is separate from confirmed save/delete lifecycle F08/F09."
+      },
+      {
+        "candidateId": "C07",
+        "disposition": "RETAIN_NATIVE_NOTRUN_NOT_A_CONFIRMED_FIX",
+        "reason": "Reduced-motion/low-bandwidth/forced-colors/composed contrast requires authorized mounted proof; no new source audit or motion campaign."
+      }
+    ],
+    "preservationAndEvidence": {
+      "reportSha256BeforeContinuation": "0bea3d1356d000b0bfb4cab50dde062b0dfd2f48f1b0b0a038be1525cbdd8608",
+      "logSha256BeforeContinuation": "9a54e630ca1d39bcabbd9876ff7432857c62e97dce0fb1515f3d24dc22b367ed",
+      "originalFields": "All pre-existing findings, candidates, counts, source snippets, citations, ownerNeeds, timestamps, pins, declared-test details, validation failures and receipt limitations are retained unchanged. This appended mapping does not re-certify original source or repair the prior incomplete receipt.",
+      "originalCitationValidation": "FAIL, preserved; no fresh line/source verification",
+      "originalPinValidation": "DRIFT, preserved; concurrent unowned en.json change remains historical",
+      "originalDeliveryStatus": "PARTIAL_RECEIPT_SOURCE_QA_COMPLETE, preserved",
+      "nativeAcceptance": "NOTRUN",
+      "applicationAcceptance": "NOTRUN",
+      "sourceAuditsTestsLintCompilerBuildBrowserNetworkExportDownloadJobsBusinessOperations": "NOTRUN",
+      "sourceCatalogQueueGitHelpersServersInstallsDockerNestedAgents": "NO_ACTION",
+      "freshReads": [
+        "docs\\orchestrator-loop.md",
+        "docs\\frontend-mission.md",
+        "docs\\frontend-design-contract.md",
+        "docs\\frontend-worker-conventions.md",
+        "docs\\session-handoff.md:1-145",
+        "docs\\frontend-inventory.md:235-236 and DataExport owner matches",
+        "migration-queue.md:canonical status rows and relevant notes",
+        "docs\\frontend-audits\\phase6-qa-system-data-export.json",
+        "web\\logs\\phase6-qa-system-data-export.log:release footer",
+        ".github\\instructions\\frontend-si-cutover.instructions.md",
+        ".github\\instructions\\react-frontend.instructions.md",
+        ".github\\instructions\\observability.instructions.md"
+      ],
+      "filenameOnly": [
+        "web\\src\\components\\feedback\\RequiresAuth.test.tsx"
+      ],
+      "continuationReadFailures": [
+        "Two combined queue/log output calls exceeded display limits; recovered with bounded canonical row/field extraction without reading generated output paths.",
+        "Queue-match extraction exit1 used the PowerShell automatic $Matches variable as a numeric counter. Corrected counter name and re-extracted documentation only; exit0, 1892 status rows, eight original objective/owner-name matches and one exact QA row."
+      ],
+      "verificationScope": "Only owned JSON parse, appended mapping completeness/consistency, preservation of original report fields and existing log prefix; not an application test, source audit, compiler, lint or native pass."
+    },
+    "documentVerification": {
+      "observedUtc": "2026-10-14T05:16:15.8973902Z",
+      "command": "PowerShell owned-report ConvertFrom-Json; reciprocal F01-F16/Q01-Q11 mapping checks; original report byte-reconstruction SHA256 and original log-prefix SHA256 comparison. Exact executed command and raw output are appended to the matching log.",
+      "exitCode": 0,
+      "jsonParse": "PASS",
+      "originalReportByteReconstruction": "PASS",
+      "originalLogPrefix": "PASS",
+      "findingMapping": "16/16 unique retained IDs",
+      "ownerScopes": "11/11 unique; reciprocal links PASS",
+      "candidates": "7/7 preserved conditional/native only",
+      "historicalCitationAndPinFailures": "PRESERVED",
+      "nativeAcceptance": "NOTRUN",
+      "applicationAcceptance": "NOTRUN"
+    },
+    "release": {
+      "result": "DONE_REPORT_ONLY",
+      "writeScopeReleasedOnReturn": true,
+      "files": [
+        "docs\\frontend-audits\\phase6-qa-system-data-export.json",
+        "web\\logs\\phase6-qa-system-data-export.log"
+      ],
+      "parentNeeds": "Create or consolidate the eleven proposed exact corrective scopes at their four existing source/test owners, serializing overlapping pairs. Resolve Q01 export capability/date semantics at the existing integration owner; a Q07 canonical-copy prerequisite remains conditional on a genuinely absent existing message. Existing completed objectives need no change or rerun. All original source/receipt failures and native/application NOTRUN remain open evidence, not page approval.",
+      "limits": "No queue/source/catalog/test/Git action taken and no actor termination or lifecycle census asserted. Report-only completion is not implementation, repaired historical receipt, native approval or phase completion."
+    }
+  }
+}

@@ -74,6 +74,13 @@ describe('WidgetStatGrid — empty & null-safety', () => {
 // ── Mapping ──────────────────────────────────────────────────────────────────
 
 describe('WidgetStatGrid — mapping', () => {
+  it('uses a chrome-free metric group inside the existing widget panel', () => {
+    const { container } = render(<WidgetStatGrid stats={[makeStat()]} />);
+    expect(container.querySelector('.\\!bg-transparent')).toBeInTheDocument();
+    expect(container.querySelector('.\\!border-0')).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveClass('grid-cols-1', '@xs:grid-cols-2');
+  });
+
   it('renders one StatCard per item with label, value and optional unit', () => {
     const stats: StatGridItem[] = [
       makeStat({ label: 'Power', value: 42, unit: 'kW' }),
@@ -98,11 +105,26 @@ describe('WidgetStatGrid — mapping', () => {
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.queryByText('—')).toBeNull();
   });
+
+  it('renders a current-value sublabel without implying a comparison trend', () => {
+    render(<WidgetStatGrid stats={[makeStat({ value: 4, sublabel: '3 online' })]} />);
+    expect(screen.getByText('3 online')).toBeInTheDocument();
+    expect(screen.queryByText('no change')).toBeNull();
+    expect(screen.queryByText('—')).toBeNull();
+  });
 });
 
 // ── Trend chip branches ──────────────────────────────────────────────────────
 
 describe('WidgetStatGrid — trend chip branches', () => {
+  it('lets callers express a declining cost as a positive result', () => {
+    const { container } = render(
+      <WidgetStatGrid stats={[makeStat({ label: 'Cost', value: 3, trend: 'down', trendValue: '12%', trendPositive: true })]} />,
+    );
+    expect(screen.getByText('↓')).toBeInTheDocument();
+    expect(container.querySelector('.text-emerald-700')).toBeInTheDocument();
+  });
+
   it('renders a positive (green) chip for an up trend with a value', () => {
     const { container } = render(
       <WidgetStatGrid stats={[makeStat({ label: 'Eff', value: 9, trend: 'up', trendValue: '+12%' })]} />,

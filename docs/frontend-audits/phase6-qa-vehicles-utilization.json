@@ -1,0 +1,1172 @@
+{
+  "item": "phase6-qa-vehicles-utilization",
+  "attempt": 1,
+  "status": "SOURCE_QA_REPORT_COMPLETE_WITH_CONFIRMED_NEEDS",
+  "beforePins": [
+    {
+      "path": "web/src/features/vehicles/pages/UtilizationPage.tsx",
+      "sha256": "F31E8D76D8D6673C4E8DAF4660015A0EBAC964BCDC2DAE55EB0DC06AA023222F"
+    },
+    {
+      "path": "web/src/features/vehicles/pages/UtilizationPage.test.tsx",
+      "sha256": "6DBDD578540911EEBD2E7E6F8396BCA9DA29C9FC116A2C137AD6434517838E3F"
+    },
+    {
+      "path": "web/src/features/vehicles/lib/utilization.ts",
+      "sha256": "B14AAABB5963DE2EC281F690C33C6B745301A7AC53EBE5D9F1EA5EBC553C109A"
+    },
+    {
+      "path": "web/src/features/vehicles/lib/utilization.test.ts",
+      "sha256": "8261AAC07D46B9727B8E4EE1391F5DB79AE057AB2D623E022C08F7DD3E0C3F3D"
+    },
+    {
+      "path": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "sha256": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75"
+    },
+    {
+      "path": "web/src/api/hooks/useDriving.ts",
+      "sha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+    },
+    {
+      "path": "web/src/hooks/useRangeState.ts",
+      "sha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3"
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "sha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64"
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE"
+    },
+    {
+      "path": "web/src/types/driving.ts",
+      "sha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+    },
+    {
+      "path": "web/vite.config.ts",
+      "sha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58"
+    },
+    {
+      "path": "web/package.json",
+      "sha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/ActiveDayConsistency.tsx",
+      "sha256": "736588FC5C7D225CBC5301198F15262AE574A0699F12262B8F58328F651B11FB"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/BusiestDays.tsx",
+      "sha256": "16B9F32516988CB960D89676EA81B3139B8C7C3ADB0F08455921281B8DFACF40"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/DriveDistributions.tsx",
+      "sha256": "3F291CDB8B37929B6A07E6BECB97239168C82416E816C3F841706DD1B0C69789"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/index.ts",
+      "sha256": "8B34D54B2C5D067F1D1D4374C4D412BBC3D1249C440C09384DBE30E0F1E2E17D"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/TimeCostOverview.tsx",
+      "sha256": "87DAB513B9D2DAE0973701695DF645C7DADF45DA14CD57C4C6606424780851E2"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/types.ts",
+      "sha256": "B180E4A380C29EB07249DC90969A926946964C4DE83911555AE27C655656C669"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/useUtilizationDisplay.ts",
+      "sha256": "BDFD273281375BAA9EA37B221F45EEA6ADC37B91DAA77E516F20897EA84B1A3E"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/UtilizationKpis.tsx",
+      "sha256": "81874DB970B1CF4051D5DFCA308E76D5ABCFAD7E1AE9D1DBDCC1E9CF802F99A6"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/UtilizationMethodology.tsx",
+      "sha256": "937D9A3082E372469FF298011D28094ABA595452FEF7981AFCDC13C4ED512326"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/UtilizationSectionBody.tsx",
+      "sha256": "48F12A9C16BF42912732B670D4D8D50B417FB0E0070D45582F5F4836C2EBA5A1"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/UtilizationTables.test.tsx",
+      "sha256": "E16EB686C81F0F5DEDFD5BF496650A32E693F6224439D2DB2CCB4B8770C16F7B"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/UtilizationTrend.tsx",
+      "sha256": "2CFB2A1464FDB2C3F7E05A01676D15F2161340B45536D4059339D51273B4A547"
+    },
+    {
+      "path": "web/src/features/vehicles/components/utilization/WeekdayProfile.tsx",
+      "sha256": "F5AD19CB1BE968D47285D6109F9751FA3B43926202A0BB795D73CC371C6962AB"
+    }
+  ],
+  "startedAt": "2026-10-14T01:27:54.3904065Z",
+  "supplementalContextPins": [
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A"
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694"
+    },
+    {
+      "path": "web/src/components/charts/chartSizing.ts",
+      "sha256": "C9ACF3F287165F087082782FBB6215EF6DAAEC0690FB905CBAF54EA6BABF9532"
+    },
+    {
+      "path": "web/scripts/frontend-qa.mjs",
+      "sha256": "E82FB2D99D429AF549766CE1A50951F6ACE714E8AD2F55CD4FCDF7E4C2067D0C"
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "rule": "workspace-precise-bounds",
+      "contract": "MDC-032/MDC-044",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/pages/UtilizationPage.tsx",
+      "line": 50,
+      "related": [
+        "UtilizationPage.tsx:49-73",
+        "web/src/hooks/useRangeState.ts:656-693",
+        "web/src/lib/workspaceScope.ts:75,79-92",
+        "web/src/api/hooks/useDriving.ts:104-139",
+        "web/src/features/vehicles/lib/utilization.ts:243-262,446,461-481"
+      ],
+      "detail": "Header-owned route discards startInstant/endInstantExclusive/timezone, sends calendar strings to query and UTC-only model, and freezes analysis at page mount. Both date labels and header vehicle are forwarded correctly, but precise rolling/non-UTC bounds are not.",
+      "repro": "STATIC TRACE, NOT executed: July one-day America/Los_Angeles header scope spans 07:00Z to next-day07:00Z; page/model instead use UTC00:00Z boundaries. Live/24h advances instants without changing calendar labels, while submitted dates/asOf remain fixed.",
+      "fix": "Use existing precise bounds end-to-end; preserve calendar labels, header selection, DST/timezone and actual observed-window denominator. Deliberately reconcile frozen analysis versus moving header scope.",
+      "owner": "page/model/query integration",
+      "confidence": "high",
+      "queueDedup": "No utilization corrective claim found; completed drivetrain exact-range integration is different and must not be redispatched."
+    },
+    {
+      "id": "F02",
+      "rule": "full-range-completeness",
+      "contract": "MDC-032/MDC-045",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/pages/UtilizationPage.tsx",
+      "line": 55,
+      "related": [
+        "web/src/features/vehicles/lib/utilization.ts:12,817",
+        "web/src/api/hooks/useDriving.ts:114-140,175-210",
+        "web/src/features/vehicles/components/utilization/UtilizationMethodology.tsx:299-312"
+      ],
+      "detail": "One at-most1000-row response supplies all utilization rollups. useDrives does not paginate; full requested history cannot be guaranteed. Cap/partial coverage is honestly disclosed: this is a required full-range capability gap, NOT a hidden cap or lifetime-completeness mislabel.",
+      "repro": "STATIC TRACE, NOT executed:1001 matching drives cause one request with limit1000 and no offset1000 request. At least one matching record cannot contribute. Actual backend ordering is NOT established.",
+      "fix": "Coordinate existing complete-history pagination capability with both precise bounds and cancellation, or obtain an explicit source-limited product decision; retain cap disclosure until completeness is proven.",
+      "owner": "page/query integration",
+      "confidence": "high",
+      "queueDedup": "ActionCenter history pagination and completed drivetrain scope are distinct objectives, not duplicate utilization fixes."
+    },
+    {
+      "id": "F03",
+      "rule": "unknown-weekday-as-zero",
+      "contract": "MDC-026/MDC-045",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/components/utilization/WeekdayProfile.tsx",
+      "line": 67,
+      "related": [
+        "WeekdayProfile.tsx:67-78,137-179",
+        "web/src/features/vehicles/lib/utilization.ts:716-731"
+      ],
+      "detail": "Null activeDayShare and averageDistancePerActiveDayM become numeric0 in chart rows, accessible tables and exportData. Undefined/unobserved weekday operands therefore appear measured zero.",
+      "repro": "STATIC TRACE, NOT executed: a Sunday-only observed window leaves Monday-Saturday observedDays0 and null rates; adapter supplies0%/0 distance. Observed inactive weekdays may legitimately have0 active rate but average per active day remains unavailable.",
+      "fix": "Retain null through chart/table/export boundaries; preserve observed true zero only where the denominator exists.",
+      "owner": "utilization feature",
+      "confidence": "high",
+      "queueDedup": "Remaining audit-page-236 finding; no corrective row claiming this file found. No accepted-page remigration."
+    },
+    {
+      "id": "F04",
+      "rule": "missing-field-rollups-as-zero",
+      "contract": "MDC-026/MDC-033/MDC-045",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/components/utilization/TimeCostOverview.tsx",
+      "line": 219,
+      "related": [
+        "TimeCostOverview.tsx:45-49,174-219",
+        "web/src/features/vehicles/lib/utilization.ts:519-543,618-629,641-661,836-841",
+        "web/src/features/vehicles/components/utilization/UtilizationTrend.tsx:56-66",
+        "web/src/features/vehicles/components/utilization/BusiestDays.tsx:118-119,152-169",
+        "web/src/features/vehicles/pages/UtilizationPage.tsx:76-83,133-142"
+      ],
+      "detail": "Top brief now guards unavailable duration/distance operands and marks partial. Lower panels/charts/ranked views still consume zero-initialized totals with no per-rollup field availability. Missing distance/duration reads as0 motion/0 distance/all time without recorded driving; partial usable sums lack per-day/month measurement coverage.",
+      "repro": "STATIC TRACE, NOT executed: one eligible drive with unusable duration/distance has usable field counts0 and summary totals0. Top brief shows unknown; narrative interpolates drivingShare and formatDistance(0), ranked cards format drivingS/distanceM as0. Mixed covered/uncovered days reveal the per-rollup gap.",
+      "fix": "Carry field availability/partial coverage through rollups and guard all display/export operands. Do not blanket-null real inactive observed days, erase counts or drop retained sections.",
+      "owner": "utilization model/presentation",
+      "confidence": "high",
+      "queueDedup": "Do not requeue the already accepted main-summary guard; only remaining lower-section mechanisms need correction."
+    },
+    {
+      "id": "F05",
+      "rule": "initial-paused-state-collapse",
+      "contract": "MDC-026/MDC-040",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/pages/UtilizationPage.tsx",
+      "line": 89,
+      "related": [
+        "UtilizationPage.tsx:125,151-168",
+        "web/src/api/dataState.ts:191-223",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:57-62",
+        "web/src/features/vehicles/components/utilization/UtilizationSectionBody.tsx:24-45",
+        "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx:41"
+      ],
+      "detail": "No-data paused drives have isPending=true/isLoading=false. Only isLoading reaches sections; stale warning returns null without data. Page shows no-drives/browse content and passes loading=false despite initial status. Independently paused initial pricing shows indefinite aria-busy skeleton without blocked/recovery explanation.",
+      "repro": "STATIC TRACE, NOT executed: no data, fetchStatus=paused, isLoading=false, no error => initial/isRefreshBlocked=true, then empty branches. No-data paused pricing selects lines165-168 skeleton. Paused does not itself prove offline.",
+      "fix": "Use actual initial/pending/blocked source state; distinguish deferred load from authoritative empty/failure and preserve independent recovery/retained payload.",
+      "owner": "page and section-state contract",
+      "confidence": "high",
+      "queueDedup": "Existing retained-pricing paused fixture is a different state; no matching initial-paused utilization repair found."
+    },
+    {
+      "id": "F06",
+      "rule": "paused-retained-labelled-failure",
+      "contract": "MDC-026/MDC-025",
+      "priority": "P2",
+      "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "line": 31,
+      "related": [
+        "web/src/api/dataState.ts:247-254",
+        "web/src/features/vehicles/pages/UtilizationPage.tsx:64,81-83,125,218"
+      ],
+      "detail": "Every stale source is labelled Retained after refresh failure. Retained paused sources also become stale with refreshError=null, so both drive-derived briefs assert a failure for a deferred refresh.",
+      "repro": "STATIC TRACE, NOT executed: retained eligible drive plus fetchStatus=paused/error=null => stale/isRefreshBlocked=true/refreshError=null => failure-specific brief label.",
+      "fix": "Neutral retained/stale wording or actual reason propagation through existing brief; preserve genuine failure/paused distinctions and do not invent offline/age. Catalog copy requires a separate exclusive owner.",
+      "owner": "existing VehicleEvidenceBrief adapter",
+      "confidence": "high",
+      "queueDedup": "No corrective claim for VehicleEvidenceBrief found; no competing summary implementation."
+    },
+    {
+      "id": "F07",
+      "rule": "display-precision-pre-rounding",
+      "contract": "MDC-033/MDC-044/MDC-045",
+      "priority": "P2",
+      "file": "web/src/features/vehicles/components/utilization/UtilizationTrend.tsx",
+      "line": 59,
+      "related": [
+        "UtilizationTrend.tsx:59-66",
+        "web/src/features/vehicles/components/utilization/WeekdayProfile.tsx:69-77",
+        "web/src/features/vehicles/components/utilization/ActiveDayConsistency.tsx:61-62",
+        "web/src/features/vehicles/components/utilization/DriveDistributions.tsx:77,110"
+      ],
+      "detail": "Chart adapters round distance, days, hours and percentage shares to one decimal before preference-aware fmtNumber. Rounded rows also feed accessible tables/CSVs; increasing saved precision cannot recover discarded digits. Raw SI model values remain untouched.",
+      "repro": "STATIC TRACE, NOT executed:12345m/km/decimal_precision3 => converted12.345 => rows.distance12.3 before formatter. A1/3 share becomes33.3 instead of retaining the exact formatter-ready operand.",
+      "fix": "Keep unrounded converted operands until actual preference-aware formatter/serialization boundary; retain intentional integer counts and specialized duration formatting.",
+      "owner": "utilization chart adapters",
+      "confidence": "high",
+      "queueDedup": "One precision mechanism across four adapters; no covering utilization fix found."
+    },
+    {
+      "id": "F08",
+      "rule": "saved-date-locale-not-forwarded",
+      "contract": "MDC-044",
+      "priority": "P2",
+      "file": "web/src/features/vehicles/components/utilization/useUtilizationDisplay.ts",
+      "line": 19,
+      "related": [
+        "useUtilizationDisplay.ts:11,18-24",
+        "web/src/lib/dateFormat.ts:221-226,275-295",
+        "web/src/hooks/useUnits.ts:133-150"
+      ],
+      "detail": "Saved locale is available through useUnits, but date callbacks pass only style and have empty dependencies. formatDayKey therefore uses host locale rather than explicit saved locale for ranked/monthly/weekly labels. UTC day-key anchoring remains appropriate for declared UTC grouping.",
+      "repro": "STATIC TRACE, NOT executed: browser en-US and saved de-DE with key2026-07-10 => callback supplies no locale, formatter uses host. Saved-locale change cannot change callback options.",
+      "fix": "Forward effective locale and update dependencies; preserve day-key identity and use existing date/preference owners, never shift a calendar key via instant formatting.",
+      "owner": "utilization display hook",
+      "confidence": "high",
+      "queueDedup": "Relative-future-dates concerns expiry, not this caller; completed advanced-evidence adoption is not reopened."
+    },
+    {
+      "id": "F09",
+      "rule": "elapsed-duration-fixed-number-locale",
+      "contract": "MDC-044",
+      "priority": "P2",
+      "file": "web/src/lib/dateFormat.ts",
+      "line": 458,
+      "related": [
+        "dateFormat.ts:356-361,457-462",
+        "web/src/features/vehicles/components/utilization/useUtilizationDisplay.ts:26-29",
+        "web/src/features/vehicles/components/utilization/BusiestDays.tsx:118,156"
+      ],
+      "detail": "Utilization duration uses formatDurationSecondsAsMinutes, whose rounded minute helper explicitly formats en-US; hours directly interpolate an integer. Saved numeric locale never reaches either. Intentional whole-minute specialization is NOT counted as a precision violation.",
+      "repro": "STATIC TRACE, NOT executed: saved ar-EG with300s => helper formats5 using explicit en-US, not saved numeric locale.",
+      "fix": "Reuse existing effective numeric locale at shared helper without changing rounded-minute API/unknown/invalid behavior. Do not patch currently held dateFormat.ts from QA.",
+      "owner": "existing shared date owner, serialized",
+      "confidence": "high",
+      "queueDedup": "phase6-fix-relative-future-dates at queue356 holds dateFormat.ts for future/past expiry only. Distinct duration need must be coordinated with that owner/orchestrator after release, not overlap or duplicate broad formatter repair."
+    },
+    {
+      "id": "F10",
+      "rule": "routine-metadata-warning-accent",
+      "contract": "MDC-010/MDC-012/MDC-025",
+      "priority": "P3",
+      "file": "web/src/features/vehicles/components/utilization/UtilizationMethodology.tsx",
+      "line": 300,
+      "related": [
+        "UtilizationMethodology.tsx:165,324",
+        "web/src/features/vehicles/components/utilization/TimeCostOverview.tsx:155,239",
+        "web/src/features/vehicles/components/utilization/BusiestDays.tsx:54"
+      ],
+      "detail": "Routine below-cap disclosure shares unconditional amber warning surface; decorative icons use fixed cyan-300 instead of neutral semantic metadata roles. This is a source presentation-contract mismatch, NOT proof of neon bloom/contrast failure.",
+      "repro": "STATIC TRACE, NOT executed:historyCapReached=false selects uncapped explanation inside the same amber wrapper.",
+      "fix": "Neutral existing tokens for routine metadata/icons; retain actual cap/limited warnings and saved chart-series identities.",
+      "owner": "utilization presentation",
+      "confidence": "high",
+      "queueDedup": "Remaining audit-page-236 source issue; no corrective claim found."
+    }
+  ],
+  "unprovedCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/vehicles/lib/utilization.ts",
+      "line": 287,
+      "rule": "valid-zero-or-signed-measurement-policy",
+      "status": "UNPROVED_DOMAIN_CANDIDATE",
+      "detail": "positiveFinite rejects <=0 duration/distance/energy. Filtering is proven; endpoint validity of stationary/zero-energy/net-negative-energy records is NOT established. No raw payload mutation.",
+      "neededEvidence": "Establish allowed domains/signs, then test zero versus null. Do not infer validity from SI unit names.",
+      "queueFixRequested": null
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/vehicles/lib/utilization.ts",
+      "line": 605,
+      "rule": "overlap-double-count",
+      "status": "UNPROVED_BACKEND_INVARIANT_CANDIDATE",
+      "detail": "Durations sum into days then saturate at observed time rather than unioning intervals. Two1h drives30m apart could become2h not1.5h; valid same-vehicle overlap/duplicate permission is unknown.",
+      "neededEvidence": "Endpoint identity/overlap invariants before model repair; scenario NOT executed.",
+      "queueFixRequested": null
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/vehicles/components/utilization/UtilizationMethodology.tsx",
+      "line": 215,
+      "column": 39,
+      "rule": "arbitrary-tailwind",
+      "match": "grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)]",
+      "status": "UNPROMOTED_CANONICAL_SCANNER_CANDIDATE",
+      "scannerExit": 1,
+      "detail": "Canonical scanner candidate, not proof of overflow/clipping or absence of an approved geometry exception. Five additional scanner findings are token-reference-review, not violations.",
+      "neededEvidence": "Approved token equivalence and native narrow-container/long-label/200% text geometry before promotion.",
+      "queueFixRequested": null
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "findings": [
+        "F01",
+        "F02"
+      ],
+      "owner": "utilization page/model/query integration",
+      "action": "Precise header bounds and complete requested results; preserve disclosed cap until completeness proved."
+    },
+    {
+      "id": "N02",
+      "findings": [
+        "F03",
+        "F04"
+      ],
+      "owner": "utilization model and lower sections",
+      "action": "Null-safe weekday operands and per-rollup field availability; preserve true zero and all exports/sections."
+    },
+    {
+      "id": "N03",
+      "findings": [
+        "F05"
+      ],
+      "owner": "utilization page/section-state",
+      "action": "Initial paused distinct from loading/empty/fatal/retained; preserve independent price/drive recovery."
+    },
+    {
+      "id": "N04",
+      "findings": [
+        "F06"
+      ],
+      "owner": "existing VehicleEvidenceBrief adapter",
+      "action": "Reason-truthful retained labels; any copy serialized separately by catalog owner."
+    },
+    {
+      "id": "N05",
+      "findings": [
+        "F07"
+      ],
+      "owner": "four existing utilization chart adapters",
+      "action": "One precision repair scope, unrounded operands until formatter boundary; not four duplicate tasks."
+    },
+    {
+      "id": "N06",
+      "findings": [
+        "F08",
+        "F09"
+      ],
+      "owner": "utilization display caller and current shared-date owner",
+      "action": "Forward date locale; coordinate distinct duration locale need with phase6-fix-relative-future-dates file owner. No overlapping writer/duplicate expiry fix/broad formatter campaign."
+    },
+    {
+      "id": "N07",
+      "findings": [
+        "F10"
+      ],
+      "owner": "existing utilization presentation",
+      "action": "Neutral routine metadata using existing tokens; preserve meaningful warnings/series preference."
+    }
+  ],
+  "identity": {
+    "actor": "7221b677-6a62-4a85-bb56-9c2ed8b529b7",
+    "page": "web/src/features/vehicles/pages/UtilizationPage.tsx",
+    "routes": [
+      "/utilization"
+    ],
+    "acceptedSourceCommit": "d64609503b7216ee89bac57131ee76bcb74c1123",
+    "authority": "Exact queue row source acceptance only; no native/page acceptance.",
+    "returnBy": "2026-10-14T01:44:50.678Z",
+    "hardBy": "2026-10-14T01:49:50.678Z",
+    "reservation": "2026-10-14T01:24:50.678Z"
+  },
+  "writeScope": {
+    "report": "docs/frontend-audits/phase6-qa-vehicles-utilization.json",
+    "log": "web/logs/phase6-qa-vehicles-utilization.log",
+    "sourceTestCatalogGitWrites": 0,
+    "subagentsInstallsServersBrowserApiDeviceCustomHelpers": 0,
+    "foreignDirtyFiles": "Preserved; initial raw read-only Git status in log."
+  },
+  "instructionsRead": [
+    "docs/orchestrator-loop.md entire",
+    "docs/frontend-mission.md entire",
+    "docs/frontend-design-contract.md authority/layout/trust/numeric/preferences/responsive/a11y/evidence sections",
+    "docs/frontend-inventory.md authority/exact route287/proposals1075-1077/alternate1427",
+    "docs/session-handoff.md current recovery and evidence conventions",
+    "migration-queue.md current lifecycle/exact Phase5 and Phase6 utilization and corrective rows",
+    "docs/frontend-worker-conventions.md",
+    ".github/copilot-instructions.md integrity/SI sections",
+    ".github/instructions/react-frontend.instructions.md entire",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-audits/audit-page-236.json",
+    "docs/frontend-audits/phase6-scoped-runner-startup.json retained-context sections"
+  ],
+  "preservation": {
+    "pageLines": 224,
+    "pageTestLines": 489,
+    "modelLines": 852,
+    "modelTestLines": 333,
+    "tableTestLines": 89,
+    "sectionCount": 8,
+    "panelSites": 4,
+    "chartFrames": 5,
+    "briefs": 2,
+    "sections": [
+      "Summary metrics",
+      "Observed time split/energy-only ledger",
+      "Monthly trend",
+      "Weekday profile",
+      "Duration/distance distributions",
+      "Active-day consistency",
+      "Busiest days",
+      "Coverage/methodology"
+    ],
+    "actions": [
+      "Onboarding/no-vehicle recovery",
+      "Drive history retry/retained refresh",
+      "Independent pricing retry/refresh",
+      "Browse /drives empty action",
+      "Two brief Review details drawers",
+      "Chart fullscreen/view-data/export",
+      "Persisted trend/weekday/consistency legend toggles",
+      "Localized time-split/methodology help",
+      "Header vehicle/View settings scope"
+    ],
+    "denominators": [
+      "Exact observed duration: first eligible RETURNED drive start to min(selected UTC next-midnight-exclusive,frozen page clock), NOT requested-range duration.",
+      "Observed calendar days: intersected UTC keys including partial boundaries. Active share active UTC days/observed keys; distance per day usable distance sum/observed keys.",
+      "Duration clips/splits crossed UTC days and saturates to observed time; clipped full-drive distance/energy and duration-band evidence withheld, not guessed/apportioned.",
+      "Costs: configured nonnegative rate times usable Wh; per-distance/per-hour use matching energy+distance/duration rows; absent rate/energy stays unknown.",
+      "Declared latest26 UTC weeks and top5 ranked days are intentional presentation bounds, not hidden section deletion."
+    ],
+    "rawSiAndProvenance": "Meters/seconds/Wh stay on wire/cache/model. Existing SI display and cost-per-distance conversion retained; historical returned drives/configured energy-only estimate, not live/billed/causal waste. Sign validity remains C01.",
+    "stateReview": "Eight shells remain mounted; active loading/empty/fatal retry and retained payload warning preserved; pricing has independent lifecycle. F05/F06 remain exact paused/trust gaps.",
+    "resolvedHistorical": [
+      "Independent pricing trust adopted at page46-48,158-170; not a new missing-pricing fix.",
+      "Cap/incomplete measurement summary status adopted at76-83; not a new missing-cap-badge fix.",
+      "Main numeric operand guards adopted at133-147; only remaining lower sections in F04."
+    ],
+    "unmounted": "UtilizationKpis.tsx remains exported/pinned but is not mounted by this page; its text metric pathway is not counted as page behavior or deleted."
+  },
+  "dataSources": [
+    {
+      "hook": "useDrives",
+      "file": "web/src/api/hooks/useDriving.ts:114-140",
+      "endpoint": "GET /drives?vehicle_id=<header>&start=<date>&end=<date>&limit=1000; request adds /api/v1",
+      "retained": "TanStack key/AbortSignal/enablement/safeArray/FAST policy/refetch/raw SI",
+      "limit": "Single capped page; both calendar bounds, not precise instants."
+    },
+    {
+      "hook": "useFormatting/useSettings",
+      "file": "web/src/hooks/useFormatting.ts:39-55",
+      "source": "Configured electricity price and saved currency/locale/precision; independent pricingState. No endpoint invoked."
+    },
+    {
+      "hook": "useRangeState/useSelectedVehicle",
+      "file": "web/src/hooks/useRangeState.ts:656-693; web/src/hooks/useSelectedVehicle.ts:48-79",
+      "source": "Existing header scope/vehicle; no duplicate page picker. Header-owned route inherits shared defaults despite old page persistKey/default options."
+    }
+  ],
+  "nativeDeclarations": {
+    "responsive": "PageLayout min-w-0/@container; grids stack until xl; BusiestDays semantic desktop Table sm and complete mobile ordered cards below sm; shared chartSizing mobile heights. Methodology track minimum is C03, not proven overflow.",
+    "accessibility": "Eight named shells; five chart ariaLabel/localized dataColumns/table alternatives; scoped table headers, hidden decorative icons, named help/retry/loading; shared reduced-motion owner retained.",
+    "status": "NOTRUN",
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "limits": "No measured geometry/touch targets/contrast/themes/RTL/200% text/forced-colors/reduced-motion/keyboard/focus/screen-reader/native export roundtrip proof."
+  },
+  "notRun": [
+    "27 unchanged authored Vitest declarations; no-change source-QA convention: no runner invocation or discovered/pass/fail/skip receipt.",
+    "Global npx tsc --noEmit/build/full suites/full lint/global audits forbidden scope.",
+    "Browser/Playwright/screenshots/API/device/vehicle/server/install/subagent actions forbidden scope.",
+    "Backend row order/sign/overlap invariants/full-history completeness against actual data.",
+    "Application/native/page acceptance, deployment/performance/full preference matrix."
+  ],
+  "pinVerification": {
+    "mainPins": 33,
+    "supplementalPins": 5,
+    "entries": [
+      {
+        "path": "web/src/features/vehicles/pages/UtilizationPage.tsx",
+        "beforeSha256": "F31E8D76D8D6673C4E8DAF4660015A0EBAC964BCDC2DAE55EB0DC06AA023222F",
+        "afterSha256": "F31E8D76D8D6673C4E8DAF4660015A0EBAC964BCDC2DAE55EB0DC06AA023222F",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/pages/UtilizationPage.test.tsx",
+        "beforeSha256": "6DBDD578540911EEBD2E7E6F8396BCA9DA29C9FC116A2C137AD6434517838E3F",
+        "afterSha256": "6DBDD578540911EEBD2E7E6F8396BCA9DA29C9FC116A2C137AD6434517838E3F",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/lib/utilization.ts",
+        "beforeSha256": "B14AAABB5963DE2EC281F690C33C6B745301A7AC53EBE5D9F1EA5EBC553C109A",
+        "afterSha256": "B14AAABB5963DE2EC281F690C33C6B745301A7AC53EBE5D9F1EA5EBC553C109A",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/lib/utilization.test.ts",
+        "beforeSha256": "8261AAC07D46B9727B8E4EE1391F5DB79AE057AB2D623E022C08F7DD3E0C3F3D",
+        "afterSha256": "8261AAC07D46B9727B8E4EE1391F5DB79AE057AB2D623E022C08F7DD3E0C3F3D",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+        "beforeSha256": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75",
+        "afterSha256": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/api/hooks/useDriving.ts",
+        "beforeSha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+        "afterSha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/hooks/useDataState.ts",
+        "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/api/dataState.ts",
+        "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/hooks/useRangeState.ts",
+        "beforeSha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+        "afterSha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/hooks/useSelectedVehicle.ts",
+        "beforeSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "afterSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/hooks/useFormatting.ts",
+        "beforeSha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+        "afterSha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/hooks/useNumberFormatting.ts",
+        "beforeSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "afterSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/hooks/useUnits.ts",
+        "beforeSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+        "afterSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/lib/workspaceScope.ts",
+        "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/lib/dateFormat.ts",
+        "beforeSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "afterSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/lib/unitConversion.ts",
+        "beforeSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+        "afterSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/types/driving.ts",
+        "beforeSha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+        "afterSha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "unchanged": true
+      },
+      {
+        "path": "web/vite.config.ts",
+        "beforeSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+        "afterSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+        "unchanged": true
+      },
+      {
+        "path": "web/package.json",
+        "beforeSha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+        "afterSha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/ActiveDayConsistency.tsx",
+        "beforeSha256": "736588FC5C7D225CBC5301198F15262AE574A0699F12262B8F58328F651B11FB",
+        "afterSha256": "736588FC5C7D225CBC5301198F15262AE574A0699F12262B8F58328F651B11FB",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/BusiestDays.tsx",
+        "beforeSha256": "16B9F32516988CB960D89676EA81B3139B8C7C3ADB0F08455921281B8DFACF40",
+        "afterSha256": "16B9F32516988CB960D89676EA81B3139B8C7C3ADB0F08455921281B8DFACF40",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/DriveDistributions.tsx",
+        "beforeSha256": "3F291CDB8B37929B6A07E6BECB97239168C82416E816C3F841706DD1B0C69789",
+        "afterSha256": "3F291CDB8B37929B6A07E6BECB97239168C82416E816C3F841706DD1B0C69789",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/index.ts",
+        "beforeSha256": "8B34D54B2C5D067F1D1D4374C4D412BBC3D1249C440C09384DBE30E0F1E2E17D",
+        "afterSha256": "8B34D54B2C5D067F1D1D4374C4D412BBC3D1249C440C09384DBE30E0F1E2E17D",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/TimeCostOverview.tsx",
+        "beforeSha256": "87DAB513B9D2DAE0973701695DF645C7DADF45DA14CD57C4C6606424780851E2",
+        "afterSha256": "87DAB513B9D2DAE0973701695DF645C7DADF45DA14CD57C4C6606424780851E2",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/types.ts",
+        "beforeSha256": "B180E4A380C29EB07249DC90969A926946964C4DE83911555AE27C655656C669",
+        "afterSha256": "B180E4A380C29EB07249DC90969A926946964C4DE83911555AE27C655656C669",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/useUtilizationDisplay.ts",
+        "beforeSha256": "BDFD273281375BAA9EA37B221F45EEA6ADC37B91DAA77E516F20897EA84B1A3E",
+        "afterSha256": "BDFD273281375BAA9EA37B221F45EEA6ADC37B91DAA77E516F20897EA84B1A3E",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/UtilizationKpis.tsx",
+        "beforeSha256": "81874DB970B1CF4051D5DFCA308E76D5ABCFAD7E1AE9D1DBDCC1E9CF802F99A6",
+        "afterSha256": "81874DB970B1CF4051D5DFCA308E76D5ABCFAD7E1AE9D1DBDCC1E9CF802F99A6",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/UtilizationMethodology.tsx",
+        "beforeSha256": "937D9A3082E372469FF298011D28094ABA595452FEF7981AFCDC13C4ED512326",
+        "afterSha256": "937D9A3082E372469FF298011D28094ABA595452FEF7981AFCDC13C4ED512326",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/UtilizationSectionBody.tsx",
+        "beforeSha256": "48F12A9C16BF42912732B670D4D8D50B417FB0E0070D45582F5F4836C2EBA5A1",
+        "afterSha256": "48F12A9C16BF42912732B670D4D8D50B417FB0E0070D45582F5F4836C2EBA5A1",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/UtilizationTables.test.tsx",
+        "beforeSha256": "E16EB686C81F0F5DEDFD5BF496650A32E693F6224439D2DB2CCB4B8770C16F7B",
+        "afterSha256": "E16EB686C81F0F5DEDFD5BF496650A32E693F6224439D2DB2CCB4B8770C16F7B",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/UtilizationTrend.tsx",
+        "beforeSha256": "2CFB2A1464FDB2C3F7E05A01676D15F2161340B45536D4059339D51273B4A547",
+        "afterSha256": "2CFB2A1464FDB2C3F7E05A01676D15F2161340B45536D4059339D51273B4A547",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/features/vehicles/components/utilization/WeekdayProfile.tsx",
+        "beforeSha256": "F5AD19CB1BE968D47285D6109F9751FA3B43926202A0BB795D73CC371C6962AB",
+        "afterSha256": "F5AD19CB1BE968D47285D6109F9751FA3B43926202A0BB795D73CC371C6962AB",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "beforeSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+        "afterSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/components/layout/PageContainer.tsx",
+        "beforeSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "afterSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/components/charts/ChartContainer.tsx",
+        "beforeSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+        "afterSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+        "unchanged": true
+      },
+      {
+        "path": "web/src/components/charts/chartSizing.ts",
+        "beforeSha256": "C9ACF3F287165F087082782FBB6215EF6DAAEC0690FB905CBAF54EA6BABF9532",
+        "afterSha256": "C9ACF3F287165F087082782FBB6215EF6DAAEC0690FB905CBAF54EA6BABF9532",
+        "unchanged": true
+      },
+      {
+        "path": "web/scripts/frontend-qa.mjs",
+        "beforeSha256": "E82FB2D99D429AF549766CE1A50951F6ACE714E8AD2F55CD4FCDF7E4C2067D0C",
+        "afterSha256": "E82FB2D99D429AF549766CE1A50951F6ACE714E8AD2F55CD4FCDF7E4C2067D0C",
+        "unchanged": true
+      }
+    ],
+    "mismatchCount": 0,
+    "verifiedAt": "2026-10-14T01:42:45.7546752Z",
+    "supplementalTiming": "Five additional context/scanner files first pinned after initial read, before final artifact assembly; not a fabricated before-initial-inspection receipt."
+  },
+  "tests": [
+    {
+      "file": "web/src/features/vehicles/pages/UtilizationPage.test.tsx",
+      "authoredDeclarations": 14,
+      "caseDeclarations": [
+        {
+          "line": 271,
+          "text": "it('mounts all sections and sends the selected date scope with the maximum limit', () => {"
+        },
+        {
+          "line": 295,
+          "text": "it('threads loading, error, and empty states to every mounted section', () => {"
+        },
+        {
+          "line": 324,
+          "text": "it('updates the server scope when the selected range changes', () => {"
+        },
+        {
+          "line": 349,
+          "text": "it('freezes the as-of clock for the lifetime of the page mount', () => {"
+        },
+        {
+          "line": 365,
+          "text": "it('keeps the no-vehicle recovery state and disables the ranged query', () => {"
+        },
+        {
+          "line": 383,
+          "text": "it('keeps retained eligible drives in all eight sections when refresh fails', () => {"
+        },
+        {
+          "line": 394,
+          "text": "it('opens the real review drawer with UTC-day denominators and energy-only cost context', () => {"
+        },
+        {
+          "line": 413,
+          "text": "it('keeps missing duration and distance unknown in the numeric brief', () => {"
+        },
+        {
+          "line": 424,
+          "text": "it('discloses a capped response without dropping any section or the query limit', () => {"
+        },
+        {
+          "line": 432,
+          "text": "it('preserves retained-drive trust ahead of the cap disclosure and retries only drives', () => {"
+        },
+        {
+          "line": 442,
+          "text": "it('keeps drive metrics visible while the independent electricity rate loads', () => {"
+        },
+        {
+          "line": 451,
+          "text": "it('retries an initial pricing failure independently without marking drives failed', () => {"
+        },
+        {
+          "line": 466,
+          "text": "it('retains estimated costs with a source-specific warning after pricing refresh fails', () => {"
+        },
+        {
+          "line": 481,
+          "text": "it('keeps paused pricing distinct from an initial drive error and retains its estimate', () => {"
+        }
+      ],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web/src/features/vehicles/lib/utilization.test.ts",
+      "authoredDeclarations": 10,
+      "caseDeclarations": [
+        {
+          "line": 54,
+          "text": "it('measures utilization from the first eligible drive to the frozen boundary', () => {"
+        },
+        {
+          "line": 78,
+          "text": "it('uses the selected end as an exclusive next-midnight boundary', () => {"
+        },
+        {
+          "line": 106,
+          "text": "it('accounts deterministically for invalid, future, and out-of-range rows', () => {"
+        },
+        {
+          "line": 131,
+          "text": "it('builds zero-inclusive UTC day, month, week, and weekday rollups', () => {"
+        },
+        {
+          "line": 177,
+          "text": "it('places exact duration and SI-distance boundaries into stable bands', () => {"
+        },
+        {
+          "line": 208,
+          "text": "it('prices only matched energy rows and preserves field-level exclusions', () => {"
+        },
+        {
+          "line": 247,
+          "text": "it('returns null costs for invalid rates or absent measured energy', () => {"
+        },
+        {
+          "line": 269,
+          "text": "it('ranks busiest days by logged duration with deterministic tie-breaks', () => {"
+        },
+        {
+          "line": 298,
+          "text": "it('detects the response cap and exposes conservative sample guards', () => {"
+        },
+        {
+          "line": 318,
+          "text": "it('handles empty and invalid calendar windows without fabricating observations', () => {"
+        }
+      ],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web/src/features/vehicles/components/utilization/UtilizationTables.test.tsx",
+      "authoredDeclarations": 3,
+      "caseDeclarations": [
+        {
+          "line": 49,
+          "text": "it('retains desktop ranking and all mobile fields without claiming a complete filter universe', () => {"
+        },
+        {
+          "line": 69,
+          "text": "it('retains timestamp and field accounting, zero counts, and methodology notes', () => {"
+        },
+        {
+          "line": 83,
+          "text": "it('keeps the ranked section shell while loading', () => {"
+        }
+      ],
+      "status": "NOTRUN"
+    }
+  ],
+  "summary": {
+    "confirmedMechanisms": 10,
+    "unprovedCandidates": 3,
+    "deduplicatedNeeds": 7,
+    "authoredCases": 27,
+    "runnerInvocations": 0,
+    "executedCases": 0,
+    "discovered": null,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "byRule": [
+      {
+        "rule": "display-precision-pre-rounding",
+        "count": 1
+      },
+      {
+        "rule": "elapsed-duration-fixed-number-locale",
+        "count": 1
+      },
+      {
+        "rule": "full-range-completeness",
+        "count": 1
+      },
+      {
+        "rule": "initial-paused-state-collapse",
+        "count": 1
+      },
+      {
+        "rule": "missing-field-rollups-as-zero",
+        "count": 1
+      },
+      {
+        "rule": "paused-retained-labelled-failure",
+        "count": 1
+      },
+      {
+        "rule": "routine-metadata-warning-accent",
+        "count": 1
+      },
+      {
+        "rule": "saved-date-locale-not-forwarded",
+        "count": 1
+      },
+      {
+        "rule": "unknown-weekday-as-zero",
+        "count": 1
+      },
+      {
+        "rule": "workspace-precise-bounds",
+        "count": 1
+      }
+    ],
+    "byPriority": [
+      {
+        "priority": "P1",
+        "count": 5
+      },
+      {
+        "priority": "P2",
+        "count": 4
+      },
+      {
+        "priority": "P3",
+        "count": 1
+      }
+    ],
+    "filesWithMostIssues": [
+      {
+        "file": "web/src/features/vehicles/pages/UtilizationPage.tsx",
+        "count": 3
+      },
+      {
+        "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/utilization/TimeCostOverview.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/utilization/useUtilizationDisplay.ts",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/utilization/UtilizationMethodology.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/utilization/UtilizationTrend.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/utilization/WeekdayProfile.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "count": 1
+      }
+    ],
+    "definition": "Distinct confirmed mechanisms, not repeated JSX sites/regex candidates/resolved historical issues/native outcomes."
+  },
+  "ruleChecks": {
+    "scope": "Production page/direct utilization TS/TSX/model/VehicleEvidenceBrief; tests excluded.",
+    "staticInlineStyleMatches": 0,
+    "rawHtmlCaseSensitiveMatches": 0,
+    "directLibraryImportMatches": 0,
+    "oldApiImportMatches": 0,
+    "doublePrefixMatches": 0,
+    "camelcaseUrlParameterMatches": 0,
+    "hiddenSectionRegexMatches": 0,
+    "literalEnglishJsxRegexMatches": 0,
+    "fetchUseEffectWordBoundaryMatches": 0,
+    "pageContainer": "PageLayout delegates to actual PageContainer; no-vehicle recovery acceptable.",
+    "falsePositives": "Initial case-insensitive raw scan matched3 shared Table tags; initial fetch scan matched refetch. Corrected case-sensitive/word-boundary scans returned0.",
+    "exceptions": "Shared Table/semantic tbody/tr/headers are allowed building blocks. CHART_COLORS array props and Recharts API props are not forbidden static inline styles.",
+    "limits": "Exact regex match counts only; not proof all i18n/conditional mounting/design/API semantics pass. Backend rules11-14 out of scope/NOTRUN."
+  },
+  "canonicalScanner": {
+    "commands": [
+      {
+        "command": "node scripts/frontend-qa.mjs scan --path src/features/vehicles/pages/UtilizationPage.tsx",
+        "exit": 0,
+        "candidateViolations": 0,
+        "tokenReviews": 0
+      },
+      {
+        "command": "node scripts/frontend-qa.mjs scan --path src/features/vehicles/components/utilization",
+        "exit": 1,
+        "candidateViolations": 1,
+        "tokenReviews": 5
+      },
+      {
+        "command": "node scripts/frontend-qa.mjs scan --path src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+        "exit": 0,
+        "candidateViolations": 0,
+        "tokenReviews": 0
+      }
+    ],
+    "tokenReviews": [
+      "BusiestDays.tsx:132 border token",
+      "BusiestDays.tsx:132 surface token",
+      "UtilizationMethodology.tsx:228 border token",
+      "UtilizationMethodology.tsx:241 border token",
+      "UtilizationMethodology.tsx:265 border token"
+    ],
+    "receipt": "Raw stdout JSON/native exits0,1,0 in log. Wrapper tool0 does not hide middle native1. Candidate C03 remains unpromoted."
+  },
+  "commandEvidence": {
+    "log": "web/logs/phase6-qa-vehicles-utilization.log",
+    "runtime": "node --version v26.8.1 actual exit0",
+    "rawRecording": "Start-Transcript append; no redirection/Tee. Initial pre-transcript failures copied with actual exits.",
+    "failures": [
+      "session1082 actual exit1: rg not recognized; native PowerShell fallback, no install.",
+      "session1264 actual exit1 empty stdout/stderr; no successful scan inferred.",
+      "session1274 actual exit1 empty stdout/stderr; smaller inspections recovered; cause unknown.",
+      "view dateFormat range690-810 beyond EOF463, corrected.",
+      "view frontend-qa range960-1025 beyond EOF860; exact scan implementation830-844 read separately.",
+      "session1463 actual exit1 os206 filename/extension too long; oversized artifact command not launched, existing pins preserved, bounded serialization succeeded.",
+      "session1525 actual exit1: deadline DateTime-kind comparison threw despite raw UTC01:43:23Z before01:44:50Z; JSON/count/38pins passed. Corrected explicit UTC DateTimeOffset comparison in final log."
+    ],
+    "formatting": "Early mixed table pipeline had unusable MatchInfo values; exact string-formatted queue rereads used. Large raw output preserved in authorized log."
+  },
+  "filesRead": [
+    "web/src/features/vehicles/pages/UtilizationPage.tsx",
+    "web/src/features/vehicles/pages/UtilizationPage.test.tsx",
+    "web/src/features/vehicles/lib/utilization.ts",
+    "web/src/features/vehicles/lib/utilization.test.ts",
+    "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+    "web/src/api/hooks/useDriving.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/types/driving.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/vite.config.ts",
+    "web/package.json",
+    "web/src/features/vehicles/components/utilization/ActiveDayConsistency.tsx",
+    "web/src/features/vehicles/components/utilization/BusiestDays.tsx",
+    "web/src/features/vehicles/components/utilization/DriveDistributions.tsx",
+    "web/src/features/vehicles/components/utilization/index.ts",
+    "web/src/features/vehicles/components/utilization/TimeCostOverview.tsx",
+    "web/src/features/vehicles/components/utilization/types.ts",
+    "web/src/features/vehicles/components/utilization/useUtilizationDisplay.ts",
+    "web/src/features/vehicles/components/utilization/UtilizationKpis.tsx",
+    "web/src/features/vehicles/components/utilization/UtilizationMethodology.tsx",
+    "web/src/features/vehicles/components/utilization/UtilizationSectionBody.tsx",
+    "web/src/features/vehicles/components/utilization/UtilizationTables.test.tsx",
+    "web/src/features/vehicles/components/utilization/UtilizationTrend.tsx",
+    "web/src/features/vehicles/components/utilization/WeekdayProfile.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/charts/chartSizing.ts",
+    "web/scripts/frontend-qa.mjs",
+    "docs/orchestrator-loop.md entire",
+    "docs/frontend-mission.md entire",
+    "docs/frontend-design-contract.md authority/layout/trust/numeric/preferences/responsive/a11y/evidence sections",
+    "docs/frontend-inventory.md authority/exact route287/proposals1075-1077/alternate1427",
+    "docs/session-handoff.md current recovery and evidence conventions",
+    "migration-queue.md current lifecycle/exact Phase5 and Phase6 utilization and corrective rows",
+    "docs/frontend-worker-conventions.md",
+    ".github/copilot-instructions.md integrity/SI sections",
+    ".github/instructions/react-frontend.instructions.md entire",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-audits/audit-page-236.json",
+    "docs/frontend-audits/phase6-scoped-runner-startup.json retained-context sections"
+  ],
+  "finalVerification": "Final read-only JSON parse/count/pin/report-SHA receipt in log is authority; no native/page acceptance.",
+  "release": {
+    "sourceWrites": "Never owned; source/tests/catalog readonly.",
+    "artifacts": "Both exact artifacts released to caller after final verification receipt.",
+    "commands": "Only bounded synchronous inspections/scans/serialization; no background commands/services. Last verification completion is command-release boundary.",
+    "queueGit": "Parent owns queue/commits; no writes."
+  }
+}

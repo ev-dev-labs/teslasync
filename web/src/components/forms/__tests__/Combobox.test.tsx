@@ -21,6 +21,7 @@ import {
   vi,
 } from 'vitest';
 import { useState } from 'react';
+import userEvent from '@testing-library/user-event';
 import '@/i18n';
 import { Combobox } from '../Combobox';
 
@@ -46,6 +47,7 @@ interface HarnessProps {
   onChange?: (v: Item | null) => void;
   disabled?: boolean;
   loading?: boolean;
+  selectOnly?: boolean;
   inputValue?: string;
   onInputChange?: (text: string) => void;
 }
@@ -59,6 +61,7 @@ function Harness({
   onChange,
   disabled,
   loading,
+  selectOnly,
   inputValue,
   onInputChange,
 }: HarnessProps) {
@@ -79,6 +82,7 @@ function Harness({
       onFreeTextCommit={onFreeTextCommit}
       disabled={disabled}
       loading={loading}
+      selectOnly={selectOnly}
       inputValue={inputValue}
       onInputChange={onInputChange}
     />
@@ -100,6 +104,42 @@ describe('Combobox', () => {
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(input).toHaveAttribute('aria-autocomplete', 'list');
     expect(input).toHaveAttribute('aria-haspopup', 'listbox');
+  });
+
+  it('uses the semantic chevron focus color without changing the native toggle or selection', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn<(value: Item | null) => void>();
+    render(<Harness initial={ITEMS[1]} onChange={onChange} selectOnly />);
+    const input = screen.getByRole('combobox', { name: /fruit/i });
+    const chevron = screen.getByRole('button', { name: /show options/i });
+    expect(chevron.tagName).toBe('BUTTON');
+    expect(chevron).toHaveAttribute('type', 'button');
+    expect(chevron).toHaveAttribute('tabindex', '-1');
+    expect(chevron).toHaveClass(
+      'focus:outline-none',
+      'focus:ring-2',
+      'focus:ring-[var(--focus-ring)]',
+    );
+    expect(chevron).not.toHaveClass('focus:ring-blue-500');
+    expect(chevron.className).not.toMatch(/focus-visible:|ring-inset|ring-offset-/);
+
+    await user.click(chevron);
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('listbox', { name: /fruit/i })).toBeInTheDocument();
+    expect(input).toHaveValue('Banana');
+    await user.click(screen.getByRole('button', { name: /hide options/i }));
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(input).toHaveValue('Banana');
+    expect(onChange).not.toHaveBeenCalled();
+
+    await user.click(chevron);
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(ITEMS[2]);
+    expect(input).toHaveValue('Cherry');
+    expect(input).toHaveFocus();
   });
 
   it('opens the listbox on focus and exposes role=option rows', () => {

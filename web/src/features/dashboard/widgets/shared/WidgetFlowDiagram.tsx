@@ -95,18 +95,6 @@ export function WidgetFlowDiagram({
       role="img"
       aria-label={ariaLabel}
     >
-      <defs>
-        {/* animated dash pattern for active arrows */}
-        <style>{`
-          @keyframes dashFlow {
-            to { stroke-dashoffset: -12; }
-          }
-          .flow-active {
-            animation: dashFlow 0.8s linear infinite;
-          }
-        `}</style>
-      </defs>
-
       {/* ── arrows ── */}
       {visibleArrows.map((arrow) => {
         const fromNode = nodeMap.get(arrow.from);

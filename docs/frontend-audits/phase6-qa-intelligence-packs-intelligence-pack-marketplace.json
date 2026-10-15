@@ -1,0 +1,1927 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-intelligence-packs-intelligence-pack-marketplace",
+  "attempt": 1,
+  "actor": "269ba8ed-4f76-48a5-ba42-96933e70dd56",
+  "status": "DONE_SOURCE_ONLY_REPORT_NOT_ACCEPTANCE",
+  "page": "web/src/features/intelligence-packs/pages/IntelligencePackMarketplacePage.tsx",
+  "routes": [
+    "/intelligence-packs"
+  ],
+  "reportWrittenUtc": "2026-10-14T02:14:15.559520+00:00",
+  "authorizedWrites": [
+    "docs/frontend-audits/phase6-qa-intelligence-packs-intelligence-pack-marketplace.json",
+    "web/logs/phase6-qa-intelligence-packs-intelligence-pack-marketplace.log"
+  ],
+  "reservation": {
+    "reservedUtc": "2026-10-14T01:57:57.687Z",
+    "returnUtc": "2026-10-14T02:17:57.687Z",
+    "hardUtc": "2026-10-14T02:22:57.687Z",
+    "firstActualCommandUtc": "2026-10-14T02:00:03.7515791Z",
+    "clockRenewed": false
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "claimLine": 53,
+    "claimRaw": "| phase6-qa-intelligence-packs-intelligence-pack-marketplace | 269ba8ed-4f76-48a5-ba42-96933e70dd56 |",
+    "dependencyLine": 85,
+    "dependencyRaw": "| [~] | 6 | phase6-qa-intelligence-packs-intelligence-pack-marketplace | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-intelligence-packs-intelligence-pack-marketplace.json; web\\logs\\phase6-qa-intelligence-packs-intelligence-pack-marketplace.log | phase5-page-intelligence-packs-intelligence-pack-marketplace | 1 | reserved01:57:57.687Z; actor pending | - | IntelligencePackMarketplacePage/direct supports; source-only, no install/marketplace/job/network actions. |",
+    "acceptedSourceCommit": "6961054e0a5947634a34ad2201c8db309fe7e168",
+    "queueSha256": "bffa02660b5d08e7f3d314397695c60194f93c98cfb35646efd7414ae01b5ac0",
+    "phase": "0-5 closed; Phase6 unfinished; Phase7 NOTRUN",
+    "precedence": "Current user report-only prohibitions supersede older worker gate/heartbeat/server/Git instructions.",
+    "finalClaimLine": 53,
+    "finalClaimRaw": "| phase6-qa-intelligence-packs-intelligence-pack-marketplace | 269ba8ed-4f76-48a5-ba42-96933e70dd56 |"
+  },
+  "requiredReading": {
+    "full": [
+      "docs/orchestrator-loop.md:1-296",
+      ".github/instructions/frontend-si-cutover.instructions.md:1-94",
+      ".github/instructions/react-frontend.instructions.md:1-629",
+      ".github/instructions/unit-conversion.instructions.md:1-221",
+      ".github/instructions/observability.instructions.md:1-45",
+      "docs/frontend-worker-conventions.md:1-152"
+    ],
+    "relevant": [
+      ".github/copilot-instructions.md:1-200",
+      "docs/frontend-design-contract.md:1-605,2481-2539",
+      "docs/frontend-mission.md:1-180,1416-1518",
+      "docs/frontend-inventory.md:185,370,842,1275",
+      "docs/session-handoff.md:1-48,2219-2250",
+      "migration-queue.md:1-63 and exact rows",
+      "docs/frontend-audits/audit-page-134.json:1-160",
+      "web/src/features/intelligence-packs/docs/THREAT_MODEL.md:1-116"
+    ],
+    "limits": "Only orchestrator playbook read fully; unrelated design addenda not reviewed. No root-level orchestrator-loop.md exists. No applicable AGENTS.md found at searched ancestors."
+  },
+  "scope": {
+    "productionFeatureFilesScanned": 43,
+    "existingTestFilesInspected": 30,
+    "testInspection": "UI/hook/core storage/verification/sandbox tests read in full; remaining deep unit tests by declaration/assertion context only; no tests executed. testUtils is a support, not a test suite.",
+    "excluded": "Backend/unrelated audit, generation/signing helper execution, install/model/job/network/API/browser actions."
+  },
+  "preservation": {
+    "sections": {
+      "count": 6,
+      "keys": [
+        "catalog",
+        "installed",
+        "sandbox",
+        "audit",
+        "importExport",
+        "security"
+      ],
+      "default": "catalog",
+      "pageLines": 94,
+      "tabIdentity": "intelligence-packs-tab-${key} / intelligence-packs-panel-${activeTab}; role=tabpanel, aria-labelledby, tabIndex0; only active panel mounts"
+    },
+    "actions": [
+      "catalog detail review",
+      "signed install/upgrade confirmation",
+      "unsigned typed TRUST UNSIGNED confirmation",
+      "record blocked",
+      "enable/disable",
+      "rollback",
+      "uninstall confirmation",
+      "synthetic pack selection/preview",
+      "chart/table alternatives and run-details drawer",
+      "audit filtering/pagination",
+      "file/paste parse to same detail flow",
+      "envelope export",
+      "fingerprint copy",
+      "security guarantees/non-guarantees/resource/capability review"
+    ],
+    "dataSources": [
+      "Bundled3-entry curated synthetic catalog; useCatalog annotates repository.listInstalled.",
+      "PackRepositoryProvider -> IndexedDB/localStorage/memory; useInstalledPacks/useTrustDecision/useAuditLog; local packId keys, no API endpoint.",
+      "Web Crypto SHA256/Ed25519 verification + separate local publisher recognition + user trust.",
+      "Closed AST memoized sandbox over14 synthetic rows; hard steps/time/row/output budgets; not vehicle telemetry or analytical accuracy."
+    ],
+    "states": {
+      "loading": "Installed/Audit/Export shared source-shaped skeleton; verification checking/unknown/error. Catalog install annotation/trust-specific gaps remain.",
+      "fatal": "PackRepositorySource replaces only own source for fatal/no-data; other panels/draft remain.",
+      "retained": "Installed/Audit/Export preserve rows or known-empty with nonblocking warning/retry; trust preview notice gapF04.",
+      "initialPausedUnknown": "Wrapper unresolved no-data/not-fetching renders paused/unresolved status instead of known-empty; independent trust/install source gapsF02/F03.",
+      "confirmation": "Signed warning, unsigned typed danger flow, uninstall danger; existing ConfirmDialog suppresses cancellation during loading. None executed.",
+      "feedback": "Parse rejection and blocked verification feedback present; mutation failure consumers absentF06."
+    },
+    "scopeIdentity": "Device-local, no date/vehicle/API scope or duplicate picker; preserve packId/version/content/signature, provider continuity and table IDs intelligence-packs:installed and intelligence-packs:audit-log. Identity issuesF01/F02 and candidateC03/C04.",
+    "capabilities": "Closed6 allowlisted IDs at parse; no write/command/network grant. Install explicitly approves requested capabilities. Recommendations remain manual-only strings. Denied synthetic sample fields become0 with disclosure by intentional interpreter semantics, not measured-zero telemetry.",
+    "SIAndPreferences": "No wire/cache/API SI data accessed/changed. Arbitrary signed formula unit strings are not guessed/converted. Brief raw latency=durationMs/1000 seconds with explicit source-ms specialist display; count/metric locale/precision owners reused. Palette gapF13; timestamp preference candidateC06.",
+    "i18n": "185 literal t references checked: missing0/mismatch3. App-generated English sinksF14; signed/imported user content/protocol IDs unchanged.",
+    "mobileA11yDeclarations": "PageLayout->PageContainer confirmed; shared Tabs stable IDs/roving navigation/localized tablist label; catalog1/md2/xl3, widgets1/sm2/lg3; shared modal/typed/native controls and chart data alternatives. Mobile hidingF12/native-disabled omissionF05 confirmed at source; all native/contrast/viewport acceptance NOTRUN.",
+    "sourceTestCatalogChangedByAttempt": false
+  },
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "file": "web/src/features/intelligence-packs/hooks/usePackVerification.ts",
+      "line": 17,
+      "rule": "verification-cache-identity",
+      "severity": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Verification result can belong to different envelope",
+      "mechanism": "Claimed contentDigestSha256Hex is the entire query key; fallback id/version/signature omits manifest bytes. staleTime=Infinity can reuse cached signature-valid for other content. Parser validates digest syntax only. Detail bases installability on that result and passes it with current envelope. This is result association failure, not an Ed25519 flaw.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source-trace / proposed isolated covering fixture only; no marketplace/browser action executed",
+        "scenario": "Future one-QueryClient fixture: retain verified envelope result, supply different schema-valid manifest with same claimed digest; also same id/version/signature without digest. Assert recomputation/current-envelope binding. No payload built/run here."
+      },
+      "fix": "Use independently derived complete content/signature identity, and bind confirmation/commit result to immutable current envelope; never trust claimed digest for cache association.",
+      "owner": "feature/domain consumer; parent must queue/claim exclusive repair, no accepted-page redispatch",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/hooks/usePackVerification.ts",
+          "line": 20,
+          "endLine": 28
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/manifestValidator.ts",
+          "line": 514,
+          "endLine": 518
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/PackDetailModal.tsx",
+          "line": 49,
+          "endLine": 56
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/PackDetailModal.tsx",
+          "line": 71,
+          "endLine": 83
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "file": "web/src/features/intelligence-packs/hooks/useCatalog.ts",
+      "line": 21,
+      "rule": "source-state",
+      "severity": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Unknown install inventory becomes not installed",
+      "mechanism": "data ?? [] creates empty map for pending/paused/fatal reads; installedVersion=null and only isLoading escapes, ignored by catalog/sandbox. Import panel repeats data ?? []; selected catalog entry is a stale object snapshot. Install/upgrade choice can use absence never established. Bundled catalog must remain visible.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source-trace / proposed isolated covering fixture only; no marketplace/browser action executed",
+        "scenario": "Future deferred/rejected/paused inventory fixture: preserve catalog/synthetic preview, expose unknown install state and guard commit until readiness; selected detail must update with current pack identity."
+      },
+      "fix": "Expose independent source readiness/retention/retry; separate known absence from unknown for catalog/import details.",
+      "owner": "feature/domain consumer; parent must queue/claim exclusive repair, no accepted-page redispatch",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/hooks/useCatalog.ts",
+          "line": 28,
+          "endLine": 38
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/CatalogCard.tsx",
+          "line": 27,
+          "endLine": 31
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/CatalogPanel.tsx",
+          "line": 17,
+          "endLine": 18
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/ImportExportPanel.tsx",
+          "line": 30
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/ImportExportPanel.tsx",
+          "line": 55,
+          "endLine": 61
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/PackDetailModal.tsx",
+          "line": 60
+        }
+      ]
+    },
+    {
+      "id": "F03",
+      "file": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+      "line": 27,
+      "rule": "source-state",
+      "severity": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Trust unknown/missing/blocked collapse",
+      "mechanism": "trustQuery.data ?? null feeds isEnableAllowed; every !allowed prints No trust decision on record, even explicit blocked decision. ExpandedDetail missing data becomes empty granted Set and Denied/none recorded before readiness or after fatal error.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source-trace / proposed isolated covering fixture only; no marketplace/browser action executed",
+        "scenario": "Future pending/fatal/paused/null/blocked trust fixtures should distinguish each state without dropping installed row; unavailable grants must not become authoritative denials."
+      },
+      "fix": "Reuse data-trust owner for independent trust read and localized state/retry; keep blocked distinct from absent.",
+      "owner": "feature/domain consumer; parent must queue/claim exclusive repair, no accepted-page redispatch",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+          "line": 31,
+          "endLine": 48
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+          "line": 54,
+          "endLine": 65
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/trust.ts",
+          "line": 76,
+          "endLine": 78
+        }
+      ]
+    },
+    {
+      "id": "F04",
+      "file": "web/src/features/intelligence-packs/components/SandboxPreviewPanel.tsx",
+      "line": 172,
+      "rule": "source-state",
+      "severity": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Retained trust refresh failure is undisclosed",
+      "mechanism": "Retained trustQuery.data yields success badge/Using installed capability grant; error/fetchStatus/refetch are never presented. Output correctly survives but freshness/failure/paused state does not. No-data fallback does explicitly disclose synthetic full-grant simulation; not unauthorized telemetry.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source-trace / proposed isolated covering fixture only; no marketplace/browser action executed",
+        "scenario": "Existing SandboxContentPreservation fixture explicitly leaves query status error with retained grant; future coverage must also require nonblocking notice/retry."
+      },
+      "fix": "Retain grant/output with source-specific failed/paused context and retry.",
+      "owner": "feature/domain consumer; parent must queue/claim exclusive repair, no accepted-page redispatch",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/components/SandboxPreviewPanel.tsx",
+          "line": 174,
+          "endLine": 189
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/SandboxPreviewPanel.tsx",
+          "line": 215,
+          "endLine": 218
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/__tests__/SandboxContentPreservation.test.tsx",
+          "line": 179,
+          "endLine": 218
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "file": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+      "line": 35,
+      "rule": "disabled-semantics",
+      "severity": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Inactive switch lacks native disabled",
+      "mechanism": "Caller uses opacity/pointer-events-none but omits disabled; Toggle defaults disabled=false and forwards to native button. Keyboard focus/AT still advertises enabled while callback is no-op. Guard prevents mutation; no unauthorized enable asserted.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source-trace / proposed isolated covering fixture only; no marketplace/browser action executed",
+        "scenario": "Future no-trust/pending mutation fixture should assert native disabled, not only warning CSS/text."
+      },
+      "fix": "Pass existing Toggle.disabled={!interactive}; retain explicit trust/loading explanation.",
+      "owner": "feature/domain consumer; parent must queue/claim exclusive repair, no accepted-page redispatch",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+          "line": 31,
+          "endLine": 43
+        },
+        {
+          "file": "web/src/components/ui/Toggle.tsx",
+          "line": 52,
+          "endLine": 53
+        },
+        {
+          "file": "web/src/components/ui/Toggle.tsx",
+          "line": 97,
+          "endLine": 103
+        }
+      ]
+    },
+    {
+      "id": "F06",
+      "file": "web/src/features/intelligence-packs/hooks/usePackActions.ts",
+      "line": 31,
+      "rule": "mutation-feedback",
+      "severity": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Action failures have no local recovery/feedback",
+      "mechanism": "Mutations have only onSuccess invalidation. Consumers inspect isPending, not error/isError. performInstall/blockPack/uninstall await mutateAsync without catch; ConfirmDialog invokes void callback without awaiting. Rollback/setEnabled mutate have no visible failure. Production QueryClient has no global mutation error handler. Partial writes before audit failure are possible and cross-table nontransactionality is documented, not itself a violation.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source-trace / proposed isolated covering fixture only; no marketplace/browser action executed",
+        "scenario": "Future rejecting repository fixtures for trust/install/upgrade/block/rollback/enable/uninstall should retain original review context and disclose failure/explicit recovery, never blind replay."
+      },
+      "fix": "Consume localized mutation errors at owners, preserve success-only closes and original pack identity/partial-write limits.",
+      "owner": "feature/domain consumer; parent must queue/claim exclusive repair, no accepted-page redispatch",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/components/PackDetailModal.tsx",
+          "line": 71,
+          "endLine": 99
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+          "line": 132
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+          "line": 185,
+          "endLine": 192
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 145,
+          "endLine": 150
+        },
+        {
+          "file": "web/src/api/queryClient.ts",
+          "line": 45,
+          "endLine": 85
+        }
+      ]
+    },
+    {
+      "id": "F07",
+      "file": "web/src/features/intelligence-packs/lib/kvStore.ts",
+      "line": 91,
+      "rule": "storage-failure",
+      "severity": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "localStorage failure masks empty/success",
+      "mechanism": "getItem catches exception -> null; setItem/removeItem swallow exceptions -> fulfilled Promise. No in-memory mirror exists despite comment. Query/mutation cannot distinguish unavailable storage from absence or unsuccessful persistence from success.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source-trace / proposed isolated covering fixture only; no marketplace/browser action executed",
+        "scenario": "Future isolated adapter fixtures injecting get/set/remove exceptions must expose failure or real visible degraded memory, not empty/persisted success. No storage calls executed here."
+      },
+      "fix": "Propagate errors or explicitly adopt/document real degraded backend; never fabricate persistent success.",
+      "owner": "feature/domain consumer; parent must queue/claim exclusive repair, no accepted-page redispatch",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/lib/kvStore.ts",
+          "line": 93,
+          "endLine": 114
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/packRepository.ts",
+          "line": 97,
+          "endLine": 114
+        },
+        {
+          "file": "web/src/features/intelligence-packs/hooks/usePackActions.ts",
+          "line": 31,
+          "endLine": 33
+        }
+      ]
+    },
+    {
+      "id": "F08",
+      "file": "web/src/features/intelligence-packs/lib/packRepository.ts",
+      "line": 64,
+      "rule": "invalid-storage-empty",
+      "severity": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Corrupt present table becomes authoritative empty",
+      "mechanism": "safeJsonParseArray returns [] for invalid JSON/nonarray. Installed/trust/audit reads succeed as empty; subsequent read-modify-write may replace unreadable prior data. Genuine missing key is valid empty, malformed present value is not.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source-trace / proposed isolated covering fixture only; no marketplace/browser action executed",
+        "scenario": "Future malformed JSON/nonarray fixtures should surface recoverable source failure, preserve raw snapshot and distinguish absent key."
+      },
+      "fix": "Distinguish absent versus invalid persisted tables; avoid silent destructive replacement.",
+      "owner": "feature/domain consumer; parent must queue/claim exclusive repair, no accepted-page redispatch",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/lib/packRepository.ts",
+          "line": 97,
+          "endLine": 98
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/packRepository.ts",
+          "line": 110
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/packRepository.ts",
+          "line": 125,
+          "endLine": 136
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/packRepository.ts",
+          "line": 140,
+          "endLine": 153
+        }
+      ]
+    },
+    {
+      "id": "F09",
+      "file": "web/src/features/intelligence-packs/hooks/packRepositoryContext.tsx",
+      "line": 37,
+      "rule": "storage-durability",
+      "severity": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Memory durability is not disclosed",
+      "mechanism": "createDefaultKvStore can choose memory; provider exposes backend but UI backend grep0. Methodology guarantee says IndexedDB/localStorage only. Memory records disappear on provider recreation/reload. kvStore comment claims UI surfaces backend but callers do not.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source trace / future isolated fixture only; no runtime action",
+        "scenario": "Future memory-backend presentation fixture should disclose nonpersistence; actual native fallback still NOTRUN."
+      },
+      "fix": "Consume existing backend for localized degradation notice/methodology; preserve records/preferences.",
+      "owner": "feature/domain consumer; parent queues exclusive fix, catalogs separately serialized",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/lib/kvStore.ts",
+          "line": 140,
+          "endLine": 152
+        },
+        {
+          "file": "web/src/features/intelligence-packs/hooks/packRepositoryContext.tsx",
+          "line": 21,
+          "endLine": 22
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/SecurityMethodologyPanel.tsx",
+          "line": 29
+        }
+      ]
+    },
+    {
+      "id": "F10",
+      "file": "web/src/features/intelligence-packs/components/PublisherFingerprintDisplay.tsx",
+      "line": 27,
+      "rule": "trust-label",
+      "severity": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Unestablished fingerprint is called unsigned",
+      "mechanism": "Null fingerprint always says No signing key (unsigned). Signed pending/error/digest-mismatch callers pass null too; presence of signed key is contradicted by this copy.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source trace / future isolated fixture only; no runtime action",
+        "scenario": "Future signed pending/platform error/digest mismatch fixtures must differ from actual signature=null."
+      },
+      "fix": "Pass signature presence/verification state, reserving unsigned copy for unsigned envelope.",
+      "owner": "feature/domain consumer; parent queues exclusive fix, catalogs separately serialized",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/components/CatalogCard.tsx",
+          "line": 59,
+          "endLine": 62
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/PackDetailModal.tsx",
+          "line": 124,
+          "endLine": 129
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/verifyEnvelope.ts",
+          "line": 85
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/__tests__/badges.test.tsx",
+          "line": 65,
+          "endLine": 68
+        }
+      ]
+    },
+    {
+      "id": "F11",
+      "file": "web/src/features/intelligence-packs/components/CompatibilityBadge.tsx",
+      "line": 18,
+      "rule": "unknown-success",
+      "severity": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Uncheckable compatibility is success Compatible",
+      "mechanism": "isAppVersionCompatible returns compatible:true for unparsable/dev version with check-skipped reason; badge turns it into confirmed Compatible success. Reason visible does not make unknown a successful check. Blocking policy is not asserted.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source trace / future isolated fixture only; no runtime action",
+        "scenario": "Future dev/unparsable fixture should retain development access with neutral compatibility unknown."
+      },
+      "fix": "Separate checked outcome from permission-to-proceed.",
+      "owner": "feature/domain consumer; parent queues exclusive fix, catalogs separately serialized",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/lib/compatibility.ts",
+          "line": 59,
+          "endLine": 63
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/CompatibilityBadge.tsx",
+          "line": 19,
+          "endLine": 23
+        }
+      ]
+    },
+    {
+      "id": "F12",
+      "file": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+      "line": 173,
+      "rule": "mobile-data-loss",
+      "severity": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Mobile subsets hide fields/actions without full detail",
+      "mechanism": "Installed mobileColumns name/enabled hides verification/actions; expanded detail includes grants/trust/history count, not those fields/actions. Audit timestamp/action subset hides pack/detail and has no expansion. Neither passes mobilePresentation; DataTable hidden md:table-cell applies to excluded head/body. Existing allColumns quick-view adapter is opt-in, so inactive here. Source CSS reachability confirmed, no measured viewport/browser claim.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source trace / future isolated fixture only; no runtime action",
+        "scenario": "Future mission-width fixtures/native QA must retain verification/upgrade/rollback/uninstall and audit identity/detail reachability."
+      },
+      "fix": "Reuse existing mobile presentation/details or accessible contained full table; no duplicate pipeline.",
+      "owner": "feature/domain consumer; parent queues exclusive fix, catalogs separately serialized",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+          "line": 54,
+          "endLine": 70
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/AuditLogPanel.tsx",
+          "line": 79
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 506
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 742,
+          "endLine": 743
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1180
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1404,
+          "endLine": 1409
+        },
+        {
+          "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+          "line": 150,
+          "endLine": 158
+        }
+      ]
+    },
+    {
+      "id": "F13",
+      "file": "web/src/features/intelligence-packs/components/SandboxPreviewPanel.tsx",
+      "line": 85,
+      "rule": "palette-preference",
+      "severity": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Static chart paints bypass saved palette",
+      "mechanism": "Line cyan #22d3ee, area green #34d399/#34d39933, bar purple #a78bfa bypass shared theme/palette. Chart API props are not static-inline-style violations; contrast/saturation rendering is native NOTRUN.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source trace / future isolated fixture only; no runtime action",
+        "scenario": "Future saved palette/theme review must preserve series/data identity after adoption."
+      },
+      "fix": "Consume existing chart palette owner, no custom palette or source-value changes.",
+      "owner": "feature/domain consumer; parent queues exclusive fix, catalogs separately serialized",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/components/SandboxPreviewPanel.tsx",
+          "line": 93
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/SandboxPreviewPanel.tsx",
+          "line": 101
+        }
+      ]
+    },
+    {
+      "id": "F14",
+      "file": "web/src/features/intelligence-packs/components/CapabilityRequestList.tsx",
+      "line": 33,
+      "rule": "hardcoded-string",
+      "severity": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "App-generated human-readable strings bypass i18n",
+      "mechanism": "Direct English sinks: capability label/description (also methodology), verification.summary, compatibility.reason, generated audit detail, parser error strings, sandbox budgetError, catalog outer sourceNote. Counted once as localization root, NOT an estimated total of every validator literal. Signed/imported manifest content and technical IDs are exceptions.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source trace / future isolated fixture only; no runtime action",
+        "scenario": "Future non-English copy fixtures should cover each sink without translating/re-signing source packs or recasing protocol identities."
+      },
+      "fix": "Use localizable structured descriptors at display boundary; preserve stored raw facts/signed bytes. Parent/serialized canonical owner handles English integration.",
+      "owner": "feature/domain consumer; parent queues exclusive fix, catalogs separately serialized",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/components/SecurityMethodologyPanel.tsx",
+          "line": 87
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/PackDetailModal.tsx",
+          "line": 115,
+          "endLine": 117
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/CompatibilityBadge.tsx",
+          "line": 23
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/AuditLogPanel.tsx",
+          "line": 62
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/ImportExportPanel.tsx",
+          "line": 106
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/SandboxPreviewPanel.tsx",
+          "line": 157
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/CatalogCard.tsx",
+          "line": 65
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/manifestTypes.ts",
+          "line": 88,
+          "endLine": 116
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/verifyEnvelope.ts",
+          "line": 77
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/compatibility.ts",
+          "line": 62
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/packActions.ts",
+          "line": 57
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/manifestValidator.ts",
+          "line": 81
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/expressionInterpreter.ts",
+          "line": 22
+        }
+      ]
+    },
+    {
+      "id": "F15",
+      "file": "web/src/features/intelligence-packs/pages/IntelligencePackMarketplacePage.tsx",
+      "line": 43,
+      "rule": "catalog-fallback-mismatch",
+      "severity": "P3",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Three fallback literals differ from canonical English",
+      "mechanism": "Lexical literal comparison185 checked/missing0/mismatch3: security tab methodology vs canonical Methodology; ng5 automation builder vs canonical Automation Builder; cryptoUnavailable Web Crypto vs canonical Web crypto. No official guard or runtime failure/pass inferred.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source trace / future isolated fixture only; no runtime action",
+        "scenario": "Future serialized owner should reconcile exact three measured pairs on stable source, preserving tab identity."
+      },
+      "fix": "Exact consumer/canonical review only; no generator/guard rerun or catalog write here.",
+      "owner": "feature/domain consumer; parent queues exclusive fix, catalogs separately serialized",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/components/SecurityMethodologyPanel.tsx",
+          "line": 37
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/VerificationStatusBadge.tsx",
+          "line": 86
+        }
+      ]
+    },
+    {
+      "id": "F16",
+      "file": "web/src/features/intelligence-packs/lib/sandboxRunner.ts",
+      "line": 107,
+      "rule": "partial-output-loss",
+      "severity": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high",
+      "title": "Budget interruption loses completed rows of interrupted formula",
+      "mechanism": "series=[] is assigned only after evaluateSeries returns. Its rows.map throws on budget after some rows and drops map partial accumulator; catch sets error/truncated but series stays[]. Earlier completed formulas survive, interrupted formula partial rows do not, contrary to partial-series contract. UI partial preservation test overrides producer; tiny-budget test does not actually assert budgetError/truncated.",
+      "sourceRepro": {
+        "status": "NOTRUN",
+        "kind": "source trace / future isolated fixture only; no runtime action",
+        "scenario": "Future isolated real producer fixture must interrupt after >=1 complete row and retain those outputs/error/truncation. No formula evaluation executed here."
+      },
+      "fix": "Retain completed rows at existing producer boundary, preserve all hard caps/deadlines; do not loosen budgets.",
+      "owner": "feature/domain consumer; parent queues exclusive fix, catalogs separately serialized",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/intelligence-packs/lib/sandboxRunner.ts",
+          "line": 34
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/sandboxRunner.ts",
+          "line": 110,
+          "endLine": 121
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/expressionInterpreter.ts",
+          "line": 140,
+          "endLine": 148
+        },
+        {
+          "file": "web/src/features/intelligence-packs/lib/__tests__/sandboxRunner.test.ts",
+          "line": 53,
+          "endLine": 72
+        },
+        {
+          "file": "web/src/features/intelligence-packs/components/__tests__/SandboxContentPreservation.test.tsx",
+          "line": 159,
+          "endLine": 176
+        }
+      ]
+    }
+  ],
+  "conditionalNativeCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/intelligence-packs/components/PackDetailModal.tsx",
+      "line": 49,
+      "classification": "CONDITIONAL_OR_NATIVE_CANDIDATE_NOT_COUNTED_AS_CONFIRMED",
+      "title": "Incompatible-install policy",
+      "sourceBasis": "Installability uses verification, not compatibility; badge may say Incompatible.",
+      "requiredEvidence": "Clarify blocking/override policy before calling warning-only install a defect; no speculative backend restriction.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/intelligence-packs/components/PackDetailModal.tsx",
+      "line": 60,
+      "classification": "CONDITIONAL_OR_NATIVE_CANDIDATE_NOT_COUNTED_AS_CONFIRMED",
+      "title": "Reinstall/downgrade behavior",
+      "sourceBasis": "Same-version entry still offers Install, enabled:true can change disabled record; differing versions are upgrades without semver comparison.",
+      "requiredEvidence": "Clarify intentional re-install/history/older-version policy and cover it in separately claimed fixtures.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/intelligence-packs/components/PackDetailModal.tsx",
+      "line": 44,
+      "classification": "CONDITIONAL_OR_NATIVE_CANDIDATE_NOT_COUNTED_AS_CONFIRMED",
+      "title": "Confirmation identity replacement",
+      "sourceBasis": "confirmMode not keyed/reset by entry; late overlapping file reads may replace imported entry during confirmation; typed field resets on open only.",
+      "requiredEvidence": "Future delayed-file/entry replacement and original-identity settlement fixtures; no real import or install.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/intelligence-packs/lib/packActions.ts",
+      "line": 122,
+      "classification": "CONDITIONAL_OR_NATIVE_CANDIDATE_NOT_COUNTED_AS_CONFIRMED",
+      "title": "Rollback grant/publisher association",
+      "sourceBasis": "Restores version envelope/verification while separate current trust/grant and enabled state remain.",
+      "requiredEvidence": "Define intended per-pack versus per-version trust; future changed-grant/publisher rollback fixtures.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/intelligence-packs/components/SandboxPreviewPanel.tsx",
+      "line": 61,
+      "classification": "CONDITIONAL_OR_NATIVE_CANDIDATE_NOT_COUNTED_AS_CONFIRMED",
+      "title": "SI/display-unit preference semantics",
+      "sourceBasis": "Synthetic sample has explicit km/kWh/kmh/C conventions; arbitrary formulas carry source units/deltas/flags. No real API SI values read.",
+      "requiredEvidence": "Establish dimensions before conversion; never guess/convert signed data; future unit preference QA.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C06",
+      "file": "web/src/features/intelligence-packs/components/AuditLogPanel.tsx",
+      "line": 40,
+      "classification": "CONDITIONAL_OR_NATIVE_CANDIDATE_NOT_COUNTED_AS_CONFIRMED",
+      "title": "Audit timezone/locale/time-format preferences",
+      "sourceBasis": "formatDateTime called without options defaults to browser locale/timezone; selected product preference binding not exercised.",
+      "requiredEvidence": "Trace saved product settings/date owner and future isolated/native preference comparisons.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C07",
+      "file": "web/src/features/intelligence-packs/pages/IntelligencePackMarketplacePage.tsx",
+      "line": 48,
+      "classification": "CONDITIONAL_OR_NATIVE_CANDIDATE_NOT_COUNTED_AS_CONFIRMED",
+      "title": "Native/mobile/a11y/visual acceptance",
+      "sourceBasis": "Stable tab relationships, shared controls/motion and responsive classes are declarations only.",
+      "requiredEvidence": "Authorized mounted Edge matrix320/375/390/430/768/1024/1280/1440/1920/2560, narrow containers,long/RTL/200% text, light/dark/custom, OS forced colors, reduced motion/low bandwidth, overlay focus/contrast; all NOTRUN here.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C08",
+      "file": "web/src/features/intelligence-packs/hooks/usePackActions.ts",
+      "line": 57,
+      "classification": "CONDITIONAL_OR_NATIVE_CANDIDATE_NOT_COUNTED_AS_CONFIRMED",
+      "title": "Audit event completeness",
+      "sourceBasis": "Trust/block writes and import/export do not append events despite supported AuditAction kinds/comments.",
+      "requiredEvidence": "Clarify required event completeness before proposing new history; future isolated assertions only.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C09",
+      "file": "web/src/features/intelligence-packs/lib/kvStore.ts",
+      "line": 149,
+      "classification": "CONDITIONAL_OR_NATIVE_CANDIDATE_NOT_COUNTED_AS_CONFIRMED",
+      "title": "Native storage capability/fallback",
+      "sourceBasis": "localStorage property access may throw; IndexedDB chosen by presence, operational open failures do not fall back.",
+      "requiredEvidence": "Authorized denied-storage/private/quota/IndexedDB-open fixtures/native QA; no browser/storage actions here.",
+      "status": "NOTRUN"
+    }
+  ],
+  "needs": [
+    {
+      "owner": "verification identity",
+      "findings": [
+        "F01"
+      ],
+      "needs": "independently bind full content/signature/result and confirmation; one-client collision fixture",
+      "queueDeduplication": "Exact feature rows and narrow repair-owner names searched; no active matching marketplace repair found. Phase5 page and shared owners remain completed; parent queues narrow new fixes, no redispatch/passing rerun.",
+      "sharedCapability": "Existing shared data trust, feedback, Toggle, tables, palette and catalogs; no speculative new shared component."
+    },
+    {
+      "owner": "install readiness",
+      "findings": [
+        "F02"
+      ],
+      "needs": "independent installed-source readiness/current selected-entry identity across catalog/import, retain browsing",
+      "queueDeduplication": "Exact feature rows and narrow repair-owner names searched; no active matching marketplace repair found. Phase5 page and shared owners remain completed; parent queues narrow new fixes, no redispatch/passing rerun.",
+      "sharedCapability": "Existing shared data trust, feedback, Toggle, tables, palette and catalogs; no speculative new shared component."
+    },
+    {
+      "owner": "trust presentation",
+      "findings": [
+        "F03",
+        "F04",
+        "F05"
+      ],
+      "needs": "unknown/blocked/absent/retained notices/retry and existing Toggle.disabled consumer adoption",
+      "queueDeduplication": "Exact feature rows and narrow repair-owner names searched; no active matching marketplace repair found. Phase5 page and shared owners remain completed; parent queues narrow new fixes, no redispatch/passing rerun.",
+      "sharedCapability": "Existing shared data trust, feedback, Toggle, tables, palette and catalogs; no speculative new shared component."
+    },
+    {
+      "owner": "action feedback",
+      "findings": [
+        "F06"
+      ],
+      "needs": "localized source-local failure/recovery with original pack identity and success-only closes",
+      "queueDeduplication": "Exact feature rows and narrow repair-owner names searched; no active matching marketplace repair found. Phase5 page and shared owners remain completed; parent queues narrow new fixes, no redispatch/passing rerun.",
+      "sharedCapability": "Existing shared data trust, feedback, Toggle, tables, palette and catalogs; no speculative new shared component."
+    },
+    {
+      "owner": "storage integrity/durability",
+      "findings": [
+        "F07",
+        "F08",
+        "F09"
+      ],
+      "needs": "explicit failed versus corrupt/absent/degraded-memory states; parent splits exclusive adapter/repository/UI scopes",
+      "queueDeduplication": "Exact feature rows and narrow repair-owner names searched; no active matching marketplace repair found. Phase5 page and shared owners remain completed; parent queues narrow new fixes, no redispatch/passing rerun.",
+      "sharedCapability": "Existing shared data trust, feedback, Toggle, tables, palette and catalogs; no speculative new shared component."
+    },
+    {
+      "owner": "publisher and compatibility truth",
+      "findings": [
+        "F10",
+        "F11"
+      ],
+      "needs": "unsigned versus unestablished fingerprint, compatibility unchecked neutral without blocking development",
+      "queueDeduplication": "Exact feature rows and narrow repair-owner names searched; no active matching marketplace repair found. Phase5 page and shared owners remain completed; parent queues narrow new fixes, no redispatch/passing rerun.",
+      "sharedCapability": "Existing shared data trust, feedback, Toggle, tables, palette and catalogs; no speculative new shared component."
+    },
+    {
+      "owner": "mobile table consumers",
+      "findings": [
+        "F12"
+      ],
+      "needs": "reuse existing mobilePresentation/allColumns details, retain original actions/audit fields",
+      "queueDeduplication": "Exact feature rows and narrow repair-owner names searched; no active matching marketplace repair found. Phase5 page and shared owners remain completed; parent queues narrow new fixes, no redispatch/passing rerun.",
+      "sharedCapability": "Existing shared data trust, feedback, Toggle, tables, palette and catalogs; no speculative new shared component."
+    },
+    {
+      "owner": "sandbox palette consumer",
+      "findings": [
+        "F13"
+      ],
+      "needs": "reuse existing preference palette, retain exact series/sample values",
+      "queueDeduplication": "Exact feature rows and narrow repair-owner names searched; no active matching marketplace repair found. Phase5 page and shared owners remain completed; parent queues narrow new fixes, no redispatch/passing rerun.",
+      "sharedCapability": "Existing shared data trust, feedback, Toggle, tables, palette and catalogs; no speculative new shared component."
+    },
+    {
+      "owner": "feature localization / serialized English",
+      "findings": [
+        "F14",
+        "F15"
+      ],
+      "needs": "app-owned copy sinks plus3 measured fallback differences; parent catalog claim, preserve signed bytes",
+      "queueDeduplication": "Exact feature rows and narrow repair-owner names searched; no active matching marketplace repair found. Phase5 page and shared owners remain completed; parent queues narrow new fixes, no redispatch/passing rerun.",
+      "sharedCapability": "Existing shared data trust, feedback, Toggle, tables, palette and catalogs; no speculative new shared component."
+    },
+    {
+      "owner": "sandbox partial producer",
+      "findings": [
+        "F16"
+      ],
+      "needs": "retain completed rows at hard interruption; actual producer coverage, never weaken budgets",
+      "queueDeduplication": "Exact feature rows and narrow repair-owner names searched; no active matching marketplace repair found. Phase5 page and shared owners remain completed; parent queues narrow new fixes, no redispatch/passing rerun.",
+      "sharedCapability": "Existing shared data trust, feedback, Toggle, tables, palette and catalogs; no speculative new shared component."
+    }
+  ],
+  "ruleChecks": {
+    "scope": "43 production feature ts/tsx files; Python regex per line; raw outputs retained in log",
+    "static-inline-style": {
+      "rawMatches": 0
+    },
+    "raw-html": {
+      "rawMatches": 0
+    },
+    "direct-library-import": {
+      "rawMatches": 0
+    },
+    "old-api-import": {
+      "rawMatches": 0
+    },
+    "double-prefix": {
+      "rawMatches": 0
+    },
+    "camelcase-param": {
+      "broadRawMatches": 183,
+      "urlOnlyRawMatches": 0,
+      "classification": "183 JSX prop false positives; no URL matches"
+    },
+    "fetch-useeffect": {
+      "rawMatches": 0
+    },
+    "missing-page-container": {
+      "classification": "PageLayout is existing PageContainer adapter, not violation"
+    },
+    "hidden-section": {
+      "classification": "Active-tab/dialog/verification summary conditions do not hide entire null-data page; source panels retain shells"
+    },
+    "hardcoded-string": {
+      "classification": "App-generated human copy sinks confirmedF14; signed/user-authored content and IDs are exceptions"
+    },
+    "network-primitives": {
+      "rawMatches": 0,
+      "limit": "static source search only, not runtime isolation"
+    },
+    "unsafe-execution": {
+      "rawMatches": 3,
+      "classification": "3 explanatory comments/localized security copy, not execution"
+    },
+    "backend": "NOTRUN out of scope",
+    "canonicalFallbacks": {
+      "lexicallyChecked": 185,
+      "missing": 0,
+      "mismatches": 3,
+      "officialGuard": "NOTRUN"
+    }
+  },
+  "evidenceLimits": {
+    "sourceOnly": true,
+    "runtimeReprosExecuted": 0,
+    "tests": {
+      "status": "NOTRUN_BY_AUTHORITY",
+      "filesEnumerated": 30,
+      "runtimeDiscovered": null,
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "typescript": "NOTRUN; npx tsc --noEmit prohibited; no passes claim",
+    "lintBuildGatesHelpersCatalogGuards": "NOTRUN_BY_AUTHORITY",
+    "browserNativeApiNetworkMarketplaceInstallModelJob": "NOTRUN_BY_AUTHORITY",
+    "serversInstallsSubagentsGitWrites": "NONE",
+    "historicalEvidence": "Phase5 dependency receipt records3 parent final-source cases passed; historical only, not rerun or present acceptance.",
+    "sourceOnlyNotAcceptance": "Valid report/hash equality cannot establish native/functional/application release.",
+    "failures": [
+      "rg unavailable (shell1956 exit1)",
+      "broad stdout UnicodeEncodeError (shell2012 exit1), raw output recovered",
+      "missing root/orchestrator-loop.md view path failure",
+      "oversize artifact command launch os206 (shell2342 exit1), no script execution"
+    ],
+    "warnings": [
+      "shell2153 Python invalid escape SyntaxWarning exit0, raw warning preserved"
+    ],
+    "readLimit": "Tool stdout truncations preserved in log/temporary tool transcripts; bounded ranges read. Deep unit tests assertion-context inspection is not full semantic or runtime coverage."
+  },
+  "pins": [
+    {
+      "path": "web/src/api/dataState.ts",
+      "beforeSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434,
+      "bytes": 15482,
+      "group": "source/support",
+      "afterSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/queryClient.ts",
+      "beforeSha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "lines": 86,
+      "bytes": 3802,
+      "group": "source/support",
+      "afterSha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/charts/ChartTooltip.tsx",
+      "beforeSha256": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+      "lines": 179,
+      "bytes": 6130,
+      "group": "source/support",
+      "afterSha256": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17,
+      "bytes": 658,
+      "group": "source/support",
+      "afterSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "beforeSha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines": 74,
+      "bytes": 3322,
+      "group": "source/support",
+      "afterSha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/ConfirmDialog.tsx",
+      "beforeSha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "lines": 219,
+      "bytes": 8134,
+      "group": "source/support",
+      "afterSha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "beforeSha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines": 1707,
+      "bytes": 77157,
+      "group": "source/support",
+      "afterSha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "beforeSha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "lines": 165,
+      "bytes": 9039,
+      "group": "source/support",
+      "afterSha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/Tabs.tsx",
+      "beforeSha256": "6754cd3469dbec346cc6069fa5c12d6660204dd2b721e4ab2752f6ecb0fb82bf",
+      "lines": 132,
+      "bytes": 4989,
+      "group": "source/support",
+      "afterSha256": "6754cd3469dbec346cc6069fa5c12d6660204dd2b721e4ab2752f6ecb0fb82bf",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/Toggle.tsx",
+      "beforeSha256": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "lines": 140,
+      "bytes": 5204,
+      "group": "source/support",
+      "afterSha256": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/AuditLogPanel.tsx",
+      "beforeSha256": "4e2a79a97720d77e0f0d1a34eaccd37ffd2231a1771b024a812a443be9579877",
+      "lines": 86,
+      "bytes": 3216,
+      "group": "source/support",
+      "afterSha256": "4e2a79a97720d77e0f0d1a34eaccd37ffd2231a1771b024a812a443be9579877",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/CapabilityRequestList.tsx",
+      "beforeSha256": "f1be580e8f4a3b8154d47b8de572deb9e9f17ce63c3e5b9f16efc9c0afc89f0f",
+      "lines": 46,
+      "bytes": 1852,
+      "group": "source/support",
+      "afterSha256": "f1be580e8f4a3b8154d47b8de572deb9e9f17ce63c3e5b9f16efc9c0afc89f0f",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/CatalogCard.tsx",
+      "beforeSha256": "4eb4025407ca1ede3f77abe025ef08882945138a9505080d1aecf0fe3ccc981a",
+      "lines": 74,
+      "bytes": 3396,
+      "group": "source/support",
+      "afterSha256": "4eb4025407ca1ede3f77abe025ef08882945138a9505080d1aecf0fe3ccc981a",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/CatalogPanel.tsx",
+      "beforeSha256": "d3382873443e83123b55b5e00d10f0caf52d7423d5316e816c86231a1f600ac0",
+      "lines": 46,
+      "bytes": 1993,
+      "group": "source/support",
+      "afterSha256": "d3382873443e83123b55b5e00d10f0caf52d7423d5316e816c86231a1f600ac0",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/CompatibilityBadge.tsx",
+      "beforeSha256": "4bfcbcf30dbda9d814e7c84c49086716d55049f3174f85e8c6c6fe12d6e0cd17",
+      "lines": 26,
+      "bytes": 1081,
+      "group": "source/support",
+      "afterSha256": "4bfcbcf30dbda9d814e7c84c49086716d55049f3174f85e8c6c6fe12d6e0cd17",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/ImportExportPanel.tsx",
+      "beforeSha256": "97fa32b75d2848f4fc59f6afabccc688628674123905343804bb58a4f441b4ea",
+      "lines": 138,
+      "bytes": 6277,
+      "group": "source/support",
+      "afterSha256": "97fa32b75d2848f4fc59f6afabccc688628674123905343804bb58a4f441b4ea",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+      "beforeSha256": "deca745f58b45c57f28b2b69336d0deb36b1af1374a7da0fc864cf0731a0e423",
+      "lines": 197,
+      "bytes": 8387,
+      "group": "source/support",
+      "afterSha256": "deca745f58b45c57f28b2b69336d0deb36b1af1374a7da0fc864cf0731a0e423",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/PackDetailModal.tsx",
+      "beforeSha256": "a4734db08b614f33316858c29e8fbb5774d9841b76172ef66060ec7e49af0bed",
+      "lines": 221,
+      "bytes": 10532,
+      "group": "source/support",
+      "afterSha256": "a4734db08b614f33316858c29e8fbb5774d9841b76172ef66060ec7e49af0bed",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/PackRecommendations.tsx",
+      "beforeSha256": "b1144dbaff8dc06aff3800911c1ccca015f1ed5e3aa7c4672e1b7d088adcca6d",
+      "lines": 30,
+      "bytes": 1722,
+      "group": "source/support",
+      "afterSha256": "b1144dbaff8dc06aff3800911c1ccca015f1ed5e3aa7c4672e1b7d088adcca6d",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/PackRepositorySource.tsx",
+      "beforeSha256": "a528dd6008bfee19c1caddeaf58c08eaead1d487ac5bb6221f7c8603c72d0ee6",
+      "lines": 41,
+      "bytes": 1695,
+      "group": "source/support",
+      "afterSha256": "a528dd6008bfee19c1caddeaf58c08eaead1d487ac5bb6221f7c8603c72d0ee6",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/PublisherFingerprintDisplay.tsx",
+      "beforeSha256": "3c594d3f236310b7ab4cd87aff4f9a3ed9826586ecd094fb9fee4b1d9a7ba551",
+      "lines": 62,
+      "bytes": 2213,
+      "group": "source/support",
+      "afterSha256": "3c594d3f236310b7ab4cd87aff4f9a3ed9826586ecd094fb9fee4b1d9a7ba551",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/SandboxPreviewPanel.tsx",
+      "beforeSha256": "ccdf51c894dbd973fe222956b394e3f5fa84b728dd8325d1526ec3dea9bd7cc1",
+      "lines": 244,
+      "bytes": 10714,
+      "group": "source/support",
+      "afterSha256": "ccdf51c894dbd973fe222956b394e3f5fa84b728dd8325d1526ec3dea9bd7cc1",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/SecurityMethodologyPanel.tsx",
+      "beforeSha256": "1691e00c79e98c56b43855f3012ae21b341934d054f4f78011f1086ea848feb2",
+      "lines": 101,
+      "bytes": 7797,
+      "group": "source/support",
+      "afterSha256": "1691e00c79e98c56b43855f3012ae21b341934d054f4f78011f1086ea848feb2",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/TrustDistinctionNote.tsx",
+      "beforeSha256": "e66f736d06cf7553f15b418ff508219408813a5fb7dacff07c8338c0be415ebb",
+      "lines": 22,
+      "bytes": 1018,
+      "group": "source/support",
+      "afterSha256": "e66f736d06cf7553f15b418ff508219408813a5fb7dacff07c8338c0be415ebb",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/VerificationStatusBadge.tsx",
+      "beforeSha256": "54a58578f8f687fa50fce8db1f4ec3bc7d146da31f01e52646b69a00d0e73bdf",
+      "lines": 102,
+      "bytes": 3495,
+      "group": "source/support",
+      "afterSha256": "54a58578f8f687fa50fce8db1f4ec3bc7d146da31f01e52646b69a00d0e73bdf",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/__tests__/AuditLogPanel.test.tsx",
+      "beforeSha256": "aab0981a11b6cccc984f61ccf83b8b41fdc896af1e6c363acf6220e13447642e",
+      "lines": 55,
+      "bytes": 2722,
+      "group": "test",
+      "afterSha256": "aab0981a11b6cccc984f61ccf83b8b41fdc896af1e6c363acf6220e13447642e",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/__tests__/CatalogAndDetail.test.tsx",
+      "beforeSha256": "99453b1b336ff11598810ef4387e26c6293ce4abfbb75b24f3166ad336572983",
+      "lines": 98,
+      "bytes": 4994,
+      "group": "test",
+      "afterSha256": "99453b1b336ff11598810ef4387e26c6293ce4abfbb75b24f3166ad336572983",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/__tests__/ImportExportPanel.test.tsx",
+      "beforeSha256": "4c68702af9441132df26a697dde6ba78c60f56e27023026a1e5101c3a8e7b659",
+      "lines": 58,
+      "bytes": 2827,
+      "group": "test",
+      "afterSha256": "4c68702af9441132df26a697dde6ba78c60f56e27023026a1e5101c3a8e7b659",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/__tests__/InstalledInventoryPanel.test.tsx",
+      "beforeSha256": "ece2a321730a73c20bdceaed9bc234a0cc73f97e1cf230f8ac15b8e1cb1c842f",
+      "lines": 103,
+      "bytes": 4824,
+      "group": "test",
+      "afterSha256": "ece2a321730a73c20bdceaed9bc234a0cc73f97e1cf230f8ac15b8e1cb1c842f",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/__tests__/RepositorySourcePreservation.test.tsx",
+      "beforeSha256": "4c35b88ed1b71b5a9a2c8dff45a0f32ad8538d05e5dea184f44cd48ef6c6bcda",
+      "lines": 201,
+      "bytes": 11202,
+      "group": "test",
+      "afterSha256": "4c35b88ed1b71b5a9a2c8dff45a0f32ad8538d05e5dea184f44cd48ef6c6bcda",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/__tests__/SandboxContentPreservation.test.tsx",
+      "beforeSha256": "f9eb5b817b29422162e1ace0dd06bf42b7fdeaf7937ea7f19a5aaf1a7a9aaef1",
+      "lines": 276,
+      "bytes": 15026,
+      "group": "test",
+      "afterSha256": "f9eb5b817b29422162e1ace0dd06bf42b7fdeaf7937ea7f19a5aaf1a7a9aaef1",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/__tests__/SandboxPreviewPanel.test.tsx",
+      "beforeSha256": "c539ee9ef7a4701f08a34b08479394609eb98c7569b5e033371953c9686379a4",
+      "lines": 58,
+      "bytes": 2939,
+      "group": "test",
+      "afterSha256": "c539ee9ef7a4701f08a34b08479394609eb98c7569b5e033371953c9686379a4",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/__tests__/SecurityMethodologyPanel.test.tsx",
+      "beforeSha256": "1336d140747eb47c27786e2cec92fc0821e09a76092d285dba33f4ce378838cb",
+      "lines": 32,
+      "bytes": 1558,
+      "group": "test",
+      "afterSha256": "1336d140747eb47c27786e2cec92fc0821e09a76092d285dba33f4ce378838cb",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/__tests__/badges.test.tsx",
+      "beforeSha256": "ce6f9db15e45f1f0bce44db37cfa738692f0fee4c8b01197e960297ecb956f26",
+      "lines": 112,
+      "bytes": 5013,
+      "group": "test",
+      "afterSha256": "ce6f9db15e45f1f0bce44db37cfa738692f0fee4c8b01197e960297ecb956f26",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/__tests__/testUtils.tsx",
+      "beforeSha256": "edbbd5fe0faf43f9c16689c9165708f82d57b0dcf58eacadc2e7f38fcafd8ac5",
+      "lines": 18,
+      "bytes": 1008,
+      "group": "source/support",
+      "afterSha256": "edbbd5fe0faf43f9c16689c9165708f82d57b0dcf58eacadc2e7f38fcafd8ac5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/operationalbrief-all/SandboxRunBrief.tsx",
+      "beforeSha256": "4fb12c3a6464509e6fe398134c430f7b1a76492ab65989f97aa00b30aeef3797",
+      "lines": 75,
+      "bytes": 3805,
+      "group": "source/support",
+      "afterSha256": "4fb12c3a6464509e6fe398134c430f7b1a76492ab65989f97aa00b30aeef3797",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/components/operationalbrief-all/__tests__/SandboxRunBrief.test.tsx",
+      "beforeSha256": "01b7eac6f46a5d355f25cd2f92927849441441c37f7043edc4cf24ba42e8d18d",
+      "lines": 122,
+      "bytes": 6070,
+      "group": "test",
+      "afterSha256": "01b7eac6f46a5d355f25cd2f92927849441441c37f7043edc4cf24ba42e8d18d",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/docs/SIGNED_FIXTURE_PROVENANCE.md",
+      "beforeSha256": "f520f7c19f8bf9d952b157a5e002561182c19b3d61843cd1b53f068d371d68a9",
+      "lines": 109,
+      "bytes": 5018,
+      "group": "feature-doc",
+      "afterSha256": "f520f7c19f8bf9d952b157a5e002561182c19b3d61843cd1b53f068d371d68a9",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/docs/THREAT_MODEL.md",
+      "beforeSha256": "d4ab868669f7864530fc964d17ca0daf552a1e56cb159e69bfb189d7ed56d4d1",
+      "lines": 116,
+      "bytes": 7148,
+      "group": "feature-doc",
+      "afterSha256": "d4ab868669f7864530fc964d17ca0daf552a1e56cb159e69bfb189d7ed56d4d1",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/docs/generate-signed-fixture.mjs",
+      "beforeSha256": "e8a50e2d62ea3484bd9d4fc80a91b7971d979de51c6734ba2d84ae663d343d39",
+      "lines": 174,
+      "bytes": 7133,
+      "group": "feature-doc",
+      "afterSha256": "e8a50e2d62ea3484bd9d4fc80a91b7971d979de51c6734ba2d84ae663d343d39",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/__tests__/packHooks.test.tsx",
+      "beforeSha256": "ea5755d5b8440e7aac6ff160406f689695e574ff7def885b7da71789a6aa0a32",
+      "lines": 128,
+      "bytes": 5701,
+      "group": "test",
+      "afterSha256": "ea5755d5b8440e7aac6ff160406f689695e574ff7def885b7da71789a6aa0a32",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/__tests__/useCatalog.test.tsx",
+      "beforeSha256": "7295c3c2ec1011937e5269f2962d7a57573a2cfb7afc7be254b46d595748616d",
+      "lines": 58,
+      "bytes": 2636,
+      "group": "test",
+      "afterSha256": "7295c3c2ec1011937e5269f2962d7a57573a2cfb7afc7be254b46d595748616d",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/__tests__/usePackVerificationAndSandbox.test.tsx",
+      "beforeSha256": "e96b4dc5b618e8278aa982c3405cfd6bcd2ae374c125491dc4ac76c58fba9787",
+      "lines": 67,
+      "bytes": 3389,
+      "group": "test",
+      "afterSha256": "e96b4dc5b618e8278aa982c3405cfd6bcd2ae374c125491dc4ac76c58fba9787",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/packRepositoryContext.tsx",
+      "beforeSha256": "52c22207361bc36fa930f2780c29a191e7e7482fc980072e4bffaf38b22e24d1",
+      "lines": 62,
+      "bytes": 2682,
+      "group": "source/support",
+      "afterSha256": "52c22207361bc36fa930f2780c29a191e7e7482fc980072e4bffaf38b22e24d1",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/queryKeys.ts",
+      "beforeSha256": "c28803fba548fad89bb1ccedadd9bbcd97ec880ea6f17d23888e501428892459",
+      "lines": 7,
+      "bytes": 461,
+      "group": "source/support",
+      "afterSha256": "c28803fba548fad89bb1ccedadd9bbcd97ec880ea6f17d23888e501428892459",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/useAuditLog.ts",
+      "beforeSha256": "532c5fd592063b2fac0e6b97f023dec18752a3aa2cf3af6c0943576d1736f073",
+      "lines": 15,
+      "bytes": 593,
+      "group": "source/support",
+      "afterSha256": "532c5fd592063b2fac0e6b97f023dec18752a3aa2cf3af6c0943576d1736f073",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/useCatalog.ts",
+      "beforeSha256": "040f23a734264334b59a3bf3a008ca55edf1a6dd9dd8018c8c7417d7312c81a5",
+      "lines": 39,
+      "bytes": 1387,
+      "group": "source/support",
+      "afterSha256": "040f23a734264334b59a3bf3a008ca55edf1a6dd9dd8018c8c7417d7312c81a5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/useInstalledPacks.ts",
+      "beforeSha256": "df83475c9d0a33c668faa7fe0129d1a0f4d48d0a10d6260a2a5ff5d1480fffe5",
+      "lines": 15,
+      "bytes": 581,
+      "group": "source/support",
+      "afterSha256": "df83475c9d0a33c668faa7fe0129d1a0f4d48d0a10d6260a2a5ff5d1480fffe5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/usePackActions.ts",
+      "beforeSha256": "5e99db02c7f17ff60ca8e25b096a71abbb24727d151963a5001bffe4b1414985",
+      "lines": 63,
+      "bytes": 2356,
+      "group": "source/support",
+      "afterSha256": "5e99db02c7f17ff60ca8e25b096a71abbb24727d151963a5001bffe4b1414985",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/usePackVerification.ts",
+      "beforeSha256": "bb9433931771ccc7fb20c47c38d16cc9662601d15f64dbec4126010d9e68f644",
+      "lines": 30,
+      "bytes": 1295,
+      "group": "source/support",
+      "afterSha256": "bb9433931771ccc7fb20c47c38d16cc9662601d15f64dbec4126010d9e68f644",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/useSandboxPreview.ts",
+      "beforeSha256": "9236f271001b68740252b3ec344677eef63cd501615673b81c478002b0a10b3c",
+      "lines": 21,
+      "bytes": 865,
+      "group": "source/support",
+      "afterSha256": "9236f271001b68740252b3ec344677eef63cd501615673b81c478002b0a10b3c",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/hooks/useTrustDecision.ts",
+      "beforeSha256": "834e2da5f4894398dfbee49f39f79c614e5f91093ee3c8407e4c00ab6ff4f51f",
+      "lines": 16,
+      "bytes": 633,
+      "group": "source/support",
+      "afterSha256": "834e2da5f4894398dfbee49f39f79c614e5f91093ee3c8407e4c00ab6ff4f51f",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/auditLog.test.ts",
+      "beforeSha256": "9d77a1e628b6f668c0228ce7d767bfeb73c440778efd85f17ba4131ba30ee7ab",
+      "lines": 27,
+      "bytes": 1204,
+      "group": "test",
+      "afterSha256": "9d77a1e628b6f668c0228ce7d767bfeb73c440778efd85f17ba4131ba30ee7ab",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/canonicalJson.test.ts",
+      "beforeSha256": "10943723450947df77a5b004afbaa54c9519034780654fda4febb0ed3452ac3a",
+      "lines": 77,
+      "bytes": 3036,
+      "group": "test",
+      "afterSha256": "10943723450947df77a5b004afbaa54c9519034780654fda4febb0ed3452ac3a",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/capabilityPolicy.test.ts",
+      "beforeSha256": "5a20af435f83b950a9ccfdbc4c867b0f8004acf5f3a3f51fd4161185be6a1a2f",
+      "lines": 66,
+      "bytes": 2917,
+      "group": "test",
+      "afterSha256": "5a20af435f83b950a9ccfdbc4c867b0f8004acf5f3a3f51fd4161185be6a1a2f",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/catalogFixtures.test.ts",
+      "beforeSha256": "6406daec59d3dbcee17fab2c7a63edf62b552f06a5e587c0c6e9d44a97b755e5",
+      "lines": 52,
+      "bytes": 2386,
+      "group": "test",
+      "afterSha256": "6406daec59d3dbcee17fab2c7a63edf62b552f06a5e587c0c6e9d44a97b755e5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/compatibility.test.ts",
+      "beforeSha256": "a4cca8e8f9b9a8a43549270361047b3d2e9ded31206acdcc79ef45ebc00c6e94",
+      "lines": 67,
+      "bytes": 2798,
+      "group": "test",
+      "afterSha256": "a4cca8e8f9b9a8a43549270361047b3d2e9ded31206acdcc79ef45ebc00c6e94",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/expressionInterpreter.test.ts",
+      "beforeSha256": "4be917a6719d55a7f2333c911d485e7fba4e755b8f9330828f546831692f01ab",
+      "lines": 130,
+      "bytes": 6703,
+      "group": "test",
+      "afterSha256": "4be917a6719d55a7f2333c911d485e7fba4e755b8f9330828f546831692f01ab",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/kvStore.test.ts",
+      "beforeSha256": "7be400187862c9bcb01f2dbcf2c83a037d1919b42b6b4ad5196de614586180eb",
+      "lines": 74,
+      "bytes": 3117,
+      "group": "test",
+      "afterSha256": "7be400187862c9bcb01f2dbcf2c83a037d1919b42b6b4ad5196de614586180eb",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/manifestImportExport.test.ts",
+      "beforeSha256": "e4b95c8f694807f0a44e2099af16e1f1bf00a7da917c07995acb03bf63611e6b",
+      "lines": 61,
+      "bytes": 2530,
+      "group": "test",
+      "afterSha256": "e4b95c8f694807f0a44e2099af16e1f1bf00a7da917c07995acb03bf63611e6b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/manifestValidator.test.ts",
+      "beforeSha256": "f16a4a2a5b1383aff5ff5b57b32c0f256c158e147d6e1b55ce3945418fed303d",
+      "lines": 295,
+      "bytes": 11405,
+      "group": "test",
+      "afterSha256": "f16a4a2a5b1383aff5ff5b57b32c0f256c158e147d6e1b55ce3945418fed303d",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/packActions.test.ts",
+      "beforeSha256": "ba751ed2835b117df8542b53e0cff56ae5a754687e80dac32c22911457292fa7",
+      "lines": 194,
+      "bytes": 9081,
+      "group": "test",
+      "afterSha256": "ba751ed2835b117df8542b53e0cff56ae5a754687e80dac32c22911457292fa7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/packCrypto.test.ts",
+      "beforeSha256": "e0fb7d579e8718aa9840b2c806ac83a077c8315f167d8da1cab0e8af5b90a29b",
+      "lines": 128,
+      "bytes": 4619,
+      "group": "test",
+      "afterSha256": "e0fb7d579e8718aa9840b2c806ac83a077c8315f167d8da1cab0e8af5b90a29b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/packRepository.test.ts",
+      "beforeSha256": "a8daae67515f51e52b37449c2f17161a0136844489fedb39874817c4b84317cf",
+      "lines": 194,
+      "bytes": 8135,
+      "group": "test",
+      "afterSha256": "a8daae67515f51e52b37449c2f17161a0136844489fedb39874817c4b84317cf",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/sandboxRunner.test.ts",
+      "beforeSha256": "5d1a77b3c1b8ba7b289fe36eb67e3a797cb049811dc017da9d9f7423cb8e5af9",
+      "lines": 104,
+      "bytes": 5294,
+      "group": "test",
+      "afterSha256": "5d1a77b3c1b8ba7b289fe36eb67e3a797cb049811dc017da9d9f7423cb8e5af9",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/trust.test.ts",
+      "beforeSha256": "670a54afe20056954be3b23600f6df9466d08fbd7124f05f3c61198fd447eaf8",
+      "lines": 71,
+      "bytes": 2832,
+      "group": "test",
+      "afterSha256": "670a54afe20056954be3b23600f6df9466d08fbd7124f05f3c61198fd447eaf8",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/__tests__/verifyEnvelope.test.ts",
+      "beforeSha256": "4f6c408847cbdcbeb78208b498e597683ed4e57055afb13a08dd544ed83feec1",
+      "lines": 111,
+      "bytes": 5665,
+      "group": "test",
+      "afterSha256": "4f6c408847cbdcbeb78208b498e597683ed4e57055afb13a08dd544ed83feec1",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/auditLog.ts",
+      "beforeSha256": "f676d434486ba53abe96537e2418e0716fe0d48c1f453c0edce671e313cd691e",
+      "lines": 52,
+      "bytes": 1070,
+      "group": "source/support",
+      "afterSha256": "f676d434486ba53abe96537e2418e0716fe0d48c1f453c0edce671e313cd691e",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/canonicalJson.ts",
+      "beforeSha256": "411162e8af1c9235ba7673b4c7d35db35b82752420d0f18b7dfd5e6590c518e7",
+      "lines": 103,
+      "bytes": 4625,
+      "group": "source/support",
+      "afterSha256": "411162e8af1c9235ba7673b4c7d35db35b82752420d0f18b7dfd5e6590c518e7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/capabilityPolicy.ts",
+      "beforeSha256": "7c57f58f5bb79896730a1509f8fc5bb8dd752153ee2dd5487422c8f24a5a4b93",
+      "lines": 54,
+      "bytes": 2245,
+      "group": "source/support",
+      "afterSha256": "7c57f58f5bb79896730a1509f8fc5bb8dd752153ee2dd5487422c8f24a5a4b93",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/catalogFixtures.ts",
+      "beforeSha256": "7d585179a4391da088e9dfe3bac1f6704bad34d48678127ddbbcc48866c4f0ee",
+      "lines": 228,
+      "bytes": 9403,
+      "group": "source/support",
+      "afterSha256": "7d585179a4391da088e9dfe3bac1f6704bad34d48678127ddbbcc48866c4f0ee",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/compatibility.ts",
+      "beforeSha256": "e4576a0be87bae3408a90fe17df5667e2da394efdeb6d34f9b62f76ee461ff06",
+      "lines": 81,
+      "bytes": 3104,
+      "group": "source/support",
+      "afterSha256": "e4576a0be87bae3408a90fe17df5667e2da394efdeb6d34f9b62f76ee461ff06",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/expressionInterpreter.ts",
+      "beforeSha256": "101f7d54aba104baa6f0ae8a2eecdadd0078efb0183c58e96f442e865648727d",
+      "lines": 148,
+      "bytes": 6275,
+      "group": "source/support",
+      "afterSha256": "101f7d54aba104baa6f0ae8a2eecdadd0078efb0183c58e96f442e865648727d",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/kvStore.ts",
+      "beforeSha256": "bcb860bd1098a7c12c2ec46df05dd2da8efe38927e31569236518de0f078f8af",
+      "lines": 153,
+      "bytes": 5559,
+      "group": "source/support",
+      "afterSha256": "bcb860bd1098a7c12c2ec46df05dd2da8efe38927e31569236518de0f078f8af",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/manifestImportExport.ts",
+      "beforeSha256": "ba5e9c63ebdbb3aec0f58501e49dc207abe3f52ce3f2005a1c7f27c3ae46910b",
+      "lines": 54,
+      "bytes": 2297,
+      "group": "source/support",
+      "afterSha256": "ba5e9c63ebdbb3aec0f58501e49dc207abe3f52ce3f2005a1c7f27c3ae46910b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/manifestTypes.ts",
+      "beforeSha256": "42409a2f0fc0f8c0988adf602624dca3ea002f37406c3dada602b825c901fbe5",
+      "lines": 284,
+      "bytes": 9524,
+      "group": "source/support",
+      "afterSha256": "42409a2f0fc0f8c0988adf602624dca3ea002f37406c3dada602b825c901fbe5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/manifestValidator.ts",
+      "beforeSha256": "7eb8c78888cb9f169b9ab2619bcce0ac6c9aadecf3a5ed40bcd137fb9398b268",
+      "lines": 537,
+      "bytes": 26085,
+      "group": "source/support",
+      "afterSha256": "7eb8c78888cb9f169b9ab2619bcce0ac6c9aadecf3a5ed40bcd137fb9398b268",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/packActions.ts",
+      "beforeSha256": "a8567a6115f0aa63e72ff8b41b2005d436c8666c1a2ebab97d8aa2c075348d3a",
+      "lines": 174,
+      "bytes": 6444,
+      "group": "source/support",
+      "afterSha256": "a8567a6115f0aa63e72ff8b41b2005d436c8666c1a2ebab97d8aa2c075348d3a",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/packCrypto.ts",
+      "beforeSha256": "7435e1fd06534f90acd723a6e82187fdaf2f6302473ba9a44c82676485317bd6",
+      "lines": 170,
+      "bytes": 7315,
+      "group": "source/support",
+      "afterSha256": "7435e1fd06534f90acd723a6e82187fdaf2f6302473ba9a44c82676485317bd6",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/packRepository.ts",
+      "beforeSha256": "6c08813734cef462a0e73cf56b92d0d8e37f1045088a974c5d1b820225a3bfa4",
+      "lines": 166,
+      "bytes": 6209,
+      "group": "source/support",
+      "afterSha256": "6c08813734cef462a0e73cf56b92d0d8e37f1045088a974c5d1b820225a3bfa4",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/sampleTelemetry.ts",
+      "beforeSha256": "b2f64b666a07d909aff3705a2a99e92252422b1b2df3e98927e70f7ffe058177",
+      "lines": 44,
+      "bytes": 1747,
+      "group": "source/support",
+      "afterSha256": "b2f64b666a07d909aff3705a2a99e92252422b1b2df3e98927e70f7ffe058177",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/sandboxRunner.ts",
+      "beforeSha256": "3255523b4ef5e336672c04bc22692a0139c455ae028697f95817bb8a2ec2e7ac",
+      "lines": 145,
+      "bytes": 5381,
+      "group": "source/support",
+      "afterSha256": "3255523b4ef5e336672c04bc22692a0139c455ae028697f95817bb8a2ec2e7ac",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/trust.ts",
+      "beforeSha256": "b67d0241f52a1e24c10090344b810e27de813c0e0fe3cc45acb7e37faaf550e7",
+      "lines": 78,
+      "bytes": 3436,
+      "group": "source/support",
+      "afterSha256": "b67d0241f52a1e24c10090344b810e27de813c0e0fe3cc45acb7e37faaf550e7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/lib/verifyEnvelope.ts",
+      "beforeSha256": "6ff3a33e32c1da36edbe0679d34112e2ac03b2014e9ef175e5a72971b1d12b10",
+      "lines": 135,
+      "bytes": 6604,
+      "group": "source/support",
+      "afterSha256": "6ff3a33e32c1da36edbe0679d34112e2ac03b2014e9ef175e5a72971b1d12b10",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/pages/IntelligencePackMarketplacePage.test.tsx",
+      "beforeSha256": "e6f148dfc1eb96ae1fe524f2f4c1a825986936a53105675485fc6b5442fafc2b",
+      "lines": 107,
+      "bytes": 5201,
+      "group": "test",
+      "afterSha256": "e6f148dfc1eb96ae1fe524f2f4c1a825986936a53105675485fc6b5442fafc2b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/pages/IntelligencePackMarketplacePage.tsx",
+      "beforeSha256": "e51842c7c6eaed6e9add3c57700bab15c6474e8b195c9cf05fe499fcadd6984e",
+      "lines": 94,
+      "bytes": 4185,
+      "group": "source/support",
+      "afterSha256": "e51842c7c6eaed6e9add3c57700bab15c6474e8b195c9cf05fe499fcadd6984e",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/intelligence-packs/pages/__tests__/IntelligencePackMarketplacePage.test.tsx",
+      "beforeSha256": "f1136311e5a02b7affaa0edd15c7706ad413fdfbc252a5334930bc9aeccd61c9",
+      "lines": 87,
+      "bytes": 3647,
+      "group": "test",
+      "afterSha256": "f1136311e5a02b7affaa0edd15c7706ad413fdfbc252a5334930bc9aeccd61c9",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "beforeSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65,
+      "bytes": 2035,
+      "group": "source/support",
+      "afterSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "beforeSha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "lines": 39002,
+      "bytes": 1843667,
+      "group": "catalog",
+      "afterSha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/i18n/en/locale-intelligence-packs.json",
+      "beforeSha256": "8d492235271e874e4999448f0ff2f49e3da3fc63c69fa042a83cb71d446b5b78",
+      "lines": 1058,
+      "bytes": 39499,
+      "group": "catalog",
+      "afterSha256": "8d492235271e874e4999448f0ff2f49e3da3fc63c69fa042a83cb71d446b5b78",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "beforeSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462,
+      "bytes": 18863,
+      "group": "source/support",
+      "afterSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "unchanged": true
+    }
+  ],
+  "finalVerification": {
+    "status": "PASS_ARTIFACT_PARSE_COUNT_LINES_AND_SOURCE_TEST_SUPPORT_PIN_CHECK_ONLY",
+    "pinFiles": 91,
+    "unchanged": 91,
+    "changed": [],
+    "pinCheckUtc": "2026-10-14T02:16:43.276555+00:00",
+    "pinScope": "77 feature files incl43 production/30 tests/testUtils/3 feature docs +14 shared/catalog supports; instructions/queue read separately, not acceptance pins",
+    "jsonParseExit": 0,
+    "pinCheckExit": 0,
+    "referenceLineCheckExit": 0,
+    "finalCheckUtc": "2026-10-14T02:17:23.244460+00:00"
+  },
+  "release": {
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-intelligence-packs-intelligence-pack-marketplace.json",
+      "web/logs/phase6-qa-intelligence-packs-intelligence-pack-marketplace.log"
+    ],
+    "commandsStillRunning": 0,
+    "sourceWriteRelease": "Source/tests/catalogs never claimed or written. Exclusive JSON/log claims RELEASED; no Git writes or running task-owned commands.",
+    "acceptance": "REPORT_ONLY_NOT_APPLICATION_RELEASE",
+    "sourceTestSupportPinsUnchanged": true,
+    "releasedUtc": "2026-10-14T02:17:23.244460+00:00",
+    "returnDeadlineMet": true
+  },
+  "summary": {
+    "confirmedRootMechanisms": 16,
+    "conditionalNativeCandidates": 9,
+    "deduplicatedNeeds": 10,
+    "countingUnit": "One source mechanism per finding ID; repeated callers/copy sinks grouped. Not an estimated count of every English literal/DOM occurrence; candidates excluded.",
+    "byRule": {
+      "catalog-fallback-mismatch": 1,
+      "disabled-semantics": 1,
+      "hardcoded-string": 1,
+      "invalid-storage-empty": 1,
+      "mobile-data-loss": 1,
+      "mutation-feedback": 1,
+      "palette-preference": 1,
+      "partial-output-loss": 1,
+      "source-state": 3,
+      "storage-durability": 1,
+      "storage-failure": 1,
+      "trust-label": 1,
+      "unknown-success": 1,
+      "verification-cache-identity": 1
+    },
+    "bySeverity": {
+      "P1": 8,
+      "P2": 7,
+      "P3": 1
+    },
+    "primaryFilesMostIssues": [
+      {
+        "file": "web/src/features/intelligence-packs/components/InstalledInventoryPanel.tsx",
+        "rootFindings": 3
+      },
+      {
+        "file": "web/src/features/intelligence-packs/components/SandboxPreviewPanel.tsx",
+        "rootFindings": 2
+      },
+      {
+        "file": "web/src/features/intelligence-packs/hooks/usePackVerification.ts",
+        "rootFindings": 1
+      },
+      {
+        "file": "web/src/features/intelligence-packs/hooks/useCatalog.ts",
+        "rootFindings": 1
+      },
+      {
+        "file": "web/src/features/intelligence-packs/hooks/usePackActions.ts",
+        "rootFindings": 1
+      }
+    ],
+    "priorities": [
+      "F01 verification identity",
+      "F02/F03 readiness/trust",
+      "F06-F09 action/persistence truth",
+      "F10 key-state truth",
+      "F12 mobile actions/audit reachability"
+    ]
+  }
+}

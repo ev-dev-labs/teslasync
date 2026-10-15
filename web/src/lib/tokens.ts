@@ -5,11 +5,9 @@
 
 // ── Neon color variants used across Badge, IconBox, Button, etc. ──
 
-export type NeonColor = 'cyan' | 'green' | 'red' | 'purple' | 'amber' | 'blue'
+export type NeonColor = 'cyan' | 'green' | 'red' | 'purple' | 'amber' | 'blue' | 'neutral'
 
-// `text` uses Tailwind 300-level shades (toned-down) for readability — the saturated
-// neon hues are reserved for backgrounds, borders, rings, glows, and single-glyph dots.
-// `:root.light-mode` overrides in index.css invert these to dark variants on white.
+// Historical variant names remain compatible; presentation uses semantic roles.
 export const neonColorMap: Record<NeonColor, {
   text: string
   bg: string
@@ -18,12 +16,13 @@ export const neonColorMap: Record<NeonColor, {
   glow: string
   dot: string
 }> = {
-  cyan:   { text: 'text-cyan-300',    bg: 'bg-neon-cyan/10',   ring: 'ring-neon-cyan/20',   border: 'border-neon-cyan/30',   glow: 'shadow-[0_0_15px_rgba(0,240,255,0.1)]',     dot: 'bg-neon-cyan' },
-  green:  { text: 'text-emerald-300', bg: 'bg-neon-green/10',  ring: 'ring-neon-green/20',  border: 'border-neon-green/30',  glow: 'shadow-[0_0_15px_rgba(16,185,129,0.1)]',    dot: 'bg-neon-green' },
-  red:    { text: 'text-rose-300',    bg: 'bg-neon-red/10',    ring: 'ring-neon-red/20',    border: 'border-neon-red/30',    glow: 'shadow-[0_0_15px_rgba(239,68,68,0.1)]',     dot: 'bg-neon-red' },
-  purple: { text: 'text-purple-300',  bg: 'bg-neon-purple/10', ring: 'ring-neon-purple/20', border: 'border-neon-purple/30', glow: 'shadow-[0_0_15px_rgba(168,85,247,0.1)]',    dot: 'bg-neon-purple' },
-  amber:  { text: 'text-amber-300',   bg: 'bg-neon-amber/10',  ring: 'ring-neon-amber/20',  border: 'border-neon-amber/30',  glow: 'shadow-[0_0_15px_rgba(245,158,11,0.1)]',    dot: 'bg-neon-amber' },
-  blue:   { text: 'text-indigo-300',  bg: 'bg-neon-blue/10',   ring: 'ring-neon-blue/20',   border: 'border-neon-blue/30',   glow: 'shadow-[0_0_15px_rgba(79,70,229,0.1)]',     dot: 'bg-neon-blue' },
+  cyan:   { text: 'text-[var(--semantic-info)]', bg: 'bg-[var(--semantic-info-bg)]', ring: 'ring-[var(--semantic-info-border)]', border: 'border-[var(--semantic-info-border)]', glow: 'shadow-none', dot: 'bg-[var(--semantic-info)]' },
+  green:  { text: 'text-[var(--semantic-success)]', bg: 'bg-[var(--semantic-success-bg)]', ring: 'ring-[var(--semantic-success-border)]', border: 'border-[var(--semantic-success-border)]', glow: 'shadow-none', dot: 'bg-[var(--semantic-success)]' },
+  red:    { text: 'text-[var(--semantic-danger)]', bg: 'bg-[var(--semantic-danger-bg)]', ring: 'ring-[var(--semantic-danger-border)]', border: 'border-[var(--semantic-danger-border)]', glow: 'shadow-none', dot: 'bg-[var(--semantic-danger)]' },
+  purple: { text: 'text-[var(--semantic-purple)]', bg: 'bg-[var(--semantic-purple-bg)]', ring: 'ring-[var(--semantic-purple-border)]', border: 'border-[var(--semantic-purple-border)]', glow: 'shadow-none', dot: 'bg-[var(--semantic-purple)]' },
+  amber:  { text: 'text-[var(--semantic-warning)]', bg: 'bg-[var(--semantic-warning-bg)]', ring: 'ring-[var(--semantic-warning-border)]', border: 'border-[var(--semantic-warning-border)]', glow: 'shadow-none', dot: 'bg-[var(--semantic-warning)]' },
+  blue:   { text: 'text-[var(--semantic-info)]', bg: 'bg-[var(--semantic-info-bg)]', ring: 'ring-[var(--semantic-info-border)]', border: 'border-[var(--semantic-info-border)]', glow: 'shadow-none', dot: 'bg-[var(--semantic-info)]' },
+  neutral: { text: 'text-[var(--text-secondary)]', bg: 'bg-[var(--surface-2)]', ring: 'ring-[var(--border-default)]', border: 'border-[var(--border-default)]', glow: 'shadow-none', dot: 'bg-[var(--text-secondary)]' },
 }
 
 // ── Semantic color aliases ──
@@ -35,7 +34,7 @@ export const semanticToNeon: Record<SemanticColor, NeonColor> = {
   warning: 'amber',
   danger: 'red',
   info: 'cyan',
-  neutral: 'blue',
+  neutral: 'neutral',
 }
 
 // ── Icon sizes ──
@@ -53,9 +52,9 @@ export type IconSize = keyof typeof iconSize
 // ── Common inline card pattern (replaces repeated class strings) ──
 
 export const glassCardClasses = {
-  sm: 'p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]',
-  md: 'p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]',
-  lg: 'p-5 rounded-xl bg-white/[0.02] border border-white/[0.06]',
+  sm: 'p-3 rounded-panel bg-[var(--panel-bg)] border border-[var(--panel-border)] shadow-e1',
+  md: 'p-4 rounded-panel bg-[var(--panel-bg)] border border-[var(--panel-border)] shadow-e1',
+  lg: 'p-5 rounded-panel bg-[var(--panel-bg)] border border-[var(--panel-border)] shadow-e1',
 } as const
 
 // ── Table styling tokens ──
@@ -64,34 +63,38 @@ export const glassCardClasses = {
 // expanded-row tokens used by DataTable's optional features.
 
 export const tableTokens = {
-  wrapper: 'w-full text-sm',
-  head: 'border-b border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-muted)] text-xs uppercase tracking-wider',
+  frame: 'min-w-0 max-w-full space-y-2 rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-3 shadow-e1',
+  toolbar: 'flex flex-wrap items-center justify-between gap-2',
+  wrapper: 'w-full border-collapse text-sm text-[var(--text-primary)]',
+  head: 'border-b border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-secondary)] text-xs normal-case tracking-normal',
   headCell: 'px-4 py-3.5 text-left font-semibold',
   body: 'divide-y divide-[var(--border-subtle)]',
-  row: 'hover:bg-[var(--surface-2)] transition-colors duration-fast',
+  row: 'align-middle even:bg-[var(--surface-2)] hover:!bg-[var(--control-bg-hover)] transition-colors duration-fast focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--text-secondary)]',
   cell: 'px-4 py-3.5',
   /** Wrapper applied when stickyHeader / maxHeight is in use — needs scroll + relative for sticky thead. */
   scrollContainer: 'relative overflow-auto rounded-panel border border-[var(--border-default)]',
   /** Applied to <thead> rows when stickyHeader is true. The bg matches GlassPanel
    *  surface so rows scrolling underneath don't bleed through. z-20 keeps the
    *  sticky thead above selected-row z-10 hover states. */
-  stickyHead: 'sticky top-0 z-20 bg-[var(--surface-elevated)] backdrop-blur-sm',
+  stickyHead: 'sticky top-0 z-20 bg-[var(--surface-2)] backdrop-blur-sm',
   /** Visual treatment for selected rows. */
-  rowSelected: 'bg-cyan-500/10 hover:bg-cyan-500/15',
+  rowSelected: '!bg-[var(--control-bg)] [&>td:first-child]:shadow-[inset_3px_0_0_var(--text-secondary)]',
+  groupStart: 'border-l border-[var(--border-subtle)]',
+  semantic: '[&_thead]:border-b [&_thead]:border-[var(--border-default)] [&_thead]:bg-[var(--surface-2)] [&_th]:px-3 [&_th]:py-2 [&_th]:font-semibold [&_th]:normal-case [&_th]:tracking-normal [&_th]:text-[var(--text-secondary)] [&_td]:px-3 [&_td]:py-2 [&_tbody_tr]:align-middle [&_tbody_tr]:border-b [&_tbody_tr]:border-[var(--border-subtle)] [&_tbody_tr:nth-child(even)]:bg-[var(--surface-2)] [&_tbody_tr:hover]:bg-[var(--control-bg-hover)] [&_tbody_tr:focus-within]:bg-[var(--control-bg-hover)]',
   /** Container for the bulk-action toolbar that appears above the table. */
   bulkBar:
     'flex flex-wrap items-center gap-2 px-3 py-2 mb-2 rounded-lg ' +
-    'border border-cyan-500/20 bg-cyan-500/[0.06] text-sm text-[var(--text-primary)]',
+    'border border-[var(--border-default)] bg-[var(--control-bg)] text-sm text-[var(--text-primary)]',
   /** Width of the leading checkbox/chevron columns. */
   leadingColWidth: 'w-10',
   /** The drag handle on the right edge of resizable column headers. */
   resizer:
     'absolute top-0 right-0 h-full w-1.5 cursor-col-resize select-none ' +
-    'opacity-0 hover:opacity-100 hover:bg-cyan-400/40 transition-opacity ' +
-    'focus-visible:opacity-100 focus-visible:bg-cyan-400/60 outline-none',
+    'opacity-0 hover:opacity-100 hover:bg-[var(--text-muted)] transition-opacity ' +
+    'focus-visible:opacity-100 focus-visible:bg-[var(--text-secondary)] outline-none',
   /** Cell holding `renderExpanded` content under an expanded row. */
   expandedCell:
-    'px-4 py-3 bg-white/[0.02] border-l-2 border-cyan-500/40',
+    'px-4 py-3 bg-[var(--surface-2)] border-l-2 border-[var(--border-default)]',
 } as const
 
 // ── Animation ──
@@ -166,6 +169,7 @@ export type MotionEasing = keyof typeof motion.easing
 export const typography = {
   /** Type scale — mirrors Tailwind. Pick by intent, not by px. */
   size: {
+    inherit: 'text-size-inherit',
     '2xs': 'text-2xs',     // 10px — micro labels, table footers
     xs: 'text-xs',         // 12px — chip text, dense table cells
     sm: 'text-sm',         // 14px — default body in dense UIs
@@ -213,19 +217,19 @@ export const typography = {
    * Use these via <Heading level="..."> / <Text variant="..."> in components/ui.
    */
   role: {
-    pageTitle: 'text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]',
-    sectionTitle: 'text-xl font-semibold tracking-tight text-[var(--text-primary)]',
-    panelTitle: 'text-lg font-semibold tracking-tight text-[var(--text-primary)]',
+    pageTitle: 'text-2xl sm:text-3xl font-bold text-[var(--text-primary)]',
+    sectionTitle: 'text-xl font-semibold text-[var(--text-primary)]',
+    panelTitle: 'text-lg font-semibold text-[var(--text-primary)]',
     subhead: 'text-sm font-medium text-[var(--text-secondary)]',
     body: 'text-sm text-[var(--text-primary)]',
     bodySm: 'text-sm text-[var(--text-secondary)]',
     caption: 'text-xs text-[var(--text-muted)]',
-    label: 'text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
-    metricValue: 'text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums',
-    metricLabel: 'text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
+    label: 'text-xs font-medium text-[var(--text-muted)]',
+    metricValue: 'text-2xl sm:text-3xl font-bold text-[var(--text-primary)] tabular-nums',
+    metricLabel: 'text-xs font-medium text-[var(--text-muted)]',
     code: 'text-xs font-mono text-[var(--text-primary)]',
     helper: 'text-xs text-[var(--text-muted)]',
-    error: 'text-xs text-rose-300',
+    error: 'text-xs text-[var(--semantic-danger)]',
   },
 } as const
 
@@ -261,32 +265,32 @@ export interface SeverityTokens {
 
 export const severityTokens: Record<Severity, SeverityTokens> = {
   info: {
-    bg: 'bg-sky-500/10',
-    border: 'border-sky-500/30',
-    fg: 'text-sky-300',
+    bg: neonColorMap.cyan.bg,
+    border: neonColorMap.cyan.border,
+    fg: neonColorMap.cyan.text,
     icon: 'Info',
-    dot: 'bg-sky-400',
+    dot: neonColorMap.cyan.dot,
   },
   warn: {
-    bg: 'bg-amber-500/10',
-    border: 'border-amber-500/30',
-    fg: 'text-amber-300',
+    bg: neonColorMap.amber.bg,
+    border: neonColorMap.amber.border,
+    fg: neonColorMap.amber.text,
     icon: 'AlertTriangle',
-    dot: 'bg-amber-400',
+    dot: neonColorMap.amber.dot,
   },
   critical: {
-    bg: 'bg-red-500/10',
-    border: 'border-red-500/30',
-    fg: 'text-red-300',
+    bg: neonColorMap.red.bg,
+    border: neonColorMap.red.border,
+    fg: neonColorMap.red.text,
     icon: 'AlertOctagon',
-    dot: 'bg-red-400',
+    dot: neonColorMap.red.dot,
   },
   success: {
-    bg: 'bg-emerald-500/10',
-    border: 'border-emerald-500/30',
-    fg: 'text-emerald-300',
+    bg: neonColorMap.green.bg,
+    border: neonColorMap.green.border,
+    fg: neonColorMap.green.text,
     icon: 'CheckCircle',
-    dot: 'bg-emerald-400',
+    dot: neonColorMap.green.dot,
   },
 }
 
@@ -314,11 +318,10 @@ export function normalizeSeverity(s: string | null | undefined): Severity {
 //   - THEME tones (`primary`, `accent`) resolve through the CSS variables the
 //     ThemeProvider rewrites, so a gauge that means "this vehicle's headline
 //     number" re-tints with the active preset.
-//   - STATUS tones (`success`…`neutral`) are deliberately FIXED colours. A
+//   - STATUS tones (`success`…`neutral`) use mode-aware semantic roles. A
 //     danger bar must read as danger on all 140 presets, so it cannot inherit
-//     an arbitrary accent. They are the same hues the chart series palette and
-//     severity tokens use, chosen for contrast against both dark and light
-//     surfaces.
+//     an arbitrary accent. They share the severity palette, independently of
+//     the categorical chart-series policy.
 //
 // Callers with a legitimately caller-defined series colour (a chart legend
 // swatch, a per-series bar) keep using the raw `color` escape hatch.
@@ -338,13 +341,13 @@ export const gaugeTone: Record<GaugeTone, string> = {
   primary: 'var(--theme-primary)',
   /** The active theme's secondary accent — follows warm/light/custom presets. */
   accent: 'var(--theme-accent)',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  info: '#0ea5e9',
-  purple: '#8b5cf6',
+  success: 'var(--semantic-success)',
+  warning: 'var(--semantic-warning)',
+  danger: 'var(--semantic-danger)',
+  info: 'var(--semantic-info)',
+  purple: 'var(--semantic-purple)',
   /** Theme-aware muted grey for "no signal" / de-emphasised readings. */
-  neutral: 'var(--text-muted)',
+  neutral: 'var(--text-secondary)',
 }
 
 /** Default tone applied when a gauge names neither a tone nor a raw colour. */
@@ -390,19 +393,18 @@ export const chartTokens = {
   /** Secondary text color inside Recharts tooltip (label key, units). */
   tooltipMutedText: 'var(--text-secondary)',
   /**
-   * Series palette for multi-line/area charts. Color-blind safe (Okabe-Ito-
-   * inspired) and identical across themes — chart series should "pop" against
-   * either light or dark backgrounds.
+   * Restrained series in the existing blue/green/amber/rose/purple/cyan/pink/
+   * lime order. The existing root color-scheme selects the presentation pair.
    */
-  series: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'] as const,
+  series: ['light-dark(#385e7e, #91b4d2)', 'light-dark(#38614f, #91b9a5)', 'light-dark(#745829, #cfb481)', 'light-dark(#83464e, #d6a0a5)', 'light-dark(#625077, #b5a8c9)', 'light-dark(#3f6268, #91bbc0)', 'light-dark(#785568, #c3a2b5)', 'light-dark(#586437, #acba91)'] as const,
   /**
    * Brush widget styling — used by `<ChartBrush>` to keep zoom-selection bars
    * consistent across pages. The fill is intentionally near-transparent so the
    * underlying overview line stays visible.
    */
   brush: {
-    stroke: '#22d3ee',
-    fill: 'rgba(255, 255, 255, 0.03)',
+    stroke: 'var(--text-secondary)',
+    fill: 'color-mix(in srgb, var(--text-secondary) 6%, transparent)',
     travellerWidth: 8,
     height: 28,
   },
@@ -412,7 +414,7 @@ export const chartTokens = {
    * (added via `<ReferenceLine>`) render identically.
    */
   cursor: {
-    stroke: 'rgba(255, 255, 255, 0.3)',
+    stroke: 'var(--text-secondary)',
     strokeWidth: 1,
     strokeDasharray: '4 2',
   },

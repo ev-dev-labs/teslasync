@@ -209,3 +209,76 @@ describe('registration lifecycle', () => {
     expect(readOverrides()).toEqual({});
   });
 });
+
+describe('provider scope and identity preservation', () => {
+  it('keeps nested providers isolated and restores the outer scope afterward', () => {
+    function ScopedReader({ id }: { id: string }) {
+      const overrides = useBreadcrumbOverrides();
+      return <div data-testid={id}>{JSON.stringify(overrides)}</div>;
+    }
+
+    render(
+      <BreadcrumbOverridesProvider>
+        <Registrar map={{ '/drives/:id': 'Outer label' }} />
+        <ScopedReader id="outer-before" />
+        <BreadcrumbOverridesProvider>
+          <Registrar map={{ '/drives/:id': 'Inner label' }} />
+          <ScopedReader id="inner" />
+        </BreadcrumbOverridesProvider>
+        <ScopedReader id="outer-after" />
+      </BreadcrumbOverridesProvider>,
+    );
+
+    expect(screen.getByTestId('outer-before')).toHaveTextContent(
+      JSON.stringify({ '/drives/:id': 'Outer label' }),
+    );
+    expect(screen.getByTestId('inner')).toHaveTextContent(
+      JSON.stringify({ '/drives/:id': 'Inner label' }),
+    );
+    expect(screen.getByTestId('outer-after')).toHaveTextContent(
+      JSON.stringify({ '/drives/:id': 'Outer label' }),
+    );
+  });
+
+  it('restores the earlier label when a winning registration resets', () => {
+    const { rerender } = render(
+      <Harness
+        registrars={[
+          { id: 'a', map: { '/drives/:id': 'Earlier label' } },
+          { id: 'b', map: { '/drives/:id': 'Winning label' } },
+        ]}
+      />,
+    );
+    expect(readOverrides()).toEqual({ '/drives/:id': 'Winning label' });
+
+    rerender(
+      <Harness
+        registrars={[
+          { id: 'a', map: { '/drives/:id': 'Earlier label' } },
+          { id: 'b', map: undefined },
+        ]}
+      />,
+    );
+    expect(readOverrides()).toEqual({ '/drives/:id': 'Earlier label' });
+  });
+
+  it('retains merged map identity when inline registration content is unchanged', () => {
+    const { result, rerender } = renderHook(
+      () => {
+        useSetBreadcrumbOverrides({ '/drives/:id': 'Same label' });
+        return useBreadcrumbOverrides();
+      },
+      { wrapper: BreadcrumbOverridesProvider },
+    );
+    const first = result.current;
+    expect(first).toEqual({ '/drives/:id': 'Same label' });
+    rerender();
+    expect(result.current).toBe(first);
+  });
+
+  it('preserves long RTL labels without truncation or recasing', () => {
+    const label = 'رحلة طويلة من المنزل إلى محطة الشحن → '.repeat(30);
+    render(<Harness registrars={[{ id: 'a', map: { '/drives/:id': label } }]} />);
+    expect(readOverrides()).toEqual({ '/drives/:id': label });
+  });
+});

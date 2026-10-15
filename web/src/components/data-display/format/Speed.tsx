@@ -1,5 +1,5 @@
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 interface SpeedProps {
@@ -13,9 +13,10 @@ interface SpeedProps {
 
 /**
  * Speed renderer that respects the user's metric/imperial preference.
- * Hover title shows the raw caller-supplied value with its source unit.
+ * Hover title shows the source-unit value at the requested display precision.
  */
 export function Speed({ mph, kmh, precision, className }: SpeedProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
   const toSpeedDisplay = (mps: number) => convertSpeedFromSI(mps, unitPrefs.speed);
@@ -26,10 +27,10 @@ export function Speed({ mph, kmh, precision, className }: SpeedProps) {
   let title: string | undefined;
   if (mph != null && Number.isFinite(mph)) {
     sourceMps = mph * 0.44704;
-    title = `${mph.toFixed(1)} mph`;
+    title = `${fmtNumber(mph, precision)} mph`;
   } else if (kmh != null && Number.isFinite(kmh)) {
     sourceMps = (kmh * 1000) / 3600;
-    title = `${kmh.toFixed(1)} km/h`;
+    title = `${fmtNumber(kmh, precision)} km/h`;
   }
 
   if (sourceMps == null) {

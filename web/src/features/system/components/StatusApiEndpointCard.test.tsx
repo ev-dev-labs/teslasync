@@ -14,11 +14,13 @@
  * Conventions mirror the sibling suites (CommandSelectDialog.test.tsx,
  * GDPRArtifactDetails.test.tsx): react-i18next is stubbed to echo the inline
  * English fallback so accessible names stay stable, the clipboard is mocked
- * (jsdom ships none), and interactions use `fireEvent` — the repo does not
- * depend on @testing-library/user-event.
+ * (jsdom ships none), and the original interactions use `fireEvent`.
+ * Additive keyboard coverage uses the installed user-event runner.
  */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { typography } from '@/lib/tokens'
 
 import {
   StatusApiEndpointCard,
@@ -27,8 +29,12 @@ import {
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: unknown) =>
-      typeof fallback === 'string' ? fallback : key,
+    t: (key: string, fallback?: unknown, options?: Record<string, unknown>) =>
+      typeof fallback === 'string'
+        ? fallback.replace(/\{\{(\w+)\}\}/g, (placeholder, name: string) =>
+            options?.[name] == null ? placeholder : String(options[name]),
+          )
+        : key,
     i18n: { language: 'en', changeLanguage: () => Promise.resolve() },
   }),
 }))
@@ -61,8 +67,8 @@ function renderCard(overrides: Partial<StatusApiEndpointCardProps> = {}) {
 }
 
 // The example accordion is collapsed by default; open it so the JSON /
-// placeholder body is mounted. Asserting the aria-expanded flip also proves
-// the toggle is keyboard-operable and correctly wired.
+// placeholder body is mounted. Asserting the aria-expanded flip proves the
+// disclosure wiring; the additive user-event case covers keyboard activation.
 async function openExample() {
   const toggle = screen.getByRole('button', { name: /Example response/ })
   expect(toggle).toHaveAttribute('aria-expanded', 'false')
@@ -180,5 +186,97 @@ describe('StatusApiEndpointCard', () => {
     expect(
       await screen.findByText('No example response available.'),
     ).toBeInTheDocument()
+  })
+})
+
+describe('StatusApiEndpointCard — theme ink and logical alignment', () => {
+  it('uses neutral theme-aware secondary ink for the endpoint path and decorative icon', () => {
+    renderCard({
+      icon: <span data-testid="endpoint-glyph">★</span>,
+    })
+
+    const path = screen.getByText('/api/v1/status')
+    const icon = screen.getByTestId('endpoint-glyph').parentElement
+    expect(path.tagName).toBe('CODE')
+    expect(path).toHaveClass(typography.family.mono, typography.color.secondary)
+    expect(icon).toHaveClass(typography.color.secondary)
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(path).not.toHaveClass('text-cyan-300')
+    expect(icon).not.toHaveClass('text-cyan-300')
+  })
+
+  it.each(['ltr', 'rtl'] as const)(
+    'keeps logical copy spacing and wrapping hooks with complete long content in %s',
+    async direction => {
+      const path = `/api/v1/status/${'component-identifier-'.repeat(12)}`
+      const query = `component=${'identifier-'.repeat(12)}&window=24h`
+      const description = 'تفاصيل نقطة النهاية الطويلة '.repeat(15)
+      const { container } = render(
+        <div dir={direction}>
+          <StatusApiEndpointCard {...makeProps({ path, query, description })} />
+        </div>,
+      )
+
+      const code = screen.getByText(path)
+      const copy = screen.getByRole('button', { name: `Copy endpoint path ${path}` })
+      expect(code).toHaveClass('min-w-0', 'break-all')
+      expect(code.parentElement).toHaveClass('flex', 'flex-wrap')
+      expect(copy).toHaveClass('ms-auto', 'shrink-0')
+      expect(copy).not.toHaveClass('ml-auto')
+      expect(copy).toHaveAttribute('type', 'button')
+      expect(screen.getByText(`?${query}`)).toHaveClass('break-all')
+      expect(screen.getByText(`?${query}`).parentElement).toHaveClass('flex-wrap')
+      expect(screen.getByText(description.trim())).toHaveTextContent(description.trim())
+      expect(screen.getByText('GET')).toBeInTheDocument()
+      expect(container.querySelector('[data-print-card]')).toHaveClass('h-full', 'flex-col')
+
+      fireEvent.click(copy)
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(path))
+      expect(copy).toHaveAccessibleName(`Copy endpoint path ${path}`)
+      expect(await screen.findByText('Copied')).toHaveAttribute('aria-live', 'polite')
+    },
+  )
+
+  it('preserves keyboard copy, disclosure focus and every serialized response field', async () => {
+    const user = userEvent.setup({ writeToClipboard: false })
+    const clipboardWrite = vi.fn(() => Promise.resolve())
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: clipboardWrite },
+    })
+    const example = {
+      status: 'operational',
+      resources: { uptime_seconds: 0, goroutines: 999999 },
+      healthy: false,
+      absent: null,
+      signed: -2,
+      components: [{ name: 'mqtt', state: 'unknown' }],
+      incidents: [],
+    }
+    const { container } = renderCard({ example })
+    const copy = screen.getByRole('button', { name: 'Copy endpoint path /api/v1/status' })
+    const toggle = screen.getByRole('button', { name: 'Example response' })
+
+    await user.tab()
+    expect(copy).toHaveFocus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(clipboardWrite).toHaveBeenCalledWith('/api/v1/status'))
+    expect(clipboardWrite).toHaveBeenCalledTimes(1)
+
+    await user.tab()
+    expect(toggle).toHaveFocus()
+    await user.keyboard(' ')
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    const region = await screen.findByRole('region', { name: 'Example response' })
+    expect(region.id).toBe(toggle.getAttribute('aria-controls'))
+    expect(toggle).toHaveFocus()
+    const pre = container.querySelector('pre')
+    expect(pre?.textContent).toBe(JSON.stringify(example, null, 2))
+    expect(pre).toHaveClass('max-h-72', 'overflow-auto', typography.color.secondary)
+
+    await user.keyboard(' ')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle).toHaveFocus()
+    await waitFor(() => expect(container.querySelector('pre')).toBeNull())
   })
 })

@@ -93,6 +93,92 @@ describe('resolveDashboardWidgetResults', () => {
       expect(r.widgetId).toBe(dashboard.widgets[i].id);
       expect(r.result?.formulaId).toBe(dashboard.widgets[i].formulaRef);
     });
+
+    describe('runSandboxPreview — interrupted formula partial rows', () => {
+      it.each([
+        'exceeded 20000 total node evaluations.',
+        'exceeded the wall-clock time budget.',
+      ])('retains completed rows and shared budgets after %s', async (reason) => {
+        const { vi } = await import('vitest');
+        const interpreter = await import('../expressionInterpreter');
+        const budgetError = new interpreter.ExpressionBudgetExceededError(reason);
+        const evaluate = vi.spyOn(interpreter, 'evaluateExpr');
+        const clock = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+        let calls = 0;
+        evaluate.mockImplementation((_expr, row, _coefficients, _budget, steps) => {
+          steps.count += 1;
+          calls += 1;
+          if (calls > 17) throw budgetError;
+          return row.day_index ?? 0;
+        });
+
+        try {
+          const fixture: PackManifest = {
+            ...manifest,
+            formulas: ['complete', 'interrupted', 'remaining'].map((id) => ({
+              id,
+              label: id,
+              expr: { op: 'field', name: 'day_index' },
+            })),
+          };
+          const result = runSandboxPreview(fixture, allCapabilities);
+          expect(result.formulas.map((formula) => formula.formulaId)).toEqual(['complete', 'interrupted', 'remaining']);
+          expect(result.formulas[0].series).toEqual(Array.from({ length: 14 }, (_, i) => i + 1));
+          expect(result.formulas[0].budgetError).toBeNull();
+          expect(result.formulas[1]).toMatchObject({
+            series: [1, 2, 3],
+            latest: 3,
+            average: 2,
+            budgetError: budgetError.message,
+          });
+          expect(result.formulas[2]).toMatchObject({
+            series: [],
+            latest: null,
+            average: null,
+            budgetError: budgetError.message,
+          });
+          expect(result.truncated).toBe(true);
+          expect(result.rowsUsed).toBe(14);
+          expect(result.totalStepsUsed).toBe(19);
+          const sharedBudget = evaluate.mock.calls[0][3];
+          const sharedSteps = evaluate.mock.calls[0][4];
+          expect(sharedBudget.maxSteps).toBe(SANDBOX_BUDGETS.maxTotalSteps);
+          expect(sharedBudget.deadlineAtMs).toBe(1_000 + SANDBOX_BUDGETS.maxDurationMs);
+          for (const call of evaluate.mock.calls) {
+            expect(call[3]).toBe(sharedBudget);
+            expect(call[4]).toBe(sharedSteps);
+          }
+        } finally {
+          evaluate.mockRestore();
+          clock.mockRestore();
+        }
+      });
+
+      it('preserves the unexpected-error result instead of exposing incomplete values as a budget interruption', async () => {
+        const { vi } = await import('vitest');
+        const interpreter = await import('../expressionInterpreter');
+        const evaluate = vi.spyOn(interpreter, 'evaluateExpr');
+        evaluate.mockReturnValueOnce(42).mockImplementation(() => {
+          throw new Error('Unexpected fixture failure');
+        });
+
+        try {
+          const result = runSandboxPreview({
+            ...manifest,
+            formulas: [{ id: 'unexpected', label: 'Unexpected', expr: { op: 'const', value: 42 } }],
+          }, allCapabilities);
+          expect(result.formulas[0]).toMatchObject({
+            series: [],
+            latest: null,
+            average: null,
+            budgetError: 'Unexpected evaluation error.',
+          });
+          expect(result.truncated).toBe(false);
+        } finally {
+          evaluate.mockRestore();
+        }
+      });
+    });
   });
 
   it('returns null result for a widget whose formulaRef somehow was not run', () => {

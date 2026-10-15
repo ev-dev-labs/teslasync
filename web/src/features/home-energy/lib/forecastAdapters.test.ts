@@ -85,6 +85,53 @@ describe('buildSolarForecast', () => {
 });
 
 describe('buildLoadForecast', () => {
+  const options = { startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 4 };
+
+  it.each([null, undefined, []])('does not invent a measured load series from missing history (%j)', (history) => {
+    expect(buildLoadForecast(history, options)).toMatchObject({
+      seriesW: [], confidence: 0, quality: 'none', sourceSampleCount: 0,
+      latestSampleIso: null, sourceQuality: 'missing',
+    });
+  });
+
+  it('ignores invalid values and timestamps without treating them as measured zero', () => {
+    const history = [
+      entry({ timestamp: options.startTimeIso }),
+      entry({ timestamp: options.startTimeIso, consumer_energy_wh: undefined }),
+      entry({ timestamp: options.startTimeIso, consumer_energy_wh: NaN }),
+      entry({ timestamp: options.startTimeIso, consumer_energy_wh: Infinity }),
+      entry({ timestamp: options.startTimeIso, consumer_energy_wh: -Infinity }),
+      entry({ timestamp: 'invalid', consumer_energy_wh: 0 }),
+      entry({ timestamp: options.startTimeIso, solar_energy_wh: 500 }),
+    ];
+    expect(buildLoadForecast(history, options)).toMatchObject({
+      seriesW: [], confidence: 0, quality: 'none', sourceSampleCount: 0,
+      latestSampleIso: null, sourceQuality: 'missing',
+    });
+  });
+
+  it.each([
+    null, undefined, [],
+    [entry({ timestamp: options.startTimeIso, consumer_energy_wh: NaN })],
+  ])('discloses an explicitly assumed zero-load scenario without claiming source observations (%j)', (history) => {
+    expect(buildLoadForecast(history, { ...options, assumeZeroLoad: true })).toMatchObject({
+      seriesW: [0, 0, 0, 0], confidence: 0, quality: 'none', sourceSampleCount: 0,
+      latestSampleIso: null, sourceQuality: 'assumed-zero',
+    });
+  });
+
+  it.each([0, -5, 5, -0.125, 0.125])('retains measured signed and fractional energy %s Wh', (wh) => {
+    const history = [entry({ timestamp: options.startTimeIso, consumer_energy_wh: wh })];
+    const result = buildLoadForecast(history, { ...options, assumeZeroLoad: true });
+    expect(result).toMatchObject({
+      quality: 'low', sourceSampleCount: 1,
+      latestSampleIso: options.startTimeIso, sourceQuality: 'measured',
+    });
+    expect(result.confidence).toBeGreaterThan(0);
+    expect(result.seriesW).toHaveLength(4);
+    for (const power of result.seriesW) expect(power).toBeCloseTo(wh * 12, 10);
+  });
+
   it('reads consumer_energy_wh independently of the solar field', () => {
     const day = buildSyntheticDay('2024-06-01T00:00:00.000Z', 6000);
     const result = buildLoadForecast(day, { startTimeIso: '2024-06-01T00:00:00.000Z', slotMinutes: 15, horizonSlots: 4 });

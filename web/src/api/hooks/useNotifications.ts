@@ -92,7 +92,8 @@ export const notificationKeys = {
       },
     ] as const,
   priorityAlerts: ['alerts', 'priority'] as const,
-  alertHistory: (limit: number) => ['alerts', 'history', limit] as const,
+  alertHistory: (limit: number, scope: AlertListScope = {}) =>
+    ['alerts', 'history', limit, scope] as const,
   alertDetail: (id: number) => ['alerts', 'detail', id] as const,
   alertRules: ['alert-rules'] as const,
   packInstallations: ['alert-pack-installations'] as const,
@@ -109,10 +110,11 @@ export const notificationKeys = {
     ['notification-logs', 'count', grouped, filters ?? {}] as const,
   // Grouped/threaded inbox cache sits beside `logsFiltered` so a
   // same-filter swap between flat and grouped views doesn't fight the cache.
-  // Members of a single group reuse `logsFiltered` keyed on `{ group_key }`
-  // so expand-row payloads dedupe with matching flat-list queries.
+  // Complete member arrays must not share a cache with one flat-list page.
   groups: (filters?: NotificationFilters) =>
     ['notification-logs', 'groups', filters ?? {}] as const,
+  groupMembers: (filters: NotificationFilters) =>
+    ['notification-logs', 'group-members', filters] as const,
   // Bell preview cache is keyed only by `limit` so every Layout mount
   // reuses the same entry. It sits under the `notification-logs` prefix so
   // bulk mark-read invalidation cascades into it without bespoke wiring.
@@ -268,16 +270,61 @@ export function usePriorityAlerts() {
   });
 }
 
-/**
- * Fetches the largest backend-supported alert page for analytical views.
- * Ordinary inbox consumers keep the lightweight polling query above.
- */
-export function useAlertHistory(limit = 1000) {
+/** Fetches complete, cursor-paginated alert history for analytical views. */
+export function useAlertHistory(limit = 1000, scope: AlertListScope = {}, enabled = true) {
   const boundedLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
   return useQuery({
-    queryKey: notificationKeys.alertHistory(boundedLimit),
-    queryFn: ({ signal }) =>
-      request<Alert[]>(`/alerts?limit=${boundedLimit}`, { signal }),
+    queryKey: notificationKeys.alertHistory(boundedLimit, scope),
+    enabled,
+    queryFn: async ({ signal }) => {
+      if (!Number.isFinite(limit) || limit <= 0) {
+        throw new Error('Alert history requires a finite positive page limit');
+      }
+      if (scope.vehicle_id != null
+        && (!Number.isSafeInteger(scope.vehicle_id) || scope.vehicle_id <= 0)) {
+        throw new Error('Alert history requires a positive integer vehicle ID');
+      }
+      const from = scope.from == null ? undefined : Date.parse(scope.from);
+      const to = scope.to == null ? undefined : Date.parse(scope.to);
+      if ((from != null && !Number.isFinite(from))
+        || (to != null && !Number.isFinite(to))
+        || (from != null && to != null && from > to)) {
+        throw new Error('Alert history requires valid ordered date bounds');
+      }
+      const alerts: Alert[] = [];
+      let cursor: Pick<Alert, 'created_at' | 'id'> | undefined;
+      for (;;) {
+        const query = serializeAlertListScope(scope, {
+          limit: boundedLimit,
+          before_created_at: cursor?.created_at,
+          before_id: cursor?.id,
+        });
+        const page = await request<Alert[]>(`/alerts?${query}`, { signal });
+        if (!Array.isArray(page)) {
+          throw new Error('Alert history response is not an array');
+        }
+        if (page.some((alert) => !alert || !Number.isSafeInteger(alert.id) || alert.id <= 0
+          || typeof alert.created_at !== 'string' || !Number.isFinite(Date.parse(alert.created_at))
+          || typeof alert.severity !== 'string' || !alert.severity
+          || !Number.isSafeInteger(alert.vehicle_id) || alert.vehicle_id < 0
+          || (alert.all_vehicles != null && typeof alert.all_vehicles !== 'boolean')
+          || (alert.vehicle_ids != null && (!Array.isArray(alert.vehicle_ids)
+            || alert.vehicle_ids.some((id) => !Number.isSafeInteger(id) || id <= 0))))) {
+          throw new Error('Alert history response contains invalid alert fields');
+        }
+        alerts.push(...page);
+        if (page.length < boundedLimit) return alerts;
+        const last = page[page.length - 1];
+        if (!last || !Number.isSafeInteger(last.id) || last.id <= 0
+          || !Number.isFinite(Date.parse(last.created_at))
+          || (cursor && (Date.parse(last.created_at) > Date.parse(cursor.created_at)
+            || (Date.parse(last.created_at) === Date.parse(cursor.created_at)
+              && last.id >= cursor.id)))) {
+          throw new Error('Alert history cursor did not advance');
+        }
+        cursor = { created_at: last.created_at, id: last.id };
+      }
+    },
     staleTime: STALE_TIMES.MODERATE,
     select: safeArray,
   });
@@ -949,6 +996,8 @@ export function useNotificationGroups(
  * Inherits filters (severity/vehicle/from/to/etc.) from the parent inbox so
  * the expanded list mirrors the same window the user is viewing — anything
  * that didn't make it into the group's `count` won't show up here either.
+ * Parent limit/offset paginate threads, not their members. Read member pages
+ * with the existing created_at/id cursor and return the original flat shape.
  */
 export function useGroupMembers(
   groupKey: string | null | undefined,
@@ -957,14 +1006,31 @@ export function useGroupMembers(
 ) {
   const trimmed = (groupKey ?? '').trim();
   const enabled = trimmed.length > 0 && (options?.enabled ?? true);
-  const merged: NotificationFilters = { ...filters, group_key: trimmed };
+  const merged: NotificationFilters = { ...filters, group_key: trimmed, limit: ANALYSIS_PAGE_SIZE, offset: 0 };
   const qs = serializeNotificationFilters(merged);
   return useQuery({
-    queryKey: enabled
-      ? notificationKeys.logsFiltered(merged)
-      : ['notification-logs', 'group-members', 'disabled'],
-    queryFn: ({ signal }) =>
-      request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`, { signal }),
+    queryKey: notificationKeys.groupMembers(merged),
+    queryFn: async ({ signal }): Promise<NotificationLog[]> => {
+      const members: NotificationLog[] = [];
+      let cursor: Pick<NotificationLog, 'created_at' | 'id'> | undefined;
+      for (;;) {
+        const params = new URLSearchParams(qs);
+        if (cursor) {
+          params.set('before_created_at', cursor.created_at);
+          params.set('before_id', String(cursor.id));
+        }
+        const page = await request<NotificationLog[]>(`/notifications/logs?${params}`, { signal });
+        if (!Array.isArray(page)) throw new Error('Invalid notification members response');
+        members.push(...page);
+        if (page.length < ANALYSIS_PAGE_SIZE) return members;
+        const last = page[page.length - 1]!;
+        if (!last.created_at || !Number.isSafeInteger(last.id) || last.id <= 0 ||
+            (cursor && cursor.created_at === last.created_at && cursor.id === last.id)) {
+          throw new Error('Notification member cursor did not advance');
+        }
+        cursor = { created_at: last.created_at, id: last.id };
+      }
+    },
     enabled,
     select: safeArray,
     staleTime: STALE_TIMES.QUICK,
@@ -1296,6 +1362,7 @@ export function useSaveChannel() {
     },
     onSuccess: (_data, vars) => {
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.channels });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.stats });
       const isUpdate = 'id' in vars && typeof vars.id === 'number';
       success(
         isUpdate ? 'toast.channels.save.updated' : 'toast.channels.save.created',
@@ -1308,43 +1375,40 @@ export function useSaveChannel() {
 
 export function useDeleteChannel() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  // ChannelCard owns feedback; keep cache invalidation here without a second toast.
   return useMutation({
     mutationFn: (id: number) =>
       request<void>(`/notifications/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.channels });
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.stats });
-      success('toast.channels.delete.success', 'Channel deleted');
     },
-    onError: (e) => error(e, 'toast.channels.delete.error', 'Failed to delete channel'),
   });
 }
 
 export function useToggleChannel() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  // ChannelCard owns state-specific feedback and releases its latch on settlement.
   return useMutation({
     mutationFn: (id: number) =>
       request<NotificationChannel>(`/notifications/${id}/toggle`, { method: 'POST' }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.channels });
       invalidateAndBroadcast(qc, { queryKey: notificationKeys.stats });
-      success('toast.channels.toggle.success', 'Channel toggled');
     },
-    onError: (e) => error(e, 'toast.channels.toggle.error', 'Failed to toggle channel'),
   });
 }
 
 export function useTestChannel() {
-  const { success, error } = useMutationToast();
+  // The card and modal own feedback so each attempt produces only one toast.
   return useMutation({
-    mutationFn: (id: number) =>
-      request<{ success: boolean; error?: string }>(`/notifications/${id}/test`, { method: 'POST' }),
-    onSuccess: () => {
-      success('toast.channels.test.success', 'Test notification sent');
+    mutationFn: async (id: number) => {
+      const result = await request<{ success: boolean; error?: string }>(
+        `/notifications/${id}/test`, { method: 'POST' },
+      );
+      if (!result.success) throw new Error(result.error);
+      return result;
     },
-    onError: (e) => error(e, 'toast.channels.test.error', 'Failed to send test'),
   });
 }
 

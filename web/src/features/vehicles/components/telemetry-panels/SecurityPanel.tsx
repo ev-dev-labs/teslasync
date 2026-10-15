@@ -75,7 +75,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled, remoteStartAct
                   unknown (null). Unknown reads "Unknown", not "Inactive". */}
               <div className="flex items-center justify-between">
                 <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-                  <Eye className="h-3 w-3" aria-hidden="true" /> {t('telemetry.sentryMode', 'Sentry Mode')}
+                  <Eye className="h-3 w-3" aria-hidden="true" /> {t('telemetry.sentryMode', 'Sentry mode')}
                 </span>
                 <span
                   className={cn(
@@ -118,7 +118,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled, remoteStartAct
                   unknown (null → em-dash). */}
               <div className="flex items-center justify-between">
                 <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-                  <User className="h-3 w-3" aria-hidden="true" /> {t('telemetry.userPresent', 'User Present')}
+                  <User className="h-3 w-3" aria-hidden="true" /> {t('telemetry.userPresent', 'User present')}
                 </span>
                 <span
                   className={cn(
@@ -147,7 +147,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled, remoteStartAct
           {/* Remote Start access */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-              <KeyRound className="h-3 w-3" aria-hidden="true" /> {t('telemetry.remoteStart', 'Remote Start')}
+              <KeyRound className="h-3 w-3" aria-hidden="true" /> {t('telemetry.remoteStart', 'Remote start')}
             </span>
             <span
               className={cn(
@@ -168,7 +168,7 @@ export function SecurityPanel({ securityData, remoteStartEnabled, remoteStartAct
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-              <KeyRound className="h-3 w-3" aria-hidden="true" /> {t('telemetry.remoteStartActive', 'Remote Start Active')}
+              <KeyRound className="h-3 w-3" aria-hidden="true" /> {t('telemetry.remoteStartActive', 'Remote start active')}
             </span>
             <span
               className={cn(

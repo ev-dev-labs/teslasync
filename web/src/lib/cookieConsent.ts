@@ -81,39 +81,45 @@ function dispatchChange(state: ConsentState): void {
 }
 
 /**
- * Persists the user's explicit consent decision and notifies in-tab
+ * Returns whether persistence succeeded and notifies in-tab
  * subscribers via {@link CONSENT_CHANGED_EVENT}. Cross-tab listeners
  * pick the change up via the native `storage` event.
  */
-export function setConsent(state: 'accepted' | 'declined'): void {
+export function setConsent(state: 'accepted' | 'declined'): boolean {
   const ls = safeLocalStorage()
   if (!ls) {
     dispatchChange(state)
-    return
+    return false
   }
+  let persisted = false
   try {
     ls.setItem(CONSENT_STORAGE_KEY, state)
+    persisted = true
   } catch {
     // Quota / private-mode failures are silent by design.
   }
   dispatchChange(state)
+  return persisted
 }
 
 /**
  * Clears any stored consent decision so the next `getConsent()` call
  * returns `unknown`. Used by the Privacy settings panel ("Reset")
- * and by tests.
+ * and by tests. Returns whether removal succeeded.
  */
-export function clearConsent(): void {
+export function clearConsent(): boolean {
   const ls = safeLocalStorage()
+  let persisted = false
   if (ls) {
     try {
       ls.removeItem(CONSENT_STORAGE_KEY)
+      persisted = true
     } catch {
       // Silent — see safeLocalStorage rationale above.
     }
   }
   dispatchChange('unknown')
+  return persisted
 }
 
 /**

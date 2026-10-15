@@ -17,7 +17,8 @@
  *   5. Wake failure → the error message is surfaced via an error toast.
  *   6. Live-state failure (the regression this file also fixes) → a failed
  *      `/state` read renders <QueryError> with a working Retry instead of an
- *      infinite skeleton, and the state-gated sections stay unmounted.
+ *      infinite skeleton. Only live-state consumers remain unavailable;
+ *      independent systems/history/configuration/settings stay mounted.
  *   7. Invalid route id → every query is disabled (no network), title falls back.
  *
  * Strategy (mirrors web/src/features/driving/pages/DrivetrainHealthPage.test.tsx):
@@ -38,7 +39,7 @@
  * page tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -82,6 +83,8 @@ const H = vi.hoisted(() => {
     requestMock: vi.fn(),
     toastSuccess: vi.fn(),
     toastError: vi.fn(),
+    operational: { canWrite: true, writeBlockReason: null as string | null },
+    online: true,
     settingsRef: { current: undefined as unknown },
     liveState: {
       status: 'connected' as const,
@@ -132,6 +135,8 @@ vi.mock('@/components/feedback/Toast', async () => {
 })
 
 vi.mock('@/hooks/useLiveConnection', () => ({ useLiveConnection: () => H.liveState }))
+vi.mock('@/hooks/useOperationalMode', () => ({ useOperationalMode: () => H.operational }))
+vi.mock('@/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => H.online }))
 
 // Stub the 14 sections so we can capture the exact props the page computed.
 // VehicleHeader is a clickable button so the wake path can be driven.
@@ -170,6 +175,22 @@ vi.mock('../components/vehicle-detail', async () => {
     QuickLinksSection: stub('QuickLinksSection', 'sec-quick-links'),
   }
 })
+
+// The security and chart mounts now live in the owned modernization area.
+// Keep their original semantic test IDs and prop assertions; only relocate
+// these orchestration doubles, leaving the actual shared layout/state adapters.
+vi.mock('../components/modernization/VehicleSecurityPanel', () => ({
+    VehicleSecurityPanel: (props: Record<string, unknown>) => {
+      H.captured.SecuritySection = props
+      return <div data-testid="sec-security" />
+    },
+}))
+vi.mock('../components/modernization/VehicleDetailCharts', () => ({
+    VehicleDetailCharts: (props: Record<string, unknown>) => {
+      H.captured.BatteryRangeCharts = props
+      return <div data-testid="sec-battery-charts" />
+    },
+}))
 
 vi.mock('../components/VehicleSettingsTab', async () => {
   const React = await vi.importActual<typeof import('react')>('react')
@@ -276,7 +297,7 @@ function renderPage(route = '/vehicles/1') {
       mutations: { retry: false },
     },
   })
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]}>
         <Routes>
@@ -285,6 +306,7 @@ function renderPage(route = '/vehicles/1') {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return { ...view, client }
 }
 
 const ALL_SECTION_IDS = [
@@ -311,6 +333,8 @@ beforeEach(() => {
   H.toastSuccess.mockReset()
   H.toastError.mockReset()
   H.captured = {}
+  H.operational = { canWrite: true, writeBlockReason: null }
+  H.online = true
   // Default: a nickname override is present so the title-override path runs.
   H.settingsRef.current = {
     settings: [{ key: 'nickname', value: 'My Roadster', source: 'override' }],
@@ -330,6 +354,11 @@ describe('VehicleDetailPage', () => {
     renderPage()
 
     expect(await screen.findByTestId('vehicle-detail-skeleton')).toBeInTheDocument()
+    const title = screen.getByRole('heading', { name: 'Vehicle detail', level: 1 })
+    expect(title).toHaveAttribute('data-route-focus-target', 'true')
+    expect(title).toHaveAttribute('tabindex', '-1')
+    expect(title.closest('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     // No live sections should leak through while the record loads.
     expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
   })
@@ -341,7 +370,7 @@ describe('VehicleDetailPage', () => {
 
       expect(await screen.findByText('Vehicle not found')).toBeInTheDocument()
       expect(
-        screen.getByRole('link', { name: 'Back to Vehicles' }),
+        screen.getByRole('link', { name: 'Back to vehicles' }),
       ).toHaveAttribute('href', '/vehicles')
       // Queries stay disabled: no record fetch, no skeleton, no sections.
       const paths = H.requestMock.mock.calls.map((c: unknown[]) => String(c[0]))
@@ -355,18 +384,27 @@ describe('VehicleDetailPage', () => {
     renderPage()
 
     // Title uses the nickname override; subtitle uses model + trim badging.
-    expect(await screen.findByRole('heading', { name: 'My Roadster' })).toBeInTheDocument()
+    const title = await screen.findByRole('heading', { name: 'My Roadster' })
+    expect(title).toBeInTheDocument()
+    const header = title.closest('[data-role="page-header"]')
+    expect(header).toHaveClass('border-0', 'bg-transparent')
+    expect(screen.getByTestId('wake-btn').closest('[data-role="page-header"]')).toBe(header)
+    expect(screen.getByTestId('wake-btn').closest('[data-tour="vehicle-detail-tabs"]')).toHaveClass('min-w-0', 'max-w-full')
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
     expect(screen.getByText('Model 3 Performance')).toBeInTheDocument()
 
     // Every section + the settings tab + the paint preview must mount — no
     // gutted / hidden panels.
-    for (const id of ALL_SECTION_IDS) {
-      expect(screen.getByTestId(id)).toBeInTheDocument()
-    }
+    await waitFor(() => {
+      for (const id of ALL_SECTION_IDS) {
+        expect(screen.getByTestId(id)).toBeInTheDocument()
+      }
+    })
 
     // deriveStatus(state): is_charging === true → 'charging'.
     expect(H.captured.QuickStatsGrid?.status).toBe('charging')
     expect(H.captured.VehicleHeader?.status).toBe('charging')
+    expect(screen.getByLabelText('Live')).toHaveAttribute('data-provenance', 'live')
 
     // Live objects flow through by reference; software_version passes through.
     expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
@@ -374,6 +412,10 @@ describe('VehicleDetailPage', () => {
     expect(H.captured.MotorSection?.motorData).toBe(MOTOR)
     expect(H.captured.RecentDrivesSection?.drives).toBe(DRIVES)
     expect(H.captured.RecentChargesSection?.sessions).toBe(SESSIONS)
+    expect(H.captured.SecuritySection?.securityData).toBe(SECURITY)
+    expect(H.captured.SecuritySection?.state).toBe(STATE)
+    expect(H.captured.BatteryRangeCharts?.state).toBe(STATE)
+    expect(H.captured.BatteryRangeCharts?.drives).toBe(DRIVES)
 
     // Both vehicle-scoped children get the numeric id parsed from the route.
     expect(H.captured.VehicleSettingsTab?.vehicleId).toBe(1)
@@ -389,6 +431,92 @@ describe('VehicleDetailPage', () => {
     expect(screen.queryByRole('heading', { name: 'My Roadster' })).not.toBeInTheDocument()
   })
 
+  it.each([undefined, null, 'not-a-timestamp'])(
+    'does not turn receive time into observation evidence when observed_at is %s',
+    async (observed_at) => {
+      const response = { ...STATE_RESPONSE, observed_at, freshness: 'fresh', verified_fields: ['battery_level'] }
+      H.requestMock.mockImplementation((path: string, options?: unknown) =>
+        path === '/vehicles/1/state' ? Promise.resolve(response) : defaultRequest(path, options),
+      )
+      const { client } = renderPage()
+
+      await waitFor(() => expect(H.captured.BatteryRangePanel?.state).toBe(STATE))
+      expect(client.getQueryData(['vehicle-state', 1])).toBe(response)
+      expect(client.getQueryState(['vehicle-state', 1])?.dataUpdatedAt).toBeGreaterThan(0)
+      expect(screen.getByText('No verified observation time for this vehicle')).toBeInTheDocument()
+      expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'partial')
+      expect(screen.getByLabelText('Live')).not.toHaveAttribute('title', expect.stringContaining('Last updated:'))
+      expect(H.captured.SecuritySection?.state).toBe(STATE)
+    },
+  )
+
+  it('keeps old observation evidence and raw readings through successful polling and failed refresh', async () => {
+    const observed_at = new Date(Date.now() - 10 * 60_000).toISOString()
+    const response = {
+      ...STATE_RESPONSE, observed_at, freshness: 'fresh',
+      verified_fields: ['battery_level', 'is_charging'],
+    }
+    H.requestMock.mockImplementation((path: string, options?: unknown) =>
+      path === '/vehicles/1/state' ? Promise.resolve(response) : defaultRequest(path, options),
+    )
+    const { client } = renderPage()
+    await waitFor(() => expect(H.captured.BatteryRangePanel?.state).toBe(STATE))
+    expect(screen.getByText('Last real observation 10m ago')).toHaveAttribute('title', observed_at)
+    expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'stale')
+
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['vehicle-state', 1], exact: true })
+    })
+    expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'stale')
+    expect(client.getQueryData(['vehicle-state', 1])).toBe(response)
+
+    H.requestMock.mockImplementation((path: string, options?: unknown) =>
+      path === '/vehicles/1/state'
+        ? Promise.reject(new ApiError('State refresh failed', 500))
+        : defaultRequest(path, options),
+    )
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['vehicle-state', 1], exact: true })
+    })
+    await waitFor(() => expect(screen.getByLabelText('Cached')).toHaveAttribute('data-data-status', 'stale'))
+    expect(screen.getByText('Last real observation 10m ago')).toHaveAttribute('title', observed_at)
+    for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+    expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
+    expect(H.captured.BatteryRangeCharts?.state).toBe(STATE)
+    expect(H.captured.SecuritySection?.state).toBe(STATE)
+    expect(H.captured.VehicleHeader?.status).toBe('charging')
+  })
+
+  it('ages a verified observation without replacing it with the newer receive time', async () => {
+    const now = Date.now()
+    const response = {
+      ...STATE_RESPONSE, observed_at: new Date(now).toISOString(), freshness: 'fresh',
+      verified_fields: ['battery_level', 'is_charging'],
+    }
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(now)
+    try {
+      H.requestMock.mockImplementation((path: string, options?: unknown) =>
+        path === '/vehicles/1/state' ? Promise.resolve(response) : defaultRequest(path, options),
+      )
+      const { client } = renderPage()
+      await waitFor(() => expect(H.captured.BatteryRangePanel?.state).toBe(STATE))
+      expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'ok')
+      expect(screen.getByText('Last real observation 0s ago')).toBeInTheDocument()
+
+      clock.mockReturnValue(now + 3 * 60_000)
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: ['vehicle-state', 1], exact: true })
+      })
+      await waitFor(() => expect(screen.getByLabelText('Live')).toHaveAttribute('data-data-status', 'stale'))
+      expect(screen.getByText('Last real observation 3m ago')).toBeInTheDocument()
+      expect(client.getQueryState(['vehicle-state', 1])?.dataUpdatedAt).toBe(now + 3 * 60_000)
+      expect(client.getQueryData(['vehicle-state', 1])).toBe(response)
+      expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
   it('sends the wake command and shows a success toast', async () => {
     renderPage()
 
@@ -402,6 +530,74 @@ describe('VehicleDetailPage', () => {
     expect(H.toastError).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['historical', false, true, 'Return to live mode before making operational changes.'],
+    ['offline', true, false, 'Reconnect before making operational changes.'],
+  ] as const)('blocks wake in %s mode without queueing or hiding populated sections', async (_mode, canWrite, online, reason) => {
+    H.operational = { canWrite, writeBlockReason: canWrite ? null : reason }
+    H.online = online
+    const { rerender, client } = renderPage()
+    const button = await screen.findByTestId('wake-btn')
+    expect(button).toBeDisabled()
+    expect(screen.getByText(reason)).toHaveAttribute('id', 'vehicle-wake-blocked')
+    expect(button.closest('fieldset')).toHaveAttribute('aria-describedby', 'vehicle-wake-blocked')
+    await waitFor(() => {
+      for (const id of ALL_SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument()
+    })
+
+    // Also exercise the callback guard independently of native disabled behavior.
+    act(() => { (H.captured.VehicleHeader.onWake as () => void)() })
+    expect(H.requestMock.mock.calls.some(([path]) => path === '/vehicles/1/wake')).toBe(false)
+    expect(client.getMutationCache().getAll()).toHaveLength(0)
+    expect(H.toastSuccess).not.toHaveBeenCalled()
+    expect(H.toastError).toHaveBeenCalledWith(reason)
+
+    H.operational = { canWrite: true, writeBlockReason: null }
+    H.online = true
+    rerender(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/vehicles/1']}>
+          <Routes><Route path="/vehicles/:id" element={<VehicleDetailPage />} /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(screen.getByTestId('wake-btn')).not.toBeDisabled()
+    expect(H.requestMock.mock.calls.some(([path]) => path === '/vehicles/1/wake')).toBe(false)
+  })
+
+  it('keeps wake pending single-flight and refetches state only after success', async () => {
+    let finishWake!: (value: { status: string }) => void
+    H.requestMock.mockImplementation((path: string, options?: unknown) =>
+      path === '/vehicles/1/wake'
+        ? new Promise<{ status: string }>(resolve => { finishWake = resolve })
+        : defaultRequest(path, options),
+    )
+    renderPage()
+    await screen.findByTestId('wake-btn')
+    await waitFor(() => expect(H.captured.BatteryRangePanel?.state).toBe(STATE))
+    const stateCalls = () => H.requestMock.mock.calls.filter(([path]) => path === '/vehicles/1/state').length
+    const before = stateCalls()
+    const timeout = vi.spyOn(globalThis, 'setTimeout')
+    try {
+      const wake = H.captured.VehicleHeader.onWake as () => void
+      act(() => { wake(); wake() })
+      await waitFor(() => expect(screen.getByTestId('wake-btn')).toBeDisabled())
+      expect(screen.getByTestId('wake-btn')).toHaveAttribute('data-waking', 'true')
+      expect(H.requestMock.mock.calls.filter(([path]) => path === '/vehicles/1/wake')).toHaveLength(1)
+      expect(H.toastSuccess).not.toHaveBeenCalled()
+      expect(stateCalls()).toBe(before)
+      await act(async () => { finishWake({ status: 'ok' }) })
+      await waitFor(() => expect(H.toastSuccess).toHaveBeenCalledWith('Wake command sent'))
+      expect(screen.getByTestId('wake-btn')).not.toBeDisabled()
+      const refresh = timeout.mock.calls.find(([, delay]) => delay === 5000)?.[0]
+      expect(refresh).toBeTypeOf('function')
+      await act(async () => { if (typeof refresh === 'function') refresh() })
+      expect(stateCalls()).toBe(before + 1)
+    } finally {
+      timeout.mockRestore()
+    }
+  })
+
   it('surfaces the error message via a toast when the wake command fails', async () => {
     H.requestMock.mockImplementation((path: string, options?: unknown) => {
       if (path === '/vehicles/1/wake') return Promise.reject(new Error('boom'))
@@ -410,11 +606,19 @@ describe('VehicleDetailPage', () => {
 
     renderPage()
 
-    fireEvent.click(await screen.findByTestId('wake-btn'))
+    const button = await screen.findByTestId('wake-btn')
+    const timeout = vi.spyOn(globalThis, 'setTimeout')
+    try {
+      fireEvent.click(button)
 
-    await waitFor(() => expect(H.toastError).toHaveBeenCalledTimes(1))
-    expect(H.toastError).toHaveBeenCalledWith('boom')
-    expect(H.toastSuccess).not.toHaveBeenCalled()
+      await waitFor(() => expect(H.toastError).toHaveBeenCalledTimes(1))
+      expect(H.toastError).toHaveBeenCalledWith('boom')
+      expect(H.toastSuccess).not.toHaveBeenCalled()
+      expect(timeout.mock.calls.some(([, delay]) => delay === 5000)).toBe(false)
+      expect(button).not.toBeDisabled()
+    } finally {
+      timeout.mockRestore()
+    }
   })
 
   it('shows an error with a working Retry when the live-state read fails', async () => {
@@ -425,19 +629,30 @@ describe('VehicleDetailPage', () => {
 
     renderPage()
 
-    // The header still renders (wake button present) but the state-gated
-    // sections must NOT — the failed read renders <QueryError>, not a skeleton
-    // that hangs forever.
+    // Stateful live consumers cannot fabricate values. Independent successful
+    // sources and all recovery/navigation/settings controls remain available.
     expect(await screen.findByTestId('wake-btn')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByText('Server error')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getAllByText('Server error')).toHaveLength(3))
     expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
     expect(screen.queryByTestId('sec-quick-stats')).not.toBeInTheDocument()
+    for (const id of ['sec-motor', 'sec-climate', 'sec-security', 'sec-tire',
+      'sec-charging-telem', 'sec-recent-drives', 'sec-recent-charges',
+      'sec-vehicle-config', 'sec-quick-links', 'sec-settings', 'sec-ai-paint']) {
+      expect(await screen.findByTestId(id)).toBeInTheDocument()
+    }
+    expect(H.captured.SecuritySection?.securityData).toBe(SECURITY)
+    expect(H.captured.SecuritySection?.state).toBeUndefined()
+    expect(H.captured.VehicleConfigSection?.vehicleConfig).toBe(CONFIG)
+    expect(H.captured.VehicleConfigSection?.softwareVersion).toBeUndefined()
+    expect(H.captured.RecentDrivesSection?.drives).toBe(DRIVES)
+    expect(H.captured.RecentChargesSection?.sessions).toBe(SESSIONS)
 
     // Retry re-issues the /state read.
     const stateCalls = () =>
       H.requestMock.mock.calls.filter((c) => c[0] === '/vehicles/1/state').length
     const before = stateCalls()
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    const overview = screen.getByRole('region', { name: 'Live overview' })
+    fireEvent.click(within(overview).getAllByRole('button', { name: 'Retry' })[0])
     await waitFor(() => expect(stateCalls()).toBeGreaterThan(before))
   })
 
@@ -447,8 +662,182 @@ describe('VehicleDetailPage', () => {
     renderPage('/vehicles/not-a-number')
 
     // Title falls back and no vehicle-scoped fetch fires.
-    expect(await screen.findByRole('heading', { name: 'Vehicle Detail' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Vehicle detail' })).toBeInTheDocument()
     expect(H.requestMock).not.toHaveBeenCalled()
     expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { caseName: 'fractional', route: '/vehicles/1.5' },
+    { caseName: 'unsafe integer', route: '/vehicles/9007199254740992' },
+    { caseName: 'nonfinite', route: '/vehicles/Infinity' },
+  ])('rejects a $caseName route identity without starting reads or commands', async ({ route }) => {
+    renderPage(route)
+
+    expect(await screen.findByText('Vehicle not found')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to vehicles' })).toHaveAttribute('href', '/vehicles')
+    expect(H.requestMock).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('wake-btn')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('vehicle-detail-skeleton')).not.toBeInTheDocument()
+  })
+
+  it('forwards cancellation for all ten independent reads without changing their scope or polling', async () => {
+    H.requestMock.mockImplementation(() => new Promise<never>(() => {}))
+    const { client, unmount } = renderPage()
+    const reads = [
+      { path: '/vehicles/1', key: ['vehicles', '1'], interval: undefined },
+      { path: '/vehicles/1/state', key: ['vehicle-state', 1], interval: 30_000 },
+      { path: '/motor/latest?vehicle_id=1', key: ['motor-latest', 1], interval: 15_000 },
+      { path: '/climate/latest?vehicle_id=1', key: ['climate-latest', 1], interval: 15_000 },
+      { path: '/security/latest?vehicle_id=1', key: ['security-latest', 1], interval: 15_000 },
+      { path: '/tire-pressure/latest?vehicle_id=1', key: ['tire-latest', 1], interval: 30_000 },
+      { path: '/charging-telemetry/latest?vehicle_id=1', key: ['charging-telemetry-latest', 1], interval: 5_000 },
+      { path: '/drives?vehicle_id=1&limit=5', key: ['drives', 1], interval: undefined },
+      { path: '/charging?vehicle_id=1&limit=5', key: ['charging', 1], interval: undefined },
+      { path: '/vehicle-config/latest?vehicle_id=1', key: ['vehicle-config-latest', 1], interval: 30_000 },
+    ]
+
+    await waitFor(() => expect(H.requestMock).toHaveBeenCalledTimes(reads.length))
+    const signals = reads.map(({ path, key, interval }) => {
+      const call = H.requestMock.mock.calls.find(([requestPath]) => requestPath === path)
+      expect(call?.[1]).toEqual({ signal: expect.any(AbortSignal) })
+      const signal = (call?.[1] as { signal: AbortSignal }).signal
+      expect(signal.aborted).toBe(false)
+      const query = client.getQueryCache().find({ queryKey: key, exact: true })
+      expect(query?.options).toMatchObject({ queryKey: key, enabled: true })
+      if (interval == null) expect(query?.options).not.toHaveProperty('refetchInterval')
+      else expect(query?.options).toHaveProperty('refetchInterval', interval)
+      return signal
+    })
+
+    unmount()
+    for (const signal of signals) expect(signal.aborted).toBe(true)
+  })
+
+  it.each([
+    { caseName: 'cached envelope', response: { state: STATE, live: false } },
+    { caseName: 'missing provenance', response: { state: STATE } },
+  ])('does not assert live provenance for a $caseName and preserves every raw reading', async ({ response }) => {
+    H.requestMock.mockImplementation((path: string, options?: unknown) =>
+      path === '/vehicles/1/state' ? Promise.resolve(response) : defaultRequest(path, options),
+    )
+    renderPage()
+
+    await waitFor(() => {
+      for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+    })
+    expect(screen.getByLabelText('Unknown source')).toHaveAttribute('data-provenance', 'unknown')
+    expect(screen.queryByLabelText('Live')).not.toBeInTheDocument()
+    expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
+    expect(H.captured.BatteryRangeCharts?.state).toBe(STATE)
+    expect(H.captured.SecuritySection?.state).toBe(STATE)
+    expect(H.captured.VehicleHeader?.status).toBe('charging')
+  })
+
+  it.each([
+    { state: {}, recordStatus: 'asleep' },
+    { state: { state: 'unknown', speed: 0, is_charging: false }, recordStatus: 'parked' },
+    { state: { state: '', battery_level: 72 }, recordStatus: 'offline' },
+  ])('retains $recordStatus from the record when partial state cannot establish status', async ({ state, recordStatus }) => {
+    H.requestMock.mockImplementation((path: string, options?: unknown) => {
+      if (path === '/vehicles/1') return Promise.resolve({ ...VEHICLE, state: recordStatus })
+      if (path === '/vehicles/1/state') return Promise.resolve({ state, live: true })
+      return defaultRequest(path, options)
+    })
+    const { client } = renderPage()
+
+    await waitFor(() => expect(client.getQueryState(['vehicle-state', 1])?.status).toBe('success'))
+    await waitFor(() => expect(H.captured.VehicleHeader?.status).toBe(recordStatus))
+    expect(H.captured.QuickStatsGrid?.status).toBe(recordStatus)
+    expect(H.captured.BatteryRangePanel?.state).toBe(state)
+  })
+
+  it('retains the known record status when independent live state is unavailable', async () => {
+    H.requestMock.mockImplementation((path: string, options?: unknown) =>
+      path === '/vehicles/1/state'
+        ? Promise.reject(new ApiError('State unavailable', 500))
+        : defaultRequest(path, options),
+    )
+    renderPage()
+
+    await waitFor(() => expect(screen.getAllByText('Server error')).toHaveLength(3))
+    expect(H.captured.VehicleHeader?.vehicle).toBe(VEHICLE)
+    expect(H.captured.VehicleHeader?.status).toBe('online')
+    expect(H.captured.SecuritySection?.state).toBeUndefined()
+    expect(screen.getByLabelText('Unknown source')).toHaveAttribute('data-provenance', 'unknown')
+    expect(screen.getByTestId('sec-settings')).toBeInTheDocument()
+  })
+
+  it('retains the complete page and vehicle-record recovery on a failed cached refresh', async () => {
+    const { client } = renderPage()
+    await waitFor(() => {
+      for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+    })
+    H.requestMock.mockImplementation((path: string, options?: unknown) => {
+      if (path === '/vehicles/1') return Promise.reject(new ApiError('Record refresh failed', 500))
+      return defaultRequest(path, options)
+    })
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['vehicles', '1'], exact: true })
+    })
+    expect(screen.getByRole('heading', { name: 'My Roadster', level: 1 })).toBeInTheDocument()
+    // invalidateQueries awaits the read, not the observer's scheduled render.
+    const warning = await screen.findByTestId('stale-refresh-warning')
+    expect(warning).toBeInTheDocument()
+    expect(warning).toHaveAttribute('role', 'status')
+    expect(within(warning).getByText('Vehicle detail may be out of date')).toBeInTheDocument()
+    expect(within(warning).getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument()
+    expect(client.getQueryData(['vehicles', '1'])).toBe(VEHICLE)
+    expect(client.getQueryState(['vehicles', '1'])?.error).toBeInstanceOf(ApiError)
+    for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+    expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
+    expect(H.captured.RecentDrivesSection?.drives).toBe(DRIVES)
+    expect(H.captured.RecentChargesSection?.sessions).toBe(SESSIONS)
+    expect(screen.queryByText(/synthetic/i)).not.toBeInTheDocument()
+
+    const recordCalls = () => H.requestMock.mock.calls.filter((call) => call[0] === '/vehicles/1').length
+    const beforeRetry = recordCalls()
+    H.requestMock.mockImplementation(defaultRequest)
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(recordCalls()).toBeGreaterThan(beforeRetry))
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument())
+    expect(client.getQueryData(['vehicles', '1'])).toBe(VEHICLE)
+    expect(client.getQueryState(['vehicles', '1'])?.error).toBeNull()
+    for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+  })
+
+  it('keeps independent state, systems, histories and settings usable on first vehicle-record failure', async () => {
+    H.requestMock.mockImplementation((path: string, options?: unknown) => {
+      if (path === '/vehicles/1') return Promise.reject(new ApiError('Record unavailable', 500))
+      return defaultRequest(path, options)
+    })
+    renderPage()
+    await waitFor(() => {
+      for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+    })
+    // Shared status-aware recovery deliberately localizes a classified 500
+    // instead of printing the raw server message.
+    expect(screen.getByText('Server error')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(H.captured.QuickStatsGrid?.status).toBe('charging')
+    expect(H.captured.VehicleSettingsTab?.vehicleId).toBe(1)
+  })
+
+  it('contains a motor failure without blanking climate, tires, security or history', async () => {
+    H.requestMock.mockImplementation((path: string, options?: unknown) => {
+      if (path.startsWith('/motor/latest')) return Promise.reject(new ApiError('Motor unavailable', 500))
+      return defaultRequest(path, options)
+    })
+    renderPage()
+    const systems = await screen.findByRole('region', { name: 'Vehicle systems' })
+    expect(await within(systems).findByText('Server error')).toBeInTheDocument()
+    expect(within(systems).getByRole('heading', { name: 'Powertrain' })).toBeInTheDocument()
+    expect(screen.queryByTestId('sec-motor')).not.toBeInTheDocument()
+    for (const sectionId of ['sec-climate', 'sec-tire', 'sec-security', 'sec-recent-drives', 'sec-recent-charges', 'sec-settings']) {
+      expect(await screen.findByTestId(sectionId)).toBeInTheDocument()
+    }
+    expect(H.captured.ClimateSection?.climateData).toBe(CLIMATE)
+    expect(H.captured.SecuritySection?.securityData).toBe(SECURITY)
+    expect(H.captured.RecentDrivesSection?.drives).toBe(DRIVES)
   })
 })

@@ -1,18 +1,54 @@
 import type { ChargingSession } from '@/api/types';
+import i18n, { type TFunction } from 'i18next';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
+import { getChargerCategory } from '@/lib/chargingAggregation';
 import type { CurvePoint } from './types';
 
 export function isDcSession(s: ChargingSession): boolean {
-  return !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 20_000));
+  const explicitAC = !!s.charger_type && getChargerCategory(s.charger_type) === 'home';
+  return !explicitAC && !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 20_000));
 }
 
-export function getChargerLabel(s: ChargingSession): string {
+export type ChargerCategoryId = 'Home / AC' | 'Supercharger' | 'DC Fast';
+
+/** Keep the original grouping and color keys independent of the display language. */
+export function getChargerCategoryId(s: ChargingSession): ChargerCategoryId {
+  if (!isDcSession(s)) return 'Home / AC';
   if (s.charger_type === 'Tesla' || (s.charger_type ?? '').toLowerCase().includes('tesla'))
     return 'Supercharger';
-  if (s.charger_type) return 'DC Fast';
-  if (s.peak_power_w && s.peak_power_w > 20_000) return 'DC Fast';
-  return 'Home / AC';
+  return 'DC Fast';
+}
+
+export function getChargerCategoryLabel(category: ChargerCategoryId, t: TFunction = i18n.t): string {
+  switch (category) {
+    case 'Home / AC': return t('charging.curve.chargerLabels.homeAc', { defaultValue: 'Home / AC' }) || 'Home / AC';
+    case 'Supercharger': return t('charging.curve.chargerLabels.supercharger', { defaultValue: 'Supercharger' }) || 'Supercharger';
+    case 'DC Fast': return t('charging.curve.chargerLabels.dcFast', { defaultValue: 'DC Fast' }) || 'DC Fast';
+  }
+}
+
+export function getChargerLabel(s: ChargingSession, t: TFunction = i18n.t): string {
+  return getChargerCategoryLabel(getChargerCategoryId(s), t);
+}
+
+/** Provenance describes evidence, not a replacement for the accepted curve buckets. */
+export function getChargerClassification(s: ChargingSession): {
+  isDc: boolean;
+  label: string;
+  provenance: 'reported' | 'inferred' | 'unknown';
+} {
+  let provenance: 'reported' | 'inferred' | 'unknown' = 'unknown';
+  if (s.charger_type) {
+    if (getChargerCategory(s.charger_type) !== 'unknown'
+      || s.charger_type.toLowerCase().includes('tesla')) {
+      provenance = 'reported';
+    }
+  } else if (s.peak_power_w != null && Number.isFinite(s.peak_power_w)
+    && s.peak_power_w > 0) {
+    provenance = 'inferred';
+  }
+  return { isDc: isDcSession(s), label: getChargerLabel(s), provenance };
 }
 
 export function durationMinutes(startedAt: string, endedAt: string | null): number {
@@ -24,15 +60,16 @@ export function durationMinutes(startedAt: string, endedAt: string | null): numb
 }
 
 export function distanceAddedM(s: ChargingSession): number | null {
-  if (s.start_odometer_m == null || s.end_odometer_m == null) return null;
+  if (typeof s.start_odometer_m !== 'number' || !Number.isFinite(s.start_odometer_m)
+    || typeof s.end_odometer_m !== 'number' || !Number.isFinite(s.end_odometer_m)) return null;
   const delta = s.end_odometer_m - s.start_odometer_m;
-  return delta > 0 ? delta : null;
+  return Number.isFinite(delta) ? delta : null;
 }
 
 export function sessionLabel(s: ChargingSession): string {
   const date = formatDateShort(s.started_at);
   const label = getChargerLabel(s);
-  const energy = s.total_energy_added_wh != null ? fmtNumber(s.total_energy_added_wh / 1000, 1) : '?';
+  const energy = s.total_energy_added_wh != null ? fmtNumber(s.total_energy_added_wh / 1000) : '?';
   return `${date} — ${label} — ${energy} kWh`;
 }
 
@@ -72,4 +109,18 @@ export function generateChargingCurve(session: ChargingSession): CurvePoint[] {
 export function avg(nums: number[]): number {
   if (!Array.isArray(nums) || nums.length === 0) return 0;
   return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+/** Average only recorded finite samples; an unavailable subgroup is not zero. */
+export function availableAverage(nums: readonly (number | null | undefined)[]): number | null {
+  const samples = nums.filter((value): value is number =>
+    typeof value === 'number' && Number.isFinite(value),
+  );
+  return samples.length ? avg(samples) : null;
+}
+
+export function crossesSocWindow(s: ChargingSession, startSoc: number): boolean {
+  return typeof s.start_soc_pct === 'number' && Number.isFinite(s.start_soc_pct)
+    && typeof s.end_soc_pct === 'number' && Number.isFinite(s.end_soc_pct)
+    && s.start_soc_pct <= startSoc && s.end_soc_pct >= 80;
 }

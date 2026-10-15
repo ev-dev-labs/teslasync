@@ -10,7 +10,7 @@ import {
   Text,
 } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 
 import type {
   CareRiskComponent,
@@ -19,6 +19,7 @@ import type {
 } from '../../lib/batteryCare';
 import { BatteryCareSection } from './BatteryCareSection';
 import type { BatteryCareSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CareScoreBreakdownProps {
   care: CareScore;
@@ -59,7 +60,7 @@ function componentSublabel(
         'batteryCare.risk.deduction',
         '−{{points}} / {{max}} pts',
         {
-          points: fmtNumber(component.penaltyPoints, 1),
+          points: fmtNumber(component.penaltyPoints),
           max: component.maxPoints,
         },
       )
@@ -76,6 +77,7 @@ export function CareScoreBreakdown({
   state,
   className,
 }: CareScoreBreakdownProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const readyCount = care.riskComponents.filter(
     (component) => component.ready,

@@ -4,6 +4,7 @@ import { vi } from 'vitest';
 // reaches it, so stub the origin.
 vi.mock('../../e2e/mockSseServer', () => ({
   ensureMockSseServer: vi.fn(async () => ({ origin: 'http://127.0.0.1:9' })),
+  closeMockSseServer: vi.fn(async () => {}),
 }));
 
 import { installApiMocks } from '../../e2e/mockApi';

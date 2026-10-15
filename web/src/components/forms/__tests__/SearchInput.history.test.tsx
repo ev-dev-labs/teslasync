@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
 import '@/i18n';
@@ -271,5 +271,69 @@ describe('SearchInput — recent searches dropdown', () => {
     render(<Harness />);
     fireEvent.focus(screen.getByPlaceholderText('Search…'));
     expect(screen.getByRole('button', { name: /Remove "M3 sport"/i })).toBeInTheDocument();
+  });
+
+  it('keeps canonical visible focus on every history action and the active option', () => {
+    recordSearch(SCOPE, 'Mixed CASE query');
+    render(<Harness />);
+    const input = screen.getByPlaceholderText('Search…');
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+    const option = screen.getByRole('option');
+    expect(option).toHaveAttribute('id', input.getAttribute('aria-activedescendant'));
+    expect(option).toHaveAttribute('aria-selected', 'true');
+    for (const button of screen.getAllByRole('button')) {
+      expect(button).toHaveAttribute('type', 'button');
+      expect(button).toHaveClass(
+        'focus-visible:outline-2',
+        'focus-visible:outline-offset-2',
+        'focus-visible:outline-[var(--focus-ring)]',
+        'forced-colors:focus-visible:outline-[Highlight]',
+      );
+    }
+    expect(within(option).getAllByRole('button')[0]).toHaveClass('bg-[var(--control-bg)]');
+  });
+
+  it('retains full long query text and returns input focus after history actions', () => {
+    const query = 'Mixed CASE ' + 'long-query-'.repeat(30);
+    recordSearch(SCOPE, query);
+    recordSearch(SCOPE, 'other query');
+    render(<Harness />);
+    const input = screen.getByPlaceholderText('Search…');
+    fireEvent.focus(input);
+    expect(screen.getByText(query)).toHaveClass('break-words');
+
+    fireEvent.click(screen.getByRole('button', { name: `Remove "${query}" from search history` }));
+    expect(input).toHaveFocus();
+    expect(screen.queryByText(query)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Clear history/i }));
+    expect(input).toHaveFocus();
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+
+  it('keeps history open for focused actions and restores focus after selection and Escape', () => {
+    const onChange = vi.fn();
+    recordSearch(SCOPE, 'Mixed CASE query');
+    render(<Harness onChange={onChange} />);
+    const input = screen.getByPlaceholderText('Search…');
+    act(() => input.focus());
+    const entryButton = within(screen.getByRole('option')).getAllByRole('button')[0];
+    act(() => entryButton.focus());
+    expect(entryButton).toHaveFocus();
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    fireEvent.click(entryButton);
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('Mixed CASE query');
+    expect(onChange).toHaveBeenCalledWith('Mixed CASE query');
+    expect(screen.queryByRole('listbox')).toBeNull();
+
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('listbox')).toBeNull();
   });
 });

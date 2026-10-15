@@ -26,6 +26,14 @@ interface SessionCurveChartProps {
 
 export default function SessionCurveChart({ curveData }: SessionCurveChartProps) {
   const { t } = useTranslation();
+  const modeledContext = t(
+    'charging.curve.modernization.modeledCurves',
+    'Curves are modeled from session metadata, not sampled charging telemetry.',
+  );
+  const windowContext = t(
+    'charging.curve.modernization.resultScope',
+    'Up to 200 returned sessions; not a full-history aggregate.',
+  );
 
   // Null-safe + memoised. Callers may hand us `undefined` at runtime (e.g.
   // before a session is selected) despite the non-optional prop type, so we
@@ -46,15 +54,19 @@ export default function SessionCurveChart({ curveData }: SessionCurveChartProps)
   return (
     <ChartContainer
       title={t('charging.curve.powerVsSoc', 'Power vs SOC')}
-      subtitle={t(
-        'charging.curve.powerVsSocDesc',
-        'Charging power curve for selected session',
-      )}
+      subtitle={modeledContext}
+      metadata={{ sourceLabel: modeledContext, rangeLabel: windowContext }}
+      ariaDescription={`${modeledContext} ${windowContext}`}
       ariaLabel={t(
-        'charging.curve.powerVsSoc.aria',
+        'charging.curve.powerVsSocAria',
         'Charging power versus state-of-charge area chart for the selected session',
       )}
       data={rows}
+      exportData={rows.map((row) => ({
+        ...row,
+        source_context: modeledContext,
+        returned_window: windowContext,
+      }))}
       dataColumns={[
         { key: 'soc', label: t('charging.curve.col.soc', 'SOC %') },
         { key: 'power', label: t('charging.curve.col.power', 'Power (kW)') },
@@ -83,7 +95,7 @@ export default function SessionCurveChart({ curveData }: SessionCurveChartProps)
                 value: t('charging.curve.socPercent', 'SOC (%)'),
                 position: 'insideBottomRight',
                 offset: -5,
-                style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+                style: axisTickSm,
               }}
             />
             <YAxis
@@ -92,7 +104,7 @@ export default function SessionCurveChart({ curveData }: SessionCurveChartProps)
                 value: t('charging.curve.powerKw', 'Power (kW)'),
                 angle: -90,
                 position: 'insideLeft',
-                style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+                style: axisTickSm,
               }}
             />
             <Tooltip content={<ChartTooltip />} />

@@ -1,0 +1,457 @@
+{
+  "item": "audit-page-056",
+  "page": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+  "routes": ["/automations/new", "/automations/:id/edit"],
+  "purpose": "Create, edit, or install a preset for a typed automation graph, with optional AI proposals, readiness feedback, safe draft handling, and explicit publishing.",
+  "primaryGoal": "Configure a name, business vehicle target, trigger, optional conditions, and ordered actions; review and explicitly save without losing work.",
+  "dataSources": [
+    {
+      "name": "useAutomation",
+      "owner": "web\\src\\api\\hooks\\useAutomations.ts",
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 317,
+      "endpoint": "GET /api/v1/automations/{id}",
+      "behavior": "Positive numeric ID enablement, detail query key, abort signal forwarding; page hydrates the editor once from retained server data.",
+      "routeEvidence": "internal\\api\\router.go:3838-3839",
+      "consumerEvidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:325-334,398-405",
+      "verification": "Source registration only; handler response, permissions and actual requests unverified."
+    },
+    {
+      "name": "useAutomationPreset",
+      "owner": "web\\src\\api\\hooks\\useAutomations.ts",
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 388,
+      "endpoint": "GET /api/v1/automations/presets/{presetId}",
+      "behavior": "Optional preset URL parameter, encoded identifier, static stale time, enabled only with an ID; seeds name/description and all graph arrays.",
+      "routeEvidence": "internal\\api\\router.go:3827-3829",
+      "consumerEvidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:299,334,408-427",
+      "verification": "Source registration only."
+    },
+    {
+      "name": "useVehicles",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoint": "GET /api/v1/vehicles",
+      "behavior": "Abort signal, FAST stale time, safeArray; local target options retain All vehicles represented by null. This is the automation's business target, not another workspace picker.",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "consumerEvidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:332,466-479,779-788"
+    },
+    {
+      "name": "useNotificationChannels",
+      "owner": "web\\src\\api\\hooks\\useNotifications.ts",
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 738,
+      "endpoint": "GET /api/v1/notifications",
+      "behavior": "Abort signal and safeArray. ActionBuilder chooses the first enabled channel, otherwise the first channel, otherwise ID 0; disabled channel options remain represented.",
+      "routeEvidence": "internal\\api\\router.go:4026-4027",
+      "consumerEvidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:333,492-493,864-867; web\\src\\features\\automations\\pages\\ActionBuilder.tsx:23-41"
+    },
+    {
+      "name": "useGeofences",
+      "owner": "web\\src\\api\\hooks\\useLocations.ts",
+      "file": "web\\src\\api\\hooks\\useLocations.ts",
+      "line": 85,
+      "endpoint": "GET /api/v1/geofences",
+      "behavior": "Shared query key, abort signal and safeArray. Both trigger and condition editors use persisted place IDs. Trigger editor includes loading/error/empty explanations and retry.",
+      "routeEvidence": "internal\\api\\router.go:3614-3615",
+      "consumerEvidence": "web\\src\\features\\automations\\pages\\TriggerConfigurator.tsx:187,342-385; web\\src\\features\\automations\\pages\\ConditionBuilder.tsx:158-167"
+    },
+    {
+      "name": "useCreateAutomationFull / useUpdateAutomationFull / useTestRunAutomation",
+      "owner": "web\\src\\api\\hooks\\useAutomations.ts",
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 298,
+      "endpoints": ["POST /api/v1/automations", "PUT /api/v1/automations/{id}", "POST /api/v1/automations/{id}/test-run"],
+      "behavior": "Live-mode-required writes; always network mode; localized toast feedback. Create invalidates/broadcasts the list; update also invalidates/broadcasts detail; test run invalidates history. Page saves the normalized graph, clears dirty/draft on success, retains returned conflicts and stays in the editor if conflicts exist.",
+      "routeEvidence": "internal\\api\\router.go:3806,3842,3846",
+      "consumerEvidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:344-347,572-601,632-637,973-1020",
+      "verification": "No mutation executed; conflict semantics described only from client consumption and registered routes."
+    },
+    {
+      "name": "AINLAutomationBuilder / AIGeofenceAwareAutomationSuggestions with useAiStream",
+      "owner": "web\\src\\components\\ai",
+      "file": "web\\src\\components\\ai\\AINLAutomationBuilder.tsx",
+      "line": 51,
+      "endpoints": ["POST /api/v1/ai/automations/draft", "POST /api/v1/ai/geofences/automations/draft"],
+      "routeEvidence": "internal\\api\\ai_routes.go:134,217,1088",
+      "behavior": "Workspace selected vehicle supplies AI scope independently from the saved automation target. NL requires positive finite vehicle ID and trimmed prompt up to 4096 characters. Geofence proposal captures tool_result, offers Apply to form only for status ok, and cancels/resets on vehicle switch. AI feature HOC hides deliberately disabled features; this is not accidental missing-data section hiding.",
+      "consumerEvidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:314,918-944; web\\src\\components\\ai\\AINLAutomationBuilder.tsx:30-106; web\\src\\components\\ai\\AIGeofenceAwareAutomationSuggestions.tsx:126-209,290-320; web\\src\\components\\ai\\withAiFeature.tsx:45-57",
+      "verification": "Registered paths and consumer source inspected; useAiStream internals, feature settings sources, stream protocol at runtime and provider availability not verified."
+    },
+    {
+      "name": "Local editor, draft, concurrency and trust contracts",
+      "owner": "Existing application hooks and page form state",
+      "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+      "line": 302,
+      "endpoints": [],
+      "behavior": "useFormDraft version 1 with 1500ms debounce and dirty/hydrated/not-saving persistence gate; source-specific keys; edit leases; browser and in-app navigation guards; explicit discard confirmation; OperationalBrief derives four editor-only metrics via useOperationalMetrics. useDataState distinguishes fatal from refresh errors. OperationalMode blocks writes offline/as-of.",
+      "evidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:302-464,495-535,696-754; web\\src\\hooks\\useOperationalMode.tsx:50-98; web\\src\\api\\client.ts:90-93,368-378",
+      "verification": "Hook usage inspected; draft/lease/guard implementations and browser persistence were not exercised."
+    }
+  ],
+  "components": [
+    {
+      "category": "layout",
+      "name": "PageLayout",
+      "owner": "@/components/layout",
+      "evidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:15,641-695",
+      "contract": "Localized title/subtitle, breadcrumb labels, back action, loading/error branches; existing shell remains owner of workspace scope."
+    },
+    {
+      "category": "primitives",
+      "name": "Button, Input, Textarea, Select, Toggle, Badge, GlassPanel, PanelTitle, Text, ConfirmDialog, VisuallyHidden",
+      "owner": "@/components/ui and @/components/a11y",
+      "evidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:16-26,50,86,759-915,973-1025",
+      "contract": "Reuse field identity/help, native validation, semantic control variants and confirmation focus engine. No new surface/overlay system."
+    },
+    {
+      "category": "composites",
+      "name": "OperationalBrief, FormSection and trust/safety banners",
+      "owner": "@/components/data-display, @/components/forms, @/components/feedback",
+      "evidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:27-39,696-757",
+      "contract": "Four editor metrics with provenance, enabled/disabled status, readiness, dirty freshness; retain OperationalWriteNotice, EditConflictBanner, DraftRecoveryBanner, StaleRefreshWarning and AlertBanner."
+    },
+    {
+      "category": "domain",
+      "name": "TriggerConfigurator, ConditionBuilder, ActionBuilder, ConflictWarnings",
+      "owner": "web\\src\\features\\automations\\pages",
+      "evidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:62-69,816-820,846-867,959",
+      "contract": "Four typed trigger kinds, four typed condition kinds, four action kinds, ordered actions and server-returned warnings; keep the current action helper source-closure decomposition."
+    },
+    {
+      "category": "domain field composites",
+      "name": "ActionStepRow, ActionFields, action field renderers, UnitInput, UnitListInput, WeekdaySelect",
+      "owner": "web\\src\\features\\automations\\components\\automation-helper-source-closure and @/components/forms",
+      "evidence": "web\\src\\features\\automations\\pages\\ActionBuilder.tsx:72-91; web\\src\\features\\automations\\components\\automation-helper-source-closure\\ActionStepRow.tsx:28-79; web\\src\\features\\automations\\pages\\ConditionBuilder.tsx:328-418",
+      "contract": "Preserve min-w-0 responsive action rows, useId fields, 44px reorder/delete controls, guided command inputs, advanced JSON with native validity, display-only physical inputs, typed setting values and target IDs."
+    },
+    {
+      "category": "shared AI",
+      "name": "AIFeatureCard, withAiFeature and two automation AI consumers",
+      "owner": "web\\src\\components\\ai",
+      "evidence": "web\\src\\components\\ai\\AIFeatureCard.tsx:82-196,282-358; web\\src\\components\\ai\\withAiFeature.tsx:32-59",
+      "contract": "Shared canStart/stream lifecycle, localized contextual accessible names, input/children slots, output, feature gating; preserve actual user review before publishing."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\automations\\pages\\ConditionBuilder.tsx",
+      "line": 158,
+      "rule": "MDC-026 / existing-source-state reuse",
+      "detail": "Trigger and condition geofence selectors consume the same hook but only TriggerConfigurator surfaces loading/error/empty/retry. Query caching is already shared; presentation-state handling is inconsistent.",
+      "fix": "Reuse existing data-state and field hint/retry patterns in ConditionBuilder, not a new query or speculative universal picker.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": "web\\src\\features\\automations\\pages\\TriggerConfigurator.tsx:187,342-385"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": [
+      "Page stacks build canvas and assistant until xl, then uses a 2:1 split with sticky assistant (AutomationBuilderPage.tsx:754-758,872-876).",
+      "General vehicle/enabled fields stack until sm (AutomationBuilderPage.tsx:778).",
+      "Footer actions wrap and use min-h-11 (AutomationBuilderPage.tsx:973-1010).",
+      "Migrated action rows use min-w-0, full-width fields, responsive grids, wrapLabel and 44px controls (ActionStepRow.tsx:33-76; ActionNotificationFields.tsx:16-38)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\pages\\ConditionBuilder.tsx",
+        "line": 211,
+        "rule": "MDC-043 / mission section 15",
+        "detail": "Condition type is fixed w-56 inside a padded panel and a flex row that also reserves a separate remove button; other fields use w-44/w-56/w-52. Unlike migrated action rows, the enclosing flexible child lacks min-w-0. This is a narrow-container overflow risk, not measured viewport failure.",
+        "fix": "Retain every field and condition; adopt existing action-row min-w-0/full-width stacking and bounded wide-screen field sizes.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\components\\ai\\AIGeofenceAwareAutomationSuggestions.tsx",
+        "line": 246,
+        "rule": "MDC-043 / long-content preservation",
+        "detail": "Proposal uses a non-wrapping flex row with shrink-0 Apply control and no min-w-0/break-word constraints on proposal content. Long names, descriptions and validator errors may compete with the action in the narrow assistant rail.",
+        "fix": "Use existing responsive wrapping and typography contracts; stack the Apply action when allocated width is small and keep full proposal/validation content.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "requiredQA": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "long localized labels", "200% text", "RTL", "sticky assistant with long stream output"]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": [
+      "Named assistant landmark, native form, localized shared field labels and required name.",
+      "Readiness icons are decorative and include localized VisuallyHidden complete/incomplete text (AutomationBuilderPage.tsx:885-905).",
+      "ConflictWarnings uses role=alert and decorative icons (ConflictWarnings.tsx:23-41).",
+      "Action rows retain localized move/remove names, explicit action-kind IDs and 44px controls (ActionStepRow.tsx:33-76).",
+      "Advanced command JSON sets custom validity and shared Textarea error feedback (ActionCommandFields.tsx:97-143)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\pages\\ConditionBuilder.tsx",
+        "line": 202,
+        "rule": "MDC-021 / MDC-040 / accessible field names",
+        "detail": "Condition type Select receives a label only for index 0; later condition type controls have no caller label, aria-label or aria-labelledby in this render path. Select internals were not inspected, so the resulting accessible name is not browser-proved.",
+        "fix": "Give every condition type control a localized label or explicit accessible name including row context; preserve visible grouping and typed values.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\automations\\pages\\TriggerConfigurator.tsx",
+        "line": 296,
+        "rule": "MDC-020 / MDC-040 / touch target and focus",
+        "detail": "Cron mode button overrides shared sizing with !h-auto !px-0 !py-0 and text-xs. Condition remove uses size sm without the 44px override present on action remove. These need target/spacing review, not a fabricated WCAG measurement.",
+        "fix": "Keep button semantics and both cron modes; use shared wrapping/minimum target sizing and verify spacing exceptions on the actual interface.",
+        "owner": "page",
+        "confidence": "medium",
+        "relatedEvidence": "web\\src\\features\\automations\\pages\\ConditionBuilder.tsx:220-229"
+      },
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+        "line": 552,
+        "rule": "MDC-021 / mission section 30 / form errors",
+        "detail": "Page validation returns a single saveError rendered near the bottom, without per-field error props or focusing the invalid configuration. Native required name/UnitInput and JSON validity remain separate protections.",
+        "fix": "Retain current validation and shared AlertBanner; associate validation with relevant existing fields and provide a focus path for errors spanning trigger/condition/action editors.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "limits": "Keyboard order, actual accessible names, focus restoration/trapping, effective contrast, forced colors, reduced motion and touch geometry not exercised."
+  },
+  "states": {
+    "initialLoading": "Edit without retained automation uses PageLayout loading; actual skeleton geometry uninspected (AutomationBuilderPage.tsx:639-650).",
+    "empty": "Edit not found and unset trigger use EmptyState; zero optional conditions is valid and still offers Add condition. No channel options render No channels configured (ActionNotificationFields.tsx:20-22).",
+    "fatalError": "Edit passes fatal error into PageLayout; exact retry behavior of that shared renderer not inspected (AutomationBuilderPage.tsx:653-663).",
+    "refreshStale": "useDataState and StaleRefreshWarning retain an editor when data exists (AutomationBuilderPage.tsx:326,696).",
+    "offlineHistorical": "OperationalWriteNotice plus operationalMode.canWrite disable save/test; request also asserts write policy. Editor/draft remains available (AutomationBuilderPage.tsx:704-709,977-998; useOperationalMode.tsx:50-98; client.ts:378).",
+    "pendingSuccessError": "Save/test have loading states, returned conflicts stay on screen after successful save, test success badge and hook toasts remain; test failure uses hook toast rather than inline page status.",
+    "draftConcurrency": "DraftRecoveryBanner only for new non-preset draft; edit lease and navigation/discard confirmations are existing safeguards, not new proposals.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+        "line": 334,
+        "rule": "MDC-026 / mission sections 22-25",
+        "detail": "Preset query consumes only data. With preset parameter and pending/failed/missing preset, normal blank editor renders with default climate_on action; hydration never completes until preset exists. No preset-specific loading/error/retry state explains why installation did not populate.",
+        "fix": "Keep preset identity and graph seeding; expose independent loading/fatal/refresh/empty states with retry and prevent unintended blank-preset publishing without review.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+        "line": 332,
+        "rule": "MDC-026 / unknown is not empty",
+        "detail": "Vehicle/channel reads consume only data and default undefined to empty options; failure or loading is indistinguishable from genuinely no vehicles/channels. ConditionBuilder similarly ignores geofence query state. Existing form values can remain even when unavailable options do not explain them.",
+        "fix": "Retain target IDs and draft; use existing source trust/hint/retry contracts for each auxiliary query without hiding unrelated sections or substituting measured emptiness.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:466-479,493; web\\src\\features\\automations\\pages\\ConditionBuilder.tsx:158; web\\src\\features\\automations\\components\\automation-helper-source-closure\\ActionNotificationFields.tsx:20-22"
+      },
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+        "line": 528,
+        "rule": "MDC-025 / readiness meaning",
+        "detail": "Checklist enumerates only name, trigger and actions, but allReady also requires geofence conditions to have a place. All three items can read complete while badge remains Not ready yet with no condition checklist explanation.",
+        "fix": "Reflect existing condition validation in readiness feedback without weakening the validator or claiming server execution readiness.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 296,
+      "rule": "MDC-010 / MDC-020 / mission sections 7 and 43",
+      "detail": "Shared AI CTA overrides neutral outline styling with cyan borders/background/text/hover/focus; badge independently adds cyan chrome at line 214. Two stacked AI cards compete with the primary automation-publishing action. This is source-confirmed fixed-hue saturation/noise risk, not measured rendered intensity.",
+      "fix": "Use existing control/severity/theme tokens and restrained AI identity; preserve labels, contextual accessible names, prompt, stream output and explicit action behavior.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIGeofenceAwareAutomationSuggestions.tsx",
+      "line": 243,
+      "rule": "MDC-010 / MDC-013 / restrained hierarchy",
+      "detail": "Nested proposal uses fixed cyan tint/border, text-cyan-300 label and ad-hoc text-xs/text-sm instead of role wrappers. Fixed rose-300 rejection copy also needs effective light-theme contrast review.",
+      "fix": "Use existing neutral surface and semantic status/typography roles, retaining proposal name, description, graph counts, validation errors, rejection message and Apply action.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+      "line": 881,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Readiness icons use fixed cyan-300 and emerald-300; ConditionBuilder delete uses fixed red-400/red-300 at line 226. These are residual theme-independent accents; no pure-white, neon or glow strings were found in the audited page itself.",
+      "fix": "Prefer existing semantic tokens and quieter readiness decoration while retaining textual complete/incomplete status and user theme preferences.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 282,
+      "rule": "MDC-021 / MDC-046 / explicit publish-only preservation",
+      "detail": "AI CTA omits type=\"button\" while mounted inside the page's native onSubmit form. Button forwards native props and supplies no default type (Button.tsx:64-80). Geofence Apply also omits type (AIGeofenceAwareAutomationSuggestions.tsx:290). Native button default is submit, so drafting/applying can also invoke page save when validation permits. Source composition confirms the risk; no production write was attempted.",
+      "fix": "Set explicit type=\"button\" on both shared non-publishing actions and verify they never submit the enclosing editor. Do not globally change Button defaults or alter the canonical Save/Create submit action.",
+      "owner": "shared",
+      "confidence": "high",
+      "relatedEvidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:697-702,918-944,975; web\\src\\components\\ui\\Button.tsx:64-80"
+    },
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+      "line": 491,
+      "rule": "MDC-001 / typed-graph preservation",
+      "detail": "Hydration and payload normalization preserve every trigger, but the editor displays only triggers[0] and any trigger change replaces the array with one entry. A multi-trigger server/preset/AI graph can contain invisible trigger configuration that is lost on editing the first trigger.",
+      "fix": "Confirm supported graph cardinality with the existing typed API contract before implementation; preserve all loaded steps and make additional supported triggers inspectable/editable, or explain unsupported editing without silently truncating. Do not invent backend multi-trigger semantics.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:222,240,541-546,816-820"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AINLAutomationBuilder.tsx",
+      "line": 54,
+      "rule": "MDC-001 / source behavior evidence",
+      "detail": "Natural-language card describes a draft to review and save below, but onEvent is a no-op and the page passes no apply callback. Unlike the geofence panel, this inspected path displays stream text only and does not populate the typed editor.",
+      "fix": "Preserve current stream output and clarify existing workflow; only add typed apply integration if established tool-result contracts support it, through the existing normalizers and explicit review/save path.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx:918-944; web\\src\\components\\ai\\AINLAutomationBuilder.tsx:82-89"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "Resolve accidental enclosing-form submission before presentation adoption. Then close source-state/readiness/accessible-field gaps and verify graph preservation. Keep inherited modernized action editors and OperationalBrief rather than reverting them.",
+    "order": ["Non-submit AI controls", "Preset and auxiliary source trust", "Graph cardinality preservation", "Condition accessible names and narrow layouts", "Restrained shared AI visuals", "Runtime accessibility/responsive/state QA"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Non-publishing AI actions inside forms",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "additionalOwnerFiles": ["web\\src\\components\\ai\\AIGeofenceAwareAutomationSuggestions.tsx"],
+      "propsVariantsStates": "Keep AIFeatureCard canStart, stream, onAction, inputSlot, children, contextual names, loading/disabled states. Its CTA and geofence Apply must use native type=button; only page Save/Create submits.",
+      "usedBy": ["AutomationBuilderPage /automations/new", "AutomationBuilderPage /automations/:id/edit", "AINLAutomationBuilder", "AIGeofenceAwareAutomationSuggestions"],
+      "dependsOn": ["Existing Button forwards native type", "Existing page form submit", "Existing propose-only typed draft review flow"],
+      "evidence": "AIFeatureCard.tsx:282-312; AIGeofenceAwareAutomationSuggestions.tsx:290-306; AutomationBuilderPage.tsx:697-702",
+      "acceptance": "Focused enclosing-form test: Draft/Suggest/Apply click must not submit; intentional Save/Create still submits; disabled/pending behavior unchanged.",
+      "confidence": "high"
+    },
+    {
+      "name": "Restrained AI card and responsive proposal contract",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "additionalOwnerFiles": ["web\\src\\components\\ai\\AIGeofenceAwareAutomationSuggestions.tsx"],
+      "propsVariantsStates": "Reuse existing outline button, neutral surface, role typography and semantic status tokens; retain prompt slot, full text/activity/usage output, invalid proposal details, Apply availability, feature-off gating and long-content responsive reflow. No new component or variant demonstrated necessary.",
+      "usedBy": ["AINLAutomationBuilder", "AIGeofenceAwareAutomationSuggestions"],
+      "dependsOn": ["MDC-010/013/020/026/043", "Existing shared typography/control/surface tokens", "Preserved stream and feature gate APIs"],
+      "evidence": "AIFeatureCard.tsx:214,296,315-358; AIGeofenceAwareAutomationSuggestions.tsx:243-306",
+      "acceptance": "Review both cards in dark/light/forced colors, narrow rail, long localized content, pending/error/rejected/ok states; retain all output and explicit review actions.",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\automations\\pages\\ConditionBuilder.tsx",
+      "line": 196,
+      "rule": "MDC-002 / preserve existing migration",
+      "detail": "Condition rows retain fixed-width GlassPanel/flex field composition, while action rows already have decomposed responsive FormSection owners. This is a local implementation inconsistency, not evidence of a second global layout engine.",
+      "fix": "Reuse established primitive/form/layout contracts for condition modernization; keep action helper source-closure files, typed settings, SI inputs and existing accessibility improvements.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "d444921e39058da607cf3b6c9cc06f757aaa43fa174442dac43c613dfa413343",
+    "currentLineCount": 1028,
+    "sourceFile": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+    "hashMethod": "PowerShell Get-FileHash -Algorithm SHA256 on original bytes; line count from (Get-Content).Count.",
+    "sectionCount": 10,
+    "sectionCountDefinition": "Ten named presentation groups, excluding page header, safety/status banners, form feedback and dialog. AI groups are feature-gated and preset hint is create-only; this is not a rendered-count claim.",
+    "sections": [
+      {"name": "Automation draft summary", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx", "line": 737},
+      {"name": "General configuration", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx", "line": 760},
+      {"name": "When (trigger)", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx", "line": 799},
+      {"name": "Only if (conditions)", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx", "line": 839},
+      {"name": "Then (actions)", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx", "line": 856},
+      {"name": "Readiness", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx", "line": 879},
+      {"name": "Natural-language AI draft", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx", "line": 918},
+      {"name": "Geofence-aware AI proposal", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx", "line": 922},
+      {"name": "Create-only typed template hint", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx", "line": 948},
+      {"name": "Save/test/cancel action bar", "count": 1, "file": "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx", "line": 973}
+    ],
+    "sourceComponentCounts": {"GlassPanel": 5, "FormSection": 4, "ChartContainer": 0, "OperationalBrief": 1},
+    "sourceCountNotes": "Lexical opening-tag counts on page only; two trigger GlassPanels are mutually exclusive. Nested components contribute additional forms/surfaces and are not counted as page literals.",
+    "actions": [
+      "Back to automations and Cancel with dirty confirmation; browser/in-app navigation guards",
+      "Name/description edits, automation business vehicle target including All vehicles, enabled toggle",
+      "Trigger type selection; schedule time/weekdays/advanced cron/timezone; vehicle event; geofence place/event/dwell; signal/operator/typed threshold/any change",
+      "Add/remove/change conditions; signal comparisons/range/list, time window/weekdays/timezone, geofence state, other automation ID/state",
+      "Add/remove/reorder/change ordered actions; vehicle commands and guided parameters/advanced JSON, channel/message, typed setting value, target automation",
+      "Draft/Suggest AI and valid geofence Apply to form; preserve feature settings and stream output",
+      "Create/Save, returned conflict review, test run saved/current ID, success/error feedback",
+      "Discard recovered new draft; geofence retry and Manage places navigation"
+    ],
+    "dataBehavior": [
+      "Trim name/description only at payload creation; keep discriminated step normalization with optional zero/false values preserved.",
+      "Default enabled=true; vehicle_id=null; no trigger/conditions; initial climate_on action. Do not replace real configuration with fixtures.",
+      "Retain every typed step property, action order and full hydrated arrays. Input union distribution in stepInputTypes.ts:9-25 is load-bearing.",
+      "Keep existing SI-aware UnitInput/UnitListInput at display boundary and numeric/raw payload values; no unit or backend field rename is authorized by this audit.",
+      "Preserve source-specific draft/lease keys, hydration reset on actual source switch, version/debounce/persistence gate, unsaved guards and explicit confirmation.",
+      "Edit/preset hydration currently discards recovered draft in favor of canonical source; report this existing behavior, do not silently change it during presentation work.",
+      "Keep separate AI workspace vehicle scope and automation business target; preserve explicit All vehicles choice.",
+      "Preserve query keys, abort signals, stale policies, live-mode write assertion, toast/invalidation/broadcast behaviors.",
+      "Retain OperationalBrief four editor-only metrics and provenance: no execution-history or backend readiness claim.",
+      "Keep conditional feedback visible when applicable; no export/chart exists in this page snapshot, so do not invent one."
+    ],
+    "noSourceChanges": true
+  },
+  "evidenceLimits": {
+    "scope": "One shared mounted page item plus directly relevant presentation/data dependencies; no sibling page audit or application-wide inventory.",
+    "routeVerification": "App.tsx:191,618-619 establishes lazy route declarations only, not authenticated mount/reachability.",
+    "runtime": "Not exercised; no browser, server, network requests, mutations or production actions.",
+    "visual": "No screenshots or rendered theme review; fixed color/size classes indicate source risks, not measured saturation/glow or contrast failure.",
+    "keyboardContrastViewport": "Unverified keyboard/screen-reader/focus/contrast/forced-colors/reduced-motion/ten-width/RTL/200%-text behavior.",
+    "backend": "Router registrations only; no handler, DB, graph cardinality, conflict algorithm, authorization or execution proof. Existing dwell_minutes spelling is recorded, not interpreted as permission to change wire units.",
+    "dependencies": "Shared PageLayout, field/select, trust-banner, motion, data-state implementation, draft/guard/lease hooks, useAiStream and token resolvers were not exhaustively inspected; imported usage is not implementation acceptance.",
+    "sourceDrift": "Concurrent writers may change dependencies. Page hash pins this read snapshot; final readback checks that page hash remains the same, not a Git cleanliness claim.",
+    "checks": [
+      {"command": "Get-FileHash web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx).Count", "exitCode": 0, "output": "D444921E39058DA607CF3B6C9CC06F757AAA43FA174442DAC43C613DFA413343; 1028"},
+      {"command": "PowerShell scoped regex counts on AutomationBuilderPage.tsx: <GlassPanel\\b, <FormSection\\b, <ChartContainer\\b, style=, <(button|input|textarea|select|table)\\b, text-white, neon, glow", "exitCode": 0, "output": "GlassPanel=5; FormSection=4; ChartContainer=0; style=0; raw-controls=0; text-white=0; neon=0; glow=0", "limit": "Page lexical counts only, not zero violations across dependencies or runtime."},
+      {"command": "audit.sh / TypeScript / full lint / build / tests", "exitCode": null, "output": "NOT RUN: Phase 0 read-only scope and centralized validation contract prohibit project-wide validation; the skill script invokes project TypeScript, so scoped source checks were used instead."}
+    ],
+    "prohibitedOperations": "No Git, agents, full-repository lint/build, source/UI changes or production actions were performed.",
+    "ownership": ["docs\\frontend-audits\\audit-page-056.json", ".agent-status\\audit-page-056.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx",
+    "web\\src\\features\\automations\\pages\\TriggerConfigurator.tsx",
+    "web\\src\\features\\automations\\pages\\ConditionBuilder.tsx",
+    "web\\src\\features\\automations\\pages\\ActionBuilder.tsx",
+    "web\\src\\features\\automations\\pages\\ConflictWarnings.tsx",
+    "web\\src\\features\\automations\\components\\stepInputTypes.ts",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\ActionStepRow.tsx",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\ActionFields.tsx",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\ActionCommandFields.tsx",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\ActionNotificationFields.tsx",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\ActionSettingFields.tsx",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\ActionCallFields.tsx",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\actionHelpers.ts",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\actionOptions.ts",
+    "web\\src\\api\\hooks\\useAutomations.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useNotifications.ts",
+    "web\\src\\api\\hooks\\useLocations.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useOperationalMode.tsx",
+    "web\\src\\components\\ai\\AINLAutomationBuilder.tsx",
+    "web\\src\\components\\ai\\AIGeofenceAwareAutomationSuggestions.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go"
+  ]
+}

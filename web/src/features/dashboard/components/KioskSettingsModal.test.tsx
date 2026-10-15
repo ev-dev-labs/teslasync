@@ -86,13 +86,13 @@ describe('KioskSettingsModal — rendering', () => {
   it('renders nothing when closed', () => {
     setup({ open: false })
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(screen.queryByText('Kiosk Settings')).toBeNull()
+    expect(screen.queryByText('Kiosk settings')).toBeNull()
   })
 
   it('renders an accessible dialog with every section when open', () => {
     setup()
-    expect(screen.getByRole('dialog', { name: 'Kiosk Settings' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Dashboard Rotation' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Kiosk settings' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Dashboard rotation' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Display' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Transparency' })).toBeInTheDocument()
   })
@@ -101,7 +101,7 @@ describe('KioskSettingsModal — rendering', () => {
     setup({ config: { rotateInterval: 30, showClock: true, dimAfter: 5 } })
     expect(screen.getByText('Off')).toBeInTheDocument()
     expect(screen.getByText('1 min')).toBeInTheDocument()
-    expect(screen.getByText('Top Left')).toBeInTheDocument()
+    expect(screen.getByText('Top left')).toBeInTheDocument()
     expect(screen.getByText('Never')).toBeInTheDocument()
   })
 })
@@ -148,20 +148,20 @@ describe('KioskSettingsModal — dashboard rotation picker', () => {
 
   it('hides the picker when rotation is off', () => {
     setup({ config: { rotateInterval: 0 } })
-    expect(screen.queryByText('Dashboards to Rotate')).toBeNull()
+    expect(screen.queryByText('Dashboards to rotate')).toBeNull()
     expect(screen.queryByRole('checkbox')).toBeNull()
   })
 
   it('hides the picker when there is only a single dashboard', () => {
     setup({ config: { rotateInterval: 30 }, dashboards: [makeDashboard('solo', 'Solo')] })
-    expect(screen.queryByText('Dashboards to Rotate')).toBeNull()
+    expect(screen.queryByText('Dashboards to rotate')).toBeNull()
   })
 })
 
 describe('KioskSettingsModal — rotation interval', () => {
   it('reflects and persists the rotation interval', () => {
     const { onUpdateConfig } = setup({ config: { rotateInterval: 30 } })
-    const select = screen.getByLabelText('Rotation Interval') as HTMLSelectElement
+    const select = screen.getByLabelText('Rotation interval') as HTMLSelectElement
     expect(select.value).toBe('30')
     fireEvent.change(select, { target: { value: '60' } })
     expect(onUpdateConfig).toHaveBeenCalledWith({ rotateInterval: 60 })
@@ -171,25 +171,25 @@ describe('KioskSettingsModal — rotation interval', () => {
 describe('KioskSettingsModal — cursor auto-hide', () => {
   it('shows the timeout select and its value only when auto-hide is on', () => {
     setup({ config: { hideCursor: true, cursorTimeout: 5 } })
-    const select = screen.getByLabelText('Hide After') as HTMLSelectElement
+    const select = screen.getByLabelText('Hide after') as HTMLSelectElement
     expect(select).toBeInTheDocument()
     expect(select.value).toBe('5')
   })
 
   it('hides the timeout select when auto-hide is off', () => {
     setup({ config: { hideCursor: false } })
-    expect(screen.queryByLabelText('Hide After')).toBeNull()
+    expect(screen.queryByLabelText('Hide after')).toBeNull()
   })
 
   it('persists toggling auto-hide off', () => {
     const { onUpdateConfig } = setup({ config: { hideCursor: true } })
-    fireEvent.click(screen.getByRole('switch', { name: 'Auto-hide Cursor' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-hide cursor' }))
     expect(onUpdateConfig).toHaveBeenCalledWith({ hideCursor: false })
   })
 
   it('persists a cursor-timeout change', () => {
     const { onUpdateConfig } = setup({ config: { hideCursor: true, cursorTimeout: 5 } })
-    fireEvent.change(screen.getByLabelText('Hide After'), { target: { value: '10' } })
+    fireEvent.change(screen.getByLabelText('Hide after'), { target: { value: '10' } })
     expect(onUpdateConfig).toHaveBeenCalledWith({ cursorTimeout: 10 })
   })
 })
@@ -197,25 +197,25 @@ describe('KioskSettingsModal — cursor auto-hide', () => {
 describe('KioskSettingsModal — screen dimming', () => {
   it('hides the brightness slider when dimming is off', () => {
     setup({ config: { dimAfter: 0 } })
-    expect(screen.queryByLabelText('Dimmed Brightness')).toBeNull()
+    expect(screen.queryByLabelText('Dimmed brightness')).toBeNull()
   })
 
   it('shows the brightness slider reflecting dimLevel when dimming is on', () => {
     setup({ config: { dimAfter: 10, dimLevel: 0.5 } })
-    const slider = screen.getByLabelText('Dimmed Brightness') as HTMLInputElement
+    const slider = screen.getByLabelText('Dimmed brightness') as HTMLInputElement
     expect(slider).toBeInTheDocument()
     expect(slider.value).toBe('50')
   })
 
   it('persists a brightness change', () => {
     const { onUpdateConfig } = setup({ config: { dimAfter: 10, dimLevel: 0.5 } })
-    fireEvent.change(screen.getByLabelText('Dimmed Brightness'), { target: { value: '70' } })
+    fireEvent.change(screen.getByLabelText('Dimmed brightness'), { target: { value: '70' } })
     expect(onUpdateConfig).toHaveBeenCalledWith({ dimLevel: 0.7 })
   })
 
   it('persists a dim-after change', () => {
     const { onUpdateConfig } = setup({ config: { dimAfter: 0 } })
-    fireEvent.change(screen.getByLabelText('Dim Screen After'), { target: { value: '15' } })
+    fireEvent.change(screen.getByLabelText('Dim screen after'), { target: { value: '15' } })
     expect(onUpdateConfig).toHaveBeenCalledWith({ dimAfter: 15 })
   })
 })
@@ -223,17 +223,17 @@ describe('KioskSettingsModal — screen dimming', () => {
 describe('KioskSettingsModal — clock', () => {
   it('shows and reflects the clock-position select when the clock is enabled', () => {
     setup({ config: { showClock: true, clockPosition: 'bottom-right' } })
-    expect((screen.getByLabelText('Clock Position') as HTMLSelectElement).value).toBe('bottom-right')
+    expect((screen.getByLabelText('Clock position') as HTMLSelectElement).value).toBe('bottom-right')
   })
 
   it('hides the clock-position select when the clock is disabled', () => {
     setup({ config: { showClock: false } })
-    expect(screen.queryByLabelText('Clock Position')).toBeNull()
+    expect(screen.queryByLabelText('Clock position')).toBeNull()
   })
 
   it('persists a clock-position change', () => {
     const { onUpdateConfig } = setup({ config: { showClock: true } })
-    fireEvent.change(screen.getByLabelText('Clock Position'), { target: { value: 'top-left' } })
+    fireEvent.change(screen.getByLabelText('Clock position'), { target: { value: 'top-left' } })
     expect(onUpdateConfig).toHaveBeenCalledWith({ clockPosition: 'top-left' })
   })
 })
@@ -241,8 +241,8 @@ describe('KioskSettingsModal — clock', () => {
 describe('KioskSettingsModal — transparency', () => {
   it('reflects and persists widget + background opacity', () => {
     const { onUpdateConfig } = setup({ config: { widgetOpacity: 1, backgroundOpacity: 1 } })
-    const widget = screen.getByLabelText('Widget Opacity') as HTMLInputElement
-    const background = screen.getByLabelText('Background Opacity') as HTMLInputElement
+    const widget = screen.getByLabelText('Widget opacity') as HTMLInputElement
+    const background = screen.getByLabelText('Background opacity') as HTMLInputElement
     expect(widget.value).toBe('100')
     expect(background.value).toBe('100')
     fireEvent.change(widget, { target: { value: '50' } })
@@ -257,7 +257,7 @@ describe('KioskSettingsModal — primary actions', () => {
     const { onClose, onEnterKiosk, onUpdateConfig } = setup({
       config: { rotateInterval: 30, dashboardIds: [] },
     })
-    fireEvent.click(screen.getByRole('button', { name: /Enter Kiosk Mode/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Enter kiosk mode/ }))
     expect(onUpdateConfig).toHaveBeenCalledWith({ dashboardIds: ['a', 'b', 'c'] })
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(onEnterKiosk).toHaveBeenCalledTimes(1)
@@ -284,9 +284,9 @@ describe('KioskSettingsModal — hardening', () => {
       // dimLevel, widgetOpacity, backgroundOpacity intentionally omitted
     } as unknown as KioskConfig
     setup({ rawConfig: partial })
-    expect((screen.getByLabelText('Dimmed Brightness') as HTMLInputElement).value).toBe('50')
-    expect((screen.getByLabelText('Widget Opacity') as HTMLInputElement).value).toBe('100')
-    expect((screen.getByLabelText('Background Opacity') as HTMLInputElement).value).toBe('100')
+    expect((screen.getByLabelText('Dimmed brightness') as HTMLInputElement).value).toBe('50')
+    expect((screen.getByLabelText('Widget opacity') as HTMLInputElement).value).toBe('100')
+    expect((screen.getByLabelText('Background opacity') as HTMLInputElement).value).toBe('100')
   })
 
   it('does not crash when the dashboards prop is undefined', () => {
@@ -303,7 +303,7 @@ describe('KioskSettingsModal — hardening', () => {
         />
       </StrictMode>,
     )
-    expect(screen.getByRole('dialog', { name: 'Kiosk Settings' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Kiosk settings' })).toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).toBeNull()
   })
 })

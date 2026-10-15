@@ -1,0 +1,335 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - status [ref=e3]: Trip replay — TeslaSync
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - generic [ref=e5]:
+      - status [ref=e6]
+      - alert [ref=e7]
+      - navigation "Primary" [ref=e8]:
+        - link "TeslaSync" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - navigation "Sections and shortcuts" [ref=e117]:
+          - generic [ref=e118]:
+            - button "Suggested" [ref=e119] [cursor=pointer]:
+              - generic "4 suggestions" [ref=e124]: "4"
+            - button "Saved" [ref=e125] [cursor=pointer]:
+              - generic "5 pinned pages" [ref=e130]: "5"
+            - link "All pages" [ref=e131] [cursor=pointer]:
+              - /url: /explore
+            - button "Home, 9 pages" [ref=e138] [cursor=pointer]:
+              - generic [ref=e144]: Home
+            - button "Vehicles, 12 pages" [ref=e145] [cursor=pointer]:
+              - generic [ref=e150]: Vehicles
+            - button "Driving, 32 pages" [pressed] [ref=e151] [cursor=pointer]:
+              - generic [ref=e155]: Driving
+            - button "Charging, 15 pages" [ref=e156] [cursor=pointer]:
+              - generic [ref=e160]: Charging
+            - button "Battery, 11 pages" [ref=e161] [cursor=pointer]:
+              - generic [ref=e167]: Battery
+            - button "Energy, 5 pages" [ref=e168] [cursor=pointer]:
+              - generic [ref=e173]: Energy
+            - button "Cabin, 6 pages" [ref=e174] [cursor=pointer]:
+              - generic [ref=e179]: Cabin
+            - button "Reports, 11 pages" [ref=e180] [cursor=pointer]:
+              - generic [ref=e184]: Reports
+            - button "Service, 12 pages" [ref=e185] [cursor=pointer]:
+              - generic [ref=e189]: Service
+            - button "Commands, 3 pages" [ref=e190] [cursor=pointer]:
+              - generic [ref=e194]: Commands
+            - button "Automation, 5 pages" [ref=e195] [cursor=pointer]:
+              - generic [ref=e201]: Automation
+            - button "Notifications, 5 pages" [ref=e202] [cursor=pointer]:
+              - generic [ref=e207]: Notifications
+            - button "Security, 4 pages" [ref=e208] [cursor=pointer]:
+              - generic [ref=e213]: Security
+            - button "Advanced intelligence, 5 pages" [ref=e214] [cursor=pointer]:
+              - generic [ref=e218]: Advanced intelligence
+            - button "Ownership intelligence, 7 pages" [ref=e219] [cursor=pointer]:
+              - generic [ref=e226]: Ownership intelligence
+            - button "Tesla physics, 2 pages" [ref=e227] [cursor=pointer]:
+              - generic [ref=e233]: Tesla physics
+            - button "Data, 5 pages" [ref=e234] [cursor=pointer]:
+              - generic [ref=e240]: Data
+            - button "Diagnostics, 31 pages" [ref=e241] [cursor=pointer]:
+              - generic [ref=e247]: Diagnostics
+            - button "Account, 6 pages" [ref=e248] [cursor=pointer]:
+              - generic [ref=e253]: Account
+            - button "Settings, 8 pages" [ref=e254] [cursor=pointer]:
+              - generic [ref=e267]: Settings
+            - button "Integrations, 1 page" [ref=e268] [cursor=pointer]:
+              - generic [ref=e275]: Integrations
+            - button "About, 1 page" [ref=e276] [cursor=pointer]:
+              - generic [ref=e280]: About
+          - generic [ref=e281]:
+            - generic [ref=e282]:
+              - link "Alerts" [ref=e283] [cursor=pointer]:
+                - /url: /notifications/inbox
+              - link "Display" [ref=e290] [cursor=pointer]:
+                - /url: /settings#appearance
+            - button "Collapse sidebar" [expanded] [ref=e298] [cursor=pointer]:
+              - generic [ref=e302]: Collapse
+      - generic [ref=e17]:
+        - banner "Workspace command bar" [ref=e303]:
+          - navigation "Breadcrumb" [ref=e307]:
+            - link "Dashboard" [ref=e308] [cursor=pointer]:
+              - /url: /
+            - generic [ref=e314]: Driving
+            - link "Drives" [ref=e317] [cursor=pointer]:
+              - /url: /drives
+            - link "Demo Home → Demo Office" [ref=e1534] [cursor=pointer]:
+              - /url: /drives/1
+            - generic [ref=e1537]: Trip replay
+          - button "Search pages, commands…" [ref=e322] [cursor=pointer]:
+            - generic [ref=e327]: K
+          - generic [ref=e330]:
+            - generic [ref=e333]:
+              - generic [ref=e334]: Select vehicle
+              - generic [ref=e335]:
+                - combobox "Select vehicle" [ref=e336] [cursor=pointer]: Demo Model Y
+                - button "Show options" [ref=e338] [cursor=pointer]
+            - button "Notifications" [ref=e343] [cursor=pointer]
+            - button "Open theme picker" [ref=e348] [cursor=pointer]
+        - status [ref=e355]:
+          - generic [ref=e356]: Sample data present — DRILL vehicles and their drive and charging history are synthetic, not live activity.
+        - main [ref=e19]:
+          - generic [ref=e20]:
+            - status [ref=e358]:
+              - generic [ref=e363]:
+                - paragraph [ref=e364]: Install TeslaSync
+                - paragraph [ref=e365]: Add to home screen for native experience
+              - button "Install" [ref=e366] [cursor=pointer]
+              - button "Dismiss install prompt" [ref=e367] [cursor=pointer]
+            - generic [ref=e1539]:
+              - generic [ref=e1540]:
+                - heading "Trip replay" [level=1] [ref=e1545]
+                - group "Actions" [ref=e1546]:
+                  - generic [ref=e1548]:
+                    - button "Refresh data · Stale · 2m ago" [ref=e1889] [cursor=pointer]:
+                      - generic [ref=e1556]: Stale · 2m ago
+                    - generic [ref=e1557]: "Drive #1 — Oct 2, 2026 · Demo Home → Demo Office"
+                  - generic [ref=e1560]:
+                    - button "Refresh replay data" [ref=e1561] [cursor=pointer]
+                    - link [ref=e1567] [cursor=pointer]:
+                      - /url: /drives/1
+                      - button "Back to drive" [ref=e1568]
+              - region "Drive summary" [ref=e1572]:
+                - generic [ref=e1573]:
+                  - generic [ref=e1575]:
+                    - generic [ref=e1576]: Distance
+                    - generic [ref=e1583]:
+                      - text: "9.0"
+                      - generic [ref=e1584]: mi
+                  - generic [ref=e1586]:
+                    - generic [ref=e1587]: Duration
+                    - generic [ref=e1593]: 21m
+                  - generic [ref=e1595]:
+                    - generic [ref=e1596]: Avg speed
+                    - generic [ref=e1602]:
+                      - text: "25.7"
+                      - generic [ref=e1603]: mph
+                  - generic [ref=e1605]:
+                    - generic [ref=e1606]: Max speed
+                    - generic [ref=e1612]:
+                      - text: "36.0"
+                      - generic [ref=e1613]: mph
+                  - generic [ref=e1615]:
+                    - generic [ref=e1616]: Efficiency
+                    - generic [ref=e1622]:
+                      - text: "289.7"
+                      - generic [ref=e1623]: Wh/mi
+                  - generic [ref=e1625]:
+                    - generic [ref=e1626]: Battery
+                    - generic [ref=e1631]: 78% → 74%
+                  - generic [ref=e1633]:
+                    - generic [ref=e1634]: Elevation gain
+                    - generic [ref=e1640]: —
+                  - generic [ref=e1642]:
+                    - generic [ref=e1643]: Elevation loss
+                    - generic [ref=e1649]: —
+              - region "Route map and live position" [ref=e1651]:
+                - generic [ref=e1652]:
+                  - region "Trip route map" [ref=e1654]:
+                    - generic [ref=e1655]:
+                      - generic:
+                        - generic:
+                          - img:
+                            - generic:
+                              - generic [ref=e1656] [cursor=pointer]
+                              - generic [ref=e1657] [cursor=pointer]
+                              - generic [ref=e1658] [cursor=pointer]
+                              - generic [ref=e1659] [cursor=pointer]
+                              - generic [ref=e1660] [cursor=pointer]
+                              - generic [ref=e1661] [cursor=pointer]
+                              - generic [ref=e1662] [cursor=pointer]
+                              - generic [ref=e1663] [cursor=pointer]
+                              - generic [ref=e1664] [cursor=pointer]
+                              - generic [ref=e1665] [cursor=pointer]
+                              - generic [ref=e1666] [cursor=pointer]
+                              - generic [ref=e1675] [cursor=pointer]
+                        - button [ref=e1677] [cursor=pointer]:
+                          - img "Vehicle position" [ref=e1890]
+                      - generic [ref=e1681]:
+                        - link "Leaflet" [ref=e1682] [cursor=pointer]:
+                          - /url: https://leafletjs.com
+                        - text: "| ©"
+                        - link "OpenStreetMap" [ref=e1687] [cursor=pointer]:
+                          - /url: https://www.openstreetmap.org/copyright
+                      - group "Map style" [ref=e1688]:
+                        - button "Dark" [pressed] [ref=e1689] [cursor=pointer]:
+                          - generic [aria-hidden] [ref=e1690]: 🌑
+                        - button "Satellite" [ref=e1692] [cursor=pointer]:
+                          - generic [aria-hidden] [ref=e1693]: 🛰️
+                        - button "Streets" [ref=e1695] [cursor=pointer]:
+                          - generic [aria-hidden] [ref=e1696]: 🗺️
+                        - button "Terrain" [ref=e1698] [cursor=pointer]:
+                          - generic [aria-hidden] [ref=e1699]: ⛰️
+                  - generic [ref=e1701]:
+                    - heading "Current position stats" [level=3] [ref=e1702]
+                    - generic [ref=e1703]:
+                      - generic [ref=e1704]:
+                        - generic [ref=e1705]: Speed
+                        - generic [ref=e1711]: 25.7 mph
+                      - generic [ref=e1712]:
+                        - generic [ref=e1713]:
+                          - generic [ref=e1717]: Power
+                          - generic [ref=e1718]:
+                            - button "More info" [ref=e1719] [cursor=pointer]
+                            - tooltip "Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw."
+                        - generic [ref=e1723]: —
+                      - generic [ref=e1724]:
+                        - generic [ref=e1725]:
+                          - generic [ref=e1729]: Battery
+                          - generic [ref=e1730]:
+                            - button "More info" [ref=e1731] [cursor=pointer]
+                            - tooltip "State-of-charge percentage at this point. Drops indicate energy use; rises indicate regen or DC-fast-charging during a drive."
+                        - generic [ref=e1735]: 78%
+                      - generic [ref=e1736]:
+                        - generic [ref=e1737]: Elevation
+                        - generic [ref=e1742]: —
+                      - generic [ref=e1743]:
+                        - generic [ref=e1744]:
+                          - generic [ref=e1748]: Range
+                          - generic [ref=e1749]:
+                            - button "More info" [ref=e1750] [cursor=pointer]
+                            - tooltip "Estimated rated range remaining at this position based on EPA rated efficiency. Differs from real-world range, which depends on speed, terrain, climate, and load."
+                        - generic [ref=e1754]: —
+                      - generic [ref=e1755]:
+                        - generic [ref=e1756]: Temperature
+                        - generic [ref=e1761]: 18.5 °C
+                - generic [ref=e1764]:
+                  - button "Reset" [ref=e1765] [cursor=pointer]
+                  - button "Play" [active] [ref=e1893] [cursor=pointer]
+                  - button "Stop" [ref=e1771] [cursor=pointer]
+                  - 'button "Playback speed: 1x" [ref=e1774] [cursor=pointer]': 1x
+                  - slider "Playback progress" [ref=e1779] [cursor=pointer]:
+                    - generic:
+                      - img "Trend sparkline"
+                    - generic [ref=e1780]:
+                      - generic [ref=e1781]:
+                        - button "Start at 0.0%" [ref=e1782]
+                        - tooltip "Start"
+                      - generic [ref=e1783]:
+                        - button "End at 100.0%" [ref=e1784]
+                        - tooltip "End"
+                  - generic [ref=e1785]: 00:54 / 19:57
+                  - generic [ref=e1786]:
+                    - button "Show keyboard shortcuts" [ref=e1787] [cursor=pointer]
+                    - tooltip "Trip replay shortcuts Space / K Play / Pause ← / → Skip ±5s (shift = ±30s) J / L Skip ±10s , / . Previous / next frame Home / End Jump to start / end 0 – 9 Jump to N×10% + / − Speed up / slow down":
+                      - generic:
+                        - generic: Trip replay shortcuts
+                        - generic:
+                          - generic: Space / K
+                          - generic: Play / Pause
+                          - generic: ← / →
+                          - generic: Skip ±5s (shift = ±30s)
+                          - generic: J / L
+                          - generic: Skip ±10s
+                          - generic: ", / ."
+                          - generic: Previous / next frame
+                          - generic: Home / End
+                          - generic: Jump to start / end
+                          - generic: 0 – 9
+                          - generic: Jump to N×10%
+                          - generic: + / −
+                          - generic: Speed up / slow down
+              - region "Trip elevation and speed timelines" [ref=e1791]:
+                - figure [ref=e1792]:
+                  - generic [ref=e1793]:
+                    - heading "Elevation profile" [level=3] [ref=e1796]
+                    - button "Export chart" [ref=e1799] [cursor=pointer]
+                  - img "Elevation profile chart — no data available yet" [ref=e1803]:
+                    - status [ref=e1804]:
+                      - paragraph [ref=e1805]: No elevation data available
+                  - paragraph [ref=e1807]: "Chart: Elevation profile"
+                - figure [ref=e1808]:
+                  - generic [ref=e1809]:
+                    - generic [ref=e1811]:
+                      - heading "Speed & power timeline" [level=3] [ref=e1812]
+                      - paragraph [ref=e1813]: Click to seek replay position
+                    - button "Export chart" [ref=e1816] [cursor=pointer]
+                  - group "Trip replay speed and power timeline area chart" [ref=e1820]:
+                    - generic [ref=e1822]:
+                      - img [ref=e1823]:
+                        - generic [ref=e1828]:
+                          - generic [ref=e1829]: 0.0m
+                          - generic [ref=e1882]: 5.0m
+                          - generic [ref=e1884]: 10.0m
+                          - generic [ref=e1886]: 20.0m
+                        - generic [ref=e1837]:
+                          - generic [ref=e1838]:
+                            - generic [ref=e1839]: "0.0"
+                            - generic [ref=e1841]: "7.0"
+                            - generic [ref=e1843]: "14.0"
+                            - generic [ref=e1845]: "21.0"
+                            - generic [ref=e1847]: "28.0"
+                          - generic [ref=e1849]: mph
+                      - list [ref=e1855]:
+                        - listitem [ref=e1856]:
+                          - button "Speed" [ref=e1860] [cursor=pointer]
+                        - listitem [ref=e1861]:
+                          - button "Power" [ref=e1865] [cursor=pointer]
+                  - paragraph [ref=e1867]: "Chart: Speed & power timeline"
+      - contentinfo "Application status" [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - 'link "API connection status: Online (49ms)" [ref=e1896] [cursor=pointer]':
+              - /url: /system-status
+              - generic [ref=e60]: API
+              - generic [ref=e1525]: · 49ms
+            - tooltip "API connection · Online · 49ms"
+          - generic [ref=e62]:
+            - 'link "Live telemetry status: Live" [ref=e1526] [cursor=pointer]':
+              - /url: /signal-diff
+              - generic [ref=e72]: Live
+              - generic [ref=e1531]: · 0s
+            - tooltip "Live telemetry stream · Last message 0s ago"
+          - generic [ref=e73]:
+            - link "Telemetry honesty meter" [ref=e74] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e78]:
+                - text: Guessed
+                - generic [ref=e1532]: · 0/2
+            - tooltip "Live 0 · Stale 0 · Guessed 2 · Missing 0 · Stream live"
+          - generic [ref=e79]:
+            - button "Current data with live actions available." [ref=e80] [cursor=pointer]:
+              - generic [ref=e85]: Now
+            - tooltip "Current data with live actions available."
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - button "Open recently viewed pages, 12 saved" [ref=e1869] [cursor=pointer]:
+              - generic [ref=e92]: Recent
+            - tooltip "Recently viewed pages - 12 pages"
+          - generic [ref=e94]:
+            - button "Open presentation options" [ref=e95] [cursor=pointer]:
+              - generic [ref=e99]: Present
+            - tooltip "Report and kiosk views"
+          - generic [ref=e100]:
+            - button "Open help and about. Update or release notes available" [ref=e101] [cursor=pointer]:
+              - generic [ref=e105]: Help
+            - tooltip "Help and about · Update or release notes available"
+          - generic [ref=e108]:
+            - button "Open Helix chat" [ref=e109] [cursor=pointer]
+            - tooltip "Open Helix chat"
+      - status "Application status announcements" [ref=e113]: "Telemetry honesty: guessed"
+  - generic [aria-hidden] [ref=e1533]: "0.0"

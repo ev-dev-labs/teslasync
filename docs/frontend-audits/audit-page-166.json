@@ -1,0 +1,589 @@
+{
+  "item": "audit-page-166",
+  "phase": 0,
+  "page": "web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.tsx",
+  "routes": [
+    {
+      "path": "/resale-vault",
+      "file": "web\\src\\App.tsx",
+      "line": 760,
+      "detail": "SafeRoute renders the lazy WarrantyResaleVault import declared at line 226. Route declarations inspected by scoped search, not mounted in a browser."
+    }
+  ],
+  "purpose": "Compose vehicle-history evidence, choose disclosure, preview and locally sign/export a report, import and independently verify signed reports, manage browser signing keys, and inspect local activity. A separate server-issued battery certificate is available in Evidence.",
+  "primaryGoal": "Prepare a selectively disclosed warranty/service/resale report while understanding evidence coverage, privacy choices, and the difference between content integrity, local key recognition and authoritative certification.",
+  "dataSources": [
+    {
+      "name": "Vehicle identity",
+      "hook": "useVehicle",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 86,
+      "endpoint": "GET /vehicles/{id}",
+      "sourceOwner": "Existing vehicles query domain",
+      "consumer": "useVaultEvidence.ts:62; evidenceNormalizers.ts:66",
+      "behavior": "Selected workspace vehicle; VIN excluded/masked/full according to explicit selection. Null evidence is retained as unknown rather than invented identity.",
+      "backendVerified": false
+    },
+    {
+      "name": "Battery Passport",
+      "hook": "useBatteryPassport",
+      "file": "web\\src\\api\\hooks\\useBatteryPassport.ts",
+      "line": 68,
+      "endpoint": "GET /vehicles/{vehicleId}/battery-passport",
+      "sourceOwner": "Existing Battery Passport query",
+      "consumer": "useVaultEvidence.ts:63; evidenceNormalizers.ts:84-112",
+      "behavior": "Capacity source fields are currently kWh-shaped and explicitly converted to Wh in normalized report evidence. Provenance hash is displayed, not independently verified by this page.",
+      "backendVerified": false
+    },
+    {
+      "name": "Maintenance and service",
+      "hooks": ["useMaintenance", "useServiceRecords"],
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 84,
+      "endpoints": ["GET /maintenance", "GET /maintenance/records"],
+      "sourceOwner": "Vehicle systems queries",
+      "consumer": "useVaultEvidence.ts:64-65; MaintenanceSummaryPanel.tsx:37-49",
+      "behavior": "Requests have no vehicle filter; static stale policy, retry false, safeArray selection. Account/fleet-wide attribution caveat is mandatory.",
+      "backendVerified": false
+    },
+    {
+      "name": "Software history",
+      "hook": "useSoftwareUpdates",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 118,
+      "endpoint": "GET /software-updates?vehicle_id={vehicleId}",
+      "sourceOwner": "Vehicle systems queries",
+      "consumer": "useVaultEvidence.ts:66; evidenceNormalizers.ts:141-150",
+      "behavior": "Vehicle-keyed and enabled query; installed-version history and latest version normalized separately from returned update count.",
+      "backendVerified": false
+    },
+    {
+      "name": "Warranty",
+      "hook": "useWarrantyDetails",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 1782,
+      "endpoint": "GET /vehicles/{vehicleId}/warranty",
+      "sourceOwner": "Vehicles warranty query",
+      "consumer": "useVaultEvidence.ts:67; WarrantySummaryPanel.tsx:16-29",
+      "behavior": "Daily stale policy; opaque warranty envelope recursively scrubbed by key-name pattern, then displayed as sorted top-level key/value data. No semantic interpretation of nested units is established.",
+      "backendVerified": false
+    },
+    {
+      "name": "Driving evidence",
+      "hooks": ["useDriveHistory", "useDrivingStats", "useDriveScore"],
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoints": [
+        "GET /drives?vehicle_id={vehicleId}&limit=1000",
+        "GET /drives/stats?vehicle_id={vehicleId}",
+        "GET /drives/score?vehicle_id={vehicleId}"
+      ],
+      "sourceOwner": "Driving query domain",
+      "consumer": "useVaultEvidence.ts:68-70; evidenceNormalizers.ts:165-188",
+      "behavior": "History limit clamped to 1..1000; isolated query key and cancellation preserved. Stats and score are distinct sources; their coverage must not be inferred to equal returned history bounds. Stats request lines 218-224 and score lines 205-213 inspected.",
+      "backendVerified": false
+    },
+    {
+      "name": "Charging evidence",
+      "hook": "useChargingHistory",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 72,
+      "endpoint": "GET /charging?vehicle_id={vehicleId}&limit=1000",
+      "sourceOwner": "Charging query domain",
+      "consumer": "useVaultEvidence.ts:71; evidenceNormalizers.ts:191-213",
+      "behavior": "Observed window only; SI energy/power fields aggregated in the normalizer; unknown currency denomination is not converted or invented.",
+      "backendVerified": false
+    },
+    {
+      "name": "Guard/security events",
+      "hook": "useGuardEvents",
+      "file": "web\\src\\api\\hooks\\useGuard.ts",
+      "line": 116,
+      "endpoint": "GET /vehicles/{vehicleId}/guard/events",
+      "sourceOwner": "Guard query domain",
+      "consumer": "useVaultEvidence.ts:72; evidenceNormalizers.ts:216-239",
+      "behavior": "Numeric vehicle gate; counts/type breakdown only; details and acknowledged_by are not forwarded by the normalizer.",
+      "backendVerified": false
+    },
+    {
+      "name": "Server battery certificate",
+      "hooks": ["useBatteryCertificate", "useVerifyBatteryCertificate"],
+      "file": "web\\src\\api\\hooks\\useBatteryCertificate.ts",
+      "line": 53,
+      "endpoints": [
+        "GET /analytics/battery-health/certificate?vehicle_id={vehicleId}",
+        "POST /public/battery-certificate/verify"
+      ],
+      "sourceOwner": "Existing certificate API hooks, not local ECDSA vault",
+      "consumer": "BatteryCertificatePanel.tsx:37-57",
+      "behavior": "Query fetches certificate; mounted panel automatically submits exact certificate/signature to server verification. Badge requires matching mutation variables, nonpending success and valid=true. Manual retry and separate certificate/signature clipboard actions remain.",
+      "trustBoundary": "Hook describes HMAC signature. Public server validation is not buyer-side ECDSA verification; backend issuer/key custody/authentication/expiry semantics were not inspected or exercised.",
+      "backendVerified": false
+    },
+    {
+      "name": "Disclosure/report assembly",
+      "hook": "useDisclosureSelection",
+      "file": "web\\src\\features\\resale-vault\\hooks\\useDisclosureSelection.ts",
+      "line": 18,
+      "endpoint": null,
+      "sourceOwner": "Feature-local state and reportBuilder.ts",
+      "behavior": "Fresh visit defaults to resale, VIN excluded, day precision; selection is not persisted. Page useMemo assembles live report from selection/evidence; section filtering repeated in builder. Report IDs/times generated locally."
+    },
+    {
+      "name": "Signing keys and audit log",
+      "hook": "useSigningVault",
+      "file": "web\\src\\features\\resale-vault\\hooks\\useSigningVault.ts",
+      "line": 35,
+      "endpoint": null,
+      "sourceOwner": "signingKeyRepository.ts, vaultDb.ts, auditTrail.ts",
+      "behavior": "IndexedDB teslasync-resale-vault stores signing_keys/key_registry/audit_log; memory fallback when persistence unavailable. Private keys generated nonextractable. Local audit is bookkeeping, not a cryptographic proof chain.",
+      "trustBoundary": "ECDSA P-256/SHA-256 signs canonical report bytes; embedded public JWK enables local verification. Neither mathematical validity nor local key recognition establishes identity, Tesla endorsement or accuracy of source measurements."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard / SourceContent",
+      "kind": "Existing shared layout and source-state owners",
+      "ownerFiles": [
+        "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx"
+      ],
+      "citation": "web\\src\\components\\layout\\index.ts:8-15",
+      "contract": "Page title/subtitle; panel title/actions; loading/empty/error/ready/retained content, retry and source label. Reuse category barrel; no replacement card/state system.",
+      "evidence": "Export mapping and feature call sites inspected; shared implementations not fully inspected."
+    },
+    {
+      "name": "Tabs",
+      "kind": "Shared navigation primitive",
+      "ownerFile": "web\\src\\components\\ui\\Tabs.tsx",
+      "citation": "web\\src\\components\\ui\\Tabs.tsx:9-18,91-127",
+      "contract": "tabs/activeTab/onChange/ariaLabel/idBase; roving tab stop, arrows/Home/End; scrollable strip and min-h-11. Consumer owns linked panels."
+    },
+    {
+      "name": "Table",
+      "kind": "Shared semantic matrix primitive",
+      "ownerFile": "web\\src\\components\\ui\\Table.tsx",
+      "citation": "web\\src\\components\\ui\\Table.tsx:5-35",
+      "contract": "standalone or embedded variant; native table attributes and ref; contained horizontal scrolling. Eight-row evidence matrix does not require a second data-table pipeline."
+    },
+    {
+      "name": "VaultSummaryBrief",
+      "kind": "Feature adapter to shared OperationalBrief",
+      "ownerFile": "web\\src\\features\\resale-vault\\components\\operationalbrief-all\\VaultSummaryBrief.tsx",
+      "citation": "web\\src\\features\\resale-vault\\components\\operationalbrief-all\\VaultSummaryBrief.tsx:9-62",
+      "contract": "id/title/description/metrics/hasEvidence/scope/sources/provenance; raw numeric metrics through useOperationalMetrics; loading/retained/partial/refreshing/available/missing and source load times. Seven adapter usages across six panels.",
+      "sharedOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "sharedOwnerEvidence": "web\\src\\components\\data-display\\index.ts:81-86; feature import/call inspected, shared renderer not inspected."
+    },
+    {
+      "name": "Shared controls, feedback, formatting and motion",
+      "kind": "Existing contracts consumed by feature",
+      "names": ["Button", "CopyButton", "Badge", "RadioCard", "Checkbox", "Toggle", "Select", "Input", "Accordion", "HelperText", "PanelTitle", "ErrorText", "InlineCallout", "StaleRefreshWarning", "EmptyState", "Skeleton", "KVList", "Timeline", "FadeIn"],
+      "citation": "WarrantyResaleVaultPage.tsx:21-28; component imports and call sites",
+      "contract": "Retain localized names and warnings, disabled/loading actions, confirmation, copy feedback, native file input, accordion details, semantic statuses and date/number/unit preferences. Motion implementation and effective contrast not validated."
+    },
+    {
+      "name": "Feature panels",
+      "kind": "Domain-owned presentation",
+      "ownerFile": "web\\src\\features\\resale-vault\\components\\index.ts",
+      "citation": "web\\src\\features\\resale-vault\\components\\index.ts:6-32",
+      "contract": "Fourteen panel components compose five tabs. Keep certificate distinct from browser-signed report and keep all evidence inventories, specialists, explanations and export/import actions."
+    },
+    {
+      "name": "NoVehicleSelected",
+      "kind": "Existing onboarding prerequisite owner",
+      "ownerFile": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "citation": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx:44-86",
+      "contract": "Localized page title, setup guidance, /onboarding CTA; reuse global selected vehicle rather than local picker."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\resale-vault\\components\\ExportReportPanel.tsx",
+      "line": 104,
+      "rule": "MDC-002/MDC-010/MDC-015",
+      "detail": "White-alpha bordered mini-surfaces repeat in export results, import results, key rows and maintenance rows; a white-alpha background also appears in certificate signature details.",
+      "fix": "Use existing border/surface tokens and typography roles within current feature components. Do not introduce another card library.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedCitations": ["ImportVerifyPanel.tsx:127", "SignatureKeyPanel.tsx:72", "MaintenanceSummaryPanel.tsx:65", "BatteryCertificatePanel.tsx:124"]
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; all viewport outcomes unverified",
+    "observed": [
+      "Disclosure profile/section/sensitive controls stack in one column and switch to two at sm (DisclosureProfileBuilder.tsx:61,88,105).",
+      "Action groups commonly flex-wrap; report digest/key identifiers use break-all; signature clipboard groups wrap (ExportReportPanel.tsx:94-122; BatteryCertificatePanel.tsx:124-144).",
+      "Shared Tabs contains horizontal scrolling without dropping tabs (Tabs.tsx:94-96); Table contains horizontal overflow (Table.tsx:21-25).",
+      "Local activity retains an independently scrolling max-h-96 region (AuditTrailPanel.tsx:113)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\resale-vault\\components\\SignatureKeyPanel.tsx",
+        "line": 54,
+        "rule": "MDC-043; mission sections 15/16",
+        "detail": "Active-key HelperText does not provide break-all, unlike the history key at line 74. Long rotation linkage and timestamps at lines 79-86 likewise lack explicit wrapping strategy. Overflow is a source risk, not a reproduced viewport defect.",
+        "fix": "Keep full identifiers and lineage; apply bounded wrapping/min-width strategy using existing primitives, then test long content at 320px and 200% text.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "acceptanceWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "preserve": "All five tabs, eight inventory rows, full key history, certificate copy actions, warnings, audit details and privacy manifests must remain reachable; mobile is not permission to delete secondary evidence."
+  },
+  "accessibility": {
+    "status": "source-only; keyboard, screen reader, contrast, focus, target geometry and forced-colors unverified",
+    "observed": [
+      "Page has localized tablist label; decorative intro icon is aria-hidden (WarrantyResaleVaultPage.tsx:95,109).",
+      "Disclosure uses labeled radiogroup/shared RadioCard, Checkbox, Select and Toggle (DisclosureProfileBuilder.tsx:61-118).",
+      "Evidence matrix has accessible table name and scoped row headers (EvidenceInventoryPanel.tsx:47,60).",
+      "Import uses shared labeled native file Input (ImportVerifyPanel.tsx:110-115); local validity is expressed in text badges and warning explanations, not color alone."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.tsx",
+        "line": 113,
+        "rule": "MDC-040; WAI-ARIA Tabs linkage",
+        "detail": "The consumer renders one role=tabpanel with no id or aria-labelledby. Tabs emits aria-controls={tablistId}-panel-{key} and tab IDs, but page passes no stable idBase or matching panel identity.",
+        "fix": "Use existing Tabs.idBase; set the current panel id and aria-labelledby to the selected tab IDs, keeping all five tabs and keyboard behavior. Add consumer DOM-association coverage and browser keyboard/focus QA.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedCitations": ["web\\src\\components\\ui\\Tabs.tsx:14-18,117-127"]
+      },
+      {
+        "file": "web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.tsx",
+        "line": 118,
+        "rule": "MDC-040; asynchronous accessible feedback",
+        "detail": "Verification progress is plain HelperText; the result container at line 127 has no explicit live-region semantics. Announcement support in nested shared feedback was not inspected; end-to-end announcement is unknown.",
+        "fix": "Use existing accessible status feedback or appropriately scoped polite announcement for completion/progress without rereading all warnings; verify file-change race handling and keyboard-only import.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "observed": [
+      {
+        "name": "No vehicle",
+        "citation": "WarrantyResaleVaultPage.tsx:81-83",
+        "behavior": "Existing onboarding fallback; hooks execute before early return, so vehicle-scoped enablement remains important. Account-wide maintenance and local vault initialization are not gated by the early return."
+      },
+      {
+        "name": "Independent source loading/failure/retained data",
+        "citation": "useVaultEvidence.ts:74-162; EvidenceInventoryPanel.tsx:38-44,54-100",
+        "behavior": "Eleven source states derived independently. Inventory distinguishes pending, data found, unavailable and no data; per-source retry and retained-data warnings preserve usable neighbor evidence."
+      },
+      {
+        "name": "Certificate",
+        "citation": "BatteryCertificatePanel.tsx:37-57,93-117,147-159",
+        "behavior": "Fatal load error/retry, loading skeleton, empty, retained refresh warning, ready snapshot; verification badges bind to exact payload; failure/retry is distinct from certificate availability."
+      },
+      {
+        "name": "Local keys and crypto capability",
+        "citation": "SignatureKeyPanel.tsx:29-68; cryptoAvailability.ts:32-40",
+        "behavior": "Capability warning, mutation/error, loading and empty states; persisted/session-only keys; revoke confirmation and cancel. No weak unsigned signing fallback."
+      },
+      {
+        "name": "Import/export",
+        "citation": "ImportVerifyPanel.tsx:47-98,118-188; ExportReportPanel.tsx:41-73,88-133",
+        "behavior": "Import clears old result and uses attempt counter to reject late file completions; JSON shape/syntax/crypto errors surfaced. Sign has busy/error states; download disabled until signed."
+      },
+      {
+        "name": "Audit",
+        "citation": "AuditTrailPanel.tsx:46-77,101-128; auditTrail.ts:31-56",
+        "behavior": "Mount/refresh loading, retryable error, empty guidance, retained entries and newest-first timeline. Storage failures are intentionally best-effort and may produce empty/memory-only history; not durable audit proof."
+      }
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.ts",
+        "line": 128,
+        "rule": "MDC-026/MDC-045; unknown is not zero",
+        "detail": "If one maintenance source has records and the other is undefined/failed, missing scheduled/service counts become 0. Charging sums at lines 197/200 likewise replace unknown energy/cost inputs with 0. Source warnings exist, but normalized numeric zero can still read as measured absence/completeness.",
+        "fix": "Coordinate typed evidence null/partial totals with source availability; distinguish observed subtotal from complete total without changing raw caches or inventing amounts. Add mixed-success/missing-value cases.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\resale-vault\\components\\WarrantySummaryPanel.tsx",
+        "line": 36,
+        "rule": "MDC-026; independent source states",
+        "detail": "Warranty panel accepts only evidence, not its source state, so a pending/failed warranty presents the same no-evidence message as resolved empty. Inventory supplies source feedback elsewhere, but this panel alone cannot explain loading/failure/retained context.",
+        "fix": "Pass the existing warranty source state and reuse SourceContent/StaleRefreshWarning; preserve opaque values and per-source recovery rather than adding a separate query.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\resale-vault\\components\\BatteryCertificatePanel.tsx",
+      "line": 124,
+      "rule": "MDC-010/MDC-012/MDC-015",
+      "detail": "Fixed-white alpha signature surface and four fixed-white alpha bordered result/list surfaces are theme-independent decoration. These are low-alpha white usages, not pure-white text or proof of excessive rendered saturation.",
+      "fix": "Replace white-alpha surfaces/dividers with established semantic panel/control tokens, preserving signature text, clipboard affordances and trust-status labels in light/dark/custom themes.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedCitations": ["ExportReportPanel.tsx:104", "ImportVerifyPanel.tsx:127", "SignatureKeyPanel.tsx:72", "MaintenanceSummaryPanel.tsx:65"]
+    },
+    {
+      "file": "web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.tsx",
+      "line": 150,
+      "rule": "MDC-010/MDC-025",
+      "detail": "Validity icon specifies semantic CSS-variable fallbacks #22c55e/#ef4444 at lines 152/154; certificate badge icon fixes emerald-300 at BatteryCertificatePanel.tsx:74. Semantic use is legitimate, but fallback/theme composed saturation and contrast are unmeasured.",
+      "fix": "Prefer existing semantic status/icon tokens; retain explicit validity text and exact-payload checks. Do not globally reset user palette choices.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\resale-vault\\components\\PrivacyPreviewPanel.tsx",
+      "line": 53,
+      "rule": "MDC-013",
+      "detail": "Several lists/results use raw text-xs/text-sm and font-medium spans rather than role typography (also inventory line 60 and key rows line 72). Long evidence and trust explanations need readable preference-aware hierarchy.",
+      "fix": "Use existing Text/Caption/Code/HelperText roles with semantic element overrides; keep full manifests, raw identifiers and all limitations.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.tsx",
+      "line": 98,
+      "rule": "MDC-046; accurate privacy/trust boundary",
+      "detail": "Intro claims nothing leaves browser until explicit export, but Evidence mounts BatteryCertificatePanel which automatically POSTs certificate/signature for verification (lines 46-50). Certificate copying is independent of report disclosure. Server certificate includes vehicle_id and exact issue/expiry times.",
+      "fix": "Clarify browser-local report signing versus existing server certificate fetch/verification/copy flow and its separate disclosure scope. Preserve certificate, automatic exact-payload self-check and copy actions; do not claim all networking is local.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedCitations": ["web\\src\\features\\resale-vault\\components\\BatteryCertificatePanel.tsx:46-57,134-144", "web\\src\\api\\hooks\\useBatteryCertificate.ts:20-26,68-76"]
+    },
+    {
+      "file": "web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.ts",
+      "line": 141,
+      "rule": "MDC-046; disclosure precision contract",
+      "detail": "normalizeSoftwareUpdates receives no precision and copies installedAt unchanged (line 147), despite exactTimestamps=false and manifest claiming all report timestamps are day-truncated (redaction.ts:160). Generated/signature metadata remain exact too and should be explicitly scoped rather than silently advertised as coarsened.",
+      "fix": "Apply current evidence precision to software install timestamps and accurately scope manifest language to evidence versus generation/signing metadata. Preserve toggle defaults, versions, counts and exact opt-in behavior.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.ts",
+      "line": 134,
+      "rule": "MDC-046; evidence-backed privacy statements",
+      "detail": "Service notes are copied as free text; vehicle display_name also passes through (line 75). Warranty scrub drops sensitive key names but preserves string values (redaction.ts:80). These paths do not substantiate the absolute claim that identity/addresses are always absent from arbitrary source content.",
+      "fix": "Keep useful evidence and disclose limits of key-pattern redaction; establish explicit safe-field/free-text review policy before strengthening privacy claims. Do not treat fixtures or a generated manifest as proof of all-content redaction.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\resale-vault\\components\\ExportReportPanel.tsx",
+      "line": 41,
+      "rule": "MDC-046; preview/export payload identity",
+      "detail": "signed state is not cleared or compared when report prop changes. After signing, a source refresh can change live PrivacyPreviewPanel while Download JSON still targets earlier signed.report (line 69). This is a source-confirmed identity gap, not a reproduced interaction.",
+      "fix": "Show explicitly which immutable snapshot is signed/downloadable or invalidate/re-sign on changed report identity, without mutating a signed payload. Preserve both signed proof and current privacy preview.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.ts",
+      "line": 91,
+      "rule": "MDC-045; SI canonical shared source contracts",
+      "detail": "Existing passport/certificate interfaces expose kWh fields; normalizer multiplies passport capacities by 1000, certificate presentation also multiplies estimated_capacity_kwh by 1000. Maintenance odometerKm and driving totalDistanceKm are converted at normalization. Do not assume source wire values already changed or remove conversions based on naming alone.",
+      "fix": "Coordinate shared source-contract audit with SI migration owner and real backend JSON before modifying conversions. Preserve current raw query payloads, report Wh/m/s values and existing display-boundary useUnits behavior.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedCitations": ["BatteryCertificatePanel.tsx:63", "evidenceNormalizers.ts:133,178", "web\\src\\api\\hooks\\useBatteryCertificate.ts:28-29"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Trust/disclosure and signed-snapshot identity issues are more important than cosmetic restyling; tab-panel association is a concrete accessibility defect.",
+    "order": [
+      "Clarify certificate/server/local trust and preserve all proof/evidence affordances.",
+      "Resolve precision, free-text disclosure limits and missing-value semantics with feature/integration owners.",
+      "Bind export snapshot to the visible preview and link tab IDs.",
+      "Replace fixed-white mini-surfaces and align role typography.",
+      "Exercise responsive, theme, keyboard, offline/retained-data and real browser crypto/storage cases under centralized QA."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Coordinate existing certificate/passport and legacy source-unit contracts",
+      "existingOwnerFiles": [
+        "web\\src\\api\\hooks\\useBatteryCertificate.ts",
+        "web\\src\\api\\hooks\\useBatteryPassport.ts",
+        "web\\src\\api\\hooks\\useVehicles.ts",
+        "web\\src\\api\\hooks\\useVehicleSystems.ts",
+        "web\\src\\api\\hooks\\useDriving.ts"
+      ],
+      "owner": "integration",
+      "concreteContract": {
+        "props": "Typed source fields and actual JSON unit meanings; vehicle scope and query keys unchanged.",
+        "variants": "Separate server HMAC certificate and local ECDSA report; no dual-shape/legacy adapter invented.",
+        "states": "Null versus observed zero, partial source totals, retained payloads, exact-payload verification, unavailable source/provenance."
+      },
+      "usedBy": ["BatteryCertificatePanel", "useVaultEvidence", "evidenceNormalizers", "BatterySummaryPanel", "DrivingChargingSummaryPanel"],
+      "dependsOn": ["Backend payload and SI migration contract confirmation by designated integration owner", "Current query/state/formatting contracts"],
+      "detail": "Source-contract coordination required, not authorization to edit shared hooks during this page audit. No new shared UI component/API is needed: Tabs.idBase, Table.variant, SourceContent and OperationalBrief already cover the observed presentation needs."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "detail": "One feature component barrel, one disclosure state hook, one local report builder/signer/verifier and existing shared UI/layout owners. Separate server certificate and browser report represent distinct trust mechanisms, not duplicate implementations to merge.",
+    "boundedDuplication": [
+      {
+        "file": "web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.ts",
+        "line": 43,
+        "detail": "Local charger-type classification comment documents intentional repetition of battery-care logic to avoid cross-feature dependency. Other implementation not inspected; no whole-app duplication conclusion."
+      }
+    ]
+  },
+  "preservation": {
+    "sourceSha256": "A030F014CF39399C275803581DE8CE3194F3B9C79B7491D7FEF1C108ACA4F52A",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 178,
+    "pagePlusPresentationComponentLineCount": 1811,
+    "lineCountMethod": "Get-Content page plus all production .tsx under this feature components directory, excluding .test. files; includes VaultSummaryBrief.",
+    "sectionCounts": {
+      "tabs": 5,
+      "introCards": 1,
+      "panelComponents": 14,
+      "evidencePanels": 8,
+      "disclosurePanels": 1,
+      "previewPanels": 3,
+      "importPanels": 1,
+      "auditPanels": 1,
+      "inventoryEvidenceCategories": 8,
+      "sourceStates": 11,
+      "summaryBriefInstances": 7,
+      "privacyAccordions": 3
+    },
+    "sections": [
+      {"name": "Local-first introduction", "citation": "WarrantyResaleVaultPage.tsx:94-102"},
+      {"name": "Evidence inventory, availability and profile membership", "citation": "WarrantyResaleVaultPage.tsx:123-129; EvidenceInventoryPanel.tsx:49-82"},
+      {"name": "Battery health: six metrics, thermal distribution, recommendations, provenance", "citation": "BatterySummaryPanel.tsx:28-84"},
+      {"name": "Separate server battery certificate: four metrics, expiry, signature, copy and verification", "citation": "BatteryCertificatePanel.tsx:61-161"},
+      {"name": "Maintenance/service counts, account-wide warning, categories and dated odometer/notes records", "citation": "MaintenanceSummaryPanel.tsx:30-79"},
+      {"name": "Software count, latest version and installed history", "citation": "SoftwareUpdateSummaryPanel.tsx:23-53"},
+      {"name": "Warranty selected-vehicle caveat and complete flattened scrubbed payload", "citation": "WarrantySummaryPanel.tsx:34-56"},
+      {"name": "Driving six metrics and score; charging five metrics; observed-window warning", "citation": "DrivingChargingSummaryPanel.tsx:45-103"},
+      {"name": "Security counts, observed bounds and event-type breakdown", "citation": "IncidentSummaryPanel.tsx:24-59"},
+      {"name": "Disclosure: warranty/service/resale/custom, eight section choices, VIN and timestamp choices, warnings", "citation": "DisclosureProfileBuilder.tsx:22,61-146"},
+      {"name": "Privacy: time window, always excluded, excluded by profile, coarsened, warned inclusions, limitations and attestation", "citation": "PrivacyPreviewPanel.tsx:35-116"},
+      {"name": "Key management: capability, active key, persistence, full history, rotation/revocation linkage and disclaimer", "citation": "SignatureKeyPanel.tsx:27-123"},
+      {"name": "Sign/export: explicit sign, JSON download, persistence/revocation status, digest/key/time and digest disclaimer", "citation": "ExportReportPanel.tsx:78-133"},
+      {"name": "Import/verify: file selection, race protection, errors, digest/signature/key trust results and disclaimers", "citation": "ImportVerifyPanel.tsx:47-188"},
+      {"name": "Local audit trail: refresh, empty guidance, source recovery and complete newest-first activity", "citation": "AuditTrailPanel.tsx:85-128"}
+    ],
+    "actions": [
+      "Switch any of five tabs; shared arrow/Home/End activation.",
+      "Select warranty/service/resale/custom profile; toggle eight sections in custom.",
+      "Choose excluded/masked/full VIN; opt into exact timestamps; read warnings.",
+      "Open/close all three privacy accordions; inspect inclusion warnings/limitations.",
+      "Generate key; rotate active key; initiate revoke; confirm revoke; cancel revoke.",
+      "Sign current report explicitly; download signed JSON.",
+      "Choose/rechoose JSON file; independently verify locally; read digest and signature results separately.",
+      "Retry failed evidence/certificate source; retry server certificate verification.",
+      "Copy server certificate; copy its separate signature with feedback.",
+      "Refresh local audit log and inspect full activity.",
+      "Follow onboarding CTA when no vehicle is selected."
+    ],
+    "dataBehavior": [
+      "Workspace vehicle remains sole page vehicle selection; no duplicate selector/date range is introduced.",
+      "Evidence inventory is not filtered by disclosure sections; report assembly is filtered defensively by selection.",
+      "Disclosure state remains session-local, initially resale with excluded VIN/day precision.",
+      "Preserve all raw numeric measurements, specialty conversion/formatting and full source payload metadata; SI conversions must follow actual source contract, not guessed units.",
+      "Retain observed-window and account-wide limitations; no lifetime coverage, per-vehicle service attribution or currency denomination invented.",
+      "Preserve report schema/app version, ID, time bounds, selected evidence, redaction manifest, limitations and attestation.",
+      "Preserve battery degradation_trend in report evidence even though the current summary does not draw it (evidenceNormalizers.ts:104-107).",
+      "Preserve canonical-byte signing, separate SHA-256 digest and ECDSA proof, public JWK, algorithm and local key status.",
+      "Retain crypto-unavailable errors and session-only storage limitations; no fixture/unsigned/hash-only proof fallback.",
+      "Local registry recognition/revocation is separate from cryptographic validity; unknown external key is not inherently invalid.",
+      "Local audit is neither part of signed report nor authority/immutable-proof infrastructure."
+    ],
+    "trustBoundaries": [
+      "Fixture-fed tests or source annotations are not evidence that real Web Crypto signatures verify.",
+      "A matching digest alone establishes neither authorship nor measured source accuracy.",
+      "Embedded-JWK ECDSA validity proves possession of the matching private key for signed bytes, not person/vehicle identity, Tesla endorsement, legal validity or authenticity of upstream measurements.",
+      "Passport provenance hash is displayed without this page invoking passport verification.",
+      "Server certificate verification trusts the existing server response and must remain distinct from local self-attestation; no backend verification/runtime proof claimed.",
+      "Hard-exclusion manifest is a policy description, not proof that arbitrary free-text values contain no sensitive data."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only scoped source audit; only assigned JSON and heartbeat written.",
+    "runtime": "UNVERIFIED: no browser navigation, screenshots, live API calls, certificate issue/verify requests, production mutations, file import, clipboard, signing, downloads or storage probes performed.",
+    "visual": "UNVERIFIED: composed themes, contrast, saturation, effective pure-white noise, responsive widths, text zoom, RTL, motion/forced-colors and focus appearance.",
+    "backend": "Not read or called. Endpoints are current hook source strings, not proof of router registration, authorization, cryptographic implementation, response units, expiry handling, source completeness or availability.",
+    "tests": "Not executed; no TypeScript, full-repository lint/build, test runner, Git or agents invoked. Skill script inspected but not executed because its unconditional project-wide TypeScript gate is outside this audit scope.",
+    "sourceChecks": {
+      "pageLines": 178,
+      "pageInlineStyleMatches": 0,
+      "pageRawControlMatches": 0,
+      "pageNeonGlowWhiteClassMatches": 0,
+      "featureWhiteAlphaDecorationMatches": 5,
+      "featureNeonGlowMatches": 0,
+      "scope": "Production resale-vault .tsx source pattern inspection, not rendered visual acceptance or a complete engineering audit.",
+      "commands": [
+        {"command": "Get-FileHash web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.tsx -Algorithm SHA256", "exitCode": 0, "output": "A030F014CF39399C275803581DE8CE3194F3B9C79B7491D7FEF1C108ACA4F52A"},
+        {"command": "functions.rg pattern=neon|glow|text-white|border-white|bg-white|shadow|style=|<button\\b|<input\\b|<textarea\\b|<select\\b|<table\\b paths=web\\src\\features\\resale-vault glob=*.tsx output_mode=content -n=true", "exitCode": null, "toolOutcome": "Successful tool response; rg process exit code not exposed", "output": "Five white-alpha decoration lines: SignatureKeyPanel:72, MaintenanceSummaryPanel:65, ImportVerifyPanel:127, ExportReportPanel:104, BatteryCertificatePanel:124. No neon/glow/pure-white text match."},
+        {"command": "$p='web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.tsx'; $s=Get-Content $p; $cs=Get-ChildItem web\\src\\features\\resale-vault\\components -Recurse -Filter *.tsx | Where-Object Name -NotMatch '\\.test\\.'; ($cs | ForEach-Object {(Get-Content $_.FullName).Length} | Measure-Object -Sum).Sum+$s.Length", "exitCode": 0, "output": "Page lines: 178; Page inline style matches: 0; Page raw control matches: 0; Page neon/glow/white matches: 0; Page plus production presentation component lines: 1811"},
+        {"command": "Select-String attempted route declaration lookup including nonexistent web\\src\\routes directory", "exitCode": 1, "output": "Cannot find path F:\\github\\TeslaSync\\web\\src\\routes because it does not exist. Corrected with scoped App/route filename rg search; App.tsx:226 and :760 found."}
+      ]
+    },
+    "validationReceipt": "Final source-only validation: JSON valid | required fields: 19 | issue contracts valid: 14 | source hash unchanged. Production components white-alpha matching lines: 5; neon/glow matching lines: 0. PowerShell case-insensitive raw-control search also returned 12 shared component tag matches; that count is not an HTML-violation count.",
+    "missionSectionsRead": ["0/1 and architecture: docs\\frontend-mission.md:1-240", "Color/text/intensity: docs\\frontend-mission.md:240-368", "Responsive/mobile/forms/states: docs\\frontend-mission.md:529-790", "Accessibility: docs\\frontend-mission.md:921-941", "Motion/data separation/performance/isolation/extreme data: docs\\frontend-mission.md:930-1120", "Visual QA and definition of done: docs\\frontend-mission.md:1416-1490"],
+    "coverage": "All fourteen directly composed production panels, feature summary adapter, direct feature state/report/privacy/crypto/storage dependencies and relevant API hook excerpts inspected. Shared foundation implementations mostly inferred only from export mapping and call-site contracts, except Tabs/Table; not a foundations audit.",
+    "snapshot": "Source may evolve under other workers. Page hash records the inspected snapshot, not a repository freeze. Large batched reads were truncated by tool output; affected panels were reread individually before citations were recorded.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-166.json", ".agent-status\\audit-page-166.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\App.tsx",
+    "web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.tsx",
+    "web\\src\\features\\resale-vault\\components\\index.ts",
+    "web\\src\\features\\resale-vault\\components\\EvidenceInventoryPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\BatterySummaryPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\BatteryCertificatePanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\MaintenanceSummaryPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\SoftwareUpdateSummaryPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\WarrantySummaryPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\DrivingChargingSummaryPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\IncidentSummaryPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\DisclosureProfileBuilder.tsx",
+    "web\\src\\features\\resale-vault\\components\\PrivacyPreviewPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\SignatureKeyPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\ExportReportPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\AuditTrailPanel.tsx",
+    "web\\src\\features\\resale-vault\\components\\operationalbrief-all\\VaultSummaryBrief.tsx",
+    "web\\src\\features\\resale-vault\\hooks\\useVaultEvidence.ts",
+    "web\\src\\features\\resale-vault\\hooks\\useDisclosureSelection.ts",
+    "web\\src\\features\\resale-vault\\hooks\\useSigningVault.ts",
+    "web\\src\\features\\resale-vault\\lib\\constants.ts",
+    "web\\src\\features\\resale-vault\\lib\\reportBuilder.ts",
+    "web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.ts",
+    "web\\src\\features\\resale-vault\\lib\\redaction.ts",
+    "web\\src\\features\\resale-vault\\lib\\reportSigner.ts",
+    "web\\src\\features\\resale-vault\\lib\\reportVerifier.ts",
+    "web\\src\\features\\resale-vault\\lib\\signingKeyRepository.ts",
+    "web\\src\\features\\resale-vault\\lib\\vaultDb.ts",
+    "web\\src\\features\\resale-vault\\lib\\auditTrail.ts",
+    "web\\src\\features\\resale-vault\\lib\\cryptoAvailability.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useBatteryPassport.ts",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useGuard.ts",
+    "web\\src\\api\\hooks\\useBatteryCertificate.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\components\\ui\\Tabs.tsx",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx"
+  ]
+}

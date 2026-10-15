@@ -6,8 +6,7 @@
  * SystemInfoRows) is exercised through it by driving the data sources it reads.
  *
  * Strategy:
- *   - The seven inline `useQuery(...)` devtools calls (extended-health, version,
- *     update-check, backup-stats, workers, errors) are controlled
+ *   - The inline queries and the extended-health domain hook are controlled
  *     synchronously via a mocked `@tanstack/react-query.useQuery` keyed off
  *     `queryKey[1]`, so there is no async network flush.
  *   - The domain hooks (`useSystemHealth`, `useBackupRuns`, `useBackupConfigs`,
@@ -33,6 +32,7 @@ import { render, screen, within, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { neonColorMap } from '@/lib/tokens'
 
 // ── i18n: return the fallback/default string and interpolate {{vars}} ──
 vi.mock('react-i18next', async () => {
@@ -69,18 +69,14 @@ vi.mock('@tanstack/react-query', async () => {
   return { ...actual, useQuery: vi.fn(), useQueryClient: vi.fn() }
 })
 
-// devtools functions are passed as queryFns to the mocked useQuery (never
-// invoked); stub them so the import chain stays inert.
-vi.mock('@/api/devtools', () => ({
-  getVersionInfo: vi.fn(),
-  getExtendedHealth: vi.fn(),
-  checkForUpdates: vi.fn(),
-  getBackupStats: vi.fn(),
-  getWorkersHealth: vi.fn(),
+vi.mock('@/api/client', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/client')>(),
+  request: vi.fn(),
 }))
 
 vi.mock('@/api/hooks/useAdmin', () => ({
   useSystemHealth: vi.fn(),
+  useExtendedSystemHealth: vi.fn(),
   useBackupRuns: vi.fn(),
   useBackupConfigs: vi.fn(),
   useMaintenanceState: vi.fn(),
@@ -88,6 +84,7 @@ vi.mock('@/api/hooks/useAdmin', () => ({
 vi.mock('@/api/hooks/useSettings', () => ({ useAuthStatus: vi.fn() }))
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vi.fn() }))
 vi.mock('../hooks/useStatusLiveSSE', () => ({ useStatusLiveSSE: vi.fn() }))
+vi.mock('@/hooks/useMotionPreference', () => ({ useMotionPreference: vi.fn(() => ({ reduce: false, durationMs: 250 })) }))
 
 // Feature-level status cards fetch their own data — stub to prop-exposing
 // stand-ins so the page runs end-to-end without a network.
@@ -133,9 +130,10 @@ vi.mock('../components/status', () => ({
   SLOTrackingCard: () => <div data-testid="slo-card" />,
 }))
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   useSystemHealth,
+  useExtendedSystemHealth,
   useBackupRuns,
   useBackupConfigs,
   useMaintenanceState,
@@ -144,6 +142,8 @@ import { useAuthStatus } from '@/api/hooks/useSettings'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
 import SystemStatusPage from './SystemStatusPage'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
+import { request } from '@/api/client'
 
 const mockUseQuery = vi.mocked(useQuery)
 const mockUseQueryClient = vi.mocked(useQueryClient)
@@ -274,16 +274,37 @@ function q<T>(data: T, over: Record<string, unknown> = {}) {
     error: null,
     refetch: vi.fn(),
     dataUpdatedAt: Date.now(),
+    errorUpdatedAt: 0,
+    errorUpdateCount: 0,
+    failureCount: 0,
+    failureReason: null,
+    isError: false,
+    isPending: false,
+    isSuccess: true,
+    isLoadingError: false,
+    isRefetchError: false,
+    isInitialLoading: false,
+    isFetched: true,
+    isFetchedAfterMount: true,
+    isRefetching: false,
+    isPaused: false,
+    isPlaceholderData: false,
+    isEnabled: true,
+    isStale: false,
+    status: 'success' as const,
+    fetchStatus: 'idle' as const,
+    promise: Promise.resolve(data),
     ...over,
   }
 }
 
 // mutable per-test state driving the inline useQuery + refresh spies
 let inline: Record<string, unknown>
-let refetchHealth: ReturnType<typeof vi.fn>
-let liveReconnect: ReturnType<typeof vi.fn>
-let invalidateQueries: ReturnType<typeof vi.fn>
-let scrollSpy: ReturnType<typeof vi.fn>
+let inlineOverrides: Record<string, Record<string, unknown>>
+let refetchHealth: ReturnType<typeof vi.fn<() => void>>
+let liveReconnect: ReturnType<typeof vi.fn<() => void>>
+let invalidateQueries: ReturnType<typeof vi.fn<(options: { queryKey: string[] }) => void>>
+let scrollSpy: ReturnType<typeof vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>>
 
 function renderPage() {
   return render(
@@ -301,6 +322,7 @@ const actionsRegion = () => within(screen.getByRole('region', { name: 'Operator 
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(useMotionPreference).mockReturnValue({ reduce: false, durationMs: 250 })
   const NOW = Date.now()
   refetchHealth = vi.fn()
   liveReconnect = vi.fn()
@@ -317,6 +339,10 @@ beforeEach(() => {
     'backup-stats': backupStats(),
     workers: workersHealth(),
   }
+  inlineOverrides = {}
+  vi.mocked(useExtendedSystemHealth).mockImplementation(() => (
+    q(inline['extended-health'], inlineOverrides['extended-health'])
+  ) as ReturnType<typeof useExtendedSystemHealth>)
   mockUseQuery.mockImplementation(
     (opts: unknown) =>
       ({
@@ -325,6 +351,7 @@ beforeEach(() => {
         isFetching: false,
         error: null,
         refetch: vi.fn(),
+        ...inlineOverrides[String((opts as { queryKey: unknown[] }).queryKey[1])],
          
       }) as any,
   )
@@ -356,11 +383,116 @@ beforeEach(() => {
   })
 })
 
+describe('SystemStatusPage query contracts', () => {
+  it('reuses extended health and preserves inline keys, cadence, raw payloads and cancellation', async () => {
+    renderPage()
+    expect(useExtendedSystemHealth).toHaveBeenCalledWith()
+    const signal = new AbortController().signal
+    const cases = [
+      { key: 'version', path: '/system/version', interval: 60_000 },
+      { key: 'update-check', path: '/system/update-check', interval: 3_600_000, staleTime: 3_600_000 },
+      { key: 'backup-stats', path: '/system/backup/stats', interval: 30_000 },
+      { key: 'workers', path: '/system/workers', interval: 30_000 },
+    ]
+    for (const source of cases) {
+      const options = mockUseQuery.mock.calls
+        .map(([options]) => options)
+        .find((options) => options.queryKey[1] === source.key)
+      expect(options).toBeDefined()
+      expect(options?.queryKey).toEqual(['system-status', source.key])
+      expect(options?.refetchInterval).toBe(source.interval)
+      expect(options?.staleTime).toBe(source.staleTime)
+      expect(options?.select).toBeUndefined()
+      if (!options) throw new Error('Expected query options')
+      const queryFn = options.queryFn
+      if (typeof queryFn !== 'function') throw new Error('Expected a callable query function')
+      const payload = inline[source.key]
+      vi.mocked(request).mockResolvedValueOnce(payload)
+      expect(await queryFn({
+        signal,
+        queryKey: options.queryKey,
+        client: new QueryClient(),
+        meta: undefined,
+      })).toBe(payload)
+      expect(request).toHaveBeenLastCalledWith(source.path, { signal })
+    }
+  })
+
+  it('preserves the domain hook signal and accepted 503 health payload', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAdmin')>('@/api/hooks/useAdmin')
+    actual.useExtendedSystemHealth()
+    const options = mockUseQuery.mock.calls.at(-1)?.[0]
+    expect(options?.queryKey).toEqual(['system-status', 'extended-health'])
+    expect(options?.refetchInterval).toBe(30_000)
+    if (!options) throw new Error('Expected health query options')
+    const queryFn = options.queryFn
+    if (typeof queryFn !== 'function') throw new Error('Expected a callable health query function')
+    const signal = new AbortController().signal
+    const payload = extHealth({ status: 'unhealthy' })
+    vi.mocked(request).mockResolvedValueOnce(payload)
+    expect(await queryFn({
+      signal,
+      queryKey: options.queryKey,
+      client: new QueryClient(),
+      meta: undefined,
+    })).toBe(payload)
+    expect(request).toHaveBeenLastCalledWith('/system/health', { signal, acceptedStatuses: [503] })
+  })
+})
+
+describe('SystemStatusPage — row-count completeness', () => {
+  const expectTotal = (value: string) => {
+    const resourceLabel = resourcesRegion().getByText('Total rows')
+    expect(within(resourceLabel.parentElement!).getByText(value)).toBeInTheDocument()
+    const database = document.querySelector('#database')!
+    const databaseLabel = within(database as HTMLElement).getByText('Total rows')
+    expect(databaseLabel.nextElementSibling).toHaveTextContent(value)
+  }
+
+  it.each([
+    { name: 'missing map', counts: undefined },
+    { name: 'null map', counts: null },
+    { name: 'empty map', counts: {} },
+    { name: 'array instead of map', counts: [1000, 50] },
+    { name: 'string instead of map', counts: '1000' },
+    { name: 'missing count with known subtotal', counts: { positions: 1000, drives: undefined } },
+    { name: 'null count with measured zero', counts: { positions: 0, drives: null } },
+    { name: 'all counts missing', counts: { positions: undefined, drives: null } },
+    { name: 'NaN', counts: { positions: 1000, drives: NaN } },
+    { name: 'positive infinity', counts: { positions: 1000, drives: Infinity } },
+    { name: 'negative infinity', counts: { positions: 1000, drives: -Infinity } },
+    { name: 'numeric string', counts: { positions: 1000, drives: '50' } },
+    { name: 'boolean', counts: { positions: 1000, drives: false } },
+    { name: 'negative count', counts: { positions: 1000, drives: -50 } },
+    { name: 'positive fraction', counts: { positions: 1000, drives: +0.5 } },
+    { name: 'negative fraction', counts: { positions: 1000, drives: -0.5 } },
+    { name: 'unsafe count', counts: { positions: Number.MAX_SAFE_INTEGER + 1 } },
+    { name: 'unsafe sum', counts: { positions: Number.MAX_SAFE_INTEGER, drives: 1 } },
+  ])('shows unknown rather than a complete total for $name', ({ counts }) => {
+    inline['backup-stats'] = backupStats({ row_counts: counts })
+    renderPage()
+    expectTotal('—')
+    expect(resourcesRegion().getByText('512 MB')).toBeInTheDocument()
+  })
+
+  it.each([
+    { name: 'measured zero', counts: { positions: 0, drives: 0 }, expected: '0' },
+    { name: 'signed zero', counts: { positions: -0, drives: +0 }, expected: '0' },
+    { name: 'integer-valued decimals', counts: { positions: 1000.0, drives: 50.0 }, expected: '1,050' },
+    { name: 'signed positive integers', counts: { positions: +1000, drives: +50 }, expected: '1,050' },
+    { name: 'mixed zero and positive counts', counts: { positions: 0, drives: 50 }, expected: '50' },
+  ])('preserves a complete valid total for $name', ({ counts, expected }) => {
+    inline['backup-stats'] = backupStats({ row_counts: counts })
+    renderPage()
+    expectTotal(expected)
+  })
+})
+
 describe('SystemStatusPage — healthy populated view', () => {
   it('renders the page scaffolding, hero, sticky chrome, chip bar and live pill', () => {
     renderPage()
 
-    expect(screen.getByRole('heading', { level: 1, name: 'System Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     // healthy + fresh → the real StatusHero shows its default headline.
     expect(screen.getByText('All systems operational')).toBeInTheDocument()
     // subline reports recency, not an error/stale banner.
@@ -425,6 +557,72 @@ describe('SystemStatusPage — healthy populated view', () => {
     expect(screen.getByText('linux/amd64')).toBeInTheDocument()
   })
 
+  describe('database pool readings', () => {
+    const invalidReadings = [
+      { name: 'missing', value: undefined },
+      { name: 'null', value: null },
+      { name: 'NaN', value: Number.NaN },
+      { name: 'positive infinity', value: Number.POSITIVE_INFINITY },
+      { name: 'negative infinity', value: Number.NEGATIVE_INFINITY },
+      { name: 'numeric string', value: '5' },
+    ]
+    const fields = ['acquired_conns', 'idle_conns', 'total_conns'] as const
+
+    it.each(fields.flatMap(field => invalidReadings.map(reading => ({ field, ...reading }))))(
+      'shows $name $field as unknown without discarding the other readings',
+      ({ field, value }) => {
+        const extended = extHealth()
+        inline['extended-health'] = {
+          ...extended,
+          components: {
+            ...extended.components,
+            database_pool: { ...extended.components.database_pool, [field]: value },
+          },
+        }
+        renderPage()
+        const section = document.querySelector('#database')
+        if (!(section instanceof HTMLElement)) throw new Error('Database section missing')
+        const details = within(section)
+        expect(details.getByText(field === 'acquired_conns' ? '— / 25'
+          : field === 'total_conns' ? '5 / —' : '5 / 25')).toBeInTheDocument()
+        expect(details.getByText(field === 'idle_conns' ? '—' : '20')).toBeInTheDocument()
+        expect(section).not.toHaveTextContent(/undefined|null|NaN|Infinity/)
+        expect(details.getByText('512 MB')).toBeInTheDocument()
+        if (field !== 'idle_conns') {
+          expect(resourcesRegion().queryByRole('progressbar', { name: 'DB connections usage' })).not.toBeInTheDocument()
+        }
+        if (field === 'total_conns') {
+          expect(resourcesRegion().queryByText(/of .* in use/)).not.toBeInTheDocument()
+        }
+      },
+    )
+
+    it.each([
+      { acquired: 0, idle: 0, total: 0, acquiredText: '0 / 0', idleText: '0' },
+      { acquired: -0, idle: +2, total: +10, acquiredText: '0 / 10', idleText: '2' },
+      { acquired: -5, idle: -2, total: -10, acquiredText: '-5 / -10', idleText: '-2' },
+      { acquired: 7.5, idle: 2.25, total: 10.5, acquiredText: '7.5 / 10.5', idleText: '2.25' },
+      { acquired: 5, idle: 20, total: 0, acquiredText: '5 / 0', idleText: '20' },
+    ])('preserves finite pool readings $acquired/$total with idle $idle', ({
+      acquired, idle, total, acquiredText, idleText,
+    }) => {
+      const extended = extHealth()
+      extended.components.database_pool = {
+        status: 'healthy', acquired_conns: acquired, idle_conns: idle, total_conns: total,
+      }
+      inline['extended-health'] = extended
+      renderPage()
+      const section = document.querySelector('#database')
+      if (!(section instanceof HTMLElement)) throw new Error('Database section missing')
+      expect(within(section).getByText(acquiredText)).toBeInTheDocument()
+      expect(within(section).getByText(idleText)).toBeInTheDocument()
+      if (total <= 0) {
+        expect(resourcesRegion().queryByRole('progressbar', { name: 'DB connections usage' })).not.toBeInTheDocument()
+        expect(resourcesRegion().queryByText(/of .* in use/)).not.toBeInTheDocument()
+      }
+    })
+  })
+
   it('reports an unhealthy database as down rather than degraded', () => {
     const unhealthy = extHealth()
     unhealthy.components.database.status = 'unhealthy'
@@ -445,7 +643,8 @@ describe('SystemStatusPage — healthy populated view', () => {
     expect(document.querySelector('#errors')).toBeNull()
 
     // Everything healthy → the action list shows its explicit empty state.
-    expect(document.querySelector('#action-items')).toBeNull()
+    // The original empty-action assertion now verifies a persistent neutral panel.
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
   })
 })
 
@@ -484,7 +683,7 @@ describe('SystemStatusPage — operator action items', () => {
     expect(a.getByText('Update available — v1.3.0')).toBeInTheDocument()
     expect(a.getByText('Tesla token expires in 3 day(s)')).toBeInTheDocument()
     expect(a.getByText('Last backup is 10 days old')).toBeInTheDocument()
-    expect(a.queryByText(/Tesla API estimated cost/)).not.toBeInTheDocument()
+    expect(a.queryByText(/Tesla API Estimated cost/)).not.toBeInTheDocument()
     expect(a.getByText('2 of 3 workers unhealthy')).toBeInTheDocument()
     expect(a.getByText('export, geocode')).toBeInTheDocument()
   })
@@ -534,6 +733,65 @@ describe('SystemStatusPage — auth + backup edge branches', () => {
 })
 
 describe('SystemStatusPage — loading / stale / error', () => {
+  it.each(['healthy', 'unhealthy'])('retains %s health during a paused refresh without presenting a live assessment', (status) => {
+    const data = systemHealth({ status })
+    mockSystemHealth.mockReturnValue(
+      q(data, { fetchStatus: 'paused' }) as ReturnType<typeof useSystemHealth>,
+    )
+    const view = renderPage()
+
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    expect(screen.queryByText(/Health check failed/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Service outage')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('status-skeleton')).not.toBeInTheDocument()
+    expect(healthRegion().getByText('3 / 3 healthy')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Current component status' })).toHaveTextContent('tesla_api')
+    expect(resourcesRegion().getByText('512 MB')).toBeInTheDocument()
+    expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
+    expect(screen.getAllByTestId('stale-refresh-warning').some(
+      (notice) => notice.getAttribute('data-refresh-blocked') === 'true',
+    )).toBe(true)
+
+    mockSystemHealth.mockReturnValue(q(data) as ReturnType<typeof useSystemHealth>)
+    view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument()
+    expect(screen.getByText(status === 'healthy' ? 'All systems operational' : 'Service outage')).toBeInTheDocument()
+  })
+
+  it('shows a paused initial health request as unknown, not active loading or an outage', () => {
+    mockSystemHealth.mockReturnValue(
+      q(undefined, { isLoading: true, isPending: true, fetchStatus: 'paused', dataUpdatedAt: 0 }) as ReturnType<typeof useSystemHealth>,
+    )
+    renderPage()
+
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    expect(screen.queryByTestId('status-skeleton')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Health check failed/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Service outage')).not.toBeInTheDocument()
+    expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
+  })
+
+  it('retains populated health through a failed refresh and restores trust on recovery', () => {
+    const data = systemHealth()
+    mockSystemHealth.mockReturnValue(
+      q(data, { error: new Error('health refresh failed') }) as ReturnType<typeof useSystemHealth>,
+    )
+    const view = renderPage()
+
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(screen.getByText('Health check failed — health refresh failed')).toBeInTheDocument()
+    expect(healthRegion().getByText('3 / 3 healthy')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Current component status' })).toHaveTextContent('tesla_api')
+    expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
+
+    mockSystemHealth.mockReturnValue(q(data) as ReturnType<typeof useSystemHealth>)
+    view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
+    expect(screen.getByText('All systems operational')).toBeInTheDocument()
+    expect(screen.queryByText(/Health check failed/)).not.toBeInTheDocument()
+  })
+
   it('shows the skeleton and no hero while the health query is loading', () => {
     mockSystemHealth.mockReturnValue(
        
@@ -543,7 +801,7 @@ describe('SystemStatusPage — loading / stale / error', () => {
 
     expect(screen.getByTestId('status-skeleton')).toBeInTheDocument()
     // scaffolding stays, rich content does not.
-    expect(screen.getByRole('heading', { level: 1, name: 'System Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     expect(screen.queryByText('All systems operational')).not.toBeInTheDocument()
     expect(screen.queryByTestId('sticky-compact-hero')).not.toBeInTheDocument()
   })
@@ -605,18 +863,19 @@ describe('SystemStatusPage — missing data placeholders', () => {
     expect(screen.getByText('Awaiting first check')).toBeInTheDocument()
     const r = healthRegion()
     expect(r.getByText('no data')).toBeInTheDocument() // services
-    expect(r.getByText('connected')).toBeInTheDocument() // database (no latency/size)
+    expect(r.queryByText('connected')).not.toBeInTheDocument() // absent database source is not connected
     expect(r.getByText('No vehicle telemetry to assess')).toBeInTheDocument()
-    expect(r.getByText('unknown')).toBeInTheDocument() // workers
-    expect(r.getByText('Not connected')).toBeInTheDocument() // tesla auth
+    expect(r.getAllByText('unknown')).toHaveLength(3) // database, workers and Tesla auth
+    expect(r.queryByText('Not connected')).not.toBeInTheDocument()
 
     // Errors + system-info honest fallbacks.
     expect(document.querySelector('#errors')).toBeNull()
-    expect(screen.getByText('Loading system info…')).toBeInTheDocument()
+    expect(within(document.getElementById('system')!).getByText('System info is unavailable.')).toBeInTheDocument()
+    expect(screen.queryByText('Loading system info…')).not.toBeInTheDocument()
     // Infrastructure details are available in the operator disclosure.
     expect(document.querySelector('#operator-details #resources')).not.toBeNull()
-    // Nothing actionable → empty action list.
-    expect(document.querySelector('#action-items')).toBeNull()
+    expect(actionsRegion().queryByText('No current attention items.')).not.toBeInTheDocument()
+    expect(actionsRegion().getByText('Operator action items is unavailable.')).toBeInTheDocument()
   })
 
   it('does not crash and shows an empty component list when components is missing', () => {
@@ -627,9 +886,110 @@ describe('SystemStatusPage — missing data placeholders', () => {
     renderPage()
 
     // The page still mounts (crash guard: Object.entries(health.components ?? {})).
-    expect(screen.getByRole('heading', { level: 1, name: 'System Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     expect(screen.getByText('Current component status is unavailable.')).toBeInTheDocument()
     expect(healthRegion().getByText('no data')).toBeInTheDocument()
+  })
+})
+
+describe('SystemStatusPage — assessment source authority', () => {
+  it.each(['extended-health', 'workers'])('does not declare operational health without %s', (source) => {
+    inline[source] = undefined
+    renderPage()
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(screen.queryByText('All systems operational')).not.toBeInTheDocument()
+  })
+
+  it.each(['update-check', 'workers'])('shows active assessment loading for %s without inventing an empty result', (source) => {
+    inline[source] = undefined
+    inlineOverrides[source] = { isLoading: true, isFetching: true, fetchStatus: 'fetching' }
+    renderPage()
+    expect(actionsRegion().getByRole('status')).toHaveTextContent('Loading')
+    expect(actionsRegion().queryByText('No current attention items.')).not.toBeInTheDocument()
+  })
+
+  it('keeps paused-without-data distinct from active loading and a successful empty assessment', () => {
+    inline['update-check'] = undefined
+    inlineOverrides['update-check'] = { isPending: true, fetchStatus: 'paused' }
+    renderPage()
+    expect(actionsRegion().getByRole('status')).toHaveTextContent('Operator action items is unavailable.')
+    expect(actionsRegion().queryByText('Loading')).not.toBeInTheDocument()
+    expect(actionsRegion().queryByText('No current attention items.')).not.toBeInTheDocument()
+  })
+
+  it('accepts successful empty backup lists and zero workers as evidence, not missing data', () => {
+    mockBackupRuns.mockReturnValue(q([]) as ReturnType<typeof useBackupRuns>)
+    mockBackupConfigs.mockReturnValue(q([]) as ReturnType<typeof useBackupConfigs>)
+    inline.workers = workersHealth({ workers: [], total: 0, healthy_count: 0 })
+    renderPage()
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
+    expect(screen.getByText('All systems operational')).toBeInTheDocument()
+    expect(screen.queryByText('No backups recorded')).not.toBeInTheDocument()
+  })
+
+  it('retains update findings through a failed refresh and clears the retained notice on recovery', () => {
+    inline['update-check'] = updateCheck({ update_available: true, latest: '2.0.0' })
+    inlineOverrides['update-check'] = { error: new Error('update refresh failed') }
+    const view = renderPage()
+    expect(actionsRegion().getByText('Update available — v2.0.0')).toBeInTheDocument()
+    expect(actionsRegion().getByRole('status')).toHaveTextContent('Previously loaded data remains visible')
+    inlineOverrides['update-check'] = {}
+    inline['update-check'] = updateCheck()
+    view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
+    expect(actionsRegion().queryByText('Update available — v2.0.0')).not.toBeInTheDocument()
+    expect(actionsRegion().queryByRole('status')).not.toBeInTheDocument()
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
+  })
+
+  it.each([
+    { error: new Error('worker refresh failed') },
+    { fetchStatus: 'paused' },
+    { isFetching: true, fetchStatus: 'fetching' },
+  ])('does not present retained healthy evidence as a fresh assessment: %j', (overrides) => {
+    inlineOverrides.workers = overrides
+    const view = renderPage()
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(actionsRegion().getByRole('status')).toHaveTextContent('Previously loaded data remains visible')
+    expect(actionsRegion().queryByText('No current attention items.')).not.toBeInTheDocument()
+    expect(healthRegion().getByText('2 / 2 healthy')).toBeInTheDocument()
+    inlineOverrides.workers = {}
+    view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
+    expect(screen.getByText('All systems operational')).toBeInTheDocument()
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
+  })
+})
+
+describe('SystemStatusPage — continuation source preservation', () => {
+  it('keeps scalar Telemetry, independent sources and body recovery outside the refresh control', () => {
+    inlineOverrides['backup-stats'] = { error: new Error('statistics refresh failed') }
+    mockAuthStatus.mockReturnValue(
+      q<ReturnType<typeof useAuthStatus>['data']>(undefined, { error: new Error('auth source unavailable') }) as ReturnType<typeof useAuthStatus>,
+    )
+    renderPage()
+    expect(healthRegion().getByText('Telemetry')).toBeInTheDocument()
+    expect(screen.getByTestId('telemetry-card')).toHaveTextContent('positions:1000')
+    expect(resourcesRegion().getByText('101,069')).toBeInTheDocument()
+    expect(screen.getByText('App version')).toBeInTheDocument()
+    expect(screen.getByText('1.2.3')).toBeInTheDocument()
+    // The page source notice and both retained resource rows expose recovery.
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(3)
+    const refresh = screen.getByRole('button', { name: 'Refresh (r)' })
+    expect(refresh).toHaveAttribute('title', 'Press r to refresh')
+    expect(within(refresh).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
+    expect(within(refresh).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('keeps extended runtime evidence when version info is unavailable rather than claiming it is loading', () => {
+    inline.version = undefined
+    inlineOverrides.version = { error: new Error('version unavailable') }
+    renderPage()
+    expect(screen.getByText('System info is unavailable.')).toBeInTheDocument()
+    expect(screen.queryByText('Loading system info…')).not.toBeInTheDocument()
+    const system = document.getElementById('system')!
+    expect(within(system).getByText('Goroutines')).toBeInTheDocument()
+    expect(within(system).getByText('150')).toBeInTheDocument()
+    expect(within(system).getByText('App version').nextElementSibling).toHaveTextContent('—')
+    expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
   })
 })
 
@@ -637,7 +997,7 @@ describe('SystemStatusPage — interactions', () => {
   it('fans the header refresh button out to refetch + invalidate + reconnect', () => {
     renderPage()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh (R)' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh (r)' }))
 
     expect(refetchHealth).toHaveBeenCalledTimes(1)
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['system-status'] })
@@ -678,8 +1038,239 @@ describe('SystemStatusPage — interactions', () => {
     )
     renderPage()
 
-    const btn = screen.getByRole('button', { name: 'Refresh (R)' })
+    const btn = screen.getByRole('button', { name: 'Refresh (r)' })
     expect(btn).toBeDisabled()
     expect(btn).toHaveAttribute('aria-busy', 'true')
+  })
+})
+
+describe('SystemStatusPage — Resource source adoption', () => {
+  function workerRow() {
+    const row = resourcesRegion().getByText('Workers').closest('div.min-w-0.space-y-2')
+    if (!(row instanceof HTMLElement)) throw new Error('Workers resource row missing')
+    return within(row)
+  }
+
+  it.each([
+    { healthy: 95, total: 100, status: 'Degraded', color: neonColorMap.amber.dot },
+    { healthy: 100, total: 100, status: 'Healthy', color: neonColorMap.green.dot },
+    { healthy: 0, total: 10, status: 'Critical', color: neonColorMap.red.dot },
+  ])('uses raw worker health $healthy/$total rather than utilization', ({ healthy, total, status, color }) => {
+    inline.workers = workersHealth({ healthy_count: healthy, total })
+    renderPage()
+    const row = workerRow()
+    expect(row.getByText(`${healthy} / ${total}`)).toBeInTheDocument()
+    expect(row.getByText(status)).toBeInTheDocument()
+    const bar = row.getByRole('progressbar', { name: 'Workers health' })
+    expect(bar).toHaveAttribute('aria-valuenow', String(Math.round(healthy / total * 100)))
+    expect(bar.firstElementChild).toHaveClass(color)
+    expect(bar.firstElementChild).toHaveStyle({ width: `${healthy / total * 100}%` })
+  })
+
+  it.each([
+    { healthy: undefined, total: 10 },
+    { healthy: 1, total: undefined },
+    { healthy: null, total: 10 },
+    { healthy: 11, total: 10 },
+    { healthy: -1, total: 10 },
+    { healthy: 1.5, total: 10 },
+    { healthy: 1, total: 1.5 },
+    { healthy: NaN, total: 10 },
+    { healthy: 1, total: Infinity },
+    { healthy: Infinity, total: 10 },
+    { healthy: 1, total: Number.MAX_SAFE_INTEGER + 1 },
+    { healthy: 0, total: -10 },
+    { healthy: 0, total: 1.5 },
+    { healthy: -Infinity, total: 10 },
+    { healthy: '0', total: 10 },
+    { healthy: 1, total: '10' },
+  ])('does not invent health for invalid raw counts $healthy/$total', ({ healthy, total }) => {
+    inline.workers = workersHealth({ healthy_count: healthy, total })
+    renderPage()
+    expect(workerRow().getByText('Unknown')).toBeInTheDocument()
+    expect(workerRow().queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(resourcesRegion().getByRole('progressbar', { name: 'DB connections usage' })).toHaveAttribute('aria-valuenow', '20')
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(actionsRegion().queryByText(/workers unhealthy/)).not.toBeInTheDocument()
+    expect(actionsRegion().queryByText('No current attention items.')).not.toBeInTheDocument()
+    expect(healthRegion().getByRole('button', { name: /Workers/ }).querySelector('.rounded-full')).toHaveClass('bg-zinc-400')
+  })
+
+  it.each([
+    { healthy: +2, total: +2, headline: 'All systems operational', unhealthy: null },
+    { healthy: -0, total: +10, headline: 'Service outage', unhealthy: '10 of 10 workers unhealthy' },
+    { healthy: +1, total: +10, headline: 'Degraded performance', unhealthy: '9 of 10 workers unhealthy' },
+  ])('uses one measured assessment for signed counts $healthy/$total', ({ healthy, total, headline, unhealthy }) => {
+    inline.workers = workersHealth({ healthy_count: healthy, total })
+    renderPage()
+    expect(screen.getByText(headline)).toBeInTheDocument()
+    expect(workerRow().getByText(`${healthy} / ${total}`)).toBeInTheDocument()
+    expect(healthRegion().getByText(`${healthy} / ${total} healthy`)).toBeInTheDocument()
+    expect(workerRow().getByRole('progressbar')).toHaveAttribute('aria-valuenow', String(Math.round(healthy / total * 100)))
+    if (unhealthy) expect(actionsRegion().getByText(unhealthy)).toBeInTheDocument()
+    else expect(actionsRegion().queryByText(/workers unhealthy/)).not.toBeInTheDocument()
+  })
+
+  it('treats measured zero workers as an empty assessment rather than an outage', () => {
+    inline.workers = workersHealth({ workers: [], healthy_count: 0, total: 0 })
+    renderPage()
+    expect(workerRow().getByText('0 / 0')).toBeInTheDocument()
+    expect(workerRow().getByText('Unknown')).toBeInTheDocument()
+    expect(workerRow().queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(screen.getByText('All systems operational')).toBeInTheDocument()
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
+  })
+
+  it.each([
+    { acquired: 7, total: 10, status: 'Warning', color: neonColorMap.amber.dot },
+    { acquired: 9, total: 10, status: 'Critical', color: neonColorMap.red.dot },
+    { acquired: +7.5, total: +10, status: 'Warning', color: neonColorMap.amber.dot },
+  ])('retains DB utilization at $acquired/$total independently of worker health', ({ acquired, total, status, color }) => {
+    const extended = extHealth()
+    extended.components.database_pool.acquired_conns = acquired
+    extended.components.database_pool.total_conns = total
+    inline['extended-health'] = extended
+    renderPage()
+    const bar = resourcesRegion().getByRole('progressbar', { name: 'DB connections usage' })
+    expect(bar).toHaveAttribute('aria-valuenow', String(acquired / total * 100))
+    expect(bar.firstElementChild).toHaveClass(color)
+    const row = bar.closest('div.min-w-0.space-y-2')
+    if (!(row instanceof HTMLElement)) throw new Error('DB resource row missing')
+    expect(within(row).getByText(status)).toBeInTheDocument()
+    expect(workerRow().getByText('Healthy')).toBeInTheDocument()
+    expect(resourcesRegion().getByRole('heading', { name: 'Server resources' })).toBeInTheDocument()
+  })
+
+  it('retains the unresolved worker row without inventing zero or blanking neighbors', () => {
+    inline.workers = undefined
+    inlineOverrides.workers = { isLoading: true, isFetching: true }
+    renderPage()
+    expect(workerRow().getByText('Loading')).toBeInTheDocument()
+    expect(workerRow().queryByText('0 / 0')).not.toBeInTheDocument()
+    expect(workerRow().queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(resourcesRegion().getByText('512 MB')).toBeInTheDocument()
+    expect(resourcesRegion().getByText('1d 1h 1m')).toBeInTheDocument()
+  })
+
+  it('limits a fatal worker error and its retry to that row', () => {
+    const retry = vi.fn()
+    inline.workers = undefined
+    inlineOverrides.workers = { error: new Error('worker probes unavailable'), refetch: retry }
+    renderPage()
+    const row = workerRow()
+    expect(row.queryByRole('progressbar')).not.toBeInTheDocument()
+    fireEvent.click(row.getByRole('button'))
+    expect(retry).toHaveBeenCalledTimes(1)
+    expect(resourcesRegion().getByText('101,069')).toBeInTheDocument()
+    expect(resourcesRegion().getByRole('progressbar', { name: 'DB connections usage' })).toBeInTheDocument()
+  })
+
+  it('keeps healthy retained counts with nonblocking refresh recovery', () => {
+    const retry = vi.fn()
+    inlineOverrides.workers = { error: new Error('worker refresh failed'), refetch: retry, dataUpdatedAt: 1234 }
+    renderPage()
+    const row = workerRow()
+    expect(row.getByText('2 / 2')).toBeInTheDocument()
+    expect(row.getByText('Healthy')).toBeInTheDocument()
+    expect(row.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
+    expect(row.getByText('Workers may be out of date')).toBeInTheDocument()
+    fireEvent.click(row.getByRole('button', { name: 'Refresh' }))
+    expect(retry).toHaveBeenCalledTimes(1)
+    expect(resourcesRegion().getByText('512 MB')).toBeInTheDocument()
+  })
+
+  it('keeps paused worker counts without claiming device offline or fabricating observation age', () => {
+    inlineOverrides.workers = { fetchStatus: 'paused', dataUpdatedAt: 0 }
+    renderPage()
+    const row = workerRow()
+    expect(row.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true')
+    expect(row.getByText('2 / 2')).toBeInTheDocument()
+    expect(row.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
+    expect(row.queryByText(/ago|offline/i)).not.toBeInTheDocument()
+  })
+
+  it('threads independent refresh recovery to every existing backing resource row', () => {
+    const extendedRetry = vi.fn()
+    const backupRetry = vi.fn()
+    const versionRetry = vi.fn()
+    inlineOverrides['extended-health'] = { error: new Error('extended refresh failed'), refetch: extendedRetry }
+    inlineOverrides['backup-stats'] = { error: new Error('backup refresh failed'), refetch: backupRetry }
+    inlineOverrides.version = { error: new Error('version refresh failed'), refetch: versionRetry }
+    renderPage()
+    const notices = resourcesRegion().getAllByTestId('stale-refresh-warning')
+    expect(notices).toHaveLength(5)
+    for (const notice of notices) {
+      fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }))
+    }
+    expect(extendedRetry).toHaveBeenCalledTimes(2)
+    expect(backupRetry).toHaveBeenCalledTimes(2)
+    expect(versionRetry).toHaveBeenCalledTimes(1)
+    expect(workerRow().queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
+    expect(workerRow().getByText('Healthy')).toBeInTheDocument()
+  })
+
+  it('assigns fallback uptime to extended recovery rather than failed version recovery', () => {
+    const extendedRetry = vi.fn()
+    const versionRetry = vi.fn()
+    inline.version = undefined
+    inlineOverrides.version = { error: new Error('version unavailable'), refetch: versionRetry }
+    inlineOverrides['extended-health'] = { error: new Error('extended refresh failed'), refetch: extendedRetry }
+    renderPage()
+    const notices = resourcesRegion().getAllByTestId('stale-refresh-warning')
+    expect(notices).toHaveLength(3)
+    expect(resourcesRegion().getByText('1h 0m')).toBeInTheDocument()
+    for (const notice of notices) {
+      fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }))
+    }
+    expect(extendedRetry).toHaveBeenCalledTimes(3)
+    expect(versionRetry).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('SystemStatusPage — independent panels and restrained navigation', () => {
+  it('keeps all sixteen section shells and independent diagnostics while initial health is loading', () => {
+    mockSystemHealth.mockReturnValue(q(undefined, { isLoading: true, isFetching: true, dataUpdatedAt: 0 }) as ReturnType<typeof useSystemHealth>)
+    const { container } = renderPage()
+    expect(screen.getByTestId('status-skeleton')).toBeInTheDocument()
+    expect(container.querySelectorAll('section')).toHaveLength(16)
+    for (const id of ['services', 'action-items', 'incidents', 'health', 'resources', 'database', 'telemetry', 'tesla-auth', 'workers', 'system', 'slo', 'maintenance', 'api-docs']) {
+      expect(container.querySelector(`#${id}`)).toBeInTheDocument()
+    }
+    expect(screen.getByTestId('incident-history')).toBeInTheDocument()
+    expect(screen.getByTestId('slo-card')).toBeInTheDocument()
+    expect(screen.getByTestId('scheduled-maintenance')).toBeInTheDocument()
+    expect(resourcesRegion().getByText('512 MB')).toBeInTheDocument()
+    expect(screen.getByText('1.2.3')).toBeInTheDocument()
+    expect(screen.getByText('Current component status is unavailable.')).toBeInTheDocument()
+  })
+
+  it.each([false, true])('reveals a diagnostic target and honors reduced motion %s', (reduce) => {
+    vi.mocked(useMotionPreference).mockReturnValue({ reduce, durationMs: reduce ? 0 : 250 })
+    renderPage()
+    const details = document.getElementById('operator-details') as HTMLDetailsElement
+    expect(details.open).toBe(false)
+    fireEvent.click(healthRegion().getByRole('button', { name: /Database/ }))
+    expect(details.open).toBe(true)
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+  })
+
+  it('uses the same motion preference for the application scroll container', () => {
+    vi.mocked(useMotionPreference).mockReturnValue({ reduce: true, durationMs: 0 })
+    const { container } = renderPage()
+    container.id = 'main-content'
+    fireEvent.click(healthRegion().getByRole('button', { name: /Database/ }))
+    expect(Element.prototype.scrollTo).toHaveBeenCalledWith({ top: -76, behavior: 'auto' })
+    expect(scrollSpy).not.toHaveBeenCalled()
+  })
+
+  it('keeps diagnostic navigation as neutral wrapping links with the original destinations', () => {
+    renderPage()
+    for (const [name, to] of [['Open live monitor', '/live-monitor'], ['Open DB health', '/db-health'], ['Stable status API for your own dashboards', '/docs/status-api']]) {
+      const link = screen.getByRole('link', { name: new RegExp(name) })
+      expect(link).toHaveAttribute('href', to)
+      expect(link).toHaveClass('min-h-11', 'whitespace-normal', 'break-words')
+      expect(link.className).not.toMatch(/cyan-|bg-white/)
+    }
   })
 })

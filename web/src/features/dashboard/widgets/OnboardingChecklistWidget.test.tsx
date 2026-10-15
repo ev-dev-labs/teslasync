@@ -44,12 +44,23 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { MemoryRouter } from 'react-router-dom';
 import { Car } from 'lucide-react';
 
 // Hoisted navigate spy so the react-router-dom factory can reference it.
 const navigateSpy = vi.hoisted(() => vi.fn());
+const queries = vi.hoisted(() => ({
+  vehicles: vi.fn(),
+  rules: vi.fn(),
+  channels: vi.fn(),
+}));
+vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: () => queries.vehicles() }));
+vi.mock('@/api/hooks/useNotifications', () => ({
+  useAlertRules: () => queries.rules(),
+  useNotificationChannels: () => queries.channels(),
+}));
 
 // i18n echo mock: returns the fallback string (or key when none), interpolating
 // {{var}} tokens from the options object so assertions target rendered English.
@@ -162,8 +173,51 @@ function renderWidget() {
 }
 
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+  for (const mock of Object.values(queries)) mock.mockReturnValue({ data: [], refetch: vi.fn() });
   navigateSpy.mockReset();
   mockUseChecklist.mockReturnValue(makeState());
+});
+
+describe('OnboardingChecklistWidget — prerequisite trust and reactive hierarchy', () => {
+  it.each([1, 2, 4])('keeps task CTAs usable with unresolved server prerequisites at %i columns', (cols) => {
+    queries.vehicles.mockReturnValue({ data: undefined, isPending: true, refetch: vi.fn() });
+    render(<MemoryRouter><OnboardingChecklistWidget size={{ cols, rows: 2 }} /></MemoryRouter>);
+    expect(screen.getByTestId('onboarding-checklist')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+    expect(navigateSpy).toHaveBeenCalledWith('/tesla-account');
+  });
+
+  it('recovers every failed prerequisite while retaining locally observable tasks', () => {
+    const refetches = [vi.fn(), vi.fn(), vi.fn()];
+    Object.values(queries).forEach((mock, index) => mock.mockReturnValue({
+      data: undefined, error: new Error('offline'), refetch: refetches[index],
+    }));
+    renderWidget();
+    expect(screen.getByTestId('onboarding-checklist')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    refetches.forEach((refetch) => expect(refetch).toHaveBeenCalledOnce());
+  });
+
+  it('retains completed remote tasks on refresh failure rather than re-opening their CTA', () => {
+    queries.vehicles.mockReturnValue({ data: [{ id: 1 }], error: new Error('offline'), refetch: vi.fn() });
+    mockUseChecklist.mockReturnValue(makeState({ visibleTasks: [makeTask({ complete: true })] }));
+    renderWidget();
+    expect(screen.getByTestId('checklist-task-connect-vehicle')).toHaveAttribute('data-complete', 'true');
+    expect(screen.queryByRole('button', { name: 'Connect' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
+
+  it('updates completion counts after a locale preference change without re-fetching', () => {
+    mockUseChecklist.mockReturnValue(makeState({ totalCount: 1234, completeCount: 1000, allComplete: false }));
+    renderWidget();
+    expect(screen.getByText('1,000/1,234 complete')).toBeInTheDocument();
+    act(() => setGlobalLocale('de-DE'));
+    expect(screen.getByText('1.000/1.234 complete')).toBeInTheDocument();
+  });
 });
 
 afterEach(() => {

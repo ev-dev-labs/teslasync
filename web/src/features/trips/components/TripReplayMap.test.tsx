@@ -34,7 +34,7 @@
  * map/page tests.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { DrivePosition } from '@/types/driving';
 
 /* Prop-capturing shared state for the mocked maps barrel. Hoisted so the
@@ -42,6 +42,16 @@ import type { DrivePosition } from '@/types/driving';
  
 const { maps } = vi.hoisted(() => ({
   maps: {
+    resolvePaint: vi.fn((role: string): string | null => {
+      const colors: Record<string, string> = {
+        'var(--semantic-success)': 'rgb(56, 97, 79)',
+        'var(--semantic-info)': 'rgb(56, 94, 126)',
+        'var(--semantic-warning)': 'rgb(116, 88, 41)',
+        'var(--semantic-danger)': 'rgb(131, 70, 78)',
+        'var(--text-secondary)': 'rgb(71, 85, 105)',
+      };
+      return colors[role] ?? null;
+    }),
     containers: [] as any[],
     tileLayers: [] as any[],
     polylines: [] as any[],
@@ -53,11 +63,16 @@ const { maps } = vi.hoisted(() => ({
   },
 }));
 
+vi.mock('@/lib/colors', () => ({ resolveMapRendererColor: maps.resolvePaint }));
+
 vi.mock('@/components/maps', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   const h = React.createElement;
   return {
     MapContainer: (props: any) => {
+      maps.polylines.length = 0;
+      maps.circleMarkers.length = 0;
+      maps.animatedMarkers.length = 0;
       maps.containers.push(props);
       return h('div', { 'data-testid': 'map-container' }, props.children);
     },
@@ -123,12 +138,13 @@ vi.mock('react-i18next', async () => {
 import { TripReplayMap, nearestSampleIndex, type TripReplayMapProps } from './TripReplayMap';
 
 /* ── colours the source uses (kept in one place so the specs read cleanly) ── */
-const GREEN = '#10b981';
-const CYAN = '#22d3ee';
-const AMBER = '#f59e0b';
-const RED = '#ef4444';
-const ANCHOR = '#22d3ee';
-const PLAYHEAD = '#00b4d8';
+const GREEN = 'rgb(56, 97, 79)';
+const CYAN = 'rgb(56, 94, 126)';
+const AMBER = 'rgb(116, 88, 41)';
+const RED = 'rgb(131, 70, 78)';
+const UNKNOWN = 'rgb(71, 85, 105)';
+const ANCHOR = CYAN;
+const PLAYHEAD = 'var(--semantic-info)';
 
 function pos(latitude: number, longitude: number, over: Partial<DrivePosition> = {}): DrivePosition {
   return {
@@ -156,11 +172,12 @@ function route(speeds: (number | null)[]): DrivePosition[] {
   return speeds.map((s, i) => pos(47.6 + i * 0.001, -122.3 - i * 0.001, { speed: s }));
 }
 
-/* Segment colour for sample i is speedColor(positions[i].speed), so these five
- * speeds paint the four buckets plus the null→0 (green) null-safety path. */
-const ROUTE = route([0, 10, 45, 80, 130, null]);
+/* SI speeds corresponding to 0, 10, 45, 80, 130 km/h paint the four
+ * buckets plus the neutral unknown-speed path. */
+const ROUTE = route([0, 10 / 3.6, 45 / 3.6, 80 / 3.6, 130 / 3.6, null]);
 const STATIONARY = [pos(47.6, -122.3), pos(47.6, -122.3), pos(47.6, -122.3)];
-const INVALID = [pos(0, 0), pos(0, 0)];
+// Genuinely absent GPS: (0, 0) is a measured coordinate for replay (see geo.test.ts).
+const INVALID = [pos(Number.NaN, Number.NaN), pos(Number.NaN, Number.NaN)];
 
 function renderMap(props: Partial<TripReplayMapProps> = {}) {
   const onSeekToIndex = props.onSeekToIndex ?? vi.fn();
@@ -181,6 +198,7 @@ function renderMap(props: Partial<TripReplayMapProps> = {}) {
 const markerColors = (arr: any[]) => arr.map((m) => m.pathOptions?.color);
 
 beforeEach(() => {
+  maps.resolvePaint.mockClear();
   maps.containers.length = 0;
   maps.tileLayers.length = 0;
   maps.polylines.length = 0;
@@ -212,6 +230,14 @@ describe('nearestSampleIndex', () => {
 });
 
 describe('TripReplayMap — empty state', () => {
+  it('uses the shared panel material without overriding its radius, and keeps embedded maps unframed', () => {
+    const { rerender } = renderMap({ positions: [] });
+    expect(screen.getByTestId('trip-replay-map')).toHaveClass('rounded-panel');
+    expect(screen.getByTestId('trip-replay-map')).not.toHaveClass('rounded-xl');
+    rerender(<TripReplayMap positions={[]} currentIndex={0} onSeekToIndex={vi.fn()} embedded />);
+    expect(screen.getByTestId('trip-replay-map')).not.toHaveClass('rounded-panel', 'shadow-panel');
+  });
+
   it('renders the shared empty state and mounts no map when positions is empty', () => {
     renderMap({ positions: [] });
 
@@ -229,6 +255,26 @@ describe('TripReplayMap — empty state', () => {
 });
 
 describe('TripReplayMap — meaningful route', () => {
+  it('resolves path paint in the connected surface and refreshes it without resetting map style or seeking', async () => {
+    const { onSeekToIndex } = renderMap({ initialMapStyle: 'terrain' });
+    expect(maps.resolvePaint).toHaveBeenCalledWith(
+      'var(--semantic-info)', screen.getByTestId('trip-replay-map'),
+    );
+    expect(maps.polylines.every(p => /^rgb\(/.test(p.pathOptions.color))).toBe(true);
+    maps.resolvePaint.mockImplementationOnce(() => 'rgb(145, 185, 165)');
+    screen.getByTestId('trip-replay-map').setAttribute('data-mode', 'dark');
+    await waitFor(() => expect(maps.polylines[0].pathOptions.color).toBe('rgb(145, 185, 165)'));
+    expect(screen.getByTestId('tile-layer')).toHaveAttribute('data-style', 'terrain');
+    expect(onSeekToIndex).not.toHaveBeenCalled();
+  });
+
+  it('defers unresolved renderer paint instead of using a Canvas default', () => {
+    maps.resolvePaint.mockImplementationOnce(() => null);
+    renderMap();
+    expect(maps.circleMarkers.some(marker => marker.pathOptions.color === GREEN)).toBe(false);
+    expect(screen.getAllByTestId('polyline')).toHaveLength(4);
+  });
+
   it('mounts the map with the tile layer, polyline segments, and start/end pins', () => {
     renderMap();
 
@@ -286,16 +332,180 @@ describe('TripReplayMap — meaningful route', () => {
 });
 
 describe('TripReplayMap — speed-coloured segments', () => {
-  it('colours each segment by the arriving sample speed and treats null speed as 0', () => {
+  it('classifies raw SI speeds at each km/h boundary without mutating positions', () => {
+    const positions = route([
+      0,
+      30 / 3.6 - 0.001,
+      30 / 3.6,
+      60 / 3.6 - 0.001,
+      60 / 3.6,
+      100 / 3.6 - 0.001,
+      100 / 3.6,
+      null,
+    ]);
+    const original = positions.map((position) => ({ ...position }));
+    positions.forEach(Object.freeze);
+    Object.freeze(positions);
+
+    renderMap({ positions, currentIndex: 4 });
+
+    expect(maps.polylines.map((p) => p.pathOptions.color)).toEqual([
+      GREEN,
+      CYAN,
+      CYAN,
+      AMBER,
+      AMBER,
+      RED,
+      UNKNOWN,
+    ]);
+    expect(positions).toEqual(original);
+    expect(maps.animatedMarkers[0].position).toEqual([
+      positions[4].latitude,
+      positions[4].longitude,
+    ]);
+  });
+
+  it('colours each segment by the arriving sample speed and labels null speed as unknown', () => {
     renderMap();
-    // curr speeds 10,45,80,130,null → green, cyan, amber, red, green(null→0).
+    // curr speeds 10,45,80,130,null → green, cyan, amber, red, unknown.
     expect(maps.polylines.map((p) => p.pathOptions.color)).toEqual([
       GREEN,
       CYAN,
       AMBER,
       RED,
-      GREEN,
+      UNKNOWN,
     ]);
+    expect(screen.getByText('Speed: Unknown (- -)')).toBeInTheDocument();
+  });
+
+  it('keeps missing and non-finite speed segments neutral and seekable while measured zero stays valid', () => {
+    const positions = route([0, null, 0, NaN, Infinity, -Infinity, null]);
+    Reflect.deleteProperty(positions[6], 'speed');
+    const onSeekToIndex = vi.fn();
+    renderMap({ positions, currentIndex: 1, onSeekToIndex });
+
+    expect(maps.polylines.map((p) => p.pathOptions.color)).toEqual([
+      UNKNOWN, GREEN, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN,
+    ]);
+    expect(maps.polylines.map((p) => p.pathOptions.dashArray)).toEqual([
+      '6 6', undefined, '6 6', '6 6', '6 6', '6 6',
+    ]);
+    expect(screen.getByText('Speed: Unknown (- -)')).toBeInTheDocument();
+    expect(maps.animatedMarkers[0].position).toEqual([
+      positions[1].latitude, positions[1].longitude,
+    ]);
+    maps.nextClick = { lat: positions[1].latitude, lng: positions[1].longitude };
+    fireEvent.click(screen.getAllByTestId('polyline')[0]);
+    expect(onSeekToIndex).toHaveBeenCalledWith(1);
+  });
+
+  it('does not label measured zero speeds as unknown', () => {
+    renderMap({ positions: route([0, 0, 0]) });
+    expect(maps.polylines.map((p) => p.pathOptions.color)).toEqual([GREEN, GREEN]);
+    expect(maps.polylines.every((p) => p.pathOptions.dashArray === undefined)).toBe(true);
+    expect(screen.queryByText('Speed: Unknown (- -)')).toBeNull();
+  });
+});
+
+describe('TripReplayMap — viewport lifecycle', () => {
+  it('fits the route only after the map container is committed', () => {
+    maps.map.fitBounds.mockImplementationOnce(() => {
+      expect(screen.getByTestId('map-container')).toBeInTheDocument();
+    });
+
+    renderMap();
+
+    expect(maps.map.fitBounds).toHaveBeenCalledTimes(1);
+  });
+
+  it('refits changed coordinates even when sample count and the first coordinate stay the same', () => {
+    const onSeekToIndex = vi.fn();
+    const { rerender } = renderMap({ onSeekToIndex });
+    const replacement = ROUTE.map((position, index) => ({
+      ...position,
+      latitude: position.latitude + index * 0.01,
+      longitude: position.longitude + index * 0.02,
+    }));
+
+    rerender(
+      <TripReplayMap positions={replacement} currentIndex={0} onSeekToIndex={onSeekToIndex} />,
+    );
+
+    expect(maps.map.fitBounds).toHaveBeenCalledTimes(2);
+    const bounds = maps.map.fitBounds.mock.calls[1][0];
+    expect(bounds.getNorthEast().lat).toBeCloseTo(replacement[5].latitude, 6);
+    expect(bounds.getNorthEast().lng).toBeCloseTo(replacement[5].longitude, 6);
+    expect(maps.map.setView).not.toHaveBeenCalled();
+    expect(screen.getAllByTestId('polyline')).toHaveLength(5);
+    expect(onSeekToIndex).not.toHaveBeenCalled();
+  });
+
+  it('preserves the viewport during playback, layer changes, and unrelated rerenders', () => {
+    const onSeekToIndex = vi.fn();
+    const { rerender } = renderMap({ onSeekToIndex });
+
+    rerender(
+      <TripReplayMap
+        positions={ROUTE}
+        currentIndex={3}
+        onSeekToIndex={onSeekToIndex}
+        height={320}
+        reduceMotion
+      />,
+    );
+    fireEvent.click(screen.getByTestId('layer-switch'));
+
+    expect(maps.map.fitBounds).toHaveBeenCalledTimes(1);
+    expect(maps.map.setView).not.toHaveBeenCalled();
+    expect(screen.getByTestId('tile-layer')).toHaveAttribute('data-style', 'satellite');
+    const playhead = maps.circleMarkers.find((marker) => marker.pathOptions.color === CYAN);
+    expect(playhead.center).toEqual([ROUTE[3].latitude, ROUTE[3].longitude]);
+    expect(onSeekToIndex).not.toHaveBeenCalled();
+  });
+
+  it('initializes a replacement map instance even when route data stays the same', () => {
+    const onSeekToIndex = vi.fn();
+    const { rerender } = renderMap({ onSeekToIndex });
+    const originalMap = maps.map;
+    const replacementMap = { fitBounds: vi.fn(), setView: vi.fn() };
+    maps.map = replacementMap;
+
+    try {
+      rerender(
+        <TripReplayMap positions={ROUTE} currentIndex={1} onSeekToIndex={onSeekToIndex} />,
+      );
+
+      expect(originalMap.fitBounds).toHaveBeenCalledTimes(1);
+      expect(replacementMap.fitBounds).toHaveBeenCalledTimes(1);
+      expect(replacementMap.setView).not.toHaveBeenCalled();
+    } finally {
+      maps.map = originalMap;
+    }
+  });
+
+  it('switches between route bounds and stationary fallback as positions change', () => {
+    const onSeekToIndex = vi.fn();
+    const { rerender } = renderMap({ onSeekToIndex });
+
+    rerender(
+      <TripReplayMap positions={STATIONARY} currentIndex={0} onSeekToIndex={onSeekToIndex} />,
+    );
+    expect(maps.map.setView).toHaveBeenLastCalledWith([47.6, -122.3], 15);
+    expect(maps.map.fitBounds).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('polyline')).toBeNull();
+
+    const movedAnchor = [pos(48.6, -123.3)];
+    rerender(
+      <TripReplayMap positions={movedAnchor} currentIndex={0} onSeekToIndex={onSeekToIndex} />,
+    );
+    expect(maps.map.setView).toHaveBeenLastCalledWith([48.6, -123.3], 15);
+    expect(maps.map.setView).toHaveBeenCalledTimes(2);
+
+    rerender(
+      <TripReplayMap positions={ROUTE} currentIndex={0} onSeekToIndex={onSeekToIndex} />,
+    );
+    expect(maps.map.fitBounds).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByTestId('polyline')).toHaveLength(5);
   });
 });
 
@@ -308,9 +518,9 @@ describe('TripReplayMap — reduced motion', () => {
     // Start, end, and the snapped playhead → 3 circle markers.
     expect(maps.circleMarkers).toHaveLength(3);
     expect(markerColors(maps.circleMarkers)).toEqual(
-      expect.arrayContaining([GREEN, RED, PLAYHEAD]),
+      expect.arrayContaining([GREEN, RED, CYAN]),
     );
-    const playhead = maps.circleMarkers.find((m) => m.pathOptions.color === PLAYHEAD);
+    const playhead = maps.circleMarkers.find((m) => m.pathOptions.color === CYAN);
     expect(playhead.center).toEqual([47.601, -122.301]);
     expect(maps.containers[0].fadeAnimation).toBe(false);
   });

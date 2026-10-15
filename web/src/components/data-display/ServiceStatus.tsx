@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from '@/components/motion'
 import { WifiOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
+import { cn } from '@/lib/cn'
+import { neonColorMap, severityTokens, typography } from '@/lib/tokens'
 import { getConnectionStatus, onStatusChange, fetchSystemStatus, type SystemStatus } from '../../lib/resilience'
 
 export function ServiceStatusBanner() {
@@ -30,10 +32,16 @@ export function ServiceStatusBanner() {
           <div
             role="status"
             aria-live="polite"
-            className="flex items-center justify-center gap-2 border-b border-red-500/20 bg-red-500/15 px-4 py-2 text-xs font-medium text-red-300"
+            className={cn(
+              'flex items-center justify-center gap-2 border-b px-4 py-2',
+              typography.role.label,
+              neonColorMap.neutral.bg,
+              neonColorMap.neutral.border,
+              neonColorMap.neutral.text,
+            )}
           >
-            <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>
+            <WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 break-words">
               {t(
                 'serviceStatus.offline',
                 'You are offline. Data may be stale. Reconnecting automatically…',
@@ -51,11 +59,11 @@ export function ServiceStatusBanner() {
 // `unknown` covers the loading/error/no-data path so the sidebar always shows
 // an indicator (a muted dot) rather than silently disappearing while the
 // 60s-interval query is in flight or after a fetch failure.
-const HEALTH_TONE: Record<'healthy' | 'degraded' | 'unhealthy' | 'unknown', { dot: string; glow: string }> = {
-  healthy: { dot: 'bg-neon-green', glow: 'shadow-[0_0_6px_rgba(16,185,129,0.5)]' },
-  degraded: { dot: 'bg-neon-amber', glow: 'shadow-[0_0_6px_rgba(245,158,11,0.5)]' },
-  unhealthy: { dot: 'bg-neon-red', glow: 'shadow-[0_0_6px_rgba(239,68,68,0.5)]' },
-  unknown: { dot: 'bg-[var(--text-muted)]', glow: '' },
+const HEALTH_TONE: Record<'healthy' | 'degraded' | 'unhealthy' | 'unknown', string> = {
+  healthy: severityTokens.success.dot,
+  degraded: severityTokens.warn.dot,
+  unhealthy: severityTokens.critical.dot,
+  unknown: neonColorMap.neutral.dot,
 }
 
 function healthTone(overall?: string): keyof typeof HEALTH_TONE {
@@ -75,7 +83,7 @@ export function SystemHealthDot() {
   })
 
   const overall = data?.overall
-  const { dot, glow } = HEALTH_TONE[healthTone(overall)]
+  const dot = HEALTH_TONE[healthTone(overall)]
   const label = t('serviceStatus.systemHealth', 'System: {{status}}', {
     status: overall ?? t('serviceStatus.unknown', 'unknown'),
   })
@@ -85,7 +93,7 @@ export function SystemHealthDot() {
       role="img"
       aria-label={label}
       title={label}
-      className={`inline-block h-2 w-2 rounded-full ${dot}${glow ? ` ${glow}` : ''}`}
+      className={cn('inline-block h-2 w-2 rounded-full', dot)}
     />
   )
 }

@@ -1,0 +1,12 @@
+[
+  {
+    "path": "web\\src\\features\\dashboard\\widgets\\UptimeMonitorWidget.tsx",
+    "sourceHash": "FA98E794C442D0E22DA616DF1AF4D082A8CF75EE0EADD553AE16FDD34D976E92",
+    "copyHash": "FA98E794C442D0E22DA616DF1AF4D082A8CF75EE0EADD553AE16FDD34D976E92"
+  },
+  {
+    "path": "web\\src\\features\\dashboard\\widgets\\UptimeMonitorWidget.test.tsx",
+    "sourceHash": "48CBC688CAF95916E6E49FEB359FF11CEE12BFB103270C672A77C77F5C814C10",
+    "copyHash": "48CBC688CAF95916E6E49FEB359FF11CEE12BFB103270C672A77C77F5C814C10"
+  }
+]

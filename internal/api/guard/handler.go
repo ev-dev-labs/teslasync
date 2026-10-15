@@ -8,7 +8,9 @@ package guard
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,6 +20,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
@@ -32,6 +37,16 @@ type guardRepository interface {
 	Status(ctx context.Context, vehicleID int64, now time.Time) (systemdb.GuardStatus, error)
 	Events(ctx context.Context, vehicleID int64, limit int) ([]systemdb.GuardEvent, error)
 	Acknowledge(ctx context.Context, vehicleID, eventID int64, actor string) (systemdb.GuardEvent, error)
+}
+
+type guardConfigRepository interface {
+	GetConfig(ctx context.Context, vehicleID int64) (*vehiclemodel.GuardConfig, error)
+	UpsertConfig(ctx context.Context, cfg *vehiclemodel.GuardConfig) (*vehiclemodel.GuardConfig, error)
+	GeofenceExists(ctx context.Context, id int64) (bool, error)
+}
+
+type guardAPIPolicy interface {
+	IsAPISuspended(ctx context.Context) (bool, error)
 }
 
 // guardVehicleResolver looks up the VIN required by tesla.Client.SendCommand.
@@ -55,6 +70,8 @@ type guardClock func() time.Time
 // GuardHandler serves the four /guard endpoints.
 type GuardHandler struct {
 	repo                   guardRepository
+	configs                guardConfigRepository
+	apiPolicy              guardAPIPolicy
 	vehicles               guardVehicleResolver
 	cmd                    guardCommandClient
 	authHdr                string
@@ -73,14 +90,174 @@ func NewGuardHandler(
 	vehicles *vehicledb.VehicleRepo,
 	cmd *tesla.Client,
 	cfg *config.Config,
+	apiPolicy guardAPIPolicy,
 ) *GuardHandler {
 	return &GuardHandler{
 		repo:                   repo,
+		configs:                repo,
+		apiPolicy:              apiPolicy,
 		vehicles:               vehicles,
 		cmd:                    cmd,
 		authHdr:                cfg.Auth.ForwardAuthHeader,
 		commandProxyConfigured: cfg.Tesla.CommandProxyURL != "",
 	}
+}
+
+// Config serves saved policy, separately from the observed Sentry Status.
+func (h *GuardHandler) Config(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "guard.config")
+	defer span.End()
+	vehicleID, ok := h.parseVehicleID(w, r)
+	if !ok {
+		return
+	}
+	exists, err := h.repo.VehicleExists(ctx, vehicleID)
+	if err != nil {
+		h.configError(w, ctx, err, vehicleID, "failed to verify vehicle")
+		return
+	}
+	if !exists {
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
+		return
+	}
+	cfg, err := h.configs.GetConfig(ctx, vehicleID)
+	if err != nil {
+		h.configError(w, ctx, err, vehicleID, "failed to load guard config")
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, cfg)
+}
+
+type SetGuardConfigRequest struct {
+	Enabled        *bool  `json:"enabled"`
+	HomeGeofenceID *int64 `json:"home_geofence_id"`
+	Sensitivity    string `json:"sensitivity"`
+	AutoPanic      *bool  `json:"auto_panic"`
+}
+
+type SetGuardConfigResponse struct {
+	Config     *vehiclemodel.GuardConfig `json:"config"`
+	ArmResults map[string]string         `json:"arm_results"`
+	Error      string                    `json:"error,omitempty"`
+}
+
+// SetConfig restores the saved guard policy and historical lock → sentry_on
+// arming sequence. Disabling policy never unlocks or disables vehicle Sentry.
+// Policy persistence is not evidence that an automatic monitoring worker exists.
+func (h *GuardHandler) SetConfig(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "guard.set_config")
+	defer span.End()
+	vehicleID, ok := h.parseVehicleID(w, r)
+	if !ok {
+		return
+	}
+	const maxConfigBodyBytes = 4096
+	r.Body = http.MaxBytesReader(w, r.Body, maxConfigBodyBytes)
+	defer r.Body.Close()
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	var input SetGuardConfigRequest
+	if err := decoder.Decode(&input); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid guard config body")
+		return
+	}
+	if err := decoder.Decode(new(json.RawMessage)); err != io.EOF {
+		httpx.WriteError(w, http.StatusBadRequest, "body must contain one JSON object")
+		return
+	}
+	if input.Enabled == nil || input.AutoPanic == nil {
+		httpx.WriteError(w, http.StatusBadRequest, "enabled and auto_panic are required booleans")
+		return
+	}
+	if input.Sensitivity != "low" && input.Sensitivity != "medium" && input.Sensitivity != "high" {
+		httpx.WriteError(w, http.StatusBadRequest, "sensitivity must be low, medium, or high")
+		return
+	}
+	if input.HomeGeofenceID != nil && *input.HomeGeofenceID <= 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "home_geofence_id must be a positive integer or null")
+		return
+	}
+	vehicle, err := h.vehicles.GetByID(ctx, vehicleID)
+	if err != nil {
+		h.configError(w, ctx, err, vehicleID, "failed to load vehicle")
+		return
+	}
+	if vehicle == nil {
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
+		return
+	}
+	if input.HomeGeofenceID != nil {
+		exists, err := h.configs.GeofenceExists(ctx, *input.HomeGeofenceID)
+		if err != nil {
+			h.configError(w, ctx, err, vehicleID, "failed to verify home geofence")
+			return
+		}
+		if !exists {
+			httpx.WriteError(w, http.StatusBadRequest, "home geofence not found")
+			return
+		}
+	}
+	if *input.Enabled && !h.commandProxyConfigured {
+		httpx.WriteError(w, http.StatusNotImplemented, "Tesla command proxy not configured")
+		return
+	}
+	if *input.Enabled {
+		suspended, err := h.apiPolicy.IsAPISuspended(ctx)
+		if err != nil {
+			h.configError(w, ctx, err, vehicleID, "failed to verify Tesla API policy")
+			return
+		}
+		if suspended {
+			httpx.WriteError(w, http.StatusConflict, "Tesla API calls are suspended")
+			return
+		}
+	}
+	saved, err := h.configs.UpsertConfig(ctx, &vehiclemodel.GuardConfig{
+		VehicleID: vehicleID, Enabled: *input.Enabled, HomeGeofenceID: input.HomeGeofenceID,
+		Sensitivity: input.Sensitivity, AutoPanic: *input.AutoPanic,
+	})
+	if err != nil {
+		h.configError(w, ctx, err, vehicleID, "failed to save guard config")
+		return
+	}
+	resp := SetGuardConfigResponse{Config: saved, ArmResults: map[string]string{}}
+	if *input.Enabled {
+		commandCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		for _, command := range []string{"lock", "sentry_on"} {
+			if err := h.cmd.SendCommand(commandCtx, vehicle.VIN, command, nil); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "guard arming failed")
+				log.Warn().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).
+					Int64("vehicle_id", vehicleID).Str("command", command).Msg("guard.config: arming failed")
+				resp.ArmResults[command] = "failed"
+				resp.Error = "guard config saved but vehicle arming failed"
+				if failure, matched := httpx.ClassifyTeslaBudgetError(err); matched {
+					resp.Error = failure.Message
+					httpx.WriteJSON(w, failure.StatusCode, resp)
+					return
+				}
+			} else {
+				resp.ArmResults[command] = "ok"
+			}
+		}
+	}
+	log.Info().Str("trace_id", span.SpanContext().TraceID().String()).
+		Int64("vehicle_id", vehicleID).Bool("enabled", saved.Enabled).Msg("guard config saved")
+	if resp.Error != "" {
+		httpx.WriteJSON(w, http.StatusBadGateway, resp)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, resp)
+}
+
+func (h *GuardHandler) configError(w http.ResponseWriter, ctx context.Context, err error, vehicleID int64, message string) {
+	span := trace.SpanFromContext(ctx)
+	span.RecordError(err)
+	span.SetStatus(codes.Error, message)
+	log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).
+		Int64("vehicle_id", vehicleID).Msg("guard.config: " + message)
+	httpx.WriteError(w, http.StatusInternalServerError, message)
 }
 
 const (

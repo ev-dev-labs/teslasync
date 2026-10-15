@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { act, render, renderHook, screen, fireEvent, within, waitFor } from '@testing-library/react'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
@@ -9,21 +10,25 @@ import type {
   IncidentSeverity,
   IncidentUpdateEntry,
 } from '@/api/hooks/useIncidents'
+import { request } from '@/api/client'
+
+vi.mock('@/api/client', () => ({ request: vi.fn() }))
 
 // A fixed "now" so relative-time assertions are deterministic.
 const NOW = Date.parse('2025-06-01T12:00:00Z')
 
 // ── Drive the incidents query synchronously. The factory reads `queryState`
 //    lazily (at hook-call time), which sidesteps vi.mock hoisting. ──
-const queryState: { data: IncidentListResponse | undefined; calledWith: unknown } = {
+const queryState: { data: IncidentListResponse | undefined; calledWith: unknown; error: Error | null } = {
   data: undefined,
   calledWith: undefined,
+  error: null,
 }
 
 vi.mock('@/api/hooks/useIncidents', () => ({
   useIncidents: (params: unknown) => {
     queryState.calledWith = params
-    return { data: queryState.data }
+    return { data: queryState.data, error: queryState.error, refetch: vi.fn() }
   },
 }))
 
@@ -80,24 +85,86 @@ beforeEach(() => {
   seq = 0
   queryState.data = undefined
   queryState.calledWith = undefined
+  queryState.error = null
 })
 
 describe('IncidentsCard', () => {
-  it('queries active incidents only and collapses to nothing when there are none', () => {
+  it('queries active incidents only and keeps empty creation reachable', () => {
     queryState.data = { incidents: [], count: 0 }
-    const { container } = renderCard()
+    renderCard()
 
-    expect(container.firstChild).toBeNull()
+    expect(screen.getByText('No active incidents recorded.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Active incidents/ })).toHaveTextContent('0')
+    fireEvent.click(screen.getByRole('button', { name: /Log incident/ }))
+    expect(screen.getByRole('dialog', { name: 'Log an incident' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'close-form' }))
+    expect(screen.getByRole('button', { name: /Log incident/ })).toBeEnabled()
     expect(queryState.calledWith).toEqual({ activeOnly: true })
   })
 
-  it('collapses to nothing while the query is loading or has errored (no data)', () => {
-    queryState.data = undefined
-    const { container } = renderCard()
+  describe('incident live-only writes', () => {
+    it.each([
+      ['create', '/status/incidents', 'POST'],
+      ['patch', '/status/incidents/42', 'PATCH'],
+      ['append', '/status/incidents/42/updates', 'POST'],
+      ['delete', '/status/incidents/42', 'DELETE'],
+    ])('protects the %s request at the existing client boundary', async (operation, path, method) => {
+      const api = await vi.importActual<typeof import('@/api/hooks/useIncidents')>('@/api/hooks/useIncidents')
+      vi.mocked(request).mockResolvedValueOnce(makeIncident({ id: 42 }))
+      if (operation === 'create') await api.createIncident({ title: 'Operator incident' })
+      if (operation === 'patch') await api.patchIncident(42, { status: 'resolved' })
+      if (operation === 'append') await api.appendIncidentUpdate(42, { message: 'Operator update' })
+      if (operation === 'delete') await api.deleteIncident(42)
+      expect(request).toHaveBeenLastCalledWith(path, expect.objectContaining({
+        method, requiresLiveMode: true,
+      }))
+    })
 
-    // A supplementary card must not push an empty panel or a scary error onto
-    // the page before/while data resolves.
-    expect(container.firstChild).toBeNull()
+    it.each(['create', 'patch', 'append', 'delete'] as const)(
+      'rejects offline %s work immediately instead of queuing it for reconnection',
+      async operation => {
+        const api = await vi.importActual<typeof import('@/api/hooks/useIncidents')>('@/api/hooks/useIncidents')
+        const error = new Error('Changes are unavailable while offline.')
+        vi.mocked(request).mockRejectedValueOnce(error)
+        const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+        onlineManager.setOnline(false)
+        const { result, unmount } = renderHook(() => {
+          const create = api.useCreateIncident()
+          const patch = api.usePatchIncident()
+          const append = api.useAppendIncidentUpdate()
+          const remove = api.useDeleteIncident()
+          return { create, patch, append, delete: remove }
+        }, {
+          wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+        })
+        try {
+          await act(async () => {
+            const pending = operation === 'create'
+              ? result.current.create.mutateAsync({ title: 'Retained draft' })
+              : operation === 'patch'
+                ? result.current.patch.mutateAsync({ id: 42, payload: { status: 'resolved' } })
+                : operation === 'append'
+                  ? result.current.append.mutateAsync({ id: 42, payload: { message: 'Retained update' } })
+                  : result.current.delete.mutateAsync(42)
+            await expect(pending).rejects.toBe(error)
+          })
+          await waitFor(() => expect(result.current[operation].isError).toBe(true))
+          expect(result.current[operation].isPaused).toBe(false)
+          expect(client.getMutationCache().getAll()).toHaveLength(1)
+        } finally {
+          unmount()
+          client.clear()
+          onlineManager.setOnline(true)
+        }
+      },
+    )
+  })
+
+  it('keeps unknown initial state distinct from an authoritative empty read', () => {
+    queryState.data = undefined
+    renderCard()
+    expect(screen.getByRole('heading', { name: /Active incidents/ })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Loading Active incidents' })).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 
@@ -148,9 +215,18 @@ describe('IncidentsCard', () => {
     }
     renderCard()
 
-    expect(screen.getByText('minor')).toHaveClass('text-amber-300')
-    expect(screen.getByText('major')).toHaveClass('text-orange-300')
-    expect(screen.getByText('critical')).toHaveClass('text-red-400')
+    expect(screen.getByText('minor')).toHaveClass('text-[var(--semantic-warning)]')
+    expect(screen.getByText('major')).toHaveClass('text-[var(--semantic-warning)]')
+    expect(screen.getByText('critical')).toHaveClass('text-[var(--semantic-danger)]')
+  })
+
+  it('retains active incident evidence and form access after a failed refresh', () => {
+    queryState.data = { incidents: [makeIncident({ title: 'Retained incident' })], count: 1 }
+    queryState.error = new Error('refresh failed')
+    renderCard()
+    expect(screen.getByRole('link', { name: /Retained incident/ })).toBeInTheDocument()
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Log incident' })).toBeEnabled()
   })
 
   it('falls back to a safe "unknown" tone for a severity outside the known enum (no crash)', () => {

@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SearchX } from 'lucide-react';
-import { Badge, GlassPanel, Heading, Text } from '@/components/ui';
-import { AlertBanner, EmptyState } from '@/components/feedback';
+import { Badge, Button, GlassPanel, Heading, Text } from '@/components/ui';
+import { AlertBanner, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { DataFreshness } from '@/components/data-display';
+import type { DataState } from '@/api/dataState';
+import type { isVehicleStateFieldCurrent } from '@/api/hooks/useVehicles';
 import type { CommandLogEntry } from '@/api/hooks/useCommands';
 import {
   CATEGORY_META,
@@ -19,13 +22,15 @@ import { ToggleCommandTile } from '../ToggleCommandTile';
 import { CommandDialogs, type ActiveCommandDialog } from './CommandDialogs';
 import { CommandDomainBrowser } from './CommandDomainBrowser';
 import type { CommandDomainId } from './commandDomains';
-import { getLatestCommandStatus } from './commandLabels';
+import { getCommandDefinition, getLatestCommandStatus } from './commandLabels';
 import { useCommandFavorites } from './useCommandFavorites';
 
 interface CommandWorkspaceProps {
   vehicle: Vehicle;
   state: VehicleState | null;
+  stateTrust?: Parameters<typeof isVehicleStateFieldCurrent>[0];
   latestCommands: CommandLogEntry[];
+  latestState?: DataState<CommandLogEntry[]>;
   loading: boolean;
   disabled?: boolean;
   disabledReason?: string;
@@ -35,7 +40,9 @@ interface CommandWorkspaceProps {
 export function CommandWorkspace({
   vehicle,
   state,
+  stateTrust,
   latestCommands,
+  latestState,
   loading,
   disabled = false,
   disabledReason,
@@ -48,13 +55,23 @@ export function CommandWorkspace({
   const { favorites, toggleFavorite } = useCommandFavorites(vehicle.id);
 
   useEffect(() => {
-    if (disabled) setActiveDialog(null);
-  }, [disabled]);
+    setActiveDialog(null);
+  }, [disabled, vehicle.id]);
 
-  const latestByCommand = useMemo(
-    () => new Map((latestCommands ?? []).map((entry) => [entry.command, entry])),
-    [latestCommands],
-  );
+  const latestByCommand = useMemo(() => {
+    const latest = new Map<string, CommandLogEntry>();
+    for (const entry of latestCommands ?? []) {
+      const command = getCommandDefinition(entry.command)?.command ?? entry.command;
+      const previous = latest.get(command);
+      const timestamp = Date.parse(entry.created_at);
+      const previousTimestamp = previous ? Date.parse(previous.created_at) : Number.NEGATIVE_INFINITY;
+      if (!previous || timestamp > previousTimestamp ||
+          (timestamp === previousTimestamp && entry.id > previous.id)) {
+        latest.set(command, entry);
+      }
+    }
+    return latest;
+  }, [latestCommands]);
 
   const filteredCommands = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -75,15 +92,11 @@ export function CommandWorkspace({
       : definition.inputConfig
         ? 'input'
         : 'confirm';
-    setActiveDialog({ kind, definition });
-  }, []);
+    setActiveDialog({ kind, definition, vehicleId: vehicle.id });
+  }, [vehicle.id]);
 
   const renderTile = useCallback((definition: CommandDef) => {
-    const latest =
-      latestByCommand.get(definition.command) ??
-      (definition.commandOff
-        ? latestByCommand.get(definition.commandOff)
-        : undefined);
+    const latest = latestByCommand.get(definition.command);
     const common = {
       loading,
       disabled,
@@ -101,6 +114,7 @@ export function CommandWorkspace({
           {...common}
           def={definition}
           state={state}
+          stateTrust={stateTrust}
           onExecute={onExecute}
         />
       );
@@ -125,12 +139,48 @@ export function CommandWorkspace({
     onExecute,
     requestDialog,
     state,
+    stateTrust,
     toggleFavorite,
   ]);
 
   return (
     <>
       <GlassPanel className="space-y-5 p-4 sm:p-5" data-testid="command-workspace">
+        {latestState && (
+          <div data-testid="command-outcome-source" className="space-y-2">
+            {latestState.fatalError ? (
+              <QueryError error={latestState.fatalError} onRetry={latestState.retry ?? undefined} />
+            ) : !latestState.hasData ? (
+              <div role="status">
+                <Text variant="bodySm">
+                  {latestState.isRefreshBlocked
+                    ? t('dataSources.status.paused', 'Refresh paused')
+                    : t('commands.activity.loading', 'Loading command activity')}
+                </Text>
+                {!latestState.isRefreshBlocked && <Skeleton className="h-4 w-40" />}
+                {latestState.isRefreshBlocked && latestState.retry && (
+                  <Button type="button" variant="ghost" size="sm" className="min-h-11" onClick={latestState.retry}>
+                    {t('common.refresh', 'Refresh')}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <>
+                <StaleRefreshWarning state={latestState} label={t('commands.activity.title', 'Recent command activity')} />
+                <DataFreshness
+                  updatedAt={latestState.updatedAt}
+                  isFetching={latestState.isRefreshing}
+                  isStale={latestState.status !== 'ok'}
+                  isError={latestState.refreshError != null}
+                  source={t('commands.activity.title', 'Recent command activity')}
+                />
+                {latestCommands.length === 0 && (
+                  <Text variant="bodySm">{t('commands.activity.emptyTitle', 'No commands sent yet')}</Text>
+                )}
+              </>
+            )}
+          </div>
+        )}
         {disabled && (
           <AlertBanner
             variant="warning"

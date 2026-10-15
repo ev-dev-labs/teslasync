@@ -260,7 +260,7 @@ func okQuerier() *fakeQuerier {
 		shortestRow:      fakeRow{vals: []any{int64(8), mustDate("2020-02-01"), 2000.0, 600.0, strptr("A"), strptr("B")}},
 		dowRow:           fakeRow{vals: []any{int(5), int(30)}},
 		hourRow:          fakeRow{vals: []any{int(17), int(25)}},
-		socRow:           fakeRow{vals: []any{42.0}},
+		socRow:           fakeRow{vals: []any{42.0, int(20)}},
 		driveMonthRows:   &fakeRows{rows: [][]any{{int(6), int(40), 800.0}, {int(2), int(60), 1200.0}}},
 		chargeMonthRows:  &fakeRows{rows: [][]any{{int(6), 500.0, 90.0}, {int(2), 700.0, 90.0}}},
 		chargeTypeRows:   &fakeRows{rows: [][]any{{"supercharger", int(30)}, {"dc_fast", int(15)}, {"ac_other", int(5)}}},
@@ -281,7 +281,7 @@ func emptyQuerier() *fakeQuerier {
 		shortestRow:      fakeRow{err: pgx.ErrNoRows},
 		dowRow:           fakeRow{err: pgx.ErrNoRows},
 		hourRow:          fakeRow{err: pgx.ErrNoRows},
-		socRow:           fakeRow{err: pgx.ErrNoRows},
+		socRow:           fakeRow{vals: []any{nil, int(0)}},
 		driveMonthRows:   &fakeRows{},
 		chargeMonthRows:  &fakeRows{},
 		chargeTypeRows:   &fakeRows{},
@@ -291,12 +291,12 @@ func emptyQuerier() *fakeQuerier {
 // --- response decoding ---------------------------------------------------
 
 type highlightJSON struct {
-	DriveID      int64   `json:"DriveID"`
-	Date         string  `json:"Date"`
-	DistanceKm   float64 `json:"DistanceKm"`
-	DurationS    int64   `json:"DurationS"`
-	StartAddress string  `json:"StartAddress"`
-	EndAddress   string  `json:"EndAddress"`
+	DriveID         int64   `json:"drive_id"`
+	Date            string  `json:"date"`
+	DistanceKm      float64 `json:"distance_km"`
+	DurationMinutes float64 `json:"duration_min"`
+	StartAddress    string  `json:"start_address"`
+	EndAddress      string  `json:"end_address"`
 }
 
 type monthJSON struct {
@@ -324,7 +324,7 @@ type yrResponse struct {
 	TotalDistanceKm       float64          `json:"total_distance_km"`
 	TotalEnergyKwh        float64          `json:"total_energy_kwh"`
 	TotalChargeSessions   int              `json:"total_charge_sessions"`
-	TotalDrivingMinutes   int              `json:"total_driving_minutes"`
+	TotalDrivingMinutes   float64          `json:"total_driving_minutes"`
 	TotalChargingCost     float64          `json:"total_charging_cost"`
 	GasSavings            float64          `json:"gas_savings"`
 	Co2OffsetKg           float64          `json:"co2_offset_kg"`
@@ -332,9 +332,9 @@ type yrResponse struct {
 	ShortestDrive         *highlightJSON   `json:"shortest_drive"`
 	MostEfficientDrive    json.RawMessage  `json:"most_efficient_drive"`
 	LeastEfficientDrive   json.RawMessage  `json:"least_efficient_drive"`
-	FastestSpeedKmh       float64          `json:"fastest_speed_kmh"`
-	ColdestDriveTempC     float64          `json:"coldest_drive_temp_c"`
-	HottestDriveTempC     float64          `json:"hottest_drive_temp_c"`
+	FastestSpeedKmh       *float64         `json:"fastest_speed_kmh"`
+	ColdestDriveTempC     *float64         `json:"coldest_drive_temp_c"`
+	HottestDriveTempC     *float64         `json:"hottest_drive_temp_c"`
 	MonthlyStats          []monthJSON      `json:"monthly_stats"`
 	MostActiveDayOfWeek   string           `json:"most_active_day_of_week"`
 	MostActiveHour        int              `json:"most_active_hour"`
@@ -380,6 +380,346 @@ func serve(fq *fakeQuerier, query string) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	h.GetYearReview(rec, newRequest(query))
 	return rec
+}
+
+func rawReview(t *testing.T, fq *fakeQuerier) map[string]json.RawMessage {
+	t.Helper()
+	rec := serve(fq, "vehicle_id=42&year=2020")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+	}
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
+func TestGetYearReview_CalendarBasis(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		at   time.Time
+		want string
+	}{
+		{"west boundary", time.Date(2020, 1, 1, 23, 30, 0, 0, time.FixedZone("west", -8*3600)), "2020-01-02"},
+		{"east boundary", time.Date(2020, 1, 2, 0, 30, 0, 0, time.FixedZone("east", 14*3600)), "2020-01-01"},
+		{"missing", time.Time{}, ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.longestRow = fakeRow{vals: []any{int64(7), tt.at, 90000.0, 3576.0, strptr("McDonald ROAD"), strptr("iPhone Street")}}
+			rec := serve(fq, "vehicle_id=42&year=2020")
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+			}
+			got := decodeYR(t, rec.Body.Bytes()).LongestDrive
+			if got == nil || got.Date != tt.want || got.DurationMinutes != 59.6 || got.StartAddress != "McDonald ROAD" {
+				t.Fatalf("highlight = %+v", got)
+			}
+			count := 0
+			for _, query := range fq.queries {
+				if strings.Contains(query, "EXTRACT(") {
+					count++
+					if !strings.Contains(query, "started_at AT TIME ZONE 'UTC'") {
+						t.Errorf("calendar aggregation depends on session timezone: %s", query)
+					}
+				}
+			}
+			if count != 4 {
+				t.Errorf("calendar queries = %d, want 4", count)
+			}
+		})
+	}
+}
+func assertWire(t *testing.T, raw map[string]json.RawMessage, key, want string) {
+	t.Helper()
+	if got := string(raw[key]); got != want {
+		t.Errorf("%s = %s, want %s", key, got, want)
+	}
+}
+
+func TestGetYearReview_SecondaryScalarAvailability(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		value any
+		want  string
+	}{
+		{"missing", nil, "null"},
+		{"nan", math.NaN(), "null"},
+		{"infinity", math.Inf(1), "null"},
+		{"negative infinity", math.Inf(-1), "null"},
+		{"overflow", math.MaxFloat64, "null"},
+		{"zero", 0.0, "0"},
+		{"fraction", 42.26, "42.3"},
+		{"signed fraction", -5.26, "-5.3"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.efficiencyRow = fakeRow{vals: []any{tt.value}}
+			fq.socRow = fakeRow{vals: []any{tt.value, int(1)}}
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "avg_efficiency_wh_km", tt.want)
+			socWant := tt.want
+			if value, ok := tt.value.(float64); ok && (value < 0 || value > 100) {
+				socWant = "null"
+			}
+			assertWire(t, raw, "avg_charge_start_soc", socWant)
+			assertWire(t, raw, "avg_charge_start_soc_count", "1")
+			assertWire(t, raw, "total_drives", "100")
+			assertWire(t, raw, "gas_savings", "123.98")
+		})
+	}
+	for _, err := range []error{pgx.ErrNoRows, errors.New("query failed")} {
+		fq := okQuerier()
+		fq.efficiencyRow, fq.socRow = fakeRow{err: err}, fakeRow{err: err}
+		raw := rawReview(t, fq)
+		assertWire(t, raw, "avg_efficiency_wh_km", "null")
+		assertWire(t, raw, "avg_charge_start_soc", "null")
+		assertWire(t, raw, "avg_charge_start_soc_count", "null")
+		assertWire(t, raw, "total_energy_kwh", "1200")
+	}
+}
+
+func TestGetYearReview_ChargingObservationAvailability(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		soc   any
+		count int
+		want  string
+	}{
+		{"no observations", nil, 0, "null"},
+		{"zero without observations", 0.0, 0, "null"},
+		{"measured zero", 0.0, 3, "0"},
+		{"fractional SOC", 42.26, 3, "42.3"},
+		{"full SOC", 100.0, 3, "100"},
+		{"missing SOC", nil, 3, "null"},
+		{"negative SOC", -0.1, 3, "null"},
+		{"above full SOC", 100.1, 3, "null"},
+		{"nan SOC", math.NaN(), 3, "null"},
+		{"infinite SOC", math.Inf(1), 3, "null"},
+		{"invalid count", 42.0, -1, "null"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.socRow = fakeRow{vals: []any{tt.soc, tt.count}}
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "avg_charge_start_soc", tt.want)
+			countWant := fmt.Sprint(tt.count)
+			if tt.count < 0 {
+				countWant = "null"
+			}
+			assertWire(t, raw, "avg_charge_start_soc_count", countWant)
+			assertWire(t, raw, "total_charge_sessions", "50")
+			for i, sql := range fq.queries {
+				if !strings.Contains(sql, "AVG(start_soc_pct)") {
+					continue
+				}
+				for _, fragment := range []string{
+					"COUNT(start_soc_pct)", "start_soc_pct >= 0", "start_soc_pct <= 100",
+					"vehicle_id = $1", "ended_at IS NOT NULL", "started_at >= $2", "started_at < $3",
+				} {
+					if !strings.Contains(sql, fragment) {
+						t.Errorf("SOC query missing %q: %s", fragment, sql)
+					}
+				}
+				if len(fq.args[i]) != 3 || fq.args[i][0] != int64(42) ||
+					fq.args[i][1] != mustDate("2020-01-01") || fq.args[i][2] != mustDate("2021-01-01") {
+					t.Errorf("SOC scope args = %v", fq.args[i])
+				}
+			}
+		})
+	}
+
+	for _, tt := range []struct {
+		name string
+		rows *fakeRows
+		sc   string
+		dc   string
+		ac   string
+	}{
+		{"no sessions", &fakeRows{}, "null", "null", "null"},
+		{"zero denominator", &fakeRows{rows: [][]any{{"supercharger", 0}}}, "null", "null", "null"},
+		{"measured zero share", &fakeRows{rows: [][]any{{"dc_fast", 2}}}, "0", "100", "0"},
+		{"fractional shares", &fakeRows{rows: [][]any{{"supercharger", 1}, {"dc_fast", 2}}}, "33.3", "66.7", "0"},
+		{"negative count", &fakeRows{rows: [][]any{{"supercharger", -1}}}, "null", "null", "null"},
+		{"unknown category", &fakeRows{rows: [][]any{{"unknown", 1}}}, "null", "null", "null"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.chargeTypeRows = tt.rows
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "supercharger_pct", tt.sc)
+			assertWire(t, raw, "dc_fast_pct", tt.dc)
+			assertWire(t, raw, "ac_other_pct", tt.ac)
+		})
+	}
+
+	raw := rawReview(t, emptyQuerier())
+	assertWire(t, raw, "avg_charge_start_soc", "null")
+	assertWire(t, raw, "avg_charge_start_soc_count", "0")
+}
+
+func TestGetYearReview_SettingsAvailability(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		price, mpg any
+		want       string
+	}{
+		{"missing price", nil, 25.0, "null"},
+		{"missing efficiency", 3.5, nil, "null"},
+		{"invalid price", math.NaN(), 25.0, "null"},
+		{"invalid efficiency", 3.5, math.Inf(1), "null"},
+		{"zero efficiency", 3.5, 0.0, "null"},
+		{"negative efficiency", 3.5, -25.0, "null"},
+		{"negative price", -3.5, 25.0, "null"},
+		{"zero price is measured", 0.0, 25.0, "-50"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.settingsRow = fakeRow{vals: []any{tt.price, tt.mpg}}
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "gas_savings", tt.want)
+			assertWire(t, raw, "total_charging_cost", "50")
+		})
+	}
+	fq := okQuerier()
+	fq.settingsRow = fakeRow{err: errors.New("unavailable settings")}
+	raw := rawReview(t, fq)
+	assertWire(t, raw, "gas_savings", "null")
+	var cards []comparisonJSON
+	if err := json.Unmarshal(raw["comparisons"], &cards); err != nil {
+		t.Fatal(err)
+	}
+	for _, card := range cards {
+		if card.Label == "Gas money saved" {
+			t.Fatal("unavailable savings produced a comparison")
+		}
+	}
+}
+
+func TestGetYearReview_ActivityAvailability(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		row      fakeRow
+		wantHour string
+		wantDay  string
+	}{
+		{"missing", fakeRow{err: pgx.ErrNoRows}, "null", "null"},
+		{"failed", fakeRow{err: errors.New("unavailable")}, "null", "null"},
+		{"invalid negative", fakeRow{vals: []any{-1, 5}}, "null", "null"},
+		{"invalid index", fakeRow{vals: []any{24, 5}}, "null", "null"},
+		{"invalid count", fakeRow{vals: []any{0, 0}}, "null", "null"},
+		{"midnight Sunday", fakeRow{vals: []any{0, 5}}, "0", `"Sunday"`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.hourRow, fq.dowRow = tt.row, tt.row
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "most_active_hour", tt.wantHour)
+			assertWire(t, raw, "most_active_day_of_week", tt.wantDay)
+			assertWire(t, raw, "avg_efficiency_wh_km", "155.5")
+		})
+	}
+}
+
+func TestGetYearReview_GroupFailuresPreserveNeighbors(t *testing.T) {
+	for _, group := range []string{"drive", "charge", "type"} {
+		for _, failure := range []string{"query", "scan", "iteration"} {
+			t.Run(group+"/"+failure, func(t *testing.T) {
+				fq := okQuerier()
+				fail := errors.New("secondary failure")
+				rows := &fakeRows{rows: [][]any{{6, 40, 800.0}}}
+				if group == "charge" {
+					rows.rows = [][]any{{6, 500.0, 90.0}}
+				} else if group == "type" {
+					rows.rows = [][]any{{"supercharger", 30}}
+				}
+				if failure == "scan" {
+					rows.scanErr = fail
+				} else if failure == "iteration" {
+					rows.iterErr = fail
+				}
+				switch group {
+				case "drive":
+					fq.driveMonthRows = rows
+					if failure == "query" {
+						fq.driveMonthErr = fail
+					}
+				case "charge":
+					fq.chargeMonthRows = rows
+					if failure == "query" {
+						fq.chargeMonthErr = fail
+					}
+				case "type":
+					fq.chargeTypeRows = rows
+					if failure == "query" {
+						fq.chargeTypeErr = fail
+					}
+				}
+				raw := rawReview(t, fq)
+				assertWire(t, raw, "total_drives", "100")
+				assertWire(t, raw, "avg_charge_start_soc", "42")
+				var months []map[string]json.RawMessage
+				if err := json.Unmarshal(raw["monthly_stats"], &months); err != nil {
+					t.Fatal(err)
+				}
+				if len(months) != 12 {
+					t.Fatalf("got %d months", len(months))
+				}
+				for _, month := range months {
+					if group == "drive" {
+						assertWire(t, month, "drives", "null")
+						assertWire(t, month, "distance_km", "null")
+					} else if group == "charge" {
+						assertWire(t, month, "energy_kwh", "null")
+						assertWire(t, month, "cost", "null")
+					}
+				}
+				if group != "charge" {
+					assertWire(t, months[5], "energy_kwh", "500")
+				}
+				if group != "drive" {
+					assertWire(t, months[5], "drives", "40")
+				}
+				for _, key := range []string{"supercharger_pct", "dc_fast_pct", "ac_other_pct"} {
+					if group == "type" {
+						assertWire(t, raw, key, "null")
+					} else if string(raw[key]) == "null" {
+						t.Errorf("successful %s became unavailable", key)
+					}
+				}
+				if failure != "query" && !rows.closed {
+					t.Error("rows not closed")
+				}
+			})
+		}
+	}
+}
+
+func TestGetYearReview_MonthlyValuesAndFractionalDuration(t *testing.T) {
+	fq := okQuerier()
+	fq.driveStatsRow = fakeRow{vals: []any{100, 2000.0, 3000.5, 180.0, -5.0, 38.0}}
+	fq.driveMonthRows = &fakeRows{rows: [][]any{{6, 40, math.NaN()}}}
+	fq.chargeMonthRows = &fakeRows{rows: [][]any{
+		{6, nil, -5.265}, {2, 0.0, 0.0}, {3, 1.26, math.Inf(1)},
+	}}
+	raw := rawReview(t, fq)
+	assertWire(t, raw, "total_driving_minutes", "3000.5")
+	var months []map[string]json.RawMessage
+	if err := json.Unmarshal(raw["monthly_stats"], &months); err != nil {
+		t.Fatal(err)
+	}
+	assertWire(t, months[5], "drives", "40")
+	assertWire(t, months[5], "distance_km", "null")
+	assertWire(t, months[5], "energy_kwh", "null")
+	assertWire(t, months[5], "cost", "-5.27")
+	assertWire(t, months[1], "energy_kwh", "0")
+	assertWire(t, months[1], "cost", "0")
+	assertWire(t, months[2], "energy_kwh", "1.3")
+	assertWire(t, months[2], "cost", "null")
+	assertWire(t, months[0], "drives", "0")
+	assertWire(t, months[0], "energy_kwh", "0")
 }
 
 const jsonCT = "application/json; charset=utf-8"
@@ -589,7 +929,7 @@ func TestGetYearReview_Success(t *testing.T) {
 		t.Errorf("total_charge_sessions = %d, want 50", got.TotalChargeSessions)
 	}
 	if got.TotalDrivingMinutes != 3000 {
-		t.Errorf("total_driving_minutes = %d, want 3000", got.TotalDrivingMinutes)
+		t.Errorf("total_driving_minutes = %v, want 3000", got.TotalDrivingMinutes)
 	}
 	if got.TotalChargingCost != 50 {
 		t.Errorf("total_charging_cost = %v, want 50", got.TotalChargingCost)
@@ -601,13 +941,13 @@ func TestGetYearReview_Success(t *testing.T) {
 	if got.Co2OffsetKg != 384 {
 		t.Errorf("co2_offset_kg = %v, want 384", got.Co2OffsetKg)
 	}
-	if got.FastestSpeedKmh != 180 {
+	if got.FastestSpeedKmh == nil || *got.FastestSpeedKmh != 180 {
 		t.Errorf("fastest_speed_kmh = %v, want 180", got.FastestSpeedKmh)
 	}
-	if got.ColdestDriveTempC != -5 {
+	if got.ColdestDriveTempC == nil || *got.ColdestDriveTempC != -5 {
 		t.Errorf("coldest_drive_temp_c = %v, want -5", got.ColdestDriveTempC)
 	}
-	if got.HottestDriveTempC != 38 {
+	if got.HottestDriveTempC == nil || *got.HottestDriveTempC != 38 {
 		t.Errorf("hottest_drive_temp_c = %v, want 38", got.HottestDriveTempC)
 	}
 	if got.MostActiveDayOfWeek != "Friday" {
@@ -637,14 +977,14 @@ func TestGetYearReview_Success(t *testing.T) {
 		t.Fatalf("longest_drive is null, want populated")
 	}
 	if got.LongestDrive.DriveID != 7 || got.LongestDrive.Date != "2020-06-15" ||
-		got.LongestDrive.DistanceKm != 90 || got.LongestDrive.DurationS != 3600 ||
+		got.LongestDrive.DistanceKm != 90 || got.LongestDrive.DurationMinutes != 60 ||
 		got.LongestDrive.StartAddress != "Home" || got.LongestDrive.EndAddress != "Work" {
 		t.Errorf("longest_drive = %+v", *got.LongestDrive)
 	}
 	if got.ShortestDrive == nil {
 		t.Fatalf("shortest_drive is null, want populated")
 	}
-	if got.ShortestDrive.DriveID != 8 || got.ShortestDrive.DistanceKm != 2 {
+	if got.ShortestDrive.DriveID != 8 || got.ShortestDrive.DistanceKm != 2 || got.ShortestDrive.DurationMinutes != 10 {
 		t.Errorf("shortest_drive = %+v, want id=8 dist=2", *got.ShortestDrive)
 	}
 	// efficiency-extreme highlights are intentionally always null (range
@@ -688,11 +1028,85 @@ func TestGetYearReview_Success(t *testing.T) {
 	if !strings.Contains(got.Comparisons[3].Value, "384") || !strings.Contains(got.Comparisons[3].Value, "18 trees") {
 		t.Errorf("comparisons[3] (co2) value = %q, want contains 384 & 18 trees", got.Comparisons[3].Value)
 	}
-	if got.Comparisons[4].Label != "Gas money saved" || got.Comparisons[4].Value != "$124 — that's 24 cups of coffee!" {
-		t.Errorf("comparisons[4] = %+v, want gas $124/24 cups", got.Comparisons[4])
+	if got.Comparisons[4].Label != "Gas money saved" || got.Comparisons[4].Value != "$123.98 — that's 24 cups of coffee!" {
+		t.Errorf("comparisons[4] = %+v, want gas $123.98/24 cups", got.Comparisons[4])
 	}
 	if got.Comparisons[5].Label != "Hours on the road" || got.Comparisons[5].Value != "50 hours — 25 movies!" {
 		t.Errorf("comparisons[5] = %+v, want 50 hours/25 movies", got.Comparisons[5])
+	}
+}
+
+func TestGetYearReview_EfficiencyRecordsUnavailableReason(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		fq   *fakeQuerier
+	}{
+		{"populated year", okQuerier()},
+		{"empty year", emptyQuerier()},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			raw := rawReview(t, tt.fq)
+			assertWire(t, raw, "most_efficient_drive", "null")
+			assertWire(t, raw, "least_efficient_drive", "null")
+			assertWire(t, raw, "efficiency_records_unavailable_reason", `"unsupported"`)
+			if tt.name == "populated year" {
+				assertWire(t, raw, "avg_efficiency_wh_km", "155.5")
+				assertWire(t, raw, "total_drives", "100")
+				for _, key := range []string{"longest_drive", "shortest_drive"} {
+					if len(raw[key]) == 0 || string(raw[key]) == "null" {
+						t.Errorf("%s must remain populated", key)
+					}
+				}
+			} else {
+				assertWire(t, raw, "total_drives", "0")
+				assertWire(t, raw, "longest_drive", "null")
+				assertWire(t, raw, "shortest_drive", "null")
+			}
+		})
+	}
+}
+
+func TestGetYearReview_HighlightWireContract(t *testing.T) {
+	fq := okQuerier()
+	fq.longestRow = fakeRow{vals: []any{
+		int64(7), mustDate("2020-06-15"), 90000.0, 3576.0, strptr("Home"), strptr("Work"),
+	}}
+	fq.shortestRow = fakeRow{vals: []any{
+		int64(8), mustDate("2020-02-01"), 2000.0, 30.0, nil, nil,
+	}}
+	rec := serve(fq, "vehicle_id=42&year=2020")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+
+	var response map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name string
+		want string
+	}{
+		{"longest_drive", `{"drive_id":7,"date":"2020-06-15","distance_km":90,"duration_min":59.6,"start_address":"Home","end_address":"Work","efficiency_wh_km":0}`},
+		{"shortest_drive", `{"drive_id":8,"date":"2020-02-01","distance_km":2,"duration_min":0.5,"start_address":"","end_address":"","efficiency_wh_km":0}`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var got, want map[string]any
+			if err := json.Unmarshal(response[tt.name], &got); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal([]byte(tt.want), &want); err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != len(want) {
+				t.Fatalf("highlight keys = %v, want exactly %v", got, want)
+			}
+			for key, value := range want {
+				if got[key] != value {
+					t.Errorf("%s = %v, want %v", key, got[key], value)
+				}
+			}
+		})
 	}
 }
 
@@ -724,8 +1138,8 @@ func TestGetYearReview_EmptyYear(t *testing.T) {
 	if got.Co2OffsetKg != 0 {
 		t.Errorf("co2_offset_kg = %v, want 0", got.Co2OffsetKg)
 	}
-	if got.FastestSpeedKmh != 0 || got.ColdestDriveTempC != 0 || got.HottestDriveTempC != 0 {
-		t.Errorf("null extremes should deref to 0: %+v", got)
+	if got.FastestSpeedKmh != nil || got.ColdestDriveTempC != nil || got.HottestDriveTempC != nil {
+		t.Errorf("missing extremes should remain null: %+v", got)
 	}
 	if got.LongestDrive != nil || got.ShortestDrive != nil {
 		t.Errorf("highlights should be null when no drives")
@@ -757,7 +1171,7 @@ func TestGetYearReview_ToleratedFailures(t *testing.T) {
 		check  func(t *testing.T, got yrResponse)
 	}{
 		{
-			name: "efficiency query error keeps 200 with zero efficiency",
+			name: "efficiency query error keeps 200",
 			mutate: func(fq *fakeQuerier) {
 				fq.efficiencyRow = fakeRow{err: errors.New("eff boom")}
 			},
@@ -771,14 +1185,13 @@ func TestGetYearReview_ToleratedFailures(t *testing.T) {
 			},
 		},
 		{
-			name: "settings error falls back to gas defaults",
+			name: "settings error leaves savings unavailable",
 			mutate: func(fq *fakeQuerier) {
 				fq.settingsRow = fakeRow{err: errors.New("settings boom")}
 			},
 			check: func(t *testing.T, got yrResponse) {
-				// Default $3.50 / 25mpg reproduce the happy-path savings.
-				if got.GasSavings != 123.98 {
-					t.Errorf("gas_savings = %v, want 123.98 from defaults", got.GasSavings)
+				if got.GasSavings != 0 {
+					t.Errorf("null gas_savings decoded as %v, want zero value", got.GasSavings)
 				}
 			},
 		},
@@ -881,31 +1294,91 @@ func TestGetYearReview_ToleratedFailures(t *testing.T) {
 	}
 }
 
-// TestGetYearReview_GasSavingsClamped verifies that when the equivalent gas
-// cost is below the actual charging cost the reported savings floor at 0 and
-// the "Gas money saved" comparison card is omitted.
-func TestGetYearReview_GasSavingsClamped(t *testing.T) {
+// Negative savings are valid, but must not generate a money-saved card.
+func TestGetYearReview_NegativeGasSavings(t *testing.T) {
 	fq := okQuerier()
-	// Charging cost far exceeds the gas-equivalent -> negative -> clamp 0.
+	// Charging cost far exceeds the gas-equivalent.
 	fq.chargingStatsRow = fakeRow{vals: []any{int(50), 1200.0, 5000.0}}
 	rec := serve(fq, "vehicle_id=42&year=2020")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
 	got := decodeYR(t, rec.Body.Bytes())
-	if got.GasSavings != 0 {
-		t.Errorf("gas_savings = %v, want 0 (clamped)", got.GasSavings)
+	if got.GasSavings != -4826.02 {
+		t.Errorf("gas_savings = %v, want -4826.02", got.GasSavings)
 	}
 	for _, c := range got.Comparisons {
 		if c.Label == "Gas money saved" {
-			t.Errorf("gas comparison card must be absent when savings=0")
+			t.Errorf("gas money saved card must be absent when savings are negative")
 		}
+	}
+	var found bool
+	for _, c := range got.Comparisons {
+		if c.Label == "Additional spending" {
+			found = true
+			if c.Value != "$-4826.02" {
+				t.Errorf("additional spending = %q, want $-4826.02", c.Value)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("negative savings must produce an additional spending comparison")
 	}
 }
 
-// TestGetYearReview_YearWindowBranches exercises the elapsed-year branch: a
-// far-future (but valid) year makes yearEnd.After(now) true while elapsed<=0,
-// so weeksInYear stays 52 and avg_drives_per_week is deterministic.
+func TestGetYearReview_SignedChargingCosts(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		cost        any
+		wantCost    string
+		wantSavings string
+		wantLabel   string
+		wantValue   string
+	}{
+		{"missing cost", nil, "null", "null", "", ""},
+		{"invalid cost", math.NaN(), "null", "null", "", ""},
+		{"positive infinity", math.Inf(1), "null", "null", "", ""},
+		{"negative infinity", math.Inf(-1), "null", "null", "", ""},
+		{"measured zero", 0.0, "0", "0", "", ""},
+		{"fractional spending", 0.25, "0.25", "-0.25", "Additional spending", "$-0.25"},
+		{"credit", -50.0, "-50", "50", "Gas money saved", "$50.00 — that's 10 cups of coffee!"},
+		{"fractional credit", -0.25, "-0.25", "0.25", "Gas money saved", "$0.25 — that's 0 cups of coffee!"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.settingsRow = fakeRow{vals: []any{0.0, 25.0}}
+			fq.chargingStatsRow = fakeRow{vals: []any{50, 1200.0, tt.cost}}
+			fq.chargeMonthRows = &fakeRows{rows: [][]any{{6, 1200.0, tt.cost}}}
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "total_charging_cost", tt.wantCost)
+			assertWire(t, raw, "gas_savings", tt.wantSavings)
+			var months []map[string]json.RawMessage
+			if err := json.Unmarshal(raw["monthly_stats"], &months); err != nil {
+				t.Fatal(err)
+			}
+			assertWire(t, months[5], "cost", tt.wantCost)
+			var cards []comparisonJSON
+			if err := json.Unmarshal(raw["comparisons"], &cards); err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, card := range cards {
+				if card.Label != "Gas money saved" && card.Label != "Additional spending" {
+					continue
+				}
+				found = true
+				if card.Label != tt.wantLabel || (tt.wantValue != "" && card.Value != tt.wantValue) {
+					t.Errorf("money comparison = %+v, want label %q value %q", card, tt.wantLabel, tt.wantValue)
+				}
+			}
+			if found != (tt.wantLabel != "") {
+				t.Errorf("money comparison present = %v, want %v", found, tt.wantLabel != "")
+			}
+		})
+	}
+}
+
+// A future year has no elapsed denominator, even if a fixture supplies drives.
 func TestGetYearReview_YearWindowBranches(t *testing.T) {
 	rec := serve(okQuerier(), "vehicle_id=42&year=2099")
 	if rec.Code != http.StatusOK {
@@ -915,8 +1388,128 @@ func TestGetYearReview_YearWindowBranches(t *testing.T) {
 	if got.Year != 2099 {
 		t.Errorf("year = %d, want 2099", got.Year)
 	}
-	if got.AvgDrivesPerWeek != 1.9 {
-		t.Errorf("avg_drives_per_week = %v, want 1.9 (52-week baseline)", got.AvgDrivesPerWeek)
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+		t.Fatal(err)
+	}
+	assertWire(t, raw, "avg_drives_per_week", "null")
+	var period weeklyRatePeriod
+	if err := json.Unmarshal(raw["weekly_rate_period"], &period); err != nil {
+		t.Fatal(err)
+	}
+	if period.Basis != "not_started" || period.DenominatorWeeks != nil ||
+		period.Label != "Drives per week (year not started)" || period.ObservationCoverage != "unknown" {
+		t.Fatalf("future period = %+v", period)
+	}
+}
+
+func TestGetYearReview_ElapsedWeeklyRateWireContract(t *testing.T) {
+	before := time.Now().UTC()
+	rec := serve(okQuerier(), fmt.Sprintf("vehicle_id=42&year=%d", before.Year()))
+	after := time.Now().UTC()
+	if before.Year() != after.Year() {
+		t.Skip("request crossed the calendar-year boundary")
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+	}
+	var got struct {
+		Rate   *float64         `json:"avg_drives_per_week"`
+		Period weeklyRatePeriod `json:"weekly_rate_period"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	first, last := weeklyPeriodYR(before.Year(), before), weeklyPeriodYR(before.Year(), after)
+	if first.DenominatorWeeks == nil {
+		t.Skip("request began exactly at the start of the year")
+	}
+	if got.Period.Basis != first.Basis || got.Period.Label != first.Label ||
+		got.Period.ObservationCoverage != "unknown" || got.Period.MinimumWeeks != 1 ||
+		got.Period.DenominatorWeeks == nil || *got.Period.DenominatorWeeks < *first.DenominatorWeeks ||
+		*got.Period.DenominatorWeeks > *last.DenominatorWeeks {
+		t.Fatalf("elapsed period = %+v", got.Period)
+	}
+	want := roundYR(100 / *got.Period.DenominatorWeeks, 1)
+	if got.Rate == nil || *got.Rate != want {
+		t.Fatalf("rate = %v, want %v from published denominator", got.Rate, want)
+	}
+}
+
+func TestWeeklyPeriodYR(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		now   time.Time
+		basis string
+		weeks float64
+		label string
+	}{
+		{"before start", mustDate("2019-12-31"), "not_started", 0, "Drives per week (year not started)"},
+		{"at start", mustDate("2020-01-01"), "not_started", 0, "Drives per week (year not started)"},
+		{"minimum week", mustDate("2020-01-02"), "elapsed_year", 1, "Drives per week (elapsed year, minimum one week)"},
+		{"exact week", mustDate("2020-01-08"), "elapsed_year", 1, "Drives per week (elapsed year, minimum one week)"},
+		{"fractional weeks", mustDate("2020-01-11").Add(12 * time.Hour), "elapsed_year", 1.5, "Drives per week (elapsed year, minimum one week)"},
+		{"leap year end", mustDate("2021-01-01"), "full_year", 52, "Drives per week (full-year 52-week baseline)"},
+		{"past year", mustDate("2026-10-14"), "full_year", 52, "Drives per week (full-year 52-week baseline)"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := weeklyPeriodYR(2020, tt.now)
+			if got.Basis != tt.basis || got.Label != tt.label || got.MinimumWeeks != 1 || got.ObservationCoverage != "unknown" {
+				t.Fatalf("period = %+v", got)
+			}
+			if tt.weeks == 0 {
+				if got.DenominatorWeeks != nil {
+					t.Fatalf("denominator = %v, want nil", *got.DenominatorWeeks)
+				}
+			} else if got.DenominatorWeeks == nil || *got.DenominatorWeeks != tt.weeks {
+				t.Fatalf("denominator = %v, want %v", got.DenominatorWeeks, tt.weeks)
+			}
+		})
+	}
+}
+
+func TestGetYearReview_WeeklyRateWireContract(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		count any
+		want  string
+	}{
+		{"measured zero", 0, "0"},
+		{"fractional rate", 13, "0.3"},
+		{"positive count", 104, "2"},
+		{"invalid negative count", -1, "null"},
+		{"missing count", nil, ""},
+		{"invalid fractional count", 1.5, ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.driveStatsRow = fakeRow{vals: []any{tt.count, 2000.0, 3000.0, 180.0, -5.25, 38.25}}
+			rec := serve(fq, "vehicle_id=42&year=2020")
+			if tt.want == "" {
+				if rec.Code != http.StatusInternalServerError {
+					t.Fatalf("status = %d, want 500", rec.Code)
+				}
+				return
+			}
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+			}
+			var raw map[string]json.RawMessage
+			if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+				t.Fatal(err)
+			}
+			assertWire(t, raw, "avg_drives_per_week", tt.want)
+			assertWire(t, raw, "coldest_drive_temp_c", "-5.3")
+			assertWire(t, raw, "hottest_drive_temp_c", "38.3")
+			var period weeklyRatePeriod
+			if err := json.Unmarshal(raw["weekly_rate_period"], &period); err != nil {
+				t.Fatal(err)
+			}
+			if period.Basis != "full_year" || period.DenominatorWeeks == nil || *period.DenominatorWeeks != 52 ||
+				period.Label != "Drives per week (full-year 52-week baseline)" || period.ObservationCoverage != "unknown" {
+				t.Fatalf("wire period = %+v", period)
+			}
+		})
 	}
 }
 
@@ -1076,17 +1669,46 @@ func TestSafeFloat(t *testing.T) {
 	}
 }
 
-func TestDerefFloat(t *testing.T) {
-	if got := derefFloat(nil); got != 0 {
-		t.Errorf("derefFloat(nil) = %v, want 0", got)
+func TestGetYearReview_ExtremeWireContract(t *testing.T) {
+	tests := []struct {
+		name  string
+		input any
+		want  string
+	}{
+		{"missing", nil, "null"},
+		{"typed missing", (*float64)(nil), "null"},
+		{"nan", math.NaN(), "null"},
+		{"positive infinity", math.Inf(1), "null"},
+		{"negative infinity", math.Inf(-1), "null"},
+		{"rounding overflow", math.MaxFloat64, "null"},
+		{"measured zero", 0.0, "0"},
+		{"positive", 38.0, "38"},
+		{"negative", -5.0, "-5"},
+		{"positive fraction", 38.26, "38.3"},
+		{"negative fraction", -5.26, "-5.3"},
+		{"fraction rounds to zero", 0.04, "0"},
 	}
-	v := 3.14
-	if got := derefFloat(&v); got != 3.14 {
-		t.Errorf("derefFloat(&3.14) = %v, want 3.14", got)
-	}
-	zero := 0.0
-	if got := derefFloat(&zero); got != 0 {
-		t.Errorf("derefFloat(&0) = %v, want 0", got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.driveStatsRow = fakeRow{vals: []any{100, 2000.0, 3000.0, tt.input, tt.input, tt.input}}
+			rec := serve(fq, "vehicle_id=7&year=2020")
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+			}
+			var raw map[string]json.RawMessage
+			if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+				t.Fatalf("decode response: %v", err)
+			}
+			for _, key := range []string{"fastest_speed_kmh", "coldest_drive_temp_c", "hottest_drive_temp_c"} {
+				if string(raw[key]) != tt.want {
+					t.Errorf("%s = %s, want %s", key, raw[key], tt.want)
+				}
+			}
+			if !strings.Contains(fq.queries[1], "MAX(max_speed_mps) * 3.6") {
+				t.Fatal("speed display conversion changed")
+			}
+		})
 	}
 }
 

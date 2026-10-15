@@ -108,7 +108,7 @@ function ReleaseNoteCard({ note }: { note: ReleaseNote }) {
             <span
               key={audience}
               data-release-audience={audience}
-              className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-2xs uppercase tracking-wide text-[var(--text-muted)]"
+              className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-2xs tracking-wide text-[var(--text-muted)]"
             >
               {t(AUDIENCE_LABEL[audience].key, AUDIENCE_LABEL[audience].fallback)}
             </span>

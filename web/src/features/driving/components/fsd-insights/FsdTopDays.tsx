@@ -6,12 +6,13 @@ import { EmptyState } from '@/components/feedback';
 import { Badge, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDayKey } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { FsdInsights, FsdInsightsDay } from '@/types/fsd';
 
 import { FsdSectionBody } from './FsdSectionBody';
 import { topActiveDays } from './helpers';
 import type { FsdSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const TOP_DAY_LIMIT = 10;
 
@@ -28,6 +29,7 @@ interface FsdTopDaysProps {
  * trend chart instead.
  */
 export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatDistance } = useUnits();
   const rows = useMemo(() => topActiveDays(insights?.daily ?? [], TOP_DAY_LIMIT), [insights]);
@@ -49,7 +51,7 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
         render: (row) => (
           <span className="tabular-nums">
             {row.fsd_distance_m != null
-              ? formatDistance(row.fsd_distance_m, { precision: 1 })
+              ? formatDistance(row.fsd_distance_m)
               : t('fsd.notReported', 'Not reported')}
           </span>
         ),
@@ -60,7 +62,7 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
         render: (row) => (
           <span className="tabular-nums">
             {row.driving_distance_m != null
-              ? formatDistance(row.driving_distance_m, { precision: 1 })
+              ? formatDistance(row.driving_distance_m)
               : t('fsd.notReported', 'Not reported')}
           </span>
         ),
@@ -70,7 +72,7 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
         header: t('fsd.topDays.colShare', 'Share'),
         render: (row) =>
           row.fsd_share_pct != null ? (
-            <span className="tabular-nums">{fmtNumber(row.fsd_share_pct, 1)}%</span>
+            <span className="tabular-nums">{fmtNumber(row.fsd_share_pct)}%</span>
           ) : (
             <Text as="span" variant="caption">
               {t('fsd.notReported', 'Not reported')}
@@ -92,12 +94,12 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
           ),
       },
     ],
-    [formatDistance, t, unitPrefs.locale],
+    [formatDistance, t, unitPrefs.locale, fmtNumber],
   );
 
   return (
     <GlassPanel
-      className="p-4 sm:p-5"
+      className="min-w-0 p-4 sm:p-5"
       role="region"
       aria-label={t('fsd.topDays.section', 'Most active supervised self-driving days')}
       data-testid="fsd-top-days"
@@ -116,10 +118,42 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
           <DataTable
             tableId="fsd-top-days"
             name="FsdTopDays"
+            caption={t('fsd.topDays.title', 'Most active days')}
             columns={columns}
             data={rows}
             keyExtractor={(row) => row.date}
+            rowLabel={(row) => formatDayKey(row.date, { locale: unitPrefs.locale, style: 'long' })}
             mobileColumns={['date', 'fsd_distance_m']}
+            mobilePresentation={{
+              roles: {
+                date: 'title',
+                fsd_distance_m: 'primary',
+                driving_distance_m: 'meta',
+                fsd_share_pct: 'meta',
+                reset_count: 'meta',
+              },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'date':
+                    return formatDayKey(row.date, { locale: unitPrefs.locale, style: 'long' });
+                  case 'fsd_distance_m':
+                  case 'driving_distance_m':
+                    return row[key] != null
+                      ? formatDistance(row[key])
+                      : t('fsd.notReported', 'Not reported');
+                  case 'fsd_share_pct':
+                    return row.fsd_share_pct != null
+                      ? `${fmtNumber(row.fsd_share_pct)}%`
+                      : t('fsd.notReported', 'Not reported');
+                  case 'reset_count':
+                    return row.reset_count > 0
+                      ? t('fsd.topDays.resetFlag', 'Counter reset ({{resets}})', { resets: row.reset_count })
+                      : t('fsd.topDays.noFlags', 'None');
+                  default:
+                    return undefined;
+                }
+              },
+            }}
             pagination
           />
         ) : (

@@ -114,6 +114,43 @@ function accessibleMutedForeground(mode: ModeTheme): string {
   return target
 }
 
+/** Saved palettes remain raw; only CSS presentation is restrained. */
+function presentationMode(mode: ModeTheme): ModeTheme {
+  const base = builtinModes[mode.colorScheme]
+  const highContrast = mode.id === 'hc-dark' || mode.id === 'hc-light'
+  const surface = (raw: string, neutral: string) =>
+    highContrast || ['dark', 'light', 'auto', 'oled'].includes(mode.id) ? raw : mixHex(raw, neutral, 0.85)
+  return {
+    ...mode,
+    bg: surface(mode.bg, base.bg),
+    surface1: mode.id === 'light' ? '#fafbfc' : surface(mode.surface1, base.surface1),
+    surface2: surface(mode.surface2, base.surface2),
+    surface3: surface(mode.surface3, base.surface3),
+    textPrimary: highContrast ? mode.textPrimary : base.textPrimary,
+    textSecondary: highContrast ? mode.textSecondary : base.textSecondary,
+    textMuted: highContrast ? mode.textMuted : mode.colorScheme === 'dark' ? '#8490a2' : '#64748b',
+  }
+}
+
+function presentationAccent(raw: string, mode: ModeTheme): string {
+  const rgb = parseHexColor(raw)
+  if (!rgb) return mode.colorScheme === 'dark' ? '#91b4d2' : '#385e7e'
+  const [r, g, b] = rgb.map(channel => channel / 255)
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const delta = max - min
+  if (delta < 0.05) return mode.textSecondary
+  const hue = ((max === r ? (g - b) / delta : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4) + 6) % 6
+  const lightness = mode.colorScheme === 'dark' ? 0.7 : 0.36
+  const amplitude = 0.25 * Math.min(lightness, 1 - lightness)
+  const channels = [0, 8, 4].map(offset => {
+    const k = (offset + hue * 2) % 12
+    return Math.round(255 * (lightness - amplitude * Math.max(-1, Math.min(k - 3, 9 - k, 1))))
+  })
+  const candidate = `#${channels.map(channel => channel.toString(16).padStart(2, '0')).join('')}`
+  return accessibleMutedForeground({ ...mode, textMuted: candidate })
+}
+
 const defaultCustomPrimary = '#00b4d8'
 const defaultCustomAccent = '#e63946'
 
@@ -312,23 +349,28 @@ export function useTheme() {
   return ctx
 }
 
-function applyThemeCSS(theme: ColorTheme, mode: ModeTheme) {
+function applyThemeCSS(theme: ColorTheme, savedMode: ModeTheme) {
+  const mode = presentationMode(savedMode)
+  const primary = theme.id === 'neon-cyan'
+    ? mode.colorScheme === 'dark' ? '#91b4d2' : '#385e7e'
+    : presentationAccent(theme.primary, mode)
+  const accent = presentationAccent(theme.accent, mode)
   const root = document.documentElement
-  root.style.setProperty('--theme-primary', theme.primary)
-  root.style.setProperty('--theme-primary-rgb', theme.primaryRGB)
-  root.style.setProperty('--theme-accent', theme.accent)
-  root.style.setProperty('--theme-accent-rgb', theme.accentRGB)
+  root.style.setProperty('--theme-primary', primary)
+  root.style.setProperty('--theme-primary-rgb', hexToRGB(primary))
+  root.style.setProperty('--theme-accent', accent)
+  root.style.setProperty('--theme-accent-rgb', hexToRGB(accent))
   // Contrasting foreground for solid accent fills (primary buttons, FAB, etc.)
   // so text/icons stay legible whichever accent the user picks.
-  root.style.setProperty('--theme-on-primary', readableForeground(theme.primary))
-  root.style.setProperty('--theme-on-accent', readableForeground(theme.accent))
+  root.style.setProperty('--theme-on-primary', readableForeground(primary))
+  root.style.setProperty('--theme-on-accent', readableForeground(accent))
   root.style.setProperty('--bg', mode.bg)
   root.style.setProperty('--bg-app', mode.bg)
   root.style.setProperty('--surface-1', mode.surface1)
   root.style.setProperty('--surface-2', mode.surface2)
   root.style.setProperty('--surface-3', mode.surface3)
-  root.style.setProperty('--glass-bg', mode.glassBg)
-  root.style.setProperty('--glass-border', mode.glassBorder)
+  root.style.setProperty('--glass-bg', mode.surface1)
+  root.style.setProperty('--glass-border', 'var(--border-default)')
   root.style.setProperty('--text-primary', mode.textPrimary)
   root.style.setProperty('--text-secondary', mode.textSecondary)
   root.style.setProperty('--text-muted', accessibleMutedForeground(mode))

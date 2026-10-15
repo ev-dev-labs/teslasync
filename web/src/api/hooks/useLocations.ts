@@ -18,10 +18,27 @@ import type {
   GeofenceChargingActivity,
   GeofenceCategory,
   VisitedPlaceCandidate,
+  VisitedLocation as ApiVisitedLocation,
 } from '../types';
+
+// Go's geo.VisitedLocation omits nil pointer fields. Keep that distinction
+// locally until the shared DTO owner aligns their optionality in api/types.ts.
+export type VisitedLocation = Omit<ApiVisitedLocation, 'address_id' | 'last_visited'> & {
+  address_id?: number | null;
+  last_visited?: string | null;
+};
+
+/** The handler accepts either no time window or both RFC3339 [from,to) bounds. */
+export type VisitedLocationsParams = {
+  vehicleId: number | null;
+  page?: number;
+  pageSize?: number;
+} & ({ from: string; to: string } | { from?: never; to?: never });
 
 export const locationKeys = {
   all: (vehicleId?: string) => ['locations', vehicleId ?? 'all'] as const,
+  visited: (vehicleId: number | null, page: number, pageSize: number, from?: string, to?: string) =>
+    ['visited-locations', vehicleId, page, pageSize, from, to] as const,
   geofences: ['geofences'] as const,
   geofencesFull: (includeArchived: boolean) =>
     ['geofences', 'full', includeArchived ? 'with-archived' : 'active'] as const,
@@ -59,6 +76,38 @@ export function useLocations(vehicleId?: string) {
     ),
     enabled: !!vehicleId,
     select: safeArray,
+  });
+}
+
+/**
+ * Canonical paginated GET /locations read for the visited-locations page.
+ * Retains that page's cache identity, cancellation, selected-vehicle gate and
+ * default query policies. Bounds filter drives before aggregation; the array
+ * is only a loaded page, NOT a server-wide count. Durations remain raw seconds.
+ * Pagination is passed through to apiparams.Pagination (50/0 defaults).
+ */
+export function useVisitedLocations({
+  vehicleId,
+  page = 1,
+  pageSize = 50,
+  from,
+  to,
+}: VisitedLocationsParams) {
+  return useQuery({
+    queryKey: locationKeys.visited(vehicleId, page, pageSize, from, to),
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams({
+        vehicle_id: String(vehicleId),
+        limit: String(pageSize),
+        offset: String((page - 1) * pageSize),
+      });
+      if (from !== undefined && to !== undefined) {
+        params.set('from', from);
+        params.set('to', to);
+      }
+      return request<VisitedLocation[]>(`/locations?${params}`, { signal });
+    },
+    enabled: vehicleId !== null,
   });
 }
 
@@ -113,18 +162,35 @@ export function useGeofencesFull(includeArchived = false) {
 }
 
 export interface GeofenceBulkResult {
+  // BulkUpdate always supplies OperationResult.Deleted (a non-nil pointer).
+  // Its generic "requested" field is not populated by this handler; do not
+  // use it as an authoritative count or manufacture per-ID success details.
   deleted: number;
   failed: { id: number; reason: string }[];
+}
+
+/** HTTP 200 is not all-success; preserve the raw failed IDs/reasons for recovery. */
+export function getGeofenceBulkDeleteOutcome(
+  result: GeofenceBulkResult,
+  ids: readonly number[],
+): 'complete' | 'partial' | 'failed' {
+  if (result.deleted <= 0) return 'failed';
+  return result.failed.length === 0 && result.deleted === new Set(ids).size
+    ? 'complete'
+    : 'partial';
 }
 
 /**
  * useBulkGeofencesDelete — POST /geofences/bulk
  * Deletes a batch of geofences (op=delete is the only allowlisted op
- * today) and refreshes the geofences list cache.
+ * today) and refreshes the geofences list cache, including partial outcomes.
+ * mutateAsync returns the unchanged result even for domain failures: callers
+ * must retain failed selections/reasons rather than equate fulfillment with
+ * completion. A short delete count without failed IDs is also not all-success.
  */
 export function useBulkGeofencesDelete() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  const { success, warning, error } = useMutationToast();
   return useMutation({
     mutationFn: (ids: number[]) =>
       request<GeofenceBulkResult>('/geofences/bulk', {
@@ -132,9 +198,20 @@ export function useBulkGeofencesDelete() {
         requiresLiveMode: true,
         body: JSON.stringify({ ids, op: 'delete' }),
       }),
-    onSuccess: () => {
+    onSuccess: (result, ids) => {
       invalidateAndBroadcast(qc, { queryKey: locationKeys.geofences });
-      success('toast.geofence.bulkDelete.success', 'Geofences deleted');
+      const outcome = getGeofenceBulkDeleteOutcome(result, ids);
+      if (outcome === 'complete') {
+        success('toast.geofence.bulkDelete.success', 'Geofences deleted');
+      } else if (outcome === 'partial') {
+        warning(
+          'toast.geofence.bulkDelete.partial',
+          '{{deleted}} geofences deleted; some deletions did not complete',
+          { deleted: result.deleted },
+        );
+      } else {
+        error(undefined, 'toast.geofence.bulkDelete.error', 'Failed to delete geofences');
+      }
     },
     onError: (err) =>
       error(err, 'toast.geofence.bulkDelete.error', 'Failed to delete geofences'),

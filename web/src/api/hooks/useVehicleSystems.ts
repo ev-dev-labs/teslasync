@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { isDriveDateBound, type DriveWindow } from './useDriving';
 import type { ClimateState, TirePressureReading, MaintenanceItem, ServiceRecord, SoftwareUpdate, SafetySnapshot, MaintenanceForecast } from '@/types/vehicle-systems';
 // MediaSnapshot must be the canonical snake_case shape that matches the Go
 // media handler JSON tags (now_playing_title, playback_source, audio_volume,
@@ -11,18 +12,24 @@ import type { MediaSnapshot } from '@/api/types';
 
 export const vehicleSystemsKeys = {
   climate: (vehicleId: string) => ['climate', vehicleId] as const,
-  climateHistory: (vehicleId: string) => ['climate', 'history', vehicleId] as const,
+  climateHistory: (vehicleId: string, start = '', end = '') =>
+    start || end
+      ? ['climate', 'history', vehicleId, start, end] as const
+      : ['climate', 'history', vehicleId] as const,
   tirePressure: (vehicleId: string) => ['tire-pressure', vehicleId] as const,
   tirePressureHistory: (vehicleId: string) => ['tire-pressure', 'history', vehicleId] as const,
-  tirePressureAnalysisHistory: (vehicleId: string, days: number) =>
-    ['tire-pressure', 'analysis-history', vehicleId, days] as const,
+  tirePressureAnalysisHistory: (vehicleId: string, days: number, range?: Pick<DriveWindow, 'start' | 'end'>) =>
+    range
+      ? ['tire-pressure', 'analysis-history', vehicleId, days, range.start ?? null, range.end ?? null] as const
+      : ['tire-pressure', 'analysis-history', vehicleId, days] as const,
   maintenance: ['maintenance'] as const,
   serviceRecords: ['service-records'] as const,
   softwareUpdates: (vehicleId: string) => ['software-updates', vehicleId] as const,
   safety: (vehicleId: string) => ['safety', vehicleId] as const,
   safetyHistory: (vehicleId: string) => ['safety', 'history', vehicleId] as const,
   media: (vehicleId: string) => ['media', vehicleId] as const,
-  mediaHistory: (vehicleId: string) => ['media', 'history', vehicleId] as const,
+  mediaHistory: (vehicleId: string, start = '', end = '') =>
+    ['media', 'history', vehicleId, start, end] as const,
 };
 
 export function useClimate(vehicleId: string) {
@@ -34,10 +41,24 @@ export function useClimate(vehicleId: string) {
   });
 }
 
-export function useClimateHistory(vehicleId: string) {
+/**
+ * Workspace bounds are inclusive start / exclusive end instants, passed unchanged.
+ * Omitting the range preserves the endpoint's default seven-day history.
+ */
+export function useClimateHistory(
+  vehicleId: string,
+  range?: { start?: string; end?: string },
+) {
+  const start = range?.start ?? '';
+  const end = range?.end ?? '';
   return useQuery({
-    queryKey: vehicleSystemsKeys.climateHistory(vehicleId),
-    queryFn: ({ signal }) => request<ClimateState[]>(`/climate?vehicle_id=${vehicleId}`, { signal }),
+    queryKey: vehicleSystemsKeys.climateHistory(vehicleId, start, end),
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams({ vehicle_id: vehicleId });
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      return request<ClimateState[]>(`/climate?${params.toString()}`, { signal });
+    },
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -61,17 +82,28 @@ export function useTirePressureHistory(vehicleId: string) {
   });
 }
 
-/** Fetches an explicit, longer TPMS window for robust drift estimation. */
-export function useTirePressureAnalysisHistory(vehicleId: string, days = 30) {
+/** Workspace bounds override the legacy rolling window; the server filters the complete TPMS timeline. */
+export function useTirePressureAnalysisHistory(
+  vehicleId: string,
+  days = 30,
+  range?: Pick<DriveWindow, 'start' | 'end'>,
+) {
   const boundedDays = Number.isFinite(days)
     ? Math.max(1, Math.min(365, Math.floor(days)))
     : 30;
   return useQuery({
-    queryKey: vehicleSystemsKeys.tirePressureAnalysisHistory(vehicleId, boundedDays),
+    queryKey: vehicleSystemsKeys.tirePressureAnalysisHistory(vehicleId, boundedDays, range),
     queryFn: ({ signal }) => {
-      const start = new Date(Date.now() - boundedDays * 86_400_000).toISOString();
+      if (range && (!range.start || !range.end
+        || !isDriveDateBound(range.start) || !isDriveDateBound(range.end)
+        || Date.parse(range.start) >= Date.parse(range.end))) {
+        throw new Error('Tire pressure analysis requires a valid start and end date range');
+      }
+      const start = range?.start ?? new Date(Date.now() - boundedDays * 86_400_000).toISOString();
+      const params = new URLSearchParams({ vehicle_id: vehicleId, start });
+      if (range?.end) params.set('end', range.end);
       return request<TirePressureReading[]>(
-        `/tire-pressure?vehicle_id=${encodeURIComponent(vehicleId)}&start=${encodeURIComponent(start)}`,
+        `/tire-pressure?${params}`,
         { signal },
       );
     },
@@ -156,6 +188,7 @@ export function useMedia(vehicleId: string) {
   });
 }
 
+/** Workspace callers pass their inclusive start and exclusive end instants unchanged. */
 export function useMediaHistory(
   vehicleId: string,
   range?: { start?: string; end?: string },
@@ -163,7 +196,7 @@ export function useMediaHistory(
   const start = range?.start ?? '';
   const end = range?.end ?? '';
   return useQuery({
-    queryKey: [...vehicleSystemsKeys.mediaHistory(vehicleId), start, end] as const,
+    queryKey: vehicleSystemsKeys.mediaHistory(vehicleId, start, end),
     queryFn: ({ signal }) => {
       const params = new URLSearchParams({ vehicle_id: vehicleId });
       if (start) params.set('start', start);

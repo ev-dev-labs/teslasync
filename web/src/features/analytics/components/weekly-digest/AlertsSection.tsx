@@ -6,8 +6,9 @@ import {
   ChartTooltip,
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, ChartLegend, EmbeddedChart,
 } from '@/components/charts';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { DigestMetrics, AlertPieEntry } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AlertsSectionProps {
   metrics: DigestMetrics;
@@ -38,6 +39,7 @@ export function AlertsSection({
   error,
   onRetry,
 }: AlertsSectionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const byType = metrics.alertsByType ?? {};
   const pieData = alertPieData ?? [];
@@ -72,12 +74,12 @@ export function AlertsSection({
           {/* Alert count by severity */}
           <div className="space-y-3">
             <Caption className="block">
-              {t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by Severity')}
+              {t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by severity')}
             </Caption>
             <div
               className="grid gap-3"
               role="list"
-              aria-label={t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by Severity')}
+              aria-label={t('analytics.weeklyDigest.alertsBySeverity', 'Alerts by severity')}
             >
               {Object.entries(byType).map(([severity, count]) => {
                 const Icon =
@@ -93,7 +95,7 @@ export function AlertsSection({
                         className={`h-4 w-4 ${SEVERITY_ICON_CLASS[severity] ?? 'text-sky-300'}`}
                         aria-hidden="true"
                       />
-                      <Text size="sm" color="primary" className="capitalize">
+                      <Text size="sm" color="primary">
                         {severity}
                       </Text>
                     </span>
@@ -109,11 +111,11 @@ export function AlertsSection({
           {/* Alert distribution pie chart */}
           <div className="flex flex-col items-center">
             <Caption className="mb-2 block">
-              {t('analytics.weeklyDigest.alertDistribution', 'Alert Distribution')}
+              {t('analytics.weeklyDigest.alertDistribution', 'Alert distribution')}
             </Caption>
             {pieData.length > 0 ? (
               <EmbeddedChart
-                title={t('analytics.weeklyDigest.alertDistribution', 'Alert Distribution')}
+                title={t('analytics.weeklyDigest.alertDistribution', 'Alert distribution')}
                 ariaLabel={t(
                   'analytics.weeklyDigest.alertDistributionChartLabel',
                   'Pie chart of alerts by severity',

@@ -10,13 +10,13 @@
  * summarized live in the "Security & Methodology" tab below).
  *
  * Mounts `PackRepositoryProvider` at the root so every tab/panel shares one
- * repository instance (IndexedDB, with a documented localStorage
- * fallback — never a server round-trip).
+ * repository instance (IndexedDB, localStorage, or memory according to
+ * browser capabilities — never a server round-trip).
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Tabs, type TabItem } from '@/components/ui';
+import { LayoutCard, PageLayout, Stack } from '@/components/layout';
+import { Tabs, type TabItem } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { PackRepositoryProvider } from '../hooks/packRepositoryContext';
@@ -28,6 +28,7 @@ import { ImportExportPanel } from '../components/ImportExportPanel';
 import { SecurityMethodologyPanel } from '../components/SecurityMethodologyPanel';
 
 type TabKey = 'catalog' | 'installed' | 'sandbox' | 'audit' | 'importExport' | 'security';
+const TAB_ID_BASE = 'intelligence-packs';
 
 function MarketplaceTabs() {
   const { t } = useTranslation();
@@ -36,41 +37,50 @@ function MarketplaceTabs() {
   const tabs: TabItem[] = [
     { key: 'catalog', label: t('intelPacks.tabs.catalog', 'Catalog') },
     { key: 'installed', label: t('intelPacks.tabs.installed', 'Installed') },
-    { key: 'sandbox', label: t('intelPacks.tabs.sandbox', 'Sandbox Preview') },
-    { key: 'audit', label: t('intelPacks.tabs.audit', 'Audit Log') },
-    { key: 'importExport', label: t('intelPacks.tabs.importExport', 'Import / Export') },
-    { key: 'security', label: t('intelPacks.tabs.security', 'Security & Methodology') },
+    { key: 'sandbox', label: t('intelPacks.tabs.sandbox', 'Sandbox preview') },
+    { key: 'audit', label: t('intelPacks.tabs.audit', 'Audit log') },
+    { key: 'importExport', label: t('intelPacks.tabs.importExport', 'Import / export') },
+    { key: 'security', label: t('intelPacks.tabs.security', 'Security & methodology') },
   ];
 
   return (
-    <div className="space-y-4">
+    <Stack gap={4} className="min-w-0">
       <Tabs
+        idBase={TAB_ID_BASE}
         tabs={tabs}
         activeTab={activeTab}
         onChange={(key) => setActiveTab(key as TabKey)}
-        ariaLabel={t('intelPacks.tabs.ariaLabel', 'Intelligence-Pack Marketplace sections')}
+        ariaLabel={t('intelPacks.tabs.ariaLabel', 'Intelligence-pack marketplace sections')}
       />
       <FadeIn key={activeTab}>
-        <GlassPanel padding="lg">
-          {activeTab === 'catalog' && <CatalogPanel />}
-          {activeTab === 'installed' && <InstalledInventoryPanel />}
-          {activeTab === 'sandbox' && <SandboxPreviewPanel />}
-          {activeTab === 'audit' && <AuditLogPanel />}
-          {activeTab === 'importExport' && <ImportExportPanel />}
-          {activeTab === 'security' && <SecurityMethodologyPanel />}
-        </GlassPanel>
+        <Stack
+          id={`${TAB_ID_BASE}-panel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={`${TAB_ID_BASE}-tab-${activeTab}`}
+          tabIndex={0}
+          className="min-w-0 rounded-shape-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+        >
+          <LayoutCard title={tabs.find(tab => tab.key === activeTab)?.label ?? ''}>
+            {activeTab === 'catalog' && <CatalogPanel />}
+            {activeTab === 'installed' && <InstalledInventoryPanel />}
+            {activeTab === 'sandbox' && <SandboxPreviewPanel />}
+            {activeTab === 'audit' && <AuditLogPanel />}
+            {activeTab === 'importExport' && <ImportExportPanel />}
+            {activeTab === 'security' && <SecurityMethodologyPanel />}
+          </LayoutCard>
+        </Stack>
       </FadeIn>
-    </div>
+    </Stack>
   );
 }
 
 export default function IntelligencePackMarketplacePage() {
   const { t } = useTranslation();
-  usePageTitle(t('intelPacks.page.title', 'Intelligence-Pack Marketplace'));
+  usePageTitle(t('intelPacks.page.title', 'Intelligence-pack marketplace'));
 
   return (
-    <PageContainer
-      title={t('intelPacks.page.title', 'Intelligence-Pack Marketplace')}
+    <PageLayout
+      title={t('intelPacks.page.title', 'Intelligence-pack marketplace')}
       subtitle={t(
         'intelPacks.page.subtitle',
         'Signed, sandboxed, local-first analytics packs — declarative data only, never executable code, never a network request.',
@@ -79,6 +89,6 @@ export default function IntelligencePackMarketplacePage() {
       <PackRepositoryProvider>
         <MarketplaceTabs />
       </PackRepositoryProvider>
-    </PageContainer>
+    </PageLayout>
   );
 }

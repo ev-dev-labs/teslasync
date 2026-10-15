@@ -142,15 +142,19 @@ func (h *AutomationHandler) ListAutomationHistory(w http.ResponseWriter, r *http
 //
 //	GET /automations/history/{historyId}
 func (h *AutomationHandler) GetHistoryDetail(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.automation.history_detail")
+	defer span.End()
 	historyID, err := urlParamInt64(r, "historyId")
 	if err != nil || historyID <= 0 {
+		span.RecordError(fmt.Errorf("invalid history ID"))
 		writeError(w, http.StatusBadRequest, "invalid history ID")
 		return
 	}
 
-	record, err := h.historyRepo.GetByID(r.Context(), historyID)
+	record, err := h.historyRepo.GetByID(ctx, historyID)
 	if err != nil {
-		log.Error().Err(err).Int64("history_id", historyID).Msg("failed to get execution detail")
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Int64("history_id", historyID).Msg("failed to get execution detail")
 		writeError(w, http.StatusInternalServerError, "failed to get execution detail")
 		return
 	}
@@ -161,23 +165,32 @@ func (h *AutomationHandler) GetHistoryDetail(w http.ResponseWriter, r *http.Requ
 
 	// Compute success rate for this automation (unfiltered).
 	var successRate float64
-	stats, err := h.historyRepo.GetStats(r.Context(), dbauto.HistoryFilter{AutomationID: record.AutomationID})
-	if err == nil && stats.TotalExecutions > 0 {
+	stats, err := h.historyRepo.GetStats(ctx, dbauto.HistoryFilter{AutomationID: record.AutomationID})
+	successRateStatus := "unavailable"
+	if err != nil {
+		successRateStatus = "failed"
+		span.RecordError(err)
+		log.Warn().Err(err).Int64("history_id", historyID).Msg("failed to compute execution success rate")
+	} else if stats.TotalExecutions > 0 {
+		successRateStatus = "available"
 		successRate = stats.SuccessRate
 	}
 
 	// Fetch FSM transitions that occurred during the execution window.
 	var transitions []dbobs.FSMTransitionRecord
+	var transitionTotal int64
+	var transitionErr error
 	if record.VehicleID != nil {
 		from := record.TriggeredAt
 		to := time.Now().UTC()
 		if record.CompletedAt != nil {
 			to = *record.CompletedAt
 		}
-		// Cap at 100 transitions; no pagination needed for detail view.
-		transitions, _, err = h.fsmTransRepo.Query(r.Context(), *record.VehicleID, "", from, to, 100, 0)
-		if err != nil {
-			log.Warn().Err(err).Int64("history_id", historyID).Msg("failed to fetch FSM transitions for execution")
+		// Preserve the bounded detail payload while reporting its actual coverage.
+		transitions, transitionTotal, transitionErr = h.fsmTransRepo.Query(ctx, *record.VehicleID, "", from, to, 100, 0)
+		if transitionErr != nil {
+			span.RecordError(transitionErr)
+			log.Warn().Err(transitionErr).Int64("history_id", historyID).Msg("failed to fetch FSM transitions for execution")
 			transitions = []dbobs.FSMTransitionRecord{}
 		}
 	}
@@ -185,11 +198,37 @@ func (h *AutomationHandler) GetHistoryDetail(w http.ResponseWriter, r *http.Requ
 		transitions = []dbobs.FSMTransitionRecord{}
 	}
 
-	writeJSON(w, http.StatusOK, historyDetailResponse{
-		AutomationHistory: record,
-		SuccessRate:       successRate,
-		FSMTransitions:    transitions,
+	writeJSON(w, http.StatusOK, struct {
+		historyDetailResponse
+		ActionResultsAvailability  dbauto.HistorySectionAvailability `json:"action_results_availability"`
+		FSMTransitionsAvailability dbauto.HistorySectionAvailability `json:"fsm_transitions_availability"`
+		SuccessRateStatus          string                            `json:"success_rate_status"`
+	}{
+		historyDetailResponse: historyDetailResponse{
+			AutomationHistory: record,
+			SuccessRate:       successRate,
+			FSMTransitions:    transitions,
+		},
+		ActionResultsAvailability:  dbauto.ActionResultsAvailability(record),
+		FSMTransitionsAvailability: executionTransitionAvailability(record, transitionTotal, len(transitions), transitionErr),
+		SuccessRateStatus:          successRateStatus,
 	})
+}
+
+func executionTransitionAvailability(record *automationmodel.AutomationHistory, total int64, returned int, queryErr error) dbauto.HistorySectionAvailability {
+	if record.VehicleID == nil {
+		return dbauto.HistorySectionAvailability{Status: "not_applicable"}
+	}
+	if queryErr != nil {
+		return dbauto.HistorySectionAvailability{Status: "failed"}
+	}
+	truncated := total > int64(returned)
+	return dbauto.HistorySectionAvailability{
+		Status:    "available",
+		Total:     total,
+		Truncated: truncated,
+		Complete:  !truncated && record.CompletedAt != nil,
+	}
 }
 
 // parseHistoryFilter accepts an inclusive date-only upper bound, or an exclusive RFC3339 instant.

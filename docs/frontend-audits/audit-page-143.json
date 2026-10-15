@@ -1,0 +1,395 @@
+{
+  "item": "audit-page-143",
+  "page": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+  "routes": ["/notifications/rules"],
+  "purpose": "Fleet-wide notification rule inventory, configuration insights, inline rename, bulk management, export, and query-selected existing-rule editing.",
+  "primaryGoal": "Find and safely manage existing rules without losing configuration, delivery routing, typed thresholds, or rule scope.",
+  "dataSources": [
+    {
+      "hook": "useAlertRules",
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 507,
+      "endpoints": ["GET /alerts/rules"],
+      "routeEvidence": "internal\\api\\router.go:3765-3769",
+      "owner": "notification API hooks and alert handler",
+      "behavior": "AbortSignal forwarded; stable notificationKeys.alertRules; safeArray selection. Loaded inventory drives counts, insights, client-side filters, table, and edit lookup."
+    },
+    {
+      "hook": "useNotificationChannels",
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 738,
+      "endpoints": ["GET /notifications"],
+      "routeEvidence": "internal\\api\\router.go:4026-4027",
+      "owner": "notification API hooks and channel handler",
+      "behavior": "Independent channel source; AbortSignal forwarded. Supplies filter options and editor routing/test targets."
+    },
+    {
+      "hook": "useSaveAlertRule / useDeleteAlertRule / useBulkEnableRules / useBulkDisableRules",
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 554,
+      "endpoints": [
+        "PUT /alerts/rules/{id}",
+        "DELETE /alerts/rules/{id}",
+        "POST /alerts/rules/bulk/enable",
+        "POST /alerts/rules/bulk/disable"
+      ],
+      "routeEvidence": "internal\\api\\router.go:3776-3781",
+      "owner": "notification mutation hooks",
+      "behavior": "Typed payloads, mutation toasts, invalidateAndBroadcast of rule and pack-installation queries. Bulk deletion currently uses parallel per-ID deletes rather than the registered bulk delete endpoint."
+    },
+    {
+      "hook": "useAlertMetrics / useTestAlertRule / useVehicles / useAvailableSignals",
+      "file": "web\\src\\features\\notifications\\hooks\\useAlertRuleEditorController.ts",
+      "line": 3,
+      "endpoints": ["GET /alerts/metrics", "POST /alerts/test", "GET /vehicles", "GET /signals/{vehicleID}/available"],
+      "routeEvidence": "internal\\api\\router.go:3768,3783,3319-3320,4886,4911,4929",
+      "owner": "shared notification editor controller, vehicle hooks, signal hooks",
+      "behavior": "Only existing-rule editing is mounted here. Controller consumes the selected workspace vehicle for signal metadata, explicit rule vehicle scope for business configuration, computed metric definitions, saved preferences, and test targets.",
+      "limitations": "Signal hook URL inspected at web\\src\\api\\hooks\\useSignals.ts:237-241; registration confirmed at router.go:4911,4929. Backend handlers, authorization outcomes, response completeness, and unit correctness were not exercised."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 8,
+      "contract": "Reuses PageContainer; full-width min-w-0 container composition. Page supplies query, title, subtitle, primaryAction and secondaryActions. Shell retains workspace ownership."
+    },
+    {
+      "name": "OperationalBrief",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "line": 42,
+      "contract": "compact, loading, metrics, statusLabel/statusTone, scope, freshness, provenance and testId; six count metrics use the existing useOperationalMetrics bridge. DataProvenanceBadge keeps actual source trust."
+    },
+    {
+      "name": "EmbeddedChart",
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "line": 18,
+      "contract": "Forwards to canonical ChartContainer with variant=embedded. This page supplies title, ariaLabel, data/dataColumns, fluid=false, mobileHeight=224, height=256. Do not introduce another chart wrapper."
+    },
+    {
+      "name": "MetricBar",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "line": 8,
+      "contract": "value/max/color/label/sublabel; existing fill=solid and size=slim options; null/nonfinite readings remain distinct from zero; shared reduced-motion handling and progressbar semantics."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 184,
+      "contract": "Stable tableId=notifications:alert-rules; typed columns, keyExtractor, multi-selection, controlled selectedKeys, bulkActions, sorting, value filters, column persistence, pagination and exportRow. Existing mobilePresentation is available; mobileColumns hides excluded columns below md."
+    },
+    {
+      "name": "AlertRuleEditor",
+      "owner": "web\\src\\features\\notifications\\components\\AlertRuleEditor.tsx",
+      "line": 28,
+      "contract": "Existing rule branch returns content without a duplicate PageLayout. Reuses controller and source-closure field components. Rule prop suppresses AI draft/template creation surfaces."
+    },
+    {
+      "name": "Existing primitive, feedback and lease owners",
+      "owner": "existing category barrels",
+      "line": 6,
+      "contract": "GlassPanel, PanelTitle, Text, Badge, SeverityBadge, EditableText, Button, Select, SearchInput, ConfirmDialog, Skeleton, QueryError, StaleRefreshWarning, EditConflictBanner and FadeIn already compose the page; no competing primitives needed.",
+      "evidence": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx:6-42,125-147,338-381,548-554"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+      "line": 584,
+      "rule": "MDC-002 / mission 33",
+      "detail": "Three insight panels repeat localized title, loading skeleton, fatal-error retry and empty-state CTA; both bar panels repeat MetricBar lists.",
+      "fix": "If decomposition is undertaken, extract feature-local presentation panels with explicit loading/error/empty props and preserve all three independent bodies. Do not propose a new global widget without a second independent consumer.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedLines": [588, 659, 691]
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "AlertRulesPage.tsx:582 stacks insights at base, two columns at md, three at xl; top-subject panel spans two md columns.",
+      "AlertRulesPage.tsx:728-751 stacks search/channel controls before sm two-column layout.",
+      "AlertRulesPage.tsx:786 only name/severity/status are listed as mobile columns.",
+      "ScopeKindFields.tsx:11 uses one base column and three sm columns; EditorActions.tsx:11 wraps controls."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+        "line": 786,
+        "rule": "MDC-023 / MDC-043 / preservation",
+        "detail": "Table caller supplies mobileColumns=['name','severity','status'] but no mobilePresentation/detail contract. The shared contract explicitly hides type, subject and scope columns below 768px. Equivalent in-table mobile access to those fields is not established; the rule editor is a separate reachable configuration view, not proof of table detail parity.",
+        "fix": "Use the existing DataTable mobile presentation/detail API, or a proven complete-data scroll strategy, retaining type/subject/scope, selection, sort, filters and export. Verify long rule/channel names and all supported widths.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": "web\\src\\components\\ui\\DataTable.tsx:237-248,184-186; AlertRulesPage.tsx:387-433,773-807"
+      }
+    ],
+    "verified": false,
+    "viewportsExercised": []
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "AlertRulesPage.tsx:353 provides a localized inline-rename name; :373 names the edit button; :475 names refresh.",
+      "AlertRulesPage.tsx:559 names the metric section; :603-611 supplies donut chart name and data columns.",
+      "AlertRulesPage.tsx:733 names search and :736 names the channel select.",
+      "MetricBar.tsx:58-65 supplies progressbar name, bounds and unknown-reading text.",
+      "EditorActions.tsx:38-40 routes Cancel through existing dirty guard."
+    ],
+    "issues": [],
+    "verified": false,
+    "limitations": [
+      "Keyboard navigation, focus trapping/restoration, screen readers, live announcements, contrast, forced colors, touch target dimensions, reduced-motion behavior and 200% text were not exercised.",
+      "Small buttons and fixed cyan classes require mounted theme/target review; no contrast or target failure is asserted from class names alone."
+    ]
+  },
+  "states": {
+    "initialLoading": "Rules: no-retained-data gate at :135; brief loading at :564; three insight skeletons and table skeleton rows. Editor shows skeleton at :517.",
+    "empty": "Each insight retains its panel and localized creation CTA; table has no-rules CTA at :759-772 and filtered-empty message at :807. Missing/invalid rule query gets dedicated not-found recovery at :526-531.",
+    "fatalError": "rulesState.fatalError is the replacement criterion at :136-138; each source surface offers refetch. Editor preserves same criterion.",
+    "retainedRefreshError": "Rules retained through useDataState; StaleRefreshWarning is present at :516 and :548. Brief includes provenance/update timestamp at :575.",
+    "offline": "Known inherited impossible DataStatus comparison at :570 and :573; documented as diagnostic only below. Initial paused reads may have no loading/error presentation; source contract uses isRefreshBlocked, not an offline DataStatus member.",
+    "mutations": "Enable/disable rejected requests retain selection; deletion uses allSettled then clears selection; rename uses save mutation; destructive confirmation exists.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+        "line": 570,
+        "rule": "MDC-026 / inherited diagnostic only",
+        "detail": "Known inherited comparison of rulesState.status to 'offline' also occurs at :573. DataStatus has no offline member; paused/offline refresh is represented by isRefreshBlocked and retained status=stale. Source confirms a type-contract mismatch, not a newly executed compiler result.",
+        "fix": "Future owning implementation should consume isRefreshBlocked and existing shared offline presentation without adding an offline union member or weakening typing. No correction is authorized by this audit.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": "web\\src\\api\\dataState.ts:63-75,135-136,244-250",
+        "diagnosticOnly": true,
+        "inherited": true
+      },
+      {
+        "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+        "line": 739,
+        "rule": "MDC-026",
+        "detail": "Channel filter is disabled on channelsQuery.isError even when channelsQuery.data retains usable channels; :749-750 uses generic QueryError rather than retained channel trust presentation. Independent rules content survives, but the filter cannot use retained channel data after a refresh failure.",
+        "fix": "Adapt channel query through existing useDataState; show nonblocking stale/paused warning and keep retained filter options usable, replacing only the never-loaded source on fatal error.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": "AlertRulesPage.tsx:142-143,739-750; useDataState.ts:5-10; dataState.ts:230-250"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+        "line": 280,
+        "rule": "mission 24 / safe bulk recovery",
+        "detail": "Resolved bulk enable/disable responses clear all selected keys without inspecting optional failed rows. Hooks type failed:[{id,reason}] but onSuccess reports only updated count. A partial result can leave no per-row explanation or retained failed selection.",
+        "fix": "Preserve failed IDs for retry and display concrete partial-result details through existing feedback. Define outcome handling jointly with hook owner; preserve invalidation and success/error toasts.",
+        "owner": "integration",
+        "confidence": "high",
+        "evidence": "AlertRulesPage.tsx:279-298; web\\src\\api\\hooks\\useNotifications.ts:642-650,663-671",
+        "limitations": "Actual backend partial-result payload and UI outcome were not exercised."
+      },
+      {
+        "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+        "line": 264,
+        "rule": "mission 24 / safe bulk recovery",
+        "detail": "Bulk delete discards Promise.allSettled outcomes and clears all selected keys even for rejected per-ID deletions. Individual hook toasts exist, but failed IDs are not retained for retry. The adjacent claim that there is no bulk delete route is stale relative to router registration.",
+        "fix": "Retain failed IDs and actionable result details. Evaluate the existing registered bulk delete contract separately before replacing the per-ID mutation path; do not silently change deletion behavior during visual modernization.",
+        "owner": "integration",
+        "confidence": "high",
+        "evidence": "AlertRulesPage.tsx:252-265; internal\\api\\router.go:3782; useNotifications.ts:582-593"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+      "line": 64,
+      "rule": "MDC-010 / MDC-025 / MDC-034",
+      "detail": "Local hardcoded severity/status hex palettes compete with semantic token ownership; snoozed uses purple and disabled amber independently of the actual badges. Top subjects use categorical chart series. Bar callers inherit gradient fill despite an existing solid option.",
+      "fix": "Reuse restrained existing semantic/chart token colors, retain textual counts and overlapping snooze semantics, and opt into MetricBar fill=solid. Do not add a new palette, change saved chart preferences, or invent severity meanings.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": "AlertRulesPage.tsx:64-75,203-205,215-217,674-681,706-713; MetricBar.tsx:26,46,93",
+      "limits": "Source styling observation only; composed intensity/contrast is unverified."
+    },
+    {
+      "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+      "line": 365,
+      "rule": "MDC-012 / MDC-016",
+      "detail": "Rule links and all four section icons use fixed text-cyan-300 instead of theme-aware semantic text/icon tokens. This does not automatically establish a contrast failure but bypasses theme-specific text treatment.",
+      "fix": "Use existing theme-aware link/accent semantics for actionable rule names; use subdued semantic or neutral tokens for decorative section icons. Preserve underline/focus and localized accessible names.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedLines": [586, 657, 689, 724]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+      "line": 160,
+      "rule": "mission 33 / MDC-002",
+      "detail": "The 816-line orchestrator contains derived inventory analytics, table rendering/export, bulk outcomes, and insight presentation. It already has a proper feature-owned editor and shared table/chart/brief, so the issue is bounded local orchestration density, not a need for another framework.",
+      "fix": "If modernized, move insight/table presentation into feature-local components and isolate typed inventory derivation without altering counts, filters, table identity, exports or mutation semantics. Keep the page-plus-extracted-component preservation baseline.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "order": ["bulk partial/delete recovery", "retained channel trust", "mobile full-detail preservation", "restrained token adoption", "optional feature-local decomposition"],
+    "note": "Inherited offline comparison is diagnostic-only and is not a source-edit instruction. No modernization or runtime acceptance is claimed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Bulk rule outcome consumption",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useNotifications.ts",
+      "propsVariantsStates": "Existing enable/disable result shape {updated?:number,failed?:Array<{id:number,reason:string}>}; retain failed selection and report partial success separately from transport failure. No new universal status or mutation framework.",
+      "usedBy": ["AlertRulesPage bulk enable/disable at :279-299"],
+      "dependsOn": ["Confirm actual backend bulk outcome contract", "Existing invalidateAndBroadcast and mutation-toast semantics"],
+      "owner": "integration",
+      "required": "Coordinate outcome handling with existing hook owner; a shared API change is not yet proven necessary."
+    },
+    {
+      "name": "Reuse existing mobile table full-detail contract",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Existing mobilePresentation, typed columns, selectedKeys, bulkActions, exportRow and persistent tableId. Loading, filtered empty, selected and long-content mobile states must preserve omitted metadata.",
+      "usedBy": ["AlertRulesPage DataTable at :773-807"],
+      "dependsOn": ["Read full mobile presentation API before implementation", "Mounted 320-768px and keyboard validation"],
+      "owner": "page",
+      "required": "Adoption/read-through only; no shared source change demonstrated."
+    },
+    {
+      "name": "Reuse existing trust and solid-bar contracts",
+      "existingOwnerFile": "web\\src\\api\\dataState.ts",
+      "additionalOwnerFiles": ["web\\src\\hooks\\useDataState.ts", "web\\src\\components\\data-display\\MetricBar.tsx"],
+      "propsVariantsStates": "fatalError versus refreshError, retained hasData, status=stale, isRefreshBlocked; MetricBar fill=solid with caller-prepared semantic CSS colors.",
+      "usedBy": ["AlertRulesPage rules brief/channel filter", "AlertRulesPage status and top-subject bars"],
+      "dependsOn": ["Existing source-specific trust meanings", "Existing palette tokens"],
+      "owner": "page",
+      "required": "No shared extension needed on inspected evidence."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+      "line": 64,
+      "detail": "Page-local severity/status palette overlaps existing semantic token ownership.",
+      "resolution": "Reuse existing semantic tokens; no second palette owner."
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\AlertRuleEditor.tsx",
+      "line": 28,
+      "detail": "Rules edit branch already reuses Studio's shared editor/controller rather than a second editor.",
+      "resolution": "Preserve this owner and edit-only branch; do not import or duplicate another page."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "8A76B3657AC5E9D1A5EC9CD06D51839AA3C4FDF764ABEA093431F77CCFC55AF2",
+    "hashAlgorithm": "SHA256",
+    "sourceFile": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+    "currentLineCount": 816,
+    "sections": [
+      {"name": "Rule configuration and current snoozes: six-metric operational brief", "line": 558, "count": 1},
+      {"name": "Severity distribution donut, accessible data and visible legend", "line": 583, "count": 1},
+      {"name": "Status breakdown: enabled, disabled, snoozed", "line": 654, "count": 1},
+      {"name": "Top monitored subjects: top six by rule count", "line": 686, "count": 1},
+      {"name": "All rules: search, channel filter and interactive/exportable table", "line": 720, "count": 1},
+      {"name": "Query-selected existing-rule editor and missing-rule recovery", "line": 502, "count": 1}
+    ],
+    "sectionCount": 6,
+    "listSectionCount": 5,
+    "rootJsxCounts": {"GlassPanel": 4, "ChartContainer": 0, "EmbeddedChart": 1, "OperationalBrief": 1, "DataTable": 1, "AlertRuleEditor": 1},
+    "editorSections": [
+      "Notices and validation",
+      "Identity fields",
+      "Vehicle scope and four rule kinds",
+      "Condition selection",
+      "Severity",
+      "Signal typed value and metadata trust",
+      "Delivery behavior",
+      "Repeat limits",
+      "Escalation",
+      "Message configuration",
+      "Rule channel routing",
+      "Test channel targets",
+      "Save/test/cancel actions",
+      "Dirty-discard confirmation"
+    ],
+    "editorSectionEvidence": "web\\src\\features\\notifications\\components\\AlertRuleEditor.tsx:50-80; source-closure child names are inventory evidence, not full semantic review of every child.",
+    "actions": [
+      "Refresh rule inventory",
+      "Navigate to /notifications/studio for creation",
+      "Open /notifications/rules?rule={id} for edit",
+      "Back to rules / missing-rule recovery",
+      "Inline rename with 120-character maximum",
+      "Search name and monitored subject",
+      "Filter automatic, no-external and explicit channels",
+      "Sort name, subject, severity and enabled status",
+      "Column value filters",
+      "Select multiple stable rule IDs",
+      "Bulk enable/disable with pending presentation and failure selection retention",
+      "Confirm then delete selected IDs",
+      "Persist table column visibility, ordering, resizing and page settings",
+      "Paginate and export rule rows as alert-rules",
+      "Edit all existing rule kinds and rule configuration",
+      "Save update, send test, cancel through dirty guard",
+      "Inspect shared operational metric details and chart data alternatives"
+    ],
+    "data": [
+      "Six metrics are based on all loaded rules before search/channel filtering; missing inventory stays null, not zero.",
+      "Snoozed is an overlapping browser-time predicate, not a mutually exclusive third enabled/disabled partition.",
+      "Severity uses normalizeSeverity; unknown noncritical/nonwarn entries enter the existing info aggregate. Preserve behavior pending a separately authorized business change.",
+      "Subject identifies signal, metric, system component/transition, or place/transition; top six preserve source strings and ordering.",
+      "Automatic channel routing is null; no external channels is []; explicit filtering also includes automatically routed rules.",
+      "Rule ID, all_vehicles, vehicle_ids and channel_ids are business configuration; do not replace with workspace display scope.",
+      "Preserve URL rule lookup, edit lease alert-rules/list, retained-query trust, abort signals, query keys, invalidation/broadcast and mutation feedback.",
+      "Preserve tableId notifications:alert-rules and export name/kind/subject/severity/scope/status values; do not silently remove mobile columns or exports.",
+      "Editor retains typed values, unit metadata and canonical SI payload behavior, trigger mode, cooldown, repeat limits, escalation, templates/messages and test targets.",
+      "Preserve existing saved preferences, dirty navigation/discard behavior and auth/demo/live-only mutation boundaries; no production mutation was run.",
+      "This is rule configuration, not date-scoped telemetry history. No duplicate page date or workspace vehicle selector is introduced; explicit business vehicle scope remains in editor."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "read-only source audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "typeScript": "not run; prohibited by assignment",
+    "lintBuildTests": "not run; no full builds/lint or source mutations permitted",
+    "skillScript": "audit.sh inspected but not executed because it invokes project-wide TypeScript. Used bounded source searches instead; hook verifier was not run across unrelated hook functions.",
+    "sourceSearch": {
+      "target": "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+      "command": "rg -n 'style=|<(button|input|textarea|select|table)\\b|from library/legacy API patterns|/api/v1/|vehicleId=' (bounded tool search)",
+      "result": "One dynamic legend style at line 642; zero raw control/table, direct chart/map/motion library, old API import, double-prefix, or camelCase URL matches in the root page. Tooltip wrapperStyle at :633 is allowed chart-wrapper styling, not a static-token violation.",
+      "limits": "Not a complete dependency-wide violations scan or typechecking result."
+    },
+    "backend": "Router registration and hook source only; no requests, backend handlers, response-shape completeness or authorization behavior verified.",
+    "dependencyCoverage": "Inspected root page, shared editor composition/controller, selected field/payload/signal dependencies and bounded shared API owners. Other editor field internals and transitive dependencies are not fully reviewed.",
+    "historicalReceipts": "No historical acceptance borrowed.",
+    "writes": ["docs\\frontend-audits\\audit-page-143.json", ".agent-status\\audit-page-143.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\notifications\\pages\\AlertRulesPage.tsx",
+    "web\\src\\features\\notifications\\components\\AlertRuleEditor.tsx",
+    "web\\src\\features\\notifications\\hooks\\useAlertRuleEditorController.ts",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EditorActions.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\RuleRoutingFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\ScopeKindFields.tsx",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\useSignalConditionModel.ts",
+    "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\editorPayload.ts",
+    "web\\src\\api\\hooks\\useNotifications.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useSignals.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

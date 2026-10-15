@@ -159,8 +159,91 @@ describe('summarizeTireDifferentialDrift', () => {
     expect(summary.usableSamples).toBe(0);
     expect(summary.spanDays).toBeNull();
     expect(summary.leakCorner).toBeNull();
+    expect(summary.imbalanceCorner).toBeNull();
     expect(summary.corners).toHaveLength(4);
     expect(summary.corners.every((c) => c.daysToThreshold === null)).toBe(true);
+  });
+
+  it.each([
+    ['missing corner', { front_left: undefined }],
+    ['null corner', { front_left: null }],
+    ['non-finite corner', { front_left: Number.NaN }],
+    ['infinite corner', { front_left: Infinity }],
+    ['implausible corner', { front_left: 0 }],
+    ['invalid timestamp', { ts: 'invalid' }],
+    ['missing timestamp', { ts: undefined }],
+  ])('does not rank offsets from %s inputs', (_label, override) => {
+    const sample = buildSamples({ days: 1 })[0]!;
+    const summary = summarizeTireDifferentialDrift([{ ...sample, ...override }]);
+    expect(summary.analyzedSamples).toBe(1);
+    expect(summary.usableSamples).toBe(0);
+    expect(summary.residuals).toEqual([]);
+    expect(summary.imbalanceCorner).toBeNull();
+    expect(summary.leakCorner).toBeNull();
+    expect(summary.corners.every((corner) => corner.samples === 0)).toBe(true);
+  });
+
+  it('keeps measured zero without inventing a distinguished offset', () => {
+    const summary = summarizeTireDifferentialDrift(buildSamples({
+      days: 10,
+      commonModePaPerDay: 100,
+    }));
+    expect(summary.usableSamples).toBe(10);
+    expect(summary.imbalancePa).toBe(0);
+    expect(summary.imbalanceCorner).toBeNull();
+    for (const corner of summary.corners) {
+      expect(corner.meanResidualPa).toBe(0);
+      expect(corner.lastResidualPa).toBe(0);
+    }
+  });
+
+  it.each([-25_000, 25_000, -0.25, 0.25])(
+    'preserves a unique signed offset of %s Pa, including fractions',
+    (offset) => {
+      const summary = summarizeTireDifferentialDrift(buildSamples({
+        days: 1,
+        offset: { rr: offset },
+      }));
+      expect(summary.imbalanceCorner).toBe('rr');
+      expect(summary.imbalancePa).toBe(Math.abs(offset));
+      const rr = summary.corners.find((corner) => corner.corner === 'rr')!;
+      expect(rr.meanResidualPa).toBe(offset);
+      expect(rr.lastResidualPa).toBe(offset);
+    },
+  );
+
+  it.each([
+    { fl: -100, rr: 100 },
+    { fr: 0.25, rl: -0.25 },
+  ])('withholds a unique offset ranking for equal absolute offsets: %j', (offset) => {
+    const summary = summarizeTireDifferentialDrift(buildSamples({ days: 1, offset }));
+    expect(summary.imbalancePa).toBeGreaterThan(0);
+    expect(summary.imbalanceCorner).toBeNull();
+  });
+
+  it('selects a later unique maximum after an earlier offset tie', () => {
+    const summary = summarizeTireDifferentialDrift(buildSamples({
+      days: 1,
+      offset: { fl: -100, fr: -100, rr: 300 },
+    }));
+    expect(summary.imbalanceCorner).toBe('rr');
+  });
+
+  it('does not falsely distinguish equally strong leak candidates', () => {
+    const summary = summarizeTireDifferentialDrift(buildSamples({
+      days: 20,
+      drift: { fl: -1_000, fr: -1_000 },
+    }));
+    expect(summary.leakScore).toBeGreaterThan(0);
+    expect(summary.leakCorner).toBeNull();
+  });
+
+  it('selects a stronger leak after earlier tied candidates', () => {
+    const summary = summarizeTireDifferentialDrift(buildSamples({
+      days: 20,
+      drift: { fl: -1_000, fr: -1_000, rr: -3_000 },
+    }));
+    expect(summary.leakCorner).toBe('rr');
   });
 
   it('cancels a shared common-mode trend across all four corners', () => {

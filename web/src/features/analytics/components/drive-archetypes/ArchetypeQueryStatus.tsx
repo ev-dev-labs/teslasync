@@ -37,7 +37,7 @@ export function ArchetypeQueryStatus({
           'Loading drive-archetype evidence',
         )}
       >
-        <RefreshCw className="h-4 w-4 animate-spin text-[var(--text-muted)]" aria-hidden="true" />
+        <RefreshCw className="h-4 w-4 motion-safe:animate-spin text-[var(--text-muted)]" aria-hidden="true" />
         <Text variant="bodySm">
           {t(
             'archetypes.query.loading',
@@ -91,7 +91,15 @@ export function ArchetypeQueryStatus({
               'The history window could not refresh. The most recently loaded evidence remains visible.',
             )}
           </Text>
-          <Button type="button" variant="ghost" size="sm" onClick={state.onRetry}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="min-h-11 min-w-11 md:min-h-9"
+            onClick={state.onRetry}
+            loading={state.isFetching}
+            wrapLabel
+          >
             {t('archetypes.query.retryRefresh', 'Retry refresh')}
           </Button>
         </div>

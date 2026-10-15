@@ -23,7 +23,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const { successToast, warningToast, errorToast } = vi.hoisted(() => ({
@@ -48,6 +48,7 @@ vi.mock('./_toastHelpers', () => ({
 }));
 
 import { request } from '@/api/client';
+import * as queryBroadcast from '@/lib/queryBroadcast';
 import { __flushQueryBroadcastForTests } from '@/lib/queryBroadcast';
 import {
   dataRepairKeys,
@@ -56,6 +57,9 @@ import {
   useApplyDriveRepair,
   useBulkTransitionRepairCases,
   useRepairSuggestions,
+  useRepairCases,
+  useRepairQuarantines,
+  useRunRepairScan,
   useStaleSessions,
   useUpdateCharging,
   useCloseCharging,
@@ -66,8 +70,12 @@ import {
   type RepairPatch,
   type RepairSuggestion,
   type RepairSuggestionsResponse,
+  type RepairScanResponse,
   type StaleSessionsResponse,
+  type RepairCaseListResponse,
+  type RepairQuarantineListResponse,
 } from './useDataRepair';
+import { useRepairCaseStats, type RepairCaseStats } from './useRepairCaseStats';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
@@ -107,6 +115,120 @@ describe('dataRepairKeys', () => {
     // Read-only const object — the tuple identity is the query cache anchor
     // every mutation invalidates, so its shape must not drift.
     expect(dataRepairKeys.stale).toHaveLength(2);
+  });
+
+  describe('repair query scope retention', () => {
+    const cases: RepairCaseListResponse = {
+      cases: [{
+        id: 41, fingerprint: 'fixture', kind: 'drive', session_id: 42, vehicle_id: 7,
+        rule: 'drive_open_park_observed', confidence: 'high', status: 'open', applicable: true,
+        evidence_started_at: '2026-03-29T06:00:00Z',
+        evidence_contradiction_ts: '2026-03-29T08:00:00Z',
+        evidence_contradiction_src: 'signal_log', evidence_contradiction_field: 'Gear',
+        evidence_contradiction_value: 'P', evidence_gap_s: 3600,
+        first_seen_at: '2026-03-30T00:00:00Z', last_seen_at: '2026-03-30T00:00:00Z',
+        created_at: '2026-03-30T00:00:00Z', updated_at: '2026-03-30T00:00:00Z',
+      }],
+      has_more: true,
+      next_cursor: { last_seen_at: '2026-03-30T00:00:00Z', id: 41 },
+    };
+    const quarantines: RepairQuarantineListResponse = {
+      quarantines: [{
+        id: 301, case_id: 41, kind: 'drive', session_id: 42, vehicle_id: 7,
+        schema_version: 1, checksum: 'fixture', reason: 'Reviewed duplicate',
+        quarantined_by: 'operator', quarantined_at: '2026-03-30T00:00:00Z',
+      }],
+      has_more: true,
+      next_cursor: { quarantined_at: '2026-03-30T00:00:00Z', id: 301 },
+    };
+    const stats: RepairCaseStats = {
+      total: 1, open: 1, in_review: 0, applied: 0, dismissed: 0,
+      quarantined: 0, restored: 0, resolved: 0, drive: 1, charging: 0,
+    };
+
+    it.each([
+      { name: 'cases', payload: cases, useRead: (vehicle_id?: number) => useRepairCases({ vehicle_id }) },
+      { name: 'quarantines', payload: quarantines, useRead: (vehicle_id?: number) => useRepairQuarantines({ vehicle_id }) },
+      { name: 'statistics', payload: stats, useRead: (vehicle_id?: number) => useRepairCaseStats(vehicle_id) },
+    ])('qualifies retained $name through vehicle and fleet changes', async ({ payload, useRead }) => {
+      mockedRequest.mockResolvedValueOnce(payload);
+      const { Wrapper } = makeWrapper();
+      const { result, rerender } = renderHook(
+        ({ vehicleId }: { vehicleId?: number }) => useRead(vehicleId),
+        { wrapper: Wrapper, initialProps: { vehicleId: 7 } },
+      );
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      const sourceScope = result.current.sourceScope;
+      const updatedAt = result.current.dataUpdatedAt;
+      expect(result.current.canWriteCurrentScope).toBe(true);
+      let complete: (value: typeof payload) => void = () => { throw new Error('No pending scope request'); };
+      mockedRequest.mockImplementation(() => new Promise((resolve) => { complete = resolve; }));
+
+      rerender({ vehicleId: 8 });
+      await waitFor(() => expect(result.current.isPlaceholderData).toBe(true));
+      expect(result.current.data).toEqual(payload);
+      expect(result.current.sourceScope).toBe(sourceScope);
+      expect(result.current.currentScope).not.toBe(sourceScope);
+      expect(result.current.isPreviousScope).toBe(true);
+      expect(result.current.canWriteCurrentScope).toBe(false);
+      expect(result.current.dataUpdatedAt).toBe(updatedAt);
+
+      rerender({ vehicleId: undefined });
+      await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(3));
+      expect(result.current.sourceScope).toBe(sourceScope);
+      expect(result.current.isPreviousScope).toBe(true);
+      expect(result.current.canWriteCurrentScope).toBe(false);
+      expect(mockedRequest.mock.calls[1][1].signal.aborted).toBe(true);
+      await act(async () => { complete(payload); });
+      await waitFor(() => expect(result.current.isPlaceholderData).toBe(false));
+      expect(result.current.data).toEqual(payload);
+      expect(result.current.sourceScope).toBe(result.current.currentScope);
+      expect(result.current.isPreviousScope).toBe(false);
+      expect(result.current.canWriteCurrentScope).toBe(true);
+    });
+
+    it.each([
+      {
+        name: 'cases', payload: cases,
+        useRead: (cursor?: number, status?: 'open' | 'dismissed') =>
+          useRepairCases({ vehicle_id: 7, status, cursor_id: cursor, cursor_last_seen_at: cursor ? '2026-03-30T00:00:00Z' : undefined }),
+      },
+      {
+        name: 'quarantines', payload: quarantines,
+        useRead: (cursor?: number, status?: 'open' | 'dismissed') =>
+          useRepairQuarantines({ vehicle_id: 7, restored: status === 'dismissed', cursor_id: cursor, cursor_quarantined_at: cursor ? '2026-03-30T00:00:00Z' : undefined }),
+      },
+    ])('keeps $name pagination in scope but qualifies a filter change', async ({ payload, useRead }) => {
+      mockedRequest.mockResolvedValueOnce(payload);
+      const { Wrapper } = makeWrapper();
+      const { result, rerender } = renderHook(
+        ({ cursor, status }: { cursor?: number; status: 'open' | 'dismissed' }) => useRead(cursor, status),
+        { wrapper: Wrapper, initialProps: { cursor: undefined, status: 'open' } },
+      );
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      mockedRequest.mockImplementation(() => new Promise(() => {}));
+      rerender({ cursor: 41, status: 'open' });
+      expect(result.current.data).toEqual(payload);
+      expect(result.current.isPlaceholderData).toBe(true);
+      expect(result.current.isPreviousScope).toBe(false);
+      expect(result.current.canWriteCurrentScope).toBe(true);
+      rerender({ cursor: undefined, status: 'dismissed' });
+      expect(result.current.isPreviousScope).toBe(true);
+      expect(result.current.canWriteCurrentScope).toBe(false);
+    });
+
+    it('preserves populated same-scope cases after a refresh failure', async () => {
+      mockedRequest.mockResolvedValueOnce(cases);
+      const { Wrapper } = makeWrapper();
+      const { result } = renderHook(() => useRepairCases({ vehicle_id: 7 }), { wrapper: Wrapper });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      mockedRequest.mockRejectedValueOnce(new Error('Refresh failed'));
+      await act(async () => { await result.current.refetch(); });
+      expect(result.current.isError).toBe(true);
+      expect(result.current.data).toEqual(cases);
+      expect(result.current.isPreviousScope).toBe(false);
+      expect(result.current.canWriteCurrentScope).toBe(true);
+    });
   });
 
   it('scopes the suggestions key so a vehicle filter does not collide with the global report', () => {
@@ -204,6 +326,103 @@ describe('useRepairSuggestions', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.data).toBeUndefined();
+  });
+
+  it('retains scoped scan counts and the limit result after a refresh failure without applying repairs', async () => {
+    const payload = suggestionsPayload({
+      lookback_days: 14,
+      scanned_drives: 5,
+      scanned_charging_sessions: 3,
+      truncated: true,
+    });
+    mockedRequest.mockResolvedValueOnce(payload);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(
+      () => useRepairSuggestions({ vehicle_id: 7, lookback_days: 14, limit: 5 }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(payload);
+
+    mockedRequest.mockRejectedValueOnce(new Error('refresh 503'));
+    await result.current.refetch();
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toEqual(payload);
+    expect(mockedRequest).toHaveBeenCalledTimes(2);
+    for (const [url, options] of mockedRequest.mock.calls) {
+      expect(url).toBe('/data-repair/suggestions?vehicle_id=7&lookback_days=14&limit=5');
+      expect(options.method).toBeUndefined();
+    }
+  });
+});
+
+describe('useRunRepairScan', () => {
+  it.each([false, true])('retains the scoped outcome and reports truncated=%s honestly', async (truncated) => {
+    const payload: RepairScanResponse = {
+      run_id: 19,
+      status: 'completed',
+      discovered: 4,
+      refreshed: 2,
+      truncated,
+    };
+    mockedRequest.mockResolvedValueOnce(payload);
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useRunRepairScan(), { wrapper: Wrapper });
+    expect(mockedRequest).not.toHaveBeenCalled();
+    expect(result.current.isIdle).toBe(true);
+
+    await result.current.mutateAsync({ vehicle_id: 7 });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(payload);
+    expect(result.current.variables).toEqual({ vehicle_id: 7 });
+    expect(mockedRequest).toHaveBeenCalledExactlyOnceWith(
+      '/data-repair/cases/scan',
+      {
+        method: 'POST',
+        requiresLiveMode: true,
+        body: JSON.stringify({ vehicle_id: 7 }),
+      },
+    );
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['data-repair', 'cases'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['data-repair', 'quarantine'] });
+    if (truncated) {
+      expect(warningToast).toHaveBeenCalledExactlyOnceWith(
+        'dataRepair.truncated',
+        'The scan hit its per-request limit, so more sessions may need repair than are listed here. Apply what is shown and refresh.',
+      );
+      expect(successToast).not.toHaveBeenCalled();
+    } else {
+      expect(successToast).toHaveBeenCalledExactlyOnceWith(
+        'toast.dataRepair.scan.success',
+        'Data integrity scan completed',
+      );
+      expect(warningToast).not.toHaveBeenCalled();
+    }
+  });
+
+  it('keeps an audit mount passive and surfaces an explicit scan failure without retrying or repairing', async () => {
+    const failure = new Error('scan 503');
+    mockedRequest.mockRejectedValueOnce(failure);
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result, rerender } = renderHook(() => ({
+      scan: useRunRepairScan(),
+      apply: useApplyDriveRepair(),
+    }), { wrapper: Wrapper });
+    rerender();
+    expect(mockedRequest).not.toHaveBeenCalled();
+    await expect(result.current.scan.mutateAsync()).rejects.toThrow('scan 503');
+    await waitFor(() => expect(result.current.scan.isError).toBe(true));
+    expect(result.current.scan.data).toBeUndefined();
+    expect(result.current.apply.isIdle).toBe(true);
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    expect(errorToast).toHaveBeenCalledWith(
+      failure, 'toast.dataRepair.scan.error', 'Data integrity scan failed',
+    );
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(successToast).not.toHaveBeenCalled();
+    expect(warningToast).not.toHaveBeenCalled();
   });
 });
 
@@ -419,6 +638,112 @@ describe('useStaleSessions', () => {
 // ---------------------------------------------------------------------------
 // Charging mutations
 // ---------------------------------------------------------------------------
+
+describe('repair mutation family invalidation', () => {
+  const mutations = [
+    {
+      name: 'update charging',
+      useRepair: () => {
+        const mutation = useUpdateCharging();
+        return () => mutation.mutateAsync({ id: 42, patch: { total_energy_added_wh: 42_000 } });
+      },
+    },
+    {
+      name: 'close charging',
+      useRepair: () => {
+        const mutation = useCloseCharging();
+        return () => mutation.mutateAsync({
+          id: 42,
+          ended_at: '2026-03-30T04:00:00Z',
+          rule: 'manual',
+          expected_stored_ended_at: '',
+        });
+      },
+    },
+    {
+      name: 'update drive',
+      useRepair: () => {
+        const mutation = useUpdateDrive();
+        return () => mutation.mutateAsync({ id: 42, patch: { distance_m: 12_500 } });
+      },
+    },
+    {
+      name: 'close drive',
+      useRepair: () => {
+        const mutation = useCloseDrive();
+        return () => mutation.mutateAsync({
+          id: 42,
+          ended_at: '2026-03-30T04:00:00Z',
+          rule: 'manual',
+          expected_stored_ended_at: '',
+        });
+      },
+    },
+  ];
+
+  const affectedKeys = [
+    dataRepairKeys.stale,
+    dataRepairKeys.suggestions(),
+    dataRepairKeys.suggestions({ vehicle_id: 7 }),
+    dataRepairKeys.cases({ vehicle_id: 7 }),
+    dataRepairKeys.case(42),
+    dataRepairKeys.quarantines({ vehicle_id: 7 }),
+  ];
+
+  it.each(mutations)('$name broadcasts invalidation for every repair family while retaining cached reports', async ({ useRepair }) => {
+    mockedRequest.mockResolvedValueOnce(undefined);
+    const { Wrapper, qc } = makeWrapper();
+    const payload = suggestionsPayload();
+    for (const key of affectedKeys) qc.setQueryData(key, payload);
+    qc.setQueryData(['unrelated'], payload);
+    const broadcast = vi.spyOn(queryBroadcast, 'invalidateAndBroadcast');
+    try {
+      const { result } = renderHook(useRepair, { wrapper: Wrapper });
+      expect(mockedRequest).not.toHaveBeenCalled();
+      await result.current();
+
+      for (const queryKey of [
+        dataRepairKeys.stale,
+        ['data-repair', 'suggestions'],
+        ['data-repair', 'cases'],
+        ['data-repair', 'quarantine'],
+      ]) {
+        expect(broadcast).toHaveBeenCalledWith(qc, { queryKey });
+      }
+      for (const key of affectedKeys) {
+        expect(qc.getQueryState(key)?.isInvalidated).toBe(true);
+        expect(qc.getQueryData(key)).toEqual(payload);
+      }
+      expect(qc.getQueryState(['unrelated'])?.isInvalidated).toBe(false);
+      expect(mockedRequest).toHaveBeenCalledTimes(1);
+    } finally {
+      broadcast.mockRestore();
+    }
+  });
+
+  it.each(mutations)('$name preserves every cached repair family on failure', async ({ useRepair }) => {
+    const failure = new Error('repair 409');
+    mockedRequest.mockRejectedValueOnce(failure);
+    const { Wrapper, qc } = makeWrapper();
+    const payload = suggestionsPayload();
+    for (const key of affectedKeys) qc.setQueryData(key, payload);
+    const broadcast = vi.spyOn(queryBroadcast, 'invalidateAndBroadcast');
+    try {
+      const { result } = renderHook(useRepair, { wrapper: Wrapper });
+      await expect(result.current()).rejects.toThrow('repair 409');
+
+      expect(broadcast).not.toHaveBeenCalled();
+      for (const key of affectedKeys) {
+        expect(qc.getQueryState(key)?.isInvalidated).toBe(false);
+        expect(qc.getQueryData(key)).toEqual(payload);
+      }
+      expect(errorToast).toHaveBeenCalledWith(failure, expect.any(String), expect.any(String));
+      expect(successToast).not.toHaveBeenCalled();
+    } finally {
+      broadcast.mockRestore();
+    }
+  });
+});
 
 describe('useUpdateCharging', () => {
   it('PUTs the SI patch to /data-repair/charging/{id}, invalidates the worklist, and toasts success', async () => {

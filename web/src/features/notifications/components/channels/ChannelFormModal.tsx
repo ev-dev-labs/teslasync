@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { CheckCircle, TestTube, XCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import {
-  Button, ConfirmDialog, ErrorText, GlassPanel, HelpIcon, Input, Modal, Select, Text, Toggle,
+  Button, ConfirmDialog, ErrorText, GlassPanel, HelpIcon, Input, Modal, RadioCard, Select, Text, Toggle,
 } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useToast } from '@/components/feedback';
@@ -85,7 +85,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
         return;
       }
     }
-    const payload = buildChannelPayload(kind, name, enabled, config, isEdit && channel ? channel.id : undefined);
+    const payload = buildChannelPayload(kind, name, enabled, config, channel?.id, channel);
     saveMut.mutate(payload, {
       onSuccess: () => { onSaved(); },
       onError: (err) => setFormError(String(err)),
@@ -103,11 +103,11 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
               ? t('notifications.channels.testSuccess', 'Test notification sent successfully!')
               : data.error || t('notifications.channels.testFailed', 'Test failed'),
           });
-          if (!data.success) toast.error(t('notifications.channels.testFailed', 'Test failed'), data.error);
+          if (!data.success) toast.error(`${channel.name}: ${t('notifications.channels.testFailed', 'Test failed')}`, data.error);
         },
         onError: err => {
           setTestResult({ success: false, message: err.message });
-          toast.error(t('notifications.channels.testFailed', 'Test failed'), err.message);
+          toast.error(`${channel.name}: ${t('notifications.channels.testFailed', 'Test failed')}`, err.message);
         },
       });
       return;
@@ -116,15 +116,15 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
       onSuccess: (data) => {
         if (data?.success) {
           setTestResult({ success: true, message: t('notifications.channels.testSuccess', 'Test notification sent successfully!') });
-          toast.success(t('notifications.channels.testSuccessShort', 'Test sent!'));
+          toast.success(`${channel.name}: ${t('notifications.channels.testSuccessShort', 'Test sent!')}`);
         } else {
           setTestResult({ success: false, message: data?.error || t('notifications.channels.testFailed', 'Test failed') });
-          toast.error(t('notifications.channels.testFailed', 'Test failed'), data?.error);
+          toast.error(`${channel.name}: ${t('notifications.channels.testFailed', 'Test failed')}`, data?.error);
         }
       },
-      onError: () => {
-        setTestResult({ success: false, message: t('notifications.channels.testFailed', 'Test failed') });
-        toast.error(t('notifications.channels.testFailed', 'Test failed'));
+      onError: err => {
+        setTestResult({ success: false, message: err.message || t('notifications.channels.testFailed', 'Test failed') });
+        toast.error(`${channel.name}: ${t('notifications.channels.testFailed', 'Test failed')}`, err.message);
       },
     });
   };
@@ -134,50 +134,32 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
       open
       onClose={requestClose}
       size="lg"
-      title={isEdit ? t('notifications.channels.editTitle', 'Edit Channel') : t('notifications.channels.addTitle', 'Add Channel')}
+      title={isEdit ? t('notifications.channels.editTitle', 'Edit channel') : t('notifications.channels.addTitle', 'Add channel')}
     >
       <FadeIn>
         <form className="space-y-4" onSubmit={handleSubmit}>
           {!isEdit && (
             <div>
               <Text as="span" id="channel-type-label" size="xs" weight="medium" color="secondary" className="mb-2 block">
-                {t('notifications.channels.typeLabel', 'Channel Type')}
+                {t('notifications.channels.typeLabel', 'Channel type')}
               </Text>
               <div
                 role="radiogroup"
                 aria-labelledby="channel-type-label"
-                className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4"
+                className="grid grid-cols-2 gap-2 sm:grid-cols-3"
               >
                 {CHANNEL_TYPES.map((ct) => {
                   const TIcon = ct.icon;
-                  const selected = kind === ct.value;
                   return (
-                    <Button
+                    <RadioCard
                       key={ct.value}
-                      type="button"
-                      variant="ghost"
-                      role="radio"
-                      aria-checked={selected}
-                      onClick={() => { setKind(ct.value); setConfig({}); setTestResult(null); }}
-                      className={cn(
-                        'h-auto w-full flex-col gap-1.5 rounded-xl border p-3 text-xs font-medium',
-                        selected
-                          ? 'border-neon-cyan/40 bg-neon-cyan/10'
-                          : 'border-[var(--border-subtle)] bg-white/[0.02] hover:bg-[var(--surface-2)]',
-                      )}
-                    >
-                      <TIcon
-                        className={cn('h-5 w-5', !selected && 'text-[var(--text-secondary)]')}
-                        style={selected ? { color: ct.color } : undefined}
-                        aria-hidden="true"
-                      />
-                      <span
-                        className={cn(!selected && 'text-[var(--text-secondary)]')}
-                        style={selected ? { color: ct.color } : undefined}
-                      >
-                        {ct.label}
-                      </span>
-                    </Button>
+                      name="channel-type"
+                      value={ct.value}
+                      label={t(ct.i18nKey, ct.label)}
+                      icon={<TIcon className="h-4 w-4" aria-hidden="true" />}
+                      checked={kind === ct.value}
+                      onChange={() => { setKind(ct.value); setConfig({}); setFormError(''); setTestResult(null); }}
+                    />
                   );
                 })}
               </div>
@@ -185,7 +167,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
           )}
 
           <Input
-            label={t('notifications.channels.nameLabel', 'Channel Name')}
+            label={t('notifications.channels.nameLabel', 'Channel name')}
             help={{
               i18nKey: 'help.fields.channels.nameLabel',
               content: 'Friendly identifier shown in the channel list and on alert delivery logs. Has no functional impact — pick anything memorable.',
@@ -196,12 +178,16 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
               setNameError('');
             }}
             error={nameError || undefined}
-            placeholder={`${t('notifications.channels.namePlaceholderPrefix', 'My')} ${meta.label}`}
+            placeholder={t('notifications.channels.namePlaceholder', 'My {{provider}}', {
+              provider: t(meta.i18nKey, meta.label),
+            })}
           />
 
           <div className="space-y-3">
             <Text as="span" size="xs" weight="medium" color="secondary" className="flex items-center gap-1">
-              {meta.label} {t('notifications.channels.configLabel', 'Configuration')}
+              {t('notifications.channels.providerConfiguration', '{{provider}} Configuration', {
+                provider: t(meta.i18nKey, meta.label),
+              })}
               <HelpIcon
                 i18nKey="help.fields.channels.configSection"
                 content="Provider-specific credentials and routing details. Required fields vary by channel type. All secrets are encrypted at rest."
@@ -213,13 +199,14 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
                 key={f.key}
                 label={t(f.i18nKey, f.label)}
                 help={FIELD_HELP[f.key]}
-                type={f.type === 'password' ? 'password' : 'text'}
+                type={f.type}
+                required={f.required}
                 value={config[f.key] ?? ''}
                 onChange={(e) => {
                   const { value } = e.target;
                   setConfig((prev) => ({ ...prev, [f.key]: value }));
                 }}
-                placeholder={f.placeholder}
+                placeholder={f.placeholderI18nKey ? t(f.placeholderI18nKey, f.placeholder) : f.placeholder}
               />
             ))}
             {kind === 'webhook' && (
@@ -241,7 +228,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
                 content='Use the "Send Test" button after saving to verify your configuration. Tests bypass severity filters but otherwise match real delivery.'
                 for={`channel-test-${meta.value}`}
               />
-              {t('notifications.channels.testHint', 'Save then click "Send Test" to verify the configuration.')}
+              {t('notifications.channels.testHint', 'Save then click "Send test" to verify the configuration.')}
             </Text>
           </div>
 
@@ -257,13 +244,15 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
               aria-live="polite"
               className={cn(
                 'flex items-center gap-2 p-3',
-                testResult.success ? 'border-neon-green/20 bg-neon-green/10' : 'border-neon-red/20 bg-neon-red/10',
+                testResult.success
+                  ? 'border-[var(--semantic-success-border)] bg-[var(--semantic-success-bg)]'
+                  : 'border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)]',
               )}
             >
               {testResult.success
-                ? <CheckCircle className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
-                : <XCircle className="h-4 w-4 shrink-0 text-rose-300" aria-hidden="true" />}
-              <Text as="span" size="sm" className={testResult.success ? 'text-emerald-300' : 'text-rose-300'}>
+                ? <CheckCircle className="h-4 w-4 shrink-0 text-[var(--semantic-success)]" aria-hidden="true" />
+                : <XCircle className="h-4 w-4 shrink-0 text-[var(--semantic-danger)]" aria-hidden="true" />}
+              <Text as="span" size="sm" color="primary">
                 {testResult.message}
               </Text>
             </GlassPanel>
@@ -280,7 +269,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
                 loading={testMut.isPending || webhookTestMut.isPending}
                 onClick={handleTest}
               >
-                {testMut.isPending || webhookTestMut.isPending ? t('notifications.channels.testing', 'Testing…') : t('notifications.channels.test', 'Test Connection')}
+                {testMut.isPending || webhookTestMut.isPending ? t('notifications.channels.testing', 'Testing…') : t('notifications.channels.test', 'Test connection')}
               </Button>
             )}
             <div className="flex-1" />

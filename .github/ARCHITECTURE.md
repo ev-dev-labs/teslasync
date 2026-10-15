@@ -221,6 +221,14 @@ DECISION:
       deployments must use one telemetry/FSM owner plus API-only reader pods, or
       remain single-pod for telemetry/FSM.
 
+  Implementation note:
+    - App constructs one L1 + optional L2 LiveSignalStore before optional
+      telemetry initialization and passes it explicitly to RouterOptions.
+    - API-only reader pods use that boundary without subscriber/FSM startup.
+      The telemetry owner reuses the same L1 and boundary; its existing
+      Redis warmup, signal_log hydration, and startup ordering remain intact.
+    - This reader-layer lifetime does not provide active-active FSM ownership.
+
   Rollback/degradation:
     - `LIVE_SIGNAL_STORE_MODE=hybrid|local` is the runtime rollback switch.
     - `hybrid` enables Redis-backed distributed live reads.

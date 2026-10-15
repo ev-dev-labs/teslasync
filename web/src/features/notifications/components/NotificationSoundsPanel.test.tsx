@@ -121,6 +121,21 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('NotificationSoundsPanel — structure', () => {
+  it('uses neutral header icon roles without rewriting populated sound preferences', () => {
+    mockUseSoundPrefs.mockReturnValue(
+      makePrefs({ master: true, volume: 0.4, perCategory: { charge_complete: true } }),
+    );
+    const { container } = render(<NotificationSoundsPanel />);
+    expect(container.querySelector('svg')?.parentElement).toHaveClass(
+      'text-[var(--text-secondary)]',
+      'bg-[var(--surface-2)]',
+      'ring-[var(--border-default)]',
+    );
+    expect(screen.getByRole('switch', { name: CATEGORY_LABELS.charge_complete })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('slider', { name: 'Volume' })).toHaveAttribute('value', '40');
+    expect(setPrefsSpy).not.toHaveBeenCalled();
+  });
+
   it('renders the header, master switch, every channel row, and the volume slider', () => {
     render(<NotificationSoundsPanel />);
 

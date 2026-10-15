@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListChecks } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Badge, Button, Text, DataTable, type Column } from '@/components/ui';
+import { Badge, Button, Text, DataTable, type Column, type MobileDataTablePresentation } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { useSettings } from '@/hooks/useSettings';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
 import { formatCurrencyValue } from '@/lib/currencyFormat';
 import { useGeofenceChargingActivity } from '@/api/hooks/useLocations';
@@ -36,14 +39,17 @@ const SOURCE_BADGE: Record<CostSource, 'success' | 'info' | 'warning' | 'neutral
 export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) {
   const { t } = useTranslation();
   const { locale } = useSettings();
+  const { formatDateTime } = useDateFormat();
   const { formatEnergy } = useUnits();
   const [offset, setOffset] = useState(0);
 
-  const { data, isLoading, isError, error, refetch, isFetching } = useGeofenceChargingActivity(
+  const query = useGeofenceChargingActivity(
     geofenceId,
     PAGE_SIZE,
     offset,
   );
+  const { data, isLoading, refetch, isFetching } = query;
+  const state = deriveDataState(query);
   const rows = data ?? [];
 
   useEffect(() => {
@@ -64,11 +70,13 @@ export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) 
       },
       {
         key: 'energy_wh',
+        align: 'right',
         header: t('chargingPlaces.activity.energy', 'Energy'),
         render: (r) => <Text size="sm" className="tabular-nums">{r.energy_wh != null ? formatEnergy(r.energy_wh) : '—'}</Text>,
       },
       {
         key: 'cost_decimal',
+        align: 'right',
         header: t('chargingPlaces.activity.cost', 'Cost'),
         render: (r) => (
           <Text size="sm" className="tabular-nums">
@@ -96,41 +104,76 @@ export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) 
     [t, locale, formatEnergy],
   );
 
-  return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('chargingPlaces.activity.title', 'Charging Activity')}
-      </PanelTitle>
+  const mobilePresentation = useMemo<MobileDataTablePresentation<GeofenceChargingActivity>>(
+    () => ({
+      roles: {
+        started_at: 'title',
+        ended_at: 'meta',
+        energy_wh: 'meta',
+        cost_decimal: 'primary',
+        cost_source: 'badge',
+      },
+      displayValue: (row, key) => {
+        if (key === 'started_at') return formatDateTime(row.started_at);
+        if (key === 'ended_at') return formatDateTime(row.ended_at);
+        if (key === 'energy_wh') return row.energy_wh != null ? formatEnergy(row.energy_wh) : '—';
+        if (key === 'cost_decimal') {
+          return row.cost_decimal != null && row.cost_currency
+            ? formatCurrencyValue(row.cost_decimal, row.cost_currency, locale, 2, { useGrouping: true })
+            : '—';
+        }
+        if (key === 'cost_source') {
+          return row.cost_source
+            ? t(`chargingPlaces.costSource.${row.cost_source}`, row.cost_source)
+            : t('chargingPlaces.costSource.unknown', 'Unknown');
+        }
+        return undefined;
+      },
+    }),
+    [formatDateTime, formatEnergy, locale, t],
+  );
 
-      {isError ? (
-        <QueryError error={error} onRetry={() => void refetch()} resourceName={t('chargingPlaces.activity.title', 'Charging Activity')} />
-      ) : isLoading && rows.length === 0 ? (
+  return (
+    <LayoutCard title={t('chargingPlaces.activity.title', 'Charging activity')} actions={<ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+      <SourceContent
+        state={state.refreshError ? 'retained' : 'ready'}
+        label={t('chargingPlaces.activity.title', 'Charging activity')}
+        errorMessage={t('chargingPlaces.activity.loadFailed', 'Charging activity could not be loaded.')}
+        emptyMessage={t('chargingPlaces.activity.empty', 'No charging sessions recorded at this place yet.')}
+        errorRecovery={{ onRetry: () => void refetch() }}
+      >
+
+      {state.fatalError ? (
+        <QueryError error={state.fatalError} onRetry={() => void refetch()} resourceName={t('chargingPlaces.activity.title', 'Charging activity')} />
+      ) : isLoading && !state.hasData ? (
         <Skeleton className="h-48 w-full" />
       ) : rows.length === 0 && offset === 0 ? (
         <>
           {/* no-action: charging sessions appear here automatically after the vehicle charges at this place. */}
-          <EmptyState message={t('chargingPlaces.activity.empty', 'No charging sessions recorded at this place yet.')} />
+          <EmptyState message={state.hasData
+            ? t('chargingPlaces.activity.empty', 'No charging sessions recorded at this place yet.')
+            : t('chargingPlaces.activity.unavailable', 'Charging activity is unavailable.')} />
         </>
       ) : (
         <>
           <DataTable
             tableId="maps:charging-place-activity"
             columns={columns}
-            mobileColumns={['started_at', 'cost_decimal', 'cost_source']}
+            mobilePresentation={mobilePresentation}
             data={rows}
             keyExtractor={(r) => r.session_id}
             emptyMessage={t('chargingPlaces.activity.empty', 'No charging sessions recorded at this place yet.')}
           />
-          <div className="mt-3 flex items-center justify-between">
+          <div className="mt-3 flex min-w-0 flex-wrap items-center justify-between gap-2">
             <Text size="sm" color="muted">
               {t('chargingPlaces.activity.pageInfo', 'Showing {{from}}–{{to}}', {
                 from: rows.length > 0 ? offset + 1 : 0,
                 to: offset + rows.length,
               })}
             </Text>
-            <div className="flex gap-2">
+            <div className="flex min-w-0 flex-wrap gap-2">
               <Button
+                wrapLabel
                 size="sm"
                 variant="secondary"
                 disabled={offset === 0 || isFetching}
@@ -139,6 +182,7 @@ export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) 
                 {t('common.previous', 'Previous')}
               </Button>
               <Button
+                wrapLabel
                 size="sm"
                 variant="secondary"
                 disabled={rows.length < PAGE_SIZE || isFetching}
@@ -150,6 +194,7 @@ export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) 
           </div>
         </>
       )}
-    </GlassPanel>
+      </SourceContent>
+    </LayoutCard>
   );
 }

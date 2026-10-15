@@ -1,0 +1,382 @@
+{
+  "item": "phase6-qa-admin-dlqinspector",
+  "phase": 6,
+  "reportStatus": "DONE",
+  "sourceQA": "FAIL",
+  "native": "NOTRUN",
+  "route": "/admin/dlq",
+  "page": "web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx",
+  "mode": "Read-only static source QA; no application, API, browser or mutation execution",
+  "authority": {
+    "queue": "migration-queue.md:156-184,197",
+    "acceptedSource": "migration-queue.md:1525",
+    "originalInventory": "docs\\frontend-audits\\audit-page-010.json",
+    "instructionsRead": [
+      "docs\\orchestrator-loop.md",
+      "docs\\frontend-design-contract.md:1-290,282-450,476-605",
+      "docs\\frontend-mission.md:1-280,529-639,921-960,1025-1098,1416-1486",
+      "docs\\session-handoff.md:1-180",
+      ".github\\instructions\\react-frontend.instructions.md:1-540",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\tesla-pipeline.instructions.md (supplied instruction context)",
+      ".github\\skills\\audit-violations\\audit.sh",
+      ".github\\skills\\verify-api-hooks\\verify.sh"
+    ],
+    "historicalEvidenceLimit": "The accepted Phase5 source row and Phase0 inventory are not fresh native, test, compiler or application acceptance. Existing finding identities are retained, not recreated as new tasks."
+  },
+  "protocol": {
+    "dispatchClockUtc": "2026-10-13T16:20:10.309Z",
+    "firstObservedClockUtc": "2026-10-13T16:20:49.5597753Z",
+    "lastValidationClockUtc": "2026-10-13T16:34:06.177152Z",
+    "returnBoundaryUtc": "2026-10-13T16:40:10.309Z",
+    "hardBoundaryUtc": "2026-10-13T16:45:10.309Z",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-qa-admin-dlqinspector.json",
+      "web\\logs\\phase6-qa-admin-dlqinspector.log"
+    ],
+    "ignoredLogEvidence": ".gitignore:80 excludes logs/ directories",
+    "applicationFilesWritten": [],
+    "prohibitedWorkPerformed": [],
+    "browserOwnership": "Never acquired",
+    "sourceWriteOwnership": "Never acquired",
+    "release": "All report/log/command ownership ends at this terminal return. No background processes, browser locks, helpers, servers or later writes are retained.",
+    "passingTestsRerun": false
+  },
+  "checks": [
+    {
+      "id": "section-preservation",
+      "status": "PASS",
+      "basis": "Source inspection and actual line/section scans only",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:134,148,164,182,196,207"],
+      "detail": "Four original sections remain: six-metric operational summary, entries, reason breakdown and recent replay activity. Three LayoutCards, three section boundaries and both overlays remain. No global loading/error/empty props erase all page children."
+    },
+    {
+      "id": "initial-loading",
+      "status": "PASS",
+      "basis": "Static branch coverage, not mounted rendering",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:136,158,169,190", "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx:239-250", "web\\src\\features\\admin\\components\\dlq-inspector\\ReasonBreakdown.tsx:68-70"],
+      "detail": "List/audit initial states use local loading presentations; drawer provides a named busy status and skeleton when actually loading. Entries/audit use loading text, not table-shaped skeletons. Disabled or paused detail reads are separately failing under drawer-trust."
+    },
+    {
+      "id": "independent-fatal-errors",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:152-170,186-191", "web\\src\\api\\dataState.ts:204-216"],
+      "detail": "Only list/audit fatal errors replace their own data content; retry and neighboring panel shells remain."
+    },
+    {
+      "id": "retained-list-audit",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:112-115,137,157,168,190", "web\\src\\api\\dataState.ts:215-239", "web\\src\\components\\feedback\\DataSourceNotice.tsx:81,111-113,171-174,258-266"],
+      "detail": "Retained list/audit data survive background errors. Shared source notices distinguish cached refresh failure and provide source-specific retries; summary adds retained text."
+    },
+    {
+      "id": "paused-list-audit",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:112-115", "web\\src\\components\\feedback\\DataSourceNotice.tsx:82,106,113,163-166", "web\\src\\api\\dataState.ts:242-249"],
+      "detail": "Shared page source notice classifies paused reads separately from server errors without deleting retained rows. Detail query is omitted and is not covered by this pass."
+    },
+    {
+      "id": "authoritative-empty",
+      "status": "PASS",
+      "evidence": ["internal\\api\\dlq\\handler.go:93-102", "web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx:185-188", "web\\src\\features\\admin\\components\\dlq-inspector\\ReasonBreakdown.tsx:73-80", "web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx:105-124"],
+      "detail": "Confirmed zero-row source results have visible local empty explanations. This does not validate the filtered-empty wording or certify that an empty volatile inspector ring means no broker failures."
+    },
+    {
+      "id": "drawer-trust",
+      "status": "FAIL",
+      "findingIds": ["ID-01", "STATE-01", "STATE-02"],
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:58,112-115,196-205", "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx:53-64,162-188,192-193,239-264"],
+      "detail": "Disabled, failed and paused detail reads can present unavailable payloads as measured binary data; detail retry/error/trust is not wired."
+    },
+    {
+      "id": "null-safety-expected-wire",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:157,168,190,201", "web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx:54,70-77,125-126", "web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx:36", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\dlqMetrics.ts:10-22"],
+      "detail": "Arrays/nullable metadata and invalid byte sizes are guarded for the actual handler's object-array shape. This is not a malformed arbitrary JSON fuzz pass; full DTO alignment fails separately."
+    },
+    {
+      "id": "payload-presentation",
+      "status": "FAIL",
+      "findingIds": ["STATE-01", "STATE-02", "A11Y-01"],
+      "evidence": ["web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx:53-64,184-189,207-214,253-263"],
+      "detail": "TextDecoder fatal mode and React text rendering avoid interpreting opaque bytes as markup; real binary copy falls back to base64. Missing/empty payload and tab-panel relationships are incorrect. No actual payload was decoded, copied, downloaded or captured."
+    },
+    {
+      "id": "filters-pagination",
+      "status": "FAIL",
+      "findingIds": ["FILTER-01"],
+      "evidence": ["web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx:179,185-191", "web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx:132-140", "web\\src\\components\\ui\\DataTable.tsx:525-546,612-655,1602-1605"],
+      "detail": "Existing loaded-row search/value filters and 25/50/100 pagination remain. Filtering to zero rows incorrectly reuses authoritative-empty claims. Global audit fetch is latest 50, not full-history paging."
+    },
+    {
+      "id": "action-confirmation-current-response-contract",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:68-101,207-220", "web\\src\\components\\ui\\ConfirmDialog.tsx:136-142,171-181", "web\\src\\api\\hooks\\useDLQ.ts:153-171", "web\\src\\api\\client.ts:378,392,419", "internal\\api\\router.go:4499-4502", "internal\\api\\dlq\\handler.go:173-203"],
+      "detail": "Replay requires explicit confirmation; busy confirmation cannot be canceled, buttons disable, drawer closes only on result=ok, confirmation clears in finally, 403 uses a warning, sudo cancellation is silent and other failures use a toast. Current server sends non-ok domain outcomes with non-2xx statuses. Live-only/offline guards precede network. No replay or authentication flow executed."
+    },
+    {
+      "id": "route-paths-methods-query-parameters",
+      "status": "PASS",
+      "evidence": ["web\\src\\api\\hooks\\useDLQ.ts:72,96,125-127,154-156", "internal\\api\\router.go:3210,4395,4492-4502", "internal\\api\\dlq\\handler.go:211"],
+      "detail": "All five hook path patterns match the mounted GET/POST routes; query parameter is limit. No double prefix or camelCase query-parameter matches in the scoped scan. This does not make string ID semantics correct."
+    },
+    {
+      "id": "api-dto-identity",
+      "status": "FAIL",
+      "findingIds": ["ID-01"],
+      "evidence": ["web\\src\\types\\admin-diagnostics.ts:87,108,119-120,131-138,144", "web\\src\\api\\hooks\\useDLQ.ts:91-97,112", "internal\\api\\dlq\\handler.go:53,73,79,220", "internal\\database\\audit\\dlq_replay_repo.go:63-70"],
+      "detail": "Opaque ring IDs are strings, not numbers. Omitted detail/audit fields are typed as required strings and JSON audit payload is typed as string rather than JSON. Numeric database audit-row IDs remain distinct from ring IDs."
+    },
+    {
+      "id": "localization-source",
+      "status": "FAIL",
+      "findingIds": ["I18N-01"],
+      "evidence": ["web\\src\\api\\hooks\\useDLQ.ts:160,171", "web\\src\\i18n\\en.json:10735-10833"],
+      "detail": "Literal scan checked 98 calls: one missing key and one fallback mismatch. Additional manual inspection proves both replay toast keys are absent from canonical admin.dlq. Labels generally use localization; machine reason/result strings remain verbatim source data, not proof of localized human outcome descriptions."
+    },
+    {
+      "id": "accessibility-source-relationships",
+      "status": "FAIL",
+      "findingIds": ["A11Y-01"],
+      "evidence": ["web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx:162-164", "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx:207-214,258-259", "web\\src\\components\\ui\\Tabs.tsx:104,112"],
+      "detail": "Inspect buttons have row-specific names, loading has status/busy labels and reason bars include text. Tab aria-controls IDs reference no consumer panel IDs."
+    },
+    {
+      "id": "mobile-source-field-preservation",
+      "status": "FAIL",
+      "findingIds": ["MOB-01"],
+      "evidence": ["web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx:127-140", "web\\src\\components\\ui\\DataTable.tsx:505,715-725,1390-1392"],
+      "detail": "Audit mobile allow-list hides four fields without a row detail action/mobile adapter. Entries have an Inspect recovery surface, but its opaque-ID detail read is broken."
+    },
+    {
+      "id": "si-observability-boundaries",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\dlqMetrics.ts:10-22,35-40", "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx:53-64,255-263", "web\\src\\api\\hooks\\useDLQ.ts:71-77,95-99,123-133"],
+      "detail": "Byte counts/counts/statuses are not vehicle measurement conversions. Opaque payloads are not unit-converted; hooks preserve raw response data and AbortSignal. No page RUM bootstrap, deprecated converter or ad-hoc source fetch was introduced or present in the inspected page."
+    },
+    {
+      "id": "prohibited-pattern-scan",
+      "status": "PASS",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:18-43", "web\\logs\\phase6-qa-admin-dlqinspector.log"],
+      "detail": "Actual case-sensitive bounded scans over nine files reported static-inline-vars=0, raw-controls=0, direct-libraries=0, old-api=0, request-double-prefix=0, camel-query=0, neon-body=0 and any-type=0. Line-based lexical scans are not a complete AST/style/runtime audit."
+    },
+    {
+      "id": "typescript",
+      "status": "NOTRUN",
+      "evidence": ["docs\\session-handoff.md:73-80", "migration-queue.md:160-167"],
+      "detail": "No source edits; rolling documentation QA does not rerun parent-owned global compiler gates. Historical requested gate receipt is not claimed as a fresh result."
+    },
+    {
+      "id": "tests-lint-build",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.test.tsx:212,223-230", "migration-queue.md:160-167"],
+      "detail": "No test execution or unchanged passing rerun. Numeric-only fixture paths do not establish correctness for actual opaque string IDs. Discovered/executed/passed/failed/skipped runner counts are null, not a zero-discovery pass."
+    },
+    {
+      "id": "native-visual-responsive",
+      "status": "NOTRUN",
+      "evidence": ["docs\\frontend-design-contract.md:590-603", "web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:146", "web\\src\\components\\ui\\Drawer.tsx:125-129,188-200"],
+      "detail": "No browser grant/use. All 320/375/390/430/768/1024/1280/1440/1920/2560 widths, narrow containers, themes, RTL, 200% text, long-content geometry and actual mobile hit targets remain unverified."
+    },
+    {
+      "id": "native-keyboard-screen-reader-contrast",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\components\\ui\\Drawer.tsx:85", "web\\src\\components\\ui\\Tabs.tsx:70-84", "web\\src\\components\\ui\\ConfirmDialog.tsx:164-181"],
+      "detail": "No mounted focus trap/restoration, stacked drawer/confirm/sudo, Escape, keyboard tab switching, announcements, composed contrast, forced colors, reduced motion or touch interaction acceptance."
+    },
+    {
+      "id": "api-replay-delete-real-data",
+      "status": "NOTRUN",
+      "evidence": ["migration-queue.md:197", "internal\\api\\router.go:4492-4502"],
+      "detail": "No network requests, auth challenge, MQTT action, replay/delete, clipboard operation, real identity/payload capture, deployment or Docker operation."
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "ID-01",
+      "priority": "P0",
+      "classification": "SOURCE_PROVEN",
+      "history": "Existing audit-page-010 finding; still present in current source, not a new source migration failure",
+      "evidence": ["internal\\mqtt\\dlq_inspector.go:91-94,344-347", "internal\\api\\dlq\\handler.go:53,79,220", "web\\src\\types\\admin-diagnostics.ts:87,119,131,144", "web\\src\\api\\hooks\\useDLQ.ts:91-97,112", "web\\src\\api\\client.ts:288"],
+      "mechanism": "Handler emits a 32-character hex string ID. request() only recases JSON keys; it does not convert values. useDLQEntry requires typeof id=number, replaces the real string with 0 and disables fetching. Scoped audit similarly routes a string ID to the global feed. Related DTOs incorrectly declare replayed_id/dlq_id numeric.",
+      "repro": "Source-trace only: take any synthetic backend-shaped string ID, select its summary row, follow page selected.id into useDLQEntry. The number guard is false, enabled=false and there is no detail GET. No live ID or request is necessary.",
+      "runtimeReproduced": false,
+      "needs": "Existing integration owner: align ring IDs, DTO null/optional/JSON shapes, query keys and safely encoded detail/replay/scoped-audit paths with actual backend strings; retain numeric database audit row IDs, gates and cache policies. Add source-realistic string-ID regressions in a separately assigned fix."
+    },
+    {
+      "id": "STATE-01",
+      "priority": "P1",
+      "classification": "SOURCE_PROVEN",
+      "history": "Existing audit-page-010 finding retained",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:112-115,196-205", "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx:92,162-188,192-193,239-264"],
+      "mechanism": "Drawer receives data/isLoading but no detail error, pause/refresh status or retry. With summary present, full absent and loading=false it renders a binary marker using summary byte counts, exposes empty copy text and can enable replay based solely on the retained summary.",
+      "repro": "Source-trace only: selected replayable summary; full=undefined; loading=false after failed/disabled/paused detail query. Observe the truthiness binary fallback and replayDisabled expression. No mutation should be confirmed in any future reproduction.",
+      "runtimeReproduced": false,
+      "needs": "Wire existing derived detail trust/error/paused/retry contract into EntryDrawer; retain metadata, real binary fallback, independent panels and successful payloads during refresh failure."
+    },
+    {
+      "id": "STATE-02",
+      "priority": "P2",
+      "classification": "SOURCE_PROVEN",
+      "history": "Existing audit-page-010 finding retained",
+      "evidence": ["web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx:53-64,162-179", "internal\\api\\dlq\\handler.go:73,126-128"],
+      "mechanism": "Missing base64, valid empty decoded text and decoding failure all become empty string. Truthiness then labels all of them non-UTF-8 binary, including a legitimate zero-byte payload.",
+      "repro": "Source-trace only: full synthetic entry with an empty base64 field/zero-byte size follows decodeBase64Utf8 return-empty and panel.body binary-marker fallback. No real payload was supplied or decoded.",
+      "runtimeReproduced": false,
+      "needs": "Explicit missing, empty valid text and binary decode outcomes, preserving exact base64 copy for actual binary data."
+    },
+    {
+      "id": "A11Y-01",
+      "priority": "P1",
+      "classification": "SOURCE_PROVEN",
+      "history": "Existing audit-page-010 finding retained",
+      "evidence": ["web\\src\\components\\ui\\Tabs.tsx:16,38-39,104,112", "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx:207-214,255-263"],
+      "mechanism": "Tabs creates aria-controls=<generated-prefix>-panel-<key>, but EntryDrawer passes no shared idBase and its consumer tabpanel has no matching id or aria-labelledby.",
+      "repro": "Source-trace only: follow either inner/raw tab's generated aria-controls to the sole consumer pre tabpanel. No element is assigned that target ID in this drawer.",
+      "runtimeReproduced": false,
+      "needs": "Adopt the existing stable Tabs idBase/panel ID and label association contract at the drawer owner; preserve tab labels and roving keyboard behavior."
+    },
+    {
+      "id": "MOB-01",
+      "priority": "P1",
+      "classification": "SOURCE_PROVEN",
+      "history": "Existing audit-page-010 finding retained; not a measured native viewport pass/failure",
+      "evidence": ["web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx:127-140", "web\\src\\components\\ui\\DataTable.tsx:505,715-725,1162,1522"],
+      "mechanism": "Audit allow-list contains only replayed_at/actor/result. Other four columns receive hidden md:table-cell independently of column visibility preferences. AuditPanel supplies neither mobilePresentation nor an inspect/detail action; changing a column preference cannot remove that hard mobile hiding class.",
+      "repro": "Source/CSS contract only: below md, with an audit row loaded, inspect the caller's allow-list and DataTable colHiddenClass mapping. DLQ ID, destination, error and trace are hidden with no row-detail recovery. No browser viewport was opened.",
+      "runtimeReproduced": false,
+      "needs": "Adopt existing full-detail mobile table presentation at AuditPanel, retaining all seven fields, filters, pagination, stable table IDs and loaded/selected exports."
+    },
+    {
+      "id": "FILTER-01",
+      "priority": "P1",
+      "classification": "SOURCE_PROVEN",
+      "history": "Newly documented source issue in this rolling QA report",
+      "evidence": ["web\\src\\components\\ui\\DataTable.tsx:525-546,1602-1605", "web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx:185-188", "web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx:134-137"],
+      "mechanism": "When loaded nonempty data filters/searches to zero, DataTable renders the caller's unconditional emptyMessage. Entries falsely states no DLQ entries/pipeline clean; audit states no replay attempts despite loaded attempts.",
+      "repro": "Source-trace only: keep at least one synthetic row loaded, enter a nonmatching loaded-row search or value selection. filteredData becomes empty while original data remains nonempty; the authoritative emptyMessage is displayed. Clear filters to recover rows.",
+      "runtimeReproduced": false,
+      "needs": "One narrowly assigned no-match/authoritative-empty distinction using the existing table pipeline, without deleting filters, changing snapshot counts or implying server full-history coverage."
+    },
+    {
+      "id": "I18N-01",
+      "priority": "P2",
+      "classification": "SOURCE_PROVEN_CANONICAL_GAP",
+      "history": "Newly documented canonical membership gap; not a non-English runtime acceptance claim",
+      "evidence": ["web\\src\\api\\hooks\\useDLQ.ts:160,171", "web\\src\\i18n\\en.json:10735-10833", "web\\src\\api\\hooks\\_toastHelpers.ts:87-90,97-104"],
+      "mechanism": "Both admin.dlq.toast.replaySuccess and replayError are used by hook feedback but canonical admin.dlq has no toast object. The success key is the one missing key found by the literal-call scan; error(err,key,fallback) was outside that regex and its absence was verified separately by canonical subtree inspection.",
+      "repro": "Read-only catalog lookup of each hook key returns absent; the actual toast helper supplies the English fallback. No replay, error injection, translation campaign or catalog generation was performed.",
+      "runtimeReproduced": false,
+      "needs": "Parent-owned canonical integration for the two exact existing toast keys and their standard projections, with any hook key changes separately claimed; no broad translation work."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "touch-targets",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx:157", "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx:217-227,253", "web\\src\\components\\ui\\Button.tsx:35-41", "web\\src\\components\\ui\\CopyButton.tsx:59,130-145"],
+      "detail": "Default sm/md button classes are 36/40px and these callers lack explicit 44px mobile sizing. Native composed rectangles/hit areas and density/scaling exceptions were not measured; report as source risk, not measured WCAG failure."
+    },
+    {
+      "id": "brief-paused-label",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:137", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts:10-15"],
+      "detail": "Brief retained flag only follows list.isError; a retained paused list can still say Source loaded. The page's explicit Paused offline notice does exist. Candidate local wording consistency, not proof that the entire page conceals offline state."
+    },
+    {
+      "id": "FMT-01",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx:37-42", "web\\src\\lib\\numberFormat.ts:163-171"],
+      "detail": "Known duplicated byte formatter remains; local version stops at MB while canonical owner supports GB. This is source DRY/consistency debt, not proof of a mathematically incorrect byte count or a new runtime failure."
+    },
+    {
+      "id": "inactive-scoped-fallback",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx:112-115", "web\\src\\i18n\\en.json:10748", "web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:59,190"],
+      "detail": "Literal scan found one case-only fallback difference (Replay versus replay) for scoped empty help. Current page uses global audit, so that scoped branch is not mounted by this page."
+    },
+    {
+      "id": "future-soft-disabled-response",
+      "status": "NOTRUN",
+      "evidence": ["web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx:76-82", "web\\src\\api\\hooks\\useDLQ.ts:158-162", "internal\\api\\dlq\\handler.go:173,203"],
+      "detail": "Hook toasts success for any HTTP-success response, although page comments anticipate future result=disabled in HTTP 200. Actual handler returns disabled with 403, so this is not a current proven false-success defect."
+    },
+    {
+      "id": "volatile-ring-provenance",
+      "status": "NOTRUN",
+      "evidence": ["internal\\mqtt\\dlq_inspector.go:21-26,64-67,257-267", "internal\\api\\dlq\\handler.go:93-102", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\dlqMetrics.ts:24-40"],
+      "detail": "Metrics are the bounded inspector snapshot, not durable broker queue depth or complete failure history. No MQTT subscription health/restart/capacity evidence was collected; empty-ring wording cannot certify global ingestion health."
+    }
+  ],
+  "preservation": {
+    "historicalReport": "docs\\frontend-audits\\audit-page-010.json",
+    "historicalPageLines": 223,
+    "currentPageLines": 224,
+    "samePageAndSevenComponentAdapterFilesHistoricalLines": 1051,
+    "samePageAndSevenComponentAdapterFilesCurrentLines": 1052,
+    "minimumSeventyPercentSatisfied": true,
+    "comparisonLimit": "Compared against the preserved original inventory, not Git history. These counts establish retained source structure, not mounted behavior or changes attributable to this worker.",
+    "sectionCount": 4,
+    "layoutCardCount": 3,
+    "pageGlassPanelCount": 0,
+    "pageChartContainerCount": 0,
+    "drawerGlassPanelCount": 2,
+    "overlayCount": 2,
+    "metricCount": 6,
+    "entryColumnCount": 8,
+    "auditColumnCount": 7,
+    "drawerMetadataCount": 8,
+    "payloadTabCount": 2,
+    "historicalVisualFindings": {
+      "VIS-01": "No longer present: current decorative panel icons use typography.color.muted at page lines 150,166,184.",
+      "VIS-02": "No longer present in inspected Drawer source: side/header/tabs borders now use border-default at Drawer lines 129,134,182. This is source correction evidence, not theme contrast acceptance."
+    }
+  },
+  "sourceScanInventory": [
+    {"file":"web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx","lines":224,"sha256":"c51d18747868d78e01c1f5d8ce04d8763b781fbcb9a98314c39bc397481f056c"},
+    {"file":"web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx","lines":194,"sha256":"e8867d81a6481ea656f3f9ffb0c694e96bb5df69e1e984f6fef30450e18e322e"},
+    {"file":"web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx","lines":288,"sha256":"08d231d8e4b0522c31e82572cccdbf24a5ac1bd9ec9e4afd2f9bebebfe7b65b6"},
+    {"file":"web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx","lines":143,"sha256":"3909255a61b6852be127e34c3864c24f0a850a66e31e4d48453bea14023e1798"},
+    {"file":"web\\src\\features\\admin\\components\\dlq-inspector\\ReasonBreakdown.tsx","lines":96,"sha256":"5573f09d670019bfed8f11e8489c0f75ab4dbfd5fcabe74743f1202472d74561"},
+    {"file":"web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\DLQOperationalBrief.tsx","lines":45,"sha256":"5ea507723b8827bb50ec6d1e5b402292706223dac257f5fcdc1ff7aacda0a2be"},
+    {"file":"web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\dlqMetrics.ts","lines":46,"sha256":"9322771454db4d1e735f412d20a976c732891d19d5bbc2cca1c79b9296f889f2"},
+    {"file":"web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts","lines":16,"sha256":"e39ab556a887957095776a4af98a122c43bed2edaf9a71b021d67e2cf9e3900c"},
+    {"file":"web\\src\\api\\hooks\\useDLQ.ts","lines":174,"sha256":"3c0107f65e2df8bab401302ddf38efee1ad104ee7036cb10570b94ad05b53b66"}
+  ],
+  "commandReceipts": [
+    {"command":"Read clock and list existing QA/contract directories","shellId":"4520","exit":0},
+    {"command":"Case-sensitive PowerShell Select-String rule scans; Get-FileHash/ReadAllLines for nine files; page section counts","shellId":"4575","exit":0,"rawSummary":["SCAN static_inline_vars count=0","SCAN raw_html count=0","SCAN direct_library count=0","SCAN old_api count=0","SCAN request_double_prefix count=0","SCAN camel_query count=0","SCAN neon_body count=0","SCAN any_type count=0","SOURCE_SCAN_EXIT=0"]},
+    {"command":"Attempt native rg exact-line evidence logging","shellId":"4601","exit":1,"reason":"rg shell executable unavailable; tool-based rg and native Select-String remain available. No install."},
+    {"command":"Inline read-only Python literal localization scan against canonical en.json","shellId":"4602","exit":0,"rawSummary":["I18N_LITERAL_CALLS_CHECKED=98","I18N_MISSING_KEYS=1","I18N_FALLBACK_MISMATCHES=1","I18N_SCAN_PROCESS_EXIT=0"],"limit":"Literal t/success/error(key,fallback) pattern; error(err,key,fallback) inspected separately"},
+    {"command":"Native Select-String alternative logging exact contract/state/tab/filter/router evidence","shellId":"4623","exit":0,"rawSummary":["EVIDENCE_SCAN_EXIT=0"]},
+    {"command":"Attempt canonical subtree plus additional evidence/counts using ConvertFrom-Json","shellId":"4643","exit":1,"reason":"Case-differing canonical keys rejected by default PowerShell JSON object parser; not an application/catalog-invalidity finding"},
+    {"command":"Corrected ConvertFrom-Json -AsHashtable canonical lookup; additional exact Select-String evidence; preserved-inventory line counts","shellId":"4655","exit":0,"rawSummary":["ADDITIONAL_EVIDENCE_EXIT=0","SAME_FEATURE_SET_BASELINE_LINES=1051","SAME_FEATURE_SET_CURRENT_LINES=1052","ORIGINAL_PAGE_LINES=223","CURRENT_PAGE_LINES=224","DRAWER_GLASS_PANEL_COUNT=2","LINE_COUNTS_EXIT=0"]},
+    {"command":"Read-only JSON/schema/unique-ID/exact-line-range/source-hash validation; actual visual correction selectors","shellId":"4690","exit":0,"rawSummary":["JSON_VALIDATION=PASS","CHECKS=23 CONFIRMED_FINDINGS=7 CANDIDATES=6","FILE_LINE_REFERENCE_RANGES_VALID=98","SOURCE_HASH_AND_LINE_SNAPSHOTS_STABLE=9/9","SOURCE_QA=FAIL; NATIVE=NOTRUN; NO TESTS EXECUTED","REPORT_VALIDATION_EXIT=0"]}
+  ],
+  "testExecution": {
+    "status": "NOTRUN",
+    "runnerInvocations": 0,
+    "discovered": null,
+    "executed": null,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "names": [],
+    "reason": "No runner invoked; neither historical passing tests nor zero-discovery results are substituted for a fresh receipt."
+  },
+  "unrunCommands": [
+    {"command":"npx tsc --noEmit","status":"NOTRUN","reason":"Parent-owned global gate, no code edits and no fresh global acceptance authorized by this read-only rolling scope"},
+    {"command":"npm test / Vitest / npm run lint / npm run build","status":"NOTRUN","reason":"Report-only task; no source corrections, unchanged passing reruns or full suites"},
+    {"command":"audit.sh","status":"NOTRUN","reason":"Inspected script unconditionally invokes unscoped frontend compiler; bounded actual pattern counts are separately recorded, not called a script pass"},
+    {"command":"verify.sh","status":"NOTRUN","reason":"No shell/helper launch; all scoped hook paths were manually cross-referenced with exact mounted router lines"},
+    {"command":"Native browser/API/replay/delete/Docker","status":"NOTRUN","reason":"Explicitly forbidden by this assignment"}
+  ],
+  "needs": [
+    "Retain existing ID-01, STATE-01, STATE-02, A11Y-01 and MOB-01 under narrowly claimed integration/drawer/audit owners; do not redispatch accepted whole-page migration.",
+    "Assign one exact filtered-no-match wording fix for FILTER-01.",
+    "Parent-owned two-key canonical toast integration for I18N-01.",
+    "After source corrections, obtain a separate privacy-safe native grant for mobile/a11y/state acceptance; current native result remains NOTRUN."
+  ]
+}

@@ -28,6 +28,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -174,6 +175,11 @@ function HeaderRangeProbe() {
   );
 }
 
+function HeaderInstantProbe() {
+  const { startInstant, endInstantExclusive } = useRangeState();
+  return <output data-testid="header-instants" data-from={startInstant} data-to={endInstantExclusive} />;
+}
+
 function renderPage(search = '') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -183,6 +189,7 @@ function renderPage(search = '') {
       <MemoryRouter initialEntries={[`/telemetry/signal-log${search}`]}>
         <ToastProvider>
           <HeaderRangeProbe />
+          <HeaderInstantProbe />
           <SignalLogViewerPage />
         </ToastProvider>
       </MemoryRouter>
@@ -212,8 +219,8 @@ describe('SignalLogViewerPage', () => {
     renderPage();
 
     // Page shell title still renders via usePageTitle + PageContainer heading.
-    expect(document.title).toContain('Signal Log Viewer');
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Signal Log Viewer');
+    expect(document.title).toContain('Signal log viewer');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Signal log viewer');
 
     // The no-vehicle branch renders the guidance empty state...
     expect(screen.getByText('Select a vehicle to begin')).toBeInTheDocument();
@@ -223,21 +230,22 @@ describe('SignalLogViewerPage', () => {
 
     // ...and NOT the query cockpit (no Query button, no KPI band).
     expect(screen.queryByRole('button', { name: 'Query' })).toBeNull();
-    expect(screen.queryByText('Total Records')).toBeNull();
+    expect(screen.queryByText('Total records')).toBeNull();
     // Empty fleet ⇒ the header VehicleSelect renders nothing.
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
   });
 
-  it('renders the cockpit with a disabled Query gate and honest zero/empty states before any query', () => {
+  it('renders the cockpit with a disabled Query gate and unknown result counts before any query', () => {
     // No `?signals=` ⇒ zero selected signals ⇒ canQuery is false.
     renderPage(`?${RANGE}`);
 
     const queryBtn = screen.getByRole('button', { name: 'Query' });
     expect(queryBtn).toBeDisabled();
 
-    // KPI band shows honest zeros (not skeletons — the query is disabled).
-    const totalCard = screen.getByText('Total Records').closest('div') as HTMLElement;
-    expect(within(totalCard).getByText('0')).toBeInTheDocument();
+    // No request has run: a known selection count is distinct from unknown result counts.
+    const totalCard = screen.getByText('Total records').closest('[data-operational-metric]') as HTMLElement;
+    expect(within(totalCard).getByText('—')).toBeInTheDocument();
+    expect(within(totalCard).queryByText('0')).toBeNull();
 
     // Breakdown + history each own their pre-query empty state (never a blank panel).
     expect(
@@ -298,13 +306,13 @@ describe('SignalLogViewerPage', () => {
     // KPI counters: 4 rows total, 3 numeric, 1 text, across 2 signals. Scope to
     // the KPI region — "Signals" also labels the (hidden) cockpit combobox.
     const kpi = screen.getByRole('region', { name: 'Query summary' });
-    const totalCard = within(kpi).getByText('Total Records').closest('div') as HTMLElement;
+    const totalCard = within(kpi).getByText('Total records').closest('[data-operational-metric]') as HTMLElement;
     expect(within(totalCard).getByText('4')).toBeInTheDocument();
-    const numericCard = within(kpi).getByText('Numeric Points').closest('div') as HTMLElement;
+    const numericCard = within(kpi).getByText('Numeric points').closest('[data-operational-metric]') as HTMLElement;
     expect(within(numericCard).getByText('3')).toBeInTheDocument();
-    const textCard = within(kpi).getByText('Text Points').closest('div') as HTMLElement;
+    const textCard = within(kpi).getByText('Text points').closest('[data-operational-metric]') as HTMLElement;
     expect(within(textCard).getByText('1')).toBeInTheDocument();
-    const signalsCard = within(kpi).getByText('Signals').closest('div') as HTMLElement;
+    const signalsCard = within(kpi).getByText('Signals').closest('[data-operational-metric]') as HTMLElement;
     expect(within(signalsCard).getByText('2 with data')).toBeInTheDocument();
 
     // Rows are sorted newest-first: soc=80 @10:02 leads, 'charging' @09:59 trails.
@@ -335,7 +343,7 @@ describe('SignalLogViewerPage', () => {
     renderPage(`?signals=speed&${RANGE}`);
 
     // Default 50 → limit 500; bump to 100 → limit 1000.
-    fireEvent.change(screen.getByLabelText('Per Page'), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText('Per page'), { target: { value: '100' } });
     fireEvent.click(screen.getByRole('button', { name: 'Query' }));
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
@@ -360,7 +368,7 @@ describe('SignalLogViewerPage', () => {
     // Change every readily mutable cockpit scope without submitting. The
     // already-rendered evidence must continue to describe the original query.
     mockSelectedVehicle.mockReturnValue(makeSelected(8, [veh(7), veh(8)]));
-    fireEvent.change(screen.getByLabelText('Per Page'), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText('Per page'), { target: { value: '100' } });
     fireEvent.click(screen.getByRole('button', { name: 'Remove speed' }));
     const signalInput = screen.getByRole('combobox', { name: 'Signals' });
     fireEvent.focus(signalInput);
@@ -442,7 +450,7 @@ describe('SignalLogViewerPage', () => {
 
     renderPage(`?signals=speed&${RANGE}`);
 
-    fireEvent.change(screen.getByLabelText('Per Page'), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText('Per page'), { target: { value: '25' } });
     fireEvent.click(screen.getByRole('button', { name: 'Query' }));
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
@@ -450,14 +458,116 @@ describe('SignalLogViewerPage', () => {
     expect(mockedRequest.mock.calls[0][0]).toContain('limit=250');
 
     // Pagination indicator: page 1 of 2 (ceil(30 / 25)).
-    await screen.findByText('1 / 2');
+    await screen.findByRole('button', { name: 'Page 1 of 2' });
     const nextBtn = screen.getByRole('button', { name: 'Next page' });
     expect(nextBtn).toBeEnabled();
 
     fireEvent.click(nextBtn);
 
     // Advanced to the final page; Next is now disabled.
-    expect(screen.getByText('2 / 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+  });
+});
+
+
+// Page-only adoption coverage; every pre-existing test/assertion above is retained.
+describe('SignalLogViewerPage shared range and catalog adoption', () => {
+  it('submits the canonical calendar instants and the same exclusive upper bound to agreement', async () => {
+    mockedRequest.mockResolvedValue(resp('speed', []));
+    renderPage(`?signals=speed&${RANGE}`);
+    const header = screen.getByTestId('header-instants');
+    const from = header.getAttribute('data-from');
+    const to = header.getAttribute('data-to');
+    fireEvent.click(screen.getByRole('button', { name: 'Query' }));
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    const params = new URL(mockedRequest.mock.calls[0][0] as string, 'https://example.invalid').searchParams;
+    expect(params.get('from')).toBe(from);
+    expect(params.get('to')).toBe(to);
+    expect(Date.parse(to!) - Date.parse(from!)).toBe(24 * 3_600_000);
+    expect(mockTransportAgreement.mock.calls.at(-1)?.[1]).toEqual({ from, to });
+  });
+
+  it.each([
+    ['live', 5 * 60_000],
+    ['24h', 24 * 3_600_000],
+  ])('keeps the precise %s rolling duration instead of expanding to calendar days', async (preset, duration) => {
+    mockedRequest.mockResolvedValue(resp('speed', []));
+    renderPage(`?signals=speed&time_scope=${preset}&${RANGE}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Query' }));
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    const params = new URL(mockedRequest.mock.calls[0][0] as string, 'https://example.invalid').searchParams;
+    const from = params.get('from')!;
+    const to = params.get('to')!;
+    expect(Date.parse(to) - Date.parse(from)).toBe(duration);
+    expect(mockTransportAgreement.mock.calls.at(-1)?.[1]).toEqual({ from, to });
+  });
+
+  it('preserves the canonical 23-hour calendar day across the spring DST boundary', async () => {
+    const options = Intl.DateTimeFormat().resolvedOptions();
+    const timezone = vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions')
+      .mockReturnValue({ ...options, timeZone: 'America/Los_Angeles' });
+    try {
+      mockedRequest.mockResolvedValue(resp('speed', []));
+      renderPage('?signals=speed&from=2026-03-08&to=2026-03-08');
+      fireEvent.click(screen.getByRole('button', { name: 'Query' }));
+      await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+      const params = new URL(mockedRequest.mock.calls[0][0] as string, 'https://example.invalid').searchParams;
+      expect(params.get('from')).toBe('2026-03-08T08:00:00.000Z');
+      expect(params.get('to')).toBe('2026-03-09T07:00:00.000Z');
+      expect(mockTransportAgreement.mock.calls.at(-1)?.[1]).toEqual({
+        from: params.get('from'), to: params.get('to'),
+      });
+    } finally {
+      timezone.mockRestore();
+    }
+  });
+
+  it('forwards catalog loading without claiming successful empty data or hiding results sections', () => {
+    mockSignals.mockReturnValue(signalsResult({ data: undefined, isLoading: true, isPending: true, isFetching: true }));
+    renderPage(`?${RANGE}`);
+    expect(screen.getByLabelText('Loading')).toBeInTheDocument();
+    expect(screen.queryByText('No Signal catalog found.')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Query summary' })).toBeInTheDocument();
+    expect(screen.getByText('Run a query to see the value-type breakdown.')).toBeInTheDocument();
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('offers catalog-only retry after initial failure while keeping the cockpit and result sections', () => {
+    const refetch = vi.fn();
+    mockSignals.mockReturnValue(signalsResult({ data: undefined, error: new Error('catalog-unavailable'), refetch }));
+    renderPage(`?signals=speed&${RANGE}`);
+    expect(screen.getByText(/Failed to load data/)).toHaveTextContent('catalog-unavailable');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Query' })).toBeEnabled();
+    expect(screen.getByRole('region', { name: 'Query summary' })).toBeInTheDocument();
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes successful empty catalog data and lets the operator reload only that source', () => {
+    const refetch = vi.fn();
+    mockSignals.mockReturnValue(signalsResult({ data: [], refetch }));
+    renderPage(`?${RANGE}`);
+    expect(screen.getByText('No Signal catalog found.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Query' })).toBeDisabled();
+    expect(screen.getByRole('region', { name: 'Query summary' })).toBeInTheDocument();
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('retains catalog options and draft selections on refresh failure without a fatal or empty claim', () => {
+    const refetch = vi.fn();
+    mockSignals.mockReturnValue(signalsResult({ error: new Error('catalog-refresh-failed'), refetch }));
+    renderPage(`?signals=speed&${RANGE}`);
+    expect(screen.queryByText(/Failed to load data/)).toBeNull();
+    expect(screen.queryByText('No Signal catalog found.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Remove speed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Query' })).toBeEnabled();
+    const warning = screen.getByTestId('stale-refresh-warning');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mockedRequest).not.toHaveBeenCalled();
   });
 });

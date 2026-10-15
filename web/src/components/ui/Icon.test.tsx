@@ -1,4 +1,5 @@
-import { forwardRef } from 'react';
+import { createRef, forwardRef } from 'react';
+import { Battery } from 'lucide-react';
 import type { SVGProps } from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, afterEach, vi } from 'vitest';
@@ -115,6 +116,36 @@ describe('Icon — accessibility', () => {
     renderIcon({ focusable: true });
     expect(screen.getByTestId('test-icon')).toHaveAttribute('focusable', 'true');
   });
+
+  it('uses external naming and description elements without hiding a meaningful icon', () => {
+    render(
+      <>
+        <span id="battery-name">Battery health</span>
+        <span id="battery-description">Historical measurement</span>
+        <Icon icon={TestIcon} aria-labelledby="battery-name"
+          aria-describedby="battery-description" aria-hidden />
+      </>,
+    );
+    const svg = screen.getByRole('img', { name: 'Battery health' });
+    expect(svg).not.toHaveAttribute('aria-hidden');
+    expect(svg).toHaveAccessibleDescription('Historical measurement');
+  });
+
+  it('preserves the SVG identity and full localized name across rerenders', () => {
+    const ref = createRef<SVGSVGElement>();
+    const { rerender } = render(<Icon icon={TestIcon} ref={ref} aria-label="Battery" />);
+    const svg = screen.getByRole('img', { name: 'Battery' });
+    const label = 'Batteriezustand — vollständiger historischer Messwert für dieses Fahrzeug';
+    rerender(<Icon icon={TestIcon} ref={ref} aria-label={label} />);
+    expect(screen.getByRole('img', { name: label })).toBe(svg);
+    expect(ref.current).toBe(svg);
+  });
+
+  it('keeps an empty accessible label decorative', () => {
+    renderIcon({ 'aria-label': '' });
+    expect(screen.getByTestId('test-icon')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
 });
 
 describe('Icon — robustness', () => {
@@ -142,5 +173,16 @@ describe('Icon — integration with @/lib/icons', () => {
   it('exposes a real lucide icon as role="img" when labelled', () => {
     render(<Icon icon={Icons.battery} aria-label="Battery" />);
     expect(screen.getByRole('img', { name: 'Battery' })).toBeInTheDocument();
+  });
+
+  it('supports a canonical local glyph, its ref, default stroke and semantic caller colors', () => {
+    const ref = createRef<SVGSVGElement>();
+    render(<Icon icon={Battery} ref={ref} aria-label="Battery"
+      className="text-emerald-300" color="currentColor" />);
+    const svg = screen.getByRole('img', { name: 'Battery' });
+    expect(ref.current).toBe(svg);
+    expect(svg).toHaveAttribute('stroke-width', '2');
+    expect(svg).toHaveAttribute('stroke', 'currentColor');
+    expect(svg).toHaveClass('text-emerald-300', 'h-4', 'w-4', 'shrink-0');
   });
 });

@@ -1,0 +1,1210 @@
+{
+  "item": "phase6-qa-analytics-fleet-compare",
+  "page": "web/src/features/analytics/pages/FleetComparePage.tsx",
+  "route": "/vehicle-comparison",
+  "mode": "readonly-sourceQA",
+  "terminal": "DONE",
+  "delivery": "SOURCE REPORT ONLY, NOT WHOLEPAGE PASS",
+  "createdAt": "2026-10-13T19:56:47.429Z",
+  "acceptedsource": {
+    "dependency": "phase5-page-analytics-fleet-compare",
+    "status": "[x]",
+    "queue": "migration-queue.md:1651",
+    "commitReceipt": "041264fcb6e141d116016c95b749b2f777dffc26",
+    "basis": "caller acceptance and exact queue row; no Git verification",
+    "historicalAudit": "docs/frontend-audits/audit-page-045.json",
+    "historicalUse": "header reference only, not repeated",
+    "branch": "fix/dashboard-followups (caller supplied, Git NOTRUN)",
+    "sha256": "38BC66CB7D15D09CE4D747AB799FE06977AF17D0F3635F9249A68BC317332C36",
+    "lines": 934
+  },
+  "scope": {
+    "queue": "migration-queue.md:273",
+    "soleVersionedOutput": "D:/repos/teslasync/docs/frontend-audits/phase6-qa-analytics-fleet-compare.json",
+    "ignoredLog": "D:/repos/teslasync/web/logs/phase6-qa-analytics-fleet-compare.log",
+    "allOtherFiles": "READONLY",
+    "noMigration": true,
+    "noSourceTestsCatalogBackendConfigRegistryTypesQueueHandoffWrites": true,
+    "privateData": "none; synthetic pure values only",
+    "firstCommand": "2026-10-13T19:42:04.8450101Z",
+    "returnBy": "2026-10-13T20:00:00Z",
+    "hardLimit": "2026-10-13T20:05:00Z",
+    "commandBudget": "all commands bounded <8min; no installs/servers/subagents/Git/helper files"
+  },
+  "reviewedFiles": [
+    {
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/features/analytics/components/fleet-compare-modernization/FleetTrendCard.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/features/analytics/components/fleet-compare-modernization/comparisonPresentation.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/features/analytics/components/fleet-compare-modernization/index.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/features/analytics/components/operationalbrief-a-m/FleetComparisonBrief.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/types/driving.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/types/analytics.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/api/router.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/api/drives/listing.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/api/drives/handler.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/api/mileage/handler.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/api/tco/handler.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/api/tco/summary.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/database/drive/mileage_repo.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/database/drive/stats.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/service/current_state.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/service/vehicle_service.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/models/vehicle/vehicle.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    },
+    {
+      "file": "internal/api/vehicle/handler.go",
+      "review": "accepted page complete; other files only needed direct ranges, scans, or canonical lookup, not whole-file audits"
+    }
+  ],
+  "sourcePins": [
+    {
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/features/analytics/pages/FleetComparePage.tsx",
+      "sha256": "38BC66CB7D15D09CE4D747AB799FE06977AF17D0F3635F9249A68BC317332C36",
+      "lines": 934,
+      "finalSha256": "38BC66CB7D15D09CE4D747AB799FE06977AF17D0F3635F9249A68BC317332C36",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/features/analytics/components/fleet-compare-modernization/FleetTrendCard.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/features/analytics/components/fleet-compare-modernization/FleetTrendCard.tsx",
+      "sha256": "8A3F5318F1B9EAF738B5546D613E94E1F708D800B3B994BF827643F7D35AAA38",
+      "lines": 35,
+      "finalSha256": "8A3F5318F1B9EAF738B5546D613E94E1F708D800B3B994BF827643F7D35AAA38",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/features/analytics/components/fleet-compare-modernization/comparisonPresentation.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/features/analytics/components/fleet-compare-modernization/comparisonPresentation.ts",
+      "sha256": "4A4A9F7A75B8C605654D5A6D9F668090151A5EAF8116427076689F056822296C",
+      "lines": 30,
+      "finalSha256": "4A4A9F7A75B8C605654D5A6D9F668090151A5EAF8116427076689F056822296C",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/features/analytics/components/fleet-compare-modernization/index.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/features/analytics/components/fleet-compare-modernization/index.ts",
+      "sha256": "DBE4316DD0705A37D495B22103F79A608F0F84707ACC2296289351756460E9FE",
+      "lines": 3,
+      "finalSha256": "DBE4316DD0705A37D495B22103F79A608F0F84707ACC2296289351756460E9FE",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/features/analytics/components/operationalbrief-a-m/FleetComparisonBrief.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/features/analytics/components/operationalbrief-a-m/FleetComparisonBrief.tsx",
+      "sha256": "51934A1EDB82137167B60135039F4FCFCE77EB094C6BD341DC957AC6B718F9BF",
+      "lines": 46,
+      "finalSha256": "51934A1EDB82137167B60135039F4FCFCE77EB094C6BD341DC957AC6B718F9BF",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/api/hooks/useVehicles.ts",
+      "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "lines": 1898,
+      "finalSha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/api/hooks/useDriving.ts",
+      "sha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "lines": 454,
+      "finalSha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/api/hooks/useAnalytics.ts",
+      "sha256": "F775818AC815813432F0A576AB6E22DBDBBD5106D513AA81FB56B953C5DADB20",
+      "lines": 642,
+      "finalSha256": "F775818AC815813432F0A576AB6E22DBDBBD5106D513AA81FB56B953C5DADB20",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/api/client.ts",
+      "sha256": "D00D444062AEC360EB3C89798938BE7D11B0C0CCAEFA89683AE3F725C89C3E0B",
+      "lines": 491,
+      "finalSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "reviewHashPreserved": false
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/api/types.ts",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "lines": 4194,
+      "finalSha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/types/driving.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/types/driving.ts",
+      "sha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "lines": 411,
+      "finalSha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/types/analytics.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/types/analytics.ts",
+      "sha256": "91E89CFD927D2FC29B859B6B5828068EA37356B02ECCD84DC3FC3485D5245D6C",
+      "lines": 198,
+      "finalSha256": "91E89CFD927D2FC29B859B6B5828068EA37356B02ECCD84DC3FC3485D5245D6C",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lines": 168,
+      "finalSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/lib/routeRegistry.ts",
+      "sha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "lines": 289,
+      "finalSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/App.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/App.tsx",
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "lines": 919,
+      "finalSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/lib/unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "lines": 500,
+      "finalSha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/hooks/useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "lines": 194,
+      "finalSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "absolutePath": "D:/repos/teslasync/web/src/hooks/useFormatting.ts",
+      "sha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "lines": 106,
+      "finalSha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "lines": 24,
+      "finalSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "lines": 17,
+      "finalSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/components/layout/PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "lines": 259,
+      "finalSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/components/layout/layout-reference/ChartCard.tsx",
+      "sha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+      "lines": 48,
+      "finalSha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "lines": 42,
+      "finalSha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "lines": 1006,
+      "finalSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "absolutePath": "D:/repos/teslasync/web/src/components/feedback/DataSourceNotice.tsx",
+      "sha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+      "lines": 291,
+      "finalSha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "absolutePath": "D:/repos/teslasync/web/src/i18n/en.json",
+      "sha256": "0CD7994F71D5610C56E7E1B1E5E0C97F54CF939E817999AF50B04ADF52B1629C",
+      "lines": 38982,
+      "finalSha256": "0CD7994F71D5610C56E7E1B1E5E0C97F54CF939E817999AF50B04ADF52B1629C",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/api/router.go",
+      "absolutePath": "D:/repos/teslasync/internal/api/router.go",
+      "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "lines": 5363,
+      "finalSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/api/drives/listing.go",
+      "absolutePath": "D:/repos/teslasync/internal/api/drives/listing.go",
+      "sha256": "DA0D6486C0F98E9F911825CE2E7BCAEE8E9AC4A6993EA77EDA90F0A789CD53C1",
+      "lines": 606,
+      "finalSha256": "DA0D6486C0F98E9F911825CE2E7BCAEE8E9AC4A6993EA77EDA90F0A789CD53C1",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/api/drives/handler.go",
+      "absolutePath": "D:/repos/teslasync/internal/api/drives/handler.go",
+      "sha256": "035D0B01C24BDE0480D8E6E3942A83865777A195D78FD6FA2AEAB4A8E195AA70",
+      "lines": 108,
+      "finalSha256": "035D0B01C24BDE0480D8E6E3942A83865777A195D78FD6FA2AEAB4A8E195AA70",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/api/mileage/handler.go",
+      "absolutePath": "D:/repos/teslasync/internal/api/mileage/handler.go",
+      "sha256": "6B2DC38CA2F16112115C1F98600DD1275259F7ED09E91643E093F8654BB2C797",
+      "lines": 419,
+      "finalSha256": "6B2DC38CA2F16112115C1F98600DD1275259F7ED09E91643E093F8654BB2C797",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/api/tco/handler.go",
+      "absolutePath": "D:/repos/teslasync/internal/api/tco/handler.go",
+      "sha256": "C04C1CFFFD8C79298C63CA01048E33560DD37A3E7977E636FDC07E5AE90096D5",
+      "lines": 77,
+      "finalSha256": "C04C1CFFFD8C79298C63CA01048E33560DD37A3E7977E636FDC07E5AE90096D5",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/api/tco/summary.go",
+      "absolutePath": "D:/repos/teslasync/internal/api/tco/summary.go",
+      "sha256": "869BC2EE7A0E1E28F9F139E7BEC30727A9EFE2D8C3F5252B96389CDAF3BD972D",
+      "lines": 272,
+      "finalSha256": "869BC2EE7A0E1E28F9F139E7BEC30727A9EFE2D8C3F5252B96389CDAF3BD972D",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/database/drive/mileage_repo.go",
+      "absolutePath": "D:/repos/teslasync/internal/database/drive/mileage_repo.go",
+      "sha256": "CC716B6C89741F1CC48301570E0E4452F5F10B3393D6B6E8256636A0F9FC3070",
+      "lines": 303,
+      "finalSha256": "CC716B6C89741F1CC48301570E0E4452F5F10B3393D6B6E8256636A0F9FC3070",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/database/drive/stats.go",
+      "absolutePath": "D:/repos/teslasync/internal/database/drive/stats.go",
+      "sha256": "7292C7227617DBE87F97C0625C43784A6FFAA2A751C9701268F5EADA847EED7F",
+      "lines": 87,
+      "finalSha256": "7292C7227617DBE87F97C0625C43784A6FFAA2A751C9701268F5EADA847EED7F",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/service/current_state.go",
+      "absolutePath": "D:/repos/teslasync/internal/service/current_state.go",
+      "sha256": "B9172A2942352F6126DE944FF420518717A579C7AE82D230EDF8421870B24200",
+      "lines": 386,
+      "finalSha256": "B9172A2942352F6126DE944FF420518717A579C7AE82D230EDF8421870B24200",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/service/vehicle_service.go",
+      "absolutePath": "D:/repos/teslasync/internal/service/vehicle_service.go",
+      "sha256": "CB62280CB901D5A95701C7CC615064AF58CC3E3AC04234B01181FFED13FCD3FB",
+      "lines": 627,
+      "finalSha256": "CB62280CB901D5A95701C7CC615064AF58CC3E3AC04234B01181FFED13FCD3FB",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/models/vehicle/vehicle.go",
+      "absolutePath": "D:/repos/teslasync/internal/models/vehicle/vehicle.go",
+      "sha256": "5CE3A35F5CA65697ADE9E84718AA7CB02DAD05141927A1E0DB64D5F02B2F02FF",
+      "lines": 236,
+      "finalSha256": "5CE3A35F5CA65697ADE9E84718AA7CB02DAD05141927A1E0DB64D5F02B2F02FF",
+      "reviewHashPreserved": true
+    },
+    {
+      "file": "internal/api/vehicle/handler.go",
+      "absolutePath": "D:/repos/teslasync/internal/api/vehicle/handler.go",
+      "sha256": "BF1BEF308DF90C7712B1E33857078CB1A4EC3D4CD560AD4966369469DDD75A88",
+      "lines": 407,
+      "finalSha256": "BF1BEF308DF90C7712B1E33857078CB1A4EC3D4CD560AD4966369469DDD75A88",
+      "reviewHashPreserved": true
+    }
+  ],
+  "pinLimit": "page and four feature supports pinned earlier and rechecked; other files first fully hashed at report creation. Final recheck required, not historical original hashes.",
+  "preservation": {
+    "sourceWrites": 0,
+    "pageLinesBefore": 934,
+    "pageLinesAtReport": 934,
+    "historicalOriginalLines": 894,
+    "historicalBasis": "accepted queue receipt only, no original checkout recreated",
+    "historicalRatio": 1.0447427293064877,
+    "minimum70Percent": "exceeds receipt threshold; not original body parity proof",
+    "sectionCountBefore": 5,
+    "sectionCountAtReport": 5,
+    "sections": [
+      {
+        "id": "fleet-compare-select",
+        "line": 640
+      },
+      {
+        "id": "fleet-compare-highlights-section",
+        "line": 695
+      },
+      {
+        "id": "fleet-compare-status",
+        "line": 750
+      },
+      {
+        "id": "fleet-compare-trends",
+        "line": 780
+      },
+      {
+        "id": "fleet-compare-lifetime",
+        "line": 890
+      }
+    ],
+    "alwaysRenderedShells": true,
+    "actionDeclarationSites": 13,
+    "earlierIncompleteRegexCount": 12,
+    "actionCountCorrection": "13 includes onClick: object member at 653; both actual outputs retained",
+    "semanticActionFamilies": 10,
+    "actions": [
+      "dismiss banner",
+      "period link",
+      "list retry",
+      "manage vehicles",
+      "select A",
+      "swap",
+      "select B",
+      "state A retry",
+      "state B retry",
+      "both monthly sources retry"
+    ],
+    "actionLimits": "textual sites not unique runtime commands; shared exports/legend actions excluded",
+    "highlightPairs": 4,
+    "highlightMetrics": 8,
+    "statusCards": 2,
+    "statusRowsPerCard": 5,
+    "charts": 2,
+    "seriesPerChart": 2,
+    "lifetimeRows": 10,
+    "tableId": "analytics:fleet-compare",
+    "chartKeys": [
+      "fleet-compare-monthly-distance",
+      "fleet-compare-drives-per-month"
+    ],
+    "monthlyNulls": "missing side null; measured zero stays zero; connectNulls=false",
+    "exports": "DataTable exportValue declared for all 3 columns; EmbeddedChart defaults exportable/fullscreen false. No historical chart-export parity claimed."
+  },
+  "confirmedSourceFindings": [
+    {
+      "id": "F01",
+      "rule": "unknown-vs-measured-zero",
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "line": 166,
+      "mechanism": "Non-null Go VehicleState initializes numeric/boolean fields to zero/false. Empty live/durable inputs leave them unchanged; non-omitempty model tags serialize them, CurrentState writes them, useVehicles returns res.state unchanged. formatKnown accepts finite zero; battery/range/temp become numeric zero and false lock becomes Unlocked despite absent reading evidence. Unverified is provenance, not missingness.",
+      "repro": "Synthetic serialized empty state: battery=0/range=0/temp=0/locked=false with verifiedFields=[]. Only pure JS/helper logic executed, not Go/API. Helper-only battery-winner demo is NOT a page battery-winner path.",
+      "needs": "Producer/integration owner must supply explicit presence/nullability distinct from verifiedFields, which excludes legitimate durable readings. Then coordinate hook/page unknown display without hiding valid retained zero/false. Do not null all unverified fields or rewrite caches.",
+      "owner": "vehicle-state producer/integration; later hook/page adoption",
+      "priority": "P1",
+      "confidence": "high: source mechanism only; runtime occurrence NOTRUN",
+      "support": [
+        "internal/service/vehicle_service.go:184,403-429",
+        "internal/models/vehicle/vehicle.go:54-66",
+        "internal/api/vehicle/handler.go:355-363",
+        "web/src/api/hooks/useVehicles.ts:230",
+        "FleetComparePage.tsx:193,219,227,237"
+      ]
+    },
+    {
+      "id": "F02",
+      "rule": "aggregate-scope-mislabel",
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "line": 550,
+      "mechanism": "TCO SUM energy and COUNT sessions use cost_decimal > 0. Zero-cost/null-cost/negative-cost sessions excluded. Page calls these Total energy and Charge sessions with all-tracked-data lifetime caption, no paid-subset qualification. An empty qualifying subset is zero even with known charging outside it.",
+      "repro": "Synthetic two sessions, costs 0/null and 1000Wh each: qualifyingSessions=0/wireTotalWh=0; JS translation of actual SQL predicate, no DB/financial data.",
+      "needs": "Confirm paid-only versus all-session intent with TCO owner. Qualify existing positive-cost subset/coverage, or separately authorize producer totals with presence/coverage. Preserve current wire values; no silent reinterpretation.",
+      "owner": "TCO integration and page copy owner",
+      "priority": "P1",
+      "confidence": "high: source mechanism only; runtime occurrence NOTRUN",
+      "support": [
+        "internal/api/tco/summary.go:74-79",
+        "internal/api/tco/handler.go:61-63",
+        "FleetComparePage.tsx:550-563,895"
+      ]
+    },
+    {
+      "id": "F03",
+      "rule": "unqualified-comparison-denominator",
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "line": 547,
+      "mechanism": "Winner compares only raw numbers and higher/lower. Charging cost lower-wins; distance/count/CO2 totals higher-wins and efficiency lower-wins without common date/exposure/coverage eligibility. Sources have independent lifetime histories/paid subsets. Backend efficiency is mean of eligible per-drive ratios, no sample-coverage input. Numeric ordering correct; fair comparison not established.",
+      "repro": "Imported getWinner(1,2,\"lower\") => a with no denominator argument. Synthetic unequal exposure demonstrates absent eligibility, not empirical operating cost.",
+      "needs": "Retain all rows. Qualify as raw lifetime quantity ordering or gate Winner on explicit comparable window/exposure/coverage evidence. New normalized/coverage fields require producer authority; never invent them.",
+      "owner": "page/domain comparison owner",
+      "priority": "P1",
+      "confidence": "high: source mechanism only; runtime occurrence NOTRUN",
+      "support": [
+        "web/src/features/analytics/components/fleet-compare-modernization/comparisonPresentation.ts:13-21",
+        "FleetComparePage.tsx:49,383-394,479-547",
+        "internal/database/drive/stats.go:27-33",
+        "internal/api/tco/summary.go:86-91"
+      ]
+    },
+    {
+      "id": "F04",
+      "rule": "display-preference-bypass",
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "line": 437,
+      "mechanism": "Monthly total_km copied without display conversion for both series; axes/table formatters remain unconverted. Page lifetime distance follows mi preference but trend caption says km. This is disclosed fixed-km scope, still bypassing preference. No unit-bearing YAxis/table series headers.",
+      "repro": "Pure 1.609344km stays plotted 1.609344, while existing converter returns 1mi for 1609.344m.",
+      "needs": "Use existing SI display boundary for chart/table/tooltip values and unit labels; preserve raw km payload/cache/null gaps. Existing formatEnergyPerDistance can replace duplicate conversion math only in separately owned source work.",
+      "owner": "page display adapter",
+      "priority": "P2",
+      "confidence": "high: source mechanism only; runtime occurrence NOTRUN",
+      "support": [
+        "FleetComparePage.tsx:303-314,449-453,785,802-813",
+        "internal/database/drive/mileage_repo.go:121",
+        "web/src/lib/unitConversion.ts:140-150,427-438"
+      ]
+    },
+    {
+      "id": "F05",
+      "rule": "selection-invariant",
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "line": 362,
+      "mechanism": "URL leftId/rightId nonempty strings accepted without membership/distinctness reconciliation. leftId=second with B absent auto-selects second for B also, defeating option cross-disable. Swap only checks nonempty. Unresolved nonempty IDs enable stats/cost/monthly while roster-resolved state id=0 disables state.",
+      "repro": "Synthetic IDs [1,2], A=2/B absent => A=2/B=2. Equal unresolved 9 enables aggregates, state disabled and swap enabled. No real roster queried.",
+      "needs": "Reconcile URL selections against returned list; preserve valid independent choices, choose distinct fallback and explicitly surface invalid/stale IDs before enabling unresolved aggregate queries.",
+      "owner": "page selection owner",
+      "priority": "P1",
+      "confidence": "high: source mechanism only; runtime occurrence NOTRUN",
+      "support": [
+        "FleetComparePage.tsx:321-326,360-372,383-400,413-423,673"
+      ]
+    },
+    {
+      "id": "F06",
+      "rule": "unknown-boolean-conflation",
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "line": 242,
+      "mechanism": "Truthy-only Sentry chip suppresses both nullable unknown and measured false. Security shell remains; not hidden-section. Row-level unverified label cannot reliably identify which security field is absent.",
+      "repro": "Pure sentry=null/false both chipRendered=false, true renders true.",
+      "needs": "Explicit localized tri-state Sentry value with F01 presence prerequisite; preserve security values, never infer serialized false proves off.",
+      "owner": "page security presentation",
+      "priority": "P2",
+      "confidence": "high: source mechanism only; runtime occurrence NOTRUN",
+      "support": [
+        "FleetComparePage.tsx:233-251",
+        "web/src/api/types.ts:645-649"
+      ]
+    },
+    {
+      "id": "F07",
+      "rule": "unsupported-paused-cause",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "line": 164,
+      "mechanism": "fetchStatus=paused maps directly to paused; status label unconditionally Paused offline, not gated on proof of offline. Page forwards named descriptors through PageContainer. Deferred/blocked refresh does not prove connectivity cause.",
+      "repro": "Pure synthetic paused query control flow yields paused with observed label, not real offline execution.",
+      "needs": "Shared feedback/catalog owner use cause-neutral paused/deferred label unless cause established; preserve retained data/named retry. No local page workaround.",
+      "owner": "shared feedback and catalog owner",
+      "priority": "P2",
+      "confidence": "high: source mechanism only; runtime occurrence NOTRUN",
+      "support": [
+        "web/src/components/feedback/DataSourceNotice.tsx:82,164",
+        "web/src/components/layout/PageContainer.tsx:277",
+        "FleetComparePage.tsx:607-618"
+      ]
+    },
+    {
+      "id": "F08",
+      "rule": "inferred-metric-provenance",
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "line": 534,
+      "mechanism": "Producer computes co2_saved_kg = DistanceM * 0.00007 and explicitly calls it an estimate, not measured emissions. Page/table/highlight say CO2 saved; brief provenance merely lifetime statistics, without estimate/factor qualification.",
+      "repro": "Exact producer wire-map/label source trace; no mileage/emissions/private data evaluated.",
+      "needs": "Qualify existing estimate and assumptions/period via designated domain/canonical-copy owner. Keep numeric model/value; no invented measurement or translation campaign.",
+      "owner": "page/domain provenance and bounded catalog owner",
+      "priority": "P2",
+      "confidence": "high: source mechanism only; runtime occurrence NOTRUN",
+      "support": [
+        "internal/api/drives/listing.go:167-168",
+        "FleetComparePage.tsx:534-539,736-744",
+        "web/src/features/analytics/components/operationalbrief-a-m/FleetComparisonBrief.tsx:21"
+      ]
+    },
+    {
+      "id": "F09",
+      "rule": "category-barrel-import",
+      "file": "web/src/features/analytics/components/fleet-compare-modernization/FleetTrendCard.tsx",
+      "line": 3,
+      "mechanism": "Feature support imports ChartCard/LayoutCard from @/components/layout/layout-reference sub-barrel rather than public category boundary. Not a direct vendor import; page itself uses correct barrels.",
+      "repro": "Builtin source import scan and exact feature import confirm one deep-shared-import occurrence.",
+      "needs": "Support owner use established @/components/layout exports subject to export proof; shared barrel changes need independent owner.",
+      "owner": "feature support owner",
+      "priority": "P3",
+      "confidence": "high: source mechanism only; runtime occurrence NOTRUN",
+      "support": [
+        "web/src/features/analytics/components/fleet-compare-modernization/FleetTrendCard.tsx:3",
+        "docs/frontend-design-contract.md:49-69"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "internal/database/drive/mileage_repo.go",
+      "line": 125,
+      "concern": "no upper bound, independent request clocks; future-dated/month-rollover comparability",
+      "status": "predicate confirmed; product/runtime defect NOT promoted",
+      "needs": "domain/producer decide intentional open window, no fabricated header range"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "line": 311,
+      "concern": "recreated converter functions invalidate comparisonRows memo dependencies",
+      "status": "performance NOTRUN; unpromoted",
+      "needs": "profile before optimizing"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/hooks/useFormatting.ts",
+      "line": 45,
+      "concern": "fallback currency symbol/pricingState not page source; no producer currency identity proof",
+      "status": "currency provenance UNKNOWN; no financial unit guess",
+      "needs": "TCO/settings trust contract owner"
+    },
+    {
+      "id": "C04",
+      "file": "internal/service/vehicle_service.go",
+      "line": 239,
+      "concern": "state signal copy does not prove range/temp producer units",
+      "status": "UNKNOWN, no scaling bug promoted",
+      "needs": "designated telemetry/SI producer proof; no legacy cache rewrite"
+    },
+    {
+      "id": "C05",
+      "file": "internal/database/drive/mileage_repo.go",
+      "line": 97,
+      "rule": "bare-panic",
+      "concern": "one nil-pool constructor panic match",
+      "status": "wiring invariant versus recoverable error handling requires owner review; not a blanket exception/pass",
+      "needs": "composition owner; no constructor/Go execution performed"
+    },
+    {
+      "id": "C06",
+      "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+      "line": 660,
+      "concern": "open Select keyboard/focus/touch; mobile long text/RTL/contrast/chart/table behavior",
+      "status": "visual/browser/native/runtime NOTRUN; unpromoted",
+      "needs": "separately authorized mounted QA"
+    }
+  ],
+  "commands": [
+    {
+      "name": "Select-String feature guideline scans",
+      "shellId": "5364",
+      "exit": 0,
+      "counts": {
+        "staticInlineCandidates": 1,
+        "rawHtmlCaseInsensitive": 3,
+        "directLibrary": 0,
+        "oldApi": 0,
+        "prefix": 0,
+        "camelParamCandidates": 0,
+        "hiddenSection": 0,
+        "hardcodedJsxText": 0,
+        "pageLayout": 1,
+        "useEffectCandidates": 2,
+        "deepSharedImport": 1
+      },
+      "limits": "4 feature files; dynamic width and local effects exceptions; case-insensitive raw HTML matches corrected"
+    },
+    {
+      "name": "Select-String -CaseSensitive raw HTML correction",
+      "shellId": "5367",
+      "exit": 0,
+      "counts": {
+        "matches": 0
+      },
+      "limits": "pattern <(?:button|input|textarea|select|table)\\b"
+    },
+    {
+      "name": "literal t-call builtin regex + ConvertFrom-Json canonical en.json",
+      "shellId": "5367",
+      "exit": 0,
+      "counts": {
+        "literalCalls": 91,
+        "missing": 0,
+        "different": 0,
+        "exact": 91
+      },
+      "limits": "page plus three direct feature supports only"
+    },
+    {
+      "name": "Get-FileHash/Get-Content/Section and action Select-String",
+      "shellId": "5374",
+      "exit": 0,
+      "counts": {
+        "pins": 5,
+        "pageLines": 934,
+        "sections": 5,
+        "actionSites": 13
+      },
+      "limits": "historical original 894 from queue receipt only"
+    },
+    {
+      "name": "Select-String direct-hook prefix and camel parameter ranges",
+      "shellId": "5380",
+      "exit": 0,
+      "counts": {
+        "hookRanges": 5,
+        "prefixMatches": 0,
+        "camelQueryMatches": 0
+      },
+      "limits": "useVehicles:73-81/260-291; useDriving:222-236; useAnalytics:85-93/107-114"
+    },
+    {
+      "name": "Select-String router exact endpoint/group registration",
+      "shellId": "5380",
+      "exit": 0,
+      "counts": {
+        "contextMatches": 9,
+        "readContracts": 5
+      },
+      "limits": ""
+    },
+    {
+      "name": "absolute Node26 native TS pure imports and synthetic source logic",
+      "shellId": "5384",
+      "exit": 0,
+      "counts": {
+        "nativeExit": 0
+      },
+      "limits": "console observations NOT tests; no React/Go/API execution"
+    },
+    {
+      "name": "Select-String direct Go SQL interpolation/Println/panic/context",
+      "shellId": "5388",
+      "exit": 0,
+      "counts": {
+        "sqlCandidates": 0,
+        "println": 0,
+        "panic": 1,
+        "initialContextMatches": 26
+      },
+      "limits": "panic C05 not exonerated; URL.Query false positives corrected; multiline SQL regex not exhaustive"
+    },
+    {
+      "name": "absolute Node --version; root .gitignore exact logs rule",
+      "shellId": "5387",
+      "exit": 0,
+      "counts": {
+        "ignoreMatches": 1
+      },
+      "limits": "actual v26.11.1"
+    },
+    {
+      "name": "corrected (Pool|pool).(Query|QueryRow|Exec) and ctx-first Select-String",
+      "shellId": "5390",
+      "exit": 0,
+      "counts": {
+        "dbSites": 15,
+        "withoutLiteralCtxFirst": 0,
+        "httpNewRequest": 0
+      },
+      "limits": "literal argument source check only"
+    },
+    {
+      "name": "Select-String exact finding predicates",
+      "shellId": "5409",
+      "exit": 0,
+      "counts": {
+        "exit": 0
+      },
+      "limits": "raw exact file/line source excerpts"
+    },
+    {
+      "name": "Node pure synthetic wire-default and monthly-gap repro",
+      "shellId": "5425",
+      "exit": 0,
+      "counts": {
+        "nativeExit": 0
+      },
+      "limits": "helper-only battery winner is not page winner path"
+    },
+    {
+      "name": "Node builtin fs/crypto report base/pins",
+      "shellId": "5504",
+      "exit": 0,
+      "counts": {
+        "sourcePins": 38
+      },
+      "limits": ""
+    },
+    {
+      "name": "Node builtin JSON report findings assembly",
+      "shellId": "5519",
+      "exit": 0,
+      "counts": {
+        "findings": 9,
+        "candidates": 6
+      },
+      "limits": ""
+    },
+    {
+      "name": "Node builtin source-scope/receipt assembly",
+      "shellId": "5532",
+      "exit": 0
+    },
+    {
+      "name": "Node builtin strict final pin validation",
+      "shellId": "5544",
+      "exit": 1,
+      "output": "SOURCE_DRIFT=web/src/api/client.ts; Error: validation failed",
+      "externalFailure": true
+    },
+    {
+      "name": "Node builtin final JSON/log validation with explicit external drift",
+      "exit": 0,
+      "counts": {
+        "pins": 38,
+        "preserved": 37,
+        "externalDrift": 1,
+        "acceptedFeaturePinsPreserved": 5,
+        "sections": 5,
+        "actionSites": 13
+      },
+      "limits": "external drift preserved, not wholepage PASS"
+    }
+  ],
+  "sourceContracts": {
+    "safeActions": "local state/storage, navigation and read refetch only; no device/financial mutation hook used",
+    "a11y": "PageContainer focus heading; localized select labels/swap aria-label; decorative icons hidden; finite battery progress clamp; text/checkmark/sr-only Winner. Runtime/keyboard NOTRUN.",
+    "chartAlternatives": "data/dataColumns/ariaLabel forward FleetTrendCard -> ChartCard -> EmbeddedChart -> ChartContainer; ChartContainer:865-948 stable figcaption, Table caption and scope=col, full plotted rows/null placeholders, forced-colors reveal. No screen-reader/OS proof.",
+    "mobile": "container 640px selector reflow/min-w-0; DataTable keyValue keeps metric/A/B and allDetails; shared containerPolicy chart sizing. Geometry/RTL/200% text/open controls NOTRUN.",
+    "i18n": "91 literal t(key,fallback) calls exactly match canonical en.json; no translation campaign; not all runtime/shared catalog acceptance",
+    "styles": "dynamic battery width allowed; Recharts API props/token props not inline static style violations",
+    "effects": "126 age timer; 360 local selection; neither data loading",
+    "imports": "page approved category barrels; direct support sub-barrel F09"
+  },
+  "evidenceLimits": [
+    "source report not wholepage PASS or migration reacceptance",
+    "no real API/roster/identity/private data; no Go service/React execution",
+    "historical receipts attributed, not fresh tests/commit/visual proof",
+    "no guessed state producer units/currency identity; no cache rewrites",
+    "all tests/globalTSC/build/lint/visual/geometry/contrast/performance/native/runtime/browser/fullpage NOTRUN",
+    "large support files reviewed in cited ranges/scans only",
+    "Final strict source validation exited 1: api/client.ts changed externally after review pin. Report accepted page/support unchanged, not stable whole dependency graph."
+  ],
+  "release": {
+    "report": "RELEASED",
+    "log": "RELEASED",
+    "commands": "RELEASED",
+    "source": "readonly throughout",
+    "ownedFiles": [
+      "D:/repos/teslasync/docs/frontend-audits/phase6-qa-analytics-fleet-compare.json",
+      "D:/repos/teslasync/web/logs/phase6-qa-analytics-fleet-compare.log"
+    ],
+    "noPostReturnWrites": true,
+    "backgroundProcessesStarted": 0,
+    "gitCommands": 0,
+    "installs": 0,
+    "servers": 0,
+    "subagents": 0,
+    "needs": "9 source findings, six unpromoted candidates; external api/client.ts drift needs owner verification. Runtime/visual/native/fullpage/tests/globalTSC NOTRUN.",
+    "releasedAt": "2026-10-13T20:00:16.390Z"
+  },
+  "summary": {
+    "confirmedSourceFindings": 9,
+    "candidates": 6,
+    "byRule": {
+      "unknown-vs-measured-zero": 1,
+      "aggregate-scope-mislabel": 1,
+      "unqualified-comparison-denominator": 1,
+      "display-preference-bypass": 1,
+      "selection-invariant": 1,
+      "unknown-boolean-conflation": 1,
+      "unsupported-paused-cause": 1,
+      "inferred-metric-provenance": 1,
+      "category-barrel-import": 1
+    },
+    "filesWithMostIssues": [
+      {
+        "file": "web/src/features/analytics/pages/FleetComparePage.tsx",
+        "count": 7
+      },
+      {
+        "file": "web/src/components/feedback/DataSourceNotice.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/analytics/components/fleet-compare-modernization/FleetTrendCard.tsx",
+        "count": 1
+      }
+    ],
+    "priorityNeeds": [
+      "presence/nullability proof",
+      "positive-cost subset qualification",
+      "comparable winner denominators",
+      "valid distinct selections",
+      "preference-aware monthly display"
+    ],
+    "noFixAuthority": "all repairs require separately assigned owners; this report claims no source/tests/catalog/backend files"
+  },
+  "actualScope": {
+    "kind": "two selected vehicles, NOT fleet/cohort aggregate",
+    "headerVehicle": false,
+    "headerDateRange": false,
+    "evidence": [
+      "web/src/lib/workspaceScope.ts:23-78,133,165-166",
+      "web/src/App.tsx:900",
+      "web/src/lib/routeRegistry.ts:279"
+    ],
+    "localSelectors": "intentional independent controls, not duplicate workspace pickers",
+    "bounds": {
+      "driving": {
+        "start": null,
+        "endExclusive": null,
+        "basis": "page useDrivingStats(id); backend zero bounds are full completed-drive history"
+      },
+      "cost": {
+        "start": null,
+        "endExclusive": null,
+        "basis": "lifetime positive-cost charging subset"
+      },
+      "monthly": {
+        "start": "request-local now minus 24 months, rounded UTC first day",
+        "endExclusive": null,
+        "basis": "useMonthlyMileage sends vehicle_id only; monthsAgo and SQL >= start only; no window metadata returned"
+      },
+      "state": "snapshot with existing optional as_of, not lifetime/common range"
+    },
+    "denominators": "stats completed drives; mean eligible per-drive ratios and nullable regen coverage. Monthly positive non-null distance rows, no ended_at constraint. TCO positive-cost sessions and separate positive-distance drive period. No comparable exposure/coverage proof."
+  },
+  "directHooks": [
+    {
+      "hook": "useVehicles",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 73,
+      "path": "/vehicles",
+      "router": "internal/api/router.go:3362-3363",
+      "wire": "Vehicle[] safeArray; signal; FAST staleTime"
+    },
+    {
+      "hook": "useVehicleState",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 260,
+      "path": "/vehicles/{vehicleID}/state",
+      "router": "internal/api/router.go:3370-3376",
+      "wire": "state/live/observed_at/freshness/verified_fields mapped; optional as_of; positive resolved id; live queryPolicy/signal; data_source not carried"
+    },
+    {
+      "hook": "useDrivingStats",
+      "file": "web/src/api/hooks/useDriving.ts",
+      "line": 222,
+      "path": "/drives/stats?vehicle_id=...",
+      "router": "internal/api/router.go:3506-3508",
+      "wire": "snake_case map plus client camelCase aliases; km/kmh/Whkm and ratio; nullable fields; retry false/signal/nonempty id; no page bounds"
+    },
+    {
+      "hook": "useCostBreakdown",
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "line": 107,
+      "path": "/analytics/tco?vehicle_id=...",
+      "router": "internal/api/router.go:3896",
+      "wire": "cost/total_wh/total_sessions positive-cost subset; first_date/last_date positive-distance drive subset; encoded id/signal"
+    },
+    {
+      "hook": "useMonthlyMileage",
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "line": 85,
+      "path": "/mileage/monthly?vehicle_id=...",
+      "router": "internal/api/router.go:4243-4245",
+      "wire": "{vehicle_id,months:[year_month,total_km,drive_count,...]}; safeArray select months; encoded id/signal"
+    }
+  ],
+  "states": {
+    "initial": "busy not allpage loading; 5 shells remain; local skeletons and progressive unknown values, named source loading notice",
+    "fatal": "status/trend no-data QueryError; named failure notice preserves other sources; table unavailable values stay placeholders, not allpage erasure",
+    "retained": "status error alongside retained readings; trend footer error with retained chart; highlights retained on error/paused; table data preserved; no invented last-success time",
+    "paused": "named source status and retained qualifiers; F07 cause label issue; no actual pause/offline run",
+    "refreshing": "query isFetching reaches shared freshness machinery; notice may omit refresh-only state, per shared source policy",
+    "observation": "server observedAt retained; status clock recomputes stream age every 30s. Explicit individual timestamp/completeness limitation. verifiedFields is provenance, not completeness/presence",
+    "settings": "locale/precision/currency symbol display hooks preserved; pricingState not a named page source, C03"
+  },
+  "siAndSigns": {
+    "verified": "stats producer distance_m/1000=>km, mps*3.6=>kmh, Wh/m*1000=>Wh/km; page lifts km/kmh to SI helpers at display; highlight efficiency /1000=>Wh/m; energy total_wh via useUnits; regen ratio *100 matches 0-1 contract",
+    "pureReceipt": "1609.344m=>1mi; .44704mps=>1mph; -10C=>14.00F; .1Wh/m=>160.93Wh/mi; signed -1 preserved",
+    "unknown": "state producer raw range/temp units not proved; no guessed cache/source unit; C04. Currency ISO not inferred from symbol.",
+    "needs": "monthly preference bypass F04; local KM_PER_MILE duplicates existing conversion authority, numerically correct"
+  },
+  "checkExecutionOnly": "All exit 0 above are execution receipts, not guideline/runtime/wholepage acceptance. Zero counts only for actual scoped scans. No TypeScript passes claim.",
+  "runtime": {
+    "absoluteNode": "C:/Users/AtulM/.copilot/session-state/499cebd4-378c-418c-9113-3b8fe85355b5/files/node-v26.11.1-win-x64/node.exe",
+    "version": "v26.11.1",
+    "exit": 0
+  },
+  "notRun": [
+    "npx tsc --noEmit/globalTSC",
+    "build",
+    "lint",
+    "all tests including unchanged scoped tests",
+    "browser/fullpage",
+    "native",
+    "real API",
+    "real roster/identity/private data",
+    "visual",
+    "geometry",
+    "contrast",
+    "performance",
+    "runtime React/Go"
+  ],
+  "exceptions": {
+    "rawHtml": "corrected case-sensitive scan zero; prior 3 uppercase shared Select/Button matches are not violations",
+    "staticInline": "one dynamic battery width accepted; Recharts API props accepted",
+    "effects": "2 timer/local-selection effects, no fetch/data loading",
+    "pageContainer": "PageLayout:11 forwards PageContainer",
+    "camelParams": "leftId/rightId are router selection deep links, not outgoing API params",
+    "backend": "15 literal ctx-first calls; 1 constructor panic candidate requires owner review; no backend-wide pass"
+  },
+  "exploratoryFailures": [
+    {
+      "shellId": "5342",
+      "exit": 1,
+      "reason": "web/.gitignore missing, root rule reread"
+    },
+    {
+      "tool": "view",
+      "exit": null,
+      "reason": "fleet-compare-modernization.tsx absent, directory supports read"
+    },
+    {
+      "shellId": "5368",
+      "exit": 1,
+      "reason": "database/drives absent, corrected drive"
+    },
+    {
+      "shellId": "5373",
+      "exit": 1,
+      "reason": "api/vehicles absent, corrected vehicle"
+    },
+    {
+      "shellId": "5476",
+      "exit": 1,
+      "reason": "Windows error206 command too long; no file creation; bounded artifact chunks used"
+    }
+  ],
+  "truncatedExploration": [
+    "5328",
+    "5334",
+    "5338",
+    "5350",
+    "5351"
+  ],
+  "truncationHandling": "narrowed reads/scans replaced all check claims; no global discovery claim",
+  "instructionsRead": [
+    "migration-queue.md exact QA:273/dependency:1651",
+    "docs/orchestrator-loop.md sole worker contract (no parent loop)",
+    "docs/frontend-design-contract.md authority/architecture;214-285;419-606;1342-1437",
+    "docs/frontend-worker-conventions.md readonly report conventions",
+    "docs/frontend-mission.md0-3 and relevant layout/mobile/table/states/charts/a11y/performance",
+    "docs/session-handoff.md source-only/release conventions, no parent health work",
+    ".github/instructions/react-frontend.instructions.md1-450",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md legacy guidance subordinate to modern SI/null contract",
+    ".github/instructions/observability.instructions.md RUM only main.tsx; no new bootstrap",
+    "docs/I18N_GUIDELINES.md1-90"
+  ],
+  "rawOutputLog": "D:/repos/teslasync/web/logs/phase6-qa-analytics-fleet-compare.log",
+  "rawOutputs": "COMMAND: PowerShell Select-String bounded accepted page and three direct feature supports; no source edits\nCHECK static-inline-style-candidates MATCHES=1\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:211: style={{ width: `${Math.min(Math.max(batteryLevel, 0), 100)}%` }}\nCHECK raw-html MATCHES=3\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:660: <Select\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:669: <Button\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:679: <Select\nCHECK direct-library-import MATCHES=0\nCHECK old-api-import MATCHES=0\nCHECK double-prefix MATCHES=0\nCHECK camelcase-param-candidates MATCHES=0\nCHECK hidden-section-candidates MATCHES=0\nCHECK hardcoded-jsx-text-candidates MATCHES=0\nCHECK page-container MATCHES=1\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:601: <PageLayout\nCHECK fetch-useeffect-candidates MATCHES=2\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:126: useEffect(() => {\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:360: useEffect(() => {\nCHECK deep-shared-import-candidates MATCHES=1\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetTrendCard.tsx:3: import { ChartCard, LayoutCard } from '@/components/layout/layout-reference';\nEXIT=0 (scan execution only; matches require source classification)\nCOMMAND: Select-String -CaseSensitive -Pattern <(?:button|input|textarea|select|table)\\b on four reviewed feature files\nCHECK raw-html-case-sensitive MATCHES=0\nEXIT=0\nNOTE: previous case-insensitive scan matched shared <Select>/<Button>, not raw HTML.\nCOMMAND: builtin regex literal t(key,fallback) + ConvertFrom-Json canonical en.json comparison\nLITERAL_CALLS=91 MISSING=0 DIFFERENT=0 EXACT=91\nEXIT=0 (comparison execution only)\nCOMMAND: bounded source pins Get-FileHash SHA256 + Get-Content counts + case-sensitive Select-String\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx SHA256=38BC66CB7D15D09CE4D747AB799FE06977AF17D0F3635F9249A68BC317332C36 LINES=934\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetTrendCard.tsx SHA256=8A3F5318F1B9EAF738B5546D613E94E1F708D800B3B994BF827643F7D35AAA38 LINES=35\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\fleet-compare-modernization\\comparisonPresentation.ts SHA256=4A4A9F7A75B8C605654D5A6D9F668090151A5EAF8116427076689F056822296C LINES=30\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\fleet-compare-modernization\\index.ts SHA256=DBE4316DD0705A37D495B22103F79A608F0F84707ACC2296289351756460E9FE LINES=3\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FleetComparisonBrief.tsx SHA256=51934A1EDB82137167B60135039F4FCFCE77EB094C6BD341DC957AC6B718F9BF LINES=46\nSECTION_SITES=5\n640:<Section id=\"fleet-compare-select\" title={t('comparison.selectVehicles', 'Select vehicles to compare')}>\n695:<Section id=\"fleet-compare-highlights-section\" title={t('comparison.highlights', 'Key highlights')}>\n750:<Section id=\"fleet-compare-status\" title={t('comparison.currentStatus', 'Current status')}>\n780:<Section\n890:<Section id=\"fleet-compare-lifetime\" title={t('comparison.lifetimeStats', 'Lifetime statistics')}>\nACTION_DECLARATION_SITES=13\n159:<QueryError error={error} onRetry={onRetry} resourceName={t('comparison.vehicleState', 'Vehicle state')} />\n187:{isError && <QueryError error={error} onRetry={onRetry} resourceName={t('comparison.vehicleState', 'Vehicle state')} />}\n625:onClose={dismissBanner}\n629:to=\"/period-compare\"\n643:{vehiclesQuery.isError && <QueryError error={vehiclesQuery.error} onRetry={() => vehiclesQuery.refetch()} />}\n653:onClick: () => navigate('/vehicles'),\n664:onChange={(e) => setVehicleIdA(e.target.value)}\n672:onClick={swapVehicles}\n683:onChange={(e) => setVehicleIdB(e.target.value)}\n759:onRetry={() => stateQueryA.refetch()}\n770:onRetry={() => stateQueryB.refetch()}\n794:onRetry={retryMonthly}\n841:onRetry={retryMonthly}\nORIGINAL_LINES=894 (accepted queue receipt, not fresh original checkout)\nACCEPTED_CURRENT_TO_HISTORICAL_RATIO=1.044743\nEXIT=0\nCOMMAND: Select-String direct-hook ranges only for /api/v1/ and camelCase outgoing parameters\nD:\\repos\\teslasync\\web\\src\\api\\hooks\\useVehicles.ts:73-81 PREFIX_MATCHES=0 CAMEL_QUERY_MATCHES=0\nD:\\repos\\teslasync\\web\\src\\api\\hooks\\useVehicles.ts:260-291 PREFIX_MATCHES=0 CAMEL_QUERY_MATCHES=0\nD:\\repos\\teslasync\\web\\src\\api\\hooks\\useDriving.ts:222-236 PREFIX_MATCHES=0 CAMEL_QUERY_MATCHES=0\nD:\\repos\\teslasync\\web\\src\\api\\hooks\\useAnalytics.ts:85-93 PREFIX_MATCHES=0 CAMEL_QUERY_MATCHES=0\nD:\\repos\\teslasync\\web\\src\\api\\hooks\\useAnalytics.ts:107-114 PREFIX_MATCHES=0 CAMEL_QUERY_MATCHES=0\nTOTAL PREFIX_MATCHES=0 CAMEL_QUERY_MATCHES=0\nEXIT=0\nCOMMAND: Select-String router exact direct endpoints\nROUTE_CONTEXT_MATCHES=9\nD:\\repos\\teslasync\\internal\\api\\router.go:3362: r.Route(\"/vehicles\", func(r chi.Router) {\nD:\\repos\\teslasync\\internal\\api\\router.go:3363: r.Get(\"/\", vehicleHandler.List)\nD:\\repos\\teslasync\\internal\\api\\router.go:3370: r.Route(\"/{vehicleID}\", func(r chi.Router) {\nD:\\repos\\teslasync\\internal\\api\\router.go:3376: r.Get(\"/state\", vehicleHandler.CurrentState)\nD:\\repos\\teslasync\\internal\\api\\router.go:3506: r.Route(\"/drives\", func(r chi.Router) {\nD:\\repos\\teslasync\\internal\\api\\router.go:3508: r.Get(\"/stats\", driveHandler.Stats)\nD:\\repos\\teslasync\\internal\\api\\router.go:3896: r.Get(\"/analytics/tco\", tcoHandler.GetTCO)\nD:\\repos\\teslasync\\internal\\api\\router.go:4243: r.Route(\"/mileage\", func(r chi.Router) {\nD:\\repos\\teslasync\\internal\\api\\router.go:4245: r.Get(\"/monthly\", mileageHandler.Monthly)\nEXIT=0\nCOMMAND: Node26 native TypeScript pure imports; synthetic source-logic repro only, no React/hooks/API/browser/tests\nunknown-vs-zero winner=tie displayA=—\nnan-vs-zero winner=tie displayA=—\nmeasured-zero-vs-one winner=a displayA=0\nsigned-value-preserved winner=tie displayA=-1\nautoselect-leftId=second rightId=absent => A=2 B=2 same=true\nunknown-equal-deeplink => statsEnabled=true costEnabled=true stateEnabled=false swapDisabled=false\nsynthetic-TCO-paid-filter => inputSessions=2 qualifyingSessions=0 wireTotalWh=0\nunequal-exposure-total-cost => lowerWinner=a no-denominator-input-to-getWinner\nSI-distance 1609.344m => 1mi; SI-speed 0.44704m/s => 1mph\nSI-temperature -10C => 14.00°F; SI-efficiency 0.1Wh/m => 160.93 Wh/mi\nmonthly raw total_km=1.609344 => plotted=1.609344 regardless of mi preference; preferred=1mi\nsentry=null chipRendered=false\nsentry=false chipRendered=false\nsentry=true chipRendered=true\nsynthetic-source-status=failed\nsynthetic-source-status=refreshFailed\nsynthetic-source-status=paused label=Paused offline even without offline proof\nsynthetic-source-status=refreshing\nEXIT=0\nACTUAL_NATIVE_EXIT=0\nCOMMAND: Node absolute supported runtime --version\nv26.11.1\nEXIT=0\nCOMMAND: Select-String .gitignore exact logs rule\nMATCHES=1\nD:\\repos\\teslasync\\.gitignore:80: logs/\nEXIT=0\nNOTRUN: npx tsc --noEmit, build, lint, all tests, runtime, browser, visual, geometry, contrast, performance, native, real API/roster/identity checks (source-only assignment).\nEXPLORATORY_FAILURE shell5342 EXIT=1: Cannot find path D:\\repos\\teslasync\\web\\.gitignore because it does not exist. Root .gitignore was reread successfully.\nEXPLORATORY_FAILURE view: Path D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\fleet-compare-modernization.tsx does not exist. Actual directory supports read instead.\nEXPLORATORY_FAILURE shell5368 EXIT=1: Cannot find path D:\\repos\\teslasync\\internal\\database\\drives because it does not exist. Actual internal\\database\\drive files read instead.\nEXPLORATORY_FAILURE shell5373 EXIT=1: Cannot find path D:\\repos\\teslasync\\internal\\api\\vehicles because it does not exist. No claim from that failed path.\nEXPLORATORY_LIMITATION: initial discovery/read commands 5328/5334/5338/5350/5351 exceeded tool display limits; narrowed commands and file ranges replaced them for all check claims. No global discovery claim.\nCOMMAND: Select-String bounded direct Go support for SQL interpolation, fmt/log Println, panic and DB/HTTP context call sites\nCHECK sql-interpolation-candidates MATCHES=0\nCHECK fmt-println MATCHES=0\nCHECK bare-panic MATCHES=1\nD:\\repos\\teslasync\\internal\\database\\drive\\mileage_repo.go:97: panic(\"database.NewMileageRepo: pool must not be nil\")\nCHECK context-call-sites MATCHES=26\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:28: vehicleIDStr := r.URL.Query().Get(\"vehicle_id\")\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:77: vehicleIDStr := r.URL.Query().Get(\"vehicle_id\")\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:142: start, err := parse(r.URL.Query().Get(\"start\"), \"start\", false)\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:146: endExclusive, err := parse(r.URL.Query().Get(\"end\"), \"end\", true)\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:185: vehicleIDStr := r.URL.Query().Get(\"vehicle_id\")\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:203: err = h.db.Pool.QueryRow(ctx, `\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:238: err = h.db.Pool.QueryRow(ctx, `\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:320: _ = h.db.Pool.QueryRow(ctx, `\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:331: _ = h.db.Pool.QueryRow(ctx, `\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:393: vehicleIDStr := r.URL.Query().Get(\"vehicle_id\")\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:412: err = h.db.Pool.QueryRow(ctx, `\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:535: vehicleIDStr := r.URL.Query().Get(\"vehicle_id\")\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:556: rows, err := h.db.Pool.Query(ctx, `\nD:\\repos\\teslasync\\internal\\api\\mileage\\handler.go:78: q := r.URL.Query()\nD:\\repos\\teslasync\\internal\\api\\mileage\\handler.go:120: q := r.URL.Query()\nD:\\repos\\teslasync\\internal\\api\\mileage\\handler.go:279: q := r.URL.Query()\nD:\\repos\\teslasync\\internal\\api\\tco\\handler.go:40: vehicleID, err := strconv.ParseInt(r.URL.Query().Get(\"vehicle_id\"), 10, 64)\nD:\\repos\\teslasync\\internal\\api\\tco\\summary.go:74: if err := db.Pool.QueryRow(ctx,\nD:\\repos\\teslasync\\internal\\api\\tco\\summary.go:86: if err := db.Pool.QueryRow(ctx,\nD:\\repos\\teslasync\\internal\\api\\tco\\summary.go:97: if err := db.Pool.QueryRow(ctx,\nD:\\repos\\teslasync\\internal\\api\\tco\\summary.go:147: rows, err := db.Pool.Query(ctx,\nD:\\repos\\teslasync\\internal\\database\\drive\\stats.go:53: err := r.db.Pool.QueryRow(ctx, query, args...).Scan(\nD:\\repos\\teslasync\\internal\\database\\drive\\mileage_repo.go:194: if err := r.pool.QueryRow(ctx, mileageVehicleExistsSQL, vehicleID).Scan(&exists); err != nil {\nD:\\repos\\teslasync\\internal\\database\\drive\\mileage_repo.go:204: rows, err := r.pool.Query(ctx, monthlySelectSQL, vehicleID, windowStart)\nD:\\repos\\teslasync\\internal\\database\\drive\\mileage_repo.go:252: err := r.pool.QueryRow(ctx, statsSelectSQL, vehicleID, since7d, since30d, since365d).Scan(\nD:\\repos\\teslasync\\internal\\database\\drive\\mileage_repo.go:276: rows, err := r.pool.Query(ctx, dailySelectSQL, vehicleID, windowStart)\nEXIT=0 (SQL multiline/context semantics manually reviewed only in direct functions; not backend-wide acceptance)\nCOMMAND: corrected Select-String DB call pattern excludes URL.Query; context first argument check\nDB_CALL_SITES=\n15\nDB_CALLS_WITHOUT_LITERAL_CTX_FIRST=\n0\nHTTP_NEW_REQUEST_SITES=\n0\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:203: err = h.db.Pool.QueryRow(ctx, `\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:238: err = h.db.Pool.QueryRow(ctx, `\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:320: _ = h.db.Pool.QueryRow(ctx, `\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:331: _ = h.db.Pool.QueryRow(ctx, `\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:412: err = h.db.Pool.QueryRow(ctx, `\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:556: rows, err := h.db.Pool.Query(ctx, `\nD:\\repos\\teslasync\\internal\\api\\tco\\summary.go:74: if err := db.Pool.QueryRow(ctx,\nD:\\repos\\teslasync\\internal\\api\\tco\\summary.go:86: if err := db.Pool.QueryRow(ctx,\nD:\\repos\\teslasync\\internal\\api\\tco\\summary.go:97: if err := db.Pool.QueryRow(ctx,\nD:\\repos\\teslasync\\internal\\api\\tco\\summary.go:147: rows, err := db.Pool.Query(ctx,\nD:\\repos\\teslasync\\internal\\database\\drive\\stats.go:53: err := r.db.Pool.QueryRow(ctx, query, args...).Scan(\nD:\\repos\\teslasync\\internal\\database\\drive\\mileage_repo.go:194: if err := r.pool.QueryRow(ctx, mileageVehicleExistsSQL, vehicleID).Scan(&exists); err != nil {\nD:\\repos\\teslasync\\internal\\database\\drive\\mileage_repo.go:204: rows, err := r.pool.Query(ctx, monthlySelectSQL, vehicleID, windowStart)\nD:\\repos\\teslasync\\internal\\database\\drive\\mileage_repo.go:252: err := r.pool.QueryRow(ctx, statsSelectSQL, vehicleID, since7d, since30d, since365d).Scan(\nD:\\repos\\teslasync\\internal\\database\\drive\\mileage_repo.go:276: rows, err := r.pool.Query(ctx, dailySelectSQL, vehicleID, windowStart)\nEXIT=0\nCOMMAND: Select-String exact source-finding mechanisms (read-only citation receipt)\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:242: {state.sentry_mode && (\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:321: const initialLeftId = searchParams.get('leftId') ?? '';\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:322: const initialRightId = searchParams.get('rightId') ?? '';\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:362: if (!vehicleIdA) setVehicleIdA(String(vehicleList[0].id));\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:363: if (!vehicleIdB) setVehicleIdB(String(vehicleList[1].id));\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:437: distA: known(m.total_km),\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:453: distB: known(m.total_km),\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:507: winner: 'lower',\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:534: metric: t('comparison.co2Saved', 'CO₂ saved'),\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:542: metric: t('comparison.chargingCost', 'Charging cost'),\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:547: winner: 'lower',\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:550: metric: t('comparison.totalEnergy', 'Total energy'),\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:558: metric: t('comparison.chargeSessions', 'Charge sessions'),\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:673: disabled={!vehicleIdA || !vehicleIdB}\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:736: label: t('comparison.co2Diff', 'CO₂ saved'),\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\FleetComparePage.tsx:784: 'comparison.trendContext.scope',\nD:\\repos\\teslasync\\internal\\api\\tco\\summary.go:79: WHERE vehicle_id = $1 AND cost_decimal > 0`, vehicleID,\nD:\\repos\\teslasync\\internal\\api\\tco\\summary.go:152: WHERE vehicle_id = $1 AND cost_decimal > 0\nD:\\repos\\teslasync\\internal\\api\\drives\\listing.go:168: \"co2_saved_kg\": stats.DistanceM * 0.00007,\nD:\\repos\\teslasync\\internal\\service\\vehicle_service.go:184: state := &vehiclemodel.VehicleState{\nD:\\repos\\teslasync\\internal\\service\\vehicle_service.go:429: return state, verified, nil\nD:\\repos\\teslasync\\web\\src\\api\\hooks\\useVehicles.ts:230: return { state: res.state, live, observedAt, freshness, verifiedFields }\nD:\\repos\\teslasync\\web\\src\\api\\hooks\\useVehicles.ts:234: if (!v && !p) return { state: res.state, live, observedAt, freshness, verifiedFields }\nD:\\repos\\teslasync\\web\\src\\components\\feedback\\DataSourceNotice.tsx:82: if (query.fetchStatus === 'paused') return 'paused';\nD:\\repos\\teslasync\\web\\src\\components\\feedback\\DataSourceNotice.tsx:164: label: t('dataSources.status.paused', 'Paused offline'),\nD:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\fleet-compare-modernization\\FleetTrendCard.tsx:3: import { ChartCard, LayoutCard } from '@/components/layout/layout-reference';\nEXIT=0\nCOMMAND: Node26 pure synthetic wire-default and monthly-gap repro; no producer execution\nzero-valued-serialized-state battery=0 range=0 temp=0 locked=false verifiedFields=0\ndefault-zero-can-win against measured battery=1 => winner=a (formatKnown/getWinner have no source-presence input)\nmonthly-merge [{\"month\":\"2000-01\",\"distA\":0,\"distB\":null,\"drivesA\":0,\"drivesB\":null},{\"month\":\"2000-02\",\"distA\":null,\"distB\":1,\"drivesA\":null,\"drivesB\":1}]\nEXIT=0\nACTUAL_NATIVE_EXIT=0\nEXPLORATORY_FAILURE shell5476 EXIT=1: The filename or extension is too long. (os error 206). No report created; bounded artifact assembly used instead.\nCOMMAND: Node builtin fs/crypto report base and review pins\nSOURCE_PINS=38\nREPORT=D:/repos/teslasync/docs/frontend-audits/phase6-qa-analytics-fleet-compare.json\nEXIT=0\nCOMMAND: Node builtin JSON report findings assembly\nCONFIRMED=9\nCANDIDATES=6\nSOURCE_WRITES=0\nEXIT=0\nCOMMAND: Node builtin JSON source-scope/command receipts assembly\nDIRECT_READ_HOOKS=5\nNOTRUN_GATES_EXPLICIT=true\nEXIT=0\nCOMMAND: previous final source validation shell5544\nSOURCE_DRIFT=web/src/api/client.ts\nError: validation failed\nNode.js v26.11.1\nEXIT=1\n",
+  "externalSourceDrift": {
+    "files": [
+      {
+        "file": "web/src/api/client.ts",
+        "reviewSha256": "D00D444062AEC360EB3C89798938BE7D11B0C0CCAEFA89683AE3F725C89C3E0B",
+        "finalSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5"
+      }
+    ],
+    "ownership": "external/unattributed concurrent shared client change; this worker wrote no source",
+    "needs": "Integration owner must verify current client contract. Preserve earlier review hash; no repin to erase failure and no whole-page stable-source acceptance.",
+    "claimsAffected": "Client camelCase/prefix evidence describes read snapshot; current shared client was not rereviewed. Five direct feature pins remain preserved."
+  },
+  "finalValidation": {
+    "jsonParsed": true,
+    "rawLogExists": true,
+    "sourcePins": 38,
+    "preserved": 37,
+    "externalDrift": 1,
+    "strictPinCheckExit": 1,
+    "artifactValidationExit": 0,
+    "acceptedPageAndFeaturePinsPreserved": true,
+    "sections": 5,
+    "actionSites": 13,
+    "soleVersionedOutput": "D:/repos/teslasync/docs/frontend-audits/phase6-qa-analytics-fleet-compare.json",
+    "ignoredLog": "D:/repos/teslasync/web/logs/phase6-qa-analytics-fleet-compare.log",
+    "at": "2026-10-13T20:00:16.390Z"
+  }
+}

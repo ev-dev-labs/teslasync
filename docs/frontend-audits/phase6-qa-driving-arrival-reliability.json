@@ -1,0 +1,1218 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-arrival-reliability",
+  "attempt": 1,
+  "phase": 6,
+  "actor": "af8c292d-da18-48f2-9bd7-188128a41358",
+  "status": "SOURCE_QA_DELIVERED_WITH_FINDINGS",
+  "page": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+  "snapshotUTC": "2026-10-14T01:15:53.4140958Z",
+  "routes": [
+    {
+      "path": "/arrival-reliability",
+      "file": "web\\src\\App.tsx",
+      "line": 869,
+      "lazyImportLine": 99,
+      "guard": "SafeRoute ArrivalReliability",
+      "mount": "NOTRUN",
+      "vehicle": null,
+      "range": null,
+      "scopeMechanism": "workspaceScope.ts:23-77,93-166; not range-enabled and not vehicle-disabled. Existing latest-history analysis, not a missing-range defect."
+    }
+  ],
+  "queueSnapshot": [
+    {
+      "line": 386,
+      "row": "| [~] | 6 | phase6-qa-driving-arrival-reliability | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-driving-arrival-reliability.json | phase5-page-driving-arrival-reliability | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=af8c292d-da18-48f2-9bd7-188128a41358; LastConsumed=-1 | - |CurrentacceptedArrivalReliabilityPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Prediction-vs-observation/timezones/bounds/denominators/unknownzero/SI/preferences/trust/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by af8c292d-da18-48f2-9bd7-188128a41358, no browser lock. |"
+    },
+    {
+      "line": 1850,
+      "row": "| [x] | 5 | phase5-page-driving-arrival-reliability | original-page-migration | web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx; web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.test.tsx | - | 1 | 2026-10-12T14:32:17.1640300Z | 182dcbe773a7fad58de01ca1f6c1839d28ea2543 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/arrival-reliability; audit=docs\\frontend-audits\\audit-page-103.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fresh previously unstarted scope reserved for rolling dispatch; original Page+namedtest only. Returning fixture has actual5173 origin; E2E_STORAGE_STATE supported variable. Parent-owned generator closure, no worker catalog edits/bypass. Original source/fullQA separation and all preservation/helper budget rules remain. Actual worker=0134200c-5d88-4230-91c6-a44f0c49d883; lifecycle=awaitingterminalnotification; doNOTpoll/duplicate/rereadownedsource. Supported instructions in session files; separate path/private screenshot boundaries. No source change needed:171/2755combined lines,10sections preserved, scopedlint/style0; own tests NOTRUN under no-change convention. Original once-only capture malformed caller/noPNG, nativeQA not accepted; no API/query/threshold change. |"
+    }
+  ],
+  "acceptedDependency": {
+    "item": "phase5-page-driving-arrival-reliability",
+    "queueLine": 1848,
+    "status": "[x]",
+    "commit": "182dcbe773a7fad58de01ca1f6c1839d28ea2543",
+    "evidence": "No source change needed;171/2755 lines;10sections; inherited scoped lint/style0; own tests NOTRUN; original malformed capture/noPNG/native unaccepted",
+    "limits": "Source acceptance is not page/native PASS"
+  },
+  "firstReuseCheck": {
+    "timestampUTC": "2026-10-14T01:02:07.7687059Z",
+    "reportExisted": null,
+    "logExisted": null,
+    "result": "No reserved report to reuse; reused historical audit-page-103 evidence and matching page SHA. No remigration or source change."
+  },
+  "currentPhase": "Current queue:3-38 supersedes stale handoff counts: Phase6 dispatch;0-5 closed with source debt;7 NOTRUN; inherited cadence1906 tsc exit2/25 diagnostics NOT rerun",
+  "timing": {
+    "reservationUTC": "2026-10-14T01:00:00.625Z",
+    "returnUTC": "2026-10-14T01:20:00.625Z",
+    "hardUTC": "2026-10-14T01:25:00.625Z",
+    "earlierActualDeadlineWins": null
+  },
+  "sourcePins": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+      "sha256": "54b4264b7cdaedecd949eed33cf295a00211206f635b87c58d45b4b08a928529",
+      "lines": 171,
+      "bytes": 5336,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityAccountingMetrics.tsx",
+      "sha256": "ac5a7b200bee1ff18ae4a49f0225e8af3176629a900447e387d5b04d15b23cc7",
+      "lines": 87,
+      "bytes": 3043,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityCoverageMetrics.tsx",
+      "sha256": "ea3fa2ae95e397c4ed027174e9a3596a776860506982b9ec1a0f079277cc51fb",
+      "lines": 159,
+      "bytes": 6315,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityDepartureWindowProfile.tsx",
+      "sha256": "b677116f0f8121656af9950fbb4c4ea9579bcc37c4ce0e245b6d5d74fbeb0d36",
+      "lines": 140,
+      "bytes": 4635,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceMetricGroup.tsx",
+      "sha256": "3fcf9a5539ba21e701feced1099b28880994e96519abb5b37066ea89bc8e848b",
+      "lines": 22,
+      "bytes": 1063,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceMetrics.tsx",
+      "sha256": "3f344428b4e11c04415306d8f2f85b33b7e25a4716bf1de4b3a8f43f9781397e",
+      "lines": 31,
+      "bytes": 967,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceQuality.tsx",
+      "sha256": "3b197dfd53e3fcec25af1bedbf2af0c0d0b1b61ea71729a1ab906043fe3d1ba2",
+      "lines": 74,
+      "bytes": 2790,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityKpiBand.tsx",
+      "sha256": "7efb1146a11587fcb2640c35971c946c90d31b27ee571754474c312c0237bfbd",
+      "lines": 195,
+      "bytes": 6215,
+      "readScope": "FULL",
+      "mounted": false
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMethodology.tsx",
+      "sha256": "3536ed4e746c6af5f7dc637b3be9faa8e3bcc9ae97e33a717847d53fee60e2bd",
+      "lines": 178,
+      "bytes": 6394,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMonthTrend.tsx",
+      "sha256": "b63d8a9f58d284f1797c5baffd86bce146689af9d17389a4269513d72bda9226",
+      "lines": 133,
+      "bytes": 4300,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityProfilePlot.tsx",
+      "sha256": "089bb3d22284ccd40c6118ecb19c0c2beef2c651a610b7eb5949ad83fe23efb1",
+      "lines": 165,
+      "bytes": 4958,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityQueryStatus.tsx",
+      "sha256": "2f8632e75ef4b7e9c7a7127b1d3a72a6b68d9ea0ce57508b9f111eb140f2c25f",
+      "lines": 158,
+      "bytes": 5121,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityRouteDirectory.tsx",
+      "sha256": "0927ea0d5285eb49c7d5c4b4abf3266fe2e0dc4522564687fbd87a8d39a2fbb2",
+      "lines": 162,
+      "bytes": 5637,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilitySectionBody.tsx",
+      "sha256": "e50d4af4bd38d4097f5c5f35e2c9ff7a496b940daeb339667ac601b2a0021489",
+      "lines": 155,
+      "bytes": 3955,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilitySupportMetrics.tsx",
+      "sha256": "5ad53d7892368afc573f2e3c2c1487a421d07f66150c2c22136813cf56c44bc7",
+      "lines": 81,
+      "bytes": 2820,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityTimingBandsChart.tsx",
+      "sha256": "75632e4439f502da9f8cc9d68594bb5455d73cf0012c7c825e6708ca343a594d",
+      "lines": 201,
+      "bytes": 5947,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityTimingConsistencyChart.tsx",
+      "sha256": "9c4dd88c17d1bf4ce6f40950713346eba40f1016d39f43bb4504ede60eaa1394",
+      "lines": 180,
+      "bytes": 5686,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityWeekdayProfile.tsx",
+      "sha256": "c1091201713269f37ae4d90fa35c3c7fcfbd7a3d8dbb1d9e9ea1a7424cb5732d",
+      "lines": 133,
+      "bytes": 4340,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityWindowComparisons.tsx",
+      "sha256": "fd68ebc94b26d57ac3f8b0670f25a376e8b29626529cb851ad09a74bacd0371c",
+      "lines": 173,
+      "bytes": 7271,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\index.ts",
+      "sha256": "2734e52bfd804c007ea6179a7374e208517b67a2d45a187804357ab0e1f65941",
+      "lines": 29,
+      "bytes": 1886,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\labels.ts",
+      "sha256": "43b93db95b7f77679f36aa64e1cd3c62cd7521f583cc74111013c9f8c7433f67",
+      "lines": 109,
+      "bytes": 2912,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\types.ts",
+      "sha256": "8f66497c6b3ab5febba2661777fbf90687d45f0288afdde4ec8cb38b02af010b",
+      "lines": 19,
+      "bytes": 404,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ArrivalEvidenceBrief.tsx",
+      "sha256": "adbf526326d02491477dcba280a9c33073b9a9d46c5d81559da254fa5e1068cc",
+      "lines": 59,
+      "bytes": 4990,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+      "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+      "lines": 53,
+      "bytes": 1893,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+      "sha256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba",
+      "lines": 63,
+      "bytes": 2974,
+      "readScope": "FULL",
+      "mounted": true
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\arrivalReliability.ts",
+      "sha256": "579393d07628346c751cd06d1d6d52bc9a9b8584a7ab41573caf613ec94227b8",
+      "lines": 1009,
+      "bytes": 29974,
+      "readScope": "FULL",
+      "mounted": true
+    }
+  ],
+  "preservation": {
+    "sourceSHA256": "54b4264b7cdaedecd949eed33cf295a00211206f635b87c58d45b4b08a928529",
+    "pageLines": 171,
+    "domainDirectoryLines": 2584,
+    "pagePlusDomainLines": 2755,
+    "allPresentationLines": 2930,
+    "mountedPresentationClosureLinesExcludingLegacyKpi": 2735,
+    "analyzerLines": 1009,
+    "sourceFiles": 26,
+    "totalPinnedLines": 3939,
+    "mountedSections": 10,
+    "rawSectionDeclarations": 11,
+    "rawDomainGlassPanels": 5,
+    "mountedOuterGlassPanels": 4,
+    "outerChartContainers": 5,
+    "embeddedProfileDeclaration": 1,
+    "embeddedProfileCallsites": 3,
+    "pageGlassPanelDeclarations": 0,
+    "pageChartContainerDeclarations": 0,
+    "comparison": "171/2755 and10 match accepted dependency/historical audit; no baseline regeneration",
+    "sections": [
+      {
+        "name": "Observed timing evidence",
+        "component": "ArrivalEvidenceBrief",
+        "pageLine": 87,
+        "coverage": "Six metrics, historical source/cap/timezone, query status",
+        "mechanism": "Unconditional shell declarations; passive body-state gates; methodology independent",
+        "execution": "NOTRUN"
+      },
+      {
+        "name": "Route consistency",
+        "component": "ArrivalReliabilityTimingConsistencyChart",
+        "pageLine": 97,
+        "coverage": "Top-ten index/share; samples/support columns",
+        "mechanism": "Unconditional shell declarations; passive body-state gates; methodology independent",
+        "execution": "NOTRUN"
+      },
+      {
+        "name": "Observed timing bands",
+        "component": "ArrivalReliabilityTimingBandsChart",
+        "pageLine": 102,
+        "coverage": "Top-ten p50/p90/buffer; MAD/count columns",
+        "mechanism": "Unconditional shell declarations; passive body-state gates; methodology independent",
+        "execution": "NOTRUN"
+      },
+      {
+        "name": "Route-window comparisons",
+        "component": "ArrivalReliabilityWindowComparisons",
+        "pageLine": 111,
+        "coverage": "All<=6 or top-five+lowest; sole-window qualification; four quantities",
+        "mechanism": "Unconditional shell declarations; passive body-state gates; methodology independent",
+        "execution": "NOTRUN"
+      },
+      {
+        "name": "Departure profile",
+        "component": "ArrivalReliabilityDepartureWindowProfile",
+        "pageLine": 122,
+        "coverage": "All12 two-hour bins, nullable index/share and count",
+        "mechanism": "Unconditional shell declarations; passive body-state gates; methodology independent",
+        "execution": "NOTRUN"
+      },
+      {
+        "name": "Weekday profile",
+        "component": "ArrivalReliabilityWeekdayProfile",
+        "pageLine": 127,
+        "coverage": "All7 local weekday bins",
+        "mechanism": "Unconditional shell declarations; passive body-state gates; methodology independent",
+        "execution": "NOTRUN"
+      },
+      {
+        "name": "Month trend",
+        "component": "ArrivalReliabilityMonthTrend",
+        "pageLine": 137,
+        "coverage": "Observed local months; no fabricated absent months",
+        "mechanism": "Unconditional shell declarations; passive body-state gates; methodology independent",
+        "execution": "NOTRUN"
+      },
+      {
+        "name": "Route directory",
+        "component": "ArrivalReliabilityRouteDirectory",
+        "pageLine": 146,
+        "coverage": "All supported routes, eight quantities each",
+        "mechanism": "Unconditional shell declarations; passive body-state gates; methodology independent",
+        "execution": "NOTRUN"
+      },
+      {
+        "name": "Evidence quality",
+        "component": "ArrivalReliabilityEvidenceQuality",
+        "pageLine": 155,
+        "coverage": "9 accounting/17 coverage/6 support metrics",
+        "mechanism": "Unconditional shell declarations; passive body-state gates; methodology independent",
+        "execution": "NOTRUN"
+      },
+      {
+        "name": "Methodology",
+        "component": "ArrivalReliabilityMethodology",
+        "pageLine": 164,
+        "coverage": "All8 explanations, always independently rendered",
+        "mechanism": "Unconditional shell declarations; passive body-state gates; methodology independent",
+        "execution": "NOTRUN"
+      }
+    ],
+    "legacy": "KpiBand195 lines retained/exported but not mounted; type-only import by ArrivalEvidenceBrief; excluded mounted counts",
+    "initialPinsChecked": 0,
+    "pinDrift": 0
+  },
+  "findings": [
+    {
+      "id": "ARR-001",
+      "rule": "MDC-026-analysis-clock",
+      "priority": "P1",
+      "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+      "line": 44,
+      "detail": "nowMs is captured once at mount, never advanced. Refetch/vehicle-change reanalysis still rejects a valid completed drive ending after mount but before current time as future; recency remains frozen. Source mechanism only, no actual data accessed.",
+      "mechanisms": [
+        "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx:44,53-59 web\\src\\features\\driving\\lib\\arrivalReliability.ts:642,677-680,952-955"
+      ],
+      "fix": "Explicit narrow page clock lease: advance injected analysis time on legitimate new history/vehicle analyses and define recency updates, preserving deterministic domain clock and true future exclusions. Fetch time must not become drive observation time.",
+      "owner": "page",
+      "confidence": "high/source",
+      "repro": "Mount T0; receive otherwise valid completed Drive with T0<end<=current time; current source excludes future until remount. Compare recency across reanalysis.",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No arrival clock FIX owner found; historical audit preserved mount clock, not correctness acceptance"
+    },
+    {
+      "id": "ARR-002",
+      "rule": "MDC-034-MDC-046-controller-identity",
+      "priority": "P2",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityProfilePlot.tsx",
+      "line": 84,
+      "detail": "Three distinct outer profile ChartContainers nest EmbeddedChart with identical arrival-reliability-profile key. Child context takes precedence over supplied parent hiddenSeries. Same URL-backed parameter and series IDs address one hidden state across all3; distinct outer controller state is ignored by child.",
+      "mechanisms": [
+        "ProfilePlot.tsx:83-91,135-161; DepartureWindowProfile:76,111-133; WeekdayProfile:69,104-126; MonthTrend:69,104-126",
+        "web\\src\\components\\charts\\EmbeddedChart.tsx:29-40; ChartContainer.tsx:823-834; ChartHiddenSeriesContext.tsx:45-55",
+        "web\\src\\hooks\\useHiddenSeries.ts:57-87"
+      ],
+      "fix": "One existing canonical controller per profile, preserving outer keys, legends, columns and exports. Explicit compatibility disposition for old shared URL key; no preference reset/new engine.",
+      "owner": "page/integration",
+      "confidence": "high/source",
+      "repro": "Toggle samples/normalizedDurationIndex in one profile; inspect all3 and URLs; separately set outer hidden parameter. Source predicts shared child state and bypassed parent.",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "Reconfirmed audit-page-103 architecture issue; no dedicated arrival profile FIX"
+    },
+    {
+      "id": "ARR-003",
+      "rule": "MDC-026-initial-paused",
+      "priority": "P2",
+      "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+      "line": 63,
+      "detail": "Selected query with data undefined, no error, fetchStatus paused derives initial+isRefreshBlocked. Page maps initial to loading; StaleRefreshWarning returns null without retained data. QueryStatus announces loading/spins and section bodies show skeletons with no explicit deferred-initial state. No malformed DTO needed.",
+      "mechanisms": [
+        "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx:43,63-64,83-85 web\\src\\features\\driving\\components\\arrival-reliability\\types.ts:3-11; ArrivalReliabilityQueryStatus.tsx:40-59; ArrivalReliabilitySectionBody.tsx:70-84 web\\src\\api\\dataState.ts:197-218; components\\feedback\\StaleRefreshWarning.tsx:57-60"
+      ],
+      "fix": "Thread actual fetch/refresh-blocked state through page, query-state type, summary/status/body. Distinguish paused initial from active loading without inventing device-offline/server-failure; keep all shells and truthful recovery.",
+      "owner": "page/domain",
+      "confidence": "high/source",
+      "repro": "Use documented structural Query state: selected vehicle, no retained data/error, fetchStatus paused; inspect loading announcements/bodies.",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No arrival initial-paused FIX; unrelated QA rows are not this owner"
+    },
+    {
+      "id": "ARR-004",
+      "rule": "MDC-026-retained-trust-threading",
+      "priority": "P2",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceQuality.tsx",
+      "line": 47,
+      "detail": "Quality groups omit retained props; WindowComparisons also omits NestedDrivingBrief.retained. Adapter defaults false and says Returned evidence on retained refresh failure. Summary retained flag only covers refreshError, not retained paused refresh. Payload remains visible: inaccurate trust labeling, not data loss.",
+      "mechanisms": [
+        "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceQuality.tsx:47-51; ArrivalReliabilityEvidenceMetrics.tsx:17-29; ArrivalReliabilityEvidenceMetricGroup.tsx:19-21; ArrivalReliabilityWindowComparisons.tsx:130-153 web\\src\\features\\driving\\components\\operationalbrief-a-m\\ArrivalEvidenceBrief.tsx:54; NestedDrivingBrief.tsx:24-27,55-62; DrivingSummaryBrief.tsx:39-48 web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx:43,83-85"
+      ],
+      "fix": "Propagate retained refresh-error/blocked source trust through existing summary/window/quality domain props and existing retained API; preserve raw quantities and one meaningful source warning/retry. Serialize overlapping ARR-003 files.",
+      "owner": "page/domain",
+      "confidence": "high/source",
+      "repro": "After successful load, fail refresh, then pause with retained payload; compare summary/warning versus each nested group and verify retention/retry.",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "Reconfirmed audit-page-103 quality/window omission; no dedicated arrival retained FIX"
+    },
+    {
+      "id": "ARR-005",
+      "rule": "MDC-040-MDC-043-mobile-target",
+      "priority": "P2",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityQueryStatus.tsx",
+      "line": 83,
+      "detail": "Retained-error Retry uses sm without mobile minimum/wrapLabel. Button sm h-9=2.25rem (36px at16px root), below mobile44 contract. Source-declaration gap, not measured rectangle/WCAG spacing failure.",
+      "mechanisms": [
+        "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityQueryStatus.tsx:83-90 web\\src\\components\\ui\\Button.tsx:35-40,66-74"
+      ],
+      "fix": "Existing min-h-11/min-w-11 below md with explicit desktop restoration and wrapLabel; preserve native retry/focus/loading policy. No global Button resize.",
+      "owner": "page/domain",
+      "confidence": "high/declaration",
+      "repro": "Retained error at320/375/390/430; measure actual target/focus, long RTL/200% text and keyboard retry.",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "Historical target candidate now concrete shared sm declaration; no arrival Retry FIX"
+    },
+    {
+      "id": "ARR-006",
+      "rule": "MDC-010-MDC-011-semantic-token-adoption",
+      "priority": "P3",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMethodology.tsx",
+      "line": 157,
+      "detail": "Five mounted fixed text-cyan-300 decoration declarations bypass theme-aware neutral roles without state meaning. Sixth raw hit is unmounted legacy KpiBand. No fluorescent appearance or composed contrast failure asserted.",
+      "mechanisms": [
+        "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceQuality.tsx:30; ArrivalReliabilityMethodology.tsx:139,157; ArrivalReliabilityRouteDirectory.tsx:54; ArrivalReliabilityWindowComparisons.tsx:84"
+      ],
+      "mountedDeclarationCount": 5,
+      "excludedLegacyCount": 1,
+      "fix": "Existing neutral typography/icon roles at four cited components; retain all8 methodology explanations; later composed theme QA needed. No config/token root.",
+      "owner": "page/domain",
+      "confidence": "high/token use",
+      "repro": "Review explanatory decoration in light/dark/custom/forced-colors and text scaling.",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "Reconfirmed audit-page-103 fixed cyan issue; no dedicated arrival neutral-role FIX"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "ARR-C01",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\labels.ts",
+      "line": 59,
+      "rule": "MDC-044-date-display-preferences",
+      "detail": "Hour labels use locale-default Intl; coverage timestamps force analysis timezone. Exact application hour/display preference ownership remains unproved. setting_24hr_time in useSettings.ts:139 belongs to useCarPreferences, NOT proof of an app display-hour setting. useDateFormat binds locale/tz but no explicit hour-cycle option in inspected API.",
+      "needs": "Date integration owner adjudicate calendar vehicle timezone versus display preference before change; advanced date-preferences FIX files are not driving owners.",
+      "promoted": null,
+      "reproExecution": "NOTRUN"
+    },
+    {
+      "id": "ARR-C02",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityTimingConsistencyChart.tsx",
+      "line": 140,
+      "rule": "MDC-043-dense-label-review",
+      "detail": "Top10 route labels and12 profile bins use interval=0; potential narrow-label overlap/clipping, not a measured defect. Long article route text also needs wrapping review.",
+      "mechanisms": [
+        "TimingBandsChart.tsx:159; ProfilePlot.tsx:101-106; RouteDirectory.tsx:83-85"
+      ],
+      "needs": "Later authorized Edge/msedge mounted read-only matrix, long labels/RTL/200% text/narrow containers; preserve every series/table/export.",
+      "promoted": null,
+      "reproExecution": "NOTRUN"
+    },
+    {
+      "id": "ARR-C03",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceMetricGroup.tsx",
+      "line": 20,
+      "rule": "MDC-026-population-provenance-copy",
+      "detail": "Quality scope says Loaded completed-drive population although accounting includes every returned row and incomplete exclusions. Drive.endTs is nullable (types/driving.ts:5), but endpoint list filtering/actual incomplete population was not established; no malformed required DTO scenario promoted.",
+      "needs": "Source contract owner establish endpoint population; only then narrow existing canonical copy lease if completed label is inaccurate.",
+      "promoted": null,
+      "reproExecution": "NOTRUN"
+    }
+  ],
+  "ownerNeeds": [
+    {
+      "root": "ARR-001",
+      "owner": "page",
+      "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+      "needs": "Explicit narrow page clock lease: advance injected analysis time on legitimate new history/vehicle analyses and define recency updates, preserving deterministic domain clock and true future exclusions. Fetch time must not become drive observation time.",
+      "reservation": "Parent must reread queue and assign exclusive source/covering-test files; this QA owns no source. Trust/retry/style overlapping files serialize."
+    },
+    {
+      "root": "ARR-002",
+      "owner": "page/integration",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityProfilePlot.tsx",
+      "needs": "One existing canonical controller per profile, preserving outer keys, legends, columns and exports. Explicit compatibility disposition for old shared URL key; no preference reset/new engine.",
+      "reservation": "Parent must reread queue and assign exclusive source/covering-test files; this QA owns no source. Trust/retry/style overlapping files serialize."
+    },
+    {
+      "root": "ARR-003",
+      "owner": "page/domain",
+      "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+      "needs": "Thread actual fetch/refresh-blocked state through page, query-state type, summary/status/body. Distinguish paused initial from active loading without inventing device-offline/server-failure; keep all shells and truthful recovery.",
+      "reservation": "Parent must reread queue and assign exclusive source/covering-test files; this QA owns no source. Trust/retry/style overlapping files serialize."
+    },
+    {
+      "root": "ARR-004",
+      "owner": "page/domain",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceQuality.tsx",
+      "needs": "Propagate retained refresh-error/blocked source trust through existing summary/window/quality domain props and existing retained API; preserve raw quantities and one meaningful source warning/retry. Serialize overlapping ARR-003 files.",
+      "reservation": "Parent must reread queue and assign exclusive source/covering-test files; this QA owns no source. Trust/retry/style overlapping files serialize."
+    },
+    {
+      "root": "ARR-005",
+      "owner": "page/domain",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityQueryStatus.tsx",
+      "needs": "Existing min-h-11/min-w-11 below md with explicit desktop restoration and wrapLabel; preserve native retry/focus/loading policy. No global Button resize.",
+      "reservation": "Parent must reread queue and assign exclusive source/covering-test files; this QA owns no source. Trust/retry/style overlapping files serialize."
+    },
+    {
+      "root": "ARR-006",
+      "owner": "page/domain",
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMethodology.tsx",
+      "needs": "Existing neutral typography/icon roles at four cited components; retain all8 methodology explanations; later composed theme QA needed. No config/token root.",
+      "reservation": "Parent must reread queue and assign exclusive source/covering-test files; this QA owns no source. Trust/retry/style overlapping files serialize."
+    }
+  ],
+  "requiredSharedChanges": [],
+  "commands": [
+    {
+      "shellId": 406,
+      "numericExit": 0,
+      "commandPurpose": "First existing report/log reuse and UTC probe",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 405,
+      "numericExit": 0,
+      "commandPurpose": "Repository/docs/instructions discovery",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 418,
+      "numericExit": 0,
+      "commandPurpose": "Audit/instruction inventories, raw bootstrap log",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 419,
+      "numericExit": 0,
+      "commandPurpose": "Bootstrap document/queue search, full raw output retained",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 423,
+      "numericExit": 0,
+      "commandPurpose": "Exact QA queue row/dependency",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 440,
+      "numericExit": 0,
+      "commandPurpose": "Handoff tail/mission headings; preserve bootstrap",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 439,
+      "numericExit": 0,
+      "commandPurpose": "SI/observability/unit instructions/full",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 453,
+      "numericExit": 0,
+      "commandPurpose": "Initial24 source SHA256+line pins and symbols",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 460,
+      "numericExit": 1,
+      "commandPurpose": "FAILED missing lib/routes.ts discovery; corrected",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 469,
+      "numericExit": 0,
+      "commandPurpose": "Correct App router discovery and broad queue roots",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 482,
+      "numericExit": 0,
+      "commandPurpose": "Actual lazy/route and direct small helper/DTO/timezone reads",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 497,
+      "numericExit": 0,
+      "commandPurpose": "Date/units/hidden state and queue scope",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 510,
+      "numericExit": 1,
+      "commandPurpose": "FAILED missing types/settings.ts discovery; corrected",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 511,
+      "numericExit": 0,
+      "commandPurpose": "All bounded frontend lexical rule scans26files",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 541,
+      "numericExit": 0,
+      "commandPurpose": "Corrected capability/preference/hook scans; broad queue matches",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 568,
+      "numericExit": 0,
+      "commandPurpose": "Bounded time/hook/queue rows; superseded broad dedup",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 569,
+      "numericExit": 0,
+      "commandPurpose": "Single-line77-key lookup; category/security scan",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 622,
+      "numericExit": 0,
+      "commandPurpose": "Complete197-key lookup; CaseSensitive URLs; actual FIX owner columns; ignore declaration",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 664,
+      "numericExit": 0,
+      "commandPurpose": "Complete numbered3939-line source snapshots;26pins/frames/actions",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 858,
+      "numericExit": 1,
+      "commandPurpose": "FAILED command launch os206 filename/extension too long; command never executed; split report assembly",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 881,
+      "numericExit": 0,
+      "commandPurpose": "Report core26pins/queue/10sections JSON assembly",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 901,
+      "numericExit": 0,
+      "commandPurpose": "Six confirmed source roots and owners",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": 927,
+      "numericExit": 0,
+      "commandPurpose": "Three candidates and numeric/state/action/scan closure",
+      "rawOutput": "Tool transcript and ignored raw log preserve output; exact check command labels/patterns in log"
+    },
+    {
+      "shellId": "CURRENT",
+      "numericExit": 0,
+      "commandPurpose": "Instruction/support pins plus final JSON/pin/count validation",
+      "rawOutput": "Final numeric output below retained verbatim in raw log"
+    }
+  ],
+  "validation": {
+    "reproExecution": "NOTRUN",
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "globalTypeScript": "NOTRUN",
+    "browser": "NOTRUN",
+    "screenshots": "NOTRUN",
+    "native": "NOTRUN",
+    "api": "NOTRUN",
+    "finalJsonParse": "PASS (native ConvertFrom-Json only; not application/test acceptance)",
+    "closingPins": "PASS:26 closing pins and24 initial pins,0drift",
+    "finalValidationUTC": "2026-10-14T01:18:38.8170154Z"
+  },
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-qa-driving-arrival-reliability.json",
+    "web\\logs\\phase6-qa-driving-arrival-reliability.log"
+  ],
+  "release": {
+    "report": null,
+    "log": null,
+    "sourceWriteClaim": "NONE",
+    "browserLock": "NONE",
+    "preview": "Parent5173 untouched; later Edge/msedge only, no downloads",
+    "noPostReturnWrites": null,
+    "allCommands": "Every bounded command completed before return; three failed discovery/launch commands preserved; no background command/service owned",
+    "releasedUTC": "2026-10-14T01:18:38.8170154Z"
+  },
+  "summary": {
+    "confirmedRoots": 6,
+    "countsByRule": [
+      {
+        "rule": "MDC-026-analysis-clock",
+        "roots": 1
+      },
+      {
+        "rule": "MDC-034-MDC-046-controller-identity",
+        "roots": 1
+      },
+      {
+        "rule": "MDC-026-initial-paused",
+        "roots": 1
+      },
+      {
+        "rule": "MDC-026-retained-trust-threading",
+        "roots": 1
+      },
+      {
+        "rule": "MDC-040-MDC-043-mobile-target",
+        "roots": 1
+      },
+      {
+        "rule": "MDC-010-MDC-011-semantic-token-adoption",
+        "roots": 1
+      }
+    ],
+    "priority": "Clock exclusion first; then controller persistence and paused/retained trust; mobile target/neutral decoration follow. No broad remigration.",
+    "mostAffectedFiles": [
+      "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+      "web\\src\\features\\driving\\components\\arrival-reliability\\",
+      "ArrivalReliabilityQueryStatus.tsx",
+      "web\\src\\features\\driving\\components\\arrival-reliability\\",
+      "ArrivalReliabilityWindowComparisons.tsx"
+    ],
+    "nativeOrPagePass": null,
+    "candidates": 3,
+    "failedDiscoveryOrLaunchCommands": 3
+  },
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr,1000)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "lines": "143-156",
+      "url": "/drives?vehicle_id=<encoded selected ID>&limit=<clamped1..1000>",
+      "queryKey": "drivingKeys.history vehicle+boundedLimit,47-48",
+      "enabled": "!!vehicleId",
+      "cancellation": "queryFn forwards AbortSignal to request",
+      "policy": "STALE_TIMES.MODERATE; inherited retries, no override",
+      "bounds": "No start/end/pagination. Current route range=false; capped returned history is intentional. No lifetime or whole-range assurance.",
+      "SI": "Drive.durationS seconds; distanceM meters unused",
+      "limits": "No API or backend ordering/cap/filter/auth verification"
+    },
+    {
+      "adapter": "analyzeArrivalReliability",
+      "file": "web\\src\\features\\driving\\lib\\arrivalReliability.ts",
+      "lines": "1-1009 FULL",
+      "scope": "Descriptive repeated directional routes; no promised arrival/traffic/weather/calendar target/driver identity/intent/holdout"
+    }
+  ],
+  "numericAndProvenance": {
+    "observations": "Same-sample allowance shares, quantiles/MAD/buffers and descriptive0-100 index, not calibrated future probabilities. Sample-weighted route p90 buffers are not pooled fleet p90.",
+    "calendar": "IANA normalize/fallbackUTC383-393; vehicle-local Gregorian parts413-439; local Monday weeks447-460; two-hour bins699-702; weekdays/months from local start.",
+    "timestampLimit": "463-476 accepts date-only UTC midnight and missing-offset UTC; backend timestamp contract not independently inspected. No required malformed DTO promoted.",
+    "denominators": "Aggregate successes/repeatedDrives974-977; coverage=repeatedDrives/includedRows859-860; concentration=largest/included882-883; unsupported included population explicit. Counts and thresholds exposed.",
+    "accounting": "Each returned row included or one exclusive incomplete/invalid-order/future/invalid-duration/unlocatable exclusion; returned cap not lifetime completeness.",
+    "unknownZero": "Unsupported aggregate/null profiles stay null; empty bins measured count0 only. Unresolved summary raw null. Resolved count0 and model support0 are not fabricated physical readings. Negative/nonpositive trip duration invalid; valid p90buffer0 preserved.",
+    "SI": "Raw duration seconds retained in hook/cache/model; useUnits.formatDuration only at render; ratios percent and spans days explicit. No legacy source-unit converter, physical sign, price or energy reinterpretation.",
+    "preferences": "Locale/global precision/useUnits retained; no chart ID reset. ARR-C01 limits date preference claims."
+  },
+  "states": {
+    "sourceCount": 1,
+    "noVehicle": "All10 shells; null summary; explicit select instruction; no stale other-vehicle analysis",
+    "activeInitial": "Summary suppression/live loading/section skeletons",
+    "initialPaused": "ARR-003 missing truthful deferred-initial state",
+    "fatal": "fatalError only with no retained data; domain QueryError retry, passive bodies; methodology retained",
+    "retainedError": "Payload preserved; top warning/retry; ARR-004 nested labels",
+    "retainedPaused": "Top nonfatal warning, no invented offline cause; ARR-004 labels",
+    "empty": "Explicit no returned drives; no qualified rows distinct; no three-sample route/window distinct",
+    "soleWindow": "No highest-versus-lowest claim",
+    "cap": "Summary/status/quality qualify1000 latest rows",
+    "execution": "NOTRUN"
+  },
+  "actions": [
+    {
+      "name": "Initial failure retry",
+      "mechanism": "QueryStatus61-65 -> page69 -> query.refetch",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Retained failure retry",
+      "mechanism": "QueryStatus83-90 -> page69",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Retained paused refresh",
+      "mechanism": "Page83-85 -> StaleRefreshWarning91-114 -> state.retry",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Five chart exports",
+      "mechanism": "Outer ready gates -> ChartContainer476-496,712-721 PNG/SVG/clipboard",
+      "limits": "No exportData supplied: CSV not declared; fullscreen not opted in. No export execution."
+    },
+    {
+      "name": "Legend toggles",
+      "mechanism": "Consistency2/bands3/each profile3 series incl counts; semantic ChartLegend112-138; ARR-002 shared controller identity",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Metric explanations/details",
+      "mechanism": "Existing OperationalBrief adapters;6summary/window quantities/3quality groups",
+      "execution": "NOTRUN; shared drawer not fully audited"
+    },
+    {
+      "name": "Workspace vehicle/display settings",
+      "mechanism": "Page38-42,71-72; workspaceScope actual route; header/mobile drawer shared owner",
+      "execution": "NOTRUN; no local selectors/mutations"
+    }
+  ],
+  "responsive": {
+    "declarations": "Page default1/xl2; window cards1/md2/xl3; directory metrics2/sm4/xl8; methodology1/md2/xl4;5outer charts360 responsive containers",
+    "matrix": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "additional": "Narrow allocated cards, RTL, long labels,200% text, themes/forced colors, safe area/chrome, low bandwidth/reduced motion",
+    "limits": "NOTRUN; no viewport rectangles or mobile pass; ARR-005 source minimum gap; ARR-C02 collision candidate"
+  },
+  "accessibility": {
+    "source": "PageLayout forwards real PageContainer with route-focus heading; semantic section/article/typography; localized chart aria labels/descriptions and data columns; shared legend Button aria-pressed/mobile44; decorative inspected icons hidden; loading polite and retained error alert",
+    "alternatives": "ChartContainer forced-colors graphical hiding and fallback tables declared; not exercised",
+    "limits": "Keyboard/focus/screen reader/contrast/OS forced-colors/motion/device acceptance NOTRUN; loader low-bandwidth suppression not established"
+  },
+  "i18n": {
+    "presentationFiles": 25,
+    "literalKeys": 197,
+    "missingCanonicalKeys": 0,
+    "method": "Multiline literal t-key regex + canonical en.json JSON lookup",
+    "limits": "No fallback/plural parity, generator/startup/translation runtime pass; no catalog writes"
+  },
+  "importsAndTokens": {
+    "barrels": "Category APIs;3type-only stat-reference subbarrels acceptable",
+    "exceptions": "Shared ChartLegend direct recharts and Button raw button are valid building-block boundaries",
+    "container": "PageLayout1-17 -> real PageContainer, not missing wrapper",
+    "styles": "No inline style in26files. Recharts stroke CSS vars/CHART_COLORS data paint acceptable; ARR-006 fixed decoration source gap"
+  },
+  "boundedScan": {
+    "files": 26,
+    "staticInlineStyle": 0,
+    "rawHtml": 0,
+    "directLibraryImport": 0,
+    "oldApiImport": 0,
+    "doublePrefix": 0,
+    "camelcaseParamCaseSensitive": 0,
+    "fetchUseEffect": 0,
+    "hiddenConditionalCandidate": 1,
+    "hiddenDisposition": "Page83 stale notice, not hidden section",
+    "englishCandidate": 1,
+    "englishDisposition": "Analyzer495 <= expression false positive",
+    "wrapperMatches": 1,
+    "fixedColorMatches": 6,
+    "mountedFixedColors": 5,
+    "legacyFixedColors": 1,
+    "rawSections": 11,
+    "rawActionPatternMatches": 9,
+    "exactFrameSectionActionLines": 25,
+    "correctedFullHookUrlLoadingMatches": 0,
+    "exit": 0,
+    "limits": "Lexical/manual source classification, not official scanner/parser/lint or executed QA"
+  },
+  "queueDedup": {
+    "method": "Current row/column-specific Phase6 FIX owner scan",
+    "fixRows": 1,
+    "item": "phase6-fix-advanced-evidence-date-preferences",
+    "sameScope": null,
+    "files": "Advanced-intelligence EvidencePanel/AnalysisBrief sources and tests only",
+    "newConfirmedNeeds": 6,
+    "historicalReused": "audit-page-103 controller/retained/style/target observations rechecked; not fresh runtime",
+    "limit": "Shared queue can change; parent reread before dispatch"
+  },
+  "evidenceLimits": [
+    "SOURCE QA delivery only; page/native/mission43-45/application PASS NOT CLAIMED.",
+    "ALL repros/tests/lint/build/globalTSC/browser/screenshots/native/API NOTRUN; no device/identity/location/real-data/mutation/network access, Git/subagents/installs/servers/Docker/helpers/extensions/heartbeat.",
+    "Only assigned report/rawlog written; source/tests/catalog/backend/config/queue/handoff readonly. No whole-tree Git status verification.",
+    "No malformed required DTO promoted; valid later completed Drive, structural query states, canonical controller and Button declarations support findings.",
+    "Backend list/filter/cap/order/auth and endpoint population unverified. Current bounded-history route range-disabled; adding range changes analysis and is not assigned.",
+    "Two missing-path discovery exit1 failures and one oversized report command launch exit1 preserved. Corrected scans0; no hidden failures.",
+    "Full orchestrator/design contract read; current queue phase supersedes stale handoff. Inherited test/lint/compiler/native receipts not promoted.",
+    "Parent5173 untouched; no browser lock. Later browser Edge/msedge only, no downloads."
+  ],
+  "instructionPins": [
+    {
+      "file": "docs\\orchestrator-loop.md",
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "lines": 296,
+      "readScope": "FULL"
+    },
+    {
+      "file": "docs\\frontend-design-contract.md",
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "lines": 2539,
+      "readScope": "FULL"
+    },
+    {
+      "file": "docs\\session-handoff.md",
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "lines": 2460,
+      "readScope": "1990-2186 plus final200 lines, latest continuation; current queue supersedes phase counts"
+    },
+    {
+      "file": "docs\\frontend-mission.md",
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "lines": 1593,
+      "readScope": "1280-1600; all43-45"
+    },
+    {
+      "file": "docs\\frontend-worker-conventions.md",
+      "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "lines": 152,
+      "readScope": "FULL"
+    },
+    {
+      "file": ".github\\copilot-instructions.md",
+      "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "lines": 707,
+      "readScope": "FULL"
+    },
+    {
+      "file": ".github\\instructions\\frontend-si-cutover.instructions.md",
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "lines": 94,
+      "readScope": "FULL"
+    },
+    {
+      "file": ".github\\instructions\\react-frontend.instructions.md",
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "lines": 629,
+      "readScope": "FULL"
+    },
+    {
+      "file": ".github\\instructions\\observability.instructions.md",
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "lines": 45,
+      "readScope": "FULL"
+    },
+    {
+      "file": ".github\\instructions\\unit-conversion.instructions.md",
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "lines": 221,
+      "readScope": "FULL"
+    }
+  ],
+  "supportPins": [
+    {
+      "file": "web\\src\\App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lines": 919,
+      "readScope": "lazy99/route869 and router matches"
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168,
+      "readScope": "FULL"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "lines": 454,
+      "readScope": "1-165 plus URL/key matches; history143-156"
+    },
+    {
+      "file": "web\\src\\types\\driving.ts",
+      "sha256": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+      "lines": 411,
+      "readScope": "1-60"
+    },
+    {
+      "file": "web\\src\\lib\\timezone.ts",
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "lines": 51,
+      "readScope": "FULL"
+    },
+    {
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65,
+      "readScope": "FULL"
+    },
+    {
+      "file": "web\\src\\api\\dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434,
+      "readScope": "1-255"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17,
+      "readScope": "FULL"
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259,
+      "readScope": "1-260"
+    },
+    {
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lines": 115,
+      "readScope": "FULL"
+    },
+    {
+      "file": "web\\src\\components\\ui\\Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lines": 93,
+      "readScope": "FULL"
+    },
+    {
+      "file": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "lines": 42,
+      "readScope": "FULL"
+    },
+    {
+      "file": "web\\src\\components\\charts\\ChartHiddenSeriesContext.tsx",
+      "sha256": "1daecf7d4cfcc161a3a698ec68ba8971c6d06ba1231025a5a5e7528cd36f7594",
+      "lines": 58,
+      "readScope": "FULL"
+    },
+    {
+      "file": "web\\src\\components\\charts\\ChartLegend.tsx",
+      "sha256": "e5f0b49f6f1159224d3b000ce2c57800dc13ce33c3053dc72ee1e35b2da67095",
+      "lines": 193,
+      "readScope": "1-205"
+    },
+    {
+      "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lines": 1006,
+      "readScope": "250-365,430-500,675-738,780-844 plus key/capability matches"
+    },
+    {
+      "file": "web\\src\\hooks\\useHiddenSeries.ts",
+      "sha256": "a7cfecebbb60e53783e13dbfabcca5ca685b06f72ab6684fe3b6f712409d876e",
+      "lines": 88,
+      "readScope": "45-155 and matches"
+    },
+    {
+      "file": "web\\src\\hooks\\useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lines": 148,
+      "readScope": "FULL"
+    },
+    {
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462,
+      "readScope": "1-175 plus time matches"
+    },
+    {
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines": 194,
+      "readScope": "105-178 plus duration matches"
+    },
+    {
+      "file": "web\\src\\hooks\\useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "lines": 106,
+      "readScope": "1-170"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useSettings.ts",
+      "sha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "lines": 381,
+      "readScope": "100-152 plus preference matches"
+    },
+    {
+      "file": "web\\src\\api\\types.ts",
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "lines": 4194,
+      "readScope": "preference matches only"
+    },
+    {
+      "file": "web\\src\\lib\\routeLoaders.ts",
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "lines": 127,
+      "readScope": "ArrivalReliability lexical match scan only"
+    },
+    {
+      "file": "docs\\frontend-audits\\audit-page-103.json",
+      "sha256": "fb28b4296a18a2fc228c06566eeda50ca6b60c5ce49805a2a2cd6f03b81b2732",
+      "lines": 366,
+      "readScope": "FULL1-430 historical evidence"
+    },
+    {
+      "file": ".gitignore",
+      "sha256": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+      "lines": 130,
+      "readScope": "logs declarations only"
+    },
+    {
+      "file": "web\\src\\i18n\\en.json",
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "lines": 38994,
+      "readScope": "JSON literal197-key lookup only"
+    }
+  ],
+  "filesRead": [
+    "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityAccountingMetrics.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityCoverageMetrics.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityDepartureWindowProfile.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceMetricGroup.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceMetrics.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceQuality.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityKpiBand.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMethodology.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMonthTrend.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityProfilePlot.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityQueryStatus.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityRouteDirectory.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilitySectionBody.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilitySupportMetrics.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityTimingBandsChart.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityTimingConsistencyChart.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityWeekdayProfile.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityWindowComparisons.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\index.ts",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\labels.ts",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\types.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ArrivalEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\features\\driving\\lib\\arrivalReliability.ts",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\copilot-instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\lib\\timezone.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartHiddenSeriesContext.tsx",
+    "web\\src\\components\\charts\\ChartLegend.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\hooks\\useHiddenSeries.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\lib\\routeLoaders.ts",
+    "docs\\frontend-audits\\audit-page-103.json",
+    ".gitignore",
+    "web\\src\\i18n\\en.json",
+    "migration-queue.md"
+  ],
+  "rawLog": "web\\logs\\phase6-qa-driving-arrival-reliability.log"
+}

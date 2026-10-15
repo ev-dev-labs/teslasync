@@ -1,0 +1,1156 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-power-user-grafana-panel",
+  "attempt": 1,
+  "actor": "7540c08c-50e0-4207-9157-e338ba5aef9d",
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "page": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+  "routes": [
+    "/power/grafana"
+  ],
+  "purpose": "Manual persistent JSON composer and bundled references, optional propose-only Helix; NOT a Grafana embed, proxy, datasource browser, SQL executor or connectivity/readiness viewer.",
+  "primaryGoal": "Write/paste or explicitly apply proposed panel JSON; review reference facts; copy trimmed JSON for manual paste into own Grafana editor.",
+  "timing": {
+    "firstObservedUTC": "2026-10-14T01:55:00.1844577Z",
+    "reservedUTC": "2026-10-14T01:47:59.989Z",
+    "returnDeadlineUTC": "2026-10-14T02:07:59.989Z",
+    "hardDeadlineUTC": "2026-10-14T02:12:59.989Z",
+    "note": "Earlier reservation deadlines respected; no clock renewal."
+  },
+  "scope": {
+    "readOnly": "Accepted page/direct supports/four test sources and governing evidence",
+    "ownedFiles": [
+      "docs/frontend-audits/phase6-qa-power-user-grafana-panel.json",
+      "web/logs/phase6-qa-power-user-grafana-panel.log"
+    ],
+    "sourceTestCatalogGitWrites": false,
+    "externalGrafanaApiAuthTokenNetworkBrowserAccess": false,
+    "subagentsInstallsServersCustomHelpers": false
+  },
+  "governingEvidence": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "read": "FULL1-296; sole playbook/worker contract"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "read": "Core1-655; MDC001/002/010-034/040-047/050-052/060/070/080; unrelated later addenda not claimed fully read"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "read": "Relevant1-1198,1320-1593; preservation/state/architecture/mobile/a11y/QA/definitions of done"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "read": "Exact page215, sharedG060415, integrationG158513; existing inventory reused"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "read": "Current1-48 and conventions2219-2251"
+    },
+    {
+      "file": "migration-queue.md",
+      "read": "Exact initial61/553/963/1999; latest actor43 and item125; attempt1 two-artifact/source-only scope; concurrent parent moved lines"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "read": "FULL1-152; current playbook/user restrictions supersede old helper/heartbeat practices"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "read": "FULL1-707; honesty/engineering checks; prohibited global TSC explicitly NOTRUN"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "read": "FULL1-630; shared boundaries/mobile/a11y"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "read": "FULL; canonical SI"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "read": "1-240; legacy examples superseded by current SI contract; no conversions introduced"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-164.json",
+      "read": "Historical requiredSharedChanges parsed; reuse G158, not runtime proof"
+    },
+    {
+      "file": ".agents/state.md",
+      "read": "Historical attempted read overflow450.5KB; not current queue authority"
+    }
+  ],
+  "dataSources": [
+    {
+      "name": "Manual draft",
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "lines": [
+        37,
+        166,
+        175,
+        193,
+        232
+      ],
+      "source": "React local state and best-effort origin-local key ai.grafanaPanel.draft; no live query/vehicle/date scope"
+    },
+    {
+      "name": "Catalogs",
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "lines": [
+        74,
+        85,
+        100,
+        205,
+        278
+      ],
+      "source": "Bundled static constants and copied alphabetical sorting, not measured install connectivity",
+      "counts": {
+        "panelTypes": 8,
+        "datasources": 2,
+        "tables": 5,
+        "columns": 33
+      }
+    },
+    {
+      "name": "Count preferences",
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "lines": [
+        14,
+        17,
+        22
+      ],
+      "source": "useUnits/useFormatting and pure formatOperationalMetrics; dimensionless counts; no measured physical values"
+    },
+    {
+      "name": "Optional AI",
+      "file": "web/src/components/ai/AINLGrafanaPanel.tsx",
+      "lines": [
+        149,
+        151,
+        158,
+        168,
+        174
+      ],
+      "source": "Explicit Draft POST trimmed {prompt}, canonical useAiStream, local tool-result capture, explicit Apply callback",
+      "hookUrl": "/ai/power/grafana-panel/draft",
+      "constructedEndpoint": "POST /api/v1/ai/power/grafana-panel/draft",
+      "scope": "Prompt-local; no query parameters/iframe/embed/dashboard identity; no scopeKey",
+      "endpointEvidence": "Source and mocked test expectations only; backend registration/live readiness NOT verified"
+    },
+    {
+      "name": "Gate",
+      "file": "web/src/hooks/useAiEnabled.ts",
+      "lines": [
+        31,
+        34,
+        35,
+        38
+      ],
+      "source": "Settings/feature fail closed; withAiFeature mounts Inner only when enabled; no automatic stream start"
+    },
+    {
+      "name": "Clipboard",
+      "file": "web/src/components/ui/CopyButton.tsx",
+      "lines": [
+        83,
+        95,
+        115
+      ],
+      "source": "User gesture and generation-guarded feedback; no Grafana push/SQL execution"
+    }
+  ],
+  "components": [
+    "PageLayout -> PageContainer",
+    "Grid",
+    "OperationalBrief -> Drawer",
+    "useOperationalMetrics -> formatOperationalMetrics",
+    "AINLGrafanaPanel -> withAiFeature/AIFeatureCard/AiOutputPanel/useAiStream",
+    "Button/CopyButton/Textarea/GlassPanel/Icon/PanelTitle/Text/Code",
+    "OrderedStepList/InlineCallout/EmptyState/FadeIn"
+  ],
+  "preservation": {
+    "pageLines": 550,
+    "pageTestLines": 509,
+    "directGlassPanels": 5,
+    "alwaysVisiblePanelSurfaces": 6,
+    "optionalAiPanels": 1,
+    "workflowInstructions": 3,
+    "sections": [
+      {
+        "name": "Static catalog summary",
+        "line": 303
+      },
+      {
+        "name": "Optional Helix drafter",
+        "line": 320
+      },
+      {
+        "name": "Manual JSON editor",
+        "line": 326
+      },
+      {
+        "name": "Workflow guidance",
+        "line": 375
+      },
+      {
+        "name": "Panel types",
+        "line": 413
+      },
+      {
+        "name": "Datasource types",
+        "line": 446
+      },
+      {
+        "name": "Five tables and33 ordered columns",
+        "line": 493
+      }
+    ],
+    "actions": [
+      {
+        "name": "Copy",
+        "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+        "line": 347,
+        "mechanism": "Non-whitespace guard, trims only copied text, success/failure feedback and manual-copy fallback"
+      },
+      {
+        "name": "Clear",
+        "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+        "line": 357,
+        "mechanism": "Explicit empty editor/status; storage removal via effect"
+      },
+      {
+        "name": "Review details",
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "line": 160,
+        "mechanism": "Open existing Drawer; no apply/copy/clear"
+      },
+      {
+        "name": "Close details",
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "line": 248,
+        "mechanism": "onClose sets false; physical focus delegated/NOTRUN"
+      },
+      {
+        "name": "Draft panel",
+        "file": "web/src/components/ai/AINLGrafanaPanel.tsx",
+        "line": 168,
+        "mechanism": "Guard prompt/stream; clear local proposal; start stream only on click"
+      },
+      {
+        "name": "Apply to editor",
+        "file": "web/src/components/ai/AINLGrafanaPanel.tsx",
+        "line": 174,
+        "mechanism": "Explicit onApply; page236 serializes draft.panel and resets status, not import validation"
+      }
+    ],
+    "actionCount": 6,
+    "si": "Keep distance_m,duration_s,energy_used_wh,regen_wh,avg_speed_mps,max_speed_mps,energy_added_wh,max_power_w,num_value identities, SI/null/PII descriptions, raw JSON and signs; no source physical values converted. Existing preference formatter reused; locale/currency/timezone/font/theme runtime unverified.",
+    "identity": "All8 types/2 datasource types+UIDs/5 tables/33 columns and original per-table order preserved. Code identifiers/types/UIDs are not translation targets. Enum-only descriptions127/150 preserved and excluded from English-prose count.",
+    "baseline": "Within-audit hashes prove stable inspected inputs, not uninspected original Git/deployment parity; accepted historical source remains accepted, not native QA."
+  },
+  "states": {
+    "static": "Ready synchronously; loading/fatal/refresh-retained/initial-paused N/A to constants. No fabricated readings/status/last-success dates.",
+    "trust": "Page308-312 neutral Static reference, bundled scope, no live measurement/connectivity/row counts and no-push provenance. Copy success means clipboard only; Apply is proposal transfer; readiness unknown.",
+    "empty": "Empty editor visible, Copy/Clear disabled; three static catalog EmptyState fallbacks retain shells; AI done-empty explicitly No output was generated.",
+    "loading": "Streaming shared pending output/busy-disabled Draft; Apply disabled while streaming if draft exists. Canonical hook aborts on unmount; mounting does not POST.",
+    "fatal": "Shared AI role=alert for initial/error stream; manual editor/catalogs survive. Clipboard absence/rejection warning/danger retains draft. Backend/auth causes unprobed.",
+    "retained": "Copy denial retains exact draft; changed text invalidates pending copy feedback. AiOutputPanel retains failed-stream deltas with error first. New Draft explicitly clears prior proposal, not retained query refresh data.",
+    "initialPaused": "No direct TanStack lifecycle surfaced. Unresolved settings fail closed only optional AI. Offline/initial-paused settings health unknown, not invented server failure. AI paused-confirm is distinct conditional C02, not TanStack initial-paused.",
+    "unknown": "Install UIDs/connectivity/backend validation/Grafana import/auth/permissions UNKNOWN; counts never establish these facts.",
+    "identity": "Editor useId/visible label/described-by stable; proposal versus editable current prompt needs conditional C01 review. Static references require no vehicle/date filter."
+  },
+  "testsEvidence": {
+    "status": "NOTRUN",
+    "authoredDeclarations": {
+      "page": 18,
+      "aiOff": 4,
+      "aiOnWiring": 2,
+      "sharedDrafter": 25,
+      "total": 49
+    },
+    "expandedSourceCases": 51,
+    "expansion": "Page17 ordinary it + it.each3=20; others4+2+25=31; authored counts NOT runner discovery",
+    "actualRunnerCounts": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "coverage": "Source assertions for editor label/description, exact ordered catalog columns, mobile classes/icons, passive workflow, copy denial/retry/stale settlement, summary/details/persistence/trim/clear/apply; AI off/unresolved baseline, mocked route/body/double submit, parser filtering/default arrays, explicit apply/long RTL. No tests run.",
+    "historical": "Queue rescue20/20 and shared25/25 retained as historical source receipts only; raw runner artifacts not freshly inspected; previous failed attempts preserved; no passing reruns."
+  },
+  "evidenceLimits": [
+    "Source traces only, no executed browser/test/SQL/PromQL/Grafana reproduction.",
+    "No external Grafana/API/auth/token/network/browser/storage-content access; hook import declarations only, not credentials/auth implementation.",
+    "NOTRUN fresh/scoped/full tests, lint, build, npx tsc --noEmit/global typing, custom/scanner/preservation helpers, servers, installs, Git/subagents/native captures. No all-checks-pass or TypeScript-pass claim.",
+    "Grep zeros are narrow pattern results, not AST/security/runtime proof.",
+    "Broad doc probes overflow450.5KB/825.5KB; relevant narrow reads substitute, not full historical read claims.",
+    "Actual path-discovery command1875 exit1; correct operationalMetrics.tsx found/read once. Actual oversized report launch2119 exit1/os206; bounded artifact writes substituted. Neither is a test/source failure/pass.",
+    "No full-tree attribution/Git scan; only two authorized artifact writes by this worker; concurrent parent queue changes preserved."
+  ],
+  "commands": {
+    "log": "web/logs/phase6-qa-power-user-grafana-panel.log",
+    "completedShellExits": {
+      "1737": 0,
+      "1750": 0,
+      "1762": 0,
+      "1763": 0,
+      "1778": 0,
+      "1791": 0,
+      "1802": 0,
+      "1814": 0,
+      "1827": 0,
+      "1862": 0,
+      "1875": 1,
+      "1907": 0,
+      "1923": 0,
+      "1939": 0,
+      "1961": 0,
+      "2119": 1,
+      "2128": 0,
+      "2156": 0,
+      "2181": 0
+    },
+    "checks": "Get-FileHash SHA256 before/after; Select-String explicit logged regexes/files; source/doc Get-Content and view; source it/it.each names; ConvertFrom-Json report parse and pin checks. No runners.",
+    "readTools": "Non-process read-only view operations have no numeric exit; inspected source list is sourcePins, governing ranges above."
+  },
+  "preparedUTC": "2026-10-14T02:05:18.9519126Z",
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "confidence": "source-confirmed",
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "line": 75,
+      "occurrenceCount": 46,
+      "owner": "O01+O02",
+      "mechanism": "English prose in bundled descriptions passes directly through entry.description440/482, table.description522 and col.description536, no translation adapter. Raw58 matches exclude4 interface fields/4 translated brief props/2 multiline declaration-only hits/2 enum-only descriptions.",
+      "repro": "SOURCE TRACE ONLY, not executed: non-English locale does not change literal75 -> Text440 time-series chart... or105 -> Text536 primary key. All46 sites enumerated below.",
+      "fix": "Narrow page/catalog-description localization; canonical keys/fallbacks, parent serialized English/split integration. Preserve IDs/types/UIDs/counts/ordered columns/SI/PII/null/raw JSON; no edits here.",
+      "occurrences": [
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 75,
+          "source": "{ name: 'timeseries', description: 'time-series chart (default for any time-vs-value query)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 76,
+          "source": "{ name: 'stat', description: 'single-value big-number stat panel (latest sample of one metric)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 77,
+          "source": "{ name: 'gauge', description: 'single-value gauge with min/max bounds' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 78,
+          "source": "{ name: 'table', description: 'tabular result of an SQL/PromQL query' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 79,
+          "source": "{ name: 'barchart', description: 'categorical bar chart' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 80,
+          "source": "{ name: 'heatmap', description: 'two-dimensional heatmap (e.g. histograms over time)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 81,
+          "source": "{ name: 'piechart', description: 'categorical pie chart' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 82,
+          "source": "{ name: 'logs', description: 'log-line stream (for text-shaped data)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 90,
+          "source": "'TimescaleDB postgres instance — for queries against the curated table catalog below',",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 96,
+          "source": "\"Prometheus instance — for PromQL queries against TeslaSync's metrics endpoint\",",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 103,
+          "source": "description: 'Per-trip aggregates for completed drives',",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 105,
+          "source": "{ name: 'id', type: 'bigint', description: 'primary key' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 106,
+          "source": "{ name: 'vehicle_id', type: 'bigint', description: 'vehicle this drive belongs to' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 107,
+          "source": "{ name: 'started_at', type: 'timestamptz', description: 'drive start UTC' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 108,
+          "source": "{ name: 'ended_at', type: 'timestamptz', description: 'drive end UTC' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 109,
+          "source": "{ name: 'distance_m', type: 'double precision', description: 'distance meters (SI)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 110,
+          "source": "{ name: 'duration_s', type: 'double precision', description: 'duration seconds (SI)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 111,
+          "source": "{ name: 'energy_used_wh', type: 'double precision', description: 'energy watt-hours (SI)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 112,
+          "source": "{ name: 'regen_wh', type: 'double precision', description: 'regen watt-hours' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 113,
+          "source": "{ name: 'avg_speed_mps', type: 'double precision', description: 'avg speed m/s (SI)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 114,
+          "source": "{ name: 'max_speed_mps', type: 'double precision', description: 'max speed m/s' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 119,
+          "source": "description: 'Per-charge aggregates for completed charging sessions',",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 121,
+          "source": "{ name: 'id', type: 'bigint', description: 'primary key' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 122,
+          "source": "{ name: 'vehicle_id', type: 'bigint', description: 'vehicle being charged' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 123,
+          "source": "{ name: 'started_at', type: 'timestamptz', description: 'session start UTC' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 124,
+          "source": "{ name: 'ended_at', type: 'timestamptz', description: 'session end UTC' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 125,
+          "source": "{ name: 'energy_added_wh', type: 'double precision', description: 'energy added watt-hours (SI)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 126,
+          "source": "{ name: 'cost_cents', type: 'bigint', description: 'session cost in user-currency cents' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 128,
+          "source": "{ name: 'max_power_w', type: 'double precision', description: 'peak power watts' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 133,
+          "source": "description: 'Vehicle metadata',",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 135,
+          "source": "{ name: 'id', type: 'bigint', description: 'primary key' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 136,
+          "source": "{ name: 'vin', type: 'text', description: 'Tesla VIN (PII)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 137,
+          "source": "{ name: 'display_name', type: 'text', description: 'user-chosen display name (PII)' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 138,
+          "source": "{ name: 'model', type: 'text', description: 'model code' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 139,
+          "source": "{ name: 'color', type: 'text', description: 'exterior color slug' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 144,
+          "source": "description: 'User-defined alerts that have fired',",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 146,
+          "source": "{ name: 'id', type: 'bigint', description: 'primary key' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 147,
+          "source": "{ name: 'vehicle_id', type: 'bigint', description: 'vehicle the alert fired for' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 148,
+          "source": "{ name: 'alert_rule_id', type: 'bigint', description: 'alert rule that fired' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 149,
+          "source": "{ name: 'fired_at', type: 'timestamptz', description: 'fire timestamp UTC' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 155,
+          "source": "description: 'Telemetry signal history exposed as a stable view',",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 157,
+          "source": "{ name: 'vehicle_id', type: 'bigint', description: 'vehicle the signal belongs to' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 158,
+          "source": "{ name: 'signal_name', type: 'text', description: 'canonical signal name' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 159,
+          "source": "{ name: 'ts', type: 'timestamptz', description: 'sample timestamp UTC' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 160,
+          "source": "{ name: 'num_value', type: 'double precision', description: 'numeric value (SI), null if non-numeric' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        },
+        {
+          "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+          "line": 161,
+          "source": "{ name: 'str_value', type: 'text', description: 'string value, null if numeric' },",
+          "rule": "hardcoded-string",
+          "owner": "O01+O02"
+        }
+      ]
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "rule": "request-result-identity",
+      "owner": "O03",
+      "file": "web/src/components/ai/AINLGrafanaPanel.tsx",
+      "line": 201,
+      "relatedLines": [
+        144,
+        149,
+        158,
+        166,
+        170,
+        235
+      ],
+      "mechanism": "Prompt edits only setPrompt; prior draft clears only on Draft. No scopeKey/captured-prompt attribution rendered; proposal stays applicable beside edited prompt.",
+      "repro": "NOT EXECUTED hypothetical fixture sequence: complete A, edit input B without Draft, Apply forwards stored A; or edit while A streams. Product requirement whether independent old proposal retention is intentional remains unknown.",
+      "needs": "Existing G158 adjudication; show captured prompt or reconcile request identity only in separately queued scope. Do not invent vehicle/date scope for static builder."
+    },
+    {
+      "id": "C02",
+      "rule": "proposal-trust-readiness",
+      "owner": "O03",
+      "file": "web/src/components/ai/AINLGrafanaPanel.tsx",
+      "line": 152,
+      "relatedLines": [
+        153,
+        154,
+        164,
+        166,
+        168,
+        174
+      ],
+      "mechanism": "Capture ignores ev.ok; accepts data.status ok. canApply only draft && !streaming, not done/error/paused-confirm. Hook provenance uses ev.ok; valid draft then error/incomplete can retain Apply; paused-confirm has no continuation UI.",
+      "repro": "NOT EXECUTED: contradictory ok=false/data.status=ok or valid result then error/incomplete/confirm_request. Source guard permits local Apply outside streaming; paused Draft can clear proposal then hook running guard refuse restart. Producer guarantee/reachability unknown, not demonstrated production failure.",
+      "needs": "Review producer contract and retained-valid versus invalid proposal policy; preserve manual fallback and explicit user apply. Owner deduplicated with C01/C03."
+    },
+    {
+      "id": "C03",
+      "rule": "normalization-and-import-compatibility",
+      "owner": "O03",
+      "file": "web/src/components/ai/AINLGrafanaPanel.tsx",
+      "line": 103,
+      "relatedLines": [
+        106,
+        109,
+        115,
+        116,
+        121,
+        122,
+        132
+      ],
+      "mechanism": "Malformed targets filtered, missing targets default[], table strings filtered, grid typeof-number only; emits ref_id/raw_sql/grid_pos. Not Grafana validation. Existing tests250/269 explicitly demand filtering/defaults despite strict/drop-whole prose.",
+      "repro": "NOT EXECUTED source trace mixed valid ref_id target + missing-ref_id target -> latter dropped; missing targets ->[]. Numeric grid bounds/finite validation and actual Grafana naming/UID compatibility unknown.",
+      "needs": "Reuse historical G158 typed/catalog integration owner; preserve tested normalization, no assertion weakening or speculative remapping/new parser."
+    },
+    {
+      "id": "C04",
+      "rule": "best-effort-persistence-local-identity",
+      "owner": "O01",
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "line": 184,
+      "relatedLines": [
+        37,
+        168,
+        170,
+        178,
+        180,
+        232,
+        291
+      ],
+      "mechanism": "Storage read failures return empty, write/remove errors swallowed; no persistence-unavailable notice. Single origin key not account-scoped in inspected page. In-memory editing/copy remain usable. Whitespace-only draft disables Clear but textarea can empty it.",
+      "repro": "NOT EXECUTED: denied/quota storage, edit then reload; saving not guaranteed. Shared-origin account-switch exposure depends on uninspected session policy; no auth leak/token claim or access.",
+      "needs": "Page/session policy review; preserve canonical key/raw draft and non-destructive fallback, warning only if separately authorized."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "N01",
+      "rule": "mobile-container-geometry",
+      "owner": "O04",
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "line": 325,
+      "relatedLines": [
+        346,
+        351,
+        360,
+        430,
+        472,
+        512,
+        527
+      ],
+      "source": "min-w-0/max-w-full, wrapping, base1/xl3 Grid, sm2/3xl3 local grid, auto-fit min(min(100%,18rem)); below-md min-h-11 manual/AI controls. AI preview break-words lacks anywhere; narrower allocation risk not measured.",
+      "repro": "NOTRUN320/375/390/430/768/1024/1280/1440/1920/2560px, narrow allocated containers, long UID/prompt/JSON/translations/RTL/200% scaling, drawer open/scroll. Classes do not establish overflow/hit-area acceptance."
+    },
+    {
+      "id": "N02",
+      "rule": "native-a11y-theme-motion",
+      "owner": "O04",
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "line": 332,
+      "relatedFiles": [
+        "web/src/components/ui/Textarea.tsx:49-62,99",
+        "web/src/components/feedback/InlineCallout.tsx:111",
+        "web/src/components/ui/CopyButton.tsx:149",
+        "web/src/components/motion/FadeIn.tsx:25-33",
+        "web/src/components/data-display/OperationalBrief.tsx:126,246"
+      ],
+      "source": "Visible localized label/useId/described-by; semantic headings/lists/code/section, decorative icons hidden, role=status callout and copy live feedback, neutral tokens/shared controls; FadeIn consumes motion preference; Drawer delegated.",
+      "repro": "NOTRUN physical Tab/Shift+Tab/Enter/Escape/focus restore, screen-reader announcements (possible duplicate copy feedback unmeasured),44x44 targets, composed dark/light/custom/OS forced-colors contrast, reduced-motion/low-bandwidth. Authored jsdom assertions not native proof."
+    },
+    {
+      "id": "N03",
+      "rule": "external-install-import-readiness",
+      "owner": "O03",
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "line": 458,
+      "relatedLines": [
+        339,
+        468
+      ],
+      "source": "Bundled UIDs/envelope references are not install-specific evidence; parse/copy do not validate schema/datasource/permissions/query results.",
+      "repro": "NOTRUN and forbidden: external Grafana/API/auth/token/network/browser/import/SQL/PromQL. Future external verification requires separate explicit authority; current source contract review only."
+    }
+  ],
+  "architectureObservations": [
+    {
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "line": 1,
+      "lines": 550,
+      "rule": "older-page-size-ceiling",
+      "detail": "Older instruction300-line ceiling exceeded; preserved static arrays/sections meaningful; observation not demonstrated regression or extraction permission."
+    },
+    {
+      "file": "web/src/components/ai/AINLGrafanaPanel.tsx",
+      "line": 1,
+      "lines": 281,
+      "rule": "older-component-size-ceiling",
+      "detail": "Older200-line ceiling exceeded; existing domain owner, no competing parser."
+    },
+    {
+      "file": "web/src/components/ai/AIFeatureCard.tsx",
+      "line": 1,
+      "lines": 352,
+      "rule": "older-component-size-ceiling",
+      "detail": "Older200-line ceiling exceeded, extensive contracts; accepted shared building block, not page-owned cleanup."
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "line": 1,
+      "lines": 321,
+      "rule": "older-component-size-ceiling",
+      "detail": "Older200-line ceiling exceeded; accepted shared summary/details owner, no new duplicate."
+    }
+  ],
+  "owners": [
+    {
+      "id": "O01",
+      "kind": "page",
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "needs": [
+        "F01 descriptive prose",
+        "C04 conditional storage policy"
+      ]
+    },
+    {
+      "id": "O02",
+      "kind": "serialized-catalog",
+      "file": "web/src/i18n/en.json",
+      "needs": [
+        "Actual F01 source-fix canonical keys and normal projections only; parent-owned"
+      ]
+    },
+    {
+      "id": "O03",
+      "kind": "existing-domain-integration",
+      "file": "web/src/components/ai/AINLGrafanaPanel.tsx",
+      "inventory": "G158/P301",
+      "needs": [
+        "C01/C02/C03 producer/identity/schema review",
+        "N03 external acceptance prohibited here"
+      ]
+    },
+    {
+      "id": "O04",
+      "kind": "existing-native-page-QA",
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "needs": [
+        "N01/N02 separate native permission/lock"
+      ]
+    }
+  ],
+  "ruleClassification": {
+    "productionFiles": 15,
+    "static-inline-style": {
+      "raw": 0,
+      "confirmed": 0
+    },
+    "raw-html": {
+      "raw": 0,
+      "confirmed": 0,
+      "exception": "Test mock controls not production UI"
+    },
+    "direct-library-import": {
+      "raw": 1,
+      "confirmed": 0,
+      "exception": "FadeIn1 existing shared motion building block"
+    },
+    "old-api-import": {
+      "raw": 0,
+      "confirmed": 0
+    },
+    "double-prefix": {
+      "raw": 6,
+      "confirmed": 0,
+      "exception": "Five comments/doc lines plus canonical prefix constructor useAiStream343; caller158 unprefixed"
+    },
+    "camelcase-param": {
+      "raw": 0,
+      "confirmed": 0
+    },
+    "hidden-section": {
+      "raw": 24,
+      "confirmed": 0,
+      "exception": "Optional status/help/actions/attention/proposal/output/metadata and class expressions; permanent panels survive, AI feature-off gate intentional"
+    },
+    "hardcoded-string": {
+      "rawPage": 58,
+      "descriptionLiterals": 48,
+      "confirmedEnglish": 46,
+      "enumExceptions": 2
+    },
+    "missing-page-container": {
+      "rawWrapper": 1,
+      "confirmed": 0,
+      "exception": "PageLayout293 -> existing PageContainer at PageLayout11"
+    },
+    "fetch-useeffect": {
+      "raw": 6,
+      "confirmed": 0,
+      "exception": "Local persistence/copy reset/stream lifecycle effects; canonical SSE fetch useAiStream349, not page ad-hoc query"
+    },
+    "backendRules": "NOT_APPLICABLE: no internal Go scope; test SQL payloads not interpolated/executed DB calls"
+  },
+  "summary": {
+    "confirmedGroups": 1,
+    "confirmedOccurrences": 46,
+    "byRule": {
+      "hardcoded-string": 46
+    },
+    "conditionalGroups": 4,
+    "nativeGroups": 3,
+    "structuralGuidelineObservations": 4,
+    "deduplicatedOwners": 4,
+    "mostIssues": "GrafanaPanelPage.tsx46 English prose sites",
+    "priority": [
+      "Narrow descriptive-prose localization + serialized canonical catalog owner",
+      "Existing G158 conditional producer/identity/schema adjudication, preserve accepted tests",
+      "Authorized mobile/a11y/native evidence still required"
+    ],
+    "needs": "Page prose localization/catalog coordination; G158 conditional contract review; native acceptance NOTRUN.",
+    "releaseMeaning": "Report/log release only; source unchanged. NOT native/visual/API/TypeScript/test/phase6/product-release acceptance."
+  },
+  "sourcePins": [
+    {
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+      "beforeSha256": "A29DA44AA8D251A207C3758B6F3F133C5B4328299335D2174D6236DD7370FF8A",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "A29DA44AA8D251A207C3758B6F3F133C5B4328299335D2174D6236DD7370FF8A",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 25273,
+      "lines": 550
+    },
+    {
+      "file": "web/src/features/power-user/pages/GrafanaPanelPage.test.tsx",
+      "beforeSha256": "8436382C69E34DCFBDAFC23FEE05D4EFBE2E2D3E969D63DF14E80FD63A2A5DEC",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "8436382C69E34DCFBDAFC23FEE05D4EFBE2E2D3E969D63DF14E80FD63A2A5DEC",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 24042,
+      "lines": 509
+    },
+    {
+      "file": "web/src/features/power-user/__tests__/TestNLGrafanaPanelAIOffManualEditorWorks.test.tsx",
+      "beforeSha256": "37355ADFDE5A2B733F4478159C878ADDA3214BA90120E9FF44CE81084E2926E2",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "37355ADFDE5A2B733F4478159C878ADDA3214BA90120E9FF44CE81084E2926E2",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 9942,
+      "lines": 277
+    },
+    {
+      "file": "web/src/features/power-user/__tests__/TestNlGrafanaPanelAIOnWiredCallsRoute.test.tsx",
+      "beforeSha256": "03E53D6F2F66DA6F2697BD8B0C4F638BAF252A769F8EAC9C0C9C5A86C4846756",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "03E53D6F2F66DA6F2697BD8B0C4F638BAF252A769F8EAC9C0C9C5A86C4846756",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 11205,
+      "lines": 303
+    },
+    {
+      "file": "web/src/components/ai/AINLGrafanaPanel.tsx",
+      "beforeSha256": "FA8B9912FCA3883D977BA1121581699CD2CA6FBD2EB5E7F3667297360A1556C1",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "FA8B9912FCA3883D977BA1121581699CD2CA6FBD2EB5E7F3667297360A1556C1",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 10667,
+      "lines": 281
+    },
+    {
+      "file": "web/src/components/ai/AIFeatureCard.tsx",
+      "beforeSha256": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 13277,
+      "lines": 352
+    },
+    {
+      "file": "web/src/components/ai/AiOutputPanel.tsx",
+      "beforeSha256": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 4830,
+      "lines": 120
+    },
+    {
+      "file": "web/src/components/ai/withAiFeature.tsx",
+      "beforeSha256": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 2255,
+      "lines": 60
+    },
+    {
+      "file": "web/src/hooks/useAiStream.ts",
+      "beforeSha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 23120,
+      "lines": 617
+    },
+    {
+      "file": "web/src/hooks/useAiEnabled.ts",
+      "beforeSha256": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 1681,
+      "lines": 39
+    },
+    {
+      "file": "web/src/components/ui/CopyButton.tsx",
+      "beforeSha256": "5C34313CBC9A8147E6F3B0000265D5340A83D7B75A4A2C9181921697DE9A3869",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "5C34313CBC9A8147E6F3B0000265D5340A83D7B75A4A2C9181921697DE9A3869",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 5307,
+      "lines": 155
+    },
+    {
+      "file": "web/src/components/ui/Textarea.tsx",
+      "beforeSha256": "6DE5EFA5B3F0077C97712BE4FC7C3B436DF47A4C803012CAE8CB0756BAD2DB75",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "6DE5EFA5B3F0077C97712BE4FC7C3B436DF47A4C803012CAE8CB0756BAD2DB75",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 4609,
+      "lines": 115
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 658,
+      "lines": 17
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "beforeSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "beforeEvidenceShell": "1814",
+      "afterSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 1161,
+      "lines": 24
+    },
+    {
+      "file": "web/src/components/ai/AINLGrafanaPanel.test.tsx",
+      "beforeSha256": "B79F2DB7A47E6CD88A6D76629E397D30432A730110EE255CA9239D33F81E581B",
+      "beforeEvidenceShell": "1862",
+      "afterSha256": "B79F2DB7A47E6CD88A6D76629E397D30432A730110EE255CA9239D33F81E581B",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 25689,
+      "lines": 674
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "beforeSha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "beforeEvidenceShell": "1875",
+      "afterSha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 11591,
+      "lines": 321
+    },
+    {
+      "file": "web/src/components/feedback/InlineCallout.tsx",
+      "beforeSha256": "3E58E0B84D4B4F18D8E214F759657AF40E6E18D8314477A232CCC92AF3CF6331",
+      "beforeEvidenceShell": "1875",
+      "afterSha256": "3E58E0B84D4B4F18D8E214F759657AF40E6E18D8314477A232CCC92AF3CF6331",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 3199,
+      "lines": 115
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "beforeSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "beforeEvidenceShell": "1875",
+      "afterSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 1493,
+      "lines": 39
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "beforeSha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "beforeEvidenceShell": "1923",
+      "afterSha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "afterUTC": "2026-10-14T02:07:12.5134125Z",
+      "matched": true,
+      "bytes": 2801,
+      "lines": 53
+    }
+  ],
+  "filesRead": [
+    "web/src/features/power-user/pages/GrafanaPanelPage.tsx",
+    "web/src/features/power-user/pages/GrafanaPanelPage.test.tsx",
+    "web/src/features/power-user/__tests__/TestNLGrafanaPanelAIOffManualEditorWorks.test.tsx",
+    "web/src/features/power-user/__tests__/TestNlGrafanaPanelAIOnWiredCallsRoute.test.tsx",
+    "web/src/components/ai/AINLGrafanaPanel.tsx",
+    "web/src/components/ai/AIFeatureCard.tsx",
+    "web/src/components/ai/AiOutputPanel.tsx",
+    "web/src/components/ai/withAiFeature.tsx",
+    "web/src/hooks/useAiStream.ts",
+    "web/src/hooks/useAiEnabled.ts",
+    "web/src/components/ui/CopyButton.tsx",
+    "web/src/components/ui/Textarea.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/components/ai/AINLGrafanaPanel.test.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/feedback/InlineCallout.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/lib/operationalMetrics.tsx"
+  ],
+  "validation": {
+    "reportJsonParsed": true,
+    "sourceTestPinsMatched": 19,
+    "sourceTestPinsTotal": 19,
+    "sourceDrift": 0,
+    "checkUTC": "2026-10-14T02:07:12.5134125Z",
+    "numericExit": 0,
+    "sourceTestsRuntimeNotRun": true,
+    "note": "Pins before/after within audit, not original Git parity. Initial source preview preceded first baseline hash; detailed QA inputs pinned before publication."
+  },
+  "release": {
+    "releasedUTC": "2026-10-14T02:07:12.5134125Z",
+    "ownedFiles": [
+      "docs/frontend-audits/phase6-qa-power-user-grafana-panel.json",
+      "web/logs/phase6-qa-power-user-grafana-panel.log"
+    ],
+    "sourceWriteClaims": "NONE; report/log claims released upon final response",
+    "runningWorkerShellsStartedByThisItem": 0,
+    "needs": "Page prose localization/catalog coordination; G158 conditional contract review; native acceptance NOTRUN.",
+    "acceptance": "SOURCE_QA_REPORT_ONLY"
+  }
+}

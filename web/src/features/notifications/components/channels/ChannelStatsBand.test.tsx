@@ -19,9 +19,8 @@
  *   3. Error — a failed stats query with nothing cached renders a compact
  *      error with retry instead of zeros that would read as healthy. Cached
  *      stats still win over the error (stale-but-honest beats blank).
- *   4. Null safety — an undefined payload degrades every count to `0` and the
- *      ratio to `0/0` (never blank, never `NaN`), and individually-missing
- *      numeric fields fall back to `0` field-by-field.
+ *   4. Numeric integrity — missing values remain unknown, measured zeros
+ *      remain zero, and the shared count API rejects invalid counts/totals.
  *   5. Accessibility — the four lucide glyphs are decorative and hidden from
  *      assistive tech.
  *
@@ -82,12 +81,14 @@ const FULL: NotificationStats = {
 
 describe('ChannelStatsBand — loaded', () => {
   it('renders all four KPI cards with their English labels', () => {
-    render(<ChannelStatsBand stats={FULL} isLoading={false} />);
+    const { container } = render(<ChannelStatsBand stats={FULL} isLoading={false} />);
 
-    expect(screen.getByText('Total Sent')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(screen.getByText('Total sent')).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(screen.getByText('Pending')).toBeInTheDocument();
-    expect(screen.getByText('Active Channels')).toBeInTheDocument();
+    expect(screen.getByText('Active channels')).toBeInTheDocument();
   });
 
   it('renders the sent / failed / pending counts and the enabled/total ratio', () => {
@@ -97,6 +98,14 @@ describe('ChannelStatsBand — loaded', () => {
     expect(screen.getByText('7')).toBeInTheDocument(); // failed
     expect(screen.getByText('3')).toBeInTheDocument(); // pending
     expect(screen.getByText('5/8')).toBeInTheDocument(); // enabled/total
+    expect(screen.getByText('Delivery counts have no reported time bounds; active channels are the configured enabled/total count.')).toBeInTheDocument();
+  });
+
+  it('retains the screenshot active-channel numerator and denominator without duplicating the band', () => {
+    const { container } = render(<ChannelStatsBand stats={{ ...FULL, enabled_channels: 1, total_channels: 1 }} isLoading={false} />);
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
+    expect(screen.getByText('1/1')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-metric="channels-active"] [data-operational-value]')).toHaveTextContent('1/1');
   });
 
   it('reads `sent` (successful deliveries), never the misnamed `total_sent`', () => {
@@ -122,8 +131,8 @@ describe('ChannelStatsBand — loading', () => {
     expect(region).toHaveAttribute('aria-busy', 'true');
     expect(region).toHaveAttribute('aria-label', 'Loading notification statistics');
     // Four skeleton cells, and none of the metric labels leak through.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4);
-    expect(screen.queryByText('Total Sent')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(4);
+    expect(screen.queryByText('Total sent')).not.toBeInTheDocument();
   });
 
   it('keeps cached cards up during a background refetch (isLoading + stats)', () => {
@@ -131,7 +140,7 @@ describe('ChannelStatsBand — loading', () => {
     // the cards on screen instead of flashing back to the skeleton.
     render(<ChannelStatsBand stats={FULL} isLoading />);
 
-    expect(screen.getByText('Total Sent')).toBeInTheDocument();
+    expect(screen.getByText('Total sent')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
@@ -149,7 +158,7 @@ describe('ChannelStatsBand — error', () => {
     );
 
     // No zeroed cards ("Total Sent 0, Failed 0…") that would read as healthy.
-    expect(screen.queryByText('Total Sent')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total sent')).not.toBeInTheDocument();
     expect(screen.queryByText('Failed')).not.toBeInTheDocument();
     const retry = screen.getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
@@ -159,32 +168,103 @@ describe('ChannelStatsBand — error', () => {
   it('keeps cached stats up when a background refetch errors', () => {
     render(<ChannelStatsBand stats={FULL} isLoading={false} error={new Error('stats down')} />);
 
-    expect(screen.getByText('Total Sent')).toBeInTheDocument();
+    expect(screen.getByText('Total sent')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 });
 
 describe('ChannelStatsBand — null safety', () => {
-  it('degrades every count to 0 and the ratio to 0/0 for an undefined payload', () => {
-    render(<ChannelStatsBand stats={undefined} isLoading={false} />);
+  it('keeps all four missing metrics and their reasons for an undefined payload', () => {
+    const { container } = render(<ChannelStatsBand stats={undefined} isLoading={false} />);
 
-    // Not the skeleton (not loading) and not blank — three zeroed counts…
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(screen.getAllByText('0')).toHaveLength(3);
-    // …plus the degraded ratio, and the labels still render.
-    expect(screen.getByText('0/0')).toBeInTheDocument();
-    expect(screen.getByText('Active Channels')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.getAllByText('No measurement supplied')).toHaveLength(4);
+    expect(screen.queryByText('0/0')).not.toBeInTheDocument();
+    expect(screen.getByText('Active channels')).toBeInTheDocument();
   });
 
-  it('falls back to 0 for individually-missing numeric fields', () => {
-    // Only `sent` is present; every other figure must independently degrade.
-    const partial = { sent: 9 } as unknown as NotificationStats;
-    render(<ChannelStatsBand stats={partial} isLoading={false} />);
+  it('keeps individually-missing numeric fields unknown while retaining valid siblings', () => {
+    const partial: NotificationStats = JSON.parse('{"sent":9}');
+    const { container } = render(<ChannelStatsBand stats={partial} isLoading={false} />);
 
-    expect(screen.getByText('9')).toBeInTheDocument(); // sent survives
-    expect(screen.getAllByText('0')).toHaveLength(2); // failed + pending
-    expect(screen.getByText('0/0')).toBeInTheDocument(); // enabled/total
+    expect(screen.getByText('9')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('keeps explicit null inputs unknown rather than measured zero', () => {
+    const stats: NotificationStats = JSON.parse(
+      '{"sent":null,"failed":null,"pending":null,"enabled_channels":null,"total_channels":null}',
+    );
+    const { container } = render(<ChannelStatsBand stats={stats} isLoading={false} />);
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(screen.getAllByText('No measurement supplied')).toHaveLength(4);
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('rejects numeric strings rather than coercing them into counts', () => {
+    const stats: NotificationStats = JSON.parse(
+      '{"sent":"12","failed":"0","pending":"3","enabled_channels":"5","total_channels":8}',
+    );
+    const { container } = render(<ChannelStatsBand stats={stats} isLoading={false} />);
+    expect(container.querySelectorAll('[data-value-state="invalid"]')).toHaveLength(4);
+    expect(screen.getAllByText('Expected a finite numeric measurement')).toHaveLength(4);
+  });
+
+  it.each(['enabled_channels', 'total_channels'] as const)('keeps the ratio unknown when %s is missing', field => {
+    const partial = { ...FULL };
+    Reflect.deleteProperty(partial, field);
+    const { container } = render(<ChannelStatsBand stats={partial} isLoading={false} />);
+    const active = container.querySelector('[data-operational-metric="channels-active"]');
+    expect(active).toHaveAttribute('data-value-state', 'missing');
+    expect(active).toHaveTextContent('No measurement supplied');
+    expect(active?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(screen.getByText('42')).toBeInTheDocument();
+  });
+
+  it('preserves measured zero including a measured 0/0 ratio', () => {
+    const { container } = render(<ChannelStatsBand stats={{
+      total_sent: 0, sent: 0, failed: 0, pending: 0, enabled_channels: 0, total_channels: 0,
+    }} isLoading={false} />);
+    expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    expect(screen.getAllByText('0')).toHaveLength(3);
+    expect(screen.getByText('0/0')).toBeInTheDocument();
+    expect(screen.queryByText('No measurement supplied')).not.toBeInTheDocument();
+  });
+
+  it.each([NaN, Infinity, -Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    'passes invalid count %s through shared validation without rounding or clamping', value => {
+      const { container } = render(<ChannelStatsBand stats={{
+        ...FULL, sent: value, failed: value, pending: value, enabled_channels: value,
+      }} isLoading={false} />);
+      expect(container.querySelectorAll('[data-value-state="invalid"]')).toHaveLength(4);
+      expect(screen.getAllByText('—')).toHaveLength(4);
+      expect(container.textContent).toContain(Number.isFinite(value)
+        ? 'Expected a non-negative safe integer count' : 'Expected a finite numeric measurement');
+    },
+  );
+
+  it.each([NaN, Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    'rejects invalid ratio total %s while retaining delivery counts', total => {
+      const { container } = render(<ChannelStatsBand stats={{ ...FULL, total_channels: total }} isLoading={false} />);
+      const active = container.querySelector('[data-operational-metric="channels-active"]');
+      expect(active).toHaveAttribute('data-value-state', 'invalid');
+      expect(active).toHaveTextContent('Expected a non-negative safe integer total');
+      expect(screen.getByText('42')).toBeInTheDocument();
+    },
+  );
+
+  it('preserves valid explicitly positive counts and signed zero', () => {
+    const { container } = render(<ChannelStatsBand stats={{
+      ...FULL, sent: +12, failed: -0, pending: +3, enabled_channels: +5, total_channels: +8,
+    }} isLoading={false} />);
+    expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('5/8')).toBeInTheDocument();
   });
 });
 
@@ -193,6 +273,17 @@ describe('ChannelStatsBand — accessibility', () => {
     const { container } = render(<ChannelStatsBand stats={FULL} isLoading={false} />);
 
     // One lucide icon per card, each hidden from assistive tech.
-    expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-operational-metric] svg[aria-hidden="true"]')).toHaveLength(4);
+  });
+
+  it('opens the shared Review details drawer with every count and its source context', () => {
+    render(<ChannelStatsBand stats={FULL} isLoading={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('Delivery counts have no reported time bounds; active channels are the configured enabled/total count.');
+    expect(drawer).toHaveTextContent('Total sent');
+    expect(drawer).toHaveTextContent('42');
+    expect(drawer).toHaveTextContent('Active channels');
+    expect(drawer).toHaveTextContent('5/8');
   });
 });

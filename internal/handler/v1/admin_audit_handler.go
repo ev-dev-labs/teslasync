@@ -5,6 +5,7 @@ package v1
 // because auditing happens as a side effect of other actions.
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -17,9 +18,16 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
+type adminAuditService interface {
+	Query(context.Context, auditviewersvc.Query) ([]auditviewersvc.Row, error)
+	DistinctCategories(context.Context) ([]string, error)
+	DistinctActions(context.Context) ([]string, error)
+	VerifyChain(context.Context, time.Time, int) (int64, int, error)
+}
+
 // AdminAuditHandler serves /admin/audit-log* routes.
 type AdminAuditHandler struct {
-	svc *auditviewersvc.Service
+	svc adminAuditService
 }
 
 // NewAdminAuditHandler wires the handler.
@@ -39,7 +47,7 @@ func (h *AdminAuditHandler) Register(r chi.Router) {
 func (h *AdminAuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	q := auditviewersvc.Query{
 		Limit:  parseIntDefault(r.URL.Query().Get("limit"), 100),
-		Offset: parseIntDefault(r.URL.Query().Get("offset"), 0) - 1, // safe: parseIntDefault returns dflt when <=0
+		Offset: parseIntDefault(r.URL.Query().Get("offset"), 0),
 	}
 	if q.Offset < 0 {
 		q.Offset = 0

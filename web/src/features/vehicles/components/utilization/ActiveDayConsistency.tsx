@@ -19,11 +19,12 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { useUtilizationDisplay } from './useUtilizationDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const MAX_VISIBLE_WEEKS = 26;
 
@@ -36,6 +37,7 @@ export function ActiveDayConsistency({
   summary,
   state,
 }: ActiveDayConsistencyProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDayShort } = useUtilizationDisplay();
   const guard = summary.sampleGuards.activeDayConsistency;
@@ -153,7 +155,7 @@ export function ActiveDayConsistency({
               'utilization.columns.observedDays',
               'Observed days',
             ),
-            format: (value) => fmtNumber(value, 1),
+            format: (value) => fmtNumber(value),
           },
           {
             key: 'activeRate',
@@ -161,7 +163,7 @@ export function ActiveDayConsistency({
               'utilization.columns.activeRate',
               'Active-day rate (%)',
             ),
-            format: (value) => `${fmtNumber(value, 1)}%`,
+            format: (value) => `${fmtNumber(value)}%`,
           },
           {
             key: 'phase',
@@ -224,7 +226,7 @@ export function ActiveDayConsistency({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `${fmtNumber(value, 0)}%`}
+                  tickFormatter={(value) => `${fmtNumber(value)}%`}
                   width={44}
                 />
                 <Tooltip
@@ -242,7 +244,7 @@ export function ActiveDayConsistency({
                                     : 0,
                               },
                             )
-                          : `${fmtNumber(value, 1)}%`
+                          : `${fmtNumber(value)}%`
                       }
                     />
                   }

@@ -1,7 +1,7 @@
 // Behavioural contract for the automations activity sidebar. Exercises every
 // branch of the panel and its two internal rows (HistoryRow / LiveEventRow):
 //   - header: section title + Live / Reconnecting connection indicator
-//   - stats summary shown only when historyStats has executions
+//   - persistent summary differentiates unavailable and successful zero runs
 //   - self-contained loading (skeletons) / error (QueryError) / empty states
 //   - history rows: name, relative time, duration, action ratio, error copy,
 //     status → icon-accent mapping incl. unknown-status fallback
@@ -15,13 +15,18 @@
 // because QueryError reaches for useNavigate().
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 import { AutomationActivityFeed } from './AutomationActivityFeed';
 import { ApiError } from '@/api/client';
 import type { AutomationHistory, AutomationHistoryStats } from '@/api/types';
 import type { AutomationActivityEvent } from '@/hooks/useAutomationEvents';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: { unit_of_length: 'km', unit_of_temp: 'C',
+    unit_of_pressure: 'bar', locale: 'en-US', decimal_precision: 2, currency_symbol: '$' } }),
+}));
 
 // FadeIn wraps the panel in a framer-motion `motion.div`. Render it eagerly as
 // a plain <div> so content is in the DOM synchronously and we never touch
@@ -149,7 +154,7 @@ function renderFeed(overrides: Partial<Props> = {}) {
 describe('AutomationActivityFeed — header & connection state', () => {
   it('renders the section title and a Live indicator when connected', () => {
     renderFeed({ connectionState: 'connected' });
-    expect(screen.getByText('Recent Activity')).toBeInTheDocument();
+    expect(screen.getByText('Recent activity')).toBeInTheDocument();
     expect(screen.getByText('Live')).toBeInTheDocument();
     expect(screen.queryByText('Reconnecting')).toBeNull();
   });
@@ -169,39 +174,94 @@ describe('AutomationActivityFeed — stats summary', () => {
     expect(container.textContent).toContain('avg');
   });
 
-  it('hides the summary when historyStats is null', () => {
+  it('keeps a missing summary when historyStats is null without inventing totals or averages', () => {
     const { container } = renderFeed({ historyStats: null });
     expect(container.textContent).not.toContain('total');
     expect(container.textContent).not.toContain('avg');
+    expect(screen.getByTestId('automation-activity-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
   });
 
-  it('hides the summary when there are zero executions', () => {
-    const { container } = renderFeed({ historyStats: makeStats({ total_executions: 0 }) });
-    expect(container.textContent).not.toContain('total');
+  it('keeps measured zero executions separate from undefined rate and average', () => {
+    renderFeed({ historyStats: makeStats({ total_executions: 0 }) });
+    const brief = screen.getByTestId('automation-activity-brief');
+    expect(brief.querySelector('[data-operational-metric="total"]')).toHaveAttribute('data-value-state', 'value');
+    expect(brief.querySelector('[data-operational-metric="total"] [data-operational-value]')).toHaveTextContent('0');
+    expect(brief.querySelector('[data-operational-metric="rate"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(brief.querySelector('[data-operational-metric="duration"]')).toHaveAttribute('data-value-state', 'missing');
+  });
+
+  it('reviews retained summary evidence without hiding independent live events or retry', () => {
+    const onRetry = vi.fn();
+    renderFeed({ historyStats: makeStats(), error: new Error('refresh unavailable'), onRetry,
+      liveEvents: [makeEvent({ data: { automation_id: 10, name: 'Independent stream',
+        vehicle: 'Model 3', trigger: 'schedule', at: new Date().toISOString(), mode: 'live' } })] });
+    const brief = screen.getByTestId('automation-activity-brief');
+    expect(within(brief).getByText('Retained execution summary')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Execution summary details' });
+    expect(within(drawer).getAllByText('History aggregate window is not supplied. Independent live events and recent rows are not this summary denominator.').length).toBeGreaterThan(0);
+    expect(within(drawer).getByText('42 total')).toBeInTheDocument();
+    expect(screen.getByText('Independent stream')).toBeInTheDocument();
+    expect(onRetry).not.toHaveBeenCalled();
   });
 });
 
 describe('AutomationActivityFeed — loading / error / empty', () => {
-  it('shows skeleton placeholders while loading and renders no rows', () => {
+  it('shows skeleton placeholders during the initial history load', () => {
     const { container } = renderFeed({
       isLoading: true,
       connectionState: 'connected',
-      history: [makeHistory({ automation_name: 'Should Not Show' })],
+      history: [],
     });
-    // Exactly the five body skeletons (connected → Wifi has no pulse).
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
-    expect(screen.queryByText('Should Not Show')).toBeNull();
+    expect(container.querySelectorAll(
+      '[role="status"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"], '
+      + '[data-testid="automation-activity-brief"][aria-busy="true"] [data-operational-metric] [aria-hidden="true"][class*="bg-[var(--surface-3)]"]',
+    )).toHaveLength(8);
+    expect(screen.getByTestId('automation-activity-brief')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('automation-activity-brief').querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(screen.queryByText('No execution history yet')).toBeNull();
   });
 
-  it('renders a QueryError (and no rows) when a server error is passed', () => {
+  it('renders a fatal history error without hiding independent live events', () => {
     renderFeed({
       error: new ApiError('boom', 500),
-      history: [makeHistory({ automation_name: 'Hidden By Error' })],
+      history: [],
+      liveEvents: [makeEvent({ id: 'retained-live', data: {
+        automation_id: 10, name: 'Independent live event', vehicle: 'Model 3',
+        trigger: 'schedule', at: new Date().toISOString(), mode: 'live',
+      } })],
     });
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Server error')).toBeInTheDocument();
-    expect(screen.queryByText('Hidden By Error')).toBeNull();
+    expect(screen.getByText('Independent live event')).toBeInTheDocument();
+  });
+
+  it('retains history rows, ordering, metadata and retry after a refresh failure', () => {
+    const onRetry = vi.fn();
+    renderFeed({
+      error: new Error('refresh offline'), onRetry,
+      history: [
+        makeHistory({ id: 2, automation_name: 'First retained', actions_total: 4, actions_succeeded: 2 }),
+        makeHistory({ id: 1, automation_name: 'Second retained', status: 'failed', error: 'Complete diagnostic' }),
+      ],
+    });
+    const first = screen.getByText('First retained');
+    const second = screen.getByText('Second retained');
+    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText('2/4')).toBeInTheDocument();
+    expect(screen.getByText('Complete diagnostic')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('keeps supplied history and live events during a background load', () => {
+    const { container } = renderFeed({
+      isLoading: true, history: [makeHistory()], liveEvents: [makeEvent()],
+    });
+    expect(screen.getByText('Precondition Cabin')).toBeInTheDocument();
+    expect(screen.getByText('Cabin Warmup')).toBeInTheDocument();
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(1);
   });
 
   it('shows the empty state when there is no history and no live activity', () => {
@@ -216,16 +276,37 @@ describe('AutomationActivityFeed — loading / error / empty', () => {
     expect(screen.queryByText('No execution history yet')).toBeNull();
     expect(screen.getByText('Cabin Warmup')).toBeInTheDocument();
   });
+
+  it('refreshes empty history through the supplied source recovery callback', () => {
+    const onRetry = vi.fn();
+    renderFeed({ history: [], liveEvents: [], onRetry });
+    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('No execution history yet')).toBeInTheDocument();
+  });
 });
 
 describe('AutomationActivityFeed — history rows', () => {
+  it('keeps complete names, errors, duration and action metadata in wrapping shared rows', () => {
+    const name = 'A long automation name that must remain readable in the narrow activity rail';
+    const error = 'First diagnostic line\nSecond diagnostic line with the complete remediation evidence';
+    renderFeed({ history: [makeHistory({
+      automation_name: name, error, actions_total: 4, actions_succeeded: 2, duration_ms: 1500,
+    })] });
+    expect(screen.getByText(name)).toHaveClass('break-words');
+    expect(screen.getByText(/Second diagnostic line/)).not.toHaveClass('truncate');
+    expect(screen.getByText('2/4')).toBeInTheDocument();
+    expect(screen.getByText('1.50s')).toBeInTheDocument();
+    expect(screen.getByText('Just now')).toBeInTheDocument();
+  });
+
   it('renders the automation name, relative time and duration', () => {
     renderFeed({
       history: [makeHistory({ automation_name: 'Nightly Charge', duration_ms: 1500 })],
     });
     expect(screen.getByText('Nightly Charge')).toBeInTheDocument();
     expect(screen.getByText('Just now')).toBeInTheDocument();
-    expect(screen.getByText('1.5s')).toBeInTheDocument();
+    expect(screen.getByText('1.50s')).toBeInTheDocument();
   });
 
   it('renders the action ratio only when actions_total > 0', () => {
@@ -248,7 +329,7 @@ describe('AutomationActivityFeed — history rows', () => {
     expect(screen.getByText('2/3')).toBeInTheDocument();
   });
 
-  it('coerces a nullish actions_succeeded to 0 in the ratio', () => {
+  it('keeps a nullish actions_succeeded unknown in the ratio', () => {
     renderFeed({
       history: [
         makeHistory({
@@ -257,7 +338,8 @@ describe('AutomationActivityFeed — history rows', () => {
         }),
       ],
     });
-    expect(screen.getByText('0/4')).toBeInTheDocument();
+    expect(screen.getByText('—/4')).toBeInTheDocument();
+    expect(screen.queryByText('0/4')).not.toBeInTheDocument();
   });
 
   it('surfaces the error message when a run failed', () => {

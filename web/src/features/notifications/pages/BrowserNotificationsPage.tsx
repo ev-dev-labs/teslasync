@@ -5,12 +5,12 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { SectionTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useWebPush } from '@/hooks/useWebPush';
-import { useNotificationListener } from '@/hooks/useNotificationListener';
+import { useBrowserNotificationPrefs } from '@/hooks/useNotificationListener';
 import { BrowserNotificationsKpis } from '../components/BrowserNotificationsKpis';
 import { BrowserPushChannelCard } from '../components/BrowserPushChannelCard';
 import { BrowserPermissionPanel } from '../components/BrowserPermissionPanel';
@@ -23,15 +23,13 @@ export default function BrowserNotificationsPage() {
   const { t } = useTranslation();
   usePageTitle(t('notifications.browser.title', 'Browser notifications'));
 
-  // Permission + per-event push prefs are lifted here so the KPI band and the
-  // permission panel share one source of truth (each hold their own local
-  // state, so mounting them independently would desync after a toggle).
+  // Delivery belongs to the shell; this page only edits shared preferences.
   const webPush = useWebPush();
   const { permission, requestPermission, isSupported } = webPush;
-  const { prefs: pushPrefs, setPrefs: setPushPrefs } = useNotificationListener();
+  const { prefs: pushPrefs, setPrefs: setPushPrefs } = useBrowserNotificationPrefs();
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('notifications.browser.title', 'Browser notifications')}
       subtitle={t(
         'notifications.browser.subtitle',
@@ -95,6 +93,6 @@ export default function BrowserNotificationsPage() {
           <NotificationSoundsPanel />
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

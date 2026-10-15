@@ -10,11 +10,11 @@ import { useTranslation } from 'react-i18next';
 import { AlertBanner } from '@/components/feedback';
 import {
   Badge,
+  Button,
   Code,
-  GlassPanel,
-  PanelTitle,
   Text,
 } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { cn } from '@/lib/cn';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type {
@@ -47,7 +47,7 @@ export function BatteryPassportVerificationDiagnostics({
             'Verification in progress',
           ),
           Icon: LoaderCircle,
-          iconClass: 'animate-spin text-cyan-300',
+          iconClass: 'animate-spin text-[var(--semantic-info)]',
         };
       case 'refreshing':
         return {
@@ -62,7 +62,7 @@ export function BatteryPassportVerificationDiagnostics({
                 'Refreshing verification — previous result did not match',
               ),
           Icon: LoaderCircle,
-          iconClass: 'animate-spin text-cyan-300',
+          iconClass: 'animate-spin text-[var(--semantic-info)]',
         };
       case 'valid':
         return {
@@ -72,7 +72,7 @@ export function BatteryPassportVerificationDiagnostics({
             'Current digest match',
           ),
           Icon: ShieldCheck,
-          iconClass: 'text-emerald-300',
+          iconClass: 'text-[var(--semantic-success)]',
         };
       case 'mismatch':
         return {
@@ -82,7 +82,7 @@ export function BatteryPassportVerificationDiagnostics({
             'Digest mismatch',
           ),
           Icon: ShieldAlert,
-          iconClass: 'text-rose-300',
+          iconClass: 'text-[var(--semantic-danger)]',
         };
       case 'error':
         return {
@@ -92,7 +92,7 @@ export function BatteryPassportVerificationDiagnostics({
             'Verification unavailable',
           ),
           Icon: ShieldQuestion,
-          iconClass: 'text-amber-300',
+          iconClass: 'text-[var(--semantic-warning)]',
         };
       default:
         return {
@@ -112,24 +112,19 @@ export function BatteryPassportVerificationDiagnostics({
 
   return (
     <section data-testid="battery-passport-verification-diagnostics">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Fingerprint
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.verification.title',
             'Verification diagnostics',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.verification.subtitle',
             'Current server recomputation compared with the supplied certificate digest.',
-          )}
-        </Text>
+          )} actions={<Fingerprint className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
+          {verification.isPaused ? (
+            <Text as="p" variant="bodySm" color="secondary" role="status">
+              {t('batteryPassport.verification.paused', 'Verification is paused. No current digest comparison is available.')}
+            </Text>
+          ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <statusView.Icon
               className={cn('h-5 w-5', statusView.iconClass)}
@@ -138,6 +133,11 @@ export function BatteryPassportVerificationDiagnostics({
             <Badge variant={statusView.variant} size="lg">
               {statusView.label}
             </Badge>
+            {verification.status === 'error' ? (
+              <Button variant="secondary" size="sm" onClick={verification.onRetry} disabled={verification.isRetrying}>
+                {t('batteryPassport.verification.retry', 'Retry verification')}
+              </Button>
+            ) : null}
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
@@ -172,7 +172,12 @@ export function BatteryPassportVerificationDiagnostics({
             }
           >
             <Text as="p" variant="caption">
-              {verification.status === 'refreshing'
+              {verification.status === 'error'
+                ? t(
+                    'batteryPassport.verification.errorNotice',
+                    'Verification failed. Any displayed hashes are from the previous response, not a current digest comparison. Certificate evidence and export remain available.',
+                  )
+                : verification.status === 'refreshing'
                 ? t(
                     'batteryPassport.verification.refreshingNotice',
                     'A verification refetch is in progress. The displayed hashes and result are from the previous response, not a current digest comparison.',
@@ -189,7 +194,7 @@ export function BatteryPassportVerificationDiagnostics({
             </Text>
           </AlertBanner>
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

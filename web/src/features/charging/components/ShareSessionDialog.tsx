@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Trash2, Eye, ExternalLink } from 'lucide-react';
-import { Modal, Button, CopyButton, Toggle, Select, Input } from '@/components/ui';
+import { Modal, Button, CopyButton, Toggle, Select, Input, Text, Subhead } from '@/components/ui';
 import { GlassPanel } from '@/components/ui';
-import { ListSkeleton, AlertBanner } from '@/components/feedback';
+import { ListSkeleton, StaleRefreshWarning } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
+import { useDataState } from '@/hooks/useDataState';
 import {
   useCreateSessionShareLink,
   useSessionShareLinks,
@@ -25,7 +27,8 @@ interface ShareSessionDialogProps {
 export function ShareSessionDialog({ sessionId, open, onClose }: ShareSessionDialogProps) {
   const { t } = useTranslation();
   const createShare = useCreateSessionShareLink(sessionId);
-  const { data: existingShares, isLoading: sharesLoading, error: sharesError } = useSessionShareLinks(sessionId);
+  const sharesQuery = useSessionShareLinks(sessionId);
+  const sharesState = useDataState(sharesQuery);
   const revokeShare = useRevokeSessionShareLink(sessionId);
 
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -76,7 +79,7 @@ export function ShareSessionDialog({ sessionId, open, onClose }: ShareSessionDia
     onClose();
   };
 
-  const shares = existingShares ?? [];
+  const shares = sharesState.data ?? [];
 
   return (
     <Modal open={open} onClose={handleClose} title={t('share.sessionTitle', 'Share Charging Session')}>
@@ -84,9 +87,9 @@ export function ShareSessionDialog({ sessionId, open, onClose }: ShareSessionDia
         {/* Create new share */}
         {!shareUrl ? (
           <div className="space-y-4">
-            <p className="text-sm text-[var(--text-secondary)]">
+            <Text as="p" variant="bodySm">
               {t('share.sessionDescription', 'Generate a public link to share this charging session. Anyone with the link can view the summary and charge curve — no login required.')}
-            </p>
+            </Text>
 
             <Input
               value={title}
@@ -116,9 +119,9 @@ export function ShareSessionDialog({ sessionId, open, onClose }: ShareSessionDia
         ) : (
           /* Share URL result */
           <div className="space-y-3">
-            <p className="text-sm text-green-400">
+            <Text as="p" variant="bodySm" className="text-[var(--semantic-success)]">
               {t('share.created', 'Share link created!')}
-            </p>
+            </Text>
             <Input value={shareUrl} readOnly aria-label={t('share.linkLabel', 'Share link URL')} />
             <div className="flex gap-2">
               <CopyButton
@@ -146,20 +149,42 @@ export function ShareSessionDialog({ sessionId, open, onClose }: ShareSessionDia
         {/* Existing shares — always rendered with explicit loading / error /
             empty / list states so the section is never a blank void. */}
         <div className="space-y-2 border-t border-[var(--border-subtle)] pt-4">
-          <h3 className="text-sm font-medium text-[var(--text-secondary)]">
+          <Subhead as="h3">
             {t('share.existing', 'Active Share Links')}
-          </h3>
-          {sharesLoading ? (
-            <ListSkeleton
-              rows={2}
-              label={t('share.loadingLinks', 'Loading active share links…')}
-              testId="share-links-loading"
-            />
-          ) : sharesError ? (
-            <AlertBanner variant="danger" role="alert">
-              {t('share.loadError', 'Could not load your existing share links. Please try again.')}
-            </AlertBanner>
-          ) : shares.length > 0 ? (
+          </Subhead>
+          <StaleRefreshWarning state={sharesState} label={t('share.existing', 'Active Share Links')}
+            message={sharesState.isRefreshBlocked && !sharesState.refreshError
+              ? t('dataSources.status.paused', 'Refresh paused') : undefined} />
+          <SourceContent
+            state={sharesState.fatalError ? 'error'
+              : !sharesState.hasData && sharesQuery.isFetching ? 'loading'
+                : !sharesState.hasData ? 'empty' : 'ready'}
+            label={t('share.existing', 'Active Share Links')}
+            emptyMessage={t('dataSources.status.pending', 'Pending')}
+            errorMessage={t('share.loadError', 'Could not load your existing share links. Please try again.')}
+            error={sharesState.fatalError}
+            errorRecovery={{ onRetry: sharesState.retry ?? undefined }}
+            emptyContent={
+              <div className="space-y-2">
+                <Text as="p" variant="bodySm" role="status">
+                  {sharesState.isRefreshBlocked
+                    ? t('dataSources.status.paused', 'Refresh paused')
+                    : t('dataSources.status.pending', 'Pending')}
+                </Text>
+                <Button variant="secondary" size="sm" onClick={sharesState.retry ?? undefined}>
+                  {t('error.retry', 'Retry')}
+                </Button>
+              </div>
+            }
+            loadingContent={
+              <ListSkeleton
+                rows={2}
+                label={t('share.loadingLinks', 'Loading active share links…')}
+                testId="share-links-loading"
+              />
+            }
+          >
+          {shares.length > 0 ? (
             <div className="space-y-2">
               {shares.map((share) => {
                 const isExpired = share.expires_at
@@ -168,10 +193,10 @@ export function ShareSessionDialog({ sessionId, open, onClose }: ShareSessionDia
                 return (
                   <GlassPanel key={share.id} className="p-3 flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[var(--text-primary)] truncate">
+                      <Text as="p" variant="body" className="truncate">
                         {share.title ?? t('share.untitled', 'Untitled share')}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                      </Text>
+                      <Text as="div" variant="caption" className="flex items-center gap-3">
                         <span className="flex items-center gap-1">
                           <Eye className="h-3 w-3" />
                           {share.views ?? 0} {t('share.views', 'views')}
@@ -183,7 +208,7 @@ export function ShareSessionDialog({ sessionId, open, onClose }: ShareSessionDia
                               ? t('share.expiresOn', 'Expires {{date}}', { date: formatDate(share.expires_at) })
                               : t('share.noExpiry', 'No expiry')}
                         </span>
-                      </div>
+                      </Text>
                     </div>
                     <div className="flex items-center gap-1">
                       <CopyButton
@@ -200,7 +225,7 @@ export function ShareSessionDialog({ sessionId, open, onClose }: ShareSessionDia
                         onClick={() => handleRevoke(share.token)}
                         aria-label={t('share.revoke', 'Revoke')}
                       >
-                        <Trash2 className="h-3.5 w-3.5 text-red-400" />
+                        <Trash2 className="h-3.5 w-3.5 text-[var(--semantic-danger)]" />
                       </Button>
                     </div>
                   </GlassPanel>
@@ -208,10 +233,11 @@ export function ShareSessionDialog({ sessionId, open, onClose }: ShareSessionDia
               })}
             </div>
           ) : (
-            <p className="py-2 text-center text-sm text-[var(--text-muted)]">
+            <Text as="p" variant="caption" className="py-2 text-center">
               {t('share.none', 'No active share links yet.')}
-            </p>
+            </Text>
           )}
+          </SourceContent>
         </div>
       </div>
     </Modal>

@@ -21,14 +21,11 @@
  *      vehicle/rule hides its chip, and the checkbox + icon-only buttons expose
  *      accessible names.
  *
- * i18n is loaded via the real bundle (`../../../i18n`) so the translated aria
- * labels resolve exactly as they do in the app. `@testing-library/user-event`
- * is not a dependency of this repo, so `fireEvent` drives the interactions —
- * matching every other component test here. No network is touched: the global
- * test-setup stubs `useSettings` + `useTimezone`, which is all `<DateTime>`
- * needs.
+ * The bundle still loads through the normal catalog checks. Local translation
+ * and timezone fixtures make identity and translated-label assertions causal;
+ * they do not establish browser or production-locale acceptance.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import '../../../i18n';
@@ -36,7 +33,45 @@ import '../../../i18n';
 import { NotificationRow, type NotificationRowProps } from './NotificationRow';
 import type { NotificationLog, AlertRule, Vehicle } from '@/api/types';
 
+const fixtures = vi.hoisted(() => ({
+  userZone: 'UTC',
+  selectedZone: 'Europe/Berlin',
+  translations: {} as Record<string, string>,
+  timezone: vi.fn(),
+  translate: vi.fn(),
+}));
+
+vi.mock('@/lib/timezone', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: (mode: string) => {
+    fixtures.timezone(mode);
+    return mode === 'vehicle' ? fixtures.selectedZone : fixtures.userZone;
+  },
+}));
+
+vi.mock('react-i18next', async importOriginal => ({
+  ...await importOriginal<typeof import('react-i18next')>(),
+  useTranslation: () => ({
+    t: (key: string, fallback: string, values?: Record<string, unknown>) => {
+      fixtures.translate(key);
+      let result = fixtures.translations[key] ?? fallback;
+      for (const [name, value] of Object.entries(values ?? {})) {
+        result = result.replace(`{{${name}}}`, String(value));
+      }
+      return result;
+    },
+  }),
+}));
+
 const CREATED_AT = new Date('2024-01-02T03:04:05Z').toISOString();
+
+beforeEach(() => {
+  fixtures.userZone = 'UTC';
+  fixtures.selectedZone = 'Europe/Berlin';
+  fixtures.translations = {};
+  fixtures.timezone.mockClear();
+  fixtures.translate.mockClear();
+});
 
 function makeLog(overrides: Partial<NotificationLog> = {}): NotificationLog {
   return {
@@ -135,7 +170,7 @@ describe('NotificationRow', () => {
 
   it('renders severity, title, message, vehicle name, and rule name', () => {
     renderRow();
-    expect(screen.getByText('warn')).toBeInTheDocument();
+    expect(screen.getByText('Warn')).toBeInTheDocument();
     expect(screen.getByText('Tire pressure low')).toBeInTheDocument();
     expect(screen.getByText('Front-left tire below 30 PSI')).toBeInTheDocument();
     // vehicle name + rule name render as "· <name>" chips
@@ -268,9 +303,9 @@ describe('NotificationRow', () => {
   it('hides the drill-through link and rule chip when there is no rule', () => {
     renderRow({ rule: undefined });
     expect(screen.queryByRole('link', { name: /view context/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Tire Pressure Low/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tire pressure Low/)).not.toBeInTheDocument();
     // The persisted severity remains visible even without a rule.
-    expect(screen.getByText('warn')).toBeInTheDocument();
+    expect(screen.getByText('Warn')).toBeInTheDocument();
   });
 
   it('hides the vehicle chip when the row has no vehicle', () => {
@@ -284,5 +319,111 @@ describe('NotificationRow', () => {
     renderRow({ log: makeLog({ title: '', message: 'Body still shows' }) });
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.getByText('Body still shows')).toBeInTheDocument();
+  });
+
+  it('keeps persisted critical severity authoritative when the current rule is info', () => {
+    const log = makeLog({ severity: 'critical' });
+    renderRow({ log, rule: { ...RULE, severity: 'info' } });
+    expect(screen.getByText('Critical')).toBeInTheDocument();
+    expect(screen.queryByText('Info')).not.toBeInTheDocument();
+    expect(log.severity).toBe('critical');
+    expect(screen.getByText('Critical').parentElement).toHaveClass('text-[var(--semantic-danger)]');
+  });
+
+  it.each([undefined, null, '', 'vendor.Raw/Severity', 'constructor'])(
+    'renders persisted unknown severity %s neutrally without borrowing current rule severity',
+    severity => {
+      const log = { ...makeLog(), severity } as unknown as NotificationLog;
+      renderRow({ log, rule: { ...RULE, severity: 'critical' } });
+      const badge = screen.getByText(severity || '—');
+      expect(badge).toHaveClass('text-[var(--text-secondary)]');
+      expect(screen.queryByText('Critical')).not.toBeInTheDocument();
+      expect(screen.queryByText('Info')).not.toBeInTheDocument();
+      expect(log.severity).toBe(severity);
+    },
+  );
+
+  it.each([
+    ['info', 'info', 'Information'],
+    ['warn', 'warn', 'Avertissement'],
+    ['warning', 'warn', 'Avertissement'],
+    ['critical', 'critical', 'Critique'],
+  ])('translates persisted %s through the existing %s severity key', (severity, key, label) => {
+    fixtures.translations[`notifications.inbox.filter.severity.${key}`] = label;
+    renderRow({ log: makeLog({ severity }) });
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(fixtures.translate).toHaveBeenCalledWith(`notifications.inbox.filter.severity.${key}`);
+    expect(screen.queryByText(severity)).not.toBeInTheDocument();
+  });
+
+  it('uses and discloses one user timezone instead of borrowing selected or row vehicle identity', () => {
+    fixtures.userZone = 'America/New_York';
+    const { container } = renderRow({
+      vehicle: { ...VEHICLE, timezone: 'America/Los_Angeles' },
+    });
+    expect(fixtures.timezone).toHaveBeenCalledWith('user');
+    expect(fixtures.timezone).not.toHaveBeenCalledWith('vehicle');
+    expect(container.querySelector('[title="2024-01-02T03:04:05.000Z (America/New_York)"]'))
+      .toHaveTextContent('EST');
+  });
+
+  it('keeps retained row timestamps stable across unrelated workspace selection changes', () => {
+    fixtures.userZone = 'America/New_York';
+    const { container, rerender } = renderRow();
+    const before = container.querySelector('[title$="(America/New_York)"]')?.textContent;
+    fixtures.selectedZone = 'Pacific/Auckland';
+    rerender(
+      <MemoryRouter>
+        <NotificationRow log={makeLog()} rule={RULE} vehicle={VEHICLE} selected={false} onSelectionChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(container.querySelector('[title$="(America/New_York)"]')?.textContent).toBe(before);
+    expect(fixtures.timezone).not.toHaveBeenCalledWith('vehicle');
+  });
+
+  it.each([undefined, '', 'UTC', 'Invalid/VehicleZone'])(
+    'keeps the disclosed user zone when row timezone is %s',
+    timezone => {
+      fixtures.userZone = 'America/New_York';
+      const { container } = renderRow({ vehicle: { ...VEHICLE, timezone } });
+      expect(container.querySelector('[title$="(America/New_York)"]')).toBeInTheDocument();
+      expect(fixtures.timezone).not.toHaveBeenCalledWith('vehicle');
+    },
+  );
+
+  it.each([null, '', 'not-a-date'])('preserves invalid or absent timestamps %s without dropping row content', created_at => {
+    renderRow({ log: { ...makeLog(), created_at } as unknown as NotificationLog, vehicle: undefined });
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Tire pressure low')).toBeInTheDocument();
+    expect(screen.getByText('Front-left tire below 30 PSI')).toBeInTheDocument();
+  });
+
+  it('keeps unread meaning explicit without relying on color and removes it when read', () => {
+    const { rerender } = renderRow();
+    expect(screen.getByText('Unread')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Tire pressure low' })).toHaveClass('border-l-2');
+    rerender(
+      <MemoryRouter>
+        <NotificationRow log={makeLog({ read_at: CREATED_AT })} selected={false} onSelectionChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText('Unread')).not.toBeInTheDocument();
+    expect(screen.getByText('Tire pressure low')).toBeInTheDocument();
+  });
+
+  it('uses existing semantic chrome and keeps quick actions isolated from activation', () => {
+    const onActivate = vi.fn();
+    const onArchive = vi.fn();
+    const onMarkRead = vi.fn();
+    renderRow({ onActivate, onArchive, onMarkRead });
+    expect(screen.getByRole('group', { name: 'Tire pressure low' })).toHaveClass('border-[var(--border-default)]');
+    const link = screen.getByRole('link', { name: /view context/i });
+    expect(link).toHaveClass('focus-visible:outline-[var(--focus-ring)]');
+    expect(link).toHaveClass('hover:bg-[var(--control-bg-hover)]');
+    fireEvent.click(screen.getByRole('button', { name: /^archive$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /mark as read/i }));
+    expect(onArchive).toHaveBeenCalledWith(42);
+    expect(onMarkRead).toHaveBeenCalledWith(42);
+    expect(onActivate).not.toHaveBeenCalled();
   });
 });

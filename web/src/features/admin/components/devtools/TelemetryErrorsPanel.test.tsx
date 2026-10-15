@@ -148,8 +148,21 @@ describe('TelemetryErrorsPanel', () => {
     const { container } = renderPanel({ requested: true, loading: true })
 
     expect(screen.getByText('Telemetry Errors')).toBeInTheDocument()
-    // Skeleton pulses are present…
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1)
+    // The source's three-line decorative placeholder reserves pending geometry.
+    const skeletons = container.querySelectorAll('[aria-hidden="true"].space-y-2')
+    expect(skeletons.length).toBeGreaterThanOrEqual(1)
+    const lines = skeletons[0].children
+    expect(lines).toHaveLength(3)
+    for (const line of Array.from(lines)) {
+      expect(line).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]')
+    }
+    expect(lines[0]).toHaveStyle({ width: '100%' })
+    expect(lines[1]).toHaveStyle({ width: '100%' })
+    expect(lines[2]).toHaveStyle({ width: '60%' })
+    expect(screen.queryByRole('button', { name: DOWNLOAD })).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByText('0')).toBeNull()
+    expect(screen.queryByText('?')).toBeNull()
     // …with no table, empty copy, or error text bleeding through.
     expect(screen.queryByRole('table')).toBeNull()
     expect(screen.queryByText(EMPTY)).toBeNull()
@@ -172,7 +185,7 @@ describe('TelemetryErrorsPanel', () => {
     renderPanel({ requested: false, loading: true })
 
     expect(screen.getByText(IDLE)).toBeInTheDocument()
-    expect(document.querySelector('.animate-pulse')).toBeNull()
+    expect(document.querySelector('[aria-hidden="true"].space-y-2')).toBeNull()
   })
 
   it('renders the DataTable with the caller-supplied rows in the data state', () => {
@@ -226,7 +239,11 @@ describe('TelemetryErrorsPanel', () => {
     expect(screen.getByText(EMPTY)).toBeInTheDocument()
     const badge = screen.getByText('0')
     expect(badge).toBeInTheDocument()
-    expect(badge.className).toContain('bg-green-100')
+    expect(badge).toHaveClass(
+      'bg-[var(--semantic-success-bg)]',
+      'border-[var(--semantic-success-border)]',
+      'text-[var(--semantic-success)]',
+    )
     expect(screen.queryByText(RAW_LABEL)).toBeNull()
     expect(screen.queryByRole('table')).toBeNull()
   })
@@ -237,7 +254,11 @@ describe('TelemetryErrorsPanel', () => {
 
     // Warning-toned badge signals "we could not parse the response".
     const badge = screen.getByText('?')
-    expect(badge.className).toContain('bg-yellow-100')
+    expect(badge).toHaveClass(
+      'bg-[var(--semantic-warning-bg)]',
+      'border-[var(--semantic-warning-border)]',
+      'text-[var(--semantic-warning)]',
+    )
 
     // The disclosure exposes the raw Tesla payload for debugging.
     const summary = screen.getByText(RAW_LABEL)

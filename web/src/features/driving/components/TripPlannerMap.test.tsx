@@ -39,10 +39,19 @@
  * Network is never touched — this component has no data source of its own.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import type { TripLocation, TripLeg, TripChargeStop } from '@/types/driving';
+import { chartTokens } from '@/lib/tokens';
+
+const renderer = vi.hoisted(() => ({
+  resolve: vi.fn((input: string, _context: HTMLElement): string | null => input.split('(')[1].split(',')[0]),
+}));
+vi.mock('@/lib/colors', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/colors')>(),
+  resolveMapRendererColor: renderer.resolve,
+}));
 
 // ── i18n: resolve the string fallback (2nd arg) and interpolate {{vars}}
 //    (3rd arg) so assertions read on the rendered English copy. ──
@@ -85,7 +94,7 @@ vi.mock('@/components/maps', () => {
         {children}
       </div>
     ),
-    MapTileLayer: ({ style }: { style?: string }) => (
+    MapTileLayer: ({ style = 'dark' }: { style?: string }) => (
       <div data-testid="tile-layer" data-style={String(style ?? '')} />
     ),
     Polyline: ({ positions, pathOptions }: { positions?: unknown; pathOptions?: unknown }) => (
@@ -235,6 +244,59 @@ describe('TripPlannerMap — origin + destination', () => {
     expect(readCenter(map)).toEqual([37.5, -121.5]);
     expect(screen.getByTestId('tile-layer')).toHaveAttribute('data-style', 'dark');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  describe('TripPlannerMap — restrained renderer roles', () => {
+    it('resolves existing route and endpoint roles in the mounted theme context without changing geometry', () => {
+      renderMap({
+        origin: loc(37, -122, 'Home'),
+        destination: loc(38, -121, 'Work'),
+        chargeStops: [stop()],
+      });
+
+      const region = screen.getByRole('region', { name: 'Trip route map' });
+      for (const index of [0, 1, 3]) {
+        expect(renderer.resolve).toHaveBeenCalledWith(chartTokens.series[index], region);
+      }
+      expect(JSON.parse(screen.getByTestId('polyline').getAttribute('data-path') || '{}'))
+        .toEqual({ color: chartTokens.series[0].split('(')[1].split(',')[0], stroke: true, weight: 3, opacity: 0.8 });
+      const markers = screen.getAllByTestId('circle-marker');
+      markers.forEach((marker, index) => {
+        const role = chartTokens.series[[1, 3, 0][index]].split('(')[1].split(',')[0];
+        expect(JSON.parse(marker.getAttribute('data-path') || '{}')).toEqual({
+          color: role, fillColor: role,
+          stroke: true, fill: true, fillOpacity: 0.9,
+        });
+      });
+      expect(markers.map(readCenter)).toEqual([[37, -122], [38, -121], [38, -121]]);
+      expect(markers.map((marker) => marker.getAttribute('data-radius'))).toEqual(['8', '8', '7']);
+      expect(screen.getByTestId('tile-layer')).toHaveAttribute('data-style', 'dark');
+    });
+
+    it('defers unresolved paint and retries after a theme change without removing source labels or geometry', async () => {
+      renderer.resolve.mockImplementation(() => null);
+      try {
+        renderMap({ origin: loc(37, -122, 'Home'), destination: loc(38, -121, 'Work') });
+        expect(JSON.parse(screen.getByTestId('polyline').getAttribute('data-path') || '{}'))
+          .toEqual({ stroke: false, weight: 3, opacity: 0.8 });
+        screen.getAllByTestId('circle-marker').forEach((marker) => {
+          expect(JSON.parse(marker.getAttribute('data-path') || '{}'))
+            .toEqual({ stroke: false, fill: false, fillOpacity: 0.9 });
+        });
+        expect(screen.getByText('Home')).toBeInTheDocument();
+        expect(screen.getByText('Work')).toBeInTheDocument();
+        renderer.resolve.mockImplementation(() => 'rgb(56, 94, 126)');
+        screen.getByRole('region', { name: 'Trip route map' }).setAttribute('data-mode', 'light');
+        await waitFor(() => {
+          expect(JSON.parse(screen.getByTestId('polyline').getAttribute('data-path') || '{}'))
+            .toEqual({ color: 'rgb(56, 94, 126)', stroke: true, weight: 3, opacity: 0.8 });
+        });
+        expect(readPositions()).toEqual([[37, -122], [38, -121]]);
+        expect(readCenter(screen.getByTestId('map-container'))).toEqual([37.5, -121.5]);
+      } finally {
+        renderer.resolve.mockImplementation((input) => input.split('(')[1].split(',')[0]);
+      }
+    });
   });
 
   it('draws a direct route polyline between the two points when no legs are supplied', () => {

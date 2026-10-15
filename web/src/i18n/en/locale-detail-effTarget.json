@@ -1,0 +1,140 @@
+{
+  "effTarget": {
+    "title": "Efficiency target",
+    "subtitle": "A completed-week goal workspace built from the observed history window",
+    "kpis": "Efficiency target summary metrics",
+    "targetInput": "Weekly consumption target",
+    "target": "Target",
+    "streak": "Completed-week streak",
+    "weeks": "{{count}} weeks",
+    "longest": "Longest completed run: {{count}}",
+    "hitRate": "Completed-week hit rate",
+    "ofWeeks": "Across {{count}} completed weeks",
+    "overall": "Observed overall",
+    "analyzed": "{{eligible}} of {{observed}} drives eligible",
+    "loading": "Loading efficiency target analysis",
+    "chart": "Weekly consumption vs target",
+    "chartHint": "Green weeks beat the target; the dashed line is your goal",
+    "consumption": "Consumption",
+    "methodNote": "Weeks run Monday to Sunday in your local time. A week hits the target when its distance-weighted consumption lands at or below your goal.",
+    "noData": "No drives with at least 1 km of distance and measured energy are available in this observed window.",
+    "browseDrives": "Browse drives",
+    "whPerMi": "Wh/mi",
+    "whPerKm": "Wh/km",
+    "kpi": {
+      "canonical": "Saved canonically in Wh/km"
+    },
+    "sections": {
+      "pulse": "Goal pulse and active-week snapshot",
+      "weekly": "Weekly consumption and rolling trend",
+      "weekday": "Weekday efficiency pattern",
+      "consistency": "Completed-week target consistency bands",
+      "scorecard": "Recent completed-week scorecard",
+      "method": "Confidence, methodology, and coverage"
+    },
+    "status": {
+      "onTarget": "On target",
+      "nearMiss": "Near miss",
+      "offTrack": "Off track",
+      "ungraded": "Ungraded",
+      "inProgress": "In progress · not graded",
+      "snapshot": "Active snapshot"
+    },
+    "pulse": {
+      "title": "Goal pulse",
+      "observed": "Observed history",
+      "latestCompleted": "Latest completed week",
+      "weekOf": "Week of {{date}}",
+      "underTarget": "{{value}} under target",
+      "overTarget": "{{value}} over target",
+      "consumption": "Consumption",
+      "activeWeek": "Active week",
+      "activeHint": "Snapshot only",
+      "distance": "Distance",
+      "drives": "Drives",
+      "noCompleted": "No completed eligible week is available to grade yet.",
+      "noActive": "No eligible drives have been observed in the active week."
+    },
+    "weekly": {
+      "title": "Weekly consumption vs target",
+      "subtitle": "Bars show observed weekly consumption; the line is a trailing four-calendar-week distance-weighted trend.",
+      "aria": "Weekly consumption bars, target line, and rolling four-week trend with the active partial week distinguished",
+      "consumptionSeries": "Weekly consumption",
+      "rollingSeries": "Rolling 4-week trend",
+      "activeLegend": "Target {{target}} · active = snapshot",
+      "activePhase": "Active · partial",
+      "completePhase": "Completed",
+      "empty": "No eligible weekly observations are available for this chart."
+    },
+    "weekday": {
+      "title": "Weekday efficiency pattern",
+      "subtitle": "Each day uses distance-weighted eligible drives from the observed history window.",
+      "aria": "Distance-weighted consumption by weekday with target reference",
+      "consumptionSeries": "Observed consumption",
+      "empty": "No eligible drives are available for a weekday pattern.",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday",
+      "unknown": "—"
+    },
+    "consistency": {
+      "title": "Target consistency",
+      "subtitle": "Completed weeks: on target ≤ goal, near miss ≤ 10% over, off track > 10% over.",
+      "aria": "Completed week counts across on-target, near-miss, and off-track bands",
+      "empty": "No completed eligible weeks are available for consistency bands.",
+      "weekValue": "{{count}} weeks",
+      "completedSeries": "Completed weeks"
+    },
+    "score": {
+      "title": "Recent completed-week scorecard",
+      "subtitle": "Rank 1 is the lowest-consumption completed week in the observed history window.",
+      "rank": "Rank",
+      "rankValue": "#{{rank}}",
+      "empty": "No completed eligible weeks are available for the scorecard."
+    },
+    "method": {
+      "title": "Coverage & methodology",
+      "returned": "Rows returned",
+      "eligible": "Eligible drives",
+      "graded": "Completed weeks",
+      "calendar": "Weeks run Monday through Sunday in local browser time.",
+      "eligibility": "A drive qualifies with measured positive energy and at least 1 km of distance.",
+      "weighting": "Consumption is total energy divided by total distance, not an average of drive averages.",
+      "activeExclusion": "The active week stays visible as a snapshot but is excluded from hit rate, streaks, bands, and ranking.",
+      "rolling": "The rolling line weights eligible energy and distance observed in the current and previous three calendar weeks.",
+      "capReached": "{{limit}}-drive cap reached",
+      "belowCap": "Observed window below API cap",
+      "empty": "Coverage will appear when drive history is returned for the selected vehicle.",
+      "coverage": "{{eligible}} eligible and {{excluded}} excluded across {{observed}} returned rows.",
+      "capped": "This request reached the {{limit}}-drive API cap. Results describe the returned history window; older drives may not be represented.",
+      "window": "Results describe the {{count}} drives returned in this observed history window, up to the {{limit}}-drive API limit."
+    },
+    "col": {
+      "week": "Week",
+      "consumption": "Consumption",
+      "hit": "Target hit",
+      "rolling": "Rolling 4-week trend",
+      "phase": "Week phase",
+      "status": "Status",
+      "weekday": "Weekday",
+      "distance": "Distance",
+      "drives": "Drives",
+      "band": "Band",
+      "weeks": "Completed weeks",
+      "share": "Share (%)",
+      "gap": "Target gap"
+    },
+    "brief": {
+      "completedTitle": "Completed-week consumption",
+      "completedScope": "Latest completed eligible week; target grading and streaks exclude the active week.",
+      "activeTitle": "Active-week observations",
+      "description": "Completed-week outcomes from the observed history window; current partial weeks do not extend the completed-week streak.",
+      "window": "Latest returned drive history, up to 1,000 rows; not lifetime coverage",
+      "source": "Returned drive energy and distance; saved target and completed local weeks."
+    }
+  }
+}

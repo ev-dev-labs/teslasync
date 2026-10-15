@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { neonColorMap, semanticToNeon } from '@/lib/tokens';
+import { Caption } from '../ui/Typography';
 
 type FreshnessStatus = 'fresh' | 'stale' | 'offline' | 'unknown';
 
@@ -19,24 +21,16 @@ interface FreshnessIndicatorProps {
   /** Size variant (default: 'sm') */
   size?: 'sm' | 'md';
 }
-// Freshness dots share the toned-down palette used by the sibling
-// `<DataFreshness>` (FRESHNESS_COLORS) and `<LiveIndicator>` so the app speaks
-// one visual language for "how fresh is this".
 const DOT_COLOR: Record<FreshnessStatus, string> = {
-  fresh: 'bg-emerald-400',
-  stale: 'bg-amber-400',
-  offline: 'bg-red-400',
-  unknown: 'bg-[var(--surface-2)]',
+  fresh: neonColorMap[semanticToNeon.success].dot,
+  stale: neonColorMap[semanticToNeon.warning].dot,
+  offline: neonColorMap[semanticToNeon.neutral].dot,
+  unknown: neonColorMap[semanticToNeon.neutral].dot,
 };
 
 const DOT_SIZE: Record<'sm' | 'md', string> = {
   sm: 'h-1.5 w-1.5',
   md: 'h-2 w-2',
-};
-
-const LABEL_SIZE: Record<'sm' | 'md', string> = {
-  sm: 'text-2xs',
-  md: 'text-xs',
 };
 
 // Status word used for the accessible name (and, for colour-blind users, to
@@ -132,7 +126,7 @@ export function FreshnessIndicator({
       role="img"
       aria-label={ariaLabel}
       title={timestamp ?? undefined}
-      className="inline-flex items-center gap-1"
+      className="inline-flex min-w-0 max-w-full items-center gap-1"
     >
       <span
         aria-hidden="true"
@@ -140,13 +134,12 @@ export function FreshnessIndicator({
           'rounded-full shrink-0',
           DOT_SIZE[size],
           DOT_COLOR[status],
-          status === 'fresh' && 'animate-pulse',
         )}
       />
       {showLabel && (
-        <span aria-hidden="true" className={cn('text-[var(--text-muted)]', LABEL_SIZE[size])}>
+        <Caption aria-hidden="true" className="min-w-0 break-words">
           {label}
-        </span>
+        </Caption>
       )}
     </span>
   );

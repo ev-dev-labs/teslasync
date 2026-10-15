@@ -1,0 +1,351 @@
+{
+  "item": "audit-page-124",
+  "page": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+  "routes": ["/segments"],
+  "purpose": "Explore repeated routes for the selected vehicle, rank recorded attempts by time or efficiency, and compare two attempts using historical ghost telemetry.",
+  "primaryGoal": "Choose a persisted route segment and two distinct attempts, understand the original recorded winner and margin, and inspect elapsed-time and aligned time-gap evidence without changing source measurements.",
+  "dataSources": [
+    {
+      "hook": "useSegments",
+      "file": "web\\src\\api\\hooks\\useSegments.ts",
+      "line": 136,
+      "endpoint": "/api/v1/vehicles/{vehicleID}/segments",
+      "owner": "segmentsHandler.List; internal\\api\\router.go:1102,3395",
+      "pageEvidence": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx:77-89",
+      "behavior": "Key ['segments', vehicleId]; positive vehicle enables request; AbortSignal forwarded; ANALYTICS staleTime; inherited retry policy. Response supplies route identity, addresses, distance_m, attempt_count, best_time, best_efficiency and latest. Page paginates the returned collection in groups of 12; this is not server pagination.",
+      "limits": "Backend implementation, clustering limits, completeness, authorization and response nullability were not exercised. Router comments describe bounded drive-history detection and best-effort persistence; id=0 cannot be drilled into."
+    },
+    {
+      "hook": "useSegmentLeaderboard",
+      "file": "web\\src\\api\\hooks\\useSegments.ts",
+      "line": 150,
+      "endpoint": "/api/v1/segments/{segmentID}/leaderboard",
+      "owner": "segmentsHandler.Leaderboard; internal\\api\\router.go:3872",
+      "pageEvidence": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx:146-175,194-215",
+      "behavior": "Key ['segment-leaderboard', segmentId]; positive selection enables request; AbortSignal forwarded; ANALYTICS staleTime. Separate by_time/by_efficiency arrays retain backend ordering, ranks and PR semantics. Default A/B comes once per leaderboard segment from fastest two by_time rows; one attempt defaults A only. Labels use original started_at dates or drive-ID fallback."
+    },
+    {
+      "hook": "useSegmentGhost",
+      "file": "web\\src\\api\\hooks\\useSegments.ts",
+      "line": 165,
+      "endpoint": "/api/v1/segments/{segmentID}/ghost?a={driveID}&b={driveID}",
+      "owner": "segmentsHandler.Ghost; internal\\api\\router.go:3873",
+      "pageEvidence": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx:186-192,221-270",
+      "behavior": "Key ['segment-ghost', segmentId, a, b]; only positive, distinct attempts and segment enable request; AbortSignal forwarded; ANALYTICS staleTime. Recorded durations/winner/margin remain response-owned. Independent a/b telemetry contains fraction_of_distance, elapsed_s and speed_mps; backend split_deltas supplies fraction and signed delta_s.",
+      "derivation": "raceData forms a sorted 0.2%-fraction union grid taking the first value per racer/grid key; rendered Line data explicitly uses the original independent raceSeriesA/B samples with connectNulls=false. Gap uses backend split samples directly. Never replace recorded winner with a client-calculated curve result."
+    },
+    {
+      "hook": "useSelectedVehicle / useUrlNumber / useDataState / useUnits / useNumberFormatting",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "line": 73,
+      "endpoint": null,
+      "owner": "Existing workspace, URL-state, trust and formatting owners",
+      "behavior": "Header owns vehicle; no page-local scope picker. /segments is absent from RANGE_ENABLED_PATHS, and these APIs have no requested date bounds; do not invent date filtering. URL page is clamped to loaded collection and resets after an established vehicle changes. Three independent historical useDataState wrappers preserve retained payloads, fatal versus refresh failures and individual retries. Distance uses useUnits; date/clock/number utilities retain established display behavior.",
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:23-77,96-142", "web\\src\\features\\driving\\pages\\SegmentsPage.tsx:82-143,187-200"]
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard / ChartCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx; web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "evidence": "SegmentsPage.tsx:273-277,339-362,393-399,427-436,493-500; PageLayout.tsx:9-15; ChartCard.tsx:13-45",
+      "usage": "Existing full-width shell adapter, two domain cards and two opt-in canonical chart frames. No replacement page-width or chart-controller engine needed."
+    },
+    {
+      "name": "SelectableCard / SegmentCard",
+      "owner": "web\\src\\components\\ui\\SelectableCard.tsx; local SegmentCard",
+      "evidence": "SegmentsPage.tsx:572-629; SelectableCard.tsx:27-56",
+      "usage": "Native button surface, option role, selection state, disabled id=0 and route/card metadata. Shared selection surface owns focus and selected styling."
+    },
+    {
+      "name": "LeaderboardTable / DataTable / RaceButton",
+      "owner": "local LeaderboardTable and RaceButton; web\\src\\components\\ui\\DataTable.tsx; web\\src\\components\\ui\\Button.tsx",
+      "evidence": "SegmentsPage.tsx:643-770; DataTable.tsx:237-248,714-725,1153-1168",
+      "usage": "Six columns with drive_id row identity, stable segments:leaderboard persistence ID and explicit rank/date/race mobile allow-list. Race toggles reuse Button and aria-pressed."
+    },
+    {
+      "name": "DrivingSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+      "evidence": "SegmentsPage.tsx:252-270,409-418; DrivingSummaryBrief.tsx:23-51",
+      "usage": "Three typed metrics (winner, A duration, B duration), source scope, provenance, unknown observation time, retained status and existing operational-details pipeline. Do not replace with ad-hoc KPI tiles."
+    },
+    {
+      "name": "EmbeddedChart / ChartContainer / chart category primitives",
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx; web\\src\\components\\charts\\ChartContainer.tsx",
+      "evidence": "EmbeddedChart.tsx:19-45; ChartContainer.tsx:750-859; SegmentsPage.tsx:427-540",
+      "usage": "Shared plot/controller and fallback owner. Both callers disable toolbar/export. Elapsed frame retains segment-ghost-elapsed chartKey and hidden-series callback; gap frame has no chartKey. ChartTooltip, ChartLegend, ChartGradient, axes and grid use category imports."
+    },
+    {
+      "name": "Typography / feedback / Pagination / FadeIn",
+      "owner": "Existing UI, feedback and motion category owners",
+      "evidence": "SegmentsPage.tsx:279-333,364-387,400-405,545-550; StaleRefreshWarning.tsx:47-126; FadeIn.tsx:24-36",
+      "usage": "Localized titles, semantic dl metrics, independent skeleton/empty/fatal/retry/retained notices and existing reduced-motion-aware entrance wrappers."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "line": 364,
+      "rule": "MDC-026 / mission 33",
+      "detail": "Three source-specific loading/empty/failure/retry branches repeat the same trust pattern. This is not evidence for a new global state library: the existing feedback primitives already serve them, and selection gates differ.",
+      "fix": "If decomposing, keep domain-specific bodies and existing feedback owners; retain independent queries and retries. Do not merge all content behind the segments query.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "line": 703,
+      "rule": "MDC-020 / component-first reuse",
+      "detail": "Two racer controls already share local RaceButton. Two plots already share ChartCard and ChartTooltip; no additional competing global racer or chart component is justified by this one consumer.",
+      "fix": "Retain local domain ownership and extend current Button/ChartCard APIs only if a concrete missing capability is proven.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "runtime": "unverified",
+    "sourceStrategy": [
+      "SegmentsPage.tsx:295,312 has one/two/three segment-card columns at base/md/xl; skeleton geometry follows the same grid.",
+      "PageLayout.tsx:12 uses full allocated width, min-w-0 and container marker; no competing width engine.",
+      "SegmentsPage.tsx:432-433,497-498 supplies fixed desktop/mobile chart heights with ResponsiveContainer.",
+      "SegmentsPage.tsx:584-600 truncates long route name and address; source strings remain in payload, but no explicit full-address disclosure is supplied.",
+      "SegmentsPage.tsx:616-625 preserves semantic three-column distance/best/efficiency layout; 320px and long-localized labels require mounted review."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "line": 726,
+        "rule": "MDC-023 / MDC-043 / preservation",
+        "detail": "mobileColumns keeps only rank/date/race. Time, efficiency and delta become hidden md:table-cell by DataTable.tsx:724-725. Caller supplies neither mobilePresentation nor expanded details, so essential comparison measurements have no explicit phone-detail path.",
+        "fix": "Use the existing DataTable mobile presentation/detail contract with all six original columns and formatter parity, or retain an intentional full-column scroll strategy. Keep A/B actions, row identity and tableId.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "requiredReviewWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "reviewLimits": "No viewport, touch, long-label, container-width or horizontal-overflow scenario was mounted."
+  },
+  "accessibility": {
+    "runtime": "unverified",
+    "sourcePositives": [
+      "SelectableCard uses a native button, selection ARIA, disabled state and focus ring; meaningful route-card labels are translated.",
+      "Board buttons and A/B controls expose aria-pressed; decoration in card/header icons is aria-hidden.",
+      "Route metrics use dl/dt/dd, charts have localized ariaLabel and shared frames, retries remain explicit."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "line": 761,
+        "rule": "MDC-040 / MDC-044",
+        "detail": "Accessible racer labels are only A/B plus hardcoded English ' (selected)', repeated for every row. They omit the attempt identity and action, even though aria-pressed already conveys state.",
+        "fix": "Localize an explicit pick/toggle Attempt A/B label including date or drive identity; retain visible A/B and aria-pressed.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "line": 763,
+        "rule": "MDC-040 touch reachability",
+        "detail": "RaceButton overrides Button sizing with h-7 w-7 (28px) and pairs targets with gap-1. No caller target expansion is supplied; shared Button.tsx:65-91 does not add one. A WCAG spacing exception has not been demonstrated.",
+        "fix": "Use existing button sizing with at least 44px effective touch reach, or the accepted shared target-spacing mechanism; verify adjacent A/B activation at 320px.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "line": 312,
+        "rule": "MDC-040 composite semantics",
+        "detail": "listbox/options are composed from independently focusable native buttons without page arrow-key or roving-focus handling. Shared SelectableCard.tsx:27-56 does not implement composite keyboard navigation.",
+        "fix": "Prefer an appropriately labelled group of native selection buttons if preserving current Tab/Enter semantics; otherwise implement established listbox keyboard semantics with all card content still available.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "line": 426,
+        "rule": "MDC-034 / MDC-040 / MDC-041",
+        "detail": "Both charts opt out of tables and provide neither data/dataColumns nor ariaDescription. ChartContainer.tsx:851-858 therefore falls back to title-only prose. Labels explain chart direction, but not the actual retained trace evidence; dense samples do not justify losing equivalent access.",
+        "fix": "Supply a source-backed detailed description and/or canonical full-data alternative using current ChartCard props. Preserve independent elapsed samples, gap sign and real values; do not fabricate summaries.",
+        "owner": "page",
+        "confidence": "high",
+        "additionalEvidence": "SegmentsPage.tsx:492-500; ChartCard.tsx:14,34-36; ChartContainer.tsx:750-859"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "line": 470,
+        "rule": "MDC-042",
+        "detail": "Elapsed Lines explicitly set animationDuration=700, but the page does not pass a motion-preference-controlled isAnimationActive. FadeIn honors the existing preference; that does not establish Recharts animation compliance.",
+        "fix": "Use the current motion preference to disable plot animation when required; verify OS reduced motion and low-bandwidth cases without changing telemetry.",
+        "owner": "page",
+        "confidence": "medium",
+        "additionalEvidence": "SegmentsPage.tsx:478,535; FadeIn.tsx:24-33; gap Area already sets isAnimationActive=false."
+      }
+    ],
+    "evidenceLimits": "Keyboard, focus restoration, screen reader, forced colors, effective contrast and touch behavior were not exercised."
+  },
+  "states": {
+    "runtime": "unverified",
+    "initial": "No vehicle: instructional EmptyState. Segments: six card skeletons; leaderboard: 240px skeleton; ghost: 360px skeleton only when both attempts selected.",
+    "empty": "No detected routes, no ranked rows, missing A/B selections and insufficient ghost alignment each have separate localized messages.",
+    "failure": "Each source uses fatalError and an individual refetch callback; usable retained data is not deliberately replaced on refresh failure.",
+    "staleOffline": "Three historical trust states and StaleRefreshWarning instances keep retained payloads and individual recovery. Shared warning distinguishes offline refresh blocking from refresh error; no mounted offline proof.",
+    "success": "Segment cards, ordered leaderboard and original winner/durations/plots; id<=0 is disabled, not silently dropped.",
+    "selection": "Leaderboard and ghost appear only after a segment is chosen; these are contextual progressive-disclosure gates, not authorization to delete sections. A/B cannot simultaneously reference the same drive. Changing page or selected segment resets racer selection; established vehicle changes reset page and selection.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "line": 489,
+        "rule": "MDC-026 / preservation",
+        "detail": "A loaded ghost with zero split_deltas silently removes the entire Time gap chart and explanation, even while elapsed telemetry remains visible. The user cannot distinguish unavailable gap evidence from a nonexistent capability.",
+        "fix": "Keep the gap section/title/explanation mounted inside a selected comparison and show a source-accurate unavailable/empty state for missing aligned splits. Preserve the independent elapsed chart.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "nullabilityLimit": "Hook types declare a/b/series and split_deltas present. Page accesses ghost.a.series directly. Unexpected backend-null behavior is unverified, not a confirmed crash or permission to coerce unknown evidence to zero."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "line": 749,
+      "rule": "MDC-010 / MDC-012 / mission 43 restrained noise",
+      "detail": "Active race controls use cyan/fuchsia fills, tinted text and rings; every route card also accents runs, best time and efficiency. No glow or neon text utility was found, but repeated semantic accents can dominate the hierarchy.",
+      "fix": "Use neutral control/body tokens with a restrained selected indicator; keep two distinct labelled series identities and PR/efficiency meaning. Do not reset saved theme/chart preferences or make A/B color-only.",
+      "owner": "page",
+      "confidence": "medium",
+      "additionalEvidence": "SegmentsPage.tsx:47-50,584-589,612-625,749-750"
+    },
+    {
+      "file": "web\\src\\components\\ui\\SelectableCard.tsx",
+      "line": 39,
+      "rule": "MDC-010 / MDC-015 shared surface owner",
+      "detail": "Shared selectable surfaces hardcode cyan focus/selected treatments and fixed white translucent normal/hover backgrounds, rather than neutral surface and semantic-selection tokens. The page consumes this owner; changing the page alone must not create another selection surface.",
+      "fix": "Shared owner should evaluate existing token-based surface/selected/focus styling while retaining disabled state, refs, native button semantics and public selected contract.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "line": 572,
+      "rule": "MDC-002 / mission 33 separation",
+      "detail": "The 770-line orchestrator embeds SegmentCard, LeaderboardTable and RaceButton. Only the page is exported, so this is not a multiple-export violation; extraction can clarify presentation ownership without reducing features. API logic is already in typed hooks.",
+      "fix": "Optionally extract the three local domain renderers to driving feature files, preserving all props, callbacks, memo dependencies and combined line/section evidence. Reuse current category barrels.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "first": "Restore phone access to leaderboard measurements and meaningful reachable racer controls.",
+    "next": "Add equivalent chart evidence access and preserve the gap section when splits are unavailable.",
+    "then": "Verify reduced-motion/composite selection semantics and reduce page/shared selected-surface noise without data loss.",
+    "acceptance": "Source audit completed only; implementation and runtime acceptance remain pending."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Token-aligned selectable surface review",
+      "existingOwner": "web\\src\\components\\ui\\SelectableCard.tsx",
+      "file": "web\\src\\components\\ui\\SelectableCard.tsx",
+      "line": 39,
+      "rule": "MDC-010 / MDC-015 / MDC-040",
+      "detail": "Current page consumes a shared surface with cyan/white hardcoded states.",
+      "fix": "Shared owner reviews canonical token styling, not a feature-owned replacement.",
+      "owner": "shared",
+      "confidence": "high",
+      "propsVariantsStates": ["selected true/false", "disabled", "focus-visible", "hover", "light/dark/custom themes", "forced colors", "native role/ref/aria-label forwarding"],
+      "usedBy": ["web\\src\\features\\driving\\pages\\SegmentsPage.tsx:574"],
+      "dependsOn": ["Existing surface/focus/semantic tokens", "Shared-owner consumer evidence before changing a public visual contract"],
+      "limits": "Other production consumers were not audited; this single-page report does not authorize a new composite or certify an app-wide palette change."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "line": 7,
+      "rule": "MDC-002 / MDC-030 / MDC-032",
+      "detail": "No competing theme, table, chart frame, workspace selector, fetch engine or navigation owner was found in the assigned page. Local SegmentCard/RaceButton are domain presentations over existing primitives.",
+      "fix": "Retain current PageLayout, DataTable, ChartCard, DrivingSummaryBrief and workspace hooks. Missing mobile/detail and chart-alternative capabilities can be expressed through existing APIs; do not introduce replacements.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "6A824EF8B2C461846FCAA43C617135BCEBF4734A0354896B85CD5D110D4CF52E",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 770,
+    "sectionCount": 3,
+    "sections": [
+      {"name": "Route segments", "line": 281, "contents": "Vehicle instruction, list trust/retry/empty, all returned cards, 12-item URL pagination."},
+      {"name": "Leaderboard", "line": 339, "contents": "Selected segment title, ordering toggle, independent trust/retry/empty, all ranked rows and A/B controls."},
+      {"name": "Ghost Race", "line": 393, "contents": "Two-attempt instruction, independent trust/retry/empty, original winner/attempt metrics and both trace presentations."}
+    ],
+    "subsectionCount": 3,
+    "subsections": [
+      {"name": "Winner and attempts operational brief", "line": 409},
+      {"name": "Elapsed time along the route", "line": 427},
+      {"name": "Time gap (A vs B) and direction explanation", "line": 493}
+    ],
+    "componentOccurrenceCounts": {"PageLayout": 1, "GlassPanel": 3, "LayoutCard": 2, "ChartCard": 2, "DrivingSummaryBrief": 1, "DataTable": 1, "Pagination": 1, "StaleRefreshWarning": 3, "FadeIn": 3},
+    "actions": [
+      "Header-owned vehicle selection; retain absence of duplicated local picker.",
+      "Select valid segment; disabled id=0 remains visible and non-drillable.",
+      "Change URL page, clamp out-of-range page and reset segment/racers on page or established vehicle change.",
+      "Switch by time/by efficiency without mutating backend ordering.",
+      "Pick/toggle A and B, clear opposite duplicate, retain automatic fastest/runner-up defaults.",
+      "Retry segments, leaderboard or ghost independently; retained-state warning refresh remains available.",
+      "Existing elapsed chart hidden-series state via segment-ghost-elapsed and ChartLegend.",
+      "Existing operational brief details supplied by the current shared pipeline; drawer interaction unverified.",
+      "Existing DataTable persistence/control pipeline; do not rename segments:leaderboard or add fictitious export scope."
+    ],
+    "dataBehavior": [
+      "Keep segment names, addresses, identity, median-distance contract, counts, best_time and nullable best_efficiency; preserve latest in hook/cache even though it is not displayed.",
+      "Keep rank/date/PR/time/Wh-per-km/delta/race columns in both orderings, drive_id row identity and time-PR delta meaning even in efficiency ordering.",
+      "Retain original winner_drive_id, null tie, recorded margin_s, durations and date labels.",
+      "Keep independent elapsed sample series, fractional route axis, sorted union-grid derivation, connectNulls=false, backend split signs and zero reference.",
+      "Retain raw distance_m, duration_s, elapsed_s, speed_mps and source wh_per_km; display conversion only. Do not change source efficiency semantics or backend units.",
+      "Retain null/nonfinite dashes versus measured values, locale/date/number formatting and custom duration clock formatters.",
+      "Preserve source-specific query keys, positive-ID enablement, AbortSignal, ANALYTICS staleTime, inherited retry and independent historical retained-data behavior.",
+      "No current plot toolbar/export/fullscreen is enabled; do not claim removed exports or invent existing backend capabilities.",
+      "Preserve exact route /segments, lazy/SafeRoute ownership and all source explanations; App.tsx:151,853 confirms registration.",
+      "Keep every existing section/action when extracting; include extracted feature files in later line-count comparison."
+    ]
+  },
+  "evidenceLimits": {
+    "scope": "Phase0 audit-page-124 only; source snapshot and targeted inspection, not implementation.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Router registration and hook interfaces inspected; handlers, database queries, live API responses and completeness unverified.",
+    "validation": "No Git, TypeScript, tests, full lint, build or audit.sh execution. The loaded audit script includes TypeScript compilation, so source checks were used instead in this bounded audit. No pass claim.",
+    "targetedSourceCheck": "PowerShell Select-String on assigned page found style=0, direct library import pattern=0, text-neon/glow/text-white=0, GlassPanel=3, LayoutCard=2, ChartCard=2, section=1. Case-insensitive raw-element pattern reported 2 because it matches shared Button; case-sensitive rg inspection found no raw protected HTML tags. An initial PowerShell quoting attempt exited 1 before execution; corrected source-count command exited 0.",
+    "sourceReadLimits": "DataTable, ChartContainer, Button, workspaceScope, router and mission were read only at cited relevant ranges; their whole-app behavior is not certified. Worker conventions, design contract, page, useSegments, selected named dependencies and audit.sh were read fully.",
+    "authority": "Read mission sections 0,1,15,33,43,44 and full worker/design contracts. Mission mobile hiding language does not authorize deletion under the design contract. Phase0 findings are not mission section44 acceptance.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-124.json", ".agent-status\\audit-page-124.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+    "web\\src\\api\\hooks\\useSegments.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\components\\ui\\SelectableCard.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "docs\\frontend-audits\\audit-page-121.json"
+  ]
+}

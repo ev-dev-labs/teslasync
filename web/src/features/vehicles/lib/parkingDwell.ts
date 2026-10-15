@@ -1,7 +1,7 @@
 /**
  * Pure parking-behaviour model reconstructed from gaps between drives.
  *
- * The API scopes drive starts by UTC calendar date. Parking starts, weekday
+ * The API scopes drive starts by a half-open instant window. Parking starts, weekday
  * and month rollups, and the 22:00–06:00 split use an explicit IANA display
  * timezone. The clock is injected so trailing-stint handling is deterministic.
  */
@@ -123,13 +123,16 @@ export interface ParkingSummary {
   coverage: ParkingCoverage;
 }
 
-export interface SummarizeParkingOptions {
+interface ParkingOptions {
   nowMs: number;
-  rangeStart: string;
-  rangeEnd: string;
   timeZone: string;
   rowLimit?: number;
 }
+
+export type SummarizeParkingOptions = ParkingOptions & (
+  | { startInstant: string; endInstantExclusive: string }
+  | { rangeStart: string; rangeEnd: string }
+);
 
 interface UtcDateRange {
   startMs: number;
@@ -201,6 +204,24 @@ export function parseParkingUtcRange(
   const startMs = Date.UTC(start.year, start.month - 1, start.day);
   const endExclusiveMs = Date.UTC(end.year, end.month - 1, end.day + 1);
   return endExclusiveMs > startMs ? { startMs, endExclusiveMs } : null;
+}
+
+/** Exact RFC3339 bounds; unlike legacy date-only bounds, the end is exclusive. */
+export function parseParkingInstantRange(
+  startInstant: string,
+  endInstantExclusive: string,
+): UtcDateRange | null {
+  const parse = (raw: string): number | null => {
+    const match = /^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.exec(raw);
+    if (!match || !parseUtcDate(match[1])) return null;
+    const instant = Date.parse(raw);
+    return Number.isFinite(instant) ? instant : null;
+  };
+  const startMs = parse(startInstant);
+  const endExclusiveMs = parse(endInstantExclusive);
+  return startMs != null && endExclusiveMs != null && endExclusiveMs > startMs
+    ? { startMs, endExclusiveMs }
+    : null;
 }
 
 function resolveTimeZone(raw: string): { timeZone: string; fallback: boolean } {
@@ -465,7 +486,9 @@ export function summarizeParking(
     ? Math.max(1, Math.floor(options.rowLimit ?? PARKING_DRIVE_LIMIT))
     : PARKING_DRIVE_LIMIT;
   const requestedNowMs = Number.isFinite(options.nowMs) ? options.nowMs : 0;
-  const range = parseParkingUtcRange(options.rangeStart, options.rangeEnd);
+  const range = 'startInstant' in options
+    ? parseParkingInstantRange(options.startInstant, options.endInstantExclusive)
+    : parseParkingUtcRange(options.rangeStart, options.rangeEnd);
   const resolvedZone = resolveTimeZone(options.timeZone);
   const coverage: ParkingCoverage = {
     recordsReturned: drives.length,
@@ -567,9 +590,20 @@ export function summarizeParking(
   const stints: ParkingStint[] = [];
   const rangeContainsClock =
     requestedNowMs >= range.startMs && requestedNowMs < range.endExclusiveMs;
+  let active: NormalizedDrive | undefined;
 
   for (let index = 0; index < normalized.length; index += 1) {
-    const drive = normalized[index]!;
+    const current = normalized[index]!;
+    // Nested records cannot shorten occupied time or replace its destination.
+    if (
+      !active
+      || current.startMs >= active.endMs
+      || current.endMs > active.endMs
+      || (current.endMs === active.endMs && current.open)
+    ) {
+      active = current;
+    }
+    const drive = active;
     const next = normalized[index + 1];
     if (drive.open) {
       if (next) coverage.overlappingGaps += 1;

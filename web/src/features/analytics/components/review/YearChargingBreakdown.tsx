@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { ChartContainer } from '@/components/charts';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, ChartTooltip } from '@/components/charts';
 import { Text, Caption } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { YearReview } from '@/api/types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface Props {
   data: YearReview;
@@ -13,6 +14,7 @@ interface Props {
 
 /** How the year's charging split across Supercharger / DC fast / AC. */
 export function YearChargingBreakdown({ data }: Props) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Colour travels with each slice (keyed to the connector, not to the
@@ -22,8 +24,8 @@ export function YearChargingBreakdown({ data }: Props) {
     () =>
       [
         { name: t('yearReview.supercharger', 'Supercharger'), value: data.supercharger_pct ?? 0, color: '#f59e0b' },
-        { name: t('yearReview.dcFast', 'DC Fast'), value: data.dc_fast_pct ?? 0, color: '#6366f1' },
-        { name: t('yearReview.acOther', 'AC / Other'), value: data.ac_other_pct ?? 0, color: '#94a3b8' },
+        { name: t('yearReview.dcFast', 'DC fast'), value: data.dc_fast_pct ?? 0, color: '#6366f1' },
+        { name: t('yearReview.acOther', 'AC / other'), value: data.ac_other_pct ?? 0, color: '#94a3b8' },
       ].filter((s) => s.value > 0),
     [data.supercharger_pct, data.dc_fast_pct, data.ac_other_pct, t],
   );

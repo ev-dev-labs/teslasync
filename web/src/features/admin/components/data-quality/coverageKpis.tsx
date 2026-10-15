@@ -17,12 +17,13 @@ import {
 } from 'lucide-react';
 
 import { type NeonColor } from '@/lib/tokens';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { coverageTrust, countBySeverity, formatCoveragePct, type CoverageTrust } from './helpers';
 import type {
   DataQualityFieldScore,
   NormalizationSummary,
 } from '@/types/admin-operator-confidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface CoverageKpi {
   key: string;
@@ -50,6 +51,7 @@ export function useCoverageKpis(
   windowMins: number | undefined,
   t: Translate,
 ): CoverageKpi[] {
+  const { fmtInt } = useNumberFormatting();
   const total = normalization?.total_sample_count ?? 0;
   const versioned = normalization?.versioned_sample_count ?? 0;
   const unversioned = normalization?.unversioned_sample_count ?? 0;
@@ -145,7 +147,7 @@ export function useCoverageKpis(
       trust,
       requiredVersion,
       criticalFields,
-      windowMins,
+      windowMins, fmtInt,
     ],
   );
 }

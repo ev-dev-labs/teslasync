@@ -1,0 +1,484 @@
+{
+  "item": "audit-page-171",
+  "page": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx",
+  "routes": ["/settings/fleet-setup"],
+  "purpose": "Guided operator setup for Tesla OAuth, Fleet token refresh, VIN telemetry subscription, domain/public-key readiness and streaming confirmation.",
+  "primaryGoal": "Connect Tesla, configure one locally selected VIN using existing Fleet APIs, and verify independently sourced setup and telemetry health without losing advanced controls.",
+  "scope": {
+    "phase": 0,
+    "mode": "read-only source audit",
+    "writeOwnership": ["docs\\frontend-audits\\audit-page-171.json", ".agent-status\\audit-page-171.txt"],
+    "mountedRouteEvidence": "web\\src\\App.tsx:322 lazy import; :636 SafeRoute registration. Mounting in a running browser was not exercised.",
+    "missionSectionsRead": ["0", "1", "3", "5-7", "15-16", "22-25", "30-31"],
+    "excluded": ["Other settings pages", "Whole-app audit", "Source changes", "Shared changes", "Configuration/catalog/queue changes", "Git", "Full lint/build/typecheck", "Production mutations"]
+  },
+  "dataSources": [
+    {
+      "hook": "useAuthStatus",
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 59,
+      "endpoints": ["GET /api/v1/auth/status"],
+      "routeEvidence": "internal\\api\\router.go:3240,3246",
+      "consumers": ["FleetSetupPage", "TeslaAccountSection", "FleetSetupSubscribePanel"],
+      "behavior": "Shared ['auth-status'] query; cancellation signal forwarded. deriveDataState distinguishes initial failure from retained refresh failure. Query defaults are inherited."
+    },
+    {
+      "hook": "useFleetApiInfo / usePublicKeyStatus",
+      "owner": "web\\src\\api\\hooks\\useFleetSetup.ts",
+      "line": 91,
+      "endpoints": ["GET /api/v1/dev-tools/fleet-api-info", "GET /api/v1/dev-tools/public-key-status"],
+      "routeEvidence": "internal\\api\\router.go:4745,4747,4760",
+      "behavior": "Separate fleetSetupKeys, select normalizers, cancellation, reference query policy. The reference tier uses 30-minute staleTime and no mount/focus/reconnect refetch at web\\src\\api\\queryPolicy.ts:165-176. Keep raw contracts and existing policy; report cross-source invalidation gaps rather than changing cache semantics casually."
+    },
+    {
+      "hook": "useOnboardingStatus({ pollAfterSetup: true })",
+      "owner": "web\\src\\api\\hooks\\useOnboarding.ts",
+      "line": 135,
+      "endpoints": ["GET /api/v1/onboarding/status"],
+      "routeEvidence": "internal\\api\\router.go:3318",
+      "behavior": "['onboarding','status']; 30-second polling continues after durable setup, 15-second staleTime, retry 2, cancellation. Normalizer preserves setup_complete/is_complete compatibility and healthy/stale/unknown telemetry health. Gate defaults are intentionally pessimistic, not measured values."
+    },
+    {
+      "hook": "useVehicles / useWakeVehicle",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoints": ["GET /api/v1/vehicles", "POST /api/v1/vehicles/{vehicleID}/wake"],
+      "routeEvidence": "internal\\api\\router.go:3319-3334",
+      "behavior": "['vehicles'] cache, safeArray list normalization and cancellation. Wake requiresLiveMode and networkMode always at :352-364. VIN is a local configuration target, not a second analysis-workspace selector."
+    },
+    {
+      "hook": "useFleetTelemetryConfig / useFleetTelemetryErrors",
+      "owner": "web\\src\\api\\hooks\\useFleetSetup.ts",
+      "line": 111,
+      "endpoints": ["GET /api/v1/dev-tools/fleet-telemetry-config?vin={encodedVin}", "GET /api/v1/dev-tools/fleet-telemetry-errors?vin={encodedVin}"],
+      "routeEvidence": "internal\\api\\router.go:4766,4768",
+      "behavior": "Trimmed, encoded VIN in key and URL; enabled only for nonempty VIN. Operational query policy, forwarded cancellation, config summary and error payload normalization. Independent source failures have retries."
+    },
+    {
+      "hook": "useSubscribeFleetTelemetry / useUnsubscribeFleetTelemetry",
+      "owner": "web\\src\\api\\hooks\\useFleetSetup.ts",
+      "line": 212,
+      "endpoints": ["POST /api/v1/dev-tools/fleet-telemetry-subscribe", "DELETE /api/v1/dev-tools/fleet-telemetry-config?vin={encodedVin}"],
+      "routeEvidence": "internal\\api\\router.go:4765,4767",
+      "behavior": "Live-only, networkMode always, existing toasts and invalidateAndBroadcast for VIN config/errors and onboarding. Optional host, port, PEM CA, field list, interval_seconds and field_intervals. Preserve Tesla field identifiers literally; they are not display measurements."
+    },
+    {
+      "hook": "useAuthURL / useRefreshAuth / useDisconnectAuth / useSyncVehicles",
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 66,
+      "endpoints": ["POST /api/v1/auth/url", "POST /api/v1/auth/refresh", "POST /api/v1/auth/disconnect", "POST /api/v1/vehicles/sync"],
+      "routeEvidence": "internal\\api\\router.go:3243,3245,3253,3326",
+      "behavior": "OAuth URL guard and navigation; confirmation before disconnect; auth/vehicle broadcast invalidation; sync is live-only. Disconnect is sudo/non-impersonation guarded server-side. Do not bypass challenge handling in request()."
+    },
+    {
+      "hook": "TELEMETRY_FIELDS / SignalConfigModal local state",
+      "owner": "web\\src\\features\\admin\\components\\devtools\\constants.ts",
+      "line": 121,
+      "endpoints": [],
+      "behavior": "Existing signal catalog supplies category and exact vendor field names. Modal search, eight presets, master/category/per-signal intervals, selection, expansion and reopen reseeding. No fixture data or measured SI conversion is involved."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "role": "Existing shell-compatible layout, full allocated width, title, copy-link and source freshness; delegates to PageContainer."},
+    {"name": "SourceContent", "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "line": 9, "role": "Canonical ready/loading/error/empty/retained source body and retry; persistent feature panel shells stay outside it."},
+    {"name": "SettingsSummaryBrief", "owner": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx", "line": 19, "role": "Settings-domain adapter for OperationalBrief and useOperationalMetrics; four independent status metrics, context and scope."},
+    {"name": "Fleet setup domain renderers", "owner": "web\\src\\features\\settings\\components\\fleet-setup\\index.ts", "role": "Already decomposed Guide, KpiBand, Progress, Readiness, StreamingPanel and SubscribePanel. Barrel import is confirmed in root; index file itself was enumerated but not read."},
+    {"name": "TeslaAccountSection", "owner": "web\\src\\features\\settings\\components\\TeslaAccountSection.tsx", "line": 22, "role": "OAuth connect/re-authorize, refresh, vehicle sync, disconnect confirmation and token expiry/recovery events. Reuse; no parallel account card."},
+    {"name": "Stepper", "owner": "web\\src\\features\\onboarding\\components\\Stepper.tsx", "line": 85, "role": "Domain onboarding progress owner, completed/current/pending policy, first-pending CTA, localized assistive status."},
+    {"name": "OrderedStepList", "owner": "web\\src\\components\\data-display\\OrderedStepList.tsx", "line": 47, "role": "Existing shared passive/explicit-progress ordered instructions. Guide uses it; not automatically equivalent to Stepper's current-only action policy."},
+    {"name": "IconBox", "owner": "web\\src\\components\\ui\\IconBox.tsx", "line": 19, "role": "Existing icon size/color container, currently neon-map backed; can receive class overrides."},
+    {"name": "SignalConfigModal", "owner": "web\\src\\components\\ui\\SignalConfigModal.tsx", "line": 144, "role": "Existing shared modal signal picker; preserve all search/preset/selection/interval workflows, modal lifecycle and footer."},
+    {"name": "Other current category primitives", "owners": ["@/components/ui: GlassPanel, Button, Badge, Input, Textarea, Select, Accordion, ConfirmDialog, typography", "@/components/data-display: KVList", "@/components/feedback: EmptyState, AlertBanner", "@/components/motion: FadeIn"], "role": "Reuse current owners; their complete implementations and runtime behavior were not reviewed in this scoped audit."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupReadiness.tsx",
+      "line": 39,
+      "rule": "MDC-002/MDC-016",
+      "detail": "IconBox + title + HelperText panel heading repeats across the guide, progress, subscribe and streaming panels. Existing primitives are already reused.",
+      "fix": "Use existing layout/typography composition; do not invent a FleetCard or new global panel-heading wrapper on evidence from only this page.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupProgress.tsx",
+      "line": 129,
+      "rule": "MDC-002/no competing instruction renderer",
+      "detail": "Progress uses onboarding Stepper while Guide uses OrderedStepList. They look related but their action visibility and progress policies differ.",
+      "fix": "Keep static and live instruction semantics distinct. Reuse OrderedStepList only through an explicit adapter that preserves Stepper's first-pending CTA and localized status; no speculative extraction.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx",
+      "line": 122,
+      "rule": "MDC-026/source trust",
+      "detail": "Repeated ternary mapping from DataState to SourceState appears in the page and domain panels.",
+      "fix": "Retain deriveDataState and SourceContent. A scoped adapter may reduce duplication but must not discard refreshError, paused state, source identity or last-success timestamps.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "unverified in browser",
+    "sourceStrengths": ["Root grids stack below xl; stream/readiness becomes two columns at md (FleetSetupPage.tsx:87,105,120).", "Actions flex-wrap and use wrapLabel (TeslaAccountSection.tsx:175-198; FleetSetupSubscribePanel.tsx:249-279).", "Progress and OrderedStepList retain min-w-0 and overflow-wrap:anywhere."],
+    "issues": [
+      {
+        "file": "web\\src\\components\\ui\\SignalConfigModal.tsx",
+        "line": 315,
+        "rule": "MDC-043/preserve full mobile functionality",
+        "detail": "Category row simultaneously contains toggle, expanding heading/count and interval select; signal rows truncate identifiers (:364), and footer uses non-wrapping justify-between (:385). Crowding and inaccessible full names are source risks at 320px/200% text, not demonstrated overflow.",
+        "fix": "Reflow category/footer controls, wrap or provide accessible full signal labels, keep every selection/interval action and persistent footer reachable. Exercise all ten widths plus open-dialog scrolling.",
+        "owner": "shared",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupReadiness.tsx",
+        "line": 77,
+        "rule": "MDC-043/long-content",
+        "detail": "Fingerprint and well-known path are unbounded source strings rendered through KVList. The caller does not demonstrate long-string wrapping.",
+        "fix": "Verify existing KVList wrap behavior with long fingerprint/path values before changing its owner; preserve full values.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredChecks": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "200% text", "RTL/long translations", "allocated narrow container", "open signal modal"]
+  },
+  "accessibility": {
+    "status": "keyboard, screen reader, focus, target geometry and contrast unverified",
+    "sourceStrengths": ["Three root sections have localized aria-labels.", "Connection status uses role=status/aria-live; Stepper uses aria-current and VisuallyHidden localized states.", "Guide OrderedStepList has aria-labelledby linked to useId title.", "VIN Select has explicit id and label; advanced Input/Textarea use existing shared identity mechanism.", "Readiness navigation composes native Link with canonical button chrome and min-h-11."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupProgress.tsx",
+        "line": 21,
+        "rule": "MDC-040/MDC-042",
+        "detail": "Progress CTAs call scrollIntoView with unconditional behavior=smooth and do not move focus to the target. Visual scrolling alone may leave keyboard focus at the old CTA.",
+        "fix": "Use existing motion preference and respect reduced motion; deliberately focus an existing accessible destination heading/control without adding a second focus system. Preserve the three target IDs.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\ui\\SignalConfigModal.tsx",
+        "line": 9,
+        "rule": "MDC-044/localized controls",
+        "detail": "Interval description labels and preset names/descriptions (:29-88) are hardcoded English; preset descriptions rely on title (:253). Raw buttons have custom focus/target chrome rather than the canonical Button. Raw HTML inside shared UI is not itself a page raw-HTML violation.",
+        "fix": "Use current shared Button/selection/typography primitives, localized display labels and keyboard-accessible help while retaining exact category/field identities and preset calculations.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\TeslaAccountSection.tsx",
+        "line": 99,
+        "rule": "MDC-040/decorative icons",
+        "detail": "Panel Shield icon lacks aria-hidden while neighboring domain panel icons explicitly hide decorative SVGs.",
+        "fix": "Hide this purely decorative cue, retaining localized heading and action names; verify actual accessibility tree rather than assuming announcement behavior.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "SourceContent suppresses unresolved bodies with skeletons; KPI per-source sourceLoading avoids hiding resolved neighboring sources.",
+    "empty": "No account/vehicles, no VIN/config, waiting/stale stream and missing public key have explanatory content. Guide and advanced help remain visible.",
+    "fatalError": "Independent SourceContent errors/retry for auth, vehicles, token, onboarding, public key, VIN config and errors; no single all-page data gate.",
+    "retainedRefresh": "deriveDataState keeps data on failed/paused refresh. Root aggregates retained status and local bodies show retained warnings/retry.",
+    "mutation": "Subscribe/unsubscribe/wake share busy gating; remove/disconnect require confirmation; auth and sync preserve toasts/pending feedback.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx",
+        "line": 94,
+        "rule": "MDC-026/unknown is not a negative result",
+        "detail": "Progress receives authenticated === true and no source state. Missing/failing auth becomes false; missing token/telemetry also becomes incomplete. It renders a definitive 0/4 and actionable first step while sources are unresolved or failed.",
+        "fix": "Pass known/loading/retained/error provenance to the local progress adapter and represent unresolved checks explicitly; retain all four steps and working CTAs when prerequisites are known.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupProgress.tsx",
+        "line": 96,
+        "rule": "MDC-026/source meaning",
+        "detail": "Subscribe completion is inferred from historical fleet-wide last_telemetry_at/data_flowing, not selected-VIN telemetry config. This is existing heuristic evidence, not proof the currently selected VIN is subscribed.",
+        "fix": "Make the historical/fleet-wide meaning explicit, or use a proven selected-VIN config source through the existing hook without conflating durable setup with current configuration. Do not invent backend subscription health.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx",
+        "line": 53,
+        "rule": "MDC-026/offline versus refresh failure",
+        "detail": "State adapters map paused retained queries and failed refresh to the same retained state; fatalError alone is forwarded, omitting refreshError/updatedAt/isRefreshBlocked. Root header query list also omits auth (:52).",
+        "fix": "Use existing retainedMessage and source context to distinguish refresh failure/offline and expose last success; include auth in freshness metadata where appropriate without hiding healthy sources.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\TeslaAccountSection.tsx",
+        "line": 176,
+        "rule": "MDC-026/unknown action prerequisites",
+        "detail": "Account action row is outside SourceContent; missing auth during loading/fatal failure selects the connect CTA rather than an unresolved prerequisite presentation.",
+        "fix": "Keep the row reachable but identify unresolved auth and avoid presenting unknown as a confirmed disconnected account. Do not remove recovery/re-authorization access.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\ui\\IconBox.tsx",
+      "line": 26,
+      "rule": "MDC-010/MDC-016/restrained palette",
+      "detail": "Five fleet setup panel headings plus account use decorative cyan/green/purple/blue IconBoxes. IconBox applies neonColorMap bg/ring/text, whose neon surfaces/rings are defined at tokens.ts:21-26. No glow is applied by IconBox itself.",
+      "fix": "Use existing neutral surface-2, border-default ring and text-secondary class overrides for decorative headings, following OrderedStepList.tsx:86. Reserve subdued semantic success/warning/danger for actual state, not domains. No new palette and no persisted theme-ID reset.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ui\\SignalConfigModal.tsx",
+      "line": 254,
+      "rule": "MDC-010/MDC-012/MDC-013",
+      "detail": "Mounted shared picker retains fixed-white surface/border overlays, neon-cyan hover/selection/fill (:264-266,320,359,397), neon text interval (:9), tiny ad-hoc uppercase typography and opacity-40 inactive rows (:356). Its tokens do not establish measured contrast.",
+      "fix": "Replace white overlays with existing surface/border variables; use canonical Button and semantic selection chrome, theme-aware primary/secondary/muted text and typography roles. Keep selection checked/pressed states and use subdued selected accents; no new glow. Keep preference-driven chart colors unchanged.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\onboarding\\components\\Stepper.tsx",
+      "line": 68,
+      "rule": "MDC-010/MDC-042",
+      "detail": "Current indicator uses cyan-500/20 and cyan-400/50, completed green line at :150, and an ongoing spinner at :140 even when no request is in flight. Reduced-motion class is already present.",
+      "fix": "Keep completed/current/pending semantics and localized status; neutralize structure/connector, retain restrained success/current emphasis and use a static current-step indicator when not actually busy.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\TeslaAccountSection.tsx",
+      "line": 134,
+      "rule": "MDC-012/theme-aware body text",
+      "detail": "Connection body and sync outcome text use direct emerald/rose-300 (:134,159,203) rather than semantic text roles. Source uses toned-down colors, not pure-white; actual light/dark composed contrast is unknown.",
+      "fix": "Use existing theme-aware semantic status tokens/Badge plus normal typography for descriptions; preserve explicit connection/outcome wording and expiry warning.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupSubscribePanel.tsx",
+      "line": 21,
+      "rule": "MDC-002/component category imports",
+      "detail": "Feature directly imports SignalConfigModal concrete module; account section similarly directly imports feedback/Toast at :11.",
+      "fix": "Use existing category barrel if exported; otherwise request an integration-owner export. Do not create a replacement modal/toast.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ui\\SignalConfigModal.tsx",
+      "line": 6,
+      "rule": "MDC-002/shared concrete internal imports",
+      "detail": "Shared picker imports Input, Modal and Select from its own UI barrel, contrary to shared concrete-module import policy.",
+      "fix": "Use concrete existing internal module imports in the shared owner's change, with focused modal regression and centralized chunk-cycle acceptance.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 83,
+      "rule": "MDC-026/MDC-046/coupled source freshness",
+      "detail": "Auth refresh/disconnect invalidate only authStatus. Fleet API info is a separate 30-minute reference query used to classify token and account; no invalidation connects these mutations to fleetSetupKeys.apiInfo. KPI can still say connected/auto-refresh after auth changes until that source refreshes.",
+      "fix": "Integration owner should coordinate narrowly scoped invalidation/refetch of the existing Fleet info source after auth mutations and preserve all existing keys/broadcasts. No independent polling or query store.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupSubscribePanel.tsx",
+      "line": 117,
+      "rule": "MDC-045/preserve sampling contract",
+      "detail": "Picker permits interval 0 labelled 500ms, but when the first returned signal has interval 0 the panel sets masterInterval=0 (:361), omits interval_seconds (:124), and excludes fields equal to master from field_intervals (:111). Hook also requires interval_seconds > 0. Source proves omission, not how the backend interprets it.",
+      "fix": "Before modernization, pin the existing server interpretation and a focused zero-interval payload regression. Preserve all sampling choices and raw seconds; do not silently reinterpret zero, remove 500ms, or invent an SI adapter.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useFleetSetup.ts",
+      "line": 53,
+      "rule": "MDC-026/malformed versus known negative",
+      "detail": "Fleet bool normalizer returns false for absent/malformed fields (:53-55); telemetry error normalizer returns [] for unrecognized shapes (:172-181). A successful malformed response can look like missing token/key or no Tesla-side errors.",
+      "fix": "Integration owner should pin valid response envelopes and distinguish parse-unavailable from known negative/empty while preserving query keys, cancellation and raw payload contracts. Do not guess backend capabilities.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Existing decomposition is sound, but operator decisions depend on truthful independent states; shared signal-picker mobile/palette issues and auth-token freshness coupling are higher priority than cosmetic root layout changes.",
+    "order": ["Resolve unknown/progress and cross-source trust semantics", "Shared SignalConfigModal modernization preserving all interactions", "Neutralize decorative heading palette", "Validate reduced-motion/focus navigation", "Browser/keyboard/contrast and state-matrix acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Modernize the existing SignalConfigModal; no second picker",
+      "owner": "web\\src\\components\\ui\\SignalConfigModal.tsx",
+      "file": "web\\src\\components\\ui\\SignalConfigModal.tsx",
+      "line": 253,
+      "rule": "MDC-002/MDC-010/MDC-040/MDC-043/MDC-044",
+      "detail": "Confirmed mounted dependency with neon/fixed-white styling, hardcoded labels, cramped category/footer structure and self-barrel import.",
+      "fix": "Extend existing presentation only; preserve exact signal/preset calculations and callbacks.",
+      "confidence": "high",
+      "props": ["open", "onClose", "categories", "initialSelected", "initialInterval", "onSubmit(signals: {name, interval}[])"],
+      "variants": ["Current full modal; retain size semantics", "Responsive category/row/footer reflow using existing primitives"],
+      "states": ["closed", "open/reseeded", "search matches", "search empty", "catalog empty", "all/some/none selected", "category expanded/collapsed", "preset applied", "0/positive intervals", "cancel", "submit"],
+      "usedBy": ["FleetSetupSubscribePanel (confirmed)", "Other consumers not inspected; architect must inventory before changing public API"],
+      "dependsOn": ["Existing Modal/Button/Select/Input/typography", "Current catalog identities", "Existing catalog localization pipeline", "Integration-owned 0-interval payload interpretation regression"],
+      "acceptance": ["All eight presets retained", "Reopen keeps latest parent selection", "Master/category/per-signal sampling and selection preserved", "320px and 200% text open-state controls reachable", "Keyboard/focus and composed contrast tested"]
+    },
+    {
+      "name": "Restrain existing onboarding Stepper presentation",
+      "owner": "web\\src\\features\\onboarding\\components\\Stepper.tsx",
+      "file": "web\\src\\features\\onboarding\\components\\Stepper.tsx",
+      "line": 68,
+      "rule": "MDC-010/MDC-042/no competing renderer",
+      "detail": "Existing cross-domain progress owner has colored structure and ambient current-step spinner.",
+      "fix": "Use neutral structure and semantic state emphasis; do not change completed/current policy or create a new Stepper.",
+      "confidence": "high",
+      "props": ["steps: OnboardingStep[]", "renderCta?: (step) => ReactNode"],
+      "variants": ["completed/current/pending retained", "static current indicator unless actual pending action"],
+      "states": ["empty", "first pending", "partially completed", "all completed", "disabled CTA", "reduced motion", "forced colors"],
+      "usedBy": ["FleetSetupProgress (confirmed)", "OnboardingPage (documented by existing owner, consumer source not inspected)"],
+      "dependsOn": ["Existing Button/Typography/VisuallyHidden", "Local caller must continue owning completion and prerequisite decisions"],
+      "acceptance": ["Only first-pending CTA rendered", "Every description retained", "Localized non-color status retained", "No ambient spinner when no operation is busy"]
+    },
+    {
+      "name": "Coordinate Fleet setup source contract and auth invalidation",
+      "owner": "web\\src\\api\\hooks\\useFleetSetup.ts; web\\src\\api\\hooks\\useSettings.ts",
+      "file": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 83,
+      "rule": "MDC-026/MDC-045/MDC-046",
+      "detail": "Auth changes do not invalidate separate Fleet token info; malformed successful payloads and 0-interval omission need pinned integration behavior.",
+      "fix": "Use existing keys/client/broadcast and focused contract regressions; preserve source payloads and live-only safeguards.",
+      "confidence": "high",
+      "props": ["Existing typed FleetApiInfo/PublicKeyStatus", "FleetTelemetrySubscribeInput including interval_seconds and field_intervals"],
+      "variants": ["Known negative", "Unknown/unavailable parse result", "Retained refresh failure"],
+      "states": ["auth refreshed", "auth disconnected", "malformed envelope", "valid empty errors", "zero interval", "positive interval"],
+      "usedBy": ["FleetSetupPage", "TeslaAccountSection", "FleetSetupSubscribePanel"],
+      "dependsOn": ["Existing queryPolicy", "invalidateAndBroadcast", "request cancellation/live-mode/sudo handling", "Backend endpoint semantics verification before contract alteration"],
+      "acceptance": ["Auth change cannot indefinitely leave a contradictory reference token summary", "No new polling store", "No sampling option silently lost", "Unknown not represented as clean/missing with certainty"]
+    },
+    {
+      "name": "Category export adoption for existing modal and toast",
+      "owner": "web\\src\\components\\ui\\index.ts; web\\src\\components\\feedback\\index.ts (export availability not inspected)",
+      "file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupSubscribePanel.tsx",
+      "line": 21,
+      "rule": "MDC-002",
+      "detail": "Concrete feature imports bypass category boundaries.",
+      "fix": "Check current exports and use them; add exports only if missing under integration ownership.",
+      "confidence": "medium",
+      "props": ["Unchanged SignalConfigModal and useToast contracts"],
+      "variants": [],
+      "states": ["Unchanged behavior"],
+      "usedBy": ["FleetSetupSubscribePanel", "TeslaAccountSection"],
+      "dependsOn": ["Current UI/feedback barrels", "Shared concrete internal imports to avoid cycles"],
+      "acceptance": ["No duplicate implementations", "Existing exports reused where available"]
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "Guided versus expert Fleet API surfaces", "evidence": "FleetSetupPage.tsx:7-8 and FleetSetupReadiness.tsx:112", "decision": "Keep /dev-tools?tab=fleet-api navigation and current endpoints. Expert surface was not audited and must not be deleted as duplication."},
+    {"pattern": "Stepper versus OrderedStepList", "evidence": "FleetSetupProgress.tsx:8,129; FleetSetupGuide.tsx:9,72", "decision": "Use existing owners; passive instructions and first-pending live workflow are distinct. No new global step system."},
+    {"pattern": "Two useVehicles definitions", "evidence": "useSettings.ts:111-117 and useVehicles.ts:73-79 both use ['vehicles']; TeslaAccountSection sync invalidates that same key.", "decision": "Existing cache sharing is confirmed, not an invalidation-key mismatch. Preserve it; no new vehicle cache."},
+    {"pattern": "Operational summary", "evidence": "FleetSetupKpiBand.tsx:11,154; SettingsSummaryBrief.tsx:25-41", "decision": "Keep existing OperationalBrief pipeline; do not replace with a bespoke four-card KPI band."}
+  ],
+  "preservation": {
+    "sourceHash": "DDEFE836BDA41071C3E9C210923B7989830B22C2889AE887BAC83BC77BCFA8F7",
+    "hashAlgorithm": "SHA-256",
+    "hashBasis": "Live root source bytes from Get-FileHash, not Git/history",
+    "sourceFile": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx",
+    "lineCount": 136,
+    "rootSectionCount": 3,
+    "rootSummaryCount": 1,
+    "functionalSectionCount": 7,
+    "sections": [
+      {"name": "Fleet setup overview", "file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx", "line": 55, "content": "Account, token, domain key and stream status with source context."},
+      {"name": "Tesla account", "file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx", "line": 90, "content": "Connection, expiry warning, actions and confirmation."},
+      {"name": "Setup progress", "file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx", "line": 93, "content": "Four live steps and anchored CTAs."},
+      {"name": "Subscribe telemetry", "file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx", "line": 108, "content": "VIN, current host/port/fields, signal picker, wake/subscribe/remove, errors, advanced host/port/CA."},
+      {"name": "How fleet setup works", "file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx", "line": 111, "content": "Four explanatory instructions."},
+      {"name": "Streaming", "file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx", "line": 122, "content": "Healthy/stale/waiting, last telemetry/count or live-signals navigation, command-pairing explanation."},
+      {"name": "Domain & certificates", "file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx", "line": 128, "content": "Public key, well-known path, fingerprint, default CA, pairing help and expert tools link."}
+    ],
+    "lineCounts": [
+      {"file": "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx", "lines": 136},
+      {"file": "web\\src\\features\\settings\\components\\TeslaAccountSection.tsx", "lines": 214},
+      {"file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupGuide.tsx", "lines": 77},
+      {"file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupKpiBand.tsx", "lines": 164},
+      {"file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupProgress.tsx", "lines": 134},
+      {"file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupReadiness.tsx", "lines": 122},
+      {"file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupStreamingPanel.tsx", "lines": 117},
+      {"file": "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupSubscribePanel.tsx", "lines": 373}
+    ],
+    "pagePlusDirectDomainComponentLines": 1337,
+    "comparison": "Current baseline only. No implementation or historical line-count equivalence claim; future modernization must count extracted components and preserve all functions.",
+    "componentCounts": {"rootGlassPanel": 0, "directDomainGlassPanel": 6, "rootChartContainer": 0, "directDomainChartContainer": 0, "liveProgressSteps": 4, "guideSteps": 4, "summaryStatuses": 4},
+    "actions": ["Copy current URL", "Connect via guarded OAuth URL", "Refresh token", "Sync vehicles", "Re-authorize", "Confirm/cancel disconnect", "Four progress CTAs targeting fleet-setup-account, fleet-setup-subscribe and fleet-setup-stream", "Choose local VIN", "Retry each failed/retained source", "Open/cancel signal modal", "Search signals", "Apply all eight presets", "Select/deselect all/category/signal", "Expand/collapse signal categories", "Change master/category/per-signal intervals including existing 500ms choice", "Submit selected signals", "Wake vehicle", "Subscribe selected VIN", "Confirm/cancel remove config", "Override hostname/port/PEM CA", "Expand partner-key help", "Open live signals", "Open Fleet API tools"],
+    "dataBehavior": [
+      "Independent auth/Fleet info/public key/onboarding reads and retained payloads must survive.",
+      "Fleet setup has no global analysis range: workspaceScope RANGE_ENABLED_PATHS excludes this route; /settings disables header vehicle picker. Preserve local subscription VIN; do not add scope=local or a second date range.",
+      "Keep cancellation signals, existing query keys/policies, continued onboarding polling, source recovery and broadcast invalidation.",
+      "Preserve raw SI wire/cache contracts; sampling interval_seconds remains seconds. Tesla vendor identifiers such as ChargeRateMilePerHour/MilesToArrival are upstream names, not permission to convert or rename signals.",
+      "Keep live-only mutation boundaries, request sudo/auth handling and destructive confirmations. Do not perform actual writes during acceptance without explicit safe environment authority.",
+      "Preserve OAuth malformed-URL guard and teslasync auth-expired/recovered event listeners/recovery edge logic.",
+      "Keep token expiry warning calculations, source timestamps, count semantics, host/port/default CA explanations and public-key versus command-key distinction.",
+      "Existing telemetry errors view renders first three errors only; preserve at least existing visibility and messages, do not claim full error history.",
+      "Do not silently drop presets, signals, individual sampling rates or advanced fields while restraining palette."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified; token/source names are not measured ratios",
+    "viewport": "unverified; responsive findings are source risks",
+    "backend": "Router registrations inspected only; handlers, deployed responses, defaults and zero-interval meaning were not exercised or audited.",
+    "tests": "Not run. Existing tests were enumerated, not read/executed. No historical receipt was used as current acceptance.",
+    "skillScript": "Read .github\\skills\\audit-violations\\audit.sh. Not executed because it runs project-wide TypeScript; assignment/design contract requires source-only Phase0 with centralized heavy gates.",
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\settings\\pages\\FleetSetupPage.tsx -Algorithm SHA256; Get-Content counts for root and seven direct domain dependencies", "exitCode": 0, "output": "Root lines=136 SHA256=DDEFE836BDA41071C3E9C210923B7989830B22C2889AE887BAC83BC77BCFA8F7; direct-domain GlassPanel=6 ChartContainer=0; total lines=1337."},
+      {"command": "Select-String root FleetSetupPage.tsx for style=, raw form/table controls, direct recharts/react-leaflet/framer-motion imports, old relative API imports and neon/white/glow/shadow classes", "exitCode": 0, "output": "style=: 0; raw form/table controls: 0; direct chart/map/motion imports: 0; old API imports: 0; text-neon/text-white/glow/shadow: 0. Root only, not a clean-dependencies claim."},
+      {"command": "rg route/hook evidence scoped to App.tsx, workspaceScope.ts, useSettings.ts and internal\\api\\router.go", "exitCode": 0, "output": "Lazy root and SafeRoute registration found; actual hook paths matched the existing auth/vehicles/dev-tools/onboarding route registrations."}
+    ],
+    "unchangedFiles": "No source/shared/config/catalog/queue changes authorized or made. Only audit report and heartbeat owned.",
+    "assumptions": ["Route registration is source evidence, not a runtime mount.", "Color/overflow concerns need real composed-theme and open-state checks.", "Shared APIs need cross-consumer review by exclusive owners before modification."],
+    "readFailures": ["Initial unrestricted view of frontend-design-contract.md was too large; recovered with explicit ranges.", "Guessed components\\layout\\SourceContent.tsx path did not exist; actual owner resolved via layout barrel and read."]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\settings\\pages\\FleetSetupPage.tsx",
+    "web\\src\\features\\settings\\components\\TeslaAccountSection.tsx",
+    "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupGuide.tsx",
+    "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupKpiBand.tsx",
+    "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupProgress.tsx",
+    "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupReadiness.tsx",
+    "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupStreamingPanel.tsx",
+    "web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupSubscribePanel.tsx",
+    "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx",
+    "web\\src\\features\\onboarding\\components\\Stepper.tsx",
+    "web\\src\\features\\admin\\components\\devtools\\constants.ts",
+    "web\\src\\api\\hooks\\useFleetSetup.ts",
+    "web\\src\\api\\hooks\\useOnboarding.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\queryPolicy.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\components\\ui\\SignalConfigModal.tsx",
+    "web\\src\\components\\data-display\\OrderedStepList.tsx",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

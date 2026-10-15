@@ -1,0 +1,238 @@
+{
+  "item": "audit-page-035",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+  "routes": ["/intelligence/firmware-canary"],
+  "purpose": "Read-only firmware rollout decision support from matched target/peer observation windows; explicitly not deployment control.",
+  "primaryGoal": "Understand target regression, peer regression, matched excess, decision rationale and the evidence limitations before interpreting rollout readiness.",
+  "dataSources": [
+    {
+      "hook": "useFirmwareCanary",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 77,
+      "endpoint": "GET /api/v1/advanced-intelligence/firmware-canary?vehicle_id={id}&limit=10&offset={(page-1)*10}",
+      "ownership": "internal\\handler\\v1\\advancedintelligence\\handler.go:70-73,110-125; composition internal\\api\\router.go:3917; service internal\\app\\advancedintelligencesvc\\twin_firmware.go:243-263",
+      "behavior": "Positive vehicle ID enables the query. Key includes vehicle, limit and offset; queryFn forwards AbortSignal; inherited query policy is unchanged. Snake_case response mirrors FirmwareCanary and AdvancedPage types. Service reads FirmwareWindow and currently constructs zero or one decision, then paginates that list; historical multi-row capabilities are not established.",
+      "sourceEvidence": "BuildFirmwareCanary names software_updates installation evidence and drives evidence; repository SQL, matching quality and actual production payloads were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "endpoint": "Indirect useVehicles; exact vehicle endpoint implementation not inspected in this bounded audit.",
+      "ownership": "Existing workspace vehicle store and URL synchronization.",
+      "behavior": "Page consumes the shell selection; URL > persisted valid ID > first loaded vehicle. workspaceScope.ts enables vehicle control and does not enable range for this exact route. Page has no competing local picker/date control."
+    },
+    {
+      "hook": "useNumberFormatting",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 28,
+      "endpoint": null,
+      "ownership": "Existing shared number formatting hook; internal settings graph not inspected.",
+      "behavior": "Percentages are display-formatted without changing raw dimensionless percentage payloads. No physical-unit converter or backend mutation is introduced."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / Grid", "owner": "web\\src\\components\\layout\\index.ts", "usage": "Page shell and 1/2/4-column metric grid; barrel exports existing layout-reference implementation."},
+    {"name": "InsightPanel", "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "usage": "Domain adapter over LayoutCard, SourceContent and useDataState; persistent decision shell with retry and retained-content behavior."},
+    {"name": "EvidencePanel", "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "usage": "Domain quality, sources, limitations and unsupported-capability presentation."},
+    {"name": "SourceContent", "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "usage": "Existing loading, fatal-error, empty and retained-source presentation; do not replace with another state component."},
+    {"name": "StatCard", "owner": "web\\src\\components\\data-display\\StatCard.tsx", "usage": "Four labeled metrics per decision; missing values become em dash, zero remains visible."},
+    {"name": "Pagination", "owner": "web\\src\\components\\ui\\Pagination.tsx", "usage": "Caller-owned page/offset, named navigation, direct page jump, adaptive container layout."},
+    {"name": "Badge / Text / AlertBanner / FadeIn / KVList", "owner": "Existing category barrels and EvidencePanel imports", "usage": "Semantic statuses, role typography, deployment warning, entrance motion and responsive quality metadata. Unread primitive internals are not acceptance evidence."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 71,
+      "rule": "MDC-015 / MDC-002",
+      "detail": "Page decision article and EvidencePanel source cards (EvidencePanel.tsx:81) both hand-author fixed-white bordered surfaces instead of consuming the existing surface contract.",
+      "fix": "Reuse existing neutral Card/surface tokens without new wrapper vocabulary; preserve article/heading semantics.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "FirmwareCanaryPage.tsx:72 wraps version/status header; metric Grid at :81 stacks at default, two columns at sm and four at lg.",
+      "EvidencePanel.tsx:45 stacks quality/sources/limitations until lg:grid-cols-3.",
+      "Pagination.tsx:50-52 uses min-w-0, wrapping and a named container; :47 reserves 44px mobile buttons; direct jump remains available."
+    ],
+    "issues": [],
+    "risks": ["Long firmware version/source/summary strings need actual narrow-container and 200%-text review; source classes alone do not prove absence of overflow."],
+    "verifiedViewports": [],
+    "unverifiedViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "sourceBehavior": [
+      "FirmwareCanaryPage.tsx:74 and :47 mark decorative icons aria-hidden; :75 uses Text as h3.",
+      "EvidencePanel.tsx:46,73,105 gives the three sections localized accessible labels and visible headings.",
+      "Pagination.tsx:50 names navigation; :54 announces range; :77-110 gives button names/current-page semantics; :132-136 labels jump input and associates validation error.",
+      "Decision and quality badges retain text, not color-only status."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+        "line": 79,
+        "rule": "MDC-044",
+        "detail": "Decision badge renders raw wire enum item.decision; EvidencePanel.tsx:55 likewise renders raw quality.status. These are presentation statuses rather than localized labels.",
+        "fix": "Translate known decision/quality enum labels with existing i18n conventions while preserving raw enum keys and decisionVariant mappings; retain a safe unknown fallback.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ],
+    "runtimeStatus": "Keyboard, focus, screen reader, target spacing, effective contrast, forced colors and reduced motion UNVERIFIED."
+  },
+  "states": {
+    "loading": "Decision query passes through InsightPanel.tsx:38-43 to SourceContent loading skeleton. EvidencePanel has no query and can render unsupported/empty claims while the decision source is still loading.",
+    "empty": "Successful items=[] gives vehicle-specific no-window message; no selected vehicle gives selection prerequisite. Evidence subsections remain present.",
+    "fatalError": "InsightPanel uses fatalError and shared ErrorDisplay/retry; unrelated warning remains mounted.",
+    "retainedRefreshError": "InsightPanel routes stale data to retained presentation; SourceContent.tsx:58-73 retains children and adds retry. EvidencePanel is outside that trust boundary.",
+    "offline": "Initial paused query receives explicit unresolved/paused copy in InsightPanel.tsx:44-49. Retained paused source uses shared generic retained warning. No production offline case exercised.",
+    "unknownAndZero": "Null target/peer/excess values remain null for StatCard placeholder; measured zero formats as 0. Percentage inputs are not physical-unit conversion candidates.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+        "line": 133,
+        "rule": "MDC-026 / mission 22-25",
+        "detail": "EvidencePanel receives only latest item fields (:134-136), not the source query/trust state. Its InsightPanel has no query (EvidencePanel.tsx:38), so initial loading/failure/no selection is presented as quality unsupported, no evidence returned and no additional limitations. Retained evidence also lacks its own visible stale/offline context.",
+        "fix": "Pass the existing query/trust and prerequisite state into the domain EvidencePanel adapter; retain its shell/subsections and explicit unsupported capabilities. Show unresolved/loading/error separately from authoritative successful missing metadata, and keep retained evidence on refresh failure with recovery.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 71,
+      "rule": "MDC-010 / MDC-012 / MDC-015",
+      "detail": "Decision surface uses border-white/[0.08] and bg-white/[0.025]; rationale at :102 uses border-white/[0.06]. EvidencePanel.tsx:81 repeats fixed-white styling. These bypass theme-aware neutral surface/border roles.",
+      "fix": "Use existing neutral surface and border variables/Card contract. Keep semantic badge and warning meanings without glow, gradients or saturation escalation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 34,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "The variable latest is items[0] of the current server page, and standalone evidence carries no version/generated-at identity. Current service returns at most one item, so multi-row evidence mismatch is a dormant presentation risk, not a verified current production history bug.",
+      "fix": "Clearly associate evidence with the shown decision's version/time; preserve backend ordering and all returned evidence. Do not invent a historical latest record or expand backend capabilities in a cosmetic change.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+      "line": 31,
+      "rule": "MDC-032 / MDC-046",
+      "detail": "Local page state has no vehicle-change reset. If a future/history response exposes total>10, switching vehicle on page N retains the prior offset; Pagination clamps display locally but does not correct caller state. Current one-result service does not expose this transition through the production paginator.",
+      "fix": "If pagination becomes reachable, reset/clamp the caller-owned page on scope change without changing the existing query key or workspace selection.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "order": ["Align EvidencePanel trust state before aesthetic adoption.", "Replace fixed-white surfaces and localize display enum labels.", "Exercise narrow widths/themes/state transitions centrally; keep dormant multi-row risks explicit."],
+    "rationale": "No deployment action, SI corruption or endpoint mismatch found in the inspected source. Evidence availability language currently overstates what an unresolved source knows."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Trust-aware EvidencePanel domain adapter",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Optional typed query/DataStateSource and prerequisite/empty context, forwarded to the existing InsightPanel/SourceContent; loading, fatal error with retry, unresolved/paused, successful missing metadata, retained refresh failure/offline. Existing quality/evidence/limitations/unsupported props remain intact.",
+      "usedBy": ["FirmwareCanaryPage.tsx", "Other existing EvidencePanel callers require owner-led compatibility review; not individually audited here."],
+      "dependsOn": ["web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "web\\src\\api\\dataState.ts"]
+    },
+    {
+      "name": "Theme-neutral and localized EvidencePanel presentation",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Reuse existing neutral surface/border roles; known quality-status display label mapping with safe fallback, preserving enum and semantic badge variants.",
+      "usedBy": ["FirmwareCanaryPage.tsx", "Existing EvidencePanel consumers; no new global composite required."],
+      "dependsOn": ["Existing UI surface tokens/Card", "Existing canonical i18n catalog integration owner"]
+    }
+  ],
+  "competingImplementations": {
+    "found": ["Local fixed-white cards compete with existing shared surface roles."],
+    "notFoundInInspectedPage": ["No alternate router, query store, physical-unit helper, range picker, vehicle picker, deployment controller or chart library."],
+    "recommendation": "Extend/reuse existing domain and shared adapters rather than introducing a new canary-specific design system."
+  },
+  "preservation": {
+    "sourceHash": "600efd3464c8da61cb0d0a8048b0ecae7faf9642edae7566f241cef77c4a7a2d",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact raw bytes of root page web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx, not a dependency aggregate.",
+    "currentLineCount": 145,
+    "sections": [
+      {"name": "Decision support, not deployment control warning", "count": 1},
+      {"name": "Matched cohort decisions", "count": 1},
+      {"name": "Decision article and rationale", "count": "one per returned item"},
+      {"name": "Target regression / Peer regression / Matched excess / Decision generated", "count": "four metrics per returned item"},
+      {"name": "Evidence, quality, and limitations", "count": 1},
+      {"name": "Data quality / Evidence sources / Limitations", "count": 3},
+      {"name": "Explicitly unsupported: causality and deployment commands", "count": 1}
+    ],
+    "sectionCounts": {"pageInsightPanel": 1, "pageEvidencePanel": 1, "evidenceInsightPanel": 1, "evidenceSemanticSections": 3, "pageStatCardDeclarations": 4, "pageGlassPanel": 0, "pageChartContainer": 0},
+    "actions": [
+      "Shared header vehicle selection with existing URL/store precedence.",
+      "Decision retry/refresh from existing source adapter.",
+      "Conditional Pagination when total>10: first/previous/current/next/last and direct jump through shared primitive.",
+      "No install, hold, rollback, export or firmware mutation action in this page."
+    ],
+    "dataBehavior": [
+      "PAGE_SIZE=10, limit and offset semantics, enablement, query key scope and cancellation.",
+      "Every returned item/version/decision, all three percentage metrics including zero/null distinction, generated timestamp and insufficient-versus-supported rationale.",
+      "First returned item's quality status, sample count, coverage, observation bounds, reasons, evidence ordering/source/summary/sample count/time and limitations.",
+      "Explicitly unsupported causality/deployment statements even without evidence.",
+      "Percentages remain raw dimensionless source percentages; timestamps remain source UTC strings, currently rendered by shared browser-default date formatter.",
+      "No second workspace selector; no current date-range contract or date-bound endpoint capability inferred.",
+      "Persistent shells, loading/fatal/retained-source behavior, safe null arrays and existing i18n keys."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 read-only source audit",
+    "runtime": "UNVERIFIED: route mount, live requests/payloads, click interactions, query retries, backend calculations and real source quality were not exercised.",
+    "visual": "UNVERIFIED: themes, actual composed contrast, all requested widths, RTL, long content, 200% text, forced colors and motion.",
+    "tests": "NOTRUN: TypeScript, full audit script, lint, builds and tests intentionally not run under audit restrictions. Existing closure test source at AdvancedIntelligenceClosure.test.tsx:218,241-268 is context only, not current passing evidence.",
+    "scopedPatternCounts": {
+      "command": "PowerShell Get-Content -Raw plus regex counts over FirmwareCanaryPage.tsx, EvidencePanel.tsx and InsightPanel.tsx: style=; <(button|input|textarea|select|table)\\b; from .(recharts|react-leaflet|framer-motion).",
+      "exitCode": 0,
+      "output": [
+        "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx | inline-style=0 | raw-controls=0 | direct-library=0",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx | inline-style=0 | raw-controls=0 | direct-library=0",
+        "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx | inline-style=0 | raw-controls=0 | direct-library=0"
+      ],
+      "limits": "Only these literal source patterns; not a claim of zero engineering violations. One initial PowerShell quoting attempt exited 1 with no output; corrected count command exited 0."
+    },
+    "scope": "Only assigned page and directly relevant dependencies inspected; backend read restricted to route/type/service slices, not an SQL/pipeline audit. No Git, source, shared, queue, settings, production mutation or authentication interaction performed.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-035.json", ".agent-status\\audit-page-035.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\FirmwareCanaryPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\pages\\AdvancedIntelligenceClosure.test.tsx",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\data-display\\StatCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\app\\advancedintelligencesvc\\twin_firmware.go",
+    "internal\\domain\\advancedintelligence\\twin_firmware.go"
+  ]
+}

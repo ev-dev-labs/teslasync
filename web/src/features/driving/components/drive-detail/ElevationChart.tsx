@@ -1,24 +1,30 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import {
-  ChartContainer, ChartLegend, ChartTooltip,
+  ChartLegend, ChartTooltip,
   ComposedChart, Area, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
+import { ChartCard } from '@/components/layout';
+import { Table, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { ChartDataPoint, DriveStats } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { asFiniteNumber } from '@/lib/typeGuards';
+import type { DriveElevationEvidence } from './useDriveDetailData';
 
 interface ElevationChartProps {
   chartData: ChartDataPoint[];
-  stats: DriveStats;
+  stats: DriveStats & { elevationEvidence?: DriveElevationEvidence };
 }
 
 export function ElevationChart({ chartData, stats }: ElevationChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
@@ -29,29 +35,48 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   // telemetry resolves, despite the non-optional prop type. Guard once so the
   // `.length` check and the recharts `data` prop never touch a nullish value,
   // and keep a stable reference so <ComposedChart> isn't fed a fresh array.
-  const points = useMemo(() => chartData ?? [], [chartData]);
-  const elevGain = stats?.elevGain ?? 0;
-  const elevLoss = stats?.elevLoss ?? 0;
-  const elevNet = elevGain - elevLoss;
+  const points = useMemo(() => (chartData ?? []).map((point) => ({
+    ...point, elevation: asFiniteNumber(point.elevation),
+  })), [chartData]);
+  const hasPair = points.some((point, i) => {
+    const previous = points[i - 1]?.elevation;
+    return point.elevation != null && previous != null
+      && asFiniteNumber(point.elevation - previous) != null;
+  });
+  const evidence = stats?.elevationEvidence;
+  const hasDeltas = hasPair && (!evidence || evidence.eligiblePairCount > 0);
+  const elevGain = hasDeltas
+    ? asFiniteNumber(evidence ? evidence.gainM : stats?.elevGain) : null;
+  const elevLoss = hasDeltas
+    ? asFiniteNumber(evidence ? evidence.lossM : stats?.elevLoss) : null;
+  const elevNet = elevGain != null && elevLoss != null
+    ? asFiniteNumber(elevGain - elevLoss) : null;
+  const hasChart = points.filter((point) => point.elevation != null).length > 1;
 
   return (
-    <FadeIn className="h-full">
+    <FadeIn className="space-y-3">
+      <Table variant="embedded" aria-label={t('driveDetail.elevSummary', 'Elevation summary')}>
+        <tbody>
+          <tr><th scope="row">{t('driveDetail.gain', 'Gain')}</th><td>{elevGain != null ? `${fmtNumber(elevGain)} m` : '—'}</td></tr>
+          <tr><th scope="row">{t('driveDetail.loss', 'Loss')}</th><td>{elevLoss != null ? `${fmtNumber(elevLoss)} m` : '—'}</td></tr>
+          <tr><th scope="row">{t('driveDetail.net', 'Net')}</th><td>{elevNet != null ? `${fmtNumber(elevNet)} m` : '—'}</td></tr>
+        </tbody>
+      </Table>
       {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
-      <ChartContainer
-        title={t('driveDetail.elevProfile', 'Elevation Profile')}
-        ariaLabel={t('driveDetail.elevProfile.aria', 'Elevation and speed area+line chart over the drive timeline')}
+      <ChartCard
+        title={t('driveDetail.elevProfile', 'Elevation profile')}
+        ariaLabel={t('driveDetail.elevProfileAria', 'Elevation and speed area+line chart over the drive timeline')}
         chartKey="drive-detail-elevation"
         height={220}
-        className="h-full"
+        mobileHeight={220}
+        toolbar
+        exportable
+        empty={!hasChart}
+        emptyMessage={t('driveDetail.noChartData', 'No telemetry data available')}
       >
         {({ hiddenSeries }) => (
-          points.length > 1 ? (
+          hasChart ? (
             <>
-            <div className="flex items-center gap-4 mb-2 text-xs">
-              <span className="flex items-center gap-1 text-green-400"><ArrowUpRight className="h-3 w-3" aria-hidden="true" />{fmtNumber(elevGain)} m {t('driveDetail.gain', 'gain')}</span>
-              <span className="flex items-center gap-1 text-red-400"><ArrowDownRight className="h-3 w-3" aria-hidden="true" />{fmtNumber(elevLoss)} m {t('driveDetail.loss', 'loss')}</span>
-              <span className="text-[var(--text-muted)]">{t('driveDetail.net', 'Net')}: {fmtNumber(elevNet)} m</span>
-            </div>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={points}
@@ -59,14 +84,14 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
                 syncMethod={syncProps.syncMethod}
                 onMouseMove={syncProps.onMouseMove}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis yAxisId="elev" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                <YAxis yAxisId="speed" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                <XAxis dataKey="time" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis yAxisId="elev" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
+                <YAxis yAxisId="speed" orientation="right" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend />
-                <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} hide={hiddenSeries?.isHidden('elevation')} />
-                <Line yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} hide={hiddenSeries?.isHidden('speed')} />
+                <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke={chartTokens.series[1]} fill={chartTokens.series[1]} fillOpacity={0.08} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} hide={hiddenSeries?.isHidden('elevation')} />
+                <Line yAxisId="speed" type="monotone" dataKey="speed" stroke={chartTokens.series[0]} strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} hide={hiddenSeries?.isHidden('speed')} />
                 {syncedX != null && (
                   <ReferenceLine
                     yAxisId="elev"
@@ -84,11 +109,11 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
           ) : (
             <div role="status" className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
               <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
-              <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+              <Text variant="caption">{t('driveDetail.noChartData', 'No telemetry data available')}</Text>
             </div>
           )
         )}
-      </ChartContainer>
+      </ChartCard>
     </FadeIn>
   );
 }

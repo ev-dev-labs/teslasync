@@ -1,0 +1,41 @@
+{
+  "logbook": {
+    "title": "Trip logbook",
+    "subtitle": "Classify drives for tax deduction and expense reimbursement",
+    "kpis": "Logbook summary metrics",
+    "business": "Business",
+    "commute": "Commute",
+    "personal": "Personal",
+    "unclassified": "Unclassified",
+    "driveCount": "{{count}} drives",
+    "ofTotal": "of {{total}} drives",
+    "reimbursement": "Reimbursement",
+    "inPeriod": "reimbursable in this period",
+    "rateFor": "Reimbursement rate for {{category}}",
+    "perKm": "/ km",
+    "perMile": "/ mi",
+    "drives": "Drives",
+    "filter": "Filter by category",
+    "filterAll": "All categories",
+    "date": "Date",
+    "route": "Route",
+    "distance": "Distance",
+    "category": "Category",
+    "categoryFor": "Category for drive on {{date}}",
+    "amount": "Amount",
+    "suggestionBanner": "{{count}} unclassified drives match routes you have already classified.",
+    "applySuggestions": "Apply suggestions",
+    "noDrives": "No drives in this period yet.",
+    "browseDrives": "Browse drives",
+    "noneInFilter": "No drives in this category yet.",
+    "brief": {
+      "categoryDistance": "Distance in this category within the selected period.",
+      "categoryAmount": "{{category}} amount",
+      "rateBasis": "Existing reimbursement rate × drive distance; rates remain stored per kilometre.",
+      "categoryCount": "{{category}} drives",
+      "countBasis": "Classified drives in the selected period, before the table category filter.",
+      "description": "Category distances, reimbursement amounts, and drive counts share the selected period; table filters do not change these totals.",
+      "provenance": "Returned vehicle drives, local classifications, and saved reimbursement rates; complete server-range coverage is not supplied."
+    }
+  }
+}

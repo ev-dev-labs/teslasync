@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import '@/i18n';
 import { RangePicker } from '../RangePicker';
@@ -9,6 +10,39 @@ const baseProps = {
 };
 
 describe('<RangePicker /> trigger', () => {
+  it.each([
+    ['sm', 'md:h-8'],
+    ['md', 'md:h-10'],
+  ] as const)('keeps a 44px mobile target and compact %s desktop sizing', (size, desktopHeight) => {
+    render(<RangePicker {...baseProps} onChange={vi.fn()} size={size} />);
+    const trigger = screen.getByRole('button', { name: /date range/i });
+    expect(trigger).toHaveClass('h-11', 'min-h-11', 'min-w-11', desktopHeight, 'md:min-h-0');
+    expect(trigger).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2');
+    expect(trigger).toHaveClass('bg-[var(--control-bg)]', 'text-[var(--text-primary)]');
+  });
+
+  it('opens with the keyboard, selects a preset and restores trigger focus', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<RangePicker {...baseProps} onChange={onChange} />);
+    const trigger = screen.getByRole('button', { name: /date range/i });
+    await user.tab();
+    expect(trigger).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await user.tab();
+    expect(screen.getByRole('option', { name: /^today$/i })).toHaveFocus();
+    await user.keyboard(' ');
+    expect(onChange).toHaveBeenCalledWith(expect.any(Object), 'today');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    await user.keyboard(' ');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveFocus();
+  });
+
   it('renders a button trigger with active label and resolved date readout', () => {
     render(<RangePicker {...baseProps} onChange={vi.fn()} />);
     const trigger = screen.getByRole('button', { name: /date range/i });

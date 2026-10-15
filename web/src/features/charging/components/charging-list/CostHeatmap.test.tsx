@@ -1,31 +1,11 @@
 /**
  * CostHeatmap (charging-list · optimizer) — behaviour + hardening contract.
  *
- * CostHeatmap is the weekly cost visualisation of the Charging Optimizer
- * section: a 7×24 weekday/hour grid whose cells are tinted from cheap→expensive
- * by the average cost/kWh of the sessions that landed in that slot, plus a
- * cheap↔expensive legend. It is purely presentational — the parent
- * (OptimizerSection) hands it the pre-aggregated `weekly_heatmap` array and the
- * peak cost/kWh that anchors the colour scale — so these tests render it
- * directly (no QueryClient / Router) and pin:
- *
- *   - the exported `heatFill` scale: exact rgba at both ends + midpoint, and its
- *     clamp/`safeNumber` guards (out-of-range + NaN can never emit bad colour);
- *   - structure + a11y: the grid is a single labelled `role="img"`, all seven
- *     weekday rows + the hour axis render, and exactly 7×24 = 168 title-bearing
- *     cells exist (a cell is never dropped); the header icon is decorative;
- *   - the continuous colour scale: the priciest slot gets the "hot" fill, a
- *     quarter-cost slot a distinct mid fill, and an empty slot the faint base;
- *   - the tooltip: a populated cell reports "<day> <hour>:00 — N sessions,
- *     <currency>/kWh" using the real `useFormatting` boundary, an empty cell
- *     reports only "<day> <hour>:00";
- *   - the peak fallback: `peakCostPerKwh <= 0` falls back to the 0.30 default max
- *     so the scale still spans the grid;
- *   - the empty branch: `[]` / `undefined` heatmap renders a labelled
- *     `role="status"` EmptyState (never a blank panel) while still showing the
- *     panel title, and never crashes;
- *   - dirty-data hardening: NaN/undefined/null cells are neutralised to a finite
- *     "0" so no "NaN" ever leaks into a tooltip or an inline colour.
+ * Pins all 168 weekday/hour cells, populated tooltips, theme-aware continuous
+ * cost fills, the legend, peak fallback, empty states and dirty-data guards.
+ * The shared disclosure/table alternative preserves every slot and exposes
+ * currency-formatted values without relying on color or hover. Both contained
+ * scroll regions are reachable using the keyboard.
  *
  * `react-i18next` is stubbed so `t(key, fallback)` resolves to its English
  * fallback deterministically (mirrors the sibling charging-heatmap /
@@ -35,7 +15,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { chartTokens } from '@/lib/tokens';
 
 import { CostHeatmap, heatFill } from './CostHeatmap';
 import type { OptimizerHeatmapEntry } from '@/types/charging';
@@ -45,13 +27,16 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
+      t: (key: string, fallback?: unknown, options?: { title?: string }) =>
+        typeof fallback === 'string'
+          ? fallback.replace('{{title}}', options?.title ?? '')
+          : key,
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
 });
 
-/** Strip whitespace so rgba serialisation differences don't break equality. */
+/** Strip whitespace so CSS colour serialisation doesn't break equality. */
 const norm = (s: string) => s.replace(/\s+/g, '');
 
 /** All 168 title-bearing heat cells, in DOM order (day 0 hours 0..23, day 1 …). */
@@ -76,28 +61,69 @@ const sampleHeatmap: OptimizerHeatmapEntry[] = [
 ];
 
 describe('heatFill — colour scale primitive', () => {
-  it('paints a warm rgba fill that cools from expensive (red) to cheap (green)', () => {
-    // intensity 1 → full red, no green/blue; intensity 0 → the cool base.
-    expect(heatFill(1, 0.6)).toBe('rgba(239, 0, 0, 0.6)');
-    expect(heatFill(0, 0.6)).toBe('rgba(0, 187, 100, 0.6)');
-    // Midpoint interpolates each channel and rounds (0.5·239=120, 0.5·187≈94).
-    expect(heatFill(0.5, 0.6)).toBe('rgba(120, 94, 50, 0.6)');
+  it('mixes restrained theme-aware cost series into the neutral surface', () => {
+    expect(heatFill(1, 0.6)).toBe(
+      `color-mix(in srgb, color-mix(in srgb, ${chartTokens.series[1]} 0%, ${chartTokens.series[3]}) 60%, var(--surface-2))`,
+    );
+    expect(heatFill(0, 0.6)).toContain(`${chartTokens.series[1]} 100%`);
+    expect(heatFill(0.5, 0.6)).toContain(`${chartTokens.series[1]} 50%`);
   });
 
   it('clamps out-of-range inputs and neutralises NaN/undefined to a finite 0', () => {
-    // Over-range intensity + alpha clamp to 1, not overflow past red / opacity 1.
-    expect(heatFill(2, 5)).toBe('rgba(239, 0, 0, 1)');
-    // Negative intensity + alpha clamp to 0 (the coolest fill, fully transparent).
-    expect(heatFill(-1, -0.5)).toBe('rgba(0, 187, 100, 0)');
+    // Over-range intensity + alpha clamp to 1.
+    expect(heatFill(2, 5)).toBe(heatFill(1, 1));
+    // Negative intensity + alpha clamp to the neutral surface.
+    expect(heatFill(-1, -0.5)).toBe(heatFill(0, 0));
     // NaN / undefined → 0 via safeNumber, so no "NaN" ever reaches the string.
-    expect(heatFill(NaN, NaN)).toBe('rgba(0, 187, 100, 0)');
+    expect(heatFill(NaN, NaN)).toBe(heatFill(0, 0));
     expect(heatFill(undefined as unknown as number, undefined as unknown as number)).toBe(
-      'rgba(0, 187, 100, 0)',
+      heatFill(0, 0),
     );
   });
 });
 
 describe('CostHeatmap — structure & accessibility', () => {
+  it('keeps contained scrolling keyboard reachable and exposes every slot in the shared table', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<CostHeatmap heatmap={sampleHeatmap} peakCostPerKwh={0.3} />);
+    const chartScroll = screen.getByRole('region', {
+      name: 'Average charging cost per kWh by weekday and hour of day',
+    });
+    expect(chartScroll).toHaveAttribute('tabindex', '0');
+    expect(chartScroll).toHaveClass('max-w-full', 'overflow-x-auto', 'overscroll-x-contain');
+    await user.tab();
+    expect(chartScroll).toHaveFocus();
+    await user.tab();
+    const disclosure = screen.getByRole('button', { name: 'Charging Cost Heatmap — data table' });
+    expect(disclosure).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+    await user.tab();
+    const tableScroll = screen.getAllByRole('region', { name: 'Charging Cost Heatmap — data table' })
+      .find((region) => region.tabIndex === 0);
+    expect(tableScroll).toHaveFocus();
+    expect(tableScroll).toHaveClass('max-h-96', 'overflow-auto', 'overscroll-contain');
+    const table = screen.getByRole('table', {
+      name: 'Average charging cost per kWh by weekday and hour of day',
+    });
+    await user.tab();
+    expect(table).toHaveFocus();
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(168);
+    rows.forEach((row, index) => {
+      expect(within(row).getByRole('rowheader')).toHaveTextContent(
+        ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][Math.floor(index / 24)],
+      );
+      expect(within(row).getAllByRole('cell')[0]).toHaveTextContent(`${index % 24}:00`);
+    });
+    expect(within(rows[cellIndex(1, 9)]).getAllByRole('cell').map((cell) => cell.textContent))
+      .toEqual(['9:00', '4', '$0.30/kWh']);
+    expect(within(rows[cellIndex(0, 0)]).getAllByRole('cell').map((cell) => cell.textContent))
+      .toEqual(['0:00', '0', '—']);
+    expect(rows[167]).toHaveTextContent('Sat23:00');
+    expect(heatCells(container)).toHaveLength(168);
+  });
+
   it('renders the panel title, a labelled role="img" grid, weekdays and the hour axis', () => {
     render(<CostHeatmap heatmap={sampleHeatmap} peakCostPerKwh={0.3} />);
 
@@ -142,11 +168,11 @@ describe('CostHeatmap — tooltips', () => {
 
     // Mon 09:00: 4 sessions @ $0.300/kWh (formatCurrency → $ + 3dp).
     expect(cells[cellIndex(1, 9)].getAttribute('title')).toBe(
-      'Mon 9:00 — 4 sessions, $0.300/kWh',
+      'Mon 9:00 — 4 sessions, $0.30/kWh',
     );
     // Wed 14:00: the quarter-cost slot.
     expect(cells[cellIndex(3, 14)].getAttribute('title')).toBe(
-      'Wed 14:00 — 1 sessions, $0.150/kWh',
+      'Wed 14:00 — 1 sessions, $0.15/kWh',
     );
   });
 
@@ -173,7 +199,7 @@ describe('CostHeatmap — colour scale', () => {
       norm(heatFill(1, 0.63)),
     );
     // Untouched slot: the faint base fill (never tinted).
-    expect(norm(cells[cellIndex(0, 0)].style.backgroundColor)).toBe(norm('rgba(255,255,255,0.02)'));
+    expect(norm(cells[cellIndex(0, 0)].style.backgroundColor)).toBe('var(--surface-2)');
   });
 
   it('falls back to the 0.30 default max when peakCostPerKwh is not positive', () => {
@@ -249,11 +275,11 @@ describe('CostHeatmap — dirty-data hardening', () => {
     // NaN sessions → 0 → the slot renders as empty (no session/cost text).
     const nanCell = heatCells(container)[cellIndex(1, 9)];
     expect(nanCell.getAttribute('title')).toBe('Mon 9:00');
-    expect(norm(nanCell.style.backgroundColor)).toBe(norm('rgba(255,255,255,0.02)'));
+    expect(norm(nanCell.style.backgroundColor)).toBe('var(--surface-2)');
 
     // Valid sessions but NaN cost → cost 0 → "$0.000", intensity 0, no NaN colour.
     const costCell = heatCells(container)[cellIndex(2, 10)];
-    expect(costCell.getAttribute('title')).toBe('Tue 10:00 — 3 sessions, $0.000/kWh');
+    expect(costCell.getAttribute('title')).toBe('Tue 10:00 — 3 sessions, $0.00/kWh');
     expect(norm(costCell.style.backgroundColor)).toBe(
       norm(heatFill(0, Math.min(0.9, 0.15 + 3 * 0.12))),
     );

@@ -144,7 +144,7 @@ describe('ExportModal', () => {
     renderModal();
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Export Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Export dashboard' })).toBeInTheDocument();
     expect(screen.getByText('My Fleet Overview')).toBeInTheDocument();
     expect(screen.getByTestId('mini-grid-preview')).toBeInTheDocument();
 
@@ -153,14 +153,14 @@ describe('ExportModal', () => {
     expect(screen.getByText(/^\d+(\.\d+)?\s(B|KB)$/)).toBeInTheDocument();
     expect(screen.getByText('Updated Jan 15, 2024')).toBeInTheDocument();
 
-    expect(screen.getByRole('button', { name: /Download JSON File/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Copy to Clipboard/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Copy Shareable URL/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Download JSON file/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Copy to clipboard/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Copy shareable URL/ })).toBeInTheDocument();
   });
 
   it('fires onDownload then onClose when the file download is chosen', () => {
     const { onClose, onDownload } = renderModal();
-    fireEvent.click(screen.getByRole('button', { name: /Download JSON File/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Download JSON file/ }));
 
     expect(onDownload).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -172,7 +172,7 @@ describe('ExportModal', () => {
 
   it('copies the pretty-printed dashboard JSON without closing the modal', async () => {
     const { onClose, dashboard } = renderModal();
-    fireEvent.click(screen.getByRole('button', { name: /Copy to Clipboard/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/ }));
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     expect(writeText).toHaveBeenCalledWith(JSON.stringify(dashboard, null, 2));
@@ -182,7 +182,7 @@ describe('ExportModal', () => {
 
   it('copies a shareable URL that round-trips back to the dashboard', async () => {
     const { dashboard } = renderModal();
-    fireEvent.click(screen.getByRole('button', { name: /Copy Shareable URL/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Copy shareable URL/ }));
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     const url = writeText.mock.calls[0][0];
@@ -200,7 +200,7 @@ describe('ExportModal', () => {
   it('disables share and announces a warning when the layout is too large for a URL', () => {
     renderModal({ dashboard: makeOversizedDashboard() });
 
-    const shareBtn = screen.getByRole('button', { name: /Copy Shareable URL/ });
+    const shareBtn = screen.getByRole('button', { name: /Copy shareable URL/ });
     expect(shareBtn).toBeDisabled();
 
     // The warning is exposed as an assertive live region so screen-reader
@@ -216,7 +216,7 @@ describe('ExportModal', () => {
   it('shows no warning and keeps share enabled for a small layout', () => {
     renderModal();
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getByRole('button', { name: /Copy Shareable URL/ })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /Copy shareable URL/ })).not.toBeDisabled();
   });
 
   it('closes via the modal Close affordance', () => {
@@ -230,7 +230,7 @@ describe('ExportModal', () => {
     writeText.mockRejectedValueOnce(new Error('clipboard blocked'));
 
     renderModal();
-    const copyBtn = screen.getByRole('button', { name: /Copy to Clipboard/ });
+    const copyBtn = screen.getByRole('button', { name: /Copy to clipboard/ });
     fireEvent.click(copyBtn);
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));

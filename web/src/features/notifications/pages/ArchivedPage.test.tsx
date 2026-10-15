@@ -5,7 +5,7 @@
  * backlog query into a KPI summary band (`ArchivedSummary`) over the shared
  * `InboxBody` detail surface, plus a "Back to inbox" affordance and a
  * copy-link header. Its job is orchestration, so these tests drive the page
- * end-to-end — the REAL `ArchivedSummary` + `PageContainer` + `Link` against a
+ * end-to-end — the REAL `InboxSummary` + `PageLayout` + `Link` against a
  * mocked `request()` boundary — while stubbing the heavy, URL-coupled
  * `InboxBody` so we can assert exactly what the page forwards to it.
  *
@@ -22,8 +22,10 @@
  *   4. Empty — a zero-row backlog renders an honest empty state, not a blank
  *      panel, and no KPI cards.
  *   5. Null-safety + title — when the vehicle/rule lookups return no data the
- *      page forwards empty arrays (never `undefined`) to the inbox body, and it
- *      sets the document title.
+ *      page forwards empty arrays (never `undefined`) to the inbox body, shows
+ *      independent lookup recovery, and sets the document title.
+ *   6. Trust — active loading, paused acquisition, authoritative emptiness,
+ *      unknown filter IDs, and retained lookup refresh failure/recovery.
  *
  * Network is mocked at the `@/api/client` boundary (repo convention — see
  * CostAnalysisPage.test.tsx). `react-i18next` is stubbed to echo the inline
@@ -31,9 +33,9 @@
  * come from the global stubs in src/test-setup.ts.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('@/api/client', async () => {
@@ -60,8 +62,12 @@ const captured = vi.hoisted(() => ({
   inbox: null as { archived: unknown; vehicles: unknown[]; rules: unknown[] } | null,
 }));
 
-vi.mock('../components/InboxBody', () => ({
-  InboxBody: (props: { archived: boolean; vehicles: unknown[]; rules: unknown[] }) => {
+vi.mock('../components/InboxBody', async () => {
+  const { NotificationFilterBar } = await import('../components/NotificationFilterBar');
+  const { useSearchParams } = await import('react-router-dom');
+  return {
+    InboxBody: (props: { archived: boolean; vehicles: Vehicle[]; rules: AlertRule[] }) => {
+    const [params] = useSearchParams();
     const vehicles = props.vehicles ?? [];
     const rules = props.rules ?? [];
     captured.inbox = { archived: props.archived, vehicles, rules };
@@ -71,10 +77,21 @@ vi.mock('../components/InboxBody', () => ({
         data-archived={String(props.archived)}
         data-vehicles={vehicles.length}
         data-rules={rules.length}
-      />
+      >
+        <NotificationFilterBar
+          vehicles={props.vehicles}
+          rules={props.rules}
+          filters={{
+            vehicle_id: params.getAll('vehicle_id').map(Number),
+            rule_id: params.getAll('rule_id').map(Number),
+          }}
+          onChange={vi.fn()}
+        />
+      </div>
     );
-  },
-}));
+    },
+  };
+});
 
 import { request } from '@/api/client';
 import { ToastProvider } from '@/components/feedback/Toast';
@@ -140,19 +157,20 @@ function installRequest(handlers: { vehicles?: Resolver; rules?: Resolver; logs?
 const logsCallCount = () =>
   mockedRequest.mock.calls.filter((c) => String(c[0]).startsWith('/notifications/logs')).length;
 
-function renderPage() {
+function renderPage(initialEntry = '/notifications/archived') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
-  return render(
+  const rendered = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/notifications/archived']}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <ToastProvider>
           <ArchivedPage />
         </ToastProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...rendered, client };
 }
 
 beforeEach(() => {
@@ -162,7 +180,128 @@ beforeEach(() => {
   installRequest();
 });
 
+afterEach(() => {
+  onlineManager.setOnline(true);
+});
+
+describe('ArchivedPage independent lookup trust', () => {
+  it('shows active lookup loading without claiming empty catalogs or hiding the summary', async () => {
+    installRequest({ vehicles: () => new Promise<never>(() => {}) });
+    renderPage();
+
+    const vehicles = screen.getByRole('region', { name: 'Vehicles' });
+    expect(within(vehicles).getByRole('status')).toBeInTheDocument();
+    expect(vehicles.querySelector('.animate-pulse')).not.toBeNull();
+    expect(screen.queryByText('No vehicles yet')).toBeNull();
+    await waitFor(() => expect(captured.inbox?.rules).toEqual(RULES));
+    expect(screen.getByTestId('inbox-body')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Archived summary' })).toBeInTheDocument();
+  });
+
+  it('distinguishes paused acquisition from active loading and successful emptiness', async () => {
+    onlineManager.setOnline(false);
+    renderPage();
+
+    for (const label of ['Vehicles', 'Rules']) {
+      const region = screen.getByRole('region', { name: label });
+      expect(within(region).getByText('Refresh paused')).toBeInTheDocument();
+      expect(within(region).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+      expect(region.querySelector('.animate-pulse')).toBeNull();
+      expect(within(region).queryByRole('alert')).toBeNull();
+    }
+    expect(mockedRequest).not.toHaveBeenCalled();
+    expect(screen.queryByText('No archived notifications yet')).toBeNull();
+    expect(screen.queryByText('No vehicles yet')).toBeNull();
+
+    act(() => onlineManager.setOnline(true));
+    await waitFor(() => expect(captured.inbox?.vehicles).toEqual(VEHICLES));
+    expect(screen.queryByRole('region', { name: 'Vehicles' })).toBeNull();
+  });
+
+  it('discloses successful empty catalogs and preserves unknown selected IDs', async () => {
+    installRequest({ vehicles: () => Promise.resolve([]), rules: () => Promise.resolve([]) });
+    renderPage('/notifications/archived?vehicle_id=999&rule_id=888');
+
+    expect(await screen.findByText('No vehicles yet')).toBeInTheDocument();
+    expect(await screen.findByText('No alert rules yet')).toBeInTheDocument();
+    expect(screen.getByText('#999')).toBeInTheDocument();
+    expect(screen.getByText('#888')).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Archived summary' });
+    await waitFor(() => expect(within(summary).getByText('6')).toBeInTheDocument());
+    expect(within(summary).getByText('3')).toBeInTheDocument();
+  });
+
+  it('renders confirmed zero severity counts rather than unknown values', async () => {
+    installRequest({ logs: () => Promise.resolve([makeLog({ severity: 'info', read_at: null })]) });
+    renderPage();
+    const summary = screen.getByRole('region', { name: 'Archived summary' });
+    await waitFor(() => expect(within(summary).getByText('Total archived')).toBeInTheDocument());
+    expect(within(summary).getAllByText('0')).toHaveLength(2);
+    expect(within(summary).getAllByText('1').length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('retains lookup evidence on refresh failure and retries only the affected source', async () => {
+    const { client } = renderPage('/notifications/archived?vehicle_id=999&rule_id=888');
+    await waitFor(() => expect(captured.inbox?.vehicles).toEqual(VEHICLES));
+    await waitFor(() => expect(captured.inbox?.rules).toEqual(RULES));
+    installRequest({ vehicles: () => Promise.reject(new Error('vehicles refresh down')) });
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['vehicles'], exact: true });
+    });
+
+    const vehicles = await screen.findByRole('region', { name: 'Vehicles' });
+    expect(within(vehicles).getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(within(vehicles).queryByRole('alert')).toBeNull();
+    expect(captured.inbox?.vehicles).toEqual(VEHICLES);
+    expect(captured.inbox?.rules).toEqual(RULES);
+    expect(screen.getByText('#999')).toBeInTheDocument();
+    expect(screen.getByText('#888')).toBeInTheDocument();
+    const rulesCalls = mockedRequest.mock.calls.filter(([path]) => path === '/alerts/rules').length;
+    const logsCalls = logsCallCount();
+
+    installRequest({ vehicles: () => Promise.resolve([makeVehicle(3)]) });
+    fireEvent.click(within(vehicles).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(captured.inbox?.vehicles).toEqual([makeVehicle(3)]));
+    expect(screen.queryByRole('region', { name: 'Vehicles' })).toBeNull();
+    expect(mockedRequest.mock.calls.filter(([path]) => path === '/alerts/rules')).toHaveLength(rulesCalls);
+    expect(logsCallCount()).toBe(logsCalls);
+  });
+
+  it('recovers a failed rules lookup without replacing neighboring evidence', async () => {
+    installRequest({ rules: () => Promise.reject(new Error('rules down')) });
+    renderPage();
+    const rules = await screen.findByRole('region', { name: 'Rules' });
+    expect(await within(rules).findByRole('alert')).toBeInTheDocument();
+    await waitFor(() => expect(captured.inbox?.vehicles).toEqual(VEHICLES));
+    installRequest();
+    fireEvent.click(within(rules).getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(captured.inbox?.rules).toEqual(RULES));
+    expect(screen.queryByRole('region', { name: 'Rules' })).toBeNull();
+    expect(captured.inbox?.vehicles).toEqual(VEHICLES);
+  });
+});
+
 describe('ArchivedPage', () => {
+  it('counts warn and warning together without rewriting archived source evidence or unknown severity', async () => {
+    const logs = [
+      makeLog({ id: 71, severity: 'warn' }),
+      makeLog({ id: 72, severity: 'warning', read_at: '2025-01-03T00:00:00Z' }),
+      makeLog({ id: 73, severity: 'custom' }),
+    ];
+    const original = structuredClone(logs);
+    installRequest({ logs: () => Promise.resolve(logs) });
+    const { client } = renderPage();
+    await waitFor(() => expect(screen.getByTestId('notification-backlog-brief')).not.toHaveAttribute('aria-busy', 'true'));
+    const summary = screen.getByRole('region', { name: 'Archived summary' });
+    expect(within(summary).getByText('Warnings')).toBeInTheDocument();
+    expect(within(summary).getAllByText('2')).toHaveLength(2);
+    expect(within(summary).getByText('Unknown severity')).toBeInTheDocument();
+    expect(logs).toEqual(original);
+    expect(client.getQueriesData({ queryKey: ['notification-logs'] }).some(([, data]) => data === logs)).toBe(true);
+    expect(mockedRequest.mock.calls.every(([, options]) => !options?.method)).toBe(true);
+    expect(captured.inbox?.archived).toBe(true);
+  });
+
   it('renders the header, back-link, KPI band, and forwards archived+lookups to the inbox body', async () => {
     renderPage();
 
@@ -184,7 +323,8 @@ describe('ArchivedPage', () => {
 
     // KPI band populates from the archived backlog. The summary section is an
     // accessible region; assert the derived counts inside it.
-    expect(await screen.findByText('Total archived')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('notification-backlog-brief')).not.toHaveAttribute('aria-busy', 'true'));
+    expect(screen.getByText('Total archived')).toBeInTheDocument();
     const region = screen.getByRole('region', { name: 'Archived summary' });
     expect(within(region).getByText('6')).toBeInTheDocument(); // total
     expect(within(region).getByText('3')).toBeInTheDocument(); // critical
@@ -213,8 +353,10 @@ describe('ArchivedPage', () => {
 
     // Loading state renders the stat-grid skeleton, not the populated cards or
     // the empty state.
-    expect(await screen.findByTestId('stat-grid-skeleton')).toBeInTheDocument();
-    expect(screen.queryByText('Total archived')).toBeNull();
+    const brief = await screen.findByTestId('notification-backlog-brief');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(screen.queryByText('No archived notifications yet')).toBeNull();
 
     // The rest of the page still renders — never a frozen/blank surface.
@@ -277,5 +419,56 @@ describe('ArchivedPage', () => {
     await waitFor(() =>
       expect(document.title).toBe('Archived notifications — TeslaSync'),
     );
+  });
+});
+
+describe('ArchivedPage restrained navigation', () => {
+  it('keeps a native named back link with theme focus, mobile targets, and wrapping text', async () => {
+    renderPage();
+
+    const back = screen.getByRole('link', { name: 'Back to inbox' });
+    expect(back.tagName).toBe('A');
+    expect(back).toHaveAttribute('href', '/notifications/inbox');
+    expect(back).toHaveClass(
+      'min-h-11',
+      'min-w-11',
+      'md:min-h-9',
+      'max-w-full',
+      'hover:bg-[var(--control-bg)]',
+      'focus-visible:outline-[var(--focus-ring)]',
+      'forced-colors:focus-visible:outline-[Highlight]',
+      'motion-reduce:transition-none',
+    );
+    expect(back).not.toHaveClass('focus-visible:ring-cyan-400/60', 'hover:bg-white/[0.04]');
+    expect(within(back).getByText('Back to inbox')).toHaveClass('min-w-0', 'break-words');
+    expect(back.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(back.querySelector('svg')).toHaveClass('shrink-0', 'rtl:rotate-180');
+    back.focus();
+    expect(back).toHaveFocus();
+
+    await waitFor(() => expect(captured.inbox?.rules).toEqual(RULES));
+  });
+
+  it('preserves the independent archived sample and performs only catalog and summary reads on mount', async () => {
+    renderPage();
+
+    await waitFor(() => expect(captured.inbox?.vehicles).toEqual(VEHICLES));
+    await waitFor(() =>
+      expect(screen.getByTestId('notification-backlog-brief')).not.toHaveAttribute('aria-busy', 'true'),
+    );
+
+    const calls = mockedRequest.mock.calls;
+    expect(calls.map(([path]) => path)).toEqual(expect.arrayContaining([
+      '/vehicles',
+      '/alerts/rules',
+      '/notifications/logs?archived=true',
+    ]));
+    expect(calls.every(([path]) => [
+      '/vehicles',
+      '/alerts/rules',
+      '/notifications/logs?archived=true',
+    ].includes(String(path)))).toBe(true);
+    expect(calls.every(([, options]) => options?.method == null || options.method === 'GET')).toBe(true);
+    expect(captured.inbox).toEqual({ archived: true, vehicles: VEHICLES, rules: RULES });
   });
 });

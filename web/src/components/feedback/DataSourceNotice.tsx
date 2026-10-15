@@ -2,9 +2,11 @@ import { type HTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 
-import { Badge, Button, Text } from '@/components/ui';
+import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
+import { Text } from '../ui/Typography';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import type { UnavailabilityEvidence } from '@/lib/dataUnavailability';
+import { classifyUnavailability, type UnavailabilityEvidence } from '@/lib/dataUnavailability';
 import { DataStateNotice, type DataStateKind } from './DataStateNotice';
 
 export type DataSourceStatus =
@@ -77,7 +79,7 @@ export function resolveDataSourceStatus(
   const hasData = query.data !== undefined;
 
   if (query.isError) return hasData ? 'refreshFailed' : 'failed';
-  if (!hasData && query.fetchStatus === 'paused') return 'paused';
+  if (query.fetchStatus === 'paused') return 'paused';
   if (
     !hasData
     && (
@@ -95,18 +97,21 @@ export function resolveDataSourceStatus(
 
 function noticeState(sources: readonly ResolvedSource[]): DataStateKind | null {
   const statuses = sources.map(({ status }) => status);
-  const hasUsableData = statuses.some((status) => (
-    status === 'ready'
-    || status === 'refreshing'
-    || status === 'refreshFailed'
+  const hasUsableData = sources.some(({ status, query }) => (
+    query.data !== undefined || status === 'ready'
   ));
   const hasInitialFailure = statuses.some((status) => (
-    status === 'failed' || status === 'paused'
+    status === 'failed'
+  )) || sources.some(({ status, query }) => (
+    status === 'paused' && query.data === undefined
   ));
   const hasDelayedSource = statuses.some((status) => (
     status === 'loading' || status === 'pending'
   ));
-  const hasRefreshFailure = statuses.includes('refreshFailed');
+  const hasRefreshFailure = statuses.includes('refreshFailed')
+    || sources.some(({ status, query }) => (
+      status === 'paused' && query.data !== undefined
+    ));
 
   if (!hasInitialFailure && !hasDelayedSource && !hasRefreshFailure) return null;
   if (!hasUsableData && !hasInitialFailure) return null;
@@ -136,6 +141,29 @@ export function DataSourceNotice({
 
   if (state == null) return null;
 
+  /**
+   * Evidence for the HELP-04 classifier.
+   *
+   * The first failing source's error is the honest representative: when a
+   * page's queries fail together they almost always fail for the same reason
+   * (one 403, one outage), and picking the first keeps the result
+   * deterministic. Caller-supplied evidence wins on every field it sets —
+   * a page knows things a query result cannot express, such as whether the
+   * vehicle is asleep.
+   */
+  const firstFailure = resolved.find(
+    ({ status, query }) =>
+      (status === 'failed' || status === 'refreshFailed') && query.error != null,
+  );
+  const derivedEvidence: UnavailabilityEvidence = {
+    error: firstFailure?.query.error,
+    online,
+    ...evidence,
+  };
+  // A query-policy pause alone does not establish a connectivity failure.
+  const offline = derivedEvidence.online === false
+    || classifyUnavailability(derivedEvidence) === 'vehicle_offline';
+
   const statusConfig: Record<
     DataSourceStatus,
     {
@@ -156,8 +184,10 @@ export function DataSourceNotice({
       variant: 'info',
     },
     paused: {
-      label: t('dataSources.status.paused', 'Paused offline'),
-      variant: 'warning',
+      label: offline
+        ? t('dataSources.status.pausedOffline', 'Paused offline')
+        : t('dataSources.status.paused', 'Refresh paused'),
+      variant: 'neutral',
     },
     failed: {
       label: t('dataSources.status.failed', 'Failed'),
@@ -189,30 +219,11 @@ export function DataSourceNotice({
   const retryable = resolved.filter(({ status, query }) => (
     RETRYABLE_STATUSES.has(status) && query.refetch != null
   ));
+  const retryText = retryLabel ?? t('dataSources.retry', 'Retry unavailable sources');
   const handleRetry = () => {
     retryable.forEach(({ query }) => {
       void query.refetch?.();
     });
-  };
-
-  /**
-   * Evidence for the HELP-04 classifier.
-   *
-   * The first failing source's error is the honest representative: when a
-   * page's queries fail together they almost always fail for the same reason
-   * (one 403, one outage), and picking the first keeps the result
-   * deterministic. Caller-supplied evidence wins on every field it sets —
-   * a page knows things a query result cannot express, such as whether the
-   * vehicle is asleep.
-   */
-  const firstFailure = resolved.find(
-    ({ status, query }) =>
-      (status === 'failed' || status === 'refreshFailed') && query.error != null,
-  );
-  const derivedEvidence: UnavailabilityEvidence = {
-    error: firstFailure?.query.error,
-    online,
-    ...evidence,
   };
 
   return (
@@ -241,14 +252,27 @@ export function DataSourceNotice({
             return (
               <li
                 key={source.id}
-                className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
+                className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-shape-sm border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
               >
-                <Text as="span" variant="label" className="min-w-0 truncate">
+                <Text as="span" variant="label" className="min-w-0 break-words">
                   {source.label}
                 </Text>
                 <Badge variant={config.variant} size="sm" dot>
                   {config.label}
                 </Badge>
+                {RETRYABLE_STATUSES.has(source.status) && source.query.refetch != null ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    wrapLabel
+                    className="min-h-11 md:min-h-9"
+                    aria-label={`${retryText}: ${source.label}`}
+                    onClick={() => { void source.query.refetch?.(); }}
+                  >
+                    {retryText}
+                  </Button>
+                ) : null}
               </li>
             );
           })}
@@ -258,10 +282,12 @@ export function DataSourceNotice({
             type="button"
             variant="ghost"
             size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
             onClick={handleRetry}
             icon={<RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />}
           >
-            {retryLabel ?? t('dataSources.retry', 'Retry unavailable sources')}
+            {retryText}
           </Button>
         ) : null}
       </div>

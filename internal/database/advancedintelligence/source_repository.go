@@ -6,11 +6,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/advancedintelligence"
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/text/currency"
 )
 
 type SourceRepository struct {
@@ -471,10 +474,7 @@ func (r *SourceRepository) ListChargingEvidence(
 	const query = `
 		SELECT
 			id, started_at, ended_at, total_energy_added_wh, delta_soc_pct,
-			CASE
-				WHEN cost_decimal IS NULL THEN NULL
-				ELSE ROUND(cost_decimal * 100)::bigint
-			END AS recorded_cost_minor,
+			cost_decimal::text,
 			NULLIF(btrim(cost_currency), '') AS currency,
 			COUNT(*) OVER()::int AS total
 		FROM charging_sessions
@@ -491,24 +491,58 @@ func (r *SourceRepository) ListChargingEvidence(
 	total := 0
 	for rows.Next() {
 		var item domain.ChargingSessionEvidence
+		var recordedCost *string
 		if err := rows.Scan(
 			&item.SessionID,
 			&item.StartedAt,
 			&item.EndedAt,
 			&item.VehicleEnergyWh,
 			&item.DeltaSocPct,
-			&item.RecordedCostMinor,
+			&recordedCost,
 			&item.Currency,
 			&total,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan advanced intelligence charging evidence: %w", err)
 		}
+		item.RecordedCostMinor = chargingCostMinor(recordedCost, item.Currency)
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, fmt.Errorf("iterate advanced intelligence charging evidence: %w", err)
 	}
 	return items, total, nil
+}
+
+// Denomination uses the recorded ISO currency, never an exchange rate or a
+// guessed default. Unknown inputs remain unknown rather than measured zero.
+func chargingCostMinor(amount, code *string) *int64 {
+	if amount == nil || code == nil {
+		return nil
+	}
+	unit, err := currency.ParseISO(strings.TrimSpace(*code))
+	if err != nil || unit == currency.XXX {
+		return nil
+	}
+	value, ok := new(big.Rat).SetString(*amount)
+	if !ok {
+		return nil
+	}
+	scale, _ := currency.Standard.Rounding(unit)
+	factor := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(scale)), nil)
+	value.Mul(value, new(big.Rat).SetInt(factor))
+
+	// Match PostgreSQL numeric ROUND: ties round away from zero, using exact
+	// decimal arithmetic so fractional costs do not acquire float errors.
+	rounded, remainder := new(big.Int), new(big.Int)
+	rounded.QuoRem(value.Num(), value.Denom(), remainder)
+	if remainder.Abs(remainder).Lsh(remainder, 1).Cmp(value.Denom()) >= 0 {
+		rounded.Add(rounded, big.NewInt(int64(value.Sign())))
+	}
+	if !rounded.IsInt64() {
+		return nil
+	}
+	minor := rounded.Int64()
+	return &minor
 }
 
 func (r *SourceRepository) Readiness(

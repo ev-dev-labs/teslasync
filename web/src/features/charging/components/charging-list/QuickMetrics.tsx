@@ -3,9 +3,10 @@ import { Home, Bolt, Zap } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { AnimatedNumber, Currency } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { fmtWithUnit } from '@/lib/numberFormat';
+
 import { formatDuration } from '../ChargingSessionCard';
 import type { ChargingStats } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface QuickMetricsProps {
   stats: ChargingStats | null;
@@ -15,6 +16,7 @@ interface QuickMetricsProps {
 const MONTHS_PER_YEAR = 12;
 
 export function QuickMetrics({ stats }: QuickMetricsProps) {
+  const { fmtWithUnit, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
 
   if (!stats) {
@@ -63,7 +65,7 @@ export function QuickMetrics({ stats }: QuickMetricsProps) {
           <p className="text-2xs text-[var(--text-muted)]">{t('charging.metrics.totalTime', 'Total Time')}</p>
         </div>
         <div>
-          <p className="text-lg font-bold text-[var(--text-primary)]"><Currency value={monthlyAvgCost} precision={0} /></p>
+          <p className="text-lg font-bold text-[var(--text-primary)]"><Currency value={monthlyAvgCost} precision={displayPrecision} /></p>
           <p className="text-2xs text-[var(--text-muted)]">{t('charging.metrics.monthlyAvg', 'Monthly Avg')}</p>
         </div>
         <div>

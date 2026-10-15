@@ -1,0 +1,294 @@
+{
+  "item": "audit-page-042",
+  "page": "web\\src\\features\\analytics\\pages\\DriveArchetypesPage.tsx",
+  "routes": ["/drive-archetypes"],
+  "purpose": "Explain deterministic, observational clusters of a selected vehicle's bounded recent drive history, including eligibility, coverage, model selection, assignments and interpretation limits.",
+  "primaryGoal": "Understand distinct observed driving patterns and judge whether their source coverage, imputation and geometric separation justify interpretation, without treating clusters as verified trip purposes.",
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr, 1000)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected ID>&limit=1000",
+      "routeEvidence": "internal\\api\\router.go:3463-3464 mounts /drives and driveHandler.ListByVehicle.",
+      "ownership": "Existing driving hook and backend drive handler; no archetype-specific backend endpoint.",
+      "behavior": "Limit clamped to 1..1000; dedicated history query key; vehicle enablement; request receives AbortSignal; MODERATE stale policy; safeArray selection. Server filtering, ordering and returned field values were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle / useTimezone('vehicle')",
+      "file": "web\\src\\features\\analytics\\pages\\DriveArchetypesPage.tsx",
+      "line": 37,
+      "endpoint": null,
+      "ownership": "Existing workspace vehicle selection and timezone policy.",
+      "behavior": "No competing local vehicle or date picker. /drive-archetypes is absent from RANGE_ENABLED_PATHS in web\\src\\lib\\workspaceScope.ts:23-77; current scope is explicitly newest bounded history, not a header-selected date range. Do not silently introduce a date restriction during cosmetic modernization."
+    },
+    {
+      "hook": "summarizeArchetypes(historyQuery.data ?? [], { timeZone })",
+      "file": "web\\src\\features\\analytics\\lib\\driveArchetypes.ts",
+      "line": 1031,
+      "endpoint": null,
+      "ownership": "Feature-owned pure analytical model; memoized by page at lines 42-45.",
+      "behavior": "Raw SI distanceM, avgSpeedMps, energyUsedWh, durationS, outsideTempAvgC and source addresses/startTs. One terminal source disposition per row, valid unique positive IDs, valid starts, distance >=500m, positive energy and speed. Temperature median imputation, or 15 C configured default, remains explicitly imputed. Six standardized dimensions: log distance, speed, circular-hour sine/cosine, Wh/m and temperature. Minimum 20 eligible drives; k=2..5; deterministic seed 0x5eed; bounded silhouette sample 400; four restarts; realized-cluster gate; raw silhouette maximum with smaller-k exact tie-break. Directory cap 80; full assignments and identities are retained."
+    },
+    {
+      "hook": "useDriveArchetypeDisplay / useUnits / useNumberFormatting / useOperationalMetrics",
+      "file": "web\\src\\features\\analytics\\components\\drive-archetypes\\useDriveArchetypeDisplay.ts",
+      "line": 16,
+      "endpoint": null,
+      "ownership": "Existing unit, locale, date and shared metric presentation owners.",
+      "behavior": "Physical conversions only in display projections and formatters; null/nonfinite efficiency returns an em dash; date formatting uses saved locale and vehicle timezone. Briefs retain numeric counts, silhouette and span seconds as rawValue. Exported chart projections use disclosed display units, not a replacement SI cache."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / FadeIn / Button",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": "Page:96-197; PageLayout:9-16; FadeIn.tsx:23-36.",
+      "contract": "Existing page/container/header and secondary-action pipeline; full allocated width, min-w-0 and container query ownership. Refresh has localized label, explicit button type, hidden decorative icon, loading flag and no-vehicle disablement. FadeIn honors shared reduced motion."
+    },
+    {
+      "name": "ArchetypeEvidenceBrief / ArchetypeSourceBrief / ArchetypeCoverageBrief",
+      "owner": "web\\src\\features\\analytics\\components\\operationalbrief-a-m",
+      "evidence": "Page:29-31,120-133; brief files:18-55,14-50,16-46 respectively.",
+      "contract": "Mounted OperationalBrief summaries, not the similarly named old drive-archetypes ledger/source/coverage renderers. Preserve 6 KPI metrics, 13 terminal disposition metrics, 6 coverage metrics, retained-source labels and bounded-history caveats."
+    },
+    {
+      "name": "ChartCard / EmbeddedChart / chart category barrel",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "evidence": "ChartCard:13-44; EmbeddedChart.tsx:19-39; six feature chart files.",
+      "contract": "One shared frame forwards real children, data, dataColumns, aria labels/descriptions and export props. Candidate, hourly and monthly charts preserve chartKey and hiddenSeries interaction. Do not claim fullscreen is enabled: these callers do not request it."
+    },
+    {
+      "name": "LayoutCard / Table / Text / MetricLabel / Badge / AlertBanner",
+      "owner": "web\\src\\components\\ui\\Table.tsx",
+      "evidence": "Table:14-35; assignment:122-130; feature ranges:75-92; methodology:115-140.",
+      "contract": "Shared semantic Table is appropriate for these static matrices; it is not an interactive DataTable pipeline. Preserve row/column scopes, aria labels, displayed details and explicit textual states. Table supplies a contained horizontal scroll wrapper and standalone/embedded variants."
+    },
+    {
+      "name": "ArchetypeQueryStatus / ArchetypeSectionBody / deriveDataState / SourceContent",
+      "owner": "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeSectionBody.tsx",
+      "evidence": "SectionBody:46-147; QueryStatus:20-165; api\\dataState.ts:125-177.",
+      "contract": "Feature-specific requirement gating over the canonical retained-data/fatal-error source contract. Loading skeletons, passive explanations and independent sections remain mounted; retry belongs to evidence ledger and source recovery."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeProfiles.tsx",
+      "line": 58,
+      "rule": "MDC-002 / mission shared-component rule",
+      "detail": "Profiles, separation and assignment directory repeat a feature-owned bordered list item, wrapped identity/header/badges and two-column measurement table. These represent different domain content, not permission to merge or drop fields.",
+      "fix": "If modernizing all three, reuse existing LayoutCard/Table with embedded variant before proposing a new composite; keep domain metric construction local.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\ArchetypeCoverageBrief.tsx",
+      "line": 39,
+      "rule": "MDC-026 / MDC-033",
+      "detail": "All three mounted briefs repeat resolved/loading/retained status and bounded-history provenance adaptation.",
+      "fix": "Consider a typed local adapter for this one query only; preserve each brief's metric identities, captions, raw values and loading suppression.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceEvidence": [
+      "PageLayout.tsx:12 supplies @container, w-full and min-w-0; page action wrapper:104 wraps labels/actions.",
+      "ArchetypeProfiles.tsx:56 uses one column then xl two; ArchetypeSeparation.tsx:37 uses lg two; ArchetypeMethodology.tsx:125 uses md two/xl three.",
+      "Feature evidence table:75 has 620px minimum width; candidate table:127 has 760px minimum width. Table.tsx:20-24 contains horizontal scrolling; this is an intentional matrix strategy, not proven page overflow.",
+      "Charts preserve fixed caller heights of 360-470px and full-width ResponsiveContainer; candidate/composition/confidence chart bodies also include supporting details."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeCandidateModels.tsx",
+        "line": 99,
+        "rule": "MDC-043 / mission 15-17",
+        "detail": "Fixed 470px chart area combines a minimum-224px plot and a 760px-wide candidate matrix. Narrow container/long locale labels can compete for bounded height; source inspection cannot establish clipping or overflow.",
+        "fix": "Exercise narrow allocated widths and long labels; use the existing ChartCard height/mobileHeight contract and semantic-table scroll strategy without hiding candidate fields.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceEvidence": [
+      "Refresh Button has readable localized label and aria-hidden icon at page:105-115; loading query notice uses role=status at QueryStatus:31-39.",
+      "Feature matrices retain aria-label plus scope=row/col; assignments and profiles use ul/li and descriptive headings.",
+      "Six ChartCard callers provide ariaLabel and dataColumns; candidates and confidence also provide ariaDescription explicitly rejecting correctness/probability claims.",
+      "FadeIn.tsx:24-34 disables entrance initial state/delay under shared reduced-motion policy. Hourly/monthly series explicitly disable animation."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeCandidateModels.tsx",
+        "line": 110,
+        "rule": "MDC-040 / MDC-042",
+        "detail": "Candidate bars, centroid scatter, composition and confidence bars do not explicitly disable their chart-library animation while hourly/monthly do. Shared FadeIn reduction does not prove descendant chart animation respects OS/low-bandwidth preference.",
+        "fix": "Verify canonical chart motion ownership; if missing, extend shared motion policy rather than inventing a page-specific preference. Retain actual series and chart interactions.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["Keyboard reachability and horizontal-table scroll access","Chart data-view and export control names/focus","44px touch reachability","Screen-reader announcements/headings","Composed contrast in light/dark/custom themes","Forced colors","Reduced-motion behavior of descendant chart-library series"]
+  },
+  "states": {
+    "sourceEvidence": [
+      "Page:46-89 explicitly distinguishes hasData, initial loading, resolved, fetching, paused, refreshPaused, fatal error and refreshError; retained data remains input to summarizeArchetypes.",
+      "QueryStatus:20-165 handles no vehicle, loading, initial paused, fatal retry, retained paused, retained refresh retry, valid empty, insufficient drives, no variation, no stable partition and observational publication.",
+      "SectionBody:121-148 maps canonical source state into SourceContent; sections retain skeleton/passive/error/recovery/retained structure rather than a page-wide data gate.",
+      "Methodology explanatory articles remain visible regardless of source resolution at Methodology:125-140."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeSectionBody.tsx",
+        "line": 76,
+        "rule": "MDC-026 / MDC-031 preservation",
+        "detail": "requirement='eligible' checks analyzedDrives===0, but otherwise falls through to insufficient_drives/variation/partition gating. Feature ranges and imputation are therefore withheld even with 1-19 eligible drives, although summarizeArchetypes retains normalization evidence. Source-confirmed gate mismatch, not runtime-reproduced.",
+        "fix": "Separate eligible-only evidence eligibility from partition eligibility. Keep the truthful clustering-withheld notice while showing available eligible ranges/imputation; add scoped cases for 1-19 drives and constant features.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeCandidateModels.tsx",
+        "line": 96,
+        "rule": "MDC-026 / MDC-031 preservation",
+        "detail": "Candidate section uses default clustered requirement. summarizeArchetypes:1074-1081 retains candidate evaluations when no candidate realizes every cluster, but SectionBody:98-104 hides them behind the insufficient_partition message. The diagnostic model evidence is available but not presented in that state.",
+        "fix": "Introduce an explicit candidate-evidence requirement within this domain owner, distinguishing candidate evaluations from published partition data; retain unrealized decisions and withholding caveat.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeCentroidMap.tsx",
+      "line": 105,
+      "rule": "MDC-010 / MDC-012 / MDC-034",
+      "detail": "Six charts use fixed stroke-white/10 grid decoration (candidate:105, composition:104, confidence:95, hourly:90, monthly:98). This is a theme-invariant white reference color, not pure-white body text; light/custom-theme composition is unverified.",
+      "fix": "Reuse canonical theme-aware chart grid stroke token; preserve axes, data series, labels and user-selected palettes.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeCandidateModels.tsx",
+      "line": 149,
+      "rule": "MDC-010 / mission visual intensity",
+      "detail": "Selected row uses literal bg-cyan-500/5 rather than a semantic selection token. Low opacity is not neon escalation but fixes hue independently of theme; selected text and badge already convey the decision.",
+      "fix": "Use existing subtle semantic selection treatment, preserving the explicit Selected text and success badge.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeSectionBody.tsx",
+      "line": 46,
+      "rule": "MDC-026 / MDC-046",
+      "detail": "deriveDataState receives a Boolean presence surrogate plus errors/fetch status, but no original dataUpdatedAt or age threshold. It can represent refresh-failed/offline retained evidence, not age-based freshness. Mounted coverage/source briefs label returned counts/window bounds, not last successful fetch time.",
+      "fix": "Carry original query last-success metadata through the existing ArchetypeQueryState and DataState contract if freshness is exposed; avoid inventing timestamps or claiming live/current evidence.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Already largely shared-component/token-based and unusually complete about observational trust. Prioritize partition-versus-eligible gating and diagnostic candidate visibility, then theme-neutral grid noise and mounted mobile/keyboard verification. No evidence warrants rewriting the analytical engine.",
+    "visualNoiseAssessment": "Scoped search found six fixed-white grid references and one fixed cyan selection reference; no direct neon/glow/shadow/text-white body references, raw interactive HTML, static style= or direct chart/map/motion library imports in the inspected page/feature JSX scope. Shared CHART_COLORS supplies all six charts; saturation of actual saved palettes was not measured and must not be reset. No runtime appearance acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Historical evidence freshness propagation",
+      "existingOwnerFile": "web\\src\\api\\dataState.ts",
+      "propsVariantsStates": "Reuse DataState.updatedAt/ageMs and deriveDataState source dataUpdatedAt; preserve fatalError versus refreshError, retry and blocked refresh. Domain query state must carry actual last-success metadata before displaying freshness.",
+      "usedBy": ["ArchetypeSectionBody","ArchetypeEvidenceBrief","ArchetypeSourceBrief","ArchetypeCoverageBrief"],
+      "dependsOn": ["Existing TanStack history query metadata","Feature ArchetypeQueryState typed adapter"],
+      "changeNeeded": "Integration adapter extension; no new shared trust engine or speculative DataState rewrite."
+    },
+    {
+      "name": "Canonical chart motion and reference-grid presentation",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "propsVariantsStates": "Retain ChartCard data/dataColumns/ariaLabel/ariaDescription/exportable/chartKey/hiddenSeries, height/mobileHeight, existing palette preferences and shared OS-or-low-bandwidth motion policy. Grid treatment should be theme-aware and non-emphasized.",
+      "usedBy": ["ArchetypeCandidateModels","ArchetypeCentroidMap","ArchetypeClusterComposition","ArchetypeConfidenceDistribution","ArchetypeHourlyProfile","ArchetypeMonthlyComposition"],
+      "dependsOn": ["EmbeddedChart and ChartContainer canonical frame","Existing chart palette/tokens","useMotionPreference"],
+      "changeNeeded": "First verify existing shared behavior; local grid-token adoption is supported by source. Shared motion extension only if canonical behavior is missing; not established as a new-component requirement."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\DriveArchetypesPage.tsx",
+      "line": 29,
+      "detail": "Mounted briefs are aliased as ArchetypeEvidenceLedger/SourceDisposition/HistoryCoverage. Same-named older presentation files remain in drive-archetypes; scoped source search shows LayoutCard/stat-based implementations there, but this page imports the OperationalBrief versions directly.",
+      "decision": "Audit the mounted brief path, not names in the barrel. Treat older alternatives as a possible competing presentation owner; callers elsewhere and deletion safety were not traced. Do not delete them or transfer historical acceptance."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "0FEA18870DBB3399D8CFC669FD0AE23B89DE05D1119C2E9EDF546CBB216C6BEA",
+    "sourceHashAlgorithm": "SHA-256",
+    "currentLineCount": 199,
+    "sectionCount": 15,
+    "sectionNames": ["KPI and evidence ledger","Source eligibility disposition","History coverage and bounded-window disclosure","Feature ranges and temperature-imputation evidence","Candidate-k model selection","Archetype centroid map","Cluster share and composition","Detailed archetype profiles","Cohesion and nearest-cluster separation","Assignment confidence and margin distribution","Hourly archetype profile","Monthly archetype composition","Representative and recent assignment directory","Exact accounting identities","Methodology, heuristic labels, and interpretation limits"],
+    "sectionCounts": {"OperationalBrief":3,"ChartCard":6,"LayoutCard":6,"pageFadeIn":15,"pageDirectGlassPanel":0,"pageDirectChartContainer":0},
+    "lineCountContext": "Scoped count across page, non-test drive-archetypes directory and three mounted briefs is 2911 lines, including types/display/barrel and unmounted older alternatives. It is not claimed as a mounted-only component total. Analytical model is additional, inspected selectively; no modernization comparison because no source changed.",
+    "actions": ["Refresh evidence; disabled without selected vehicle and loading while fetching","Retry fatal load via QueryError/SourceContent","Retry retained refresh failure","Six conditional chart exports with existing export filenames and rows","Candidate/hourly/monthly legend hidden-series interactions via existing chart keys","Existing shared chart data alternatives and OperationalBrief details ownership; mounted behavior unverified"],
+    "dataBehavior": [
+      "One vehicle-scoped cancellable bounded history query; preserve keys, limit, inherited cache/retry and safe-array selection.",
+      "Preserve SI on wire/cache/model and unit/locale conversion only at display/export boundary.",
+      "Preserve deterministic eligibility accounting, feature normalization, circular vehicle-local hour/month, disclosed temperature imputation, k-means/restart/separation/margin semantics and thresholds.",
+      "Preserve every cluster identity, repeated-label collision disclosure, centroid/member metrics, representative IDs and addresses, measured/imputed assignment tags.",
+      "Preserve full assignments and hourly/monthly totals independently of newest-first 80-row directory cap and omitted counts.",
+      "Preserve six exact accounting identities and explicit not-applicable/withheld explanations; unknown does not become measured zero.",
+      "Preserve valid empty versus network pause/failure, retained payload on refresh failure, no-vehicle state, section skeletons/passive explanations and always-visible methodology.",
+      "Keep observational, bounded-source, geometric-distance and non-probability limitations; never infer verified commutes or lifetime behavior."
+    ]
+  },
+  "evidenceLimits": [
+    "Read-only Phase 0 source audit. Route mount confirmed from App.tsx:87,860, not navigated.",
+    "Runtime, visual, keyboard, contrast, viewport, screen-reader, export, drawer, network and reduced-motion behavior unverified.",
+    "No Git, source edits, nested agents, production action, TypeScript, lint, build or test runs. Skill audit script was read but not executed because it unconditionally runs project-wide TypeScript; assignment forbids full-project gates.",
+    "Backend route mount was checked, not handler SQL, ordering, field payload or historical database contents.",
+    "Source snippets and scoped searches establish only cited behavior; shared transitive dependencies and alternate consumers were not comprehensively reviewed.",
+    "Only the assigned report and heartbeat were written. No fixtures, measurements or backend capabilities invented."
+  ],
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\DriveArchetypesPage.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\ArchetypeEvidenceBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\ArchetypeSourceBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\ArchetypeCoverageBrief.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\useDriveArchetypeDisplay.ts",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeQueryStatus.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeSectionBody.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeFeatureEvidence.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeCandidateModels.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeCentroidMap.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeClusterComposition.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeProfiles.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeSeparation.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeConfidenceDistribution.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeHourlyProfile.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeMonthlyComposition.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeAssignmentDirectory.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeExactAccounting.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeMethodology.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeEvidenceLedger.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeHistoryCoverage.tsx",
+    "web\\src\\features\\analytics\\components\\drive-archetypes\\ArchetypeSourceDisposition.tsx",
+    "web\\src\\features\\analytics\\lib\\driveArchetypes.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx"
+  ]
+}

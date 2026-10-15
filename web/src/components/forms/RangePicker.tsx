@@ -227,9 +227,11 @@ export function RangePicker({
 
   return (
     <>
-      <button
+      <Button
         ref={triggerRef}
         type="button"
+        variant="secondary"
+        size={size}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={t('date.range.trigger', 'Date range')}
@@ -237,10 +239,8 @@ export function RangePicker({
         data-testid={triggerTestId}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-lg ring-1 ring-white/[0.08] bg-white/[0.04] text-left',
-          'hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
-          'forced-colors:border forced-colors:border-[ButtonBorder]',
-          size === 'md' ? 'h-10 px-3 text-sm' : 'h-8 px-2.5 text-xs',
+          'h-11 min-h-11 min-w-11 justify-start gap-1.5 text-left md:min-h-0 md:min-w-0',
+          size === 'md' ? 'px-3 text-sm md:h-10' : 'px-2.5 text-xs md:h-8',
           className,
         )}
       >
@@ -248,7 +248,7 @@ export function RangePicker({
         <span className="font-medium text-[var(--text-primary)] truncate">{triggerLabel}</span>
         <span className="text-[var(--text-muted)] hidden sm:inline truncate">· {triggerSubLabel}</span>
         <ChevronDown className="h-3 w-3 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
-      </button>
+      </Button>
 
       <Popover
         open={open}

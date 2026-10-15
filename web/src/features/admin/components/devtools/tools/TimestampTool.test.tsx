@@ -42,6 +42,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import '@/i18n'
 import { TimestampTool } from './TimestampTool'
+import { fmtInt } from '@/lib/numberFormat'
 
 // 2023-11-15T22:13:20Z == unix 1700086400 == exactly 1 day after 1700000000.
 const NOW_ISO = '2023-11-15T22:13:20.000Z'
@@ -52,11 +53,11 @@ const INPUT_UNIX_MILLIS = '1700000000000'
 const INPUT_ISO = '2023-11-14T22:13:20.000Z'
 
 function unixInput(): HTMLInputElement {
-  return screen.getByLabelText('Unix Timestamp') as HTMLInputElement
+  return screen.getByLabelText('Unix timestamp') as HTMLInputElement
 }
 
 function isoInput(): HTMLInputElement {
-  return screen.getByLabelText('ISO Timestamp') as HTMLInputElement
+  return screen.getByLabelText('ISO timestamp') as HTMLInputElement
 }
 
 function type(input: HTMLInputElement, value: string): void {
@@ -85,7 +86,7 @@ describe('TimestampTool', () => {
     expect(screen.queryByText('Timestamp Desc')).toBeNull()
 
     // The live readout shows the current unix seconds AND ISO string.
-    expect(screen.getByText(NOW_UNIX)).toBeInTheDocument()
+    expect(screen.getByText(fmtInt(Number(NOW_UNIX)))).toBeInTheDocument()
     expect(screen.getByText(NOW_ISO)).toBeInTheDocument()
 
     // Both inputs are reachable by their accessible labels (association via
@@ -169,8 +170,8 @@ describe('TimestampTool', () => {
 
     // Unix row: the epoch seconds for the entered instant.
     const unixRow = screen.getByText(/^Unix:/)
-    expect(unixRow.textContent).toContain(INPUT_UNIX_SECONDS)
-    expect(screen.getByText(INPUT_UNIX_SECONDS)).toBeInTheDocument()
+    expect(unixRow.textContent).toContain(fmtInt(Number(INPUT_UNIX_SECONDS)))
+    expect(screen.getByText(fmtInt(Number(INPUT_UNIX_SECONDS)))).toBeInTheDocument()
 
     // Deterministic relative label + a real Local render.
     expect(screen.getByText('1d ago')).toBeInTheDocument()
@@ -198,9 +199,8 @@ describe('TimestampTool', () => {
     expect(unixInput().value).toBe(NOW_UNIX)
     expect(isoInput().value).toBe(NOW_ISO)
 
-    // Both columns now describe the same instant as "now", so each Relative row
-    // reads "0s ago" — one per column.
-    expect(screen.getAllByText('0s ago')).toHaveLength(2)
+    // Both columns use the shared formatter's present-time wording.
+    expect(screen.getAllByText('just now')).toHaveLength(2)
     expect(screen.queryByRole('alert')).toBeNull()
   })
 
@@ -218,7 +218,7 @@ describe('TimestampTool', () => {
 
   it('advances the live current-time readout as wall-clock time passes', () => {
     render(<TimestampTool />)
-    expect(screen.getByText(NOW_UNIX)).toBeInTheDocument()
+    expect(screen.getByText(fmtInt(Number(NOW_UNIX)))).toBeInTheDocument()
 
     // The 1s interval ticks setNow(new Date()); advancing the fake clock 5s
     // should roll the readout forward by exactly five seconds.
@@ -226,9 +226,9 @@ describe('TimestampTool', () => {
       vi.advanceTimersByTime(5000)
     })
 
-    expect(screen.getByText(String(Number(NOW_UNIX) + 5))).toBeInTheDocument()
+    expect(screen.getByText(fmtInt(Number(NOW_UNIX) + 5))).toBeInTheDocument()
     expect(screen.getByText('2023-11-15T22:13:25.000Z')).toBeInTheDocument()
-    expect(screen.queryByText(NOW_UNIX)).toBeNull()
+    expect(screen.queryByText(fmtInt(Number(NOW_UNIX)))).toBeNull()
   })
 
   it('exposes the current-time group and the "Now" control through real accessible names', () => {

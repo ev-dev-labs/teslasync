@@ -3,7 +3,7 @@ import { GitCompareArrows, Swords } from 'lucide-react';
 
 import { EmptyState } from '@/components/feedback';
 import { Badge, GlassPanel, HelpTooltip, PanelTitle, Text } from '@/components/ui';
-import { formatDateShort } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 
 import type { CompareMetricKey, CompareRow } from '../../lib/driveCompare';
@@ -32,6 +32,7 @@ interface HeadToHeadGridProps {
 
 export function HeadToHeadGrid({ rows, startA, startB, state }: HeadToHeadGridProps) {
   const { t } = useTranslation();
+  const { formatDateShort } = useDateFormat();
   const formatMetric = useCompareMetricFormatter();
   const items = rows ?? [];
 

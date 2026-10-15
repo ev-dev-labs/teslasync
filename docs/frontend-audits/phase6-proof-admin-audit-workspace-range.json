@@ -1,0 +1,133 @@
+{
+  "item": "phase6-proof-admin-audit-workspace-range",
+  "phase": 6,
+  "kind": "proof",
+  "status": "BLOCKED",
+  "blocker": "Both stable-pin reruns failed in the external catalog startup guard before collection, most recently at 2026-10-14T08:35:38.4502387-07:00. The earlier 33/33 actual passes are retained, but source drift in that run prevents a stable-source acceptance claim. No catalog repair or guard bypass is authorized by this item.",
+  "scope": "First normal Vitest execution of the retained read-only workspaceScope.phase6.test.ts fixture; no production or fixture edits.",
+  "runtime": {
+    "node": "v26.8.1",
+    "npm": "11.19.0",
+    "vitest": "4.1.11",
+    "pool": "forks",
+    "maxWorkers": 2,
+    "environment": {
+      "VITE_GIT_SHA": "dev",
+      "NO_COLOR": "1",
+      "FORCE_COLOR": "0"
+    },
+    "identityNote": "Explicit dev identity avoids the existing Vite resolver's Git invocation. SHA-256 source pins below are content pins, not commit identities."
+  },
+  "command": "npx vitest run src\\lib\\workspaceScope.phase6.test.ts --pool=forks --maxWorkers=2 --reporter=verbose",
+  "runs": [
+    {
+      "run": 1,
+      "exit": 0,
+      "filesPassed": 1,
+      "testsCollected": 33,
+      "testsPassed": 33,
+      "testsFailed": 0,
+      "testsSkipped": 0,
+      "vitestStartLocal": "08:16:15",
+      "vitestDurationSeconds": 7.27,
+      "stableSourcePins": false,
+      "limitation": "workspaceScope.ts changed externally during catalog startup. Actual test execution passed, but this run alone does not establish an immutable-source gate.",
+      "changedPin": {
+        "path": "web\\src\\lib\\workspaceScope.ts",
+        "before": "C29E1A31D5B231C2D4137E5F25753AC48C312B0C238FA7BC784BEDB27CC0492F",
+        "after": "5AD60CD4467E2BC474B29F97A1006E9973FA586B6EF949289506E2AF6EDEBC20"
+      }
+    },
+    {
+        "run": 2,
+        "startedAt": "2026-10-14T08:17:04.5210362-07:00",
+        "finishedAt": "2026-10-14T08:25:58.1491753-07:00",
+        "exit": 1,
+        "status": "NOTRUN",
+        "testsCollected": 0,
+        "testsExecuted": 0,
+        "testsPassed": 0,
+        "stableSourcePins": true,
+        "failureClass": "External catalog-only startup failure",
+        "failureCommand": "node scripts/split-i18n-catalog.mjs --check",
+        "startupGuardExit": 1,
+        "consumesAttempt": false,
+        "note": "Zero collection is NOTRUN, never PASS. Catalog regeneration, global changes and a third run were not performed."
+    },
+    {
+      "run": 3,
+      "startedAt": "2026-10-14T08:27:53.4215219-07:00",
+      "finishedAt": "2026-10-14T08:35:38.4502387-07:00",
+      "exit": 1,
+      "status": "NOTRUN",
+      "filesCollected": 0,
+      "testsCollected": 0,
+      "testsExecuted": 0,
+      "testsPassed": 0,
+      "testsFailed": 0,
+      "testsSkipped": 0,
+      "stableSourcePins": true,
+      "failureClass": "External catalog-only startup failure",
+      "failureCommand": "node scripts/split-i18n-catalog.mjs --check",
+      "startupGuardExit": 1,
+      "consumesAttempt": false,
+      "note": "Resumed only the missing stable-source proof. Normal forks/maxWorkers=2 run stopped before collection; no test names executed. All eight retained source pins and the additional config/setup pins matched before/after. No catalog repair, guard bypass, source edits or further rerun."
+    }
+  ],
+  "uniqueCases": 33,
+  "coverage": [
+    { "group": "Actual lazy AuditLog mount, route registry, range registration and vehicle disablement", "cases": 1 },
+    { "group": "Audit path normalization", "cases": 5 },
+    { "group": "No broad admin prefix or guessed child-route range ownership", "cases": 6 },
+    { "group": "No unmounted audit aliases", "cases": 3 },
+    { "group": "Prior dashboard, Inbox aliases, Activity, power, vehicle and settings contracts", "cases": 16 },
+    { "group": "Rolling, custom, all-time and independent calendar preset policy", "cases": 1 },
+    { "group": "Existing desktop header and mobile drawer source capability wiring", "cases": 1 }
+  ],
+  "currentScope": { "path": "/admin/audit-log", "range": true, "vehicle": false },
+  "sourcePinsSha256": {
+    "web\\src\\lib\\workspaceScope.phase6.test.ts": "698CDBF902243FA3F1736F9151AF4173D894B348E8802CF2C2BC7F6819DCC46B",
+    "web\\src\\lib\\workspaceScope.ts": "5AD60CD4467E2BC474B29F97A1006E9973FA586B6EF949289506E2AF6EDEBC20",
+    "web\\src\\lib\\routeRegistry.ts": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+    "web\\src\\App.tsx": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+    "web\\src\\components\\layout\\Layout.tsx": "2164103032C3971BE0485F8EF0CF43B07E266EF283E80ABB319601DA554A46E1",
+    "web\\src\\components\\layout\\WorkspaceHeader.tsx": "B414EBCD4A69886A2E40F9CE24C06124F40D0552EECA10DA881B72A78260B37C",
+    "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts": "22DCA86578F0003D09A412A9D922AECE2923AD70CBBC5454EC865A0401959C03",
+    "web\\src\\features\\admin\\pages\\AuditLogPage.tsx": "8F2B9FA43A030BE2FB4AD4FF03474E0A13DB25E52493BBFC9123D5B6213B7EEB",
+    "web\\vite.config.ts": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+    "web\\src\\test-setup.ts": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A"
+  },
+  "scopedPatternCounts": {
+    "file": "web\\src\\lib\\workspaceScope.phase6.test.ts",
+    "inlineStyles": 0,
+    "rawControls": 0,
+    "directVendorImports": 0,
+    "oldApiImports": 0,
+    "duplicateApiPrefix": 0,
+    "neonBody": 0,
+    "scanExit": 0,
+    "fixtureLines": 108,
+    "pageLines": 92,
+    "fixtureGlassPanelOrChartContainerOccurrences": 0,
+    "note": "Historical run-1/run-2 scoped regex counts only, not a comprehensive application audit or fresh run-3 scan. No source changed by this worker; no section or page reduction. Run 3 verified unchanged source pins rather than repeating these passing checks."
+  },
+  "preservation": {
+    "productionEdits": 0,
+    "fixtureEdits": 0,
+    "controller": "Unbounded fresh-ledger default, saved shared scope, legacy minute-precision since/until URL handling, pagination and actions left unchanged.",
+    "historicalRouteMatrix": "266 routes / 1330 variants retained as historical notes, not rerun or claimed as fresh Vitest passes.",
+    "si": "No unit fields, wire/storage shapes or display conversion changed.",
+    "api": "Read-only inspection: useOperatorConfidence audit GET paths match internal/api/router.go registrations for list, categories, actions and verify. No API requests or backend edits.",
+    "queueAndBudgets": "No dispatch, queue edits, helper/native budget renewal or historical evidence replacement. External catalog startup failure is uncharged."
+  },
+  "notRun": [
+    "Full-project npx tsc --noEmit, full lint, full build and full suites: outside this receipt-only item's scoped checks.",
+    "Historical broad workspaceScope suite: preserve prior evidence, do not repeat as a new fix.",
+    "Browser/native/visual/mounted-page acceptance: source fixture proof is not runtime UX acceptance."
+  ],
+  "rawLog": "web\\logs\\phase6-proof-admin-audit-workspace-range.log",
+  "changedFiles": [
+    "docs\\frontend-audits\\phase6-proof-admin-audit-workspace-range.json",
+    "web\\logs\\phase6-proof-admin-audit-workspace-range.log"
+  ]
+}

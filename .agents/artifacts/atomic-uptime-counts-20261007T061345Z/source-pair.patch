@@ -1,0 +1,205 @@
+diff --git a/web/src/features/dashboard/widgets/UptimeMonitorWidget.test.tsx b/web/src/features/dashboard/widgets/UptimeMonitorWidget.test.tsx
+index 8cfbf9d639..8dff75c5f0 100644
+--- a/web/src/features/dashboard/widgets/UptimeMonitorWidget.test.tsx
++++ b/web/src/features/dashboard/widgets/UptimeMonitorWidget.test.tsx
+@@ -14,7 +14,7 @@
+  *          1-wide widget wrongly rendered the full per-service list).
+  *        - standard (cols >= 2): a titled shell with the Overall badge + a row
+  *          per service; a tall (rows >= 2) standard widget also shows the DB
+- *          size / table-count detail strip.
++ *          size text / typed table-count source brief.
+  *   2. `classifyStatus` — the backend-contract status → visual kind mapping:
+  *        - 'healthy'/'ok'                          → success (OK badge, green dot)
+  *        - 'degraded'/'warning'                    → warning (Degraded, amber)
+@@ -45,7 +45,7 @@
+  * every render because the error branch's <QueryError> reaches for react-router.
+  */
+ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
++import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+ import { MemoryRouter } from 'react-router-dom';
+ import type { SystemHealth, SystemHealthComponent } from '@/types/admin';
+ import UptimeMonitorWidget from './UptimeMonitorWidget';
+@@ -195,12 +195,90 @@ describe('UptimeMonitorWidget — standard layout', () => {
+ 
+     renderWidget({ cols: 2, rows: 2 });
+ 
+-    // `tableCount ?? '—'` keeps a legitimate 0; `databaseSize || '—'` replaces ''.
++    // A raw count of 0 is measured; empty database-size text remains missing.
+     expect(screen.getByText('0')).toBeInTheDocument();
+     expect(screen.getByText('—')).toBeInTheDocument();
+   });
+ });
+ 
++describe('UptimeMonitorWidget — real database source brief', () => {
++  it('keeps measured zero distinct from a missing table count and preserves opaque size text in review details', () => {
++    const databaseSize = 'server-reported size (not numeric bytes)';
++    const health = makeHealth({ databaseSize, tableCount: 0 });
++    useSystemHealthMock.mockReturnValue(makeQuery({ data: health }));
++
++    renderWidget({ cols: 2, rows: 2 });
++    const brief = screen.getByTestId('dashboard-uptime-snapshot-brief');
++    const count = brief.querySelector('[data-operational-metric="uptime-database-table-count"]');
++    const sizeText = brief.querySelector('[data-operational-metric="uptime-database-size-text"]');
++    expect(count).toHaveAttribute('data-value-state', 'value');
++    expect(count).toHaveTextContent('0');
++    expect(sizeText).toHaveAttribute('data-value-state', 'value');
++    expect(sizeText).toHaveTextContent(databaseSize);
++    expect(within(brief).getByText(/not complete fleet history/)).toBeInTheDocument();
++
++    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
++    const details = screen.getByRole('dialog');
++    expect(within(details).getByText(databaseSize)).toBeInTheDocument();
++    expect(within(details).getByText('0')).toBeInTheDocument();
++    expect(within(details).getByText(/no byte count is supplied/)).toBeInTheDocument();
++
++    cleanup();
++    const withoutCount: Omit<SystemHealth, 'tableCount'> = {
++      status: health.status,
++      components: health.components,
++      databaseSize,
++    };
++    useSystemHealthMock.mockReturnValue({ ...makeQuery(), data: withoutCount });
++    renderWidget({ cols: 2, rows: 2 });
++    const missingBrief = screen.getByTestId('dashboard-uptime-snapshot-brief');
++    const missingCount = missingBrief.querySelector('[data-operational-metric="uptime-database-table-count"]');
++    expect(missingCount).toHaveAttribute('data-value-state', 'missing');
++    expect(within(missingBrief).getByText('—')).toBeInTheDocument();
++    expect(within(missingBrief).queryByText('0')).not.toBeInTheDocument();
++    expect(screen.getAllByText('OK')).toHaveLength(4);
++  });
++
++  it('shares the single health-query trust state, retains counts on refresh failure and excludes ineligible layouts', () => {
++    useSystemHealthMock.mockReturnValue(makeQuery({
++      data: makeHealth({ tableCount: 0 }),
++      error: new Error('snapshot refresh failed'),
++      isError: true,
++    }));
++
++    const { rerender } = renderWidget({ cols: 3, rows: 2 });
++    const brief = screen.getByTestId('dashboard-uptime-snapshot-brief');
++    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
++    expect(brief.querySelector('[data-provenance="cached"]')).toHaveAttribute('data-data-status', 'stale');
++    expect(within(brief).getByText('0')).toBeInTheDocument();
++    expect(screen.getAllByText('OK')).toHaveLength(4);
++    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
++
++    rerender(<MemoryRouter><UptimeMonitorWidget size={{ cols: 1, rows: 2 }} /></MemoryRouter>);
++    expect(screen.queryByTestId('dashboard-uptime-snapshot-brief')).not.toBeInTheDocument();
++    expect(screen.getByText('4/4')).toBeInTheDocument();
++    rerender(<MemoryRouter><UptimeMonitorWidget size={{ cols: 2, rows: 1 }} /></MemoryRouter>);
++    expect(screen.queryByTestId('dashboard-uptime-snapshot-brief')).not.toBeInTheDocument();
++    expect(screen.getAllByText('OK')).toHaveLength(4);
++
++    useSystemHealthMock.mockReturnValue(makeQuery({
++      data: undefined,
++      error: new Error('initial health failure'),
++      isError: true,
++    }));
++    rerender(<MemoryRouter><UptimeMonitorWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
++    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
++    expect(screen.queryByTestId('dashboard-uptime-snapshot-brief')).not.toBeInTheDocument();
++
++    useSystemHealthMock.mockReturnValue(makeQuery());
++    rerender(<MemoryRouter><UptimeMonitorWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
++    const unavailable = screen.getByTestId('dashboard-uptime-snapshot-brief');
++    expect(within(unavailable).getByText('No source readings')).toBeInTheDocument();
++    expect(within(unavailable).getAllByText('—')).toHaveLength(2);
++    expect(screen.getByText('No system health data')).toBeInTheDocument();
++  });
++});
++
+ describe('UptimeMonitorWidget — status classification', () => {
+   it('maps a "degraded" service to a Degraded badge + amber dot', () => {
+     useSystemHealthMock.mockReturnValue(
+diff --git a/web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx b/web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx
+index f6ce31d99c..f29dfb4da3 100644
+--- a/web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx
++++ b/web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx
+@@ -2,11 +2,13 @@ import { useMemo } from 'react';
+ import { useTranslation } from 'react-i18next';
+ import { Activity } from 'lucide-react';
+ import { Badge, Caption } from '@/components/ui';
++import type { StatMetric } from '@/components/data-display';
+ import { deriveDataState } from '@/api/dataState';
+ import { EmptyState } from '@/components/feedback';
+ import { useSystemHealth } from '@/api/hooks/useAdmin';
+ import { WidgetShell } from './WidgetShell';
+-import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid, type StatusCell } from './shared';
++import { WidgetBigNumber, WidgetStatusGrid, type StatusCell } from './shared';
++import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+ import type { WidgetProps } from './types';
+ 
+ const SERVICE_KEYS = ['database', 'mqtt', 'tesla_api', 'fleet_telemetry'] as const;
+@@ -63,7 +65,10 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
+   const { t } = useTranslation('dashboard');
+   const query = useSystemHealth();
+   const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
+-  const state = deriveDataState({ ...query, data: data ?? (isLoading || query.isError || query.error ? undefined : null) });
++  const sourceTrust = deriveDataState(
++    { ...query, data: data ?? (isLoading || query.isError || query.error ? undefined : null) },
++    { provenance: 'cached', unavailable: data == null && !isLoading && !isError && !query.error },
++  );
+ 
+   // Match the sibling system widgets (SystemHealthWidget / APIUsageWidget): a
+   // single-column placement is "compact". The registered minSize is 1×2, so the
+@@ -113,6 +118,22 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
+       service.lastError,
+     ].filter(Boolean).join(' · ') || undefined,
+   }));
++  const snapshotMetrics: StatMetric[] = [
++    {
++      metricId: 'text',
++      occurrenceId: 'uptime-database-size-text',
++      rawValue: data?.databaseSize || null,
++      label: t('widget.uptime.dbSize', 'DB size'),
++      description: t('widget.uptime.dbSizeSource', 'Database size text returned by the server, preserved verbatim; no byte count is supplied.'),
++    },
++    {
++      metricId: 'count',
++      occurrenceId: 'uptime-database-table-count',
++      rawValue: data?.tableCount,
++      label: t('widget.uptime.tables', 'Tables'),
++      description: t('widget.uptime.tablesSource', 'Database table count returned by the system-health snapshot; not a fleet-history record count.'),
++    },
++  ];
+ 
+   // Only replace the whole widget with a full-panel error on the INITIAL load
+   // failure, when there is no cached health payload to fall back on. This widget
+@@ -120,14 +141,14 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
+   // background-refetch failure must not blank out otherwise-valid status — it is
+   // surfaced through the freshness indicator's error state instead (WidgetShell
+   // forwards `isError` to <DataFreshness>).
+-  const blockingError = state.fatalError?.message;
++  const blockingError = sourceTrust.fatalError?.message;
+ 
+   return (
+     <WidgetShell
+       title={t('widget.uptime.title', 'Uptime monitor')}
+       icon={<Activity className="h-3.5 w-3.5" />}
+       loading={isLoading}
+-      dataState={state}
++      dataState={sourceTrust}
+       error={blockingError}
+       updatedAt={dataUpdatedAt}
+       isFetching={isFetching}
+@@ -156,10 +177,15 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
+ 
+           {/* Extended detail in tall, non-compact mode */}
+           {isTall && !isCompact && (
+-            <WidgetStatGrid cols={2} stats={[
+-              { label: t('widget.uptime.dbSize', 'DB size'), value: data?.databaseSize || '—' },
+-              { label: t('widget.uptime.tables', 'Tables'), value: data?.tableCount ?? '—' },
+-            ]} />
++            <DashboardSourceBrief
++              metrics={snapshotMetrics}
++              state={sourceTrust}
++              eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
++              title={t('widget.uptime.summaryTitle', 'Database snapshot')}
++              description={t('widget.uptime.summaryDescription', 'Database size and table count describe the returned system-health snapshot, separate from the four service-status records.')}
++              scope={t('widget.uptime.summaryScope', 'Server-returned system-health snapshot · no vehicle or date-range filter; not complete fleet history.')}
++              testId="dashboard-uptime-snapshot-brief"
++            />
+           )}
+         {!data && (
+         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

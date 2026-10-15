@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import {
   fireEvent,
+  act,
   render,
   screen,
   waitFor,
@@ -8,8 +9,18 @@ import {
 } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 import { ToastProvider } from '@/components/feedback'
+
+const operationalMode = vi.hoisted(() => ({
+  canWrite: true,
+  writeBlockReason: null as string | null,
+}))
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => operationalMode,
+}))
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>(
@@ -66,6 +77,7 @@ const VEHICLE_ID = 42
 type RequestCall = [string, RequestInit?]
 
 let pricingError: Error | null
+let payerError: Error | null
 let optionsError: Error | null
 let holdReads: boolean
 
@@ -173,6 +185,7 @@ function installRequestRouter() {
       return Promise.resolve({ data: { quote: 17, currency: 'USD' } })
     }
     if (url.endsWith('/enterprise-payer')) {
+      if (payerError) return Promise.reject(payerError)
       return Promise.resolve({ data: { updated: true } })
     }
     return Promise.resolve(responseFor(url.replace('/refresh', '')))
@@ -186,15 +199,17 @@ function renderWorkspace(vehicleId: number | null = VEHICLE_ID) {
       mutations: { retry: false },
     },
   })
-  return render(
+  const workspace = () => (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <ToastProvider>
           <VehicleManagementWorkspace vehicleId={vehicleId ?? undefined} />
         </ToastProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
+  const view = render(workspace())
+  return { ...view, rerenderWorkspace: () => view.rerender(workspace()) }
 }
 
 function calls(method?: string): RequestCall[] {
@@ -214,12 +229,87 @@ function endpointCard(id: string): HTMLElement {
 beforeEach(() => {
   requestMock.mockReset()
   pricingError = null
+  payerError = null
   optionsError = null
   holdReads = false
+  operationalMode.canWrite = true
+  operationalMode.writeBlockReason = null
   installRequestRouter()
 })
 
+afterEach(() => {
+  act(() => {
+    setGlobalLocale('en-US')
+    setGlobalPrecision(2)
+  })
+})
+
 describe('VehicleManagementWorkspace', () => {
+  it('reformats cached reported subscription money without refetching or changing currency', async () => {
+    setGlobalLocale('en-US')
+    setGlobalPrecision(0)
+    renderWorkspace()
+    await screen.findByText('Extended warranty')
+    const card = endpointCard('subscription-eligibility')
+    expect(card).toHaveTextContent('$60.00 / month')
+    expect(card).toHaveTextContent('Total $60.00')
+    const reads = calls('GET').length
+    act(() => {
+      setGlobalLocale('de-DE')
+      setGlobalPrecision(3)
+    })
+    expect(card).toHaveTextContent('60,000 $ / month')
+    expect(card).toHaveTextContent('Total 60,000 $')
+    expect(calls('GET')).toHaveLength(reads)
+    expect(calls('POST')).toHaveLength(0)
+  })
+
+  it('reformats cached specification numbers without refetching or changing source precision', async () => {
+    setGlobalLocale('en-US')
+    setGlobalPrecision(1)
+    const data = Object.freeze({ capacity: 1234.5678, offset: -2.3456, count: 0, vehicle_id: 123456 })
+    requestMock.mockImplementation((url: string) => Promise.resolve(
+      url.endsWith('/specs') ? { data, fetched_at: cachedAt } : responseFor(url),
+    ))
+    renderWorkspace()
+    const table = await screen.findByRole('table', { name: 'Vehicle specifications' })
+    expect(within(table).getByText('1,234.6')).toBeInTheDocument()
+    expect(within(table).getByText('-2.3')).toBeInTheDocument()
+    expect(within(table).getByText('0.0')).toBeInTheDocument()
+    const reads = calls('GET').length
+    act(() => {
+      setGlobalLocale('de-DE')
+      setGlobalPrecision(3)
+    })
+    expect(within(table).getByText('1.234,568')).toBeInTheDocument()
+    expect(within(table).getByText('123456')).toBeInTheDocument()
+    expect(calls('GET')).toHaveLength(reads)
+    expect(calls('POST')).toHaveLength(0)
+    fireEvent.click(within(endpointCard('vehicle-specs')).getByRole('button', { name: 'Technical response details' }))
+    expect(within(endpointCard('vehicle-specs')).getByText('1234.5678')).toBeInTheDocument()
+    expect(data.capacity).toBe(1234.5678)
+  })
+
+  it('keeps mixed option statuses unknown in the workspace summary', async () => {
+    requestMock.mockImplementation((url: string) => Promise.resolve(
+      url.endsWith('/options')
+        ? { data: { codes: [
+            { code: 'ACTIVE', isActive: true },
+            { code: 'INACTIVE', isActive: false },
+            { code: 'UNKNOWN', isActive: null },
+          ] }, fetched_at: cachedAt }
+        : responseFor(url),
+    ))
+    renderWorkspace()
+    expect(await screen.findByText('Unknown active of 3 options returned')).toBeInTheDocument()
+    const options = within(endpointCard('vehicle-options'))
+    expect(options.getByText('Active')).toBeInTheDocument()
+    expect(options.getByText('Inactive')).toBeInTheDocument()
+    expect(options.getByText('Status unknown')).toBeInTheDocument()
+    expect(options.getByRole('button', { name: 'Technical response details' })).toBeInTheDocument()
+    expect(document.querySelectorAll('[data-management-endpoint]')).toHaveLength(8)
+  })
+
   it('shows all eight official endpoint cards, reuses cached reads, and never auto-refreshes', async () => {
     renderWorkspace()
 
@@ -254,14 +344,18 @@ describe('VehicleManagementWorkspace', () => {
     expect(screen.getByText('Drive Unit Limited Warranty')).toBeInTheDocument()
     expect(screen.getByText('8 years')).toBeInTheDocument()
     expect(screen.getByText('120,000')).toBeInTheDocument()
-    expect(screen.getByText('Extended Warranty')).toBeInTheDocument()
+    expect(screen.getByText('Extended warranty')).toBeInTheDocument()
     expect(endpointCard('subscription-eligibility')).toHaveTextContent(
-      '$60 / month',
+      '$60.00 / month',
     )
     expect(screen.queryByText('warrantyDisplayName')).not.toBeInTheDocument()
     expect(screen.queryByText('must-never-render')).not.toBeInTheDocument()
     expect(screen.getByText('4 specification fields returned')).toBeInTheDocument()
-    expect(screen.getByText('Fleet Manager')).toBeInTheDocument()
+    const specifications = screen.getByRole('table', { name: 'Vehicle specifications' })
+    expect(within(specifications).getAllByRole('rowheader')).toHaveLength(4)
+    expect(within(specifications).getByRole('rowheader', { name: 'Exterior color' })).toBeInTheDocument()
+    expect(specifications).toHaveTextContent('Midnight Silver Metallic')
+    expect(screen.getByText('Fleet manager')).toBeInTheDocument()
 
     fireEvent.click(
       within(endpointCard('vehicle-options')).getByRole('button', {
@@ -349,7 +443,7 @@ describe('VehicleManagementWorkspace', () => {
 
   it('refreshes cached enterprise roles only after the explicit action', async () => {
     renderWorkspace()
-    await screen.findByText('Fleet Manager')
+    await screen.findByText('Fleet manager')
     const card = endpointCard('enterprise-roles')
 
     fireEvent.click(
@@ -411,6 +505,117 @@ describe('VehicleManagementWorkspace', () => {
       )
       expect(roleReads.length).toBeGreaterThan(1)
     })
+  })
+
+  it.each([
+    'Return to live mode before making operational changes.',
+    'Reconnect before making operational changes.',
+  ])('blocks payer preparation with an operational explanation: %s', async (reason) => {
+    operationalMode.canWrite = false
+    operationalMode.writeBlockReason = reason
+    renderWorkspace()
+    await screen.findByText('Model 3')
+    const card = endpointCard('enterprise-payer')
+    expect(within(card).getAllByRole('status').some((status) => status.textContent?.includes(reason))).toBe(true)
+    const configure = within(card).getByRole('button', { name: 'Configure payer change' })
+    expect(configure).toBeDisabled()
+    fireEvent.click(configure)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(calls('POST')).toHaveLength(0)
+    expect(screen.getByText('Fleet manager')).toBeInTheDocument()
+  })
+
+  it('rechecks payer readiness before staging and at typed confirmation, and clears cancelled payloads', async () => {
+    const view = renderWorkspace()
+    await screen.findByText('Model 3')
+    const configure = () => fireEvent.click(
+      within(endpointCard('enterprise-payer')).getByRole('button', { name: 'Configure payer change' }),
+    )
+    configure()
+    let dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText(/JSON object/), {
+      target: { value: '{"payer":"cancelled"}' },
+    })
+
+    operationalMode.canWrite = false
+    operationalMode.writeBlockReason = 'Reconnect before making operational changes.'
+    view.rerenderWorkspace()
+    dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveTextContent(operationalMode.writeBlockReason)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Continue to confirmation' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('Prepare payer change')
+    expect(calls('POST')).toHaveLength(0)
+
+    operationalMode.canWrite = true
+    operationalMode.writeBlockReason = null
+    view.rerenderWorkspace()
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Continue to confirmation' }))
+    dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Type PAYER to confirm the billing change'), {
+      target: { value: 'PAYER' },
+    })
+
+    operationalMode.canWrite = false
+    operationalMode.writeBlockReason = 'Return to live mode before making operational changes.'
+    view.rerenderWorkspace()
+    dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('status')).toHaveTextContent(operationalMode.writeBlockReason)
+    const confirm = within(dialog).getByRole('button', { name: 'Change enterprise payer' })
+    expect(confirm).toBeDisabled()
+    fireEvent.click(confirm)
+    expect(calls('POST')).toHaveLength(0)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+    operationalMode.canWrite = true
+    operationalMode.writeBlockReason = null
+    view.rerenderWorkspace()
+    configure()
+    dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByLabelText(/JSON object/)).toHaveValue('{}')
+    fireEvent.change(within(dialog).getByLabelText(/JSON object/), {
+      target: { value: '{"payer":"replacement"}' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Continue to confirmation' }))
+    dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByRole('button', { name: 'Change enterprise payer' })).toBeDisabled()
+    fireEvent.change(within(dialog).getByLabelText('Type PAYER to confirm the billing change'), {
+      target: { value: 'PAYER' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Change enterprise payer' }))
+    await waitFor(() => {
+      const payerCalls = calls('POST').filter(([url]) => url.endsWith('/enterprise-payer'))
+      expect(payerCalls).toHaveLength(1)
+      expect(JSON.parse(String(payerCalls[0][1]?.body))).toEqual({
+        payload: { payer: 'replacement' },
+        confirmed: true,
+      })
+    })
+    expect(await within(endpointCard('enterprise-payer')).findByText('Request completed')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('leaves payer permission decisions to the server and never reports a denial as success', async () => {
+    payerError = new ApiError('Enterprise payer access denied', 403)
+    renderWorkspace()
+    fireEvent.click(within(endpointCard('enterprise-payer')).getByRole('button', {
+      name: 'Configure payer change',
+    }))
+    let dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText(/JSON object/), {
+      target: { value: '{"opaque":true}' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Continue to confirmation' }))
+    dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText('Type PAYER to confirm the billing change'), {
+      target: { value: 'PAYER' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Change enterprise payer' }))
+    const card = endpointCard('enterprise-payer')
+    expect(await within(card).findByText('Permission denied')).toBeInTheDocument()
+    expect(card).toHaveTextContent('Enterprise payer access denied')
+    expect(within(card).queryByText('Request completed')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(calls('POST').filter(([url]) => url.endsWith('/enterprise-payer'))).toHaveLength(1)
   })
 
   it('keeps cards honest when no vehicle is selected', async () => {

@@ -12,27 +12,25 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
   BatteryCharging,
   Bell,
-  Building2,
   Car,
   Clock,
   Eye,
   Hash,
   MapPin,
-  Navigation,
   Route,
-  Trophy,
   Wrench,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, Pagination, PanelTitle, Text } from '@/components/ui';
-import { EntityPreviewDrawer, MetricCard } from '@/components/data-display';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
+import { Button, GlassPanel, Icon, Pagination, Text } from '@/components/ui';
+import { EntityPreviewDrawer } from '@/components/data-display';
+import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
@@ -43,23 +41,14 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+
 import { cn } from '@/lib/cn';
 import { buildContextHref } from '@/lib/contextNavigation';
-import { request } from '@/api/client';
-import { AIAutoNameUnnamedLocations } from '@/components/ai/AIAutoNameUnnamedLocations';
+import { useVisitedLocations, type VisitedLocation } from '@/api/hooks/useLocations';
+import { AIAutoNameUnnamedLocations } from '@/components/ai';
 import { LocationLeaderboardPanel, type LeaderboardDatum } from '../components/LocationLeaderboardPanel';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface VisitedLocation {
-  id: number;
-  address_name: string;
-  visit_count: number;
-  total_duration_s: number;
-  last_visited: string | null;
-}
+import { chartTokens, typography } from '@/lib/tokens';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -88,37 +77,38 @@ export function truncateLabel(name: string, max = 22): string {
   return value.length > max + 3 ? `${value.slice(0, max)}…` : value;
 }
 
-// rankChipClass tones the leaderboard rank badge by position: gold for
-// #1, cyan for the podium, muted for the rest. Toned 300-level accents
-// paired with a matching tint + border — never neon body text.
+// Rank is conveyed by its number; neutral emphasis keeps the first place distinct.
 export function rankChipClass(index: number): string {
-  if (index === 0) return 'border-amber-400/30 bg-amber-500/15 text-amber-300';
-  if (index < 3) return 'border-cyan-400/20 bg-cyan-500/10 text-cyan-300';
-  return 'border-[var(--glass-border)] bg-[var(--surface-2)] text-[var(--text-muted)]';
+  return cn(
+    'border-[var(--border-default)] bg-[var(--surface-2)]',
+    index === 0 ? typography.color.primary : typography.color.secondary,
+  );
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function LocationsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('locations.title', 'Visited Locations'));
+  usePageTitle(t('locations.title', 'Visited locations'));
   const { formatDuration } = useUnits();
+  const { formatDate, formatDateTime } = useDateFormat();
 
   const { vehicleId } = useSelectedVehicle();
   const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;
   const [search, setSearch] = useUrlString('q', '');
-  const [previewLocation, setPreviewLocation] = useState<VisitedLocation | null>(null);
+  const [preview, setPreview] = useState<{ scope: string; id: number } | null>(null);
   // AI applied-name pending hand-off — when the user clicks Apply on
   // an AI proposal, the proposed name is parked here keyed by
   // location.id. The user then writes it into the canonical
   // baseline geofence-create / location-rename UI; the AI panel
   // never persists.
-  const [appliedName, setAppliedName] = useState<{ id: number; name: string } | null>(null);
+  const [appliedName, setAppliedName] = useState<{ scope: string; id: number; name: string } | null>(null);
   const { start, end, startInstant, endInstantExclusive, reset: resetRange } = useRangeState({
     persistKey: 'locations.range',
     defaultPresetId: 'all',
   });
+  const sourceScope = JSON.stringify([vehicleId, page, startInstant, endInstantExclusive]);
   const previousRange = useRef(`${start}:${end}`);
   useEffect(() => {
     const currentRange = `${start}:${end}`;
@@ -127,23 +117,42 @@ export default function LocationsPage() {
     if (page !== 1) setPage(1);
   }, [start, end, page, setPage]);
 
-  const locationsQuery = useQuery({
-    queryKey: ['visited-locations', vehicleId, page, pageSize, startInstant, endInstantExclusive],
-    queryFn: () => {
-      const params = new URLSearchParams({
-        vehicle_id: String(vehicleId),
-        limit: String(pageSize),
-        offset: String((page - 1) * pageSize),
-        from: startInstant,
-        to: endInstantExclusive,
-      });
-      return request<VisitedLocation[]>(`/locations?${params}`);
-    },
-    enabled: vehicleId !== null,
+  const locationsQuery = useVisitedLocations({
+    vehicleId,
+    page,
+    pageSize,
+    from: startInstant,
+    to: endInstantExclusive,
   });
-  const { data: rawLocations, isLoading, isError, error, refetch } = locationsQuery;
+  const { data: rawLocations, refetch } = locationsQuery;
+  const source = deriveDataState(locationsQuery, {
+    provenance: 'historical',
+    unavailable: locationsQuery.isSuccess && rawLocations?.length === 0,
+  });
+  const isLoading = locationsQuery.isLoading && !source.hasData;
+  const isError = source.fatalError !== null;
+  const error = source.fatalError;
+  const isUnresolved = vehicleId !== null && source.status === 'initial';
+  const unresolvedTitle = source.isRefreshBlocked
+    ? t('locations.loadPaused.title', 'Location loading paused')
+    : t('locations.loadUnknown.title', 'Locations not loaded yet');
+  const unresolvedMessage = source.isRefreshBlocked
+    ? t('locations.loadPaused.message', 'The request is paused. Location counts and remaining pages are unknown until it resumes.')
+    : t('locations.loadUnknown.message', 'The request has not resolved. Location counts and remaining pages are unknown.');
 
   const locations = rawLocations;
+  // Resolve identity against the current retained receipt, never a captured row.
+  const previewLocation = preview?.scope === sourceScope
+    ? locations?.find((location) => location.id === preview.id) ?? null
+    : null;
+  useEffect(() => {
+    setPreview((current) => current && (
+      current.scope !== sourceScope || !locations?.some((location) => location.id === current.id)
+    ) ? null : current);
+    setAppliedName((current) => current && (
+      current.scope !== sourceScope || !locations?.some((location) => location.id === current.id)
+    ) ? null : current);
+  }, [sourceScope, locations]);
 
   const locationSearchFields = useMemo(
     () => ['address_name'] as const satisfies ReadonlyArray<keyof VisitedLocation>,
@@ -176,7 +185,7 @@ export default function LocationsPage() {
   const visitsChartData = useMemo<LeaderboardDatum[]>(
     () =>
       (locations ?? []).slice(0, 15).map((l) => ({
-        name: truncateLabel(l.address_name ?? ''),
+        name: l.address_name ?? '',
         value: l.visit_count ?? 0,
       })),
     [locations],
@@ -192,94 +201,93 @@ export default function LocationsPage() {
         .sort((a, b) => (b.total_duration_s ?? 0) - (a.total_duration_s ?? 0))
         .slice(0, 10)
         .map((l) => ({
-          name: truncateLabel(l.address_name ?? ''),
-          value: +fmtNumber((l.total_duration_s ?? 0) / 3600, 1),
+          name: l.address_name ?? '',
+          value: (l.total_duration_s ?? 0) / 3600,
         })),
     [locations],
   );
 
   const shownCount = locations?.length ?? 0;
   const hasLocations = shownCount > 0;
+  const briefScope = t('locations.brief.scope', 'Selected vehicle · {{from}} to {{to}} (exclusive) · loaded page {{page}}, up to {{limit}} places; not server-wide totals.', { from: startInstant, to: endInstantExclusive, page, limit: pageSize });
+  const durationDisplay = { formatter: (raw: number) => ({ value: formatDuration(raw), unit: '' }) };
+  const briefMetrics = [
+    { metricId: 'count', occurrenceId: 'locations-places', rawValue: source.hasData ? uniquePlaces : null, label: t('locations.uniquePlaces', 'Unique places'), description: briefScope },
+    { metricId: 'count', occurrenceId: 'locations-cities', rawValue: source.hasData ? uniqueCities : null, label: t('locations.uniqueCities', 'Unique cities'), description: t('locations.brief.cities', 'Distinct final address segments on the loaded page; unnamed and coordinate-only labels excluded.') },
+    { metricId: 'count', occurrenceId: 'locations-visits', rawValue: source.hasData ? totalVisits : null, label: t('locations.totalVisits', 'Total visits'), description: briefScope },
+    { metricId: 'duration', occurrenceId: 'locations-time', rawValue: source.hasData ? totalTime : null, label: t('locations.totalTime', 'Total time'), description: briefScope, display: durationDisplay },
+    { metricId: 'text', occurrenceId: 'locations-top', rawValue: topLocation?.address_name, label: t('locations.mostVisited', 'Most visited'), description: t('locations.brief.top', 'First returned location in the visit-ranked loaded page; search does not recalculate the summary.') },
+    { metricId: 'duration', occurrenceId: 'locations-average', rawValue: source.hasData ? avgDurationS : null, label: t('locations.avgVisit', 'Avg visit'), description: t('locations.brief.average', 'Loaded-page total duration divided by loaded-page visits; zero when the successful page contains no visits.'), display: durationDisplay },
+  ] as const;
 
 
   return (
-    <PageContainer
-      title={t('locations.title', 'Visited Locations')}
+    <PageLayout
+      title={t('locations.title', 'Visited locations')}
       subtitle={t('locations.subtitle', "Places you've been — ranked by frequency")}
       query={locationsQuery}
+      busy={isLoading}
+      dataSources={[{ id: 'locations', label: t('locations.title', 'Visited locations'), query: locationsQuery, enabled: vehicleId !== null }]}
     >
       {/* ── 1. KPI band ───────────────────────────────────────────── */}
       <FadeIn>
-        <section
-          aria-label={t('locations.kpis', 'Location summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6"
-        >
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
-            ))
-          ) : isError ? (
-            <div className="col-span-full">
-              <QueryError error={error} onRetry={() => refetch()} />
-            </div>
-          ) : (
-            <>
-              <MetricCard label={t('locations.uniquePlaces', 'Unique Places')} value={uniquePlaces} icon={<Navigation className="h-4 w-4" />} color="green" />
-              <MetricCard label={t('locations.uniqueCities', 'Unique Cities')} value={uniqueCities} icon={<Building2 className="h-4 w-4" />} color="blue" />
-              <MetricCard label={t('locations.totalVisits', 'Total Visits')} value={totalVisits} icon={<Hash className="h-4 w-4" />} color="cyan" />
-              <MetricCard label={t('locations.totalTime', 'Total Time')} value={formatDuration(totalTime)} icon={<Clock className="h-4 w-4" />} color="purple" />
-              <MetricCard label={t('locations.mostVisited', 'Most Visited')} value={topLocation?.address_name ?? '—'} icon={<Trophy className="h-4 w-4" />} color="amber" />
-              <MetricCard label={t('locations.avgVisit', 'Avg Visit')} value={formatDuration(avgDurationS)} icon={<Clock className="h-4 w-4" />} color="cyan" />
-            </>
-          )}
-        </section>
+        <MapsOperationalBrief
+          title={t('locations.kpis', 'Location summary')}
+          description={t('locations.brief.description', 'Visit frequency and dwell time describe the returned page, while the leaderboards and place actions remain below.')}
+          scope={briefScope}
+          metrics={briefMetrics}
+          sources={[{ label: t('locations.title', 'Visited locations'), state: source }]}
+          loading={isLoading}
+          onRetry={isError ? () => void refetch() : undefined}
+        />
       </FadeIn>
 
       {/* ── 2. Charts bento — leaderboards side-by-side on wide screens ─ */}
       <FadeIn delay={0.1}>
+        <Text variant="caption">{briefScope}</Text>
         <section
           aria-label={t('locations.leaderboards', 'Top locations')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-2"
         >
           <LocationLeaderboardPanel
-            title={t('locations.byVisits', 'Top Locations by Visits')}
-            icon={<Hash className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            title={t('locations.byVisits', 'Top locations by visits')}
+            icon={<Icon icon={Hash} size="md" className={typography.color.muted} />}
             seriesLabel={t('locations.visits', 'Visits')}
-            color="#10b981"
+            color={chartTokens.series[0]}
             data={visitsChartData}
             loading={isLoading}
             error={error}
             onRetry={() => refetch()}
-            emptyMessage={t('locations.noVisitData', 'No visited location data')}
-            emptyActionLabel={t('locations.resetDateRange', 'Reset date range')}
-            onResetFilters={resetRange}
-            ariaLabel={t('locations.byVisits.aria', 'Bar chart of the most-visited locations')}
+            emptyMessage={vehicleId === null
+              ? t('common.noVehicleSelected.title', 'No vehicle selected')
+              : isUnresolved ? unresolvedMessage : t('locations.noVisitData', 'No visited location data')}
+            emptyActionLabel={vehicleId === null || isUnresolved ? undefined : t('locations.resetDateRange', 'Reset date range')}
+            onResetFilters={vehicleId === null || isUnresolved ? undefined : resetRange}
+            ariaLabel={t('locations.byVisitsAria', 'Bar chart of the most-visited locations')}
           />
           <LocationLeaderboardPanel
-            title={t('locations.byTime', 'Top Locations by Time Spent (hours)')}
-            icon={<Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            title={t('locations.byTime', 'Top locations by time spent (hours)')}
+            icon={<Icon icon={Clock} size="md" className={typography.color.muted} />}
             seriesLabel={t('locations.hours', 'Hours')}
-            color="#a855f7"
+            color={chartTokens.series[4]}
             data={timeChartData}
             loading={isLoading}
             error={error}
             onRetry={() => refetch()}
-            emptyMessage={t('locations.noTimeData', 'No time-spent data available')}
-            emptyActionLabel={t('locations.resetDateRange', 'Reset date range')}
-            onResetFilters={resetRange}
-            ariaLabel={t('locations.byTime.aria', 'Bar chart of locations by hours spent')}
+            emptyMessage={vehicleId === null
+              ? t('common.noVehicleSelected.title', 'No vehicle selected')
+              : isUnresolved ? unresolvedMessage : t('locations.noTimeData', 'No time-spent data available')}
+            emptyActionLabel={vehicleId === null || isUnresolved ? undefined : t('locations.resetDateRange', 'Reset date range')}
+            onResetFilters={vehicleId === null || isUnresolved ? undefined : resetRange}
+            ariaLabel={t('locations.byTimeAria', 'Bar chart of locations by hours spent')}
           />
         </section>
       </FadeIn>
 
       {/* ── 3. Detail band — searchable, paginated leaderboard ──────── */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('locations.all', 'All Locations')}
-          </PanelTitle>
-
+        <LayoutCard title={t('locations.all', 'All locations')}>
+          <Text variant="caption" className="mb-3">{briefScope}</Text>
           <FilterBar className="mb-3">
             <SearchInput
               value={search}
@@ -314,11 +322,27 @@ export default function LocationsPage() {
             </div>
           ) : isError ? (
             <QueryError error={error} onRetry={() => refetch()} />
+          ) : vehicleId === null ? (
+            <EmptyState
+              icon={<Icon icon={MapPin} size="xl" />}
+              title={t('common.noVehicleSelected.title', 'No vehicle selected')}
+              message={t('common.noVehicleSelected.desc', 'Add a vehicle to your fleet to see data on this page.')}
+              actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
+            />
+          ) : isUnresolved ? (
+            <EmptyState
+              icon={<Icon icon={MapPin} size="xl" />}
+              title={unresolvedTitle}
+              message={unresolvedMessage}
+              action={{ label: t('common.retry', 'Retry'), onClick: () => { void refetch(); } }}
+            />
           ) : !hasLocations ? (
             <EmptyState
               icon={<MapPin className="h-12 w-12" />}
               title={t('locations.empty.title', 'No locations')}
-              message={t('locations.empty.message', 'No visited locations recorded yet')}
+              message={page > 1
+                ? t('locations.empty.page', 'No locations returned on this page. Use Previous or First page to return to earlier results.')
+                : t('locations.empty.message', 'No visited locations recorded yet')}
               actionTo={{ label: t('locations.empty.cta', 'View drives'), to: '/drives' }}
             />
           ) : !filteredLocations.length ? (
@@ -337,7 +361,7 @@ export default function LocationsPage() {
                   const avg = visits > 0 ? totalDuration / visits : 0;
                   return (
                     <li key={loc.id} className="space-y-2">
-                      <GlassPanel className="flex items-center gap-3 p-3 transition-colors hover:border-[var(--border-subtle)] sm:p-4">
+                      <GlassPanel className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:border-[var(--border-subtle)] sm:p-4">
                         <Text
                           as="div"
                           size="xs"
@@ -349,16 +373,16 @@ export default function LocationsPage() {
                         >
                           #{i + 1}
                         </Text>
-                        <div className="min-w-0 flex-1">
-                          <Text as="p" size="sm" weight="medium" color="primary" className="truncate">
+                        <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
+                          <Text as="p" size="sm" weight="medium" color="primary" className="break-words">
                             {loc.address_name ?? '—'}
                           </Text>
                           <Text as="p" variant="caption" className="mt-0.5">
                             {visits} {t('locations.visits', 'visits')} · {formatDuration(totalDuration)} {t('locations.total', 'total')} · ~{formatDuration(avg)} {t('locations.avg', 'avg')}
                             {loc.last_visited ? ` · ${t('locations.last', 'Last')}: ${formatDate(loc.last_visited)}` : ''}
                           </Text>
-                          {appliedName?.id === loc.id && (
-                            <Text as="span" size="xs" className="mt-1 inline-block text-emerald-300">
+                          {appliedName?.scope === sourceScope && appliedName.id === loc.id && (
+                            <Text as="span" variant="caption" className="mt-1 inline-block">
                               {t('locations.aiAutoName.applied', 'Suggested name ready to save:')}{' '}
                               <Text as="span" color="primary">{appliedName.name}</Text>
                             </Text>
@@ -368,7 +392,7 @@ export default function LocationsPage() {
                           as="div"
                           size="xs"
                           weight="medium"
-                          className="flex shrink-0 items-center gap-1 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-cyan-300"
+                          className="ms-auto flex shrink-0 items-center gap-1 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1"
                         >
                           <Hash className="h-3 w-3" aria-hidden="true" />
                           {visits}
@@ -377,42 +401,52 @@ export default function LocationsPage() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-9 w-9 shrink-0 p-0"
+                          className="h-11 w-11 min-h-11 min-w-11 shrink-0 p-0 md:h-9 md:w-9 md:min-h-9 md:min-w-9"
                           aria-label={t(
                             'locations.inspect',
                             'Inspect {{location}}',
                             { location: loc.address_name || t('locations.unknown', 'unknown location') },
                           )}
-                          onClick={() => setPreviewLocation(loc)}
+                          onClick={() => setPreview({ scope: sourceScope, id: loc.id })}
                         >
-                          <Eye className="h-4 w-4" aria-hidden="true" />
+                          <Icon icon={Eye} size="md" />
                         </Button>
                       </GlassPanel>
                       {isUnnamedLocation(loc.address_name) && (
                         <AIAutoNameUnnamedLocations
+                          key={sourceScope}
                           locationId={loc.id}
                           currentName={loc.address_name}
-                          onApplyName={(name) => setAppliedName({ id: loc.id, name })}
+                          onApplyName={(name) => setAppliedName({ scope: sourceScope, id: loc.id, name })}
                         />
                       )}
                     </li>
                   );
                 })}
               </ul>
+            </div>
+          )}
+          {vehicleId !== null && (
+            <div className="mt-4 space-y-3">
+              <Text variant="caption">
+                {t('locations.paging.exploratory', 'Next checks another page when this page is full; total locations and remaining pages are unknown.')}
+              </Text>
               <Pagination
                 page={page}
                 pageSize={pageSize}
-                total={shownCount < pageSize ? (page - 1) * pageSize + shownCount : page * pageSize + 1}
+                total={shownCount}
+                totalKind={source.hasData && !search.trim() ? 'loaded' : 'unknown'}
+                hasNextPage={source.hasData && shownCount === pageSize}
                 onPageChange={setPage}
               />
             </div>
           )}
-        </GlassPanel>
+        </LayoutCard>
       </FadeIn>
 
       <EntityPreviewDrawer
         open={previewLocation !== null}
-        onClose={() => setPreviewLocation(null)}
+        onClose={() => setPreview(null)}
         eyebrow={t('locations.preview.eyebrow', 'Location evidence')}
         title={previewLocation?.address_name || t('locations.unknown', 'Unknown location')}
         description={
@@ -427,17 +461,17 @@ export default function LocationsPage() {
             ? [
                 {
                   key: 'visits',
-                  label: t('locations.totalVisits', 'Total Visits'),
+                  label: t('locations.totalVisits', 'Total visits'),
                   value: previewLocation.visit_count ?? 0,
                 },
                 {
                   key: 'time',
-                  label: t('locations.totalTime', 'Total Time'),
+                  label: t('locations.totalTime', 'Total time'),
                   value: formatDuration(previewLocation.total_duration_s ?? 0),
                 },
                 {
                   key: 'average',
-                  label: t('locations.avgVisit', 'Avg Visit'),
+                  label: t('locations.avgVisit', 'Avg visit'),
                   value: formatDuration(
                     previewLocation.visit_count > 0
                       ? previewLocation.total_duration_s / previewLocation.visit_count
@@ -450,6 +484,11 @@ export default function LocationsPage() {
                   value: previewLocation.last_visited
                     ? formatDate(previewLocation.last_visited)
                     : '—',
+                },
+                {
+                  key: 'loaded-at',
+                  label: t('locations.preview.loadedAt', 'Page loaded at'),
+                  value: source.updatedAt ? formatDateTime(new Date(source.updatedAt)) : '—',
                 },
               ]
             : []
@@ -505,6 +544,6 @@ export default function LocationsPage() {
             : []
         }
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

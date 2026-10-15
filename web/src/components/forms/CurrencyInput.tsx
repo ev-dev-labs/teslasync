@@ -43,10 +43,11 @@ import {
 } from 'react'
 import { Input, type InputProps } from '@/components/ui/runtime'
 import {
-  currencySymbol,
   formatCurrencyMicro,
   parseCurrencyTextToMicro,
 } from '@/lib/currencyFormat'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { useTranslation } from 'react-i18next'
 
 export interface CurrencyInputChangePayload {
   valueMicro: number | null
@@ -61,6 +62,7 @@ export interface CurrencyInputProps
   valueMicro: number | null
   /** Called with the new canonical micro value (or null when blank). */
   onChange: (next: CurrencyInputChangePayload) => void
+  onValidityChange?: (valid: boolean) => void
   /** ISO 4217 currency code: 'USD', 'EUR', 'GBP', etc. */
   currency: string
   /**
@@ -94,6 +96,7 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     {
       valueMicro,
       onChange,
+      onValidityChange,
       currency,
       locale,
       precision,
@@ -102,22 +105,21 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       onKeyDown,
       onFocus,
       label,
+      error,
       ...rest
     },
     ref,
   ) {
-    const effectiveLocale = useMemo(() => resolveLocale(locale), [locale])
-    const effectivePrecision = precision ?? 2
+    const preferences = useNumberFormatting()
+    const { t } = useTranslation()
+    const effectiveLocale = useMemo(() => resolveLocale(locale ?? preferences.locale), [locale, preferences.locale])
+    const effectivePrecision = precision ?? preferences.precision
+    const [parseError, setParseError] = useState<string | null>(null)
 
     const display = useMemo(
       () => formatCurrencyMicro(valueMicro, currency, effectiveLocale, effectivePrecision),
       [valueMicro, currency, effectiveLocale, effectivePrecision],
     )
-    const symbol = useMemo(
-      () => currencySymbol(currency, effectiveLocale),
-      [currency, effectiveLocale],
-    )
-
     const [text, setText] = useState<string>(display)
 
     // Track focus internally so an external value/locale/currency change
@@ -125,6 +127,8 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     // A ref avoids the extra re-render that a `useState<boolean>` would
     // trigger on every focus/blur.
     const focusedRef = useRef(false)
+    const dirtyRef = useRef(false)
+    const editingRef = useRef<{ currency: string; locale: string; precision: number } | null>(null)
 
     // Resync local buffer when the formatted display changes — but only
     // when the user is NOT currently editing the field, so an external
@@ -136,29 +140,49 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
 
     const commit = useCallback(
       (raw: string) => {
-        const parsedMicro = parseCurrencyTextToMicro(raw, currency, effectiveLocale)
+        if (!dirtyRef.current) {
+          if (!focusedRef.current) setText(display)
+          return
+        }
+        const editing = editingRef.current
+        const parsedMicro = parseCurrencyTextToMicro(raw, editing?.currency ?? currency, editing?.locale ?? effectiveLocale)
+        if (parsedMicro === null && raw.trim()) {
+          setParseError(t('common.invalidNumber', 'Enter a valid number'))
+          onValidityChange?.(false)
+          return
+        }
+        dirtyRef.current = false
+        setParseError(null)
+        onValidityChange?.(true)
         onChange({ valueMicro: parsedMicro })
         // Renormalise the visible text to the canonical-rounded form so
         // typing "1.5001" → blur → "$1.50" feels predictable.
         setText(
-          formatCurrencyMicro(parsedMicro, currency, effectiveLocale, effectivePrecision),
+          formatCurrencyMicro(
+            parsedMicro,
+            focusedRef.current ? editing?.currency ?? currency : currency,
+            focusedRef.current ? editing?.locale ?? effectiveLocale : effectiveLocale,
+            focusedRef.current ? editing?.precision ?? effectivePrecision : effectivePrecision,
+          ),
         )
       },
-      [onChange, currency, effectiveLocale, effectivePrecision],
+      [onChange, onValidityChange, currency, effectiveLocale, effectivePrecision, display, t],
     )
 
     const handleFocus = useCallback(
       (e: FocusEvent<HTMLInputElement>) => {
         focusedRef.current = true
+        editingRef.current = { currency, locale: effectiveLocale, precision: effectivePrecision }
         onFocus?.(e)
       },
-      [onFocus],
+      [onFocus, currency, effectiveLocale, effectivePrecision],
     )
 
     const handleBlur = useCallback(
       (e: FocusEvent<HTMLInputElement>) => {
         focusedRef.current = false
         commit(e.currentTarget.value)
+        editingRef.current = null
         onBlur?.(e)
       },
       [commit, onBlur],
@@ -183,19 +207,18 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
         autoComplete="off"
         aria-label={ariaLabel}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        error={error || parseError || undefined}
+        onChange={(e) => {
+          dirtyRef.current = true
+          setText(e.target.value)
+          setParseError(null)
+          const editing = editingRef.current
+          const parsed = parseCurrencyTextToMicro(e.target.value, editing?.currency ?? currency, editing?.locale ?? effectiveLocale)
+          onValidityChange?.(parsed !== null || !e.target.value.trim())
+        }}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
-        icon={
-          <span
-            aria-hidden="true"
-            className="text-xs text-[var(--text-muted)]"
-            data-testid="currency-input-symbol"
-          >
-            {symbol}
-          </span>
-        }
         {...rest}
       />
     )

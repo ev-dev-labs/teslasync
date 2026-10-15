@@ -61,14 +61,12 @@ export interface PackRepository {
 
 const KEYS = { installed: 'installed', trust: 'trust', audit: 'audit' } as const;
 
+/** Only an absent table is empty; corrupt storage must reject before a mutation can overwrite it. */
 function safeJsonParseArray<T>(raw: string | null): T[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as T[]) : [];
-  } catch {
-    return [];
-  }
+  if (raw === null) return [];
+  const parsed: unknown = JSON.parse(raw);
+  if (!Array.isArray(parsed)) throw new Error('Stored pack repository table must be a JSON array.');
+  return parsed as T[];
 }
 
 /** Serializes async callbacks per named lane so concurrent read-modify-write calls on the same table never interleave. */

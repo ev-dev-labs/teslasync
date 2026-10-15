@@ -6,6 +6,7 @@ import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatIntensityWhPerM, formatMonth } from './formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalRankedMonths({
   analysis,
@@ -14,6 +15,7 @@ export function SeasonalRankedMonths({
   timeZone,
   units,
 }: SeasonalSectionProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const ranked = analysis.months
     .filter((month) => month.sampleCount > 0)
@@ -44,7 +46,7 @@ export function SeasonalRankedMonths({
                     <Text variant="bodySm" as="p">{formatMonth(month.month, locale, timeZone)}</Text>
                     <Text variant="caption" as="p">{t('seasonalEfficiency.rankedMonths.support', '{{samples}} samples · {{distance}}', {
                       samples: month.sampleCount,
-                      distance: units.formatDistance(month.distanceM, { precision: 0 }),
+                      distance: units.formatDistance(month.distanceM),
                     })}</Text>
                   </div>
                   <Text variant="bodySm">{formatIntensityWhPerM(month.observedEnergyIntensityWhPerM, units.unitPrefs)}</Text>

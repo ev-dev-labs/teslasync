@@ -5,6 +5,7 @@ export { Checkbox, type CheckboxProps, type CheckboxSize } from './Checkbox';
 export { RadioCard, type RadioCardProps } from './RadioCard';
 export { Input, type InputProps } from './Input';
 export { Modal, type ModalProps } from './Modal';
+export { default as SignalConfigModal } from './SignalConfigModal';
 export { Popover, type PopoverProps, type PopoverAlign, type PopoverSide } from './Popover';
 export { Select, type SelectProps, type SelectOption } from './Select';
 export { Tabs, type TabsProps, type TabItem } from './Tabs';
@@ -24,8 +25,14 @@ export { IconBox } from './IconBox';
 export { Icon, type IconProps, type IconSize } from './Icon';
 export { TabNav, type TabNavProps, type TabNavItem } from './TabNav';
 export { Accordion } from './Accordion';
-export { Pagination } from './Pagination';
+export { Pagination, type PaginationProps } from './Pagination';
 export { DataTable, useSortToggle, useTableSelection, useTableExpansion, type Column, type PaginationConfig } from './DataTable';
+export type {
+  MobileDataTablePresentation,
+  MobileDataTableDetail,
+  MobileTableRowKey,
+} from './MobileDataTableAdapter.types';
+export { DataTableValueFilter, type TableFilterValue } from './DataTableValueFilter';
 export { Table, type TableProps } from './Table';
 export { DataTableColumnsMenu } from './DataTableColumnsMenu';
 export { DataTableBulkBar } from './DataTableBulkBar';
@@ -50,6 +57,7 @@ export { ThemePicker, type ThemePickerProps } from './ThemePicker';
 export { Textarea } from './Textarea';
 export type { TextareaProps } from './Textarea';
 export { CopyButton, type CopyButtonProps } from './CopyButton';
+export { CodeBlock, type CodeBlockProps } from './CodeBlock';
 export { MaskedValue, type MaskedValueProps, type MaskedValueVariant } from './MaskedValue';
 export {
   EditableText,
@@ -87,3 +95,5 @@ export {
   type HeadingLevel,
   type TextProps,
 } from './Typography';
+export { buildTableFilterValues, compactTableValueSelection, matchesTableValueSelection, parseTableValueSelections, selectedTableValueKeys, tableValueKey } from './tableValueFilters';
+export type { TableRawValue, TableValueSelection, TableValueSelections } from './tableValueFilters';

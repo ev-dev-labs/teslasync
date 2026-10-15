@@ -1,0 +1,399 @@
+{
+  "item": "phase6-qa-analytics-true-cost",
+  "status": "SOURCE_QA_REPORTED_WITH_CONFIRMED_FINDINGS",
+  "acceptance": "Report delivery only; not page, runtime, visual, native, test or phase acceptance.",
+  "started_at": "2026-10-13T19:57:16.667Z",
+  "source_receipt_at": "2026-10-13T20:04:17.8163027Z",
+  "queue_authority": {
+    "path": "migration-queue.md",
+    "qa_row_line": 280,
+    "qa_row_status_when_read": "[ ]",
+    "qa_row_exact": "| [ ] | 6 | phase6-qa-analytics-true-cost | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-analytics-true-cost.json | phase5-page-analytics-true-cost | 0 | - | - | Userauthorized nextacceptedTrueCostPage/directsupportQA; originalactual20/20sourceproof/17sectionspreserved, no source-remigration. Period/lifetime/costledger/category/chart trust/denominators/unknown-zero/sign/SI/displaypreferences/actualscopes/actions. Only report/log writes, no realfinancialdata/API/browser/tests/fullsuite/code/backend/catalog/helper work; exactconfirmedfindings vs candidates/nativeNOTRUN. |",
+    "accepted_source_row_line": 1667,
+    "duplicate_check": "Exact report was absent on first operation. Exact QA row was pending; accepted Phase5 source was already done. No accepted source work was repeated.",
+    "historical_only": {
+      "page_lines": 190,
+      "original_page_lines": 209,
+      "sections": 17,
+      "tests_discovered": 20,
+      "tests_executed": 20,
+      "tests_passed": 20,
+      "tests_failed": 0,
+      "tests_skipped": 0,
+      "receipt_commit": "cd73725687104750e6e1332e29401838f302d577",
+      "authority": "Accepted queue receipt, not Git inspection, not a fresh run."
+    }
+  },
+  "limits": {
+    "mode": "Bounded source-only finished-page QA",
+    "versioned_writes": ["docs\\frontend-audits\\phase6-qa-analytics-true-cost.json"],
+    "ignored_log": "logs\\phase6-qa-analytics-true-cost.log",
+    "no_application_writes": true,
+    "no_git": true,
+    "no_nested_agents": true,
+    "no_helpers_extensions_installs_servers": true,
+    "no_actual_api_financial_personal_data": true,
+    "no_browser_native_lock_or_shared_server_use": true,
+    "no_tests_or_full_suites": true,
+    "parent_only": ["queue", "orchestration", "commit", "followup dispatch"],
+    "deadlines": "Target ten minutes; conservative return 20:17Z, hard 20:22Z, with earlier actual creation+20/25 prevailing.",
+    "commands": "Every shell command completed synchronously in well under eight minutes. No ongoing command or service was created."
+  },
+  "instructions_read": [
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-mission.md sections 43-44",
+    "docs\\frontend-design-contract.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    "audit-violations skill and audit.sh (read, not executed)",
+    "verify-api-hooks skill and verify.sh (read, not executed)"
+  ],
+  "page": {
+    "path": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx",
+    "route": "/tco",
+    "aliases": ["/analytics/tco"],
+    "route_evidence": [
+      "web\\src\\App.tsx:890,897",
+      "web\\src\\lib\\routeLoaders.ts:54",
+      "web\\src\\lib\\routeRegistry.ts:49,244"
+    ],
+    "purpose": "Lifetime vehicle operating-cost evidence: recorded positive-cost charging versus modeled gasoline, with distinct fixed-cost ledger and opt-in narration. It is not measured complete ownership cost.",
+    "current_page_lines": 190,
+    "historical_original_page_lines": 209,
+    "current_to_historical_page_ratio": 0.9091,
+    "actual_rendered_closure_files": 27,
+    "actual_rendered_closure_lines": 3114,
+    "comparison_limit": "209 is the queue's historical page-only baseline. No historical extracted-component total was reconstructed or claimed. Current closure includes directly rendered feature parts, state/display/type support and the pure analysis adapter, excluding tests, barrels and unused former equivalents.",
+    "current_card_slots": 17,
+    "section_preservation": "All seventeen slots are declared unconditionally in one CardGrid; each is independently wrapped by SectionErrorBoundary. No whole-page loading/error/empty props replace the children: PageLayout receives only the aggregate query for header freshness.",
+    "section_order": [
+      {"id": "evidence", "owner": "components\\operationalbrief-n-z\\TrueCostEvidenceLedger.tsx", "contract": "Eight raw numeric KPIs with distinct source filters, lifetime/span captions and aggregate retry/trust notice."},
+      {"id": "source-scope", "owner": "components\\true-cost\\TrueCostSourceScopeLedger.tsx", "contract": "Endpoint, charging/drive/month filters, payload and row dispositions."},
+      {"id": "boundary", "owner": "components\\true-cost\\TrueCostBoundaryDisclosure.tsx", "contract": "Always-present operating versus ownership boundary; zero-floor withholding."},
+      {"id": "savings", "owner": "components\\operationalbrief-n-z\\TrueCostSavingsEnvelope.tsx", "contract": "Signed fuel delta, separate maintenance heuristic, qualified combination."},
+      {"id": "fixed-ledger", "owner": "components\\true-cost-modernization\\TrueCostFixedLedger.tsx", "contract": "Independent entries/totals, add form and confirmed deletion; findings below."},
+      {"id": "cumulative", "owner": "components\\true-cost\\TrueCostCumulativeChart.tsx", "contract": "Supported monthly cumulative gas-minus-EV, source export and formatted data alternative."},
+      {"id": "monthly-cost", "owner": "components\\true-cost\\TrueCostMonthlyCostChart.tsx", "contract": "Paired supported EV/gas rows, legend visibility identity and export."},
+      {"id": "monthly-delta", "owner": "components\\true-cost\\TrueCostMonthlyDeltaChart.tsx", "contract": "Signed deltas, explicit zero line and export."},
+      {"id": "energy-trend", "owner": "components\\true-cost\\TrueCostEnergyCostTrend.tsx", "contract": "Cost and converted Wh series, separate axes and raw-Wh export."},
+      {"id": "per-distance", "owner": "components\\true-cost\\TrueCostPerDistanceChart.tsx", "contract": "Lifetime distance denominator converted at display, source cost/km export."},
+      {"id": "monthly-directory", "owner": "components\\true-cost\\TrueCostMonthlyDirectory.tsx", "contract": "Every returned row with terminal disposition and independently validated fields."},
+      {"id": "assumptions", "owner": "components\\true-cost\\TrueCostAssumptionsLedger.tsx", "contract": "Source fuel price/unit/MPG/rate, monthly energy method and heuristic."},
+      {"id": "temporal-coverage", "owner": "components\\true-cost\\TrueCostTemporalCoverage.tsx", "contract": "First/last positive drives, modeled span, returned month range and disclosed gap meaning."},
+      {"id": "break-even", "owner": "components\\true-cost\\TrueCostBreakEven.tsx", "contract": "Algebraic baseline-supported price/MPG thresholds, not forecast."},
+      {"id": "sensitivity", "owner": "components\\true-cost\\TrueCostSensitivityMatrix.tsx", "contract": "Nine bounded price/MPG scenarios; mobile omission finding below."},
+      {"id": "accounting", "owner": "components\\true-cost\\TrueCostAccountingIdentities.tsx", "contract": "Eight identities with expected/observed/residual/tolerance and unavailable operands."},
+      {"id": "methodology", "owner": "components\\true-cost\\TrueCostMethodology.tsx", "contract": "Eight always-visible limitations including negative losses and database-calendar semantics."}
+    ],
+    "additional_region": "Optional AITCONarration sibling, separately bounded, not counted as an eighteenth deterministic slot.",
+    "actual_frame_counts": {"ChartContainer": 5, "GlassPanel": 10, "DataTable": 3, "OperationalBrief_sections": 2}
+  },
+  "hooks_and_router": {
+    "agreement": "Source method/path agreement, not HTTP success or payload validation.",
+    "client": "web\\src\\api\\client.ts:75-93 owns /api/v1 prefix; inspected calls omit it.",
+    "paths": [
+      {"hook": "useCostBreakdown", "hook_source": "web\\src\\api\\hooks\\useAnalytics.ts:107-112", "method": "GET", "path": "/analytics/tco?vehicle_id=${encodeURIComponent(vehicleId)}", "router": "internal\\api\\router.go:3896", "agreement": true},
+      {"hook": "useTcoLedger", "hook_source": "web\\src\\api\\hooks\\useAnalytics.ts:121-127", "method": "GET", "path": "/analytics/tco/ledger?vehicle_id=${vehicleId}", "router": "internal\\api\\router.go:3897", "agreement": true},
+      {"hook": "useAddTcoLedgerEntry", "hook_source": "web\\src\\api\\hooks\\useAnalytics.ts:131-145", "method": "POST", "path": "/analytics/tco/ledger", "router": "internal\\api\\router.go:3898", "agreement": true},
+      {"hook": "useDeleteTcoLedgerEntry", "hook_source": "web\\src\\api\\hooks\\useAnalytics.ts:150-159", "method": "DELETE", "path": "/analytics/tco/ledger/${id}?vehicle_id=${vehicleId}", "router": "internal\\api\\router.go:3899", "agreement": true},
+      {"hook": "AITCONarration useAiStream", "hook_source": "web\\src\\components\\ai\\AITCONarration.tsx:141-152", "method": "POST", "path": "/ai/analytics/tco/narrate", "router": "internal\\api\\router.go:5050,5095 -> internal\\api\\ai_routes.go:134,559", "agreement": true, "limit": "Guard-wrapped feature route; no stream or provider invoked."},
+      {"hook": "useSelectedVehicle -> useVehicles", "hook_source": "web\\src\\api\\hooks\\useVehicles.ts:73-76", "method": "GET", "path": "/vehicles", "router": "internal\\api\\router.go:3362-3363", "agreement": true},
+      {"hook": "useSettings/useUnits/useFormatting/useAiEnabled shared preference source", "hook_source": "web\\src\\hooks\\useSettings.ts:82-90 -> web\\src\\api\\settings.ts:24", "method": "GET", "path": "/settings", "router": "internal\\api\\router.go:3702", "agreement": true}
+    ],
+    "typed_boundaries": [
+      "CostBreakdown and MonthlyCostEntry: web\\src\\types\\analytics.ts:101-129 agree with internal\\api\\tco\\summary.go:27-58 and actual query formulas.",
+      "Ledger entry/response/create/totals: web\\src\\types\\analytics.ts:132-171 agree with internal\\api\\tco\\ledger.go:33-42,82-85 and ledger_handler.go:44-57.",
+      "Aggregate hook passes TanStack AbortSignal without display conversion. Independent ledger query has separate per-vehicle key and signal; successful mutations invalidate/broadcast only the ledger vehicle key.",
+      "Pure analyzeTrueCost accepts unknown and validates finite numbers, physical nonnegativity, valid dates, unique month eligibility and independent field support."
+    ],
+    "wire_limit": "Existing total_km/cost_per_km/MPG/base_cost_per_kwh aggregate contract is explicitly retained in summary.go:36-38 until a coordinated SI contract cutover. No speculative wire rename or accepted-source rework proposed."
+  },
+  "business_scope": {
+    "header": "Both actual aliases have range=false and vehicle=true under workspaceScope.ts:22-78,166-178. WorkspaceHeader.tsx:33-35,59-65 hides range and shows vehicle; Layout.tsx:1413-1424 does the same in its mobile drawer.",
+    "date_bounds": "No from/to hook parameters and no useRangeState here are correct for this explicitly lifetime endpoint, not a confirmed date-bound omission. Independent incurred_on business date must remain distinct from workspace range.",
+    "vehicle": "Page:50-53 consumes the header-owned selection. useSelectedVehicle validates positive URL IDs and reconciles URL/store/fleet before fallback. No duplicate page selector.",
+    "numerators_denominators": "summary.go:75-90 uses full vehicle aggregates: charging cost/Wh/session count only for cost_decimal > 0, distance and dates only for distance_m > 0. No LIMIT or loaded-directory-page denominator.",
+    "monthly": "summary.go:148-196 returns all costed-month aggregates. Monthly modeled gas uses charged energy and lifetime km/kWh or 5 km/kWh fallback, whereas lifetime modeled gas uses total positive-drive distance. Page discloses this distinction rather than treating the models as identical observations.",
+    "ledger": "ledger_store.go:30-51 lists all entries for vehicle without LIMIT/date filtering; ledger_handler.go:44-46 rolls all returned entries. DataTable search/value filters/pagination alter displayed rows only, not authoritative totals. by_category exists in the response but is not rendered as category subtotals; that alone is not an established preservation defect.",
+    "physical_signs": "Finite signed savings/cumulative/residuals are preserved; positive/negative/near-balance are distinguished. Negative energy/distance/spend are invalid under the current positive-cost source contract. Ledger rejects zero/negative amounts consistently with server debit-only validation, not a confirmed refund regression.",
+    "display": "useTrueCostDisplay.ts converts source km to SI meters before shared distance conversion; Wh remains raw before energy conversion; cost/km is divided by converted 1000m. Locale, precision, currency symbol and selected units are display-only. Exports retain source fields. Fixed-ledger exceptions below."
+  },
+  "states_and_isolation": {
+    "aggregate": "queryState.ts:19-35 separates initial loading, initial paused, fatal error without retained data, retained refresh error, refresh paused, fetching and resolved. SectionBody keeps source-shaped skeleton/passive explanation; QueryStatus owns retry and zero-envelope disclosure. Unknown/invalid measurements remain null, not zero, in the analysis adapter.",
+    "retained": "isResolved includes retained data, so eligible charts/KPIs remain usable while QueryStatus warns on refresh failure/paused refresh. Page query is freshness metadata only.",
+    "directory": "Rows retain source index and terminal invalid_row/invalid_month/duplicate_month/eligible disposition. Directory body shares aggregate source state, and boundary handles a rendering crash independently. Field array missing/malformed states have a confirmed local-empty gap below.",
+    "ledger": "Independent query and fatal/retained-refresh handling exist, but header all-in computation and paused/no-selection handling do not inherit aggregate trust; confirmed finding below.",
+    "narration": "withAiFeature uses exact tco-narration opt-in and global ai_mode. It returns null before InnerSection in off mode. useAiStream only starts on action, guards double submission, and scopeKey changes abort/reset generation/text/error in useAiStream.ts:298-322. Narration has its own SectionErrorBoundary and cannot replace deterministic evidence by page JSX.",
+    "a11y_source": "Shared Heading/PanelTitle/Text, semantic Table row headers, chart ariaLabel/description and dataColumns, localized loading status and icon-only Delete label are present. Source presence does not prove keyboard/focus/live announcement/contrast acceptance.",
+    "mobile_source": "PageLayout and TrueCostLayoutSlot carry min-w-0; single CardGrid owns placement; panels use responsive padding and form uses 2/5 columns. Actual table allow-list behavior produces a confirmed source-level mobile omission, not merely a screenshot candidate.",
+    "localization_source": "250 distinct literal t() keys in the 27-file feature closure exist as scalar strings in canonical en.json. This is presence only, not translation correctness, split-resource load or cold-runtime acceptance. Raw category labels bypass t()."
+  },
+  "confirmed_findings": [
+    {
+      "id": "TC-QA-01",
+      "priority": "P1",
+      "title": "Fixed-ledger all-in value turns unavailable independent inputs into measured totals",
+      "evidence": [
+        {"file": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx", "lines": "109-110"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx", "lines": "55-70,113-124,166-171"}
+      ],
+      "mechanism": "Page passes missing aggregate distance/cost as zero. Ledger adds grand_total ?? 0 and renders the all-in header before its own loading/fatal branch. Thus missing/failed aggregate with a ready ledger becomes fixed-only 'All-in'; missing ledger with a ready aggregate becomes charging-only 'All-in'; neither source can qualify the headline. With no vehicle or initial paused ledger, isLoading is false and no fetchStatus/enabled gate exists: an empty directory and zero hint can be shown despite no authoritative empty response.",
+      "source_repro_condition": "Aggregate data undefined while ledger has entries; or ledger data undefined during loading/failure/paused/no-selection. Algebra and branch ordering establish the defect; no mounted repro executed.",
+      "owner": "TrueCostPage.tsx aggregate-to-ledger prop boundary and true-cost-modernization\\TrueCostFixedLedger.tsx",
+      "proposed_narrow_owner": "New parent-assigned fixed-ledger cross-source trust item, retaining all sections/form/actions and current raw wire fields. Pass source availability/retained context, withhold unsupported combined totals, distinguish paused/no-selection/unknown from successful empty, and retain independent retry.",
+      "acceptance_needed": "Focused synthetic source-state coverage followed by separately authorized mounted QA; no accepted Phase5 migration replay."
+    },
+    {
+      "id": "TC-QA-02",
+      "priority": "P1",
+      "title": "Ledger currency dimension is discarded in display, creation and combined totals",
+      "evidence": [
+        {"file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLedgerColumns.tsx", "lines": "29-36"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx", "lines": "69,82-87,114-116"},
+        {"file": "web\\src\\hooks\\useFormatting.ts", "lines": "45,54-56"},
+        {"file": "internal\\api\\tco\\ledger_handler.go", "lines": "66-73"},
+        {"file": "internal\\api\\tco\\ledger.go", "lines": "90-95"}
+      ],
+      "mechanism": "Entry currency survives only in filter identity; visible amount uses the current currency symbol regardless of e.currency, without conversion. Add payload omits currency, so server stores USD independently of the displayed symbol. SummarizeLedger combines all currencies into a dimensionless grand_total, which the frontend adds to charging spend; charging aggregate exposes no ISO currency dimension. A symbol preference is not an ISO code or an exchange rate.",
+      "source_repro_condition": "A non-USD display symbol, an entry with a different ISO currency, or mixed-currency entries. Source branch/schema inspection only, not actual financial data.",
+      "owner": "TrueCostLedgerColumns.tsx and TrueCostFixedLedger.tsx at the presentation/create boundary; ledger.go/ledger_handler.go and typed response for authoritative currency identity",
+      "proposed_narrow_owner": "Parent-assigned currency-contract integration owner first, plus narrowly scoped ledger consumption. Preserve original amounts/ISO identities; disclose or withhold mixed/unknown-currency totals rather than guess ISO from symbols or fabricate FX. Coordinate exact writable schema/backend files separately.",
+      "acceptance_needed": "Synthetic single/mixed/unknown-currency and create-payload checks under explicit later authorization."
+    },
+    {
+      "id": "TC-QA-03",
+      "priority": "P2",
+      "title": "Fixed ledger bypasses selected distance display preference",
+      "evidence": [
+        {"file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx", "lines": "70,114-116,168-171"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\useTrueCostDisplay.ts", "lines": "49-72"}
+      ],
+      "mechanism": "Fixed ledger always formats all-in per raw km and the lifetime km hint, unlike neighboring sections' selected-unit conversion. Under mi preference it remains /km with raw kilometer distance.",
+      "source_repro_condition": "Choose miles display preference; inspect ledger versus main per-distance chart. No preference was changed here.",
+      "owner": "true-cost-modernization\\TrueCostFixedLedger.tsx",
+      "proposed_narrow_owner": "Ledger display-boundary owner using existing useUnits/useTrueCostDisplay semantics and localized selected-unit labels; preserve raw total_km and calculation denominator.",
+      "acceptance_needed": "Synthetic km/mi and locale/precision preference checks."
+    },
+    {
+      "id": "TC-QA-04",
+      "priority": "P1",
+      "title": "Three table allow-lists remove fields/actions below md without a details adapter",
+      "evidence": [
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyDirectory.tsx", "lines": "137-146"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx", "lines": "138-150"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostSensitivityMatrix.tsx", "lines": "109-119"},
+        {"file": "web\\src\\components\\ui\\DataTable.tsx", "lines": "505-510,733-743,1180,1404,1535"}
+      ],
+      "mechanism": "No caller supplies mobilePresentation, so DataTable's mobile adapter is disabled. mobileColumns applies hidden md:table-cell unconditionally to excluded columns. Monthly directory hides all six numeric evidence fields; ledger hides note and actions including Delete; sensitivity hides highMpg (three of nine scenarios) and disables column visibility. Horizontal scrolling cannot recover display:none cells.",
+      "source_repro_condition": "Default table layouts below md: monthly allow-list source/month/disposition; ledger date/category/amount; matrix price/lowMpg/baselineMpg. Existing shared mobile adapter supports allColumns details but is not wired here.",
+      "owner": "The three caller components, not an assumed broken shared DataTable contract",
+      "proposed_narrow_owners": [
+        "Monthly evidence directory mobile caller",
+        "Fixed-cost ledger mobile caller including localized reachable deletion",
+        "Sensitivity matrix mobile caller preserving all nine scenarios"
+      ],
+      "acceptance_needed": "Separate parent-scoped caller fixes and later synthetic narrow-viewport detail/action/keyboard captures; no shared-table redesign."
+    },
+    {
+      "id": "TC-QA-05",
+      "priority": "P2",
+      "title": "Ledger category labels expose raw wire tokens",
+      "evidence": [
+        {"file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLedgerForm.tsx", "lines": "28-31"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLedgerColumns.tsx", "lines": "22-25"}
+      ],
+      "mechanism": "Select options use label: c and table cells render e.category. All eight user-visible labels remain payment/insurance/maintenance/service/tires/accessories/depreciation/other regardless of locale; raw token identity is appropriate for value/filter but not visible copy.",
+      "source_repro_condition": "Non-English locale with any category. No locale runtime invoked.",
+      "owner": "TrueCostLedgerForm.tsx and TrueCostLedgerColumns.tsx; canonical catalog serialized by parent",
+      "proposed_narrow_owner": "Ledger category presentation owner with one existing-domain label mapping and exact parent-owned canonical keys, preserving wire values and filter identities.",
+      "acceptance_needed": "Source scalar-key proof and focused synthetic localized select/table cases after a distinct assignment."
+    },
+    {
+      "id": "TC-QA-06",
+      "priority": "P2",
+      "title": "Open deletion retains the old row after selected vehicle changes",
+      "evidence": [
+        {"file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx", "lines": "65,98-102,177-185"},
+        {"file": "web\\src\\api\\hooks\\useAnalytics.ts", "lines": "152-159"},
+        {"file": "internal\\api\\tco\\ledger_handler.go", "lines": "90-110"}
+      ],
+      "mechanism": "pendingDelete is component state without vehicle-change reset or row.vehicle_id equality guard. Confirm composes current vehicleId with the previous vehicle's pendingDelete.id. Server scopes deletion by vehicle and returns not-found rather than authorizing cross-vehicle deletion, but the stale confirmation and mismatched request remain a source-backed interaction defect.",
+      "source_repro_condition": "Open confirmation for an entry, switch vehicle through workspace control, then confirm. Not executed.",
+      "owner": "true-cost-modernization\\TrueCostFixedLedger.tsx",
+      "proposed_narrow_owner": "Ledger action-scope owner resetting or invalidating old-scope confirmation and guarding entry/current-vehicle identity; preserve server vehicle scoping and success-only close.",
+      "acceptance_needed": "Synthetic vehicle-switch confirmation and in-flight action scope coverage."
+    },
+    {
+      "id": "TC-QA-07",
+      "priority": "P2",
+      "title": "Local chart colors bypass palette preferences; cumulative tint exceeds contract target",
+      "evidence": [
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostCumulativeChart.tsx", "lines": "20,99-101"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyCostChart.tsx", "lines": "21-22,104,111"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostEnergyCostTrend.tsx", "lines": "22-23"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyDeltaChart.tsx", "lines": "21,92"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostPerDistanceChart.tsx", "lines": "34,39"},
+        {"file": "web\\src\\components\\charts\\ChartContainer.tsx", "lines": "494-497"}
+      ],
+      "mechanism": "Nine literal color lines are bound directly to series/reference styling; no palette hook is consumed by these feature charts and ChartContainer returns children without palette substitution. Saved palette changes therefore cannot select these series colors. Cumulative fillOpacity is 0.16 versus MDC-034 maximum 0.08. These are source contract findings, not measured fluorescent appearance or contrast failure.",
+      "source_repro_condition": "Saved alternate chart palette; code still uses identical constants. No palette preference or browser changed.",
+      "owner": "The five existing true-cost chart consumers",
+      "proposed_narrow_owner": "Parent-assigned exact chart preference/style followup retaining series identities, data, signs, legend IDs, exports, scales and source state. Reuse current shared palette owner; no new palette or accepted-page remigration.",
+      "acceptance_needed": "Preference-bound source checks and later dark/light/custom/forced-colors composed visual evidence."
+    },
+    {
+      "id": "TC-QA-08",
+      "priority": "P2",
+      "title": "Monthly directory equates unavailable array with authoritative no rows",
+      "evidence": [
+        {"file": "web\\src\\features\\analytics\\lib\\trueCost.ts", "lines": "291-296,358"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyDirectory.tsx", "lines": "136-147"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostSectionBody.tsx", "lines": "66-72"},
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMethodology.tsx", "lines": "49-54"}
+      ],
+      "mechanism": "Adapter records missing/invalid arrayAvailability but produces monthly=[]. A resolved aggregate renders the directory's DataTable emptyMessage 'No monthly positive-cost rows were returned' without inspecting arrayAvailability. Invalid array has a separate methodology warning, but missing array has no equivalent local reason. Successful [] and unavailable monthly evidence are not the same claim.",
+      "source_repro_condition": "Resolved object with monthly_breakdown missing/null/non-array versus valid empty array. No fabricated production response or test run.",
+      "owner": "true-cost\\TrueCostMonthlyDirectory.tsx using existing monthlyAccounting.arrayAvailability",
+      "proposed_narrow_owner": "Directory local-state owner, preserving shell, rows/dispositions and aggregate independence; render reason-specific missing/invalid explanation and reserve empty copy for valid []. No adapter/schema/backend rework needed.",
+      "acceptance_needed": "Focused synthetic missing/null/malformed/empty/valid/retained directory cases."
+    },
+    {
+      "id": "TC-QA-09",
+      "priority": "P2",
+      "title": "Monthly cost tooltip drops currency formatting used by axes and data alternative",
+      "evidence": [
+        {"file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyCostChart.tsx", "lines": "70-84,97-99"},
+        {"file": "web\\src\\components\\charts\\ChartTooltip.tsx", "lines": "81-105,160-175"}
+      ],
+      "mechanism": "MonthlyCostChart passes ChartTooltip with no valueFormatter, formatter or unit. Shared default formats a number and appends a unit only when supplied; the monetary bars supply none. Axis/table use display.formatCurrency, but hovered monetary values lack the configured currency marker.",
+      "source_repro_condition": "Any monetary monthly row with a configured currency symbol; inspect default tooltip branch. No hover/runtime executed.",
+      "owner": "true-cost\\TrueCostMonthlyCostChart.tsx",
+      "proposed_narrow_owner": "Monthly monetary-tooltip caller supplying the existing display currency formatter without changing shared tooltip defaults or raw export values.",
+      "acceptance_needed": "Focused formatter-output evidence and later authorized tooltip keyboard/visual acceptance."
+    }
+  ],
+  "candidates_not_promoted": [
+    {
+      "id": "TC-C-01",
+      "topic": "Lifetime all-in business meaning and category overlap",
+      "reason": "Charging and owner entries have different temporal coverage; future incurred dates are accepted up to one year, and payment/depreciation categories may overlap economically. Intended debit/asset/forecast accounting policy is not established by this page, so no duplicate-cost or period-calculation bug is asserted.",
+      "owner_candidate": "TCO business/currency-contract owner; preserve lifetime scope and disclose coverage before changing formulas."
+    },
+    {
+      "id": "TC-C-02",
+      "topic": "Negative costs or refunds",
+      "reason": "The source contract explicitly excludes nonpositive charging costs and validates ledger positive debit amounts. Whether credits/refunds should be supported is a product/schema question, not permission to loosen physical-sign validators or invent a refund path.",
+      "owner_candidate": "Existing TCO contract owner, separately authorized only."
+    },
+    {
+      "id": "TC-C-03",
+      "topic": "Calendar and incurred-date preference handling",
+      "reason": "Ledger default uses UTC toISOString date and cells render source YYYY-MM-DD; main coverage explicitly discloses database-calendar semantics. Local-user business-day expectation and localized civil-date presentation deserve a narrow review, but were not verified in a timezone runtime.",
+      "owner_candidate": "Ledger business-date display owner."
+    },
+    {
+      "id": "TC-C-04",
+      "topic": "Source unknown fuel/currency metadata and freshness",
+      "reason": "Aggregate schema lacks ISO currency and timezone, gas-unit fallback uses settings for malformed/missing metadata, and only aggregate freshness reaches the header. Do not guess wire metadata, age, FX or measured state. Currency loss specifically proven in TC-QA-02; broader metadata policy remains integration evidence needed.",
+      "owner_candidate": "Typed TCO contract owner, not a page compatibility adapter."
+    },
+    {
+      "id": "TC-C-05",
+      "topic": "Live-only mutation and native interaction acceptance",
+      "reason": "Source has positive-input/pending guards, server validation, toast errors, confirmation and success-only closing. Offline/demo/native request enforcement was not traced comprehensively or executed; no new exploit, authorization gap or offline-queue behavior claimed.",
+      "owner_candidate": "Existing command/request policy and later authorized native QA owner."
+    },
+    {
+      "id": "TC-C-06",
+      "topic": "Composed visual/accessibility/mobile matrix",
+      "reason": "No screenshots, mounted keyboard, focus restoration, contrast calculation, screen-reader, 320/375/390/430/768/1024/1280/1440/1920/2560 widths, allocated cards, RTL, 200% text, forced-colors, reduced-motion or extreme-data interaction were exercised. Fixed chart heights, form wrapping, chart preference effect, loading spinner motion and open confirmation geometry remain native candidates, not proven runtime failures.",
+      "owner_candidate": "Later explicit synthetic/privacy-safe native QA queue item with its own locks and budget."
+    }
+  ],
+  "verification": {
+    "raw_receipt": "logs\\phase6-qa-analytics-true-cost.log",
+    "actual_commands": [
+      {
+        "command": "$p='D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-analytics-true-cost.json'; if (Test-Path $p) { Get-Content $p -Raw } else { 'EXACT_QA_REPORT_ABSENT' }; Get-Date -AsUTC -Format o; Get-ChildItem D:\\repos\\teslasync -Filter migration-queue.md -Recurse -File -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName",
+        "exit": 0,
+        "raw_output": ["EXACT_QA_REPORT_ABSENT", "2026-10-13T19:57:31.3930225Z", "D:\\repos\\teslasync\\migration-queue.md"]
+      },
+      {
+        "command": "Get-Date -AsUTC -Format o; $p='D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\TrueCostPage.tsx'; 'CURRENT_PAGE_LINES=' + (Get-Content $p).Count; 'CURRENT_CARD_IDS=' + (Select-String -Path $p -Pattern \"id: '[^']+', size:\").Count",
+        "exit": 0,
+        "raw_output": ["2026-10-13T20:00:17.4257708Z", "CURRENT_PAGE_LINES=190", "CURRENT_CARD_IDS=17"]
+      },
+      {
+        "command": "Explicit 27-path $files; foreach ($p in $patterns.GetEnumerator()) { $hits=@(Select-String -Path $files -Pattern $p.Value); \"$($p.Key)_MATCHING_LINES=$($hits.Count)\" }; plus Get-Content line sums and useAnalytics.ts[106..159] prefix/query checks. Exact paths/results retained in source scope and raw log.",
+        "exit": 0,
+        "counts": {
+          "files": 27,
+          "lines": 3114,
+          "static_inline_css_var": 0,
+          "raw_html_initial_case_insensitive": 11,
+          "direct_vendor_import": 0,
+          "old_api_import": 0,
+          "raw_any": 0,
+          "deprecated_conversion": 0,
+          "duplicate_workspace_picker": 0,
+          "neon_body": 0,
+          "literal_chart_color": 9,
+          "ChartContainer": 5,
+          "GlassPanel": 10,
+          "DataTable": 3,
+          "hook_double_prefix": 0,
+          "hook_camelcase_query": 0
+        },
+        "qualification": "Initial raw-HTML count incorrectly matched capitalized shared components because PowerShell is case-insensitive by default. Corrected fresh bounded scan below, preserving both outputs."
+      },
+      {
+        "command": "Select-String -Path $files -Pattern '<(button|input|textarea|select|table)\\b' -CaseSensitive; [regex]::Matches((Get-Content $file -Raw),'\\bt\\(\\s*[''\\\"]([^''\\\"]+)[''\\\"]') with unique-key nested lookup in (Get-Content web\\src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable)",
+        "exit": 0,
+        "raw_output": [
+          "RAW_HTML_CASE_SENSITIVE_MATCHING_LINES=0",
+          "PRIOR_RAW_HTML_11_MATCHES=shared capitalized components; initial Select-String default case-insensitivity, not violations",
+          "CANONICAL_LITERAL_KEYS=250",
+          "CANONICAL_LITERAL_KEYS_MISSING_OR_NONSCALAR=0",
+          "CATEGORY_RAW_OPTION_LABELS: TrueCostLedgerForm.tsx:30 label: c",
+          "CATEGORY_RAW_CELL_LABELS: TrueCostLedgerColumns.tsx:25 e.category"
+        ],
+        "limit": "No AST lint, dynamic-key completeness, split-resource or locale/runtime success inferred."
+      },
+      {
+        "command": "Two explicit bounded $checks lists; foreach($c in $checks) { Select-String -Path ($root+'\\'+$c[0]) -Pattern $c[1] -CaseSensitive | ForEach-Object { $c[0]+':'+$_.LineNumber+':'+$_.Line.Trim() } } | Tee-Object -FilePath D:\\repos\\teslasync\\logs\\phase6-qa-analytics-true-cost.log -Append",
+        "executions": 2,
+        "exits": [0, 0],
+        "result": "Exact route/ledger mechanisms at 20:03:33.8386904Z; mobile/state/palette/currency source citations at 20:04:17.8163027Z. Raw file-line outputs retained in log. No execution of application behavior."
+      }
+    ],
+    "report_validation": {
+      "command": "Get-Content report -Raw | ConvertFrom-Json -AsHashtable; exact item, 17 sections, 9 findings, cited-file existence and numeric line-range checks",
+      "initial_exit": 1,
+      "initial_raw_output": ["JSON_PARSE=OK", "SECTIONS=17", "CONFIRMED_FINDINGS=9", "CANDIDATES=6", "HOOK_METHOD_PATH_SOURCE_AGREEMENTS=7", "CONFIRMED_CITATIONS=30", "MISSING_OR_OUT_OF_RANGE_CITATIONS=1", "TrueCostSectionBody.tsx:71-78", "invalid citation"],
+      "correction": "Direct Get-Content last-twelve-line inspection exited 0: TrueCostSectionBody_LINES=73; resolved return is line 72. Report citation corrected to 66-72.",
+      "final_receipt": "See final identical bounded validation command and its raw numeric exit/counts in logs\\phase6-qa-analytics-true-cost.log; no application test inferred."
+    },
+    "source_tools": "Parallel view/rg/glob reads only, bounded to instructions and actual page/direct rendered/support/typed route boundary. Two mistaken view paths were corrected; no denied content was worked around.",
+    "fresh_tests": {"status": "NOTRUN", "discovered": 0, "executed": 0, "passed": 0, "failed": 0, "skipped": 0, "meaning": "No discovery or execution attempted; zero is not a test pass."},
+    "not_run": [
+      "npx tsc --noEmit",
+      "Vitest or other tests",
+      "lint",
+      "build",
+      "full-suite or phase gates",
+      "preservation runner",
+      "audit.sh and verify.sh helper execution",
+      "HTTP/API requests or real financial/personal/vehicle data",
+      "browser/native/visual/keyboard/screen-reader/contrast/viewport acceptance"
+    ],
+    "reason": "Explicit source-only/report-only/no-tests/no-helpers/no-fullsuite assignment. Full audit script would run global TypeScript; hook verifier would inspect unrelated hooks/routes. Manual exact source counts/path agreement substitute only for this bounded report, not implementation gates."
+  },
+  "handoff": {
+    "needs": "Parent may classify nine exact confirmed findings into new narrow followup queue items, reusing existing unresolved owners where appropriate; do not redispatch accepted Phase5 source. Native candidates remain separately unverified.",
+    "source_writes": "None",
+    "release": "At terminal return ALL source/report/log/JSON/commands RELEASED. NO POST-RETURN WRITES.",
+    "parent_loop": "Not entered."
+  }
+}

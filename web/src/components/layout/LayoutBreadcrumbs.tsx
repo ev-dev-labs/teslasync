@@ -37,7 +37,7 @@ export function LayoutBreadcrumbs({
   const routeItems = useBreadcrumbs(overrides);
   const pathname = useLocation().pathname;
   const items = sections && collections
-    ? sidebarBreadcrumbs(pathname, routeItems, sections, collections, (key, fallback) => t(key, fallback) as string)
+    ? sidebarBreadcrumbs(pathname, routeItems, sections, collections, (key, fallback) => t(key, fallback))
     : routeItems;
   if (items.length === 0) return null;
   const workspace = variant === 'workspace';
@@ -45,7 +45,7 @@ export function LayoutBreadcrumbs({
   return (
     <div
       className={cn(
-        'flex items-center justify-between gap-3',
+        'flex min-w-0 items-center',
         workspace ? 'min-h-5' : 'mb-5 min-h-8',
       )}
     >

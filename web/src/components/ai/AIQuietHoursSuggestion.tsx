@@ -47,7 +47,7 @@ import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
-import { Button } from '@/components/ui'
+import { Button, Text } from '@/components/ui'
 import type { AiStreamEvent } from '@/hooks/useAiStream'
 import { useAiStream } from '@/hooks/useAiStream'
 import type { QuietHoursWindowInput } from '@/api/types'
@@ -187,6 +187,12 @@ function InnerSection({ onApplyDraft }: AIQuietHoursSuggestionProps) {
     })
   }, [proposal, onApplyDraft])
 
+  const severityLabels: Record<string, string> = {
+    critical: t('quietHours.severity.critical', 'Critical'),
+    warn: t('quietHours.severity.warn', 'Warning'),
+    info: t('quietHours.severity.info', 'Info'),
+  }
+
   return (
     <AIFeatureCard
       title={t(
@@ -214,6 +220,8 @@ function InnerSection({ onApplyDraft }: AIQuietHoursSuggestionProps) {
             <Button
               variant="primary"
               size="sm"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
               disabled={proposal == null || isBusy}
               aria-disabled={proposal == null || isBusy ? 'true' : 'false'}
               onClick={handleApply}
@@ -225,15 +233,15 @@ function InnerSection({ onApplyDraft }: AIQuietHoursSuggestionProps) {
               )}
             </Button>
           </div>
-          <div className="rounded-md border border-emerald-300/30 bg-emerald-300/5 p-3 text-sm text-emerald-300">
-            <div className="font-medium">
+          <div className="rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+            <Text as="div" variant="label">
               {t(
                 'notifications.quietHours.aiSuggestion.previewLabel',
                 'Proposed window (review before saving):',
               )}
-            </div>
-            <ul className="mt-1 list-inside list-disc text-xs text-[var(--text-secondary)]">
-              <li>
+            </Text>
+            <ul className="mt-1 list-inside list-disc">
+              <Text as="li" variant="bodySm">
                 {t(
                   'notifications.quietHours.aiSuggestion.previewWindow',
                   'Window: {{start}} → {{end}} ({{tz}})',
@@ -243,37 +251,45 @@ function InnerSection({ onApplyDraft }: AIQuietHoursSuggestionProps) {
                     tz: proposal.timezone,
                   },
                 )}
-              </li>
-              <li>
+              </Text>
+              <Text as="li" variant="bodySm">
                 {t(
                   'notifications.quietHours.aiSuggestion.previewWeekdays',
                   'Weekday bitmask: {{weekdays}}',
                   { weekdays: proposal.weekdays },
                 )}
-              </li>
-              <li>
+              </Text>
+              <Text as="li" variant="bodySm">
                 {t(
                   'notifications.quietHours.aiSuggestion.previewBypass',
                   'Bypass severities: {{severities}}',
-                  { severities: proposal.bypass_severities.join(', ') },
+                  {
+                    severities: proposal.bypass_severities
+                      .map((severity) =>
+                        Object.prototype.hasOwnProperty.call(severityLabels, severity)
+                          ? severityLabels[severity]
+                          : severity,
+                      )
+                      .join(', '),
+                  },
                 )}
-              </li>
+              </Text>
               {proposal.status === 'insufficient_history' && (
-                <li className="text-amber-300">
+                <Text as="li" variant="bodySm" className="text-[var(--semantic-warning)]">
                   {t(
                     'notifications.quietHours.aiSuggestion.previewInsufficientHistory',
                     'Helix had insufficient notification history; this is a conservative default.',
                   )}
-                </li>
+                </Text>
               )}
               {proposal.existing_windows_count > 0 && (
-                <li className="text-[var(--text-secondary)]">
+                <Text as="li" variant="bodySm">
                   {t(
                     'notifications.quietHours.aiSuggestion.previewExistingCount',
                     'You already have {{count}} quiet-hours window(s) configured.',
                     { count: proposal.existing_windows_count },
                   )}
-                </li>
+                </Text>
               )}
             </ul>
           </div>

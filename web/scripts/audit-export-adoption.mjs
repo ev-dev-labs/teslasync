@@ -78,18 +78,29 @@ const ALTERNATIVE_EXPORT_SURFACES = [
   {
     file: 'features/admin/pages/ApiLogsPage.tsx',
     label: 'API logs',
-    markers: ['ListExportMenu', 'onExportCsv=', 'onExportJson='],
+    markers: [
+      'ApiLogsEvidenceTable',
+      'controls={{',
+      'onExportCsv: handleExportCsv',
+      'onExportJson: handleExportJson',
+      'exportAsCSV(exportRows, `${exportFilename}.csv`)',
+      'exportAsJSON(logs, `${exportFilename}.json`)',
+    ],
   },
   {
-    file: 'features/driving/pages/DrivesListPage.tsx',
-    label: 'Drive history',
+    file: 'features/driving/hooks/useDrivesListPageFilters.ts',
+    label: 'Drive history export',
     markers: [
-      "scopedPath('/export/drives', exportScope)",
-      "filters: { format: 'csv' }",
-      "filters: { format: 'json' }",
-      'download="teslasync-drives.csv"',
-      'download="teslasync-drives.json"',
+      "scopedPath('/export/drives', { ...exportScope, filters: { format } })",
+      "onExportCsv: () => downloadDriveExport('csv')",
+      "onExportJson: () => downloadDriveExport('json')",
+      'link.download = `teslasync-drives.${format}`',
     ],
+  },
+  {
+    file: 'features/driving/components/drives-orchestrator/DrivesDesktopEvidence.tsx',
+    label: 'Drive history export controls',
+    markers: ['controls={tableControls}'],
   },
   {
     file: 'features/charging/pages/ChargingListPage.tsx',
@@ -109,6 +120,10 @@ const ALTERNATIVE_EXPORT_SURFACES = [
 ];
 
 const WAIVER_RE = /\/\/\s*export-audit:skip\b/;
+
+const EXTRACTED_TABLE_SURFACES = [
+  'features/admin/components/structural-closure/audit-log/AuditLogEntries.tsx',
+];
 
 function walk(dir) {
   const out = [];
@@ -240,7 +255,10 @@ const exemptedWaiver = [];
 const skippedNoDataTable = [];
 const alternativePasses = [];
 
-const pageFiles = walk(PAGES_ROOT).filter(isPagesPath);
+const pageFiles = [
+  ...walk(PAGES_ROOT).filter(isPagesPath),
+  ...EXTRACTED_TABLE_SURFACES.map((file) => path.join(ROOT, file)),
+];
 
 for (const file of pageFiles) {
   if (!pageMatchesTarget(file)) continue;

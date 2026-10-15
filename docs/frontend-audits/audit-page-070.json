@@ -1,0 +1,732 @@
+{
+  "item": "audit-page-070",
+  "phase": 0,
+  "page": "web\\src\\features\\battery\\pages\\EnergyProductsPage.tsx",
+  "routes": [
+    "/energy-products"
+  ],
+  "purpose": "Discover account-level Tesla energy installations and inspect cached site capabilities, configuration and tariff settings.",
+  "primaryGoal": "Review installed Powerwall/solar products, refresh Tesla discovery/configuration and update an eligible site's rate plan.",
+  "identity": {
+    "rootComponent": "EnergyProductsPage",
+    "routeEvidence": {
+      "file": "web\\src\\App.tsx",
+      "line": 822
+    },
+    "lazyImportEvidence": {
+      "file": "web\\src\\App.tsx",
+      "line": 75
+    },
+    "rootSHA256": "53fe89d8a57337f0c7780a4328ffff260ba7dd402cbc491ca4cb07fe4bde082d",
+    "scope": "Assigned page and dependencies only; route source checks do not establish mounted reachability."
+  },
+  "dataSources": [
+    {
+      "hook": "useTeslaEnergySites",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 181,
+      "endpoint": "GET /api/v1/tesla/energy-sites",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3556
+      },
+      "owner": "useEnergy / energySiteHandler.List",
+      "behavior": "Account-level cached discovery; key ['tesla-energy-sites']; STANDARD stale time; abort signal forwarded; safeArray selection; DataState retains refresh-failure payload."
+    },
+    {
+      "hook": "useRefreshTeslaEnergySites",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 190,
+      "endpoint": "POST /api/v1/tesla/energy-sites/refresh",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3557
+      },
+      "owner": "useEnergy / energySiteHandler.Refresh",
+      "behavior": "Pending disables refresh; success invalidates discovery query; localized success/error toasts. Not executed."
+    },
+    {
+      "hook": "useTeslaEnergySiteInfo",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 204,
+      "endpoint": "GET /api/v1/tesla/energy-sites/{siteID}/site-info",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3562
+      },
+      "owner": "useEnergy / energySiteHandler.SiteInfo",
+      "behavior": "Per-site independent query ['tesla-site-info', siteId], enabled for truthy ID, SLOW stale time, abort signal forwarded; response is {data,fetched_at}."
+    },
+    {
+      "hook": "useRefreshTeslaEnergySiteInfo",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 214,
+      "endpoint": "POST /api/v1/tesla/energy-sites/{siteID}/site-info/refresh",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3563
+      },
+      "owner": "useEnergy / energySiteHandler.RefreshSiteInfo",
+      "behavior": "Invalidates only matching site query, localized toast; also called after successful tariff update. Not executed."
+    },
+    {
+      "hook": "useUpdateTOUSettings",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 231,
+      "endpoint": "POST /api/v1/tesla/energy-sites/{siteID}/tou-settings",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3579
+      },
+      "owner": "useEnergy / energySiteHandler.UpdateTOUSettings",
+      "behavior": "JSON payload, requiresLiveMode true, invalidateAndBroadcast on success; request client enforces operational-write policy at client.ts:378. No live mutation performed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "Existing full-width min-w-0 adapter, title/subtitle/query/primaryAction; shared shell retains scope, focus and mode ownership."
+    },
+    {
+      "name": "CardGrid / LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+      "contract": "Named group, stable item IDs, half-size items; shared measured-container packing and card title/actions/footer."
+    },
+    {
+      "name": "SummaryBand / BatteryEvidenceBrief / OperationalBrief",
+      "owner": "web\\src\\features\\battery\\components\\energy-products-modernization\\SummaryBand.tsx",
+      "contract": "Six metrics, explicit snapshot/provenance, loading and retained evidence; delegates shared rendering and details."
+    },
+    {
+      "name": "StatStrip",
+      "owner": "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx",
+      "contract": "Embedded typed metrics, stable IDs, period and retained flag; existing preferences owner."
+    },
+    {
+      "name": "EnergySiteCard / SiteInfoSection / InfoTile / CapBadge",
+      "owner": "web\\src\\features\\battery\\components\\energy-products-modernization\\EnergySiteCard.tsx",
+      "contract": "Feature-owned product/configuration presentation, independent config state and capability chips."
+    },
+    {
+      "name": "SourceTrustNotice",
+      "owner": "web\\src\\features\\battery\\components\\projected-range-modernization\\SourceTrustNotice.tsx",
+      "contract": "DataState retained warnings, paused first-load explanation and query retry."
+    },
+    {
+      "name": "TOUSettingsModal",
+      "owner": "web\\src\\features\\battery\\components\\TOUSettingsModal.tsx",
+      "contract": "Existing Modal/Tabs/Select/Textarea/Button; three presets and custom JSON envelope support, validation, pending protection."
+    },
+    {
+      "name": "Button / Badge / Typography / LinearGauge / feedback / FadeIn",
+      "owner": "existing category barrels",
+      "contract": "Reuse canonical shared controls, semantic palette, typography, gauge and state/motion owners, not feature replacements."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "pattern": "Capability boolean badges",
+      "files": [
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\CapBadge.tsx",
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx"
+      ],
+      "decision": "Reuse feature CapBadge with explicit textual state for configuration capabilities; preserve dynamic identities and unknown values. No speculative global registry."
+    },
+    {
+      "pattern": "Energy/power scaling",
+      "files": [
+        "web\\src\\features\\battery\\components\\energy-products-modernization\\helpers.ts"
+      ],
+      "decision": "Already centralized locally; preserve magnitude-based Wh/kWh and W/kW semantics while connecting numeric metrics to canonical display formatter support."
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts",
+        "line": 4,
+        "detail": "Measured-container bands <640, <1024, <1600; half cards stack in phone/tablet bands, become six columns on desktop, with source order preserved."
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx",
+        "line": 40,
+        "detail": "min-w-0, flex-wrap action header, single-column tiles then sm two columns; tariff text breaks words; controls min-h-11."
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\TOUSettingsModal.tsx",
+        "line": 254,
+        "detail": "JSON preview has its own overflow-auto/max-h-48; actual viewport containment unverified."
+      }
+    ],
+    "issues": [],
+    "unverifiedRisks": [
+      "Long site names, battery types and site identifiers inside half cards",
+      "Long localized action labels and tariff modal controls at 320px",
+      "200% text, RTL, allocated-width reflow and JSON horizontal overflow"
+    ],
+    "testedViewports": [],
+    "requiredViewports": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "runtime": "unverified"
+  },
+  "accessibility": {
+    "positiveEvidence": [
+      "Refresh actions have localized accessible names; site controls have 44px minimum targets.",
+      "Shared cards associate headings with cards, CardGrid labels its group; most decorative feature icons are aria-hidden.",
+      "TOU error uses canonical ErrorText role=alert; shared FadeIn respects reduced motion in source."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\energy-products-modernization\\CapBadge.tsx",
+        "line": 11,
+        "rule": "MDC-025 / MDC-040: state not color-only",
+        "detail": "Available/unavailable is in aria-label but the visible chip only says the capability name; sighted users distinguish boolean state primarily through success versus neutral color. SiteInfoSection.tsx:88 also renders true and false component chips with identical visible names.",
+        "fix": "Keep capability identities and show localized available/unavailable text or an unambiguous state icon plus text in both chip presentations; do not treat unknown as false.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtime": "Keyboard, screen-reader naming, modal focus/restore, target spacing, contrast, forced-colors and reduced-motion behavior unverified."
+  },
+  "states": {
+    "loading": "Root suppresses skeletons when retained data exists; summary loading state plus two card skeletons; each configuration has independent skeleton.",
+    "empty": "Resolved empty discovery shows six measured count/aggregate zeros and an actionable explanation referencing the existing refresh action; no invented installations.",
+    "initialUnavailable": "No successful snapshot displays unknown summary metrics, not fabricated zeros; initial paused load gets offline notice.",
+    "fatalError": "Root QueryError in summary plus discovery unavailable explanation; configuration failure stays inside its site's section.",
+    "refreshError": "Retained payload preserved through DataState; SourceTrustNotice reports refresh warnings beside retained content.",
+    "offline": "Paused/no-data notice and retained stale behavior are source-supported; actual network behavior unverified.",
+    "partial": "Missing capacity makes total capacity unknown; individual configuration availability does not block neighboring sites.",
+    "mutation": "Discovery/configuration pending guards and toasts; TOU validation/pending/error UI, live-mode write gate, refresh-after-success.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx",
+        "line": 55,
+        "rule": "MDC-026: actionable query recovery",
+        "detail": "Fatal GET configuration error wires QueryError retry to POST Tesla refresh rather than infoQuery.refetch; another Refresh site info button already owns the remote refresh. This changes the recovery operation and invokes a rate-limited mutation.",
+        "fix": "Wire query retry to infoQuery.refetch/source.retry and retain the distinct explicit Tesla refresh action.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\TOUSettingsModal.tsx",
+      "line": 250,
+      "rule": "MDC-010 / MDC-012 / MDC-015: theme-aware surfaces",
+      "detail": "Preset preview uses fixed white background/border opacity instead of neutral surface/border tokens. Source contains no neon/glow matches, but this preview is a remaining theme-inconsistent surface.",
+      "fix": "Use existing surface-2 and border-subtle tokens like InfoTile; preserve preview content and scroll behavior.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\energy-products-modernization\\EnergySiteCard.tsx",
+      "line": 3,
+      "rule": "MDC-002: component-first category barrels",
+      "detail": "EnergySiteCard directly imports layout/layout-reference and data-display/stat-reference. SiteInfoSection.tsx:5 and SummaryBand.tsx:2 also import internal stat-reference exports, unlike the page's canonical category imports.",
+      "fix": "Use existing @/components/layout and @/components/data-display exports without introducing replacement components.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\energy-products-modernization\\EnergySiteCard.tsx",
+      "line": 17,
+      "rule": "MDC-033 / MDC-045: retain numeric raw measurements",
+      "detail": "Charge and capacity are converted to text rawValue; SiteInfoSection.tsx:35-36 also formats rated W/Wh as text. This bypasses canonical numeric metric validation/conversion and raw accessible/details evidence. SummaryBand already supplies numeric energy with a specialist formatter.",
+      "fix": "Use numeric percentage/energy/power metric contracts with the existing specialist display formatter where needed; preserve exact magnitude-based formatting, locale/precision, missing distinctions and SI cache/wire values.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx",
+      "line": 88,
+      "rule": "MDC-044: localized presentation without source recasing",
+      "detail": "Component labels are generated by key.replace(/_/g, ' ') and bypass translation; dynamic upstream keys are not a canonical presentation glossary.",
+      "fix": "Localize known component identities, preserve unknown original keys as source identifiers, and retain every boolean entry and state.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "reason": "Page already uses canonical layout/trust patterns and preserves major functionality; address color-only capability state, raw numeric metric mapping and distinct query recovery before cosmetic changes."
+  },
+  "requiredSharedChanges": [],
+  "sharedContracts": [
+    {
+      "name": "Category layout exports",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "propsVariantsStates": [
+        "title",
+        "actions",
+        "footer",
+        "CardGrid.items {id,size,content}",
+        "PageLayout.query/primaryAction"
+      ],
+      "usedBy": [
+        "EnergyProductsPage",
+        "EnergySiteCard"
+      ],
+      "dependsOn": [
+        "PageContainer",
+        "layoutPolicy"
+      ],
+      "decision": "Reuse existing contract; caller import correction only."
+    },
+    {
+      "name": "Typed operational metrics",
+      "existingOwnerFile": "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx",
+      "propsVariantsStates": [
+        "numeric rawValue",
+        "metricId",
+        "display.formatter",
+        "variant embedded",
+        "period",
+        "retained",
+        "loading",
+        "null unknown"
+      ],
+      "usedBy": [
+        "SummaryBand",
+        "EnergySiteCard",
+        "SiteInfoSection",
+        "BatteryEvidenceBrief"
+      ],
+      "dependsOn": [
+        "existing metric formatter/preferences",
+        "useOperationalMetrics"
+      ],
+      "decision": "Reuse; preserve specialty formatter semantics. Formatter internals not audited here; no unsupported new shared API demanded."
+    },
+    {
+      "name": "Capability chips",
+      "existingOwnerFile": "web\\src\\components\\ui\\Badge.tsx",
+      "propsVariantsStates": [
+        "success/neutral/warning",
+        "aria-label",
+        "visible localized state",
+        "unknown distinct from unavailable"
+      ],
+      "usedBy": [
+        "CapBadge",
+        "SiteInfoSection"
+      ],
+      "dependsOn": [
+        "feature capability labels"
+      ],
+      "decision": "Badge already supports children/ARIA; feature adoption fix, not a new global status registry."
+    },
+    {
+      "name": "Source trust",
+      "existingOwnerFile": "web\\src\\api\\dataState.ts",
+      "propsVariantsStates": [
+        "fatalError",
+        "refreshError",
+        "hasData",
+        "isRefreshBlocked",
+        "retry",
+        "retained data"
+      ],
+      "usedBy": [
+        "EnergyProductsPage",
+        "SiteInfoSection",
+        "SourceTrustNotice"
+      ],
+      "dependsOn": [
+        "useDataState",
+        "TanStack Query"
+      ],
+      "decision": "Keep canonical source contract and distinct Tesla refresh/query retry actions."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Capabilities",
+      "detail": "CapBadge feature wrapper versus inline SiteInfoSection boolean Badge loop; consolidate locally only where semantics are equivalent."
+    },
+    {
+      "pattern": "Stats display",
+      "detail": "Numeric energy specialist formatter in summary versus preformatted text metrics in site/configuration strips; converge on existing stats owner, not another formatter engine."
+    }
+  ],
+  "preservation": {
+    "sourceSHA256": "53fe89d8a57337f0c7780a4328ffff260ba7dd402cbc491ca4cb07fe4bde082d",
+    "currentLineCount": 74,
+    "rootAndEnergyProductsComponentsLineCount": 344,
+    "sections": [
+      {
+        "name": "Page header and Tesla discovery refresh",
+        "count": 1
+      },
+      {
+        "name": "Source trust and six-metric energy summary",
+        "count": 1
+      },
+      {
+        "name": "Energy installation cards",
+        "count": "one per discovered site"
+      },
+      {
+        "name": "Per-site charge/capacity/type strip",
+        "count": "three metrics per site"
+      },
+      {
+        "name": "Capabilities and storm-active state",
+        "count": "five capability chips per site plus conditional storm-active badge"
+      },
+      {
+        "name": "Per-site configuration",
+        "count": "one per site"
+      },
+      {
+        "name": "Operation mode and backup reserve",
+        "count": "two tiles per available configuration"
+      },
+      {
+        "name": "Powerwall count/rated power/rated energy",
+        "count": "three metrics per available configuration"
+      },
+      {
+        "name": "Firmware/timezone/component details",
+        "count": "source-dependent, retain all"
+      },
+      {
+        "name": "Eligible rate plan and tariff editor",
+        "count": "one per TOU-capable site"
+      },
+      {
+        "name": "Discovery and configuration timestamps",
+        "count": "source-dependent, retain both"
+      }
+    ],
+    "sourceMarkerCounts": {
+      "root": {
+        "GlassPanel": 0,
+        "ChartContainer": 0,
+        "LayoutCard": 3,
+        "CardGrid": 2
+      },
+      "rootPlusSixLocalFiles": {
+        "LayoutCard": 4,
+        "CardGrid": 2,
+        "StatStrip": 2,
+        "BatteryEvidenceBrief": 1,
+        "section": 2
+      }
+    },
+    "markerCountLimit": "JSX source occurrence counts include mutually exclusive loading/error/empty branches; not mounted section counts.",
+    "actions": [
+      "Refresh from Tesla",
+      "Root GET retry",
+      "Refresh site info",
+      "Per-site GET/configuration recovery",
+      "Open rate-plan modal",
+      "Switch preset/custom tabs",
+      "Select one of three named existing presets",
+      "Edit/validate custom JSON, accepting envelope or inner object",
+      "Preview preset JSON",
+      "Cancel/close with pending protection",
+      "Submit live-only TOU update and refresh resulting configuration",
+      "Shared operational details/review presentation"
+    ],
+    "dataBehavior": [
+      "Independent discovery and per-site config sources",
+      "Nullable values remain unknown, real zeros remain measurements",
+      "Incomplete capacity aggregate remains unknown",
+      "Stable site/query/metric IDs and source ordering",
+      "Retained payload survives refresh failure",
+      "Wh/W input rendered with magnitude-based kWh/kW display only",
+      "Saved locale/precision and canonical stats preferences",
+      "Tariff source content, provider presets and custom user payload remain unchanged"
+    ],
+    "workspace": {
+      "range": false,
+      "vehicle": false,
+      "evidence": "workspaceScope.ts:23-77 excludes route from dated analysis; :119 disables vehicle selector. Account-level installation discovery correctly introduces no competing local workspace picker."
+    },
+    "SI": "Frontend assumes total_pack_energy/nameplate_energy are Wh and nameplate_power is W in helpers.ts:6-13. Backend payload units were not independently inspected; preserve current SI/display behavior and explicitly resolve source-unit ambiguity before changing conversions.",
+    "historicalParity": "No original historical revision comparison or Git operation performed; this is a frozen current-source preservation inventory, not a no-loss certification."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Route method/path matches verified by source only; handlers, database units, authorization execution and Tesla responses unverified.",
+    "tests": "No TypeScript, builds, lint/full gates, browser tests or live mutations run by assignment.",
+    "skillProtocol": "Read audit-violations skill and audit.sh; script was not executed because step 7 invokes full frontend TypeScript, expressly prohibited by this read-only Phase0 assignment. Equivalent bounded source-pattern counts were run; they are not test acceptance.",
+    "scope": "No shared/source/queue edits, no Git; only assigned JSON report and heartbeat written.",
+    "inspection": "Files read can be partial source ranges or targeted search hits; sourceInventory inspectionCoverage records the limits.",
+    "patternEvidence": {
+      "scopedPresentationFiles": 10,
+      "caseSensitiveRawControls": 0,
+      "staticInlineStyleOccurrences": 0,
+      "directRechartsLeafletFramerImports": 0,
+      "oldAPIImports": 0,
+      "neonGlowMatches": 0,
+      "fixedWhiteSurfaceLines": 1,
+      "internalReferenceImportLines": 4,
+      "correction": "Initial PowerShell Select-String raw-control scan was case-insensitive and counted eight shared capitalized controls; rerun with -CaseSensitive established zero raw HTML controls."
+    }
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\EnergyProductsPage.tsx",
+    "web\\src\\features\\battery\\components\\energy-products-modernization\\CapBadge.tsx",
+    "web\\src\\features\\battery\\components\\energy-products-modernization\\EnergySiteCard.tsx",
+    "web\\src\\features\\battery\\components\\energy-products-modernization\\helpers.ts",
+    "web\\src\\features\\battery\\components\\energy-products-modernization\\InfoTile.tsx",
+    "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx",
+    "web\\src\\features\\battery\\components\\energy-products-modernization\\SummaryBand.tsx",
+    "web\\src\\features\\battery\\components\\projected-range-modernization\\SourceTrustNotice.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\features\\battery\\components\\TOUSettingsModal.tsx",
+    "web\\src\\api\\hooks\\useEnergy.ts",
+    "web\\src\\types\\energy.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx",
+    "web\\src\\components\\ui\\Badge.tsx",
+    "web\\src\\components\\ui\\Typography.tsx",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\api\\client.ts"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-070.json",
+    ".agent-status\\audit-page-070.txt"
+  ],
+  "sourceInventory": [
+    {
+      "path": "docs\\frontend-design-contract.md",
+      "sha256": "17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255",
+      "lineCount": 394,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": "docs\\frontend-worker-conventions.md",
+      "sha256": "6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3",
+      "lineCount": 80,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "docs\\frontend-mission.md",
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "lineCount": 1593,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": ".github\\skills\\audit-violations\\audit.sh",
+      "sha256": "3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46",
+      "lineCount": 141,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\features\\battery\\pages\\EnergyProductsPage.tsx",
+      "sha256": "53fe89d8a57337f0c7780a4328ffff260ba7dd402cbc491ca4cb07fe4bde082d",
+      "lineCount": 74,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\CapBadge.tsx",
+      "sha256": "db16d2f67de046db1c55a2462e9233fe7f78efb620ea875e13cce902ae7cccc8",
+      "lineCount": 16,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\EnergySiteCard.tsx",
+      "sha256": "c99ad3efe1a0db54c54650f965850042cd8adf9c30e198307bd201e8c040170f",
+      "lineCount": 53,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\helpers.ts",
+      "sha256": "6efc05a3fd16f10cd0c6483e269ab5c8b650f0639dae590e7b9333694ae7e528",
+      "lineCount": 31,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\InfoTile.tsx",
+      "sha256": "1b766da85d9ad5077e22b3d9ef719a0b0adfd4629a570cece94076beeb839b62",
+      "lineCount": 11,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\SiteInfoSection.tsx",
+      "sha256": "518346f684542ab013562094003dfe062a2b0a56e9c333b797c88e192d2ba568",
+      "lineCount": 116,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\features\\battery\\components\\energy-products-modernization\\SummaryBand.tsx",
+      "sha256": "bd10aeb312ce2b497a730455084a9733639cf34bbce229314f6db3a12f0fe0fd",
+      "lineCount": 43,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\features\\battery\\components\\projected-range-modernization\\SourceTrustNotice.tsx",
+      "sha256": "abc4e71cd9b14b556f6db840a283878199e13e6b73c773d6174288dd9f45ae69",
+      "lineCount": 22,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "sha256": "e954755f164a93ffb2e056cea1385b2466c3964d92230a45a526cdd995816aa0",
+      "lineCount": 57,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\features\\battery\\components\\TOUSettingsModal.tsx",
+      "sha256": "0d1568ab1c3b35fc74a2abd2567f85fec6660061283cd62daeda2742b81efe7a",
+      "lineCount": 306,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\api\\hooks\\useEnergy.ts",
+      "sha256": "3f688e068cbec48fafc1ba1a32e5f63090622c0232ce565b3be5d39cdba10a01",
+      "lineCount": 456,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": "web\\src\\types\\energy.ts",
+      "sha256": "387590144bbe3c531e37484c4c95411f8cf5b9d28759249db9e534035a9b52c3",
+      "lineCount": 469,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": "web\\src\\App.tsx",
+      "sha256": "23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3",
+      "lineCount": 918,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": "internal\\api\\router.go",
+      "sha256": "98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750",
+      "lineCount": 5366,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lineCount": 168,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lineCount": 65,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\api\\dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lineCount": 434,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6",
+      "lineCount": 17,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+      "sha256": "dd3123e4931e8d5b921f807d374dde293b89e08a5f509d1b9e26e05ab76961b8",
+      "lineCount": 44,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "sha256": "1fedeb6b5cf17436d31cb0f19dac09ee1c6591d1866b09ed511387bd110e7d9a",
+      "lineCount": 64,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\layoutPolicy.ts",
+      "sha256": "7f38a16c3dc9e3ee1c39381867a3fc6337d4dcdfb7f40fb70f81955e7856df22",
+      "lineCount": 66,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "0e2e1842fcac1fe5bd7c4c37299a76f9515d45eafe43ad122a8e09a0bb817d55",
+      "lineCount": 259,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx",
+      "sha256": "58a6e690c7a0027adca524a380e7af07828647980c395d897f2acc001d75045a",
+      "lineCount": 57,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\components\\ui\\Badge.tsx",
+      "sha256": "6ecab395a91d7f92f3b323fb691dfb903dde18718a5a688f986b1a76e2c2a0dc",
+      "lineCount": 70,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\components\\ui\\Typography.tsx",
+      "sha256": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+      "lineCount": 115,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": "web\\src\\lib\\numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "lineCount": 172,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    },
+    {
+      "path": "web\\src\\hooks\\useNumberFormatting.ts",
+      "sha256": "ca9c9ce0d895cf31f23a17405fa4d4132f99fd524f970ecc75922903dec27dd9",
+      "lineCount": 47,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\components\\motion\\FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lineCount": 39,
+      "inspectionCoverage": "full source"
+    },
+    {
+      "path": "web\\src\\api\\client.ts",
+      "sha256": "a9732175455ed2dc207cc59cb42dcf7e66065453303e68593efe317a8c233428",
+      "lineCount": 478,
+      "inspectionCoverage": "partial ranges / targeted search; not full semantic coverage"
+    }
+  ],
+  "auditUTC": "2026-10-07T10:32:33.1893880Z",
+  "validation": {
+    "command": "PowerShell: ConvertFrom-Json; required schema and issue property checks; SHA256 root readback; finding line bounds",
+    "exitCode": 0,
+    "output": "Valid required schema; 6 deduplicated issues; 33 inspected inventory entries; root SHA256 unchanged.",
+    "runtimeAcceptance": "NOT RUN"
+  }
+}

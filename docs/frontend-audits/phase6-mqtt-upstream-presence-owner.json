@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-mqtt-upstream-presence-owner",
+  "status": "DONE",
+  "completionMeaning": "Bounded read-only ownership and existing-contract report delivered. Q01 remains incomplete; no source repair, runtime acceptance or passing rerun.",
+  "assignment": {
+    "startedFromPromptUtc": "2026-10-14T06:07:20.182Z",
+    "returnBeforeUtc": "2026-10-14T06:27:20.182Z",
+    "queueSnapshot": "migration-queue.md:2616, pending, attempts 0, dependencies '-'. Exact row read; no queue changes.",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-mqtt-upstream-presence-owner.json",
+      "web\\logs\\phase6-mqtt-upstream-presence-owner.log"
+    ],
+    "sourceAuthority": "All source, tests, configuration, catalogs, existing receipts and queue read-only. Future scopes below are recommendations, not granted claims.",
+    "ignoredLogAuthority": ".gitignore contains logs/; no Git command used."
+  },
+  "disposition": {
+    "Q01": "NOT_COMPLETE",
+    "confirmedSourceMechanism": "Missing count aliases become numeric zero in normalizeVehicleTelemetry. Missing/unsupported vehicle containers become [] in telemetryVehicleList. useMQTTStatus replaces raw vehicles with that normalized result before any page completeness check.",
+    "pagePartialAlreadyDelivered": "Retain the existing per-metric completeness/unknown/trust correction and its actual receipt. Do not undo it or repeat the accepted clock/throughput, uptime or localization work.",
+    "backendOccurrence": "UNKNOWN: no live payload read, broker operation or reproduction. Current Go successful-response code explicitly supplies the counters and both vehicle maps; source compatibility handling can still erase omitted input, but actual omission by this handler was not established.",
+    "physicalFreshness": "UNKNOWN: client query receipt time is not a vehicle observation timestamp, returned container presence is not complete-fleet coverage, and broker connectivity is not physical vehicle freshness."
+  },
+  "inheritedEvidence": {
+    "receipt": "web\\logs\\phase6-fix-mqtt-missingness-aggregate-trust.log",
+    "read": "Full returned log read, including original pins, raw runner output, correction history, owner refinement and release.",
+    "actualTestRunUtc": "2026-10-14T05:31:22.0741771Z through 2026-10-14T05:33:30.5714788Z",
+    "numericExit": 0,
+    "discovered": 47,
+    "executed": 11,
+    "passed": 11,
+    "failed": 0,
+    "filteredUnexecuted": 36,
+    "newExecuted": 8,
+    "affectedExistingExecuted": 3,
+    "originalPageCases": 39,
+    "preservationAuthority": "Returned receipt records all 39 original test bodies/fixtures byte-identical and source sections preserved. Current page/test SHA-256 matches its final release hashes. This report ran none of those tests.",
+    "receiptCorrectionsRetained": "Initial verification exit 1 was retained; plural-key, mounted-route and ANSI-accounting corrections exited 0 without a test rerun. Temporary extra .log.run-output deviation was disclosed and deleted by the earlier worker, not attributed to this report.",
+    "priorCompiler": "Prior scoped page/test diagnostics 0, literal project TSC NOTRUN in that worker. Neither result is a current production compile claim.",
+    "priorReleaseUtc": "2026-10-14T05:38:03.5418748Z",
+    "staleReportWarning": "Original phase6-qa-telemetry-mqttinspector.json contains historical source/proof/queue dispositions. The newer returned log and current exact queue row govern this narrow continuation."
+  },
+  "existingProducerChain": [
+    {
+      "file": "internal\\api\\router.go",
+      "lines": [4781, 4785],
+      "contract": "GET within r.Route(\"/telemetry\") is mounted to telemetryHandler.TelemetryStatus. Only this declaration was read; no backend execution."
+    },
+    {
+      "file": "internal\\api\\telemetry\\telemetry_handler.go",
+      "lines": [119, 131],
+      "symbol": "VehicleStreamState",
+      "contract": "SignalCount and BatchCount are int64 with json signal_count/batch_count, without omitempty. SignalsPerSecond is float64 with json signals_per_second. LastReceived is time.Time with json last_received. These declarations do not assert physical observation quality."
+    },
+    {
+      "file": "internal\\api\\telemetry\\telemetry_handler.go",
+      "lines": [199, 274],
+      "symbol": "(*Handler).TelemetryStatus",
+      "contract": "Builds a non-nil vehicleMap from GetStreamingState; each entry explicitly includes signal_count, batch_count, signals_per_second and last_received. Emits the same map under vehicles and streaming_vehicles, plus connected, broker, uptime_seconds and topics. connected is mqttClient != nil && IsConnected(). No new server presence flag exists or is required by this report.",
+      "limits": "DTO construction only. No GetStreamingState internals, ingestion provenance, cross-pod health or actual JSON response verified. Go int64 does not guarantee JavaScript safe-integer range. topics may be nil; topic policy is outside this count/container repair."
+    },
+    {
+      "file": "web\\src\\api\\client.ts",
+      "lines": [259, 268],
+      "symbol": "request/directRequest",
+      "contract": "Successful JSON is passed through camelCaseKeys; request<T> is a static expected type, not evidence of runtime completeness or DTO validation."
+    },
+    {
+      "file": "web\\src\\lib\\resilience.ts",
+      "lines": [23, 41],
+      "symbol": "camelCaseKeys",
+      "contract": "Recursively preserves original keys and adds camelCase aliases for existing snake_case keys. Missing keys are not introduced by this bridge. Values, including zero/null, pass through; the missing-count zero is introduced later.",
+      "scope": "Read-only dependency, not a proposed global-client or bridge rewrite."
+    },
+    {
+      "file": "web\\src\\types\\telemetry.ts",
+      "lines": [49, 77],
+      "symbol": "TelemetryStatus / VehicleTelemetry",
+      "contract": "This is the hook's actual imported DTO owner. vehicles is optional map-or-array; streaming_vehicles is declared optional map. signalCount/batchCount are currently required number, their snake_case aliases optional; rate and last-received aliases optional. The declared required canonical counters currently conceal runtime omission.",
+      "distinctType": "web\\src\\api\\types.ts:1984-2020 declares a separate TelemetryStatus for getTelemetryStatus/devtools consumers, not this hook. Do not expand this task into merging or migrating that separate DTO."
+    },
+    {
+      "file": "web\\src\\types\\telemetry.ts",
+      "lines": [112, 123],
+      "symbol": "normalizeVehicleTelemetry",
+      "contract": "Spreads raw row, retains map VIN override, prefers non-nullish camel alias then snake alias. signalCount and batchCount end with ?? 0; rate and lastReceived already preserve absence as undefined.",
+      "fixNeed": "Remove only the absent-count zero substitution and make the existing counter declarations/return contract truthful about absent values. Keep real zero, alias precedence, raw aliases and unrelated fields."
+    },
+    {
+      "file": "web\\src\\types\\telemetry.ts",
+      "lines": [138, 149],
+      "symbol": "telemetryVehicleList",
+      "contract": "Selects status?.vehicles ?? status?.streaming_vehicles. Normalizes array rows or map entries. Returns [] for absent status/container and unsupported primitive container, conflating unknown with an explicitly empty [] or {}.",
+      "fixNeed": "At this existing boundary, return an absent/unknown list for no supported container, while retaining [] for an explicitly supplied empty array/map. No new wire fields, provenance flag or framework is needed.",
+      "precedence": "Retain current nullish primary-to-legacy fallback and valid-primary precedence, including an explicit empty primary container. A non-nullish malformed primary must not silently be certified empty or bypassed with unrelated fallback evidence.",
+      "casingLimit": "Actual keys read are vehicles and streaming_vehicles. The bridge exposes streamingVehicles as well, but this helper does not directly read that camel-only container key. Do not claim that unsupported spelling works or invent another alias campaign."
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "lines": [415, 431],
+      "symbol": "useMQTTStatus",
+      "contract": "Query key telemetryKeys.mqttStatus = ['mqtt-status']; request<TelemetryStatus>('/telemetry', { signal }); spreads raw, resolves uptime and overwrites vehicles with telemetryVehicleList(raw). Currently asserts TelemetryStatus & { vehicles: VehicleTelemetry[] }, falsely requiring a known list.",
+      "fixNeed": "Carry the existing normalizer's unknown/list distinction through the inferred or accurate hook return type, instead of forcing a required array. Retain raw independent fields, AbortSignal, endpoint, key and 5000ms interval. Do not turn one missing metric into a request failure."
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx",
+      "lines": [163, 220],
+      "contract": "Current completeMetrics checks array presence and independent counter/rate validity, then marks partial via existing useDataState. Throughput requires successful receipts, safe per-vehicle counters and matching VIN scope. All these checks run after upstream loss.",
+      "fixNeed": "Keep safe [] solely for row iteration, never as presence evidence. Widen/narrow existing knownCount and aggregate/receipt arithmetic for genuinely optional canonical counts after the DTO change. Unknown container must leave all four summary metrics unknown, and missing one operand must withhold only its own aggregate."
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx",
+      "lines": [240, 251],
+      "contract": "mqttSummary remains numeric; existing per-occurrence completeMetrics mapping changes incomplete rawValue to null and sets missingReason before useOperationalMetrics. That already provides per-metric trust; a new summary framework or blanket unavailable flag is unnecessary."
+    }
+  ],
+  "minimalPresenceContract": {
+    "wireChanges": "NONE. Use the already existing count/container fields; do not invent presence/completeness/freshness fields or synthetic timestamps.",
+    "canonicalCounts": "An actually returned zero remains number 0. If both existing aliases supply no non-nullish value, canonical signalCount/batchCount must remain absent/undefined, not 0. Optional existing canonical counter fields are a minimal truthful contract; any chosen nullable representation must consistently narrow consumers and must not be misrepresented as a new server field.",
+    "canonicalRate": "Already optional. Do not change it to a default zero or couple count and rate completeness.",
+    "knownEmptyContainer": "Explicit valid vehicles=[] or vehicles={} normalizes to []. Legacy empty container does likewise when selected by existing precedence. Returned-list count and sums may be 0, but only as the returned-source aggregate, not proof of whole-fleet coverage, active streaming or physical freshness.",
+    "unknownContainer": "Absent/nullish status or no supported selected container must remain distinguishable from []; minimally use undefined at the existing list/hook boundary. The page's iteration fallback is not permission to publish zero aggregates.",
+    "partialRows": "A valid row with a missing count still exists: retain its identity, other counters/rate/receipt and independent broker fields. Do not filter incomplete rows away to improve apparent completeness.",
+    "invalidNumericEvidence": "Retain the delivered page checks for negative/nonfinite/unsafe counters or unsafe sums. Missingness repair is not permission to coerce numeric strings, skip operands, clamp counts or fabricate real observations.",
+    "receipts": "Unknown count/container produces an unavailable comparison/gap under the existing sampling rules. Recovery establishes a trustworthy baseline before a later comparable receipt; request-start/pause/failure/format changes are not observations.",
+    "conditionalC02": "Missing/unsupported container versus observed empty is tightly coupled to Q01. Malformed row objects, duplicate identities, topic types/duplicates and actual malformed backend occurrence remain conditional unknowns, not a separate campaign or confirmed live failure.",
+    "excludedPolicies": "Do not change the retained missing-receipt freshness compatibility policy C01, accepted Q02-Q06 behavior, AI scope C03, export C04 or native geometry C05."
+  },
+  "proposedFutureExclusiveScope": {
+    "owner": "One existing telemetry integration repair owner; source writes require a separate parent assignment.",
+    "minimumRootFiles": [
+      "web\\src\\types\\telemetry.ts",
+      "web\\src\\types\\telemetry.test.ts",
+      "web\\src\\api\\hooks\\useTelemetry.ts",
+      "web\\src\\api\\hooks\\__tests__\\useTelemetry.test.tsx"
+    ],
+    "tightlyCoupledAdoptionFiles": [
+      "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx",
+      "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.test.tsx"
+    ],
+    "preferredAtomicAssignment": "These six exact files together. Truthful optional counter/list types require the page arithmetic/type guards to adapt; do not leave a required-number cast to avoid that dependency. If separated, serialize root contract then page adoption, with no overlapping page writer and no intermediate compile-clean claim.",
+    "genuineDependencies": [
+      "useMQTTStatus imports telemetryVehicleList/telemetryUptimeSeconds and DTOs from types/telemetry.ts.",
+      "MQTTInspectorPage and three inspected hook consumers receive the hook's normalized optional list/counters.",
+      "Existing page receipt/map arithmetic assumes required number counts and needs narrowing when the root type becomes truthful.",
+      "Existing normalizer and hook tests explicitly expect absent counts/container to become zero/empty and must be corrected as affected contract oracles."
+    ],
+    "notDependencies": [
+      "A compiler/test/browser tool is validation, not a source prerequisite.",
+      "No backend, router, MQTT ingestion, Docker deployment or new endpoint is required by the identified frontend erasure.",
+      "No canonical catalog or shared dataState/metric-reference change is indicated; existing Unknown/partial/per-metric missing handling is already present.",
+      "No api/types.ts, devtools, client/resilience, barrels, config, workspace scope or global API audit is required.",
+      "mqttSummary.ts has one established production caller, MQTTInspectorPage. Its current interface can stay numeric with the existing completeness mask; signalsMqttSummary.test.ts is not a mandatory writer/test scope unless that helper is actually changed."
+    ]
+  },
+  "affectedExistingTestContracts": [
+    {
+      "file": "web\\src\\types\\telemetry.test.ts",
+      "lines": [116, 126],
+      "name": "defaults missing counts to 0 but leaves absent rate / last-seen undefined",
+      "need": "Replace only absent-count zero expectations with the chosen unknown contract. Keep actual-zero and alias-precedence tests intact."
+    },
+    {
+      "file": "web\\src\\types\\telemetry.test.ts",
+      "lines": [156, 163],
+      "name": "returns an empty array for null / undefined / vehicle-less status",
+      "need": "Separate unknown null/undefined/missing-container cases from observed empty {} and []; those states must no longer share an oracle."
+    },
+    {
+      "file": "web\\src\\types\\telemetry.test.ts",
+      "lines": [197, 227],
+      "names": [
+        "falls back to streaming_vehicles when vehicles is absent",
+        "tolerates a malformed non-object vehicles field without throwing"
+      ],
+      "need": "Keep legacy map/VIN behavior, change missing signalCount expectation; unsupported container must not certify an observed-empty list. Valid-primary precedence remains unchanged."
+    },
+    {
+      "file": "web\\src\\api\\hooks\\__tests__\\useTelemetry.test.tsx",
+      "lines": [642, 691],
+      "names": [
+        "falls back to streaming_vehicles and defaults missing counts to 0",
+        "yields an empty vehicles array when none are present"
+      ],
+      "need": "Use the actual hook and request mock to prove missing aliases/container survive normalization, with known zero/empty cases separate. Successful-list assertions may need truthful optional-list narrowing; no whole-hook-suite rerun is justified by this scope."
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.test.tsx",
+      "lines": [793, 922],
+      "name": "MQTTInspectorPage — independent aggregate missingness",
+      "need": "Retain its eight delivered cases and all 39 original cases. Add only new causal raw-to-normalizer/hook-to-page proof rather than asserting a hand-built post-hook omission is upstream closure."
+    }
+  ],
+  "futureNewOrChangedProofOnly": {
+    "executionNow": "NOTRUN",
+    "recipes": [
+      "Both supported containers (array/map), both existing row field casings, valid-primary/legacy precedence, and key-authoritative map VIN survive the real existing normalizers.",
+      "Independent omitted count aliases remain unknown through actual useMQTTStatus, while an explicitly supplied count/rate 0 remains 0.",
+      "Missing and unsupported selected containers remain unknown through the hook; explicit []/{} remain observed empty. connected=false/true and uptime/broker stay independent.",
+      "One complete row plus one incomplete row retains both rows and valid neighboring metrics; no incomplete operand is dropped or treated as zero.",
+      "A new page causal case feeds actual normalization output from a synthetic raw request/bridge, with mocked transport only; it verifies per-metric unknown output/partial notice and retained-refresh behavior.",
+      "Missing count/container breaks comparability without manufactured zero throughput, then recovery rebases before a later comparable receipt. Preserve existing receipt clock semantics."
+    ],
+    "runnerPolicy": "A later authorized repair worker uses existing Vitest and only newly authored/actually changed case selectors, with --pool=forks --maxWorkers=2. Preserve inherited passing receipts; do not rerun unchanged passing files or declare discovery from static declarations."
+  },
+  "otherRealHookConsumers": [
+    {
+      "file": "web\\src\\features\\dashboard\\widgets\\MQTTStatusWidget.tsx",
+      "lines": [38, 82],
+      "contract": "deriveMqttStats accepts undefined/null list, distinguishes explicit empty list from unknown and withholds incomplete counts/rates. It already consumes data?.vehicles. Root absence preservation enables existing behavior; no source rewrite is indicated.",
+      "existingTestOwner": "web\\src\\features\\dashboard\\widgets\\MQTTStatusWidget.test.tsx:132-136 and 235-262",
+      "limit": "Read/search only; not executed or claimed fully accepted."
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\widgets\\SignalLogWidget.tsx",
+      "lines": [55, 66],
+      "contract": "deriveSignalRate accepts undefined/null list and returns null; explicit empty list sums to zero. Compact branch consumes mqttData?.vehicles. No additional count API is needed.",
+      "existingTestOwner": "web\\src\\features\\dashboard\\widgets\\SignalLogWidget.test.tsx:194-240",
+      "limit": "No source edits or passing reruns requested."
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\status\\TelemetryPipelineCard.tsx",
+      "lines": [233, 251],
+      "contract": "Uses mqttStatus?.vehicles ?? [] only for iteration, optional streamMap counts/rate/receipt, separate mqttConnected. Truthful optional count/list types fit this inspected consumption. Liveness policy is a separate contract, not a Q01 expansion.",
+      "existingTestOwner": "web\\src\\features\\system\\components\\status\\__tests__\\TelemetryPipelineCard.test.tsx",
+      "limit": "Test owner located by reference search, not read/executed. No new consumer campaign."
+    }
+  ],
+  "inputPinsUtc": "2026-10-14T06:10:04.6879045Z",
+  "inputPins": [
+    {"file": "web\\src\\types\\telemetry.ts", "sha256": "15AF5C9C884E582B7B79C19C97E21583F38E48F2B69BFDBDA0F3BDAB74989CE4"},
+    {"file": "web\\src\\types\\telemetry.test.ts", "sha256": "E6AA0BDA0BC705003BB03A017DEB6F18DD597CF7980C5DF345135330146C7D03"},
+    {"file": "web\\src\\api\\hooks\\useTelemetry.ts", "sha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E"},
+    {"file": "web\\src\\api\\hooks\\__tests__\\useTelemetry.test.tsx", "sha256": "9634776C9BF2FCF50D1CB876B168C8FB5426A88E4C3F3EBAA823F02AA2137D58"},
+    {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx", "sha256": "0BF3737F0D36540ABBEC0722B68D17294A30915142D71CB339A2D2D6F69AB7DC"},
+    {"file": "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.test.tsx", "sha256": "13A114FE0B9CD00957E12C44A8BB06875D444D0BCBC2A9F0BC25A62D58A9E049"},
+    {"file": "web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\mqttSummary.ts", "sha256": "D1C2CE06E83D789EC765E1B840B8E21EC6BD5C3FAB76C4A314AF71BA01764A79"},
+    {"file": "web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\signalsMqttSummary.test.ts", "sha256": "CB5CDF2EE2A83DC4BCB6082AA5B69FC45D64E028EA24A71DAACFC4C3CF746D2D"},
+    {"file": "web\\logs\\phase6-fix-mqtt-missingness-aggregate-trust.log", "sha256": "0E0E2DB0B8A4E17E3FD41E76EB99A9DD37080A24B5CE7E856EA661EC868CB188"}
+  ],
+  "reads": {
+    "orchestrator": "docs\\orchestrator-loop.md fully read; this is an assigned worker, not an orchestration tick.",
+    "exactRow": "migration-queue.md exact pending item and returned partial item's row read without writes.",
+    "returnedReceipt": "Full exact log, not just final summary, read.",
+    "guidelines": [
+      "docs\\frontend-design-contract.md:1-230,421-492",
+      "docs\\frontend-mission.md:1-105",
+      "docs\\frontend-worker-conventions.md",
+      "docs\\session-handoff.md:1-48",
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md"
+    ],
+    "historicalReport": "docs\\frontend-audits\\phase6-qa-telemetry-mqttinspector.json",
+    "sourceScope": "Exact producer/DTO/normalizer/hook/page/summary and their existing matching tests cited above; three actual hook consumers examined only for the changed return-contract dependency.",
+    "backendReadJustification": "Needed to distinguish an existing producer's mandatory counter/map fields from compatibility/partial inputs and from unknown actual omission. Only route and Go JSON construction read, no backend operation.",
+    "missingProbe": "Assigned report did not initially exist; no workaround or competing report created.",
+    "skill": "audit-violations loaded; its audit.sh/embedded TSC NOTRUN because this assignment bans tests/compiler/passing reruns. No whole-API hook audit performed."
+  },
+  "evidenceLimits": {
+    "sourceEdited": false,
+    "tests": "NOTRUN",
+    "compiler": "NOTRUN",
+    "lintAndEngineeringScan": "NOTRUN; this is contract/ownership inspection, not a zero-violations claim.",
+    "browserNative": "NOTRUN",
+    "networkBackendMQTT": "NOTRUN",
+    "dockerInstallServerNestedAgents": "NOTRUN",
+    "gitQueueCatalogConfiguration": "No operations or writes.",
+    "sourceFunctions": "Not imported, evaluated or executed. All causal recipes are future proof requirements, not reproduced runtime evidence.",
+    "privacy": "Only repository source/technical contracts and inherited synthetic-test receipt read; no live telemetry, private vehicle identifiers, credentials or locations fetched or logged.",
+    "pinLimit": "Pins were taken after initial source reads. Equality at release checks only these named files and does not certify all-source immutability, transient concurrent edits or a clean working tree."
+  },
+  "release": {
+    "releasedAtUtc": "2026-10-14T06:14:39.9328895Z",
+    "files": [
+      "docs\\frontend-audits\\phase6-mqtt-upstream-presence-owner.json",
+      "web\\logs\\phase6-mqtt-upstream-presence-owner.log"
+    ],
+    "commands": "All own commands bounded; no owned helper, server or background process. Source ownership never acquired.",
+    "Q01Closed": false
+  },
+  "finalReportChecks": {
+    "checkedAtUtc": "2026-10-14T06:14:39.9328895Z",
+    "jsonParsed": true,
+    "futureScopeExactFilesExist": 6,
+    "namedReadonlyPinsUnchanged": 9,
+    "problems": 0,
+    "numericExit": 0,
+    "scope": "Document parsing, file existence and named SHA-256 equality only; no tests, compiler, source execution or whole-working-tree certification."
+  }
+}

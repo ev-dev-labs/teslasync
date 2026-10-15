@@ -1,0 +1,425 @@
+{
+  "item": "audit-page-200",
+  "page": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx",
+  "routes": [
+    {
+      "path": "/live-monitor",
+      "mountEvidence": ["web\\src\\App.tsx:210", "web\\src\\App.tsx:736"],
+      "kind": "lazy-loaded page inside SafeRoute",
+      "runtimeReachability": "unverified"
+    }
+  ],
+  "purpose": "Inspect the current client SSE session: transport connection, locally observed throughput, bounded signal-type composition, busiest signal names and raw live event tail.",
+  "primaryGoal": "Recognize stream activity and retained or aging evidence, inspect individual raw signal values, and control the local tail without confusing transport status with vehicle health or durable ingestion.",
+  "dataSources": [
+    {
+      "name": "useLiveSignalStream",
+      "file": "web\\src\\features\\telemetry\\hooks\\useLiveSignalStream.ts",
+      "line": 84,
+      "owner": "telemetry domain",
+      "endpoint": "GET /api/v1/events",
+      "sourceOwnership": "useRealtimeEvents subscribes to vehicle_update on the application singleton sseManager; this page consumes only its tail slice.",
+      "citations": ["web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:52-57", "web\\src\\features\\telemetry\\hooks\\useLiveSignalStream.ts:284-287", "web\\src\\hooks\\useRealtimeEvents.ts:69-85", "web\\src\\lib\\sseManager.ts:108-122", "internal\\api\\router.go:4344-4345"],
+      "behavior": [
+        "Always enabled; selected vehicle ID or null; chartSignals is empty; tail capacity is 500 entries.",
+        "Numeric and string vehicle IDs are filtered when a positive vehicle is selected; frames without vehicle_id can pass. Null scope receives all accepted events.",
+        "Tail accepts cold arrays, table column maps, or the signals/raw-object fallback. Timestamp and vehicle metadata are excluded only in that fallback. Types come from JavaScript typeof; values are String(value). No physical-unit conversion is applied here.",
+        "Accepted entries are prepended and truncated. Null/non-object frames are ignored. Pause returns before tail accumulation and rate counting; it is not merely a frozen viewport and missed frames are not replayed.",
+        "Clear resets tail entries and local entry IDs only. Vehicle switching also resets chart state and pending rate counts. Rate is published once each second from accepted unpaused tail entries.",
+        "Disconnected frames do not clear retained tail entries. Subscription teardown follows shared listener lifecycle."
+      ],
+      "unknowns": [
+        "Backend field semantics, producer ordering, authoritative per-signal observation timestamps and SI compliance were not validated.",
+        "SignalEntry stores event timestamp and string value, not unit metadata or original typed value. Do not infer units from names or convert these raw inspection strings during presentation modernization.",
+        "System events without vehicle identity and same-name signals from different fleet vehicles can share the ranking key."
+      ]
+    },
+    {
+      "name": "useThroughputHistory",
+      "file": "web\\src\\features\\telemetry\\hooks\\useThroughputHistory.ts",
+      "line": 41,
+      "owner": "telemetry domain",
+      "endpoint": null,
+      "sourceOwnership": "Local timer samples useLiveSignalStream.tailRate; no server aggregate or historical query.",
+      "citations": ["web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:59-62", "web\\src\\features\\telemetry\\hooks\\useThroughputHistory.ts:41-79"],
+      "behavior": [
+        "One sample each 1000 ms, at most 60 samples, oldest first; peak is maximum in the current rolling window.",
+        "Sampling remains enabled when disconnected or tail-paused. Finite rates are clamped nonnegative; invalid inputs become zero locally.",
+        "Selected vehicle changes reset the history; Clear tail does not reset throughput history.",
+        "Local zero samples describe absence of accepted tail entries, not measured backend throughput or vehicle silence."
+      ]
+    },
+    {
+      "name": "useSelectedVehicle / useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "owner": "workspace selection and vehicle API",
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwnership": "Existing URL/store/fleet selection owner, not a page-local picker.",
+      "citations": ["web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:50", "web\\src\\hooks\\useSelectedVehicle.ts:48-83", "web\\src\\api\\hooks\\useVehicles.ts:73-80", "internal\\api\\router.go:3319"],
+      "behavior": [
+        "Effective scope follows valid path/query vehicle, persisted selection, then first fleet vehicle; null can occur before resolution or with an empty fleet.",
+        "useVehicles uses queryKey ['vehicles'], request('/vehicles', { signal }), FAST stale time and safeArray; the page adds no parallel fetch.",
+        "Page does not consume selection-query loading/error status. A fleet-label null scope is not proof of an intentional fleet choice.",
+        "Router inspection confirms the /vehicles group, not its full handler behavior."
+      ]
+    },
+    {
+      "name": "Realtime transport and recovery",
+      "file": "web\\src\\lib\\sseManager.ts",
+      "line": 89,
+      "owner": "shared realtime infrastructure",
+      "endpoint": "GET /api/v1/events",
+      "citations": ["web\\src\\hooks\\useRealtimeEvents.ts:36-46", "web\\src\\lib\\sseManager.ts:156-175", "web\\src\\lib\\sseManager.ts:179-214", "web\\src\\lib\\eventStream.ts:35-40", "web\\src\\lib\\eventStream.ts:119-130"],
+      "behavior": [
+        "Singleton connection, subscription state resynchronized on mount; shared capped exponential reconnect delay of 1 to 60 seconds after nonterminal errors.",
+        "Authenticated remote fetch transport and same-origin native EventSource factory are retained; terminal rejected-token CLOSED state suppresses manager retry.",
+        "Incoming real messages alone advance manager lastMessageAt; synthetic disconnection does not.",
+        "This page does not register onFallbackToPolling and has no historical backfill, manual reconnect or backend retry mutation.",
+        "Factory documents no Last-Event-ID resume. Reconnection is not durable replay; preserve this limitation.",
+        "useRealtimeEvents diagnostics currently return failCount 0 and nextRetryIn null; do not display those as real retry measurements."
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Section / Grid",
+      "category": "layout",
+      "existingOwner": "web\\src\\components\\layout",
+      "citations": ["web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:17", "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:113-122", "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:149-166"],
+      "contract": "Header title/subtitle and connection metadata; one named analytics Section with generated ID; default one-column / xl three-column grid, throughput spanning two xl columns.",
+      "inspectionLimit": "Layout internals were not inspected; full-width and responsive behavior are source intent, not browser proof."
+    },
+    {
+      "name": "LiveMonitorKpiBand / TelemetrySummaryBrief / OperationalBrief",
+      "category": "domain composite using canonical stats",
+      "existingOwner": "web\\src\\features\\telemetry\\components\\LiveMonitorKpiBand.tsx",
+      "citations": ["web\\src\\features\\telemetry\\components\\LiveMonitorKpiBand.tsx:52-80", "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx:23-48"],
+      "contract": "Six metrics: transport connection, signals/sec, buffer count/capacity/fill, unique names, numeric entries, categorical entries. Retain scope, provenance, bounded-buffer explanations and retained-source status; useOperationalMetrics and OperationalBrief remain the formatter/presentation pipeline.",
+      "inspectionLimit": "OperationalBrief and its formatter internals were not audited."
+    },
+    {
+      "name": "LiveThroughputPanel / EmbeddedChart",
+      "category": "domain chart using shared charts",
+      "existingOwner": "web\\src\\features\\telemetry\\components\\LiveThroughputPanel.tsx",
+      "citations": ["web\\src\\features\\telemetry\\components\\LiveThroughputPanel.tsx:69-139", "web\\src\\components\\charts\\EmbeddedChart.tsx:19-41", "web\\src\\components\\charts\\ChartContainer.tsx:171-186"],
+      "contract": "Rolling area chart, Now and Peak rates, timestamp axis, integer rate axis, tooltip, two-point empty threshold, accessible title/label and ts/rate fallback data table. EmbeddedChart defaults exportable/fullscreen false; do not invent existing export/fullscreen actions."
+    },
+    {
+      "name": "SignalTypeBreakdown / TopSignalsPanel / MetricBar",
+      "category": "domain presentation using shared quantitative bars",
+      "existingOwner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "citations": ["web\\src\\features\\telemetry\\components\\SignalTypeBreakdown.tsx:50-94", "web\\src\\features\\telemetry\\components\\TopSignalsPanel.tsx:69-116", "web\\src\\components\\data-display\\MetricBar.tsx:43-99"],
+      "contract": "Three labeled value types with counts/percentages; top twelve names with counts and latest raw string values. Existing MetricBar supports fill='solid', accessible label/ariaLabel, max, header suppression and reduced motion."
+    },
+    {
+      "name": "LiveSignalTail / DataTable / FreshnessIndicator",
+      "category": "domain composite and shared table/trust primitives",
+      "existingOwner": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx",
+      "citations": ["web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:82-121", "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:143-220", "web\\src\\components\\ui\\DataTable.tsx:237-248", "web\\src\\components\\data-display\\FreshnessIndicator.tsx:115-169"],
+      "contract": "Time/name/value/type/freshness columns; case-insensitive signal-name filter; pause/resume, auto-scroll and Clear; persisted tableId telemetry:live-signal-tail; compact table and initial page size 50; outer 65vh scroll cap; shared row timestamp aging with 120/600-second thresholds.",
+      "inspectionLimit": "DataTable was read in selected ranges only; its entire export/settings/keyboard pipeline was not audited."
+    },
+    {
+      "name": "Badge / AlertBanner / FadeIn / typography / formatting",
+      "category": "existing primitives and application helpers",
+      "existingOwner": "existing ui, feedback, motion category barrels and formatting hooks",
+      "citations": ["web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:18-20", "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:105-131", "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:15-20"],
+      "contract": "Localized visible transport status and warning; role typography, time formatting and locale number formatting; existing entrance motion.",
+      "inspectionLimit": "Underlying Badge/AlertBanner/FadeIn, locale settings and global theme/motion CSS were not inspected."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx",
+      "line": 105,
+      "rule": "MDC-002 / MDC-025",
+      "detail": "The same connection badge appears in header and tail, but is already a single constructed node. Repeated signal-type visuals and tail controls are supplied by existing domain/shared owners, not independently reimplemented here.",
+      "fix": "Reuse existing owners; do not create another KPI grid, table controller, status registry or SSE subscription.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "min-w-0/max-w-full throughout page and panels; analytics stacks until xl, then throughput 2/3 and composition 1/3.",
+      "Leaderboard one column, two at md, three at 2xl; long ranking names/values allow anywhere wrapping.",
+      "Tail controls stack below sm then use a row with wrapping action group; filter w-full/sm:w-64.",
+      "Tail cell contents are nowrap inside an overflow-auto, maxHeight 65vh host; table hides type/freshness below md."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx",
+        "line": 206,
+        "rule": "MDC-023 / MDC-043 / preservation",
+        "detail": "mobileColumns includes signal/value/time but omits type and freshness. No mobilePresentation or expandable detail is supplied. DataTable's allow-list applies hidden md:table-cell (DataTable.tsx:714-725), so explicit trust/type evidence has no source-confirmed mobile detail path.",
+        "fix": "Adapt the existing DataTable mobile presentation/detail contract in the domain tail, retaining every column and stable table ID. Do not simply drop freshness or add a competing mobile table.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\telemetry\\components\\LiveThroughputPanel.tsx",
+        "line": 91,
+        "rule": "MDC-034 / MDC-043",
+        "detail": "EmbeddedChart defaults fluid=true without height overrides (EmbeddedChart.tsx:28); the enclosing GlassPanel supplies no explicit height. Actual ResponsiveContainer height in stacked and xl layouts has not been measured.",
+        "fix": "Verify bounded chart geometry at target widths; if collapse/clipping is observed, use the existing compact fixed-height contract or a bounded host rather than another chart frame.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "viewportStatus": "all unverified; source-only inspection",
+    "additionalChecks": ["allocated container width", "long raw values", "200% text", "RTL", "touch controls", "inner table scrolling without page overflow"]
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Localized text connection states, not color alone; throughput has VisuallyHidden transport text and accessible chart/table data props.",
+      "Tail filter has aria-label; pause and auto-scroll expose aria-pressed; decorative page icons are hidden.",
+      "Ranked signals use ul/li with an accessible list name; composition rows carry labels and count/percentage text.",
+      "FreshnessIndicator uses an accessible status-plus-age name; it does not treat a missing/invalid timestamp as a known offline measurement.",
+      "MetricBar honors shared useMotionPreference and uses progressbar semantics."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\telemetry\\components\\TopSignalsPanel.tsx",
+        "line": 106,
+        "rule": "MDC-040 / accurate accessible names",
+        "detail": "Each arrival-frequency progressbar is named 'Latest', while its numeric value is arrival count relative to the busiest name, not the latest signal value. The signal name is visually nearby but not explicitly part of the bar name.",
+        "fix": "Use MetricBar.ariaLabel with localized signal name and buffered-arrival-count meaning; preserve latest raw-value text separately.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["keyboard order and focus visibility", "screen reader announcements", "effective AA text/UI contrast", "44px touch reachability at compact sizes", "forced colors", "actual reduced-motion behavior", "table and chart fallback operation"],
+    "motionIssueRefs": ["visual-ambient-pulse"]
+  },
+  "states": {
+    "initial": "Initial singleton state is reconnecting unless already connected; the page maps this directly to Disconnected and the reconnect warning. Empty tail/type/ranking remain mounted. No initial-connecting distinction reaches this page.",
+    "loading": "No dedicated page loading source state. Throughput shows waiting only before two samples; local timer can produce a zero chart without any received signal. Do not introduce fake stream measurements as a skeleton substitute.",
+    "empty": "Tail distinguishes no buffered events from no filter matches; ranking and type mix show no buffered signals; throughput needs two samples.",
+    "errorRecovery": "Nonterminal transport reconnect is shared and automatic; terminal rejected-token transport can stop retry. No page polling or manual retry exists. Buffered neighbors remain visible.",
+    "staleOffline": "Disconnected warning explicitly identifies last buffered signals; KPI brief marks retained source data only when disconnected with nonempty buffer. Tail rows use timestamp aging independent of connection.",
+    "paused": "Tail pause prevents new tail entries and rate counts, does not stop subscription or durable backend ingestion. Throughput keeps sampling and eventually reports zero; retained ranking/type mix persist. Resume accepts future frames only.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx",
+        "line": 127,
+        "rule": "MDC-026 / truthful recovery",
+        "detail": "The warning always claims 'attempting to reconnect' when connected=false. useRealtimeEvents exposes only connected/reconnecting, while sseManager.ts:156-167 suppresses retries for rejected-token CLOSED transport. Initial connection is also shown as Disconnected.",
+        "fix": "Preserve automatic recovery and retained evidence; expose genuine initial/retrying/terminal-auth state from the existing transport owner before rendering differentiated status/recovery. Do not add fake countdown/failCount or a page reconnect loop.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx",
+        "line": 60,
+        "rule": "MDC-026 / MDC-045 / trust",
+        "detail": "Throughput samples remain enabled across transport disconnection and tail pause. Since paused entries are not counted (useLiveSignalStream.ts:244,280), the live chart's local zero samples can be mistaken for real ingestion inactivity. The KPI rate description does not mention this pause gate.",
+        "fix": "Keep exact local sampling/rate and reset semantics; visibly label locally sampled tail rate, paused recording and disconnected zero samples. Do not convert unknown backend throughput into zero or stop/clear data as a cosmetic fix.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\telemetry\\hooks\\useLiveSignalStream.ts",
+        "line": 182,
+        "rule": "MDC-026 / source timestamp provenance",
+        "detail": "Missing frame timestamp is replaced by client current time, then displayed as row freshness. This measures receipt fallback, not proven vehicle observation time. A fresh row or connected transport must not imply fresh underlying telemetry.",
+        "fix": "Retain timestamps and raw values; label frame/receipt timestamp provenance using the existing domain trust surface. Any new provenance field requires the shared hook/type owner; never infer observation time from arrival.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "id": "visual-ambient-pulse",
+      "file": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx",
+      "line": 146,
+      "rule": "MDC-010 / MDC-042 / mission sections 7,31",
+      "detail": "Saturated red pulsing radio cue is unconditional, including while paused/disconnected. FreshnessIndicator.tsx:159 also pulses every fresh row. Tail includes a CSS reduced-motion override, but repeated ambient cues still add noise; shared indicator lacks a local motion-reduce class in inspected source.",
+      "fix": "Use restrained static semantic cues aligned to actual tail/transport state; remove ambient pulse at the shared freshness owner or explicitly honor existing motion preference. Preserve status/age text and do not change freshness thresholds.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "id": "visual-accent-density",
+      "file": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx",
+      "line": 24,
+      "rule": "MDC-010 / MDC-012 / mission sections 5-7",
+      "detail": "Every raw value gets a fixed cyan/emerald/amber color while each row also has a semantic colored type badge and freshness dot; auto-scroll adds cyan-specific action styling at line 177. These are not literal neon classes, but create repeated hue emphasis and fixed theme styling.",
+      "fix": "Prefer theme-resolved primary/secondary value text and existing button pressed treatment; reserve subdued semantic hue for type/status cues. Preserve raw strings, type badges and accessible toggle state.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "id": "visual-repeated-gradient",
+      "file": "web\\src\\features\\telemetry\\components\\SignalTypeBreakdown.tsx",
+      "line": 85,
+      "rule": "MDC-010 / MDC-034 / mission section 27",
+      "detail": "Composition bars and up to twelve ranking bars omit fill, inheriting MetricBar gradient (MetricBar.tsx:45,95). The area chart also uses a cyan series[5] gradient. The palette is canonical, not proof of neon; repeated gradients and colored icons may spend excessive intensity.",
+      "fix": "Use the already-supported fill='solid' for restrained quantitative bars, neutralize decorative panel icons and evaluate a subtle chart fill without changing series meaning or user theme choices.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx",
+      "line": 71,
+      "rule": "MDC-002 / MDC-045 / scoped evidence",
+      "detail": "Ranking and unique counts key by signal name only, so fleet-scope repeated names are merged; latest value is the first encountered entry, not a timestamp-sorted authoritative vehicle value. Current components are session-buffer analysis, not a server fleet aggregate.",
+      "fix": "Preserve the existing bounded-buffer/name-keyed calculation and describe that scope; do not silently change aggregation or claim vehicle attribution during UI modernization. Any identity redesign belongs to the telemetry data owner.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Trust evidence is hidden on mobile and connection/rate labels can overstate recovery or source freshness; visual noise is secondary to preserving truthful live behavior.",
+    "order": ["retain stream/recovery/raw-value behavior", "restore mobile type/freshness reachability", "clarify connection and local-rate provenance", "correct ranking bar names", "reduce ambient motion and repeated accent/gradient emphasis", "perform centralized runtime/viewport/accessibility QA"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "LiveSignalTail mobile full-detail and trust contract",
+      "existingOwnerFile": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx",
+      "propsVariantsStates": ["reuse DataTable.mobilePresentation/full-row detail support", "retain entries/rate/paused/onPauseToggle/onClear/bufferMax/showStats/headerExtra", "expose time/name/raw value/type/freshness at phone widths", "retain tableId and compact pagination", "waiting/no-match/paused/retained states"],
+      "usedBy": ["LiveSignalMonitorPage", "SignalsWorkspacePage"],
+      "dependsOn": ["web\\src\\components\\ui\\DataTable.tsx", "web\\src\\components\\data-display\\FreshnessIndicator.tsx", "MDC-023", "MDC-026", "MDC-043"],
+      "citations": ["web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:29-46", "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:203-217", "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx:693"],
+      "scope": "domain shared owner; no new table library or controller required"
+    },
+    {
+      "name": "Truthful connection lifecycle and timestamp provenance",
+      "existingOwnerFile": "web\\src\\lib\\sseManager.ts",
+      "propsVariantsStates": ["actual initial connecting versus retrying versus terminal auth failure", "retained transport state independent of row freshness", "no fabricated retry count/countdown", "frame timestamp versus client receipt fallback provenance through existing telemetry hook/type"],
+      "usedBy": ["useRealtimeEvents consumers", "LiveSignalMonitorPage", "SignalsWorkspacePage", "SignalExplorerPage"],
+      "dependsOn": ["web\\src\\hooks\\useRealtimeEvents.ts", "web\\src\\lib\\eventStream.ts", "web\\src\\features\\telemetry\\hooks\\useLiveSignalStream.ts", "web\\src\\types\\telemetry.ts"],
+      "citations": ["web\\src\\hooks\\useRealtimeEvents.ts:94-104", "web\\src\\lib\\sseManager.ts:156-175", "web\\src\\features\\telemetry\\hooks\\useLiveSignalStream.ts:182"],
+      "scope": "integration-owned extension only after contract review; preserve singleton/recovery/auth behavior"
+    },
+    {
+      "name": "FreshnessIndicator restrained motion",
+      "existingOwnerFile": "web\\src\\components\\data-display\\FreshnessIndicator.tsx",
+      "propsVariantsStates": ["existing timestamp/staleThreshold/offlineThreshold/showLabel/size", "fresh/stale/offline/unknown accessible status-plus-age", "static dot or existing reduced-motion policy", "no freshness-threshold or age-cadence changes"],
+      "usedBy": ["LiveSignalTail on LiveSignalMonitorPage", "LiveSignalTail on SignalsWorkspacePage"],
+      "dependsOn": ["existing motion policy", "MDC-042"],
+      "citations": ["web\\src\\components\\data-display\\FreshnessIndicator.tsx:115-169", "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:117"],
+      "scope": "shared component owner; other consumers were not enumerated"
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "reuseEvidence": ["web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx:68,75,250,693", "web\\src\\features\\telemetry\\pages\\SignalExplorerPage.tsx:49,133", "web\\src\\features\\telemetry\\components\\LiveMonitorKpiBand.tsx:13", "web\\src\\components\\charts\\EmbeddedChart.tsx:30-40"],
+    "recommendation": "Keep existing telemetry tail/stream, OperationalBrief, DataTable, EmbeddedChart and MetricBar. No second stream, table pipeline, formatter, palette or freshness registry.",
+    "limit": "Only page-specific reuse sites were searched; absence of competing implementations across the application is not claimed."
+  },
+  "preservation": {
+    "sourceSha256": "5D4DAA7030D516DA3CE8FD1E218362FEEDF7D97F7BF4E37812D205AA7D62801B",
+    "hashAlgorithm": "SHA-256 over on-disk bytes",
+    "currentLineCount": 187,
+    "pagePlusDirectPresentationComponentsLineCount": 851,
+    "lineCountBreakdown": [
+      {"file": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx", "lines": 187},
+      {"file": "web\\src\\features\\telemetry\\components\\LiveMonitorKpiBand.tsx", "lines": 87},
+      {"file": "web\\src\\features\\telemetry\\components\\LiveThroughputPanel.tsx", "lines": 139},
+      {"file": "web\\src\\features\\telemetry\\components\\SignalTypeBreakdown.tsx", "lines": 98},
+      {"file": "web\\src\\features\\telemetry\\components\\TopSignalsPanel.tsx", "lines": 119},
+      {"file": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx", "lines": 221}
+    ],
+    "sectionNamesAndCounts": {
+      "majorContentBands": 4,
+      "sections": [
+        {"name": "Live stream summary", "citation": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:133-145", "metrics": 6},
+        {"name": "Live analytics", "citation": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:148-166", "panels": ["Signal throughput", "Value types"]},
+        {"name": "Most active signals", "citation": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:169-171", "maximumNames": 12},
+        {"name": "Live signal tail", "citation": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx:174-184", "columns": ["Time", "Signal", "Value", "Type", "Freshness"]}
+      ],
+      "additionalChrome": ["page title/subtitle and connection badge", "conditional disconnected retained-data warning", "tail header repeated connection badge"],
+      "explicitSectionTags": 1,
+      "directDependencyGlassPanelTags": 4,
+      "embeddedCharts": 1,
+      "literalChartContainerTags": 0,
+      "notes": "KPI is an OperationalBrief, not a fifth GlassPanel counted here. LiveSignalTail showStats=false intentionally suppresses its optional extra summary."
+    },
+    "actions": [
+      {"name": "Filter by signal name", "citation": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:69-75,150-157", "behavior": "case-insensitive local name filter; does not alter ranking, type mix or stream"},
+      {"name": "Pause / Resume", "citation": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:160-169", "behavior": "toggle tailPaused; controls tail accumulation/rate counting, not transport or backend ingest"},
+      {"name": "Auto-scroll", "citation": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:77-79,170-180", "behavior": "default on; toggles local scrollTop=0 on item changes; icon arrow direction must not change newest-first behavior"},
+      {"name": "Clear", "citation": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:181-189", "behavior": "clears only tail and IDs; no backend deletion, unsubscribe or throughput-history reset"},
+      {"name": "Tail pagination", "citation": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx:203-210", "behavior": "existing DataTable pipeline, default page size 50; keep tableId and inherited preferences"},
+      {"name": "Throughput tooltip", "citation": "web\\src\\features\\telemetry\\components\\LiveThroughputPanel.tsx:125", "behavior": "localized series/time display; keyboard accessibility unverified"}
+    ],
+    "dataBehaviorMustSurvive": [
+      "One shared SSE transport and no duplicate page subscription or independent reconnect loop.",
+      "500-entry newest-first accepted tail; six local KPI fields; three type categories; twelve busiest name keys with latest encountered values.",
+      "Exact pause/rate/clear/reset semantics and current selected-vehicle filtering, including missing identity frames.",
+      "Local 1Hz, 60-sample throughput window and rolling peak; distinguish local zeros from unknown backend measurements.",
+      "No fabricated metrics, backend capabilities, historical backfill, all-time rate or vehicle-health inference.",
+      "Raw source strings and identities remain inspection evidence; no new unit-suffixed fields, physical conversion or guessed units.",
+      "Keep retained entries through disconnect, row-age aging and unknown timestamp meaning; mark receipt fallback limitations.",
+      "Keep operational scope/provenance descriptions, locale number/time display, localized labels and shared formatting pipeline.",
+      "Keep full-width orchestration, all bands and empty states, table persistence identity, controls and accessible alternatives."
+    ]
+  },
+  "evidenceLimits": {
+    "evidenceClass": "current source inspection only; Phase 0 read-only audit",
+    "runtime": "not exercised",
+    "visual": "not rendered or screenshot-reviewed",
+    "keyboard": "not exercised",
+    "contrast": "not measured; fixed accents are review risks, not proven contrast failures",
+    "viewport": "not exercised at any width",
+    "backend": "only scoped router fragments inspected; live endpoint operation, producer units/timestamps, fleet completeness, auth responses, durable ingestion and deployment health not verified",
+    "tests": "not run; no TypeScript, lint, build, browser or full-repository tests",
+    "skillScript": "Read .github\\skills\\audit-violations\\audit.sh but did not execute it because it unconditionally runs project TypeScript, contrary to the read-only Phase 0 centralized-validation contract (MDC-070). Scoped case-sensitive source-pattern checks were used instead.",
+    "sourceChecks": {
+      "method": "PowerShell Select-String -CaseSensitive over page, five direct components and two telemetry hooks",
+      "exitCode": 0,
+      "output": [
+        "Case-sensitive scoped source counts:",
+        "<button\\b|<input\\b|<textarea\\b|<select\\b|<table\\b => 0",
+        "style= => 1",
+        "text-white|#fff|neon|glow|shadow- => 0",
+        "<GlassPanel\\b => 4",
+        "<ChartContainer\\b|<EmbeddedChart\\b => 1",
+        "<Section\\b => 1",
+        "Presentation page + five direct components line count:",
+        "851"
+      ],
+      "interpretation": "The one inline style is dynamic maxHeight, not static CSS-variable styling. No literal page/domain neon/glow/pure-white matches; shared/theme rendering is not certified noise-free. First case-insensitive exploratory raw-control check matched capitalized shared Input/Button and was corrected; those four matches are not raw HTML violations."
+    },
+    "sourceDrift": "Hash pins the inspected page snapshot; shared dependencies may change concurrently. Release hash is checked without Git.",
+    "ownership": "Only docs\\frontend-audits\\audit-page-200.json and .agent-status\\audit-page-200.txt are written. No source, Git, agents or global validation used.",
+    "filesReadMeaning": "Includes actual full reads and explicitly bounded view/rg inspections; not a hypothetical dependency graph or full-file claim for partial reads."
+  },
+  "filesRead": [
+    {"path": "docs\\frontend-worker-conventions.md", "scope": "full"},
+    {"path": "docs\\frontend-design-contract.md", "scope": "1-395"},
+    {"path": "docs\\frontend-mission.md", "scope": "1-230;238-394;507-580;673-778;812-869;921-1054;1416-1487; heading search"},
+    {"path": ".github\\skills\\audit-violations\\audit.sh", "scope": "full; not executed"},
+    {"path": "web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\telemetry\\components\\LiveMonitorKpiBand.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\telemetry\\components\\LiveThroughputPanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\telemetry\\components\\SignalTypeBreakdown.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\telemetry\\components\\TopSignalsPanel.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx", "scope": "full"},
+    {"path": "web\\src\\features\\telemetry\\hooks\\useLiveSignalStream.ts", "scope": "full"},
+    {"path": "web\\src\\features\\telemetry\\hooks\\useThroughputHistory.ts", "scope": "full"},
+    {"path": "web\\src\\hooks\\useRealtimeEvents.ts", "scope": "full"},
+    {"path": "web\\src\\hooks\\useSelectedVehicle.ts", "scope": "full"},
+    {"path": "web\\src\\lib\\sseManager.ts", "scope": "full"},
+    {"path": "web\\src\\lib\\eventStream.ts", "scope": "full"},
+    {"path": "web\\src\\types\\telemetry.ts", "scope": "1-150"},
+    {"path": "web\\src\\components\\data-display\\FreshnessIndicator.tsx", "scope": "full"},
+    {"path": "web\\src\\components\\data-display\\MetricBar.tsx", "scope": "full"},
+    {"path": "web\\src\\components\\charts\\EmbeddedChart.tsx", "scope": "full"},
+    {"path": "web\\src\\components\\charts\\ChartContainer.tsx", "scope": "height/fluid/accessible-table keyword matches only"},
+    {"path": "web\\src\\components\\ui\\DataTable.tsx", "scope": "231-250;713-730; mobile/detail keyword matches"},
+    {"path": "web\\src\\api\\hooks\\useVehicles.ts", "scope": "1-100"},
+    {"path": "web\\src\\lib\\tokens.ts", "scope": "series/color/neon/glow keyword matches only"},
+    {"path": "web\\src\\App.tsx", "scope": "LiveSignalMonitor mount keyword matches only"},
+    {"path": "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx", "scope": "LiveSignalTail/useLiveSignalStream reuse keyword matches only"},
+    {"path": "web\\src\\features\\telemetry\\pages\\SignalExplorerPage.tsx", "scope": "useLiveSignalStream reuse keyword matches only"},
+    {"path": "internal\\api\\router.go", "scope": "4335-4352; events and vehicles route keyword matches only"}
+  ]
+}

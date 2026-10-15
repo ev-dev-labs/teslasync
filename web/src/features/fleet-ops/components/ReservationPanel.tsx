@@ -1,15 +1,22 @@
 import { CalendarDays } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { DataTable, GlassPanel, PanelTitle, StatusPill, type Column } from '@/components/ui';
-import { formatDateShort, formatDateTime, formatTime } from '@/lib/dateFormat';
+import { DataTable, Text, StatusPill, type Column } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { formatDayKey } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { FleetReservation } from '@/api/hooks/useFleetOps';
+import type { DataState } from '@/api/dataState';
 import { ReservationActions } from './ReservationActions';
+import { reservationCalendarDays } from '../helpers';
 
 interface ReservationPanelProps {
   items: FleetReservation[];
+  enableValueFilters?: boolean;
   loading: boolean;
+  source?: DataState<unknown>;
+  pendingContent?: ReactNode;
   error: unknown;
   onRetry: () => void;
   onAdd: () => void;
@@ -21,15 +28,18 @@ interface ReservationPanelProps {
 }
 
 const statusColor: Record<FleetReservation['status'], string> = {
-  requested: 'bg-amber-500',
-  confirmed: 'bg-emerald-500',
-  cancelled: 'bg-rose-500',
-  completed: 'bg-slate-500',
+  requested: 'bg-[var(--semantic-warning)]',
+  confirmed: 'bg-[var(--semantic-success)]',
+  cancelled: 'bg-[var(--semantic-danger)]',
+  completed: 'bg-[var(--text-secondary)]',
 };
 
 export function ReservationPanel({
   items,
+  enableValueFilters = false,
   loading,
+  source,
+  pendingContent,
   error,
   onRetry,
   onAdd,
@@ -40,8 +50,9 @@ export function ReservationPanel({
   actionsDisabledReason,
 }: ReservationPanelProps) {
   const { t } = useTranslation();
+  const { formatDateTime, formatTime, opts, tz } = useDateFormat();
   const upcoming = items.filter((item) => item.status === 'requested' || item.status === 'confirmed');
-  const calendarDays = [...new Set(upcoming.map((item) => item.starts_at.slice(0, 10)))].slice(0, 5);
+  const calendarDays = reservationCalendarDays(upcoming, tz).slice(0, 5);
   const statusLabel = (status: FleetReservation['status']) => ({
     requested: t('fleetOps.status.requested', 'Requested'),
     confirmed: t('fleetOps.status.confirmed', 'Confirmed'),
@@ -52,18 +63,24 @@ export function ReservationPanel({
     {
       key: 'title',
       header: t('fleetOps.reservations.reservation', 'Reservation'),
+      filterValue: (item) => item.id,
+      filterValueLabel: (_value, item) => item.title,
       render: (item) => item.title,
       visibleOnMobile: true,
     },
     {
       key: 'vehicle',
       header: t('fleetOps.reservations.vehicle', 'Vehicle'),
+      filterValue: (item) => item.vehicle_id ?? null,
+      filterValueLabel: (_value, item) => item.vehicle_display_name,
       render: (item) => item.vehicle_display_name,
       visibleOnMobile: true,
     },
     {
       key: 'driver',
       header: t('fleetOps.reservations.driver', 'Driver'),
+      filterValue: (item) => item.driver_id ?? null,
+      filterValueLabel: (_value, item) => item.driver_display_name ?? '—',
       render: (item) => item.driver_display_name ?? '—',
     },
     {
@@ -74,6 +91,8 @@ export function ReservationPanel({
     {
       key: 'status',
       header: t('fleetOps.reservations.status', 'Status'),
+      filterValue: (item) => item.status ?? null,
+      filterValueLabel: (_value, item) => item.status == null ? '—' : statusLabel(item.status),
       render: (item) => (
         <StatusPill color={statusColor[item.status]}>{statusLabel(item.status)}</StatusPill>
       ),
@@ -99,18 +118,20 @@ export function ReservationPanel({
     onCancel,
     onDelete,
     onEdit,
+    formatDateTime,
     t,
   ]);
 
   return (
-    <GlassPanel className="p-5">
-      <PanelTitle>{t('fleetOps.reservations.title', 'Reservation calendar')}</PanelTitle>
-      {loading ? <Skeleton lines={7} /> : error ? (
+    <LayoutCard title={t('fleetOps.reservations.title', 'Reservation calendar')}>
+      {source?.hasData !== true && error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.reservations.resource', 'Reservations')} />
-      ) : items.length === 0 ? (
+      ) : source && !source.hasData ? (
+        pendingContent
+      ) : !source && loading ? <Skeleton lines={7} /> : items.length === 0 ? (
         <EmptyState
           icon={<CalendarDays className="h-8 w-8" />}
-          message={t('fleetOps.reservations.empty', 'No reservations in this planning window.')}
+          message={t('fleetOps.reservations.empty', 'No reservations found.')}
           action={actionsDisabled
             ? undefined
             : { label: t('fleetOps.reservations.add', 'Add reservation'), onClick: onAdd }}
@@ -118,14 +139,14 @@ export function ReservationPanel({
       ) : (
         <div className="mt-4 space-y-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {calendarDays.map((day) => (
-              <div key={day} className="min-h-28 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{formatDateShort(day)}</p>
+            {calendarDays.map(({ day, reservations }) => (
+              <div key={day ?? 'unknown'} className="min-h-28 min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+                <Text as="p" weight="semibold">{day ? formatDayKey(day, { ...opts, style: 'short' }) : '—'}</Text>
                 <div className="mt-2 space-y-2">
-                  {upcoming.filter((item) => item.starts_at.startsWith(day)).map((item) => (
-                    <div key={item.id} className="rounded-lg bg-cyan-500/10 p-2 text-xs text-cyan-200">
-                      <p className="truncate font-medium">{item.title}</p>
-                      <p className="mt-1 text-[var(--text-muted)]">{formatTime(item.starts_at)} · {item.vehicle_display_name}</p>
+                  {reservations.map((item) => (
+                    <div key={item.id} className="min-w-0 rounded-lg bg-[var(--surface-1)] p-2">
+                      <Text as="p" weight="medium" className="break-words">{item.title}</Text>
+                      <Text as="p" variant="caption" className="mt-1 break-words">{formatTime(item.starts_at)} · {item.vehicle_display_name}</Text>
                       <ReservationActions
                         item={item}
                         onEdit={onEdit}
@@ -142,14 +163,30 @@ export function ReservationPanel({
           </div>
           <DataTable
             tableId="fleet-ops:reservations"
+            caption={t('fleetOps.reservations.title', 'Reservation calendar')}
             columns={columns}
             data={items}
+            enableValueFilters={enableValueFilters}
             keyExtractor={(item) => item.id}
             mobileColumns={['title', 'vehicle', 'actions']}
+            mobilePresentation={{
+              roles: { title: 'title', vehicle: 'primary', period: 'meta', status: 'badge' },
+              displayValue: (item, key) => {
+                switch (key) {
+                  case 'title': return item.title;
+                  case 'vehicle': return item.vehicle_display_name;
+                  case 'driver': return item.driver_display_name;
+                  case 'period': return `${formatDateTime(item.starts_at)} – ${formatDateTime(item.ends_at)}`;
+                  case 'status': return statusLabel(item.status);
+                  default: return null;
+                }
+              },
+              inlineActions: (item) => columns.find((column) => column.key === 'actions')?.render(item),
+            }}
             pagination
           />
         </div>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

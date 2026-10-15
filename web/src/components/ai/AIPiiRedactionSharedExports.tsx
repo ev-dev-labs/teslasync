@@ -35,6 +35,8 @@
 //     also visually disabled to mirror the state machine).
 //   - The streamed text accumulates into AiOutputPanel which
 //     renders the SSE delta stream as-it-arrives.
+//   - Changing export_type retires prior guidance and aborts its
+//     stream through useAiStream's existing scope identity.
 //
 // HX (Helix UX) contract:
 //   - The surface renders through the shared AIFeatureCard
@@ -130,6 +132,7 @@ function InnerSection() {
     url: '/ai/exports/redaction/draft',
     body,
     onEvent: NO_EVENT_SINK,
+    scopeKey: exportType,
   })
   const haveInputs = exportType !== ''
 

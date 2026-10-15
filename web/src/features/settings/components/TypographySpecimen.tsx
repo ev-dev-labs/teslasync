@@ -37,6 +37,7 @@ export function TypographySpecimen({ sansName, monoName }: TypographySpecimenPro
           <HelperText>{t('typography.preview.data', 'Data & code')}</HelperText>
           <Heading level="panel" as="p">82% · 245 km</Heading>
           <Text as="p" variant="code" className="break-all">
+
             0123456789 · kWh · °C · km/h · 2026-08-25T10:42:00Z
           </Text>
         </div>

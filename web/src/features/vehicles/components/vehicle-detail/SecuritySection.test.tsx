@@ -3,21 +3,21 @@
 // Coverage (the section's single export — `SecuritySection`, plus its two
 // module-private helpers exercised through the rendered output):
 //   1. Empty state: renders the "Security" heading + a role="status"
-//      placeholder when `securityData` is null OR undefined and draws none of
-//      the four metric cards.
+//      placeholder when `securityData` is null OR undefined and retains all
+//      four source-state fields.
 //   2. Locked card: reads `state.is_locked` (NOT the event), surfacing Yes/No
 //      and swapping the Lock (closed padlock) / Unlock (open padlock) glyph.
 //   3. Sentry card: reads `state.sentry_mode`, surfacing Active/Off.
 //   4. Doors card (`normalizeDoorState`): shows a raw string enum, treats an
-//      empty / whitespace-only string as closed, and — the bug this suite locks
+//      empty / whitespace-only string as unknown, and — the bug this suite locks
 //      in — maps a NATIVE BOOLEAN door_state to Open/Closed semantics instead of
 //      stringifying it to the literal "true" / "false".
 //   5. Windows card (`windowOpenCount`): counts only windows reading > 0,
 //      tolerates string-percent, numeric, and boolean signal shapes, preserves a
 //      genuine 0 reading, ignores a non-numeric (NaN) string, and pluralises the
 //      open count.
-//   6. a11y: every decorative lucide icon (the Shield title glyph + all four
-//      metric-card glyphs) is marked aria-hidden, so the panel's accessible
+//   6. a11y: every decorative lucide icon (four source-state glyphs plus the
+//      provenance and shared Review details glyphs) is marked aria-hidden, so the panel's accessible
 //      heading name is the copy alone.
 
 import { describe, it, expect, afterEach } from 'vitest'
@@ -110,7 +110,7 @@ function makeSecurity(overrides: Partial<SecurityEvent> = {}): SecurityEvent {
 
 /** Scope to the label + value block of a single metric card. */
 function card(label: string): HTMLElement {
-  return screen.getByText(label).closest('div') as HTMLElement
+  return screen.getByText(label).closest('[data-operational-metric]') as HTMLElement
 }
 
 afterEach(() => {
@@ -124,18 +124,20 @@ describe('SecuritySection — empty state', () => {
     expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument()
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.getByText('No security data available')).toBeInTheDocument()
-    // None of the four metric-card labels render in the empty branch.
-    expect(screen.queryByText('Locked')).toBeNull()
-    expect(screen.queryByText('Sentry')).toBeNull()
-    expect(screen.queryByText('Doors')).toBeNull()
-    expect(screen.queryByText('Windows')).toBeNull()
+    for (const label of ['Locked', 'Sentry', 'Doors', 'Windows']) {
+      expect(screen.getByText(label)).toBeInTheDocument()
+    }
+    expect(document.querySelector('[data-testid="vehicle-security-summary"][data-operational-brief]')).not.toBeNull()
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
+    expect(card('Doors')).toHaveAttribute('data-value-state', 'missing')
+    expect(card('Windows')).toHaveAttribute('data-value-state', 'missing')
   })
 
   it('renders the same placeholder when data is undefined', () => {
     render(<SecuritySection securityData={undefined} state={makeState()} />)
 
     expect(screen.getByText('No security data available')).toBeInTheDocument()
-    expect(screen.queryByText('Windows')).toBeNull()
+    expect(screen.getByText('Windows')).toBeInTheDocument()
   })
 })
 
@@ -182,21 +184,22 @@ describe('SecuritySection — doors card (normalizeDoorState)', () => {
     expect(within(card('Doors')).getByText('Open')).toBeInTheDocument()
   })
 
-  it('falls back to Closed when door_state is null', () => {
+  it('keeps door_state unknown when null rather than inventing Closed', () => {
     render(<SecuritySection securityData={makeSecurity({ door_state: null })} state={makeState()} />)
-    expect(within(card('Doors')).getByText('Closed')).toBeInTheDocument()
+    expect(within(card('Doors')).getByText('—')).toBeInTheDocument()
+    expect(card('Doors')).toHaveAttribute('data-value-state', 'missing')
   })
 
-  it('treats an empty and a whitespace-only string as Closed', () => {
+  it('keeps empty and whitespace-only strings unknown', () => {
     const { rerender } = render(
       <SecuritySection securityData={makeSecurity({ door_state: '' })} state={makeState()} />,
     )
-    expect(within(card('Doors')).getByText('Closed')).toBeInTheDocument()
+    expect(within(card('Doors')).getByText('—')).toBeInTheDocument()
 
     rerender(
       <SecuritySection securityData={makeSecurity({ door_state: '   ' })} state={makeState()} />,
     )
-    expect(within(card('Doors')).getByText('Closed')).toBeInTheDocument()
+    expect(within(card('Doors')).getByText('—')).toBeInTheDocument()
   })
 
   it('maps a native boolean-true door_state to Open (never the literal "true")', () => {
@@ -215,9 +218,10 @@ describe('SecuritySection — doors card (normalizeDoorState)', () => {
 })
 
 describe('SecuritySection — windows card (windowOpenCount)', () => {
-  it('shows Closed when every window reads null', () => {
+  it('keeps windows unknown when every window reads null', () => {
     render(<SecuritySection securityData={makeSecurity()} state={makeState()} />)
-    expect(within(card('Windows')).getByText('Closed')).toBeInTheDocument()
+    expect(within(card('Windows')).getByText('—')).toBeInTheDocument()
+    expect(card('Windows')).toHaveAttribute('data-value-state', 'missing')
   })
 
   it('shows Closed when every window reads a 0-percent string', () => {
@@ -279,14 +283,14 @@ describe('SecuritySection — windows card (windowOpenCount)', () => {
 })
 
 describe('SecuritySection — accessibility', () => {
-  it('marks every decorative icon (title glyph + all four card glyphs) aria-hidden', () => {
+  it('marks every decorative source, provenance and Review details glyph aria-hidden', () => {
     const { container } = render(
       <SecuritySection securityData={makeSecurity()} state={makeState()} />,
     )
 
     const svgs = container.querySelectorAll('svg')
-    // Shield title glyph + Lock/Unlock + Eye + DoorClosed + Car.
-    expect(svgs.length).toBe(5)
+    // Five preserved security glyphs plus the independent live-source badge.
+    expect(svgs.length).toBe(6)
     svgs.forEach((svg) => expect(svg).toHaveAttribute('aria-hidden', 'true'))
   })
 

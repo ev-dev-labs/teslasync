@@ -29,6 +29,7 @@
  * fallbacks and value test IDs are therefore a hard contract — keep them.
  */
 
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import {
@@ -44,16 +45,19 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
-import { GlassPanel, Heading, Text, type BadgeProps } from '@/components/ui'
-import { MetricCard } from '@/components/data-display'
+import { PageLayout } from '@/components/layout'
+import { Button, GlassPanel, Heading, Text, type BadgeProps } from '@/components/ui'
+import { DataFreshness, type StatMetric } from '@/components/data-display'
+import { SettingsSummaryBrief } from '../components/operationalbrief-all/SettingsSummaryBrief'
 import { FadeIn } from '@/components/motion'
+import { DataStateNotice, QueryError } from '@/components/feedback'
 import { type NeonColor } from '@/lib/tokens'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useAiEnabled } from '@/hooks/useAiEnabled'
 import { useSettings } from '@/hooks/useSettings'
 import type { AppSettings } from '@/api/types'
 
-import { AISafetySettingExplainer } from '@/components/ai/AISafetySettingExplainer'
+import { AISafetySettingExplainer } from '@/components/ai'
 import { SafetySettingCard } from '../components/SafetySettingCard'
 
 // SafetySettingRow describes one row in the deterministic listing. The listing
@@ -76,6 +80,8 @@ interface SafetySettingRow {
   icon: LucideIcon
   /** Toned icon accent — decorative grouping only, never the sole status signal. */
   accent: NeonColor
+  /** Only source-confirmed values receive a status; missing fields stay unknown. */
+  hasValue: (s: AppSettings) => boolean
   /** Renders the current value as a string for the status chip. */
   renderValue: (s: AppSettings, t: TFunction) => string
   /** Status colour for the value chip (text always accompanies the colour). */
@@ -98,7 +104,8 @@ const SAFETY_ROWS: SafetySettingRow[] = [
       'When ON, TeslaSync defers non-critical notifications during the configured quiet-hours window. Critical alerts are always delivered.',
     docsAnchor: '/docs/notifications/quiet-hours.md',
     icon: Moon,
-    accent: 'blue',
+    accent: 'neutral',
+    hasValue: (s) => typeof s.quiet_hours_enabled === 'boolean',
     renderValue: (s, t) =>
       s.quiet_hours_enabled
         ? t('safetySettings.value.on', 'On')
@@ -113,7 +120,8 @@ const SAFETY_ROWS: SafetySettingRow[] = [
       'Window start in HH:MM (24-hour) local time. Effective only when quiet hours are ON.',
     docsAnchor: '/docs/notifications/quiet-hours.md',
     icon: Sunset,
-    accent: 'blue',
+    accent: 'neutral',
+    hasValue: (s) => coalesceBlank(s.quiet_hours_start, '').length > 0,
     renderValue: (s) => coalesceBlank(s.quiet_hours_start, '—'),
     badgeVariant: () => 'info',
   },
@@ -125,7 +133,8 @@ const SAFETY_ROWS: SafetySettingRow[] = [
       'Window end in HH:MM (24-hour) local time. Effective only when quiet hours are ON.',
     docsAnchor: '/docs/notifications/quiet-hours.md',
     icon: Sunrise,
-    accent: 'blue',
+    accent: 'neutral',
+    hasValue: (s) => coalesceBlank(s.quiet_hours_end, '').length > 0,
     renderValue: (s) => coalesceBlank(s.quiet_hours_end, '—'),
     badgeVariant: () => 'info',
   },
@@ -137,8 +146,9 @@ const SAFETY_ROWS: SafetySettingRow[] = [
       'How alerts are batched. Instant delivers each alert as it fires; Hourly batches into one digest per hour; Daily batches into one digest per day.',
     docsAnchor: '/docs/notifications/digest.md',
     icon: BellRing,
-    accent: 'cyan',
-    renderValue: (s) => coalesceBlank(s.alert_digest_mode, 'instant'),
+    accent: 'neutral',
+    hasValue: (s) => coalesceBlank(s.alert_digest_mode, '').length > 0,
+    renderValue: (s) => coalesceBlank(s.alert_digest_mode, '—'),
     badgeVariant: () => 'info',
   },
   {
@@ -149,7 +159,8 @@ const SAFETY_ROWS: SafetySettingRow[] = [
       'When ON, TeslaSync briefly flashes the browser tab title when a critical alert arrives while the tab is in the background. Honours the OS-level reduce-motion preference.',
     docsAnchor: '/docs/notifications/tab-signalling.md',
     icon: Zap,
-    accent: 'amber',
+    accent: 'neutral',
+    hasValue: (s) => typeof s.critical_flash_enabled === 'boolean',
     renderValue: (s, t) =>
       s.critical_flash_enabled
         ? t('safetySettings.value.on', 'On')
@@ -164,7 +175,8 @@ const SAFETY_ROWS: SafetySettingRow[] = [
       'When ON, TeslaSync prefixes the browser tab title with (N) and paints a coloured dot on the favicon for unread notifications.',
     docsAnchor: '/docs/notifications/tab-signalling.md',
     icon: Bell,
-    accent: 'purple',
+    accent: 'neutral',
+    hasValue: (s) => typeof s.tab_badge_enabled === 'boolean',
     renderValue: (s, t) =>
       s.tab_badge_enabled
         ? t('safetySettings.value.on', 'On')
@@ -179,7 +191,8 @@ const SAFETY_ROWS: SafetySettingRow[] = [
       'Operational kill-switch. When ON, TeslaSync stops issuing requests to the Tesla Fleet API; existing telemetry streams continue. Used during outage triage so the install does not pile up rate-limited retries.',
     docsAnchor: '/docs/operations/api-suspended.md',
     icon: Power,
-    accent: 'green',
+    accent: 'neutral',
+    hasValue: (s) => typeof s.api_suspended === 'boolean',
     renderValue: (s, t) =>
       s.api_suspended
         ? t('safetySettings.value.suspended', 'Suspended')
@@ -204,14 +217,20 @@ const DIGEST_LABELS: Record<string, { key: string; fallback: string }> = {
 // so a bare `value ?? fallback` would surface a blank status chip / KPI value.
 // Collapse null/undefined/blank to the caller's fallback so a safety value is
 // never rendered as an empty element.
-function coalesceBlank(value: string | null | undefined, fallback: string): string {
-  return value != null && value.trim().length > 0 ? value : fallback
+function coalesceBlank(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value.trim().length > 0 ? value : fallback
 }
 
 export default function SafetyPage() {
   const { t } = useTranslation()
   usePageTitle(t('safetySettings.pageTitle', 'Safety settings'))
-  const { settings } = useSettings()
+  const { settings, settingsState, settingsUnavailable, refetch } = useSettings()
+  const aiEnabled = useAiEnabled('safety-setting-explainer')
+  const unavailable = settingsUnavailable || settingsState?.hasData === false
+  const retrySettings = useCallback(() => {
+    void refetch()
+  }, [refetch])
+  const dash = t('common.dash', '—')
 
   // Deterministic safety-posture summary derived from the same settings the
   // listing renders — no invented data, no extra network calls.
@@ -221,73 +240,94 @@ export default function SafetyPage() {
     settings.tab_badge_enabled,
   ]
   const safeguardsOn = safeguards.filter(Boolean).length
+  const quietWindowKnown = typeof settings.quiet_hours_enabled === 'boolean'
   const quietWindow = settings.quiet_hours_enabled
     ? `${coalesceBlank(settings.quiet_hours_start, '—')}–${coalesceBlank(settings.quiet_hours_end, '—')}`
     : t('safetySettings.kpi.quietWindowOff', 'Off')
-  const digest = coalesceBlank(settings.alert_digest_mode, 'instant')
-  const digestMeta = DIGEST_LABELS[digest]
+  const digest = coalesceBlank(settings.alert_digest_mode, '') || null
+  const digestMeta = digest == null ? undefined : DIGEST_LABELS[digest]
   const digestLabel = digestMeta ? t(digestMeta.key, digestMeta.fallback) : digest
   const apiActive = !settings.api_suspended
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'safety-safeguards',
+      rawValue: unavailable || safeguards.some(value => typeof value !== 'boolean') ? null : safeguardsOn,
+      label: t('safetySettings.kpi.safeguards', 'Active safeguards'),
+      display: { countTotal: safeguards.length, formatter: raw => ({ value: `${raw} / ${safeguards.length}`, unit: '' }) },
+      context: <><ShieldCheck className="h-5 w-5" aria-hidden="true" />{t('safetySettings.kpi.safeguardsHint', 'Protections enabled')}</> },
+    { metricId: 'text', occurrenceId: 'safety-quiet-window', rawValue: unavailable || !quietWindowKnown ? null : quietWindow,
+      label: t('safetySettings.kpi.quietWindow', 'Quiet window'),
+      context: unavailable || !quietWindowKnown ? undefined : settings.quiet_hours_enabled
+        ? t('safetySettings.kpi.quietWindowOn', 'Deferring non-critical')
+        : t('safetySettings.kpi.quietWindowOffHint', 'Always delivering') },
+    { metricId: 'text', occurrenceId: 'safety-cadence', rawValue: unavailable ? null : digestLabel,
+      label: t('safetySettings.kpi.cadence', 'Alert cadence'), context: t('safetySettings.kpi.cadenceHint', 'Digest batching') },
+    { metricId: 'status', occurrenceId: 'safety-api', rawValue: unavailable || typeof settings.api_suspended !== 'boolean' ? null : apiActive
+        ? t('safetySettings.value.active', 'Active') : t('safetySettings.value.suspended', 'Suspended'),
+      label: t('safetySettings.kpi.fleetApi', 'Fleet API'),
+      context: <><PlugZap className="h-5 w-5" aria-hidden="true" />{t('safetySettings.kpi.fleetApiHint', 'Outbound requests')}</> },
+  ]
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('safetySettings.pageTitle', 'Safety settings')}
       subtitle={t(
-        'safetySettings.pageSubtitle',
-        'Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links on each card to change a value.',
+        'safetySettings.cardsPageSubtitle',
+        'Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links on each card to review its configuration documentation.',
       )}
     >
+      {settingsState?.fatalError && <QueryError error={settingsState.fatalError} onRetry={retrySettings} />}
+      {settingsState?.status === 'stale' && (
+        <div className="space-y-2">
+          <DataStateNotice state="stale" preserveSeverity
+            data-refresh-blocked={settingsState.isRefreshBlocked || undefined}
+            message={settingsState.isRefreshBlocked
+              ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+              : settingsState.refreshError
+                ? t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')
+                : undefined} />
+          <Button type="button" variant="secondary" size="sm" wrapLabel
+            className="min-h-11 md:min-h-9" onClick={retrySettings}>
+            {t('error.retry', 'Retry')}
+          </Button>
+        </div>
+      )}
+      {settingsState?.status === 'initial' && (
+        <Text as="p" variant="bodySm" role="status">
+          {settingsState.isRefreshBlocked
+            ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+            : t('common.loading', 'Loading…')}
+        </Text>
+      )}
       {/* 1 — Safety-posture KPI band: full-width responsive metric grid. */}
       <FadeIn>
         <section
           aria-label={t('safetySettings.kpi.sectionLabel', 'Safety posture')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
         >
-          <MetricCard
-            label={t('safetySettings.kpi.safeguards', 'Active safeguards')}
-            value={`${safeguardsOn} / ${safeguards.length}`}
-            icon={<ShieldCheck className="h-5 w-5" />}
-            color={safeguardsOn === safeguards.length ? 'green' : 'cyan'}
-            subtitle={t('safetySettings.kpi.safeguardsHint', 'Protections enabled')}
-          />
-          <MetricCard
-            label={t('safetySettings.kpi.quietWindow', 'Quiet window')}
-            value={quietWindow}
-            icon={<Moon className="h-5 w-5" />}
-            color="blue"
-            subtitle={
-              settings.quiet_hours_enabled
-                ? t('safetySettings.kpi.quietWindowOn', 'Deferring non-critical')
-                : t('safetySettings.kpi.quietWindowOffHint', 'Always delivering')
-            }
-          />
-          <MetricCard
-            label={t('safetySettings.kpi.cadence', 'Alert cadence')}
-            value={digestLabel}
-            icon={<BellRing className="h-5 w-5" />}
-            color="cyan"
-            subtitle={t('safetySettings.kpi.cadenceHint', 'Digest batching')}
-          />
-          <MetricCard
-            label={t('safetySettings.kpi.fleetApi', 'Fleet API')}
-            value={
-              apiActive
-                ? t('safetySettings.value.active', 'Active')
-                : t('safetySettings.value.suspended', 'Suspended')
-            }
-            icon={<PlugZap className="h-5 w-5" />}
-            color={apiActive ? 'green' : 'amber'}
-            subtitle={t('safetySettings.kpi.fleetApiHint', 'Outbound requests')}
-          />
+          <SettingsSummaryBrief title={t('safetySettings.brief.title', 'Safety configuration')}
+            description={t('safetySettings.brief.description', 'Configured notification safeguards, quiet hours, digest cadence and outbound Fleet API state. This is a read-only settings summary, not a safety score.')}
+            source={t('safetySettings.brief.source', 'Install settings')}
+            scope={t('safetySettings.brief.scope', 'Latest configuration · three notification safeguards; no historical analysis window')}
+            metrics={metrics} loading={settingsState?.status === 'initial'}
+            unavailable={unavailable} retained={settingsState?.status === 'stale'}
+            freshness={!unavailable && settingsState?.updatedAt != null ? (
+              <DataFreshness updatedAt={settingsState.updatedAt}
+                isFetching={settingsState.isRefreshing}
+                isStale={settingsState.status === 'stale'}
+                isError={settingsState.refreshError != null}
+                source={t('safetySettings.brief.source', 'Install settings')} />
+            ) : undefined}
+            testId="safety-settings-summary" />
         </section>
       </FadeIn>
 
       {/* 2 — Opt-in Helix narrator (absent from the DOM when AI is off). */}
-      <FadeIn delay={0.1}>
-        <section aria-label={t('safetySettings.aiExplainer.sectionLabel', 'Helix assistant')}>
-          <AISafetySettingExplainer />
-        </section>
-      </FadeIn>
+      {aiEnabled && (
+        <FadeIn delay={0.1}>
+          <section aria-label={t('safetySettings.aiExplainer.sectionLabel', 'Helix assistant')}>
+            <AISafetySettingExplainer />
+          </section>
+        </FadeIn>
+      )}
 
       {/* 3 — Deterministic listing: responsive bento of setting tiles. */}
       <FadeIn delay={0.2}>
@@ -299,18 +339,19 @@ export default function SafetyPage() {
               </Heading>
               <Text variant="bodySm" as="p">
                 {t(
-                  'safetySettings.listing.subtitle',
-                  'Each tile shows the current value on this install and links to the canonical Settings page where you can change it.',
+                  'safetySettings.listing.cardsSubtitle',
+                  'Each tile shows the current value on this install and links to its configuration documentation.',
                 )}
               </Text>
             </header>
 
             <ul
-              className="grid gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(17rem,1fr))]"
+              className="grid min-w-0 gap-3 sm:gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))]"
               data-testid="safety-settings-rows"
             >
               {SAFETY_ROWS.map((row) => {
                 const title = t(row.titleKey, row.titleFallback)
+                const known = !unavailable && row.hasValue(settings)
                 return (
                   <SafetySettingCard
                     key={row.titleKey}
@@ -318,8 +359,8 @@ export default function SafetyPage() {
                     icon={<row.icon className="h-4 w-4" aria-hidden="true" />}
                     accent={row.accent}
                     title={title}
-                    value={row.renderValue(settings, t)}
-                    valueVariant={row.badgeVariant(settings)}
+                    value={known ? row.renderValue(settings, t) : dash}
+                    valueVariant={known ? row.badgeVariant(settings) : 'neutral'}
                     description={t(row.descKey, row.descFallback)}
                     docsHref={row.docsAnchor}
                     docsLabel={t('safetySettings.listing.docsLink', 'Docs')}
@@ -342,6 +383,6 @@ export default function SafetyPage() {
           </div>
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

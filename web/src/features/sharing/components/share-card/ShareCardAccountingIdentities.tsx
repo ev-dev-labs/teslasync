@@ -1,7 +1,8 @@
-import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, Table, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { fmtScientificNumber } from '@/lib/numberFormat';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -33,13 +34,9 @@ export function ShareCardAccountingIdentities({
   return (
     <section
       data-testid="share-card-accounting-identities"
-      aria-label={t('shareCard.accounting.aria', 'Exact Share Card accounting identities')}
+      aria-label={t('shareCard.accounting.aria', 'Exact share card accounting identities')}
     >
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-2 flex items-center gap-2">
-          <Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('shareCard.accounting.title', 'Exact accounting identities')}
-        </PanelTitle>
+      <LayoutCard title={t('shareCard.accounting.title', 'Exact accounting identities')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'shareCard.accounting.subtitle',
@@ -48,7 +45,11 @@ export function ShareCardAccountingIdentities({
         </Text>
         <ShareCardSectionBody state={state}>
           <ul className="grid gap-2 lg:grid-cols-2">
-            {analysis.identities.map((check) => (
+            {analysis.identities.map((check) => {
+              const formatOperand = check.tolerance > 0
+                ? (value: number) => fmtScientificNumber(value, 12)
+                : display.formatNumber;
+              return (
               <li
                 key={check.id}
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
@@ -61,34 +62,35 @@ export function ShareCardAccountingIdentities({
                       : t('shareCard.accounting.outside', 'Outside tolerance')}
                   </Badge>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
-                  <Text as="span" variant="caption">
+                <Table className="mt-2" aria-label={labels[check.id] ?? check.id}>
+
+                  <tbody>
+                  <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.expected', 'Expected')}
-                  </Text>
-                  <Text as="span" variant="caption" mono>
-                    {display.formatNumber(check.expected, 6)}
-                  </Text>
-                  <Text as="span" variant="caption">
+                  </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
+                    {formatOperand(check.expected)}
+                  </Text></td></tr>
+                  <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.actual', 'Actual')}
-                  </Text>
-                  <Text as="span" variant="caption" mono>
-                    {display.formatNumber(check.actual, 6)}
-                  </Text>
-                  <Text as="span" variant="caption">
+                  </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
+                    {formatOperand(check.actual)}
+                  </Text></td></tr>
+                  <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.residual', 'Residual / tolerance')}
-                  </Text>
-                  <Text as="span" variant="caption" mono>
+                  </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
                     {t('shareCard.accounting.residualValue', '{{residual}} / {{tolerance}}', {
-                      residual: display.formatNumber(check.residual, 6),
-                      tolerance: display.formatNumber(check.tolerance, 6),
+                      residual: formatOperand(check.residual),
+                      tolerance: formatOperand(check.tolerance),
                     })}
-                  </Text>
-                </div>
+                  </Text></td></tr>
+                  </tbody>
+                </Table>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </ShareCardSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

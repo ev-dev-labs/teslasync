@@ -3,20 +3,30 @@
  * Independently proves that every translated namespace in the actual static
  * entry chunk closure is shell-owned. It reads Rollup sourcemaps rather than
  * trusting the generator's source-group assignments.
+ *
+ * Usage: node scripts/check-i18n-shell-closure.mjs [--dist <dir>]
+ * Output paths resolve from web/; source namespaces always use the real web root.
  */
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { gzipSync } from 'node:zlib'
 import { findEntryAssetNames } from './bundle-assets.mjs'
 import { runtimeModuleSpecifiers, translationNamespaces } from './i18n-source-graph.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const WEB_ROOT = resolve(__dirname, '..')
-const DIST_ROOT = join(WEB_ROOT, 'dist')
-const ASSETS_DIR = join(DIST_ROOT, 'assets')
 const I18N_DIR = join(WEB_ROOT, 'src', 'i18n', 'en')
 const MIN_STATIC_NAMESPACES = Number(process.env.I18N_MIN_STATIC_NAMESPACES ?? 40)
+
+export function resolveDistRoot(argv = process.argv.slice(2)) {
+  const distFlagIndex = argv.indexOf('--dist')
+  const distArgument = distFlagIndex === -1 ? 'dist' : argv[distFlagIndex + 1]
+  if (!distArgument || distArgument.startsWith('--')) {
+    throw new Error('--dist requires a directory argument')
+  }
+  return resolve(WEB_ROOT, distArgument)
+}
 
 function staticDependencies(contents) {
   const dependencies = new Set()
@@ -62,10 +72,15 @@ function verifyTypeDependencyFixtures() {
 }
 
 function main() {
+  const DIST_ROOT = resolveDistRoot()
+  if (!existsSync(DIST_ROOT) || !statSync(DIST_ROOT).isDirectory()) {
+    throw new Error(`output directory not found: ${DIST_ROOT} — run build first`)
+  }
+  const ASSETS_DIR = join(DIST_ROOT, 'assets')
   verifySourcePathFixtures()
   verifyTypeDependencyFixtures()
   if (!existsSync(ASSETS_DIR)) {
-    console.error('[i18n-shell-closure] dist/assets missing; run build first')
+    console.error(`[i18n-shell-closure] ${ASSETS_DIR} missing; run build first`)
     process.exit(1)
   }
   const entries = findEntryAssetNames(DIST_ROOT)
@@ -143,4 +158,11 @@ function main() {
   }
 }
 
-main()
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    main()
+  } catch (error) {
+    console.error('[i18n-shell-closure]', error.message)
+    process.exitCode = 1
+  }
+}

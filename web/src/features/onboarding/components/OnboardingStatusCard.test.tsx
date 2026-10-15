@@ -34,10 +34,10 @@ describe('OnboardingStatusCard — loaded content', () => {
     expect(icon).toBeInTheDocument();
 
     // The domain icon is nested directly inside the IconBox container, which
-    // carries the neon accent for the requested colour.
+    // carries the semantic accent for the requested colour.
     const iconBox = icon.parentElement as HTMLElement;
-    expect(iconBox.className).toContain('bg-neon-purple/10');
-    expect(iconBox.className).toContain('ring-neon-purple/20');
+    expect(iconBox.className).toContain('bg-[var(--semantic-purple-bg)]');
+    expect(iconBox.className).toContain('ring-[var(--semantic-purple-border)]');
   });
 
   it('is not marked busy and exposes no loading status region when loaded', () => {
@@ -79,7 +79,7 @@ describe('OnboardingStatusCard — loading state', () => {
 
   it('renders skeleton placeholders and hides the resolved content', () => {
     const { container } = renderCard({ loading: true });
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(3);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(3);
     expect(screen.queryByText('TESLA ACCOUNT')).toBeNull();
     expect(screen.queryByText('Connected')).toBeNull();
     expect(container.querySelector('.lucide-check')).toBeNull();

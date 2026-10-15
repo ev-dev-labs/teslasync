@@ -109,6 +109,7 @@ export function ArrivalReliabilityWeekdayProfile({
             skeletonHeight={320}
           >
             <ArrivalReliabilityProfilePlot
+              chartKey="arrival-weekday-profile"
               rows={rows}
               normalizedName={t(
                 'arrivalReliability.profiles.normalizedSeries',

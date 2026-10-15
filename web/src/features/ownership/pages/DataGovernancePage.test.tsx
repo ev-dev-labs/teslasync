@@ -7,11 +7,13 @@
  * mocked; the table, buttons, and confirm dialog render for real.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+
+const translations = vi.hoisted(() => new Map<string, string>());
 
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
@@ -23,6 +25,12 @@ vi.mock('react-i18next', () => {
     return s;
   };
   const t = (key: string, second?: unknown, third?: unknown): string => {
+    const translated = translations.get(key);
+    if (translated != null) {
+      return interpolate(translated, typeof second === 'object'
+        ? second as Record<string, unknown>
+        : third as Record<string, unknown> | undefined);
+    }
     if (typeof second === 'string') {
       return interpolate(second, third as Record<string, unknown> | undefined);
     }
@@ -63,14 +71,19 @@ import {
   useDeleteRetentionPolicy,
 } from '@/api/hooks/useOwnership';
 import DataGovernancePage from './DataGovernancePage';
-import type { RetentionPolicy } from '@/types/ownership';
+import type { DatasetInventory, GovernanceOverview, GovernanceSimulationResponse, RetentionImpact, RetentionPolicy, RetentionRun } from '@/types/ownership';
+import * as settingsHooks from '@/hooks/useSettings';
+import * as timezoneHooks from '@/lib/timezone';
+import { formatDateTime } from '@/lib/dateFormat';
+import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockOverview = useGovernanceOverview as unknown as ReturnType<typeof vi.fn>;
 const mockRuns = useRetentionRuns as unknown as ReturnType<typeof vi.fn>;
-const mockSimulate = useSimulateGovernance as unknown as ReturnType<typeof vi.fn>;
-const mockUpsert = useUpsertRetentionPolicy as unknown as ReturnType<typeof vi.fn>;
-const mockRemove = useDeleteRetentionPolicy as unknown as ReturnType<typeof vi.fn>;
+type MutationMock = Mock<() => ReturnType<typeof makeMutation> & { data?: unknown; error?: Error }>;
+const mockSimulate = useSimulateGovernance as unknown as MutationMock;
+const mockUpsert = useUpsertRetentionPolicy as unknown as MutationMock;
+const mockRemove = useDeleteRetentionPolicy as unknown as MutationMock;
 
 function makePolicy(overrides: Partial<RetentionPolicy> = {}): RetentionPolicy {
   return {
@@ -103,6 +116,34 @@ function makeMutation(overrides: Record<string, unknown> = {}) {
   return { mutate: vi.fn(), isPending: false, variables: undefined, ...overrides };
 }
 
+function makeRun(): RetentionRun {
+  return {
+    id: 3, dataset: 'Observed ledger dataset', mode: 'dry_run',
+    rows_scanned: 2000, rows_expiring: 300, rows_downsampling: 400,
+    bytes_reclaimable: 1024, fidelity_loss_pct: 2.5, blocked_by_hold: false,
+    executed_at: '2026-02-01T00:00:00Z',
+  };
+}
+
+function makeOverview(overrides: Partial<GovernanceOverview> = {}): GovernanceOverview {
+  return {
+    as_of: '2026-03-01T00:00:00Z',
+    inventory: [], policies: [makePolicy()],
+    total_bytes: 4 * 1024 ** 2, governed_bytes: 3 * 1024 ** 2,
+    ungoverned_bytes: 1024 ** 2, governed_share_pct: 75,
+    legal_hold_count: 0, plan_only: true,
+    quality: { status: 'limited', sample_count: 1, coverage_pct: 75, window_start: null, window_end: null, reasons: [] },
+    evidence: [],
+    ...overrides,
+  };
+}
+
+function card(title: string): HTMLElement {
+  const element = screen.getByRole('heading', { name: title }).closest('[data-card]');
+  if (!(element instanceof HTMLElement)) throw new Error(`Missing card: ${title}`);
+  return element;
+}
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -122,6 +163,7 @@ function removeButton(dataset: string): HTMLElement {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  translations.clear();
   mockSelected.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
@@ -141,6 +183,416 @@ beforeEach(() => {
 });
 
 describe('DataGovernancePage — confirm-gated delete', () => {
+  it('retains all five storage quantities, binary units, policy coverage and legal exemptions in the real brief', () => {
+    mockOverview.mockReturnValue(makeQuery(makeOverview()));
+    renderPage();
+    expectOperationalBand('Storage posture', ['total', 'governed', 'ungoverned', 'holds', 'mode']);
+    expect(summaryMetric('Storage posture', 'total')).toHaveTextContent('4.0 MiB');
+    expect(summaryMetric('Storage posture', 'governed')).toHaveTextContent('3.0 MiB');
+    expect(summaryMetric('Storage posture', 'governed')).toHaveTextContent(/75(?:\.0+)?%/);
+    expect(summaryMetric('Storage posture', 'ungoverned')).toHaveTextContent('1.0 MiB');
+    expect(summaryMetric('Storage posture', 'holds')).toHaveAttribute('data-value-state', 'value');
+    expect(summaryMetric('Storage posture', 'holds').querySelector('[data-operational-value]')).toHaveTextContent('0');
+    expect(summaryMetric('Storage posture', 'holds')).toHaveTextContent('Exempt from every plan');
+    expect(summaryMetric('Storage posture', 'mode')).toHaveTextContent('Plan only');
+    expect(screen.getByRole('button', { name: 'Run dry-run plan' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Define policy' })).toBeEnabled();
+    expect(removeButton('drives')).toBeEnabled();
+    fireEvent.click(within(card('Storage posture')).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Exempt from every plan');
+    expect(screen.getByRole('dialog')).toHaveTextContent('3.0 MiB');
+    expect(mockSimulate().mutate).not.toHaveBeenCalled();
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+  });
+
+  const inventoryRow: DatasetInventory = {
+    dataset: 'drives', label: 'Drive observations', row_count: 2400, total_bytes: 4096,
+    bytes_per_row: 1.7, span_s: 30 * 86400, oldest_at: '2026-01-01T00:00:00Z',
+    newest_at: '2026-01-31T00:00:00Z', is_hypertable: true, governed: true,
+  };
+  const impactRow: RetentionImpact = {
+    dataset: 'drives', label: 'Drive observations', policy_id: 1, retention_s: 365 * 86400,
+    rows_scanned: 2400, rows_expiring: 300, rows_downsampling: 400, rows_retained: 1700,
+    bytes_reclaimable: 1024, reclaim_share_pct: 25, fidelity_loss_pct: 26,
+    blocked_by_legal_hold: true, projected_daily_growth_bytes: 1024, runway_days: 10,
+    warnings: ['source_warning'],
+  };
+
+  function populatedGovernance() {
+    mockOverview.mockReturnValue(makeQuery(makeOverview({
+      inventory: [inventoryRow], policies: [makePolicy({
+        legal_hold: true, downsample_after_s: 30 * 86400, downsample_bucket_s: 60,
+      })],
+    })));
+    mockRuns.mockReturnValue(makeQuery({ items: [makeRun()], total: 51, limit: 50, offset: 0 }));
+    mockSimulate.mockReturnValue({
+      ...makeMutation(),
+      data: {
+        as_of: '2026-03-01T00:00:00Z', impacts: [impactRow], total_rows_expiring: 300,
+        total_bytes_reclaimable: 1024, total_fidelity_loss_pct: 26, plan_only: true,
+      },
+    });
+  }
+
+  describe('DataGovernancePage presentation preservation', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    it('embeds all four tables without changing their saved identifiers or desktop fields', () => {
+      populatedGovernance();
+      renderPage();
+      for (const id of ['inventory', 'policies', 'impact', 'runs']) {
+        const table = screen.getByRole('table', { name: `ownership-governance-${id}` });
+        expect(table.closest('[data-grid-frame]')).toHaveAttribute('data-grid-variant', 'embedded');
+      }
+      expect(within(card('Dataset inventory')).getByRole('columnheader', { name: /Rows/ })).toBeInTheDocument();
+      expect(within(card('Retention policies')).getByRole('columnheader', { name: /Bucket/ })).toBeInTheDocument();
+      expect(within(card('Dry-run impact')).getByRole('columnheader', { name: /Growth runway/ })).toBeInTheDocument();
+      expect(within(card('Plan ledger')).getByRole('columnheader', { name: /Fidelity lost/ })).toBeInTheDocument();
+      expect(within(screen.getByRole('table', { name: 'ownership-governance-impact' }))
+        .getByText(/26(?:\.0+)?%/)).toHaveClass('text-[var(--semantic-danger)]');
+      expect(mockRemove().mutate).not.toHaveBeenCalled();
+    });
+
+    it('retains mobile plan actions and every inventory, policy, impact and ledger detail', async () => {
+      const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+      vi.stubGlobal('ResizeObserver', class {
+        constructor(private callback: ResizeObserverCallback) {}
+        observe(element: Element) { observers.push({ element, callback: this.callback }); }
+        unobserve() {}
+        disconnect() {}
+      });
+      populatedGovernance();
+      renderPage();
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 375 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      expect(document.querySelectorAll('[data-mobile-table]')).toHaveLength(4);
+
+      const inventory = card('Dataset inventory');
+      const include = within(inventory).getByRole('button', { name: 'Include' });
+      expect(include).toHaveAttribute('aria-pressed', 'false');
+      fireEvent.click(include);
+      expect(within(inventory).getByRole('button', { name: 'In plan' })).toHaveAttribute('aria-pressed', 'true');
+      expect(mockSimulate().mutate).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Run dry-run plan' }));
+      expect(mockSimulate().mutate).toHaveBeenCalledWith({ datasets: ['drives'], confirmed: true });
+
+      fireEvent.click(within(inventory).getByRole('button', { name: 'Quick view' }));
+      let dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveTextContent('drives');
+      expect(dialog).toHaveTextContent('2,400');
+      expect(dialog).toHaveTextContent('4.0 KiB');
+      expect(dialog).toHaveTextContent('1.7');
+      expect(dialog).toHaveTextContent('History span');
+      expect(dialog).toHaveTextContent('hypertable');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+      const policies = card('Retention policies');
+      expect(within(policies).getByRole('button', { name: 'Edit' })).toHaveClass('min-h-11');
+      const remove = within(policies).getByRole('button', { name: 'Remove' });
+      fireEvent.click(remove);
+      expect(screen.getByRole('dialog')).toHaveTextContent('drives');
+      expect(mockRemove().mutate).not.toHaveBeenCalled();
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      fireEvent.click(within(policies).getByRole('button', { name: 'Quick view' }));
+      dialog = screen.getByRole('dialog');
+      expect(dialog).toHaveTextContent('legal hold');
+      expect(dialog).toHaveTextContent('Downsample after');
+      expect(dialog).toHaveTextContent('Bucket');
+      expect(dialog).toHaveTextContent(/1(?:\.0+)? min/);
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+      fireEvent.click(within(card('Dry-run impact')).getByRole('button', { name: 'Quick view' }));
+      dialog = screen.getByRole('dialog');
+      for (const detail of ['300', '1700 retained', '400', '10 days', '1.0 KiB', 'legal hold', 'source_warning']) {
+        expect(dialog).toHaveTextContent(detail);
+      }
+      expect(dialog).toHaveTextContent(/26(?:\.0+)?%/);
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      fireEvent.click(within(card('Plan ledger')).getByRole('button', { name: 'Quick view' }));
+      dialog = screen.getByRole('dialog');
+      for (const detail of ['Observed ledger dataset', 'dry run', '300', '1.0 KiB']) {
+        expect(dialog).toHaveTextContent(detail);
+      }
+      expect(dialog).toHaveTextContent(/2\.5(?:0+)?%/);
+      expect(mockUpsert().mutate).not.toHaveBeenCalled();
+      expect(mockRemove().mutate).not.toHaveBeenCalled();
+    });
+
+    it('pages the ledger with real server totals while preserving the initial fifty-row request', () => {
+      populatedGovernance();
+      renderPage();
+      expect(mockRuns).toHaveBeenCalledWith(50, 0);
+      fireEvent.click(within(card('Plan ledger')).getByRole('button', { name: 'Next page' }));
+      expect(mockRuns).toHaveBeenLastCalledWith(50, 50);
+      expect(mockSimulate().mutate).not.toHaveBeenCalled();
+    });
+
+    it('associates the inline editor, preserves unsaved fields, and restores its trigger on cancel', () => {
+      populatedGovernance();
+      renderPage();
+      const trigger = screen.getByRole('button', { name: 'Define policy' });
+      fireEvent.click(trigger);
+      expect(trigger).toHaveAttribute('aria-expanded', 'true');
+      const form = screen.getByRole('form', { name: 'Retention policies' });
+      expect(form).toHaveAttribute('id', trigger.getAttribute('aria-controls'));
+      expect(screen.getByRole('combobox', { name: 'Dataset' })).toHaveFocus();
+      fireEvent.change(screen.getByRole('spinbutton', { name: 'Retention (days)' }), { target: { value: '120' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(screen.getByRole('button', { name: 'Define policy' })).toHaveFocus();
+      fireEvent.click(screen.getByRole('button', { name: 'Define policy' }));
+      expect(screen.getByRole('spinbutton', { name: 'Retention (days)' })).toHaveValue(120);
+      for (const label of ['Downsample after (days)', 'Downsample bucket (seconds)', 'Legal hold', 'Enabled']) {
+        expect(screen.getByLabelText(label)).toBeInTheDocument();
+      }
+      expect(mockUpsert().mutate).not.toHaveBeenCalled();
+    });
+
+    it('explains missing dry-run prerequisites and retains prior impact during a failed simulation', () => {
+      mockOverview.mockReturnValue(makeQuery(makeOverview({ inventory: [], policies: [] })));
+      mockSimulate.mockReturnValue({
+        ...makeMutation(), error: new Error('simulation failed'),
+        data: { impacts: [impactRow], total_rows_expiring: 300, total_bytes_reclaimable: 1024,
+          total_fidelity_loss_pct: 26, as_of: '2026-03-01T00:00:00Z', plan_only: true },
+      });
+      renderPage();
+      const run = screen.getByRole('button', { name: 'Run dry-run plan' });
+      expect(run).toBeDisabled();
+      expect(run).toHaveAccessibleDescription('No retention policies defined.');
+      const impact = card('Dry-run impact');
+      expect(within(impact).getByText('Drive observations')).toBeInTheDocument();
+      expect(impact).toHaveTextContent(/Previously loaded data remains visible/);
+      expect(mockSimulate().mutate).not.toHaveBeenCalled();
+      expect(screen.getAllByRole('heading', { name: 'Evidence, quality, and limitations' })).toHaveLength(2);
+    });
+
+    it('discloses policy writes and recorded plans without suggesting dataset enforcement', () => {
+      populatedGovernance();
+      renderPage();
+      expect(screen.getByText('Plan only — dataset rows are not deleted here')).toBeInTheDocument();
+      expect(screen.getByText(/Saving or removing a retention policy changes the stored policy/))
+        .toHaveTextContent('Running a simulation records a dry-run plan in the ledger, but does not delete or downsample dataset rows.');
+      expect(screen.getByText(/Deleting or downsampling dataset rows — policy changes/)).toBeInTheDocument();
+      expect(screen.queryByText(/deliberately read-only/)).not.toBeInTheDocument();
+      expect(mockUpsert().mutate).not.toHaveBeenCalled();
+      expect(mockRemove().mutate).not.toHaveBeenCalled();
+      expect(mockSimulate().mutate).not.toHaveBeenCalled();
+    });
+
+    it('keeps simulation quality and evidence independent of catalog lineage, including retained failures', () => {
+      populatedGovernance();
+      mockOverview.mockReturnValue(makeQuery(makeOverview({
+        quality: { status: 'sufficient', sample_count: 12, coverage_pct: 100,
+          window_start: null, window_end: null, reasons: ['Catalog-only reason'] },
+        evidence: [{ source: 'pg_catalog', summary: 'Catalog measurement',
+          sample_count: 12, observed_at: '2026-03-01T00:00:00Z' }],
+      })));
+      const simulation: GovernanceSimulationResponse = {
+        as_of: '2026-03-02T00:00:00Z', impacts: [impactRow], total_rows_expiring: 300,
+        total_bytes_reclaimable: 1024, total_fidelity_loss_pct: 26, plan_only: true,
+        quality: { status: 'limited', sample_count: 1, coverage_pct: 8,
+          window_start: null, window_end: null, reasons: ['Simulation-only estimate'] },
+        evidence: [{ source: 'retention_runs', summary: 'Simulation ledger evidence',
+          sample_count: 1, observed_at: '2026-03-02T00:00:00Z' }],
+      };
+      mockSimulate.mockReturnValue({
+        ...makeMutation(), data: simulation, error: new Error('simulation refresh failed'),
+      });
+      renderPage();
+      const catalog = screen.getByRole('region', { name: 'Storage posture' });
+      const simulationEvidence = screen.getByRole('region', { name: 'Dry-run impact' });
+      expect(catalog).toHaveTextContent('Catalog-only reason');
+      expect(catalog).toHaveTextContent('pg_catalog');
+      expect(catalog).not.toHaveTextContent('Simulation-only estimate');
+      expect(simulationEvidence).toHaveTextContent('Simulation-only estimate');
+      expect(simulationEvidence).toHaveTextContent('Simulation ledger evidence');
+      expect(simulationEvidence).toHaveTextContent('retention_runs');
+      expect(simulationEvidence).not.toHaveTextContent('pg_catalog');
+      expect(simulationEvidence).toHaveTextContent('Previously loaded data remains visible');
+      expect(within(simulationEvidence).getByRole('rowheader', { name: 'Samples' }).closest('tr'))
+        .toHaveTextContent('1');
+      expect(mockSimulate().mutate).not.toHaveBeenCalled();
+    });
+
+    it('does not borrow catalog quality or evidence before a simulation returns', () => {
+      mockOverview.mockReturnValue(makeQuery(makeOverview({
+        evidence: [{ source: 'pg_catalog', summary: 'Catalog-only measurement',
+          sample_count: 12, observed_at: '2026-03-01T00:00:00Z' }],
+      })));
+      renderPage();
+      const simulationEvidence = screen.getByRole('region', { name: 'Dry-run impact' });
+      expect(simulationEvidence).toHaveTextContent('Quality metadata has not been computed yet.');
+      expect(simulationEvidence).toHaveTextContent('No supporting evidence was returned.');
+      expect(simulationEvidence).not.toHaveTextContent('pg_catalog');
+      expect(mockSimulate().mutate).not.toHaveBeenCalled();
+    });
+
+    it('updates inventory and ledger timestamps with saved locale and timezone without changing instants', () => {
+      const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+      vi.stubGlobal('ResizeObserver', class {
+        constructor(private callback: ResizeObserverCallback) {}
+        observe(element: Element) { observers.push({ element, callback: this.callback }); }
+        unobserve() {}
+        disconnect() {}
+      });
+      populatedGovernance();
+      const defaults = settingsHooks.useSettings();
+      const settings = vi.spyOn(settingsHooks, 'useSettings').mockReturnValue({
+        ...defaults, settings: { ...defaults.settings, tz_display_default: 'user',
+          timezone_user: 'America/Los_Angeles', locale: 'de-DE' }, locale: 'de-DE',
+      });
+      const timezone = vi.spyOn(timezoneHooks, 'useTimezone').mockReturnValue('America/Los_Angeles');
+      const view = renderPage();
+      expect(timezone).toHaveBeenCalledWith('user');
+      expect(card('Dataset inventory')).toHaveTextContent(formatDateTime(inventoryRow.oldest_at,
+        { locale: 'de-DE', tz: 'America/Los_Angeles' }));
+      expect(card('Plan ledger')).toHaveTextContent(formatDateTime(makeRun().executed_at,
+        { locale: 'de-DE', tz: 'America/Los_Angeles' }));
+      settings.mockReturnValue({ ...defaults,
+        settings: { ...defaults.settings, tz_display_default: 'utc', locale: 'en-GB' }, locale: 'en-GB' });
+      timezone.mockReturnValue('UTC');
+      view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}>
+        <DataGovernancePage />
+      </QueryClientProvider></MemoryRouter>);
+      expect(timezone).toHaveBeenCalledWith('utc');
+      expect(card('Plan ledger')).toHaveTextContent(formatDateTime(makeRun().executed_at,
+        { locale: 'en-GB', tz: 'UTC' }));
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 375 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      expect(document.querySelectorAll('[data-mobile-table]')).toHaveLength(4);
+      expect(card('Plan ledger')).toHaveTextContent(formatDateTime(makeRun().executed_at,
+        { locale: 'en-GB', tz: 'UTC' }));
+      expect(makeRun().executed_at).toBe('2026-02-01T00:00:00Z');
+      expect(inventoryRow.oldest_at).toBe('2026-01-01T00:00:00Z');
+      expect(mockSimulate().mutate).not.toHaveBeenCalled();
+    });
+
+    it('localizes known warnings, dry-run mode and caller Cancel while preserving unknown identifiers', () => {
+      const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+      vi.stubGlobal('ResizeObserver', class {
+        constructor(private callback: ResizeObserverCallback) {}
+        observe(element: Element) { observers.push({ element, callback: this.callback }); }
+        unobserve() {}
+        disconnect() {}
+      });
+      populatedGovernance();
+      translations.set('ownership.governance.run.dryRun', 'Simulation');
+      translations.set('ownership.governance.warning.legalHold', 'Conservation légale active');
+      translations.set('ownership.governance.warning.highExpiry', 'Plus de la moitié expire');
+      translations.set('ownership.governance.warning.noAffectedRows', 'Aucune ligne affectée');
+      translations.set('common.cancel', 'Annuler');
+      mockSimulate.mockReturnValue({
+        ...makeMutation(), data: { impacts: [{ ...impactRow, warnings: [
+          'A legal hold is active, so nothing would be removed even if execution were enabled.',
+          'More than half the dataset would age out under this policy; consider a longer retention or a downsample tier.',
+          'Nothing is old enough to be affected by this policy yet.',
+          'unknown_warning_code',
+        ] }] },
+      });
+      mockRuns.mockReturnValue(makeQuery({ items: [makeRun(),
+        { ...makeRun(), id: 4, mode: 'unknown_mode_code' }] }));
+      renderPage();
+      expect(card('Dry-run impact')).toHaveTextContent('Conservation légale active');
+      expect(card('Dry-run impact')).toHaveTextContent('Plus de la moitié expire');
+      expect(card('Dry-run impact')).toHaveTextContent('Aucune ligne affectée');
+      expect(card('Dry-run impact')).toHaveTextContent('unknown_warning_code');
+      expect(card('Plan ledger')).toHaveTextContent('Simulation');
+      expect(card('Plan ledger')).toHaveTextContent('unknown_mode_code');
+      fireEvent.click(removeButton('drives'));
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Annuler' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(mockRemove().mutate).not.toHaveBeenCalled();
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 375 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      expect(card('Plan ledger')).toHaveTextContent('Simulation');
+      expect(card('Plan ledger')).toHaveTextContent('unknown_mode_code');
+      fireEvent.click(within(card('Dry-run impact')).getByRole('button', { name: 'Quick view' }));
+      expect(screen.getByRole('dialog')).toHaveTextContent('Conservation légale active');
+      expect(screen.getByRole('dialog')).toHaveTextContent('unknown_warning_code');
+    });
+  });
+
+  it.each([true, false])('keeps the source enforcement flag %s separate from the dry-run-only screen', (planOnly) => {
+    mockOverview.mockReturnValue(makeQuery(makeOverview({
+      total_bytes: 0, governed_bytes: 0, ungoverned_bytes: 0, governed_share_pct: 0, plan_only: planOnly,
+    })));
+    renderPage();
+    expect(summaryMetric('Storage posture', 'total').querySelector('[data-operational-value]')).toHaveTextContent('0 B');
+    expect(summaryMetric('Storage posture', 'mode').querySelector('[data-operational-value]'))
+      .toHaveTextContent(planOnly ? 'Plan only' : 'Enforcing');
+    expect(screen.getByText('Plan only — dataset rows are not deleted here')).toBeInTheDocument();
+    expect(mockSimulate().mutate).not.toHaveBeenCalled();
+  });
+
+  it('does not turn missing storage measurements or an absent enforcement flag into zero or enforcing', () => {
+    mockOverview.mockReturnValue(makeQuery({ inventory: [], policies: [] }));
+    renderPage();
+    for (const key of ['total', 'governed', 'ungoverned', 'holds', 'mode']) {
+      expect(summaryMetric('Storage posture', key)).toHaveAttribute('data-value-state', 'missing');
+      expect(summaryMetric('Storage posture', key).querySelector('[data-operational-value]')).toHaveTextContent('—');
+    }
+    expect(summaryMetric('Storage posture', 'mode')).toHaveTextContent('Enforcement mode unknown');
+    expect(summaryMetric('Storage posture', 'mode')).not.toHaveTextContent('Enforcing');
+  });
+
+  it('retains a loading brief and independent ledger, then keeps all dry-run totals non-destructive', () => {
+    mockOverview.mockReturnValue({ ...makeQuery(undefined), isLoading: true });
+    mockRuns.mockReturnValue(makeQuery({ items: [makeRun()] }));
+    mockSimulate.mockReturnValue({
+      ...makeMutation(), data: { as_of: '2026-03-01T00:00:00Z', impacts: [],
+        total_rows_expiring: 0, total_bytes_reclaimable: 0, total_fidelity_loss_pct: 0, plan_only: true },
+    });
+    renderPage();
+    expect(card('Storage posture').querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(card('Storage posture').querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(within(card('Plan ledger')).getByText('Observed ledger dataset')).toBeInTheDocument();
+    expectOperationalBand('Dry-run impact', ['rows', 'bytes', 'fidelity', 'mode']);
+    expect(summaryMetric('Dry-run impact', 'bytes')).toHaveTextContent('0 B');
+    expect(summaryMetric('Dry-run impact', 'mode')).toHaveTextContent('Never — dry run');
+    expect(mockSimulate().mutate).not.toHaveBeenCalled();
+  });
+
+  it('retains historical plan records and their independent retry when the current overview is unavailable', () => {
+    const refetch = vi.fn();
+    mockOverview.mockReturnValue({ ...makeQuery(undefined), error: new Error('overview failed') });
+    mockRuns.mockReturnValue({ ...makeQuery({ items: [makeRun()] }), error: new Error('ledger refresh failed'), refetch });
+    renderPage();
+
+    const ledger = card('Plan ledger');
+    expect(within(ledger).getByText('Observed ledger dataset')).toBeInTheDocument();
+    expect(ledger).toHaveTextContent('300');
+    expect(ledger).toHaveTextContent(/1(?:\.0+)? KiB/);
+    expect(within(ledger).getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    fireEvent.click(within(ledger).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mockRuns).toHaveBeenCalledWith(50, 0);
+    expect(mockOverview).toHaveBeenCalledWith();
+    expect(mockSimulate().mutate).not.toHaveBeenCalled();
+  });
+
+  it('does not replace current retention policies with a failed historical ledger', () => {
+    mockRuns.mockReturnValue({ ...makeQuery(undefined), error: new Error('ledger failed') });
+    renderPage();
+
+    expect(within(card('Retention policies')).getByText('drives')).toBeInTheDocument();
+    expect(within(card('Retention policies')).getByText('sessions')).toBeInTheDocument();
+    expect(within(card('Retention policies')).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(within(card('Plan ledger')).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+  });
+
   it('opens a danger confirm naming the dataset instead of deleting on click', () => {
     const mutate = vi.fn();
     mockRemove.mockReturnValue(makeMutation({ mutate }));

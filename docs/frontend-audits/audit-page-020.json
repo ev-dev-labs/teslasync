@@ -1,0 +1,349 @@
+{
+  "item": "audit-page-020",
+  "page": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx",
+  "routes": ["/admin/schema-drift"],
+  "purpose": "Read-only administrator comparison of the current database schema fingerprint against the recorded seed, with object-count deltas and operator interpretation.",
+  "primaryGoal": "Determine whether live schema and seed differ, inspect and copy exact fingerprints, understand count or hash-only differences, and refresh evidence without losing retained results.",
+  "dataSources": [
+    {
+      "name": "useSchemaDrift",
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 102,
+      "endpoint": "GET /api/v1/admin/observability/schema-drift",
+      "hookUrl": "/admin/observability/schema-drift",
+      "queryKey": ["admin", "observability", "schema-drift"],
+      "ownership": "Hook: useOperatorConfidence.ts; wire types: web\\src\\types\\admin-operator-confidence.ts:29-50; handler: internal\\handler\\v1\\admin_observability_handler.go:34,42-51; service: internal\\app\\adminobssvc\\service.go:134-160.",
+      "routeEvidence": "internal\\api\\router.go:4563-4584 constructs and registers the observability handler; handler Register mounts the exact hook path at internal\\handler\\v1\\admin_observability_handler.go:34. web\\src\\App.tsx:713 mounts the page URL.",
+      "behavior": "One shared read query; AbortSignal forwarded; envelope unwrapped at hook lines 49-59; staleTime STANDARD; polling SLOW (comment documents 60 seconds); no background polling; retry 1 at lines 103-114. No page date/vehicle scope or mutation. Refresh and all section retries call the same refetch.",
+      "fields": ["is_different", "drift.has_drift", "drift.current.sha256", "drift.expected.sha256", "drift.current.table_count", "drift.current.column_count", "drift.current.index_count", "drift.expected.table_count", "drift.expected.column_count", "drift.expected.index_count", "drift.table_count_delta", "drift.column_count_delta", "drift.index_count_delta", "drift.expected_generated_at"],
+      "backendLimit": "Service calls schemacheck.Diff(current, seed, \"\") at service.go:155. The page supports an optional seed timestamp but this call supplies an empty string; no source-observation timestamp or complete analysis bounds are established. Database contents, boot seed capture, authorization and responses were not exercised."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "category": "layout",
+      "props": ["title", "subtitle", "secondaryActions", "query", "dataSources"],
+      "detail": "Adapter delegates header/help, freshness, source notices, route-focus target and persistent page boundary to PageContainer. Compact header places the subtitle in a help tooltip; no duplicated workspace selector."
+    },
+    {
+      "name": "SchemaKpis",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+      "line": 10,
+      "category": "domain",
+      "props": ["state", "isDrifted", "retained"],
+      "detail": "Four metrics through useOperationalMetrics and OperationalBrief compact: verdict, table delta, column delta and index delta. Keeps current/expected context, signed formatter, semantic match/drift badges and retained-evidence label."
+    },
+    {
+      "name": "OperationalBrief / OperationalNarrativeDetails",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "line": 78,
+      "category": "composite",
+      "props": ["metrics", "eyebrow", "title", "description", "statusLabel", "statusTone", "scope", "freshness", "provenance", "loading", "compact", "narrative", "attention"],
+      "detail": "Shared summary and Review details drawer. Drawer includes decision narrative, confidence, limitations, evidence/calculation context, operational metrics and attention; source does not pass narrative or attention."
+    },
+    {
+      "name": "SchemaFingerprints",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx",
+      "line": 11,
+      "category": "domain",
+      "props": ["state"],
+      "detail": "LayoutCard/SourceContent shell, two local FingerprintDetails cards, two CopyButtons, exact Code hashes, six FingerprintStat counts and optional expected capture time."
+    },
+    {
+      "name": "SchemaBreakdown",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaBreakdown.tsx",
+      "line": 11,
+      "category": "domain",
+      "props": ["state"],
+      "detail": "LayoutCard with three local CategoryRow comparisons, current-to-expected values, signed deltas, match/drift badges and optional relative seed capture time."
+    },
+    {
+      "name": "SchemaGuidance",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaGuidance.tsx",
+      "line": 9,
+      "category": "domain",
+      "props": ["state", "isDrifted"],
+      "detail": "LayoutCard with clean, count-driven, hash-only and unknown-count interpretation; two external operator remediation instructions. These are explanations, not in-app mutation buttons."
+    },
+    {
+      "name": "Existing primitives and trust owners",
+      "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "line": 35,
+      "category": "shared",
+      "props": ["state", "label", "loadingContent", "emptyContent", "errorRecovery", "retainedMessage"],
+      "detail": "SourceContent already supports retained content and specialist recovery. LayoutCard owns persistent heading/surface. Button/CopyButton own focus and clipboard behavior; SeverityBadge owns severity tokens; Text/Caption/Code own typography; FadeIn owns reduced entrance motion; DataSourceNotice/DataFreshness own source-level feedback; deriveDataState distinguishes fatal from refresh errors."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+      "line": 73,
+      "rule": "MDC-026 / mission 0.12",
+      "detail": "A single fatal query failure is rendered in the summary and all three cards, plus the PageContainer source notice. Page tests explicitly expect a working retry in every section at SchemaDriftPage.test.tsx:184. This is source-confirmed repeated messaging, not four independent failures.",
+      "fix": "Keep all four persistent shells and every recovery path; coordinate one primary source explanation with concise section-specific unavailable context. Preserve existing recovery assertions until a reviewed equivalent interaction contract exists.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+      "line": 19,
+      "rule": "MDC-033 preservation",
+      "detail": "Tables/columns/indexes intentionally appear in summary, both fingerprints and breakdown. Shared schemaPresentation already owns delta formatting and tone; local FingerprintStat and CategoryRow own distinct presentation roles.",
+      "fix": "Preserve all views; do not remove the comparison/detail inventory as duplication. If category metadata changes, consider one typed feature-local descriptor without moving queries or creating a competing global metric engine.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "SchemaDriftPage.tsx:61-63 uses min-w-0, one column, then xl three columns with fingerprints spanning two.",
+      "SchemaFingerprints.tsx:41,64-75 stacks fingerprint cards below md; hashes break-all and count labels break-words.",
+      "SchemaBreakdown.tsx:51-58 wraps category rows and badge groups.",
+      "SchemaGuidance.tsx:22,53 constrains only explanation text to max-w-3xl.",
+      "OperationalBrief.tsx:175-179 compact metrics use one/sm two/md three/min-1920 six columns."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "line": 178,
+        "rule": "MDC-043 / mission 15",
+        "detail": "The compact owner ignores metricColumns and uses a six-column track at 1920px for this page's four metrics. The page also uses viewport xl/md splits inside an allocated container. Potential spare track space or cramped shell-width cases need actual measurement.",
+        "fix": "Shared owner should review a typed compact metricColumns/content-count policy that preserves existing consumers; page should validate allocated-container behavior at all ten widths before changing layout.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "viewports": {"320": "unverified", "375": "unverified", "390": "unverified", "430": "unverified", "768": "unverified", "1024": "unverified", "1280": "unverified", "1440": "unverified", "1920": "unverified", "2560": "unverified"},
+    "longHashesLongTranslationsRTLZoom": "unverified"
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "SchemaDriftPage.tsx:42-44 localizes refresh aria-label/title and hides decorative icon.",
+      "SchemaFingerprints.tsx:67-68 localizes copy action and disables it for an absent hash.",
+      "LayoutCard.tsx:27-39 associates the card with its heading; PageContainer.tsx:189-198 supplies route-focus heading.",
+      "SourceContent.tsx:41 supplies localized loading status; FadeIn.tsx:24-34 suppresses reduced-motion entrance.",
+      "Counts/verdict badges include text, not color alone."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx",
+        "line": 67,
+        "rule": "MDC-020 / MDC-040",
+        "detail": "Current and expected hash buttons share the same accessible name. CopyButton's explicit ariaLabel also overrides its automatic Copied name (CopyButton.tsx:135-139); this caller does not request a toast or handle clipboard errors. Default sm is h-9; header refresh defaults to h-10, below the stronger 44px target default.",
+        "fix": "Give each caller a localized context-specific name and request existing withToast or onCopyError feedback. Review mobile target sizing via existing Button sizing/classes and preserve keyboard reachability; shared owner should retain success announcements even with explicit ariaLabel.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "keyboard": "unverified",
+    "focusAndDrawerRestoration": "unverified",
+    "screenReader": "unverified",
+    "effectiveContrast": "unverified",
+    "forcedColors": "unverified",
+    "reducedMotionRuntime": "unverified"
+  },
+  "states": {
+    "loading": "Page shells persist. deriveDataState initial drives summary loading and card skeletons (two 150px fingerprints, 150px breakdown, 72px guidance). No measured verdict is displayed without drift.",
+    "empty": "Missing drift shows unmeasured summary and specialist fingerprint/breakdown/guidance prerequisites. Fingerprint empty body offers refetch; other panels rely on header refresh.",
+    "fatalError": "Generic failure passes source.fatalError to four local QueryErrors; source notice remains in page shell. Every retry is the same query.",
+    "unsupported": "Any ApiError status 503 with no retained data is treated as unsupported; local error is suppressed, page adds unsupported explanation and retains empty section shells.",
+    "retainedRefresh": "deriveDataState keeps payload on refresh failure; only fatalError enters section state. Summary labels retained evidence on stale or active refresh. Hashes/counts/guidance remain available.",
+    "offline": "Shared DataSourceNotice and deriveDataState are the existing owners. Paused initial query remains loading locally; paused retained query becomes stale in deriveDataState. SourceNotice resolveDataSourceStatus reports a retained paused query ready unless other flags fail; header freshness depends on query flags. Actual offline presentation is unverified.",
+    "partialUnknown": "Counts and deltas render dashes rather than zero; match badges require finite deltas. Drifted guidance distinguishes missing counts from hash-only drift. Wire types declare required counts, but presentation guards partial evidence.",
+    "success": "Clean and drifted verdicts, signed positive/negative/zero deltas, hash-only guidance and exact copyable hashes.",
+    "disabled": "Copy disabled for empty hash; refresh remains actionable while fetching, icon spins.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx",
+        "line": 29,
+        "rule": "MDC-025 / MDC-026",
+        "detail": "The unsupported branch checks only HTTP 503, not SUBSYSTEM_NOT_CONFIGURED. Other 503 outages could be described as an absent subsystem. dataSources is suppressed in that branch but query remains on PageLayout, allowing an Error freshness chip alongside Feature not supported.",
+        "fix": "Classify using the established typed error code when present and retain a fallback outage path; coordinate unsupported metadata with the shared freshness/source owner rather than masking all 503 failures.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+      "line": 22,
+      "rule": "MDC-010 / MDC-012 / mission 43",
+      "detail": "Three arbitrary category hues (cyan tables, emerald columns, amber indexes) add decoration without severity meaning; card header icons also use fixed cyan. Success/warning icons use fixed pale semantic hues without a light-theme mapping. Scoped scan found ten fixed cyan/emerald/amber-300 occurrences. No neon, fixed-white, glow or inline styles found in the six scoped files.",
+      "fix": "Use existing neutral/icon tokens for category decoration and existing semantic token treatment for verdicts, retaining icons and labels. Measure composed theme contrast; do not invent a palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+      "line": 70,
+      "rule": "MDC-031 / mission 0.12",
+      "detail": "The same Current schema vs recorded seed hint repeats in description, scope, status metric detail and three delta descriptions; scope also carries a long bounds caveat in the brief's metadata row.",
+      "fix": "Retain provenance and the genuine timestamp/bounds limitation while presenting shared context once, with field-specific descriptions rather than repeated caption noise. Do not hide the limitation or current/expected counts.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "line": 3,
+      "rule": "MDC-002 component-first imports",
+      "detail": "A shared layout implementation imports UI primitives from the category barrel; OperationalBrief.tsx:3-12 and OperationalNarrativeDetails.tsx:2 also do this. Contract calls for concrete imports inside shared owners to avoid transitive chunk cycles; no cycle is proven by this audit.",
+      "fix": "Shared owners should use concrete internal primitive imports in their separately assigned scope. Page category imports are already correct; do not patch owners in a page task.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+      "line": 63,
+      "rule": "MDC-025 / MDC-026 / operational provenance",
+      "detail": "SchemaKpis supplies neither narrative nor attention. OperationalBrief.tsx:103-118 defaults cause/recommendation/evidence to unavailable, and its drawer at lines 284-301 says No current attention items even when the page verdict and guidance report drift. The generic drawer does not carry this source's concrete interpretation and bounds caveat.",
+      "fix": "Pass existing typed narrative/attention props based on the same drift evidence and conditional guidance, keeping unscored confidence and unknown cause explicit. Preserve the drawer and all metrics; do not invent evidence records or a confidence score.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Strong shared composition and retained-data preservation already exist. Prioritize truthful unsupported/source feedback and drawer parity; next reduce repeated metadata and decorative hue, then validate touch targets and responsive layouts. No runtime defect acceptance is claimed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Compact OperationalBrief layout policy review",
+      "existingOwnerFile": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "props": ["compact", "metricColumns", "metrics"],
+      "variants": ["compact with four metrics"],
+      "states": ["loading", "ready", "retained", "drawer open"],
+      "usedBy": ["SchemaKpis on /admin/schema-drift"],
+      "dependsOn": ["Existing responsive/density policy and allocated-container review", "Focused shared regression acceptance before page adoption"],
+      "detail": "Review hard-coded three/six compact columns against existing metricColumns; do not add a replacement summary owner. Additional independent consumers must be evidenced before broad API expansion."
+    },
+    {
+      "name": "CopyButton explicit-name success announcement",
+      "existingOwnerFile": "web\\src\\components\\ui\\CopyButton.tsx",
+      "props": ["ariaLabel", "iconOnly", "withToast", "onCopyError", "disabled", "size"],
+      "variants": ["iconOnly with explicit accessible name"],
+      "states": ["ready", "copied", "clipboard failure", "disabled"],
+      "usedBy": ["Current fingerprint hash copy", "Expected fingerprint hash copy"],
+      "dependsOn": ["Existing Button focus and target-size policy", "Existing Toast provider and localized clipboard labels"],
+      "detail": "Preserve contextual accessible names while exposing copy completion. Existing withToast/onCopyError permits a page-level feedback improvement without new shared API."
+    },
+    {
+      "name": "Concrete imports inside existing shared owners",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "props": ["title", "actions", "children", "size"],
+      "variants": ["existing unchanged"],
+      "states": ["all existing"],
+      "usedBy": ["SchemaFingerprints", "SchemaBreakdown", "SchemaGuidance", "OperationalBrief and OperationalNarrativeDetails inspected dependencies"],
+      "dependsOn": ["Exclusive shared-owner assignment", "Existing category export compatibility", "Parent-owned chunk-cycle validation"],
+      "detail": "Owner-level import adjustment only; include OperationalBrief.tsx and OperationalNarrativeDetails.tsx in their own shared assignments, never in this page's edit scope."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\schemaPresentation.ts",
+      "line": 11,
+      "rule": "MDC-002 / MDC-033",
+      "detail": "No competing page formatter engine, query store, clipboard renderer or summary library is established in inspected page dependencies. schemaPresentation specializes signed integer deltas using the existing fmtInt; useOperationalMetrics supplies the canonical metric bridge.",
+      "fix": "Keep specialization and existing shared owners; do not replace with new stats/table/source wrappers.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "CF6C916097140BB66E59357ED32B81C9F04A2EF6ADC501C3082DB47636E31EB4",
+    "sourceHashAlgorithm": "SHA256 of current page bytes",
+    "currentLineCount": 70,
+    "presentationLineCounts": {"SchemaDriftPage.tsx": 70, "SchemaKpis.tsx": 77, "SchemaFingerprints.tsx": 91, "SchemaBreakdown.tsx": 68, "SchemaGuidance.tsx": 72, "schemaPresentation.ts": 19},
+    "pagePlusExtractedComponentsLineCount": 378,
+    "pagePlusComponentsAndUtilityLineCount": 397,
+    "sectionCount": 4,
+    "sections": [
+      {"name": "Schema drift summary", "file": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx", "line": 57, "count": 1, "contents": ["Status verdict", "Tables delta", "Columns delta", "Indexes delta", "Current/expected context", "Source/retained status and bounds caveat"]},
+      {"name": "Schema fingerprints", "file": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx", "line": 62, "count": 1, "contents": ["Current exact SHA-256", "Expected exact SHA-256", "Two copy actions", "Six object counts", "Optional expected capture timestamp"]},
+      {"name": "Drift breakdown", "file": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx", "line": 63, "count": 1, "contents": ["Three category rows", "Current and expected counts", "Signed deltas", "Finite match/drift badges", "Optional relative seed timestamp"]},
+      {"name": "What this means", "file": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx", "line": 67, "count": 1, "contents": ["Clean verdict", "Count-driven drift", "Hash-only drift", "Unknown-count drift", "Confirm migrations and restart seed instruction", "Investigate bypass DDL instruction"]}
+    ],
+    "additionalConditionalSurfaces": [
+      "Unsupported subsystem notice at page lines 52-55",
+      "Page subtitle help and shared freshness/source notice",
+      "OperationalBrief Review details drawer: Decision narrative including what changed/impact/cause/response; confidence and limitations; supporting evidence and calculation context; four operational metrics; attention at OperationalBrief.tsx:238-306"
+    ],
+    "componentCounts": {"topLevelDomainSections": 4, "LayoutCardInstances": 3, "OperationalBriefInstances": 1, "FingerprintDetailCards": 2, "FingerprintStatCells": 6, "BreakdownCategoryRows": 3, "SummaryMetrics": 4, "pageFadeInInstances": 3, "pageSectionErrorBoundaryInstances": 1, "pageGlassPanelInstances": 0, "pageChartContainerInstances": 0},
+    "actions": [
+      {"name": "Header refresh", "file": "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx", "line": 42, "behavior": "Shared query refetch; translated label/title; fetching spinner."},
+      {"name": "Retry in summary and three card fatal states", "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx", "line": 73, "behavior": "Same state.onRetry; fingerprints:18, breakdown:18, guidance:15."},
+      {"name": "Empty fingerprint refresh", "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx", "line": 35, "behavior": "Same refetch; no seed mutation."},
+      {"name": "Copy current and expected fingerprints", "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx", "line": 67, "behavior": "Exact source hash clipboard write through existing CopyButton; disabled when absent."},
+      {"name": "Review details and close drawer", "file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 154, "behavior": "Existing shared Button opens detailsOpen; Drawer onClose at line 239 resets it."},
+      {"name": "Read page explanation help", "file": "web\\src\\components\\layout\\PageContainer.tsx", "line": 200, "behavior": "Existing compact-header Tooltip/Button shows source subtitle."},
+      {"name": "Shared freshness/source recovery", "file": "web\\src\\components\\layout\\PageContainer.tsx", "line": 225, "behavior": "DataFreshnessAuto and DataSourceNotice retain existing query-backed refresh/recovery affordances."}
+    ],
+    "dataBehavior": [
+      "Read-only endpoint and external remediation text only; no production mutation, exports or page-specific filters observed.",
+      "Preserve envelope, cancellation, key, retry, polling and inherited cache policy.",
+      "Keep exact hashes and source counts; count/delta units are dimensionless, not physical conversion inputs.",
+      "Do not replace missing counts/deltas with zero or publish measured verdict during initial loading.",
+      "Retain all evidence on refresh failure or pause; keep independent panel shells.",
+      "Preserve signed integer deltas, finite badge checks, drift verdict fallback, hash-only and unavailable-count explanations.",
+      "Retain optional seed timestamps without fabricating observation time or analysis bounds.",
+      "Keep locale/number formatting, translated labels, theme/density and reduced-motion preference owners."
+    ]
+  },
+  "evidenceLimits": {
+    "auditMode": "Atomic Phase0 read-only source audit of sole assigned mounted page and direct presentation/data owners.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "Not executed; test descriptions inspected only, not acceptance evidence.",
+    "typescriptLintBuild": "Not run: assignment forbids full build/lint and source-only audit does not hold the centralized validation baton. Skill audit.sh was inspected but not executed because it unconditionally runs project TypeScript.",
+    "sourceChecks": {
+      "command": "PowerShell Get-Content over the page, SchemaKpis.tsx, SchemaFingerprints.tsx, SchemaBreakdown.tsx, SchemaGuidance.tsx and schemaPresentation.ts; regex counts for inline styles/raw controls/direct libraries/old API/neon-white-glow/fixed category hues.",
+      "exitCode": 0,
+      "output": "page lines=70; SchemaBreakdown=68; SchemaFingerprints=91; SchemaGuidance=72; SchemaKpis=77; schemaPresentation=19; inlineStyles=0; rawControls=0; directLibraries=0; oldApi=0; neonOrWhite=0; fixedHue=10",
+      "limit": "Bounded textual checks only; not TypeScript, exhaustive AST audit, theme rendering or repository-wide cleanliness."
+    },
+    "backend": "Exact source route and service call inspected; no HTTP request, database query, authorization, boot seed behavior or response timestamp exercise.",
+    "ownership": "Only docs\\frontend-audits\\audit-page-020.json and .agent-status\\audit-page-020.txt written. No source edit, Git, full build/lint or browser mutation.",
+    "assumptions": ["Page-specific scope intentionally excludes foundation-wide inventories and unrelated admin pages.", "Potential layout/contrast issues remain hypotheses pending composed browser checks.", "Current source baseline, not historical line counts, is the preservation reference."]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\SchemaDriftPage.tsx",
+    "web\\src\\features\\admin\\pages\\SchemaDriftPage.test.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaKpis.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaFingerprints.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaBreakdown.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\SchemaGuidance.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\schemaPresentation.ts",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\OperationalNarrativeDetails.tsx",
+    "web\\src\\components\\data-display\\SeverityBadge.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\admin_observability_handler.go",
+    "internal\\app\\adminobssvc\\service.go"
+  ]
+}

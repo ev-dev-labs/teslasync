@@ -19,7 +19,7 @@ export type GradeLabel = 'A+' | 'A' | 'B' | 'C' | 'D' | '—';
 export interface Grade {
   /** Display label. `—` means insufficient data to grade. */
   label: GradeLabel;
-  /** Hex colour matching the existing per-drive badge palette. */
+  /** Theme-aware CSS colour for the existing grade display consumers. */
   color: string;
   /**
    * Numeric weight used for averaging across many drives. `null` for
@@ -30,12 +30,12 @@ export interface Grade {
 
 /** Internal: shared palette so both grade calculators stay in sync. */
 const GRADE_PALETTE: Record<GradeLabel, { color: string; numeric: number | null }> = {
-  'A+': { color: '#10b981', numeric: 4.5 },
-  A:    { color: '#10b981', numeric: 4.0 },
-  B:    { color: '#00f0ff', numeric: 3.0 },
-  C:    { color: '#f59e0b', numeric: 2.0 },
-  D:    { color: '#ef4444', numeric: 1.0 },
-  '—':  { color: '#6b7280', numeric: null },
+  'A+': { color: 'var(--semantic-success)', numeric: 4.5 },
+  A:    { color: 'var(--semantic-success)', numeric: 4.0 },
+  B:    { color: 'var(--semantic-info)', numeric: 3.0 },
+  C:    { color: 'var(--semantic-warning)', numeric: 2.0 },
+  D:    { color: 'var(--semantic-danger)', numeric: 1.0 },
+  '—':  { color: 'var(--text-muted)', numeric: null },
 };
 
 export const MIN_EFFICIENCY_DISTANCE_M = 1_000;

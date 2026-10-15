@@ -61,10 +61,10 @@ type Props = {
 
 /** English fallbacks the mocked `t` echoes for each card label. */
 const LABELS = {
-  status: 'Current Status',
-  lastLock: 'Last Lock Change',
-  sentryUptime: 'Sentry Uptime',
-  totalEvents: 'Total Events',
+  status: 'Current status',
+  lastLock: 'Last lock change',
+  sentryUptime: 'Sentry uptime',
+  totalEvents: 'Total events',
 } as const;
 
 function renderRow(props: Partial<Props> = {}) {
@@ -107,11 +107,24 @@ describe('SummaryStatsRow', () => {
     const region = screen.getByRole('status', { name: /loading/i });
     expect(region).toBeInTheDocument();
     expect(region.getAttribute('aria-busy')).toBe('true');
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4);
+    const skeletons = container.querySelectorAll('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 88px"]');
+    expect(skeletons).toHaveLength(4);
+    expect(region.children).toHaveLength(4);
+    for (const skeleton of skeletons) {
+      expect(skeleton.parentElement).toBe(region);
+      expect(skeleton).toHaveStyle({ height: '88px' });
+      expect(skeleton).toHaveClass('bg-[var(--skeleton-bg)]');
+      expect(skeleton).toBeEmptyDOMElement();
+    }
 
     // The metric cards must not render behind the skeletons.
     expect(screen.queryByText(LABELS.status)).toBeNull();
     expect(screen.queryByText(LABELS.totalEvents)).toBeNull();
+    for (const label of Object.values(LABELS)) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(container.querySelector('[data-role="metric-card"]')).toBeNull();
+    expect(container.querySelector('[data-role="metric-value"]')).toBeNull();
   });
 
   it('renders exactly the four labelled metric cards (and no status region) once loaded', () => {

@@ -33,10 +33,10 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
-import { GlassPanel, IconBox, PanelTitle, SectionTitle, Text } from '@/components/ui'
+import { PageLayout } from '@/components/layout'
+import { GlassPanel, Icon, IconBox, PanelTitle, SectionTitle, Text } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
-import { AIRAGHelp } from '@/components/ai/AIRAGHelp'
+import { AIRAGHelp } from '@/components/ai'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import type { NeonColor } from '@/lib/tokens'
 import { HelpLinkCard, type HelpLink } from '../components/HelpLinkCard'
@@ -50,7 +50,8 @@ import {
 } from '../components/help-index'
 
 /**
- * The curated link palette. Order is intentional: documentation
+ * The curated links use neutral navigation decoration, not status colors.
+ * Order is intentional: documentation
  * first (most common entry point), then onboarding (for new users),
  * then system status (for operators), then search (for everyone),
  * then chatbot (for those who want to ask a question).
@@ -64,7 +65,7 @@ const HELP_LINKS: readonly HelpLink[] = [
     id: 'docs-status-api',
     to: '/docs/status-api',
     Icon: BookOpen,
-    accent: 'cyan',
+    accent: 'neutral',
     titleKey: 'help.baseline.links.docsStatusApi.title',
     titleFallback: 'Documentation',
     descKey: 'help.baseline.links.docsStatusApi.description',
@@ -75,7 +76,7 @@ const HELP_LINKS: readonly HelpLink[] = [
     id: 'onboarding',
     to: '/onboarding',
     Icon: Rocket,
-    accent: 'green',
+    accent: 'neutral',
     titleKey: 'help.baseline.links.onboarding.title',
     titleFallback: 'Onboarding',
     descKey: 'help.baseline.links.onboarding.description',
@@ -86,7 +87,7 @@ const HELP_LINKS: readonly HelpLink[] = [
     id: 'system-status',
     to: '/system-status',
     Icon: ServerCog,
-    accent: 'amber',
+    accent: 'neutral',
     titleKey: 'help.baseline.links.systemStatus.title',
     titleFallback: 'System status',
     descKey: 'help.baseline.links.systemStatus.description',
@@ -97,7 +98,7 @@ const HELP_LINKS: readonly HelpLink[] = [
     id: 'search',
     to: '/search',
     Icon: SearchIcon,
-    accent: 'blue',
+    accent: 'neutral',
     titleKey: 'help.baseline.links.search.title',
     titleFallback: 'Search',
     descKey: 'help.baseline.links.search.description',
@@ -108,7 +109,7 @@ const HELP_LINKS: readonly HelpLink[] = [
     id: 'chatbot',
     to: '/chatbot',
     Icon: MessagesSquare,
-    accent: 'purple',
+    accent: 'neutral',
     titleKey: 'help.baseline.links.chatbot.title',
     titleFallback: 'Chatbot',
     descKey: 'help.baseline.links.chatbot.description',
@@ -132,7 +133,7 @@ const HELP_CHANNELS: readonly HelpChannel[] = [
   {
     id: 'browse',
     Icon: Compass,
-    accent: 'cyan',
+    accent: 'neutral',
     titleKey: 'help.channels.browse.title',
     titleFallback: 'Browse the app',
     descKey: 'help.channels.browse.description',
@@ -141,7 +142,7 @@ const HELP_CHANNELS: readonly HelpChannel[] = [
   {
     id: 'docs',
     Icon: BookOpen,
-    accent: 'blue',
+    accent: 'neutral',
     titleKey: 'help.channels.docs.title',
     titleFallback: 'Read the documentation',
     descKey: 'help.channels.docs.description',
@@ -151,7 +152,7 @@ const HELP_CHANNELS: readonly HelpChannel[] = [
   {
     id: 'assistant',
     Icon: Sparkles,
-    accent: 'purple',
+    accent: 'neutral',
     titleKey: 'help.channels.assistant.title',
     titleFallback: 'Ask the assistant',
     descKey: 'help.channels.assistant.description',
@@ -171,7 +172,7 @@ export default function HelpPage() {
   usePageTitle(t('help.title', 'Help'))
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('help.title', 'Help')}
       subtitle={t(
         'help.subtitle',
@@ -201,7 +202,7 @@ export default function HelpPage() {
                 {HELP_CHANNELS.map((ch) => (
                   <li key={ch.id} className="flex items-start gap-3">
                     <IconBox color={ch.accent} size="sm">
-                      <ch.Icon className="h-4 w-4" aria-hidden="true" />
+                      <Icon icon={ch.Icon} size="md" aria-hidden={true} />
                     </IconBox>
                     <div className="min-w-0 space-y-0.5">
                       <Text as="p" size="sm" weight="medium" color="primary">
@@ -274,7 +275,7 @@ export default function HelpPage() {
               </Text>
             </div>
             <div
-              className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(17rem,1fr))]"
+              className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))]"
               data-testid="help-baseline-links"
             >
               {HELP_LINKS.map((link) => (
@@ -284,6 +285,6 @@ export default function HelpPage() {
           </section>
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   )
 }

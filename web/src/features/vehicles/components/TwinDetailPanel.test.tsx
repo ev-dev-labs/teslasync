@@ -60,6 +60,7 @@ vi.mock('@/hooks/useOnlineStatus', () => ({
 }))
 
 import { ApiError } from '@/api/client'
+import { Button } from '@/components/ui'
 import { TwinDetailPanel, type TwinDetailItem } from './TwinDetailPanel'
 
 const ROWS: TwinDetailItem[] = [
@@ -121,6 +122,65 @@ describe('TwinDetailPanel — ready state', () => {
     renderPanel({ footer: <span data-testid="twin-footer">badge</span> })
     expect(screen.getByTestId('twin-footer')).toBeInTheDocument()
     expect(screen.getByText('badge')).toBeInTheDocument()
+  })
+
+  it.each([1, 2] as const)('uses container-responsive stacked, wrapping rows with %i columns', (columns) => {
+    const label = 'Passenger front opening with a long translated label'
+    const value = 'UnbrokenTelemetryStateIdentifierThatMustRemainFullyReadable'
+    const { container } = renderPanel({ columns, items: [{ label, value }] })
+    const list = container.querySelector('dl')
+    expect(list).toHaveClass('@container/kv-list')
+
+    const term = screen.getByRole('term')
+    const definition = screen.getByRole('definition')
+    const breakpoint = columns === 2 ? '49.5rem' : '24rem'
+    expect(term.parentElement).toHaveClass(
+      'grid', 'min-w-0', 'grid-cols-1', `@[${breakpoint}]/kv-list:grid-cols-2`,
+    )
+    expect(definition).toHaveClass(`@[${breakpoint}]/kv-list:text-end`)
+    for (const cell of [term, definition]) {
+      expect(cell).toHaveClass('min-w-0', 'max-w-full', 'whitespace-normal', '[overflow-wrap:anywhere]')
+      expect(cell).not.toHaveClass('truncate', 'whitespace-nowrap')
+    }
+    expect(term).toHaveTextContent(label)
+    expect(definition).toHaveTextContent(value)
+  })
+
+  it('preserves all 19 component-state rows and interactive value/footer slots', () => {
+    const states = [
+      ['Driver front', 'Closed'], ['Passenger front', 'Open'],
+      ['Driver rear', 'Closed'], ['Passenger rear', 'Closed'],
+      ['Frunk', 'Closed'], ['Trunk', 'Open'],
+      ['Front driver', 'Closed'], ['Front passenger', 'Partially open'],
+      ['Rear driver', 'Open'], ['Rear passenger', 'Closed'],
+      ['Locked', 'Yes'], ['Driving', 'No'], ['Charging', 'Yes'],
+      ['Sentry mode', 'Active'], ['Charge port', 'Charging'], ['Driver seat', 'Occupied'],
+      ['Headlights', 'On'], ['Hazards', 'Off'], ['Turn signal', 'Left'],
+    ]
+    const onValueAction = vi.fn()
+    const onFooterAction = vi.fn()
+    renderPanel({
+      items: states.map(([label, value], index) => ({
+        label,
+        value: index === 0
+          ? <Button onClick={onValueAction}>{value}</Button>
+          : value,
+      })),
+      footer: <Button onClick={onFooterAction}>Refresh status</Button>,
+    })
+
+    const terms = screen.getAllByRole('term')
+    const definitions = screen.getAllByRole('definition')
+    expect(terms).toHaveLength(19)
+    expect(definitions).toHaveLength(19)
+    states.forEach(([label, value], index) => {
+      expect(terms[index]).toHaveTextContent(label)
+      expect(definitions[index]).toHaveTextContent(value)
+    })
+    fireEvent.click(within(definitions[0]).getByRole('button', { name: 'Closed' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh status' }))
+    expect(onValueAction).toHaveBeenCalledTimes(1)
+    expect(onFooterAction).toHaveBeenCalledTimes(1)
   })
 })
 

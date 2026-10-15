@@ -27,11 +27,12 @@
  *                                numbers via /ai/usage)
  */
 
-import { useEffect, useId, useMemo, useState, useCallback } from 'react'
+import { useEffect, useId, useMemo, useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Power, Server, Cloud } from 'lucide-react'
 import { GlassPanel, Button, SectionTitle, RadioCard } from '@/components/ui'
-import { InlineCallout } from '@/components/feedback'
+import { DataStateNotice, InlineCallout, QueryError } from '@/components/feedback'
+import { deriveDataState } from '@/api/dataState'
 import { FadeIn } from '@/components/motion'
 import { useSettings } from '@/api/hooks/useSettings'
 import { useSaveAiSettings } from '@/api/hooks/useAiSettings'
@@ -45,6 +46,26 @@ import { AIFeatureSpendPanel } from './AIFeatureSpendPanel'
 import { HelixStatusStrip } from './HelixStatusStrip'
 
 type AiMode = 'off' | 'local' | 'cloud'
+
+const MODE_PROVIDERS = {
+  local: ['ollama', 'lmstudio', 'llama-cpp'],
+  cloud: ['openai', 'anthropic', 'azure', 'google'],
+} as const
+
+function providerSupportsMode(providerName: string, mode: AiMode): boolean {
+  return mode === 'off' || MODE_PROVIDERS[mode].some(name => name === providerName)
+}
+
+function providerDraftEntry(draft: AIProviderDraft): Record<string, unknown> {
+  return {
+    base_url: draft.base_url,
+    model: draft.model,
+    ...(draft.provider === 'azure' ? { api_protocol: draft.api_protocol || 'auto' } : {}),
+    ...(draft.provider === 'azure' || draft.embedding_model.trim() !== ''
+      ? { embedding_model: draft.embedding_model.trim() } : {}),
+    ...(draft.api_key.trim() === '' ? {} : { api_key: draft.api_key }),
+  }
+}
 
 /**
  * Returns true when the supplied mode is one of the canonical
@@ -166,15 +187,18 @@ function archiveHasRestorableEntries(
 
 export function AISettings() {
   const { t } = useTranslation('settings')
-  const { data: settings, isLoading } = useSettings()
+  const settingsQuery = useSettings()
+  const settingsState = deriveDataState(settingsQuery)
+  const { data: settings } = settingsQuery
   const saveAi = useSaveAiSettings()
+  const draftDirty = useRef(false)
+  const providerDrafts = useRef<Record<string, AIProviderDraft>>({})
+  const [restorePending, setRestorePending] = useState(false)
 
   // ── Local form state ─────────────────────────────────────────────
   // The Settings page is single-document so we mirror the server
-  // payload into local state only on first load (or when the cache
-  // refetches a different snapshot). Saves push through
-  // useSaveAiSettings which deep-merges back into the cache, so the
-  // mirror stays in sync without two-way binding.
+  // payload into local state on first load or a changed snapshot,
+  // unless an editable draft needs to survive a background refresh.
 
   const serverMode: AiMode = isAiMode(settings?.ai_mode)
     ? (settings!.ai_mode as AiMode)
@@ -209,7 +233,7 @@ export function AISettings() {
   // explicit "Restore previous selection?" prompt. Dismissed
   // (decline) sets this to false for the rest of the session;
   // confirming applies the archive into `features` and immediately
-  // saves so the prior state is reified.
+  // saves; only a successful write dismisses the confirmation.
   const [restoreDismissed, setRestoreDismissed] = useState(false)
 
   // Reset local state when the underlying settings document changes
@@ -227,7 +251,8 @@ export function AISettings() {
   }, [settings])
 
   useEffect(() => {
-    if (settings == null) return
+    if (settings == null || draftDirty.current) return
+    providerDrafts.current = {}
     setMode(serverMode)
     setFeatures(normaliseFeatureMap(settings.ai_features))
     const cfg = settings.ai_provider_config
@@ -265,7 +290,15 @@ export function AISettings() {
 
   function handleModeChange(next: AiMode) {
     if (next === mode) return
+    draftDirty.current = true
     setMode(next)
+    if (!providerSupportsMode(provider.provider, next) && next !== 'off') {
+      const compatibleNames = MODE_PROVIDERS[next]
+      const providerName = compatibleNames.find(name => providerDrafts.current[name] != null)
+        ?? compatibleNames.find(name => readProviderConfigEntry(settings?.ai_provider_config, name) != null)
+        ?? compatibleNames[0]
+      handleProviderChange({ ...provider, provider: providerName })
+    }
     if (next === 'off') {
       // Clear in-flight selections so the UI matches the post-save
       // server state. The backend re-clears too — this is purely
@@ -283,6 +316,7 @@ export function AISettings() {
   // the wire.
 
   function handleSave() {
+    if (!settingsState.hasData || saveAi.isPending || restorePending || !providerSupportsMode(provider.provider, mode)) return
     if (mode === 'off') {
       saveAi.mutate({
         ai_mode: 'off',
@@ -290,7 +324,7 @@ export function AISettings() {
         // overwrites whatever was there. The backend's
         // applyAIArchiveOnModeFlip helper handles the archive.
         ai_features: {},
-      })
+      }, { onSuccess: () => { draftDirty.current = false } })
       return
     }
     saveAi.mutate({
@@ -308,38 +342,31 @@ export function AISettings() {
       // Merge (not replace) the per-provider sub-object: a partial
       // form must not clobber other providers or their saved credentials.
       // readProviderConfigEntry removes obsolete Azure controls.
-      ai_provider_config: {
-        ...stripLegacyTopLevelKeys(settings?.ai_provider_config),
-        default: provider.provider,
-        [provider.provider]: {
-          ...(readProviderConfigEntry(
-            settings?.ai_provider_config,
-            provider.provider,
-          ) ?? {}),
-          base_url: provider.base_url,
-          model: provider.model,
-          // Optional / provider-specific fields are only emitted
-          // when non-empty so a config that doesn't use them
-          // doesn't grow noise keys.
-          ...(provider.provider === 'azure'
-            ? { api_protocol: provider.api_protocol || 'auto' }
-            : {}),
-          ...(provider.provider === 'azure' || provider.embedding_model.trim() !== ''
-            ? { embedding_model: provider.embedding_model.trim() }
-            : {}),
-          // Only forward a non-empty key; an empty string would clobber
-          // a previously-saved key (the server treats empty as
-          // explicit clear).
-          ...(provider.api_key.trim() === ''
-            ? {}
-            : { api_key: provider.api_key }),
-        },
-      },
+      ai_provider_config: buildProviderConfig(),
       ai_cost_cap_cents: provider.cost_cap_cents,
-    })
+    }, { onSuccess: () => { draftDirty.current = false } })
+  }
+
+  function buildProviderConfig(): Record<string, unknown> {
+    return {
+      ...stripLegacyTopLevelKeys(settings?.ai_provider_config),
+      ...Object.fromEntries(Object.entries(providerDrafts.current).map(([name, draft]) => [
+        name,
+        {
+          ...readProviderConfigEntry(settings?.ai_provider_config, name),
+          ...providerDraftEntry(draft),
+        },
+      ])),
+      default: provider.provider,
+      [provider.provider]: {
+        ...(readProviderConfigEntry(settings?.ai_provider_config, provider.provider) ?? {}),
+        ...providerDraftEntry(provider),
+      },
+    }
   }
 
   function handleFeatureToggle(id: AiFeatureId, value: boolean) {
+    draftDirty.current = true
     setFeatures((prev) => ({ ...prev, [id]: value }))
   }
 
@@ -349,15 +376,22 @@ export function AISettings() {
    * namespaced config (multi-provider preservation per F1 contract).
    * Non-provider edits flow through unchanged.
    *
-   * The api_key is intentionally NOT pre-filled on switch: the server
+   * Saved api_key values are intentionally NOT pre-filled on switch: the server
    * redacts on read (ADR-015 §I9) and the UX semantics treat an
    * empty key field as "leave existing key unchanged". Showing a key
    * we can't actually see would be misleading.
    */
   const handleProviderChange = useCallback(
     (next: AIProviderDraft) => {
+      draftDirty.current = true
       if (next.provider === provider.provider) {
         setProvider(next)
+        return
+      }
+      providerDrafts.current[provider.provider] = provider
+      const previousDraft = providerDrafts.current[next.provider]
+      if (previousDraft != null) {
+        setProvider({ ...previousDraft, cost_cap_cents: next.cost_cap_cents })
         return
       }
       const newEntry = readProviderConfigEntry(
@@ -374,23 +408,38 @@ export function AISettings() {
         embedding_model: readProviderString(newEntry, 'embedding_model', ''),
       })
     },
-    [provider.provider, settings?.ai_provider_config],
+    [provider, settings?.ai_provider_config],
   )
 
   function handleRestoreConfirm() {
-    if (settings?.ai_features_archived == null) return
+    if (settings?.ai_features_archived == null || saveAi.isPending || restorePending || !providerSupportsMode(provider.provider, mode)) return
     const restored = normaliseFeatureMap(settings.ai_features_archived)
+    draftDirty.current = true
     setFeatures(restored)
-    setRestoreDismissed(true)
+    setRestorePending(true)
     // Persist immediately so the archive snapshot itself is cleared
     // server-side on the next round-trip.
     saveAi.mutate({
       ai_mode: mode,
       ai_features: restored,
+      ...(mode !== serverMode || provider.provider !== (
+        readProviderString(settings.ai_provider_config, 'default', '') ||
+        readProviderString(settings.ai_provider_config, 'provider', 'ollama')
+      ) ? {
+        ai_provider_config: buildProviderConfig(),
+        ai_cost_cap_cents: provider.cost_cap_cents,
+      } : {}),
+    }, {
+      onSuccess: () => {
+        // Keep the draft for review; only a mode/provider switch also saves configuration.
+        setRestoreDismissed(true)
+      },
+      onSettled: () => setRestorePending(false),
     })
   }
 
   function handleRestoreDecline() {
+    if (saveAi.isPending || restorePending) return
     setRestoreDismissed(true)
   }
 
@@ -402,6 +451,8 @@ export function AISettings() {
     !restoreDismissed &&
     archiveHasRestorableEntries(settings?.ai_features_archived)
   const isCloud = mode === 'cloud'
+  const savedCapCents = settings?.ai_cost_cap_cents ?? 0
+  const hasUnsavedEnforcement = mode !== serverMode || provider.cost_cap_cents !== savedCapCents
   const enabledCount = useMemo(
     () => Object.values(features).filter(Boolean).length,
     [features],
@@ -415,15 +466,39 @@ export function AISettings() {
       data-ai-mode={mode}
       aria-label={t('ai.settings.title', 'Helix')}
     >
+      {settingsState.fatalError && <QueryError error={settingsState.fatalError} onRetry={() => void settingsQuery.refetch()} />}
+      {settingsState.status === 'stale' && (
+        <DataStateNotice state="stale" preserveSeverity>
+          <p>{t('common:dataState.stale.message', 'The latest values are temporarily unavailable. Previously loaded data remains visible.')}</p>
+          <Button variant="ghost" onClick={() => void settingsQuery.refetch()} disabled={settingsQuery.isFetching}>
+            {t('common:retry', 'Retry')}
+          </Button>
+        </DataStateNotice>
+      )}
+      {settingsState.isRefreshBlocked && !settingsState.hasData && (
+        <InlineCallout variant="info">
+          {t('common:dataSources.status.paused', 'Refresh paused')}
+        </InlineCallout>
+      )}
+      {saveAi.error && <QueryError error={saveAi.error} />}
       {/* Status band — at-a-glance summary, full-width metric grid. */}
       <FadeIn>
         <HelixStatusStrip
-          mode={serverMode === 'off' ? 'off' : mode}
+          mode={serverMode}
           enabledCount={enabledCount}
           providerName={provider.provider}
+          settingsLoading={settingsQuery.isLoading}
+          settingsUnavailable={!settingsState.hasData}
+          settingsRetained={settingsState.status === 'stale'}
         />
       </FadeIn>
 
+      <fieldset
+        aria-label={t('ai.settings.title', 'Helix')}
+        disabled={!settingsState.hasData || saveAi.isPending || restorePending}
+        aria-busy={saveAi.isPending || restorePending}
+        className="min-w-0 space-y-4 border-0 p-0 sm:space-y-5"
+      >
       {/* Mode picker — the primary decision (hero control). */}
       <FadeIn delay={0.05}>
         <GlassPanel className="space-y-3 p-4 sm:p-5">
@@ -487,7 +562,12 @@ export function AISettings() {
               data-testid="ai-mode-cloud"
             />
           </div>
-          {mode === 'off' && (
+          {hasUnsavedEnforcement && (
+            <InlineCallout variant="info" data-testid="ai-settings-unsaved">
+              {t('forms.unsavedSettings', 'You have unsaved settings.')}
+            </InlineCallout>
+          )}
+          {serverMode === 'off' && mode === 'off' && (
             <InlineCallout
               variant="info"
               icon={<Power className="h-4 w-4" aria-hidden="true" />}
@@ -504,48 +584,66 @@ export function AISettings() {
       {/* Restore prompt — explicit re-enable of an archived selection. */}
       {showRestorePanel && (
         <FadeIn delay={0.1}>
-          <AIRestorePanel
-            archived={settings?.ai_features_archived ?? {}}
-            onConfirm={handleRestoreConfirm}
-            onDecline={handleRestoreDecline}
-          />
+          <fieldset disabled={!providerSupportsMode(provider.provider, mode)} className="min-w-0 border-0 p-0">
+            <AIRestorePanel
+              archived={settings?.ai_features_archived ?? {}}
+              onConfirm={handleRestoreConfirm}
+              onDecline={handleRestoreDecline}
+            />
+          </fieldset>
+          {restorePending && (
+            <InlineCallout variant="info" testId="ai-restore-pending">
+              {t('ai.settings.saving', 'Saving…')}
+            </InlineCallout>
+          )}
         </FadeIn>
       )}
 
       {/* Configuration bento: provider form is the hero (spans two columns
           on wide screens); usage + cost-cap sit in the context rail. */}
-      {showProviderSection && (
+      {(showProviderSection || serverMode !== 'off') && (
         <FadeIn delay={0.12}>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <div className="xl:col-span-2">
-              <AIProviderSection
-                value={provider}
-                isCloud={isCloud}
-                onChange={handleProviderChange}
-              />
-            </div>
+            {showProviderSection && (
+              <div className="xl:col-span-2">
+                {!providerSupportsMode(provider.provider, mode) && (
+                  <InlineCallout variant="warning" data-testid="ai-provider-incompatible">
+                    {t('ai.settings.provider.providerLabel', 'Provider')}
+                    {': '}
+                    {isCloud
+                      ? t('ai.settings.mode.cloudHint', 'Use a cloud provider (e.g. OpenAI). Requires an API key.')
+                      : t('ai.settings.mode.localHint', 'Use a private model on your network (e.g. Ollama). No data leaves your install.')}
+                  </InlineCallout>
+                )}
+                <AIProviderSection
+                  value={provider}
+                  isCloud={isCloud}
+                  onChange={handleProviderChange}
+                />
+              </div>
+            )}
             <div className="space-y-4">
               <AIUsageCard enabled={settings?.ai_mode === 'local' || settings?.ai_mode === 'cloud'} />
               {/*
-                Cost-cap spend bar. Cloud-only (local providers don't bill
-                per token) and only when a non-zero cap is set. Reads
+                Cost-cap spend bar. Saved cloud mode and cap govern enforcement;
+                draft edits do not change the live spend readout. Reads
                 today's spend from the same /ai/usage/today endpoint as
                 AIUsageCard so the numbers match. Passive read — it does
                 not gate saving the cap.
               */}
-              {isCloud && serverMode !== 'off' && provider.cost_cap_cents > 0 && (
-                <AICostCapSpendBar capCents={provider.cost_cap_cents} />
+              {serverMode === 'cloud' && savedCapCents > 0 && (
+                <AICostCapSpendBar capCents={savedCapCents} />
               )}
             </div>
           </div>
         </FadeIn>
       )}
 
-      {showProviderSection && (
+      {(showProviderSection || serverMode !== 'off') && (
         <FadeIn delay={0.14}>
           <AIFeatureSpendPanel
             enabled={serverMode !== 'off'}
-            capCents={provider.cost_cap_cents}
+            capCents={savedCapCents}
           />
         </FadeIn>
       )}
@@ -557,12 +655,13 @@ export function AISettings() {
         </FadeIn>
       )}
 
-      <div className="flex items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-4">
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-4">
         <Button
           type="button"
           variant="primary"
+          wrapLabel
           onClick={handleSave}
-          disabled={isLoading || saveAi.isPending}
+          disabled={!settingsState.hasData || saveAi.isPending || restorePending || !providerSupportsMode(provider.provider, mode)}
           data-testid="ai-settings-save"
         >
           {saveAi.isPending
@@ -570,6 +669,7 @@ export function AISettings() {
             : t('ai.settings.save', 'Save Helix settings')}
         </Button>
       </div>
+      </fieldset>
     </section>
   )
 }

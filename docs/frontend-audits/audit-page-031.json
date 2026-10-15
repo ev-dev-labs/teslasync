@@ -1,0 +1,482 @@
+{
+  "item": "audit-page-031",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+  "routes": ["/intelligence/charging-site-twin"],
+  "purpose": "Vehicle-scoped, explicitly submitted charging-site planning simulation, not charger or site control.",
+  "primaryGoal": "Compare modeled utilization, queue percentiles, peak demand, panel constraints and ranked mitigations under user-entered arrival, service, electrical and fleet-growth assumptions.",
+  "dataSources": [
+    {
+      "hook": "useRunChargingSiteTwin",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 186,
+      "endpoint": "POST /api/v1/advanced-intelligence/charging-site-twin/scenarios",
+      "sourceOwner": "internal\\handler\\v1\\advancedintelligence\\handler.go",
+      "routeEvidence": [
+        "internal\\api\\router.go:3917 delegates to advancedIntelligenceHandler.MountRoutes",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:61-80 mounts the prefix and scenario POST",
+        "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:160-175 uses the existing request client and mutation toasts",
+        "web\\src\\api\\client.ts:93 adds the single /api/v1 prefix"
+      ],
+      "behavior": "No automatic simulation read or polling. The form sends snake_case body fields and confirmed:true on explicit submit. Preserve inherited mutation policy, success/error toasts and endpoint.",
+      "unitsEvidence": "Frontend request/response types at web\\src\\types\\advancedIntelligence.ts:218-256 match Go JSON tags at internal\\domain\\advancedintelligence\\planning.go:48-85. Power W, energy Wh, duration s and arrival rate per second are explicit in these contracts; no backend unit inference is needed.",
+      "backendEvidence": "internal\\app\\advancedintelligencesvc\\planning.go:305-420 validates the scenario and derives deterministic planning outputs. Queue percentiles stay null for unstable projections. The inspected response initializes mitigations and assumptions; null-array crash is a defensive contract risk, not evidence of a current backend null response."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 50,
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "routeEvidence": ["web\\src\\api\\hooks\\useVehicles.ts:73-78", "internal\\api\\router.go:3319-3320"],
+      "behavior": "Shared workspace vehicle selection resolves URL, persisted store and first known vehicle. This page adds no competing selector. useVehicles preserves cancellation and safeArray selection."
+    },
+    {
+      "hook": "useRetainedMutation",
+      "file": "web\\src\\hooks\\useRetainedMutation.ts",
+      "line": 29,
+      "endpoint": null,
+      "sourceOwner": "web\\src\\hooks\\useRetainedMutation.ts",
+      "behavior": "Keeps raw successful response and cloned submitted inputs together; guards request/reply vehicle identity, blocks obsolete replies and resets observer after scope changes. Page currently consumes result/source but not published.inputs."
+    },
+    {
+      "hook": "useUnits, useNumberFormatting, useOperationalMetrics",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+      "line": 25,
+      "endpoint": null,
+      "sourceOwner": "web\\src\\hooks\\useUnits.ts",
+      "behavior": "Display-only power/energy/duration conversions, localized percentages and metric formatting; retain raw SI form and response values. Settings transport and complete formatting internals were not traced."
+    }
+  ],
+  "components": [
+    {
+      "kind": "layout",
+      "names": ["PageLayout", "LayoutCard", "SourceContent"],
+      "owners": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx"],
+      "usage": "Page orchestrator uses category-barrel PageLayout. InsightPanel adapts LayoutCard and SourceContent; preserve persistent shells, title identity and inherited allocated width."
+    },
+    {
+      "kind": "primitives",
+      "names": ["Input", "Select", "Button", "Badge", "Text", "Card"],
+      "owners": ["web\\src\\components\\ui\\Input.tsx", "web\\src\\components\\ui\\Select.tsx", "web\\src\\components\\ui\\Button.tsx", "web\\src\\components\\ui\\Badge.tsx", "web\\src\\components\\ui\\Typography.tsx", "web\\src\\components\\ui\\Card.tsx"],
+      "usage": "Existing field labels, hints, native bounds, focus styles, busy/disabled behavior and semantic badges. Typography owner is identified through imports and the design contract; its implementation was not separately read."
+    },
+    {
+      "kind": "composite",
+      "names": ["OperationalBrief", "AlertBanner"],
+      "owners": ["web\\src\\components\\data-display\\OperationalBrief.tsx", "web\\src\\components\\feedback\\AlertBanner.tsx"],
+      "usage": "Six-metric planning brief with Review details drawer; persistent design-scenario notice, retained-data warning and mutation error."
+    },
+    {
+      "kind": "domain",
+      "names": ["InsightPanel", "AnalysisBrief", "EvidencePanel", "MutationError", "SiNumberInput"],
+      "owners": ["web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx", "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx", "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx"],
+      "usage": "Reuse existing domain owners, not replacement form, evidence or summary renderers."
+    },
+    {
+      "kind": "motion",
+      "names": ["FadeIn"],
+      "owners": ["web\\src\\components\\motion\\FadeIn.tsx"],
+      "usage": "Four finite entrance animations with reduced-motion hook; source honors reduced motion, runtime unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "pattern": "Read-only evidence card chrome",
+      "evidence": ["web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx:261", "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:81"],
+      "existingOwner": "web\\src\\components\\ui\\Card.tsx",
+      "decision": "Reuse Card padding variants and semantic surface/border tokens; do not introduce another card component."
+    },
+    {
+      "pattern": "Simulation summary publication and retained-result status",
+      "evidence": ["web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx:235-249", "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:137-156", "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx:188-206"],
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "decision": "Extend existing adapter for initial/paused mutation state rather than duplicate summary status logic."
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport behavior unverified",
+    "sourceBehavior": [
+      "PageLayout.tsx:11-12 retains w-full, min-w-0 and container context.",
+      "ChargingSiteTwinPage.tsx:105 form stacks by default, uses two columns at md and three at xl.",
+      "EvidencePanel.tsx:45 stacks then uses three columns at lg.",
+      "OperationalBrief.tsx:167-169 uses compact one/two/three/six metric columns without dropping metrics."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+        "line": 220,
+        "rule": "MDC-043 / MDC-020",
+        "detail": "Long localized submit label does not opt into the existing wrapLabel contract; Button defaults to a fixed 40px height. Narrow-width/200%-text wrapping and target reachability require verification.",
+        "fix": "Use existing Button wrapLabel with bounded width/min-w-0 and an intentional minimum touch height; preserve complete action text. Test ten contract widths and long translations before declaring overflow.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+        "line": 105,
+        "rule": "MDC-043 / MDC-031",
+        "detail": "Form/evidence responsive switches are viewport breakpoints although shared layout establishes an allocated container. A narrow shell allocation at a wide viewport can retain dense columns. This is a source-level risk, not observed overflow.",
+        "fix": "Exercise actual allocated widths; if needed use existing container-query reflow on the form, retaining all ten fields and all evidence metadata.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredChecks": ["320,375,390,430,768,1024,1280,1440,1920,2560px", "narrow allocated content width", "200% text", "long translated labels", "open Review details drawer"]
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, screen-reader and effective contrast unverified",
+    "sourceStrengths": [
+      "Input labels associate with stable React-generated IDs; required/bounds remain native and display hints use aria-describedby.",
+      "Select associates labels and native controls; page distribution labels differ, so no same-label collision was demonstrated here.",
+      "Submit icon is aria-hidden; Button supplies aria-busy and focus-visible styling.",
+      "OperationalBrief has a labeled section, metric list semantics, textual status and a details action.",
+      "FadeIn respects reduced-motion source policy; neither OS mode nor low-bandwidth preference was exercised."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "line": 12,
+        "rule": "MDC-040 / mission 24",
+        "detail": "Dynamic mutation failure renders AlertBanner without role or live-region props. AlertBanner.tsx:53-57 forwards props but supplies no announcement role by default, so this caller lacks explicit asynchronous error announcement semantics.",
+        "fix": "Pass role=\"alert\" on the mutation error adapter, keep its localized title and detailed error, and retain the submit action as recovery. Verify announcement and focus behavior without making the static design notice an assertive alert.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\ui\\Button.tsx",
+        "line": 43,
+        "rule": "MDC-040",
+        "detail": "Page submit defaults to 40px height and OperationalBrief Review details uses size sm at 36px; Input/Select default minimum is 40px. These are below the contract's stronger 44px mobile default; spacing exceptions and actual hit areas have not been measured.",
+        "fix": "Use existing page sizing/wrapping props and have shared owners decide mobile minimum targets without silently altering desktop density preferences. Validate spacing exceptions on the actual composed UI.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "initial": "Scenario form and design notice remain present; summary gives Not calculated and submission guidance; mitigation/evidence shells remain.",
+    "loading": "Submit uses publication.pending, disables duplicate requests; initial brief suppresses measured values and shows six skeleton/missing slots.",
+    "empty": "Empty mitigation/assumption set receives domain guidance. Evidence/quality/limitations have separate fallback content. Queue nulls are missing, not zero.",
+    "success": "Six source-backed metrics, projection stability, ranked effects, assumptions, quality, evidence, limitations and generation time remain accessible.",
+    "fatalError": "MutationError and AnalysisBrief display failure; form persists for retry.",
+    "retainedRefreshFailure": "useRetainedMutation retains same-vehicle response. AnalysisBrief warns instead of replacing usable results.",
+    "scopeChange": "Publication render guards and observer reset prevent old vehicle results reappearing.",
+    "partial": "Quality statuses/reasons and nullable queue estimates convey unsupported/limited evidence; no fabricated numerical fallback.",
+    "offline": "Mutation source carries paused state, but initial page-to-summary wiring loses it; see state issue.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+        "line": 243,
+        "rule": "MDC-026 / MDC-046 / mission 25",
+        "detail": "publication.source is passed only once a result exists. An initial paused mutation therefore reaches AnalysisBrief only as pending:true; AnalysisBrief.tsx:42-43 labels it loading rather than offline/paused. The shared adapter's paused copy at lines 75-80 cannot be reached by this page before first success.",
+        "fix": "Extend AnalysisBrief with explicit submitted/paused publication state, preserving Not calculated before any submission. Show source-specific queued/paused guidance, retain every prior result and do not invent cancellation or automatically replay a POST.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+        "line": 256,
+        "rule": "MDC-026",
+        "detail": "Mitigation panel receives only empty/content, not pending/error/query state. Before a successful simulation it says no supported mitigations were returned even when nothing has been submitted, a request is pending or the first request failed.",
+        "fix": "Distinguish not submitted, pending/paused, fatal error and successful empty using existing InsightPanel/SourceContent contracts. Preserve mitigation/assumption content for retained failures; do not hide the panel shell.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\feedback\\AlertBanner.tsx",
+      "line": 24,
+      "rule": "MDC-010 / MDC-012 / mission 5-8",
+      "detail": "Mounted design notice, error and retained warnings inherit border-neon-*/25 and bg-neon-*/10 from the shared variant map, plus backdrop-blur-sm at line 57. Root page has no direct neon/glow classes, but this dependency introduces noisy chrome.",
+      "fix": "Shared owner should replace decoration with border-[var(--border-default)] and bg-[var(--surface-2)] and neutral text hierarchy, retaining subdued semantic icon/status accents via the existing severity token owner. Remove unnecessary banner blur; preserve four variants, title/body, dismissal, role/attributes and focus behavior. Do not reset saved theme IDs or chart preferences.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+      "line": 261,
+      "rule": "MDC-010 / MDC-015",
+      "detail": "Mitigation cards use fixed white-alpha borders rather than theme-aware semantic boundaries.",
+      "fix": "Reuse Card padding=\"md\" while preserving article semantics, or use border-[var(--border-subtle)] and existing surface tokens. Rank is ordinal, not an informational alert: consider existing Badge neutral rather than accenting every row.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 81,
+      "rule": "MDC-010 / MDC-015",
+      "detail": "Evidence rows repeat border-white/[0.07] and bg-white/[0.025], decoupled from current theme surfaces. Decorative section icons at lines 48/75 are cyan irrespective of meaning.",
+      "fix": "Reuse Card padding=\"sm\" or border-[var(--border-subtle)] bg-[var(--surface-2)]. Use text-[var(--text-muted)] for decorative database/quality icons; retain muted warning semantics for explicitly unsupported capabilities. Preserve all source summaries, times and sample metadata.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "line": 39,
+      "rule": "MDC-013",
+      "detail": "SI suffix has ad-hoc text-xs typography despite the existing Text/Caption role pipeline.",
+      "fix": "Use the existing caption role with as=\"span\" and muted semantic color, preserving the literal SI unit and hint association; do not convert the field's stored value.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+      "line": 130,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "Required SI fields map cleared null to zero; charger count and arrival rate similarly use Number('') at lines 114/158. Clearing a field becomes an apparent zero measurement and changes the displayed equivalent rather than staying absent. Native bounds can then reject the fabricated zero.",
+      "fix": "Keep empty form drafts separate from validated request values; retain null/empty until valid explicit submission, provide localized field feedback, and send only validated raw SI numbers.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "line": 36,
+      "rule": "MDC-045 / MDC-021",
+      "detail": "step is optional numeric-only and is forwarded undefined by this page. Native number fields then default to step 1, although charger/panel/solar/storage fields are float64 and backend validation does not require whole-number values.",
+      "fix": "Allow existing native step semantics including 'any' in SiNumberInput's typed contract; callers choose explicitly for continuous SI quantities. Retain current bounds and integer semantics where genuinely required.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+      "line": 151,
+      "rule": "MDC-021 / MDC-045",
+      "detail": "Frontend arrival-rate minimum is 0.000001 although the server accepts every positive rate up to 1. Panel/service/solar/storage omit server maximum bounds. Source validation permits planning scenarios the UI can block or lets invalid upper-bound requests reach a generic error.",
+      "fix": "Align local validation with internal\\app\\advancedintelligencesvc\\planning.go:316-341: rate >0 and <=1, panel <=1e9 W, service <=604800 s, solar <=1e9 W and storage <=1e10 Wh. Use positive validation rather than an invented minimum floor; preserve canonical inputs and avoid changing server rules.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+      "line": 52,
+      "rule": "MDC-026 / MDC-045 / preservation of submitted scenario",
+      "detail": "Results remain correctly retained, but the page never presents publication.published.inputs. Users can edit the visible scenario after success while the unchanged brief and mitigations still describe the prior request; generation time alone does not identify those prior assumptions.",
+      "fix": "Expose the existing cloned submitted scenario alongside results/details or label the current draft as not yet simulated. Preserve exact distributions, optional nulls, vehicle scope and display-only SI formatting; do not replace retained results or fabricate a new model.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+      "line": 256,
+      "rule": "frontend null-safety / MDC-026",
+      "detail": "Empty detection dereferences result.mitigations.length and result.assumptions.length before the subsequent null-safe maps. Current inspected backend initializes both, so no present null response is demonstrated; an unexpected nullable response would still crash rendering.",
+      "fix": "Normalize mitigations and assumptions once with ?? [] and use the same arrays for empty detection and rendering. Keep trust state separate from array fallback; missing payload is not proof of a successfully empty simulation.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 55,
+      "rule": "MDC-044 / MDC-025",
+      "detail": "Badge publishes raw quality.status literals sufficient/limited/insufficient although AnalysisBrief already uses localized labels for those same meanings at lines 44-50.",
+      "fix": "Render localized labels using the existing advanced-intelligence quality keys; keep raw status unchanged for logic, payload and semantic variant selection.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "P1",
+    "first": "Preserve trust: paused/initial/fatal/retained state distinctions, exact submitted assumptions and blank numeric inputs.",
+    "next": "Align existing form validation and announce errors; neutralize shared banner and evidence chrome.",
+    "later": "Exercise responsive, keyboard, contrast and drawer behavior; apply existing wrapping and target props based on measured evidence."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Restrained AlertBanner variants",
+      "existingOwner": "web\\src\\components\\feedback\\AlertBanner.tsx",
+      "propsVariantsStates": "Keep info/success/warning/danger, title, children, icon, onClose, closeLabel and forwarded HTML/role props. Neutral surface/border/text hierarchy with existing subdued semantic accents, no neon/blur escalation. Preserve dismiss/focus/forced-color behavior.",
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx:86", "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx:12", "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx:85"],
+      "dependsOn": ["web\\src\\lib\\tokens.ts", "web\\src\\components\\ui\\Button.tsx", "docs\\frontend-design-contract.md"],
+      "acceptance": "Check static info, fatal error, retained warning and optional dismissal in both themes/forced colors; measure effective contrast. No page-local AlertBanner replacement."
+    },
+    {
+      "name": "AnalysisBrief explicit mutation lifecycle",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "propsVariantsStates": "Extend current pending/error/query/hasResult contract with source-backed submission/paused information. Preserve never-submitted, first pending, first paused, fatal error, successful empty, quality-limited, retained refreshing and retained paused/error states. Keep existing metrics/narrative/drawer.",
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx:235", "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:137", "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx:188"],
+      "dependsOn": ["web\\src\\hooks\\useRetainedMutation.ts", "web\\src\\api\\dataState.ts", "web\\src\\components\\data-display\\OperationalBrief.tsx"],
+      "acceptance": "Before submit remains Not calculated; paused does not look like an active fetch; retained results survive errors and scope changes reject obsolete data. Never add automatic POST retry as presentation recovery."
+    },
+    {
+      "name": "SiNumberInput continuous native values and role typography",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "propsVariantsStates": "Preserve number|null, onChange, id, label, hint, required and bounds; allow number|'any' step. Use existing caption role for SI suffix. Null stays blank; callers validate request construction separately.",
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx:120", "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx:78"],
+      "dependsOn": ["web\\src\\components\\ui\\Input.tsx", "web\\src\\components\\ui\\Typography.tsx"],
+      "acceptance": "Fractional valid SI values, clear/re-enter, optional null/zero, min/max validation, label/hint association and saved display preferences; no source-value conversion."
+    },
+    {
+      "name": "EvidencePanel theme-aware rows and localized status",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Keep quality/evidence/limitations/unsupported with current nullable contracts; preserve sufficient/limited/insufficient meanings, sample count, coverage, time window/reasons and explicit unsupported list. Reuse Card and localized status labels, not another evidence component.",
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx:282", "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:225", "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx:234"],
+      "dependsOn": ["web\\src\\components\\ui\\Card.tsx", "web\\src\\components\\ui\\Badge.tsx", "docs\\frontend-design-contract.md"],
+      "acceptance": "Three persistent subsections in missing/limited/full cases, long source summaries and localized labels, all metadata available at mobile widths and themes."
+    },
+    {
+      "name": "MutationError dynamic announcement",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+      "propsVariantsStates": "Keep current error:unknown contract and conditional rendering. Add alert semantics through existing AlertBanner props, retain localized fallback and raw error detail without changing mutation or toast policy.",
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx:230", "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:132"],
+      "dependsOn": ["web\\src\\components\\feedback\\AlertBanner.tsx"],
+      "acceptance": "Initial and repeat failure announcement, no focus theft, persistent form recovery and no assertive semantics on static planning disclaimer."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Evidence and mitigation card surfaces",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+      "line": 261,
+      "existingOwner": "web\\src\\components\\ui\\Card.tsx",
+      "detail": "Handwritten white-alpha boundaries compete with existing semantic Card surface policy; reuse the owner, no new surface abstraction."
+    },
+    {
+      "pattern": "Quality status labels",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 55,
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "detail": "Raw status labels diverge from the existing localized quality wording; consolidate use of current keys without inventing a universal status registry."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "124e4a82be51f680c0ec1fec1ba495dea8beb3d4ddd7efe2d8b413fcf7a81979",
+    "hashAlgorithm": "SHA-256",
+    "sourceFile": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+    "currentLineCount": 295,
+    "sectionCount": 5,
+    "sections": [
+      {"name": "Design scenario, not site control", "line": 86, "count": 1},
+      {"name": "Site scenario", "line": 97, "count": 1, "fieldCount": 10},
+      {"name": "Utilization and constraints", "line": 235, "count": 1, "metricCount": 6},
+      {"name": "Ranked mitigations and assumptions", "line": 254, "count": 1},
+      {"name": "Evidence, quality, and limitations", "line": 282, "count": 1, "subsectionCount": 3}
+    ],
+    "componentCounts": {"FadeIn": 4, "InsightPanelDirect": 2, "AnalysisBrief": 1, "EvidencePanel": 1, "SiNumberInput": 5, "InputDirect": 3, "Select": 2, "ButtonDirect": 1, "GlassPanelDirect": 0, "ChartContainerDirect": 0},
+    "actions": [
+      {"name": "Edit all ten scenario fields", "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx", "line": 106},
+      {"name": "Run confirmed site simulation; explicit POST only", "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx", "line": 47},
+      {"name": "Review details; close existing drawer", "file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 149},
+      {"name": "Retry failed scenario through explicit submit", "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx", "line": 220},
+      {"name": "Change workspace vehicle through existing shell ownership", "file": "web\\src\\hooks\\useSelectedVehicle.ts", "line": 142}
+    ],
+    "formDefaults": {"charger_count": 8, "charger_power_w": 11500, "panel_limit_w": 100000, "arrival_rate_per_s": 0.0008, "mean_service_s": 7200, "arrival_distribution": "poisson", "service_distribution": "exponential", "solar_power_w": null, "storage_energy_wh": null, "fleet_growth_pct": 10},
+    "dataInventory": [
+      "Utilization %, nullable queue P50/P90 seconds, peak demand W, panel constraint %, stable/unstable projection",
+      "Each mitigation rank/name, queue delta %, peak delta W and its specific assumption",
+      "All assumptions, limitations and the two unsupported capabilities: site control and guaranteed real-world queue performance",
+      "Quality status/sample count/coverage/window/reasons, all evidence sources/summaries/observed times/sample counts, generation timestamp",
+      "Raw successful response and cloned submitted inputs, request/reply vehicle identity, retained-error and pending semantics",
+      "Locale formatting, saved display preferences, labels, helper equivalents and canonical SI suffixes",
+      "Review-details narrative confidence basis, provenance, evidence, limitations and all six metrics"
+    ],
+    "workspace": "Vehicle-owned scenario route; workspaceScope.ts does not enable range here and does allow vehicle scope. No date-bound request exists in inspected contract: do not add a date picker, force range registration or invent historical filtering.",
+    "mustNotChange": [
+      "Current mounted route and lazy loading identity",
+      "Input defaults, distribution choices and current capability set",
+      "Endpoint, snake_case body shape, confirmed explicit submit and mutation policy",
+      "Canonical SI in request/response/cache; null and zero remain distinct",
+      "No physical site control, fake observations or automatic simulation dispatch",
+      "Every section, metric, explanation, evidence item and existing drawer action",
+      "Vehicle change publication isolation and retention after refresh failure"
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only page and directly relevant dependency inspection; bounded source searches, source hash and page-only regex counts. Only assigned JSON and heartbeat are written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "screenReader": "unverified",
+    "backendExecution": "unverified; request/response/route and relevant deterministic builder inspected, no API call or simulation mutation executed",
+    "tests": "NOT RUN. Existing closure assertions at AdvancedIntelligenceClosure.test.tsx:454-497 are preservation context, not current proof.",
+    "typescriptLintBuild": "NOT RUN per scoped Phase0 assignment and centralized validation policy. Skill script read but not executed because it invokes project TypeScript beyond the assigned source-only audit.",
+    "sourceChecks": {
+      "command": "$p='web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx'; Get-Date -AsUTC -Format 'yyyy-MM-ddTHH:mm:ssZ'; Get-FileHash -Algorithm SHA256 $p | Select-Object Hash; (Get-Content $p).Count",
+      "exitCode": 0,
+      "output": "124E4A82BE51F680C0EC1FEC1BA495DEA8BEB3D4DDD7EFE2D8B413FCF7A81979\n295",
+      "patternCheck": "Get-Date -AsUTC -Format 'yyyy-MM-ddTHH:mm:ssZ'; $p='web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx'; $s=Get-Content $p -Raw; $rules=[ordered]@{inlineStyles='style\\s*=';rawControls='<(?:button|input|textarea|select|table)\\b';directLibraries=\"from ['`\"](?:recharts|react-leaflet|framer-motion)['`\"]\";legacyApi=\"from ['`\"]\\.\\./(?:\\.\\./)?api['`\"]\";neonGlow='neon|glow|shadow-\\[';fixedWhite='(?:text|bg|border)-white'}; foreach($k in $rules.Keys){\"$k=$([regex]::Matches($s,$rules[$k]).Count)\"}",
+      "patternExitCode": 0,
+      "patternOutput": "inlineStyles=0\nrawControls=0\ndirectLibraries=0\nlegacyApi=0\nneonGlow=0\nfixedWhite=1",
+      "interpretation": "Counts are only root-file source matches; inherited AlertBanner neon and EvidencePanel white-alpha decoration are separately cited. Zero pattern matches is not runtime or full violations acceptance.",
+      "reportValidation": {
+        "command": "$report=Get-Content 'docs\\frontend-audits\\audit-page-031.json' -Raw | ConvertFrom-Json; $keys='item','page','routes','purpose','primaryGoal','dataSources','components','duplicatedPatterns','responsive','accessibility','states','visualIssues','architectureIssues','priority','requiredSharedChanges','competingImplementations','preservation','evidenceLimits','filesRead'; $missing=@($keys | Where-Object {$_ -notin $report.PSObject.Properties.Name}); if($missing.Count){throw \"Missing keys: $missing\"}; $hash=(Get-FileHash -Algorithm SHA256 $report.page).Hash.ToLowerInvariant(); if($hash -ne $report.preservation.sourceHash){throw 'Root page hash drifted'}; $paths=@($report.filesRead)+@($report.requiredSharedChanges | ForEach-Object {$_.existingOwner; $_.dependsOn})+@($report.components | ForEach-Object {$_.owners}); $absent=@($paths | Sort-Object -Unique | Where-Object {-not (Test-Path -LiteralPath $_)}); if($absent.Count){throw \"Absent cited paths: $absent\"}; 'JSON valid; 19 required keys present; cited paths exist; current root SHA256 matches'; \"Current root lines: $((Get-Content $report.page).Count)\"; Get-Date -AsUTC -Format 'yyyy-MM-ddTHH:mm:ssZ'",
+        "exitCode": 0,
+        "output": "JSON valid; 19 required keys present; cited paths exist; current root SHA256 matches\nCurrent root lines: 295",
+        "scope": "Parsed the owned JSON, checked the 19 convention keys, checked existence of filesRead/shared owner/dependency/component owner paths, and compared the current root source hash. No application validation is implied.",
+        "followupOutput": "Root source component inventory:\nFadeIn=4\nInsightPanel=2\nAnalysisBrief=1\nEvidencePanel=1\nSiNumberInput=5\nInput=3\nSelect=2\nButton=1\nGlassPanel=0\nChartContainer=0\nIssue citations and full fields valid: 16\nCurrent SHA256: 124E4A82BE51F680C0EC1FEC1BA495DEA8BEB3D4DDD7EFE2D8B413FCF7A81979",
+        "followupExitCode": 0
+      }
+    },
+    "unknowns": [
+      "Actual route reachability, authentication/native behavior and mounted shell composition",
+      "Effective theme/contrast and forced-color rendering, including any global overrides",
+      "Native form validity UX, paused/offline mutation behavior and server response at runtime",
+      "All shared formatter internals, settings transport, Drawer focus mechanics and whole-app adoption",
+      "Current builder initializes arrays; no backend null-array emission is claimed",
+      "filesRead includes bounded source snippets returned by rg as well as full/ranged view reads; it does not assert whole-file semantic review of route registries, neighboring consumers or test files"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\TCOOptimizerPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\AdvancedIntelligenceClosure.test.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\AdvancedSimulationRetention.test.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\AdvancedIntelligencePages.test.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\advancedIntelligenceClosure.fixtures.ts",
+    "web\\src\\hooks\\useRetainedMutation.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.test.tsx",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\components\\ui\\Input.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Badge.tsx",
+    "web\\src\\components\\ui\\Card.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\feedback\\AlertBanner.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\__tests__\\lazyRoutes.list.ts",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\lib\\routeMeta.ts",
+    "web\\src\\components\\layout\\sidebar\\sidebarIcons.ts",
+    "web\\src\\components\\layout\\sidebar\\collections.ts",
+    "web\\src\\components\\layout\\navSearchKeywords.ts",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\features\\explore\\featureCatalog.ts",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\domain\\advancedintelligence\\planning.go",
+    "internal\\app\\advancedintelligencesvc\\planning.go",
+    "internal\\app\\advancedintelligencesvc\\engines_test.go"
+  ]
+}

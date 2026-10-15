@@ -26,13 +26,14 @@ vi.mock('../client', async () => {
 
 // Hoisted so the (also hoisted) mock factory closes over the same spies the
 // assertions read.
-const { toastSuccess, toastError } = vi.hoisted(() => ({
+const { toastSuccess, toastWarning, toastError } = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
+  toastWarning: vi.fn(),
   toastError: vi.fn(),
 }));
 
 vi.mock('./_toastHelpers', () => ({
-  useMutationToast: () => ({ success: toastSuccess, error: toastError }),
+  useMutationToast: () => ({ success: toastSuccess, warning: toastWarning, error: toastError }),
 }));
 
 import { request, SudoCanceledError } from '../client';
@@ -87,8 +88,8 @@ function calledOpts(i = 0): RequestInit & { requiresLiveMode?: boolean } {
 const listPayload: FeatureFlagsListResponse = {
   count: 2,
   flags: [
-    { key: 'beta.dashboard', value: true },
-    { key: 'rollout.percent', value: { pct: 25 } },
+    { key: 'beta.dashboard', value: 'true' },
+    { key: 'rollout.percent', value: '{"pct":25}' },
   ],
 };
 
@@ -102,6 +103,7 @@ const changesPayload: FeatureFlagChangesResponse = {
 beforeEach(() => {
   mockedRequest.mockReset();
   toastSuccess.mockReset();
+  toastWarning.mockReset();
   toastError.mockReset();
 });
 
@@ -156,6 +158,19 @@ describe('featureFlagKeys', () => {
 
 // ── useFlags ─────────────────────────────────────────────────────────────────
 describe('useFlags', () => {
+  it('keeps all stored string shapes unchanged on reads', async () => {
+    const payload: FeatureFlagsListResponse = {
+      count: 4,
+      flags: ['', '0042', 'false', '{"enabled":true}'].map((value, index) => ({
+        key: `flag.${index}`,
+        value,
+      })),
+    };
+    mockedRequest.mockResolvedValueOnce(payload);
+    const { result } = renderHook(() => useFlags(), { wrapper: wrapperFor(makeClient()) });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(payload);
+  });
   it('GETs /system/flags, threads an abort signal, and surfaces the registry', async () => {
     mockedRequest.mockResolvedValueOnce(listPayload);
     const { result } = renderHook(() => useFlags(), { wrapper: wrapperFor(makeClient()) });
@@ -178,7 +193,7 @@ describe('useFlags', () => {
 
 // ── useFlag ──────────────────────────────────────────────────────────────────
 describe('useFlag', () => {
-  const entry: FeatureFlagEntry = { key: 'beta.dashboard', value: { rollout: 50 } };
+  const entry: FeatureFlagEntry = { key: 'beta.dashboard', value: '{"rollout":50}' };
 
   it('stays disabled and never fires when the key is null', async () => {
     const { result } = renderHook(() => useFlag(null), { wrapper: wrapperFor(makeClient()) });
@@ -252,10 +267,38 @@ describe('useFlagChanges', () => {
 
 // ── useSetFlag ───────────────────────────────────────────────────────────────
 describe('useSetFlag', () => {
+  it.each(['', '0042', 'false', ' \n{"enabled":true}\n ', '[1,2]', '{ not json'])(
+    'preserves stored text %j and the audit reason',
+    async (value) => {
+      mockedRequest.mockResolvedValueOnce({ key: 'k', audit_id: 1 });
+      const { result } = renderHook(() => useSetFlag(), { wrapper: wrapperFor(makeClient()) });
+      const reason = '  retain this reason  ';
+      await act(async () => {
+        await result.current.mutateAsync({ key: 'k', value, reason });
+      });
+      expect(JSON.parse(calledOpts().body as string)).toEqual({ value, reason });
+    },
+  );
+
+  it.each([true, 42, null, { enabled: true }, [1, 2]])(
+    'rejects unsupported non-string value %j without a request',
+    async (value) => {
+      const { result } = renderHook(() => useSetFlag(), { wrapper: wrapperFor(makeClient()) });
+      await act(async () => {
+        // @ts-expect-error Exercise untyped callers without weakening the public string contract.
+        await expect(result.current.mutateAsync({ key: 'k', value, reason: 'why' }))
+          .rejects.toThrow('Feature flag values must be strings');
+      });
+      expect(mockedRequest).not.toHaveBeenCalled();
+      expect(toastError).toHaveBeenCalled();
+      expect(toastSuccess).not.toHaveBeenCalled();
+    },
+  );
+
   const write: FeatureFlagWriteResponse = {
     key: 'beta.dashboard',
-    old_value: false,
-    new_value: true,
+    old_value: 'false',
+    new_value: 'true',
     audit_id: 12,
   };
 
@@ -266,13 +309,13 @@ describe('useSetFlag', () => {
     const { result } = renderHook(() => useSetFlag(), { wrapper: wrapperFor(client) });
 
     await act(async () => {
-      await result.current.mutateAsync({ key: 'beta/x', value: true, reason: 'enable' });
+      await result.current.mutateAsync({ key: 'beta/x', value: 'true', reason: 'enable' });
     });
 
     expect(calledUrl()).toBe('/system/flags/beta%2Fx');
     expect(calledOpts().method).toBe('PUT');
     expect(calledOpts().requiresLiveMode).toBe(true);
-    expect(JSON.parse(calledOpts().body as string)).toEqual({ value: true, reason: 'enable' });
+    expect(JSON.parse(calledOpts().body as string)).toEqual({ value: 'true', reason: 'enable' });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['system', 'flags'] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: featureFlagKeys.flag('beta/x') });
     expect(toastSuccess).toHaveBeenCalledWith(
@@ -289,7 +332,7 @@ describe('useSetFlag', () => {
 
     await act(async () => {
       await result.current
-        .mutateAsync({ key: 'beta.dashboard', value: 1, reason: 'x' })
+        .mutateAsync({ key: 'beta.dashboard', value: '1', reason: 'x' })
         .catch(() => undefined);
     });
 
@@ -303,7 +346,7 @@ describe('useSetFlag', () => {
 
     await act(async () => {
       await result.current
-        .mutateAsync({ key: 'beta.dashboard', value: 1, reason: 'x' })
+        .mutateAsync({ key: 'beta.dashboard', value: '1', reason: 'x' })
         .catch(() => undefined);
     });
 
@@ -315,8 +358,8 @@ describe('useSetFlag', () => {
 // ── useDeleteFlag ────────────────────────────────────────────────────────────
 describe('useDeleteFlag', () => {
   const write: FeatureFlagWriteResponse = {
-    key: 'beta.dashboard',
-    old_value: true,
+    key: 'beta/x',
+    old_value: 'true',
     deleted: true,
     audit_id: 13,
   };
@@ -358,6 +401,46 @@ describe('useDeleteFlag', () => {
       'admin.flags.toast.deleteError',
       'Failed to delete flag',
     );
+  });
+
+  it.each([false, undefined])('reports an audited absent flag (deleted=%s) without deletion success', async (deleted) => {
+    const response = { key: 'missing', audit_id: 14, ...(deleted === undefined ? {} : { deleted }) };
+    mockedRequest.mockResolvedValueOnce(response);
+    const client = makeClient();
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useDeleteFlag(), { wrapper: wrapperFor(client) });
+    await act(async () => {
+      await expect(result.current.mutateAsync({ key: 'missing', reason: 'cleanup' })).resolves.toEqual(response);
+    });
+    expect(toastWarning).toHaveBeenCalledWith('toast.noChanges', 'No changes');
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['system', 'flags'] });
+  });
+
+  it.each([
+    [{ key: 'k', deleted: true, audit_id: 0 }, 'The flag was deleted, but the change was not recorded'],
+    [{ key: 'k', deleted: false, audit_id: 0 }, 'The flag was already absent, but the delete attempt was not recorded'],
+    [{ key: 'k', audit_id: 0 }, 'The flag was already absent, but the delete attempt was not recorded'],
+    [{ key: 'k', deleted: true }, 'invalid flag deletion result'],
+    [{ key: 'other', deleted: true, audit_id: 1 }, 'invalid flag deletion result'],
+    [{ key: 'k', deleted: 'true', audit_id: 1 }, 'invalid flag deletion result'],
+    [{ key: 'k', deleted: true, audit_id: -1 }, 'invalid flag deletion result'],
+    [{ key: 'k', deleted: true, audit_id: '1' }, 'invalid flag deletion result'],
+    [null, 'invalid flag deletion result'],
+  ] as const)('rejects an unconfirmed or unaudited response %j', async (response, message) => {
+    mockedRequest.mockResolvedValueOnce(response);
+    const client = makeClient();
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useDeleteFlag(), { wrapper: wrapperFor(client) });
+    await act(async () => {
+      await expect(result.current.mutateAsync({ key: 'k', reason: 'retain me' })).rejects.toThrow(message);
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(toastError).toHaveBeenCalledWith(expect.any(Error), 'admin.flags.toast.deleteError', 'Failed to delete flag');
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(toastWarning).not.toHaveBeenCalled();
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['system', 'flags'] });
   });
 
   it('swallows a SudoCanceledError without any toast', async () => {

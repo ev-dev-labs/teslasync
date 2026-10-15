@@ -57,17 +57,34 @@ describe('DriveDetailSkeleton', () => {
     const { container } = render(<DriveDetailSkeleton />);
 
     // Page header + hero-gauge placeholders.
-    expect(screen.getByTestId('page-header-skeleton')).toBeInTheDocument();
+    const header = screen.getByTestId('page-header-skeleton');
+    expect(header).toBeInTheDocument();
+    expect(header).toHaveAttribute('aria-busy', 'true');
+    expect(header.children[0]).toHaveClass('h-8', 'w-64', 'bg-[var(--skeleton-bg)]');
+    expect(header.children[1]).toHaveClass('h-4', 'w-96', 'max-w-full', 'bg-[var(--skeleton-bg)]');
+    for (const line of header.children) expect(line).toHaveAttribute('aria-hidden', 'true');
     const hero = container.querySelector('.h-36');
     expect(hero).toBeInTheDocument();
-    expect(hero).toHaveClass('animate-pulse');
+    expect(hero).toHaveClass('h-36', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+    expect(hero).toHaveAttribute('aria-hidden', 'true');
 
     // KPI band — DriveStatCards renders 8 metrics, so the grid must reserve 8.
     const statGrid = screen.getByTestId('stat-grid-skeleton');
     expect(statGrid.childElementCount).toBe(8);
+    expect(statGrid).toHaveAttribute('aria-busy', 'true');
+    expect(statGrid).toHaveClass('sm:grid-cols-4', 'lg:grid-cols-8');
+    for (const card of statGrid.children) {
+      expect(card).toHaveClass('h-24', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+      expect(card).toHaveAttribute('aria-hidden', 'true');
+    }
 
     // Overview chart + the two side-by-side detail charts (SoC + elevation).
     expect(screen.getAllByTestId('chart-block-skeleton')).toHaveLength(3);
+    for (const chart of screen.getAllByTestId('chart-block-skeleton')) {
+      expect(chart).toHaveAttribute('aria-busy', 'true');
+      expect(chart.firstElementChild).toHaveClass('rounded-xl', 'bg-[var(--skeleton-bg)]');
+      expect(chart.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+    }
   });
 
   it('sizes the overview chart at 320px and lays the two detail charts side-by-side at 280px', () => {

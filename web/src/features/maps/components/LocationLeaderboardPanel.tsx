@@ -1,16 +1,18 @@
-import { useMemo, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ChartTooltip, EmbeddedChart, type ChartDataColumn, chartGrid, axisTickSm,
 } from '@/components/charts';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 /** A single leaderboard datum — a labelled bar value. */
 export interface LeaderboardDatum {
   name: string;
-  value: number;
+  value?: number | null;
 }
 
 export interface LocationLeaderboardPanelProps {
@@ -46,7 +48,7 @@ export interface LocationLeaderboardPanelProps {
 // defeats its child memoisation, so keep them stable here.
 const BAR_MARGIN = { left: 8, right: 12, top: 4, bottom: 4 } as const;
 const BAR_RADIUS: [number, number, number, number] = [0, 4, 4, 0];
-const TOOLTIP_CURSOR = { fill: 'rgba(255,255,255,0.04)' } as const;
+const TOOLTIP_CURSOR = { fill: 'var(--surface-2)', opacity: 0.4 } as const;
 
 /**
  * Reusable horizontal-bar leaderboard panel. Shared by the "Top Locations by
@@ -68,16 +70,18 @@ export function LocationLeaderboardPanel({
   onResetFilters,
   ariaLabel,
 }: LocationLeaderboardPanelProps) {
-  // Normalise once per data change: coerce untyped / API-sourced rows to a
-  // finite bar value and a non-empty category label so a stray null neither
-  // paints a NaN-wide bar nor drops a blank Y-axis tick. Memoised so the array
-  // reference stays stable across unrelated re-renders (avoids re-diffing the
-  // whole chart subtree).
+  const { fmtNumber } = useNumberFormatting();
+  const formatValue = useCallback(
+    (value: unknown) => isFiniteNumber(value) && value >= 0 ? fmtNumber(value) : '—',
+    [fmtNumber],
+  );
+  // Unknown visits/durations remain gaps, not measured zero. Normalise only
+  // this chart copy; the caller's raw values and ordering stay untouched.
   const rows = useMemo<LeaderboardDatum[]>(
     () =>
       (data ?? []).map((d) => ({
         name: d.name ?? '—',
-        value: Number.isFinite(d.value) ? d.value : 0,
+        value: isFiniteNumber(d.value) && d.value >= 0 ? d.value : null,
       })),
     [data],
   );
@@ -92,17 +96,13 @@ export function LocationLeaderboardPanel({
   const dataColumns = useMemo<ChartDataColumn[]>(
     () => [
       { key: 'name', label: title },
-      { key: 'value', label: seriesLabel, format: (v) => String(v ?? 0) },
+      { key: 'value', label: seriesLabel, format: formatValue },
     ],
-    [title, seriesLabel],
+    [title, seriesLabel, formatValue],
   );
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        {icon}
-        {title}
-      </PanelTitle>
+    <LayoutCard title={title} actions={icon}>
       {loading ? (
         <Skeleton className="h-64 w-full" />
       ) : error ? (
@@ -129,14 +129,14 @@ export function LocationLeaderboardPanel({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={rows} layout="vertical" margin={BAR_MARGIN}>
               {chartGrid}
-              <XAxis type="number" tick={axisTickSm} allowDecimals={false} />
+              <XAxis type="number" tick={axisTickSm} allowDecimals={false} tickFormatter={formatValue} />
               <YAxis dataKey="name" type="category" tick={axisTickSm} width={112} />
-              <Tooltip content={<ChartTooltip />} cursor={TOOLTIP_CURSOR} />
+              <Tooltip content={<ChartTooltip valueFormatter={formatValue} />} cursor={TOOLTIP_CURSOR} filterNull={false} />
               <Bar dataKey="value" name={seriesLabel} fill={color} radius={BAR_RADIUS} />
             </BarChart>
           </ResponsiveContainer>
         </EmbeddedChart>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

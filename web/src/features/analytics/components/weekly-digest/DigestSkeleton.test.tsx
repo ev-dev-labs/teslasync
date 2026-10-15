@@ -42,7 +42,7 @@ vi.mock('framer-motion', async () => {
 
 import { DigestSkeleton } from './DigestSkeleton';
 
-const PULSE = '.animate-pulse';
+const PULSE = '[class~="bg-[var(--skeleton-bg)]"]';
 const PANEL = '[data-print-card]';
 
 beforeEach(() => {

@@ -19,7 +19,7 @@ import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import {
   useAutopilotProfile,
   useSaveAutopilotProfile,
@@ -30,6 +30,7 @@ import {
 } from '@/api/hooks/useCharging';
 import { RateTimeline } from './RateTimeline';
 import type { AutopilotProfile } from '@/types/charging';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AutopilotPanelProps {
   vehicleId?: number;
@@ -44,6 +45,7 @@ interface AutopilotPanelProps {
  * one product, not a bolt-on.
  */
 export function AutopilotPanel({ vehicleId }: AutopilotPanelProps) {
+  const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTime } = useDateFormat();
   const { formatCurrency } = useFormatting();
@@ -283,7 +285,7 @@ export function AutopilotPanel({ vehicleId }: AutopilotPanelProps) {
                 color="green"
                 change={
                   preview && (preview.savings ?? 0) > 0
-                    ? { value: fmtPercent(preview.savings_percent ?? 0, 0), positive: true }
+                    ? { value: fmtPercent(preview.savings_percent ?? 0), positive: true }
                     : undefined
                 }
               />
@@ -317,8 +319,8 @@ export function AutopilotPanel({ vehicleId }: AutopilotPanelProps) {
                 </Text>
                 <Text as="p" variant="caption" className="tabular-nums">
                   {t('autopilot.energyNeeded', '{{kwh}} kWh · ~{{hours}}h · {{tier}}', {
-                    kwh: fmtNumber(preview.kwh_needed ?? 0, 1),
-                    hours: fmtNumber(preview.estimated_duration_hours ?? 0, 1),
+                    kwh: fmtNumber(preview.kwh_needed ?? 0),
+                    hours: fmtNumber(preview.estimated_duration_hours ?? 0),
                     tier: preview.window.rate_tier,
                   })}
                 </Text>

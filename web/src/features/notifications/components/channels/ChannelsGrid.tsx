@@ -8,7 +8,9 @@
 import { useTranslation } from 'react-i18next';
 import { Bell } from 'lucide-react';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { Button, Text } from '@/components/ui';
 import type { NotificationChannel } from '@/api/types';
+import type { DataState } from '@/api/dataState';
 import { ChannelCard } from './ChannelCard';
 
 interface ChannelsGridProps {
@@ -16,16 +18,17 @@ interface ChannelsGridProps {
   isLoading: boolean;
   isError: boolean;
   error: unknown;
+  source?: DataState<NotificationChannel[]>;
   onRetry: () => void;
   onEdit: (channel: NotificationChannel) => void;
   onAdd: () => void;
 }
 
-const AUTO_FIT = '[grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]';
+const AUTO_FIT = '[grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]';
 const SKELETON_KEYS = [0, 1, 2] as const;
 
 export function ChannelsGrid({
-  channels, isLoading, isError, error, onRetry, onEdit, onAdd,
+  channels, isLoading, isError, error, source, onRetry, onEdit, onAdd,
 }: ChannelsGridProps) {
   const { t } = useTranslation();
   const rows = channels ?? [];
@@ -42,6 +45,21 @@ export function ChannelsGrid({
         onRetry={onRetry}
         resourceName={t('notifications.channels.resource', 'Channels')}
       />
+    );
+  }
+
+  if (source?.status === 'initial' && (source.isRefreshBlocked || !isLoading)) {
+    return (
+      <div role="status" className="space-y-3">
+        <Text as="p" color="secondary">
+          {source.isRefreshBlocked
+            ? t('dataSources.status.paused', 'Refresh paused')
+            : t('dataSources.status.pending', 'Pending')}
+        </Text>
+        <Button type="button" variant="secondary" onClick={onRetry}>
+          {t('common.refresh', 'Refresh')}
+        </Button>
+      </div>
     );
   }
 
@@ -65,8 +83,8 @@ export function ChannelsGrid({
       <EmptyState
         icon={<Bell className="h-8 w-8" aria-hidden="true" />}
         title={t('notifications.channels.empty.title', 'No channels configured')}
-        message={t('notifications.channels.empty.message', 'Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more.')}
-        action={{ label: t('notifications.channels.add', 'Add Channel'), onClick: onAdd }}
+        message={t('notifications.channels.empty.message', 'Add a notification channel to start receiving alerts via Discord, Slack, Telegram, email, and more.')}
+        action={{ label: t('notifications.channels.add', 'Add channel'), onClick: onAdd }}
       />
     );
   }

@@ -8,13 +8,15 @@
 //     never a literal `disabled={true}`.
 //   - tool_result frames from validate_alert_message_template with
 //     status=ok capture the proposed template; "Apply to editor"
-//     copies it onto the parent via onApplyTemplate. Helix NEVER
+//     copies it onto the parent via onApplyTemplate only after matching
+//     completion while the draft is ready and enabled. Draft/save-state
+//     changes retire proposals and cancel old work. Helix NEVER
 //     persists — Alert Studio Save remains the only write path.
 //   - cancel() runs on unmount so a stale stream cannot bleed.
 //   - Wrapped with withAiFeature so the surface is ABSENT when
 //     ai_mode='off' or the per-feature toggle is off (ADR-015 §I5).
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
@@ -76,7 +78,11 @@ function InnerSection({
   disabled,
 }: AIAlertMessageTemplateSuggestionProps) {
   const { t } = useTranslation()
-  const [proposal, setProposal] = useState<AlertMessageTemplateProposal | null>(null)
+  const [capturedProposal, setProposal] = useState<{
+    scopeKey: string
+    data: AlertMessageTemplateProposal
+  } | null>(null)
+  const requestScope = useRef<string | null>(null)
 
   const body = useMemo(
     () => ({
@@ -113,11 +119,19 @@ function InnerSection({
     ],
   )
 
+  const scopeKey = JSON.stringify([body, Boolean(disabled)])
+  const ready = dimensionsReady(draft)
   const handleEvent = useCallback((ev: AiStreamEvent) => {
+    if (requestScope.current !== scopeKey || disabled || !ready) {
+      return
+    }
+    if (ev.type === 'error') {
+      setProposal(null)
+      return
+    }
     if (
       ev.type === 'tool_result' &&
-      ev.name === 'validate_alert_message_template' &&
-      ev.ok
+      ev.name === 'validate_alert_message_template'
     ) {
       const data = ev.data as
         | {
@@ -127,25 +141,29 @@ function InnerSection({
           }
         | undefined
       if (
+        !ev.ok ||
         !data ||
         data.status !== 'ok' ||
         typeof data.template !== 'string' ||
         data.template.trim() === ''
       ) {
+        setProposal(null)
         return
       }
       const used = Array.isArray(data.used_placeholders)
         ? data.used_placeholders.filter((k): k is string => typeof k === 'string')
         : []
       setProposal({
-        template: data.template,
-        used_placeholders: used,
-        status: data.status,
+        scopeKey,
+        data: {
+          template: data.template,
+          used_placeholders: used,
+          status: data.status,
+        },
       })
     }
-  }, [])
+  }, [scopeKey, disabled, ready])
 
-  const scopeKey = `${draft.kind ?? ''}:${draft.signal_name ?? ''}:${draft.op ?? ''}:${draft.metric_id ?? ''}`
   const stream = useAiStream({
     url: '/ai/alerts/message-template/draft',
     body,
@@ -156,31 +174,41 @@ function InnerSection({
   const { cancel: cancelStream } = stream
 
   useEffect(() => {
+    requestScope.current = null
+    setProposal(null)
+  }, [scopeKey])
+
+  useEffect(() => {
     return () => {
+      requestScope.current = null
       cancelStream()
-      setProposal(null)
     }
   }, [cancelStream])
 
   const isBusy =
     stream.state === 'streaming' || stream.state === 'paused-confirm'
   const canStart =
-    !disabled && dimensionsReady(draft) && stream.state !== 'paused-confirm'
+    !disabled && ready && stream.state !== 'paused-confirm'
+  const proposal = capturedProposal?.scopeKey === scopeKey
+    ? capturedProposal.data
+    : null
+  const canApply = Boolean(proposal) && canStart && stream.state === 'done'
 
   const handleSuggest = useCallback(() => {
     if (isBusy || !canStart) {
       return
     }
     setProposal(null)
+    requestScope.current = scopeKey
     stream.start()
-  }, [isBusy, canStart, stream])
+  }, [isBusy, canStart, scopeKey, stream])
 
   const handleApply = useCallback(() => {
-    if (!proposal) {
+    if (!proposal || !canApply || requestScope.current !== scopeKey) {
       return
     }
     onApplyTemplate(proposal.template)
-  }, [proposal, onApplyTemplate])
+  }, [proposal, canApply, scopeKey, onApplyTemplate])
 
   return (
     <AIFeatureCard
@@ -213,8 +241,8 @@ function InnerSection({
             <Button
               variant="primary"
               size="sm"
-              disabled={proposal == null || isBusy}
-              aria-disabled={proposal == null || isBusy ? 'true' : 'false'}
+              disabled={!canApply}
+              aria-disabled={!canApply ? 'true' : 'false'}
               onClick={handleApply}
               data-testid="ai-feature-alert-message-template-suggestion-apply"
             >
@@ -226,7 +254,7 @@ function InnerSection({
           </div>
           <div
             role="status"
-            className="rounded-md border border-emerald-300/30 bg-emerald-300/5 p-3 text-sm text-emerald-300"
+            className="rounded-md border border-[var(--border-default)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-primary)]"
           >
             <div className="font-medium">
               {t(

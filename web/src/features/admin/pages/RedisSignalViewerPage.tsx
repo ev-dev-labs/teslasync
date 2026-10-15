@@ -3,28 +3,24 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Database,
-  Hash,
   Layers,
   RefreshCw,
   Search,
   Server,
-  ToggleLeft,
   Trash2,
-  Type as TypeIcon,
 } from 'lucide-react'
 
-import { PageContainer } from '@/components/layout'
+import { PageLayout, LayoutCard } from '@/components/layout'
 import {
   Badge,
   Button,
   Code,
   ConfirmDialog,
   DataTable,
-  GlassPanel,
   HelperText,
+  Icon,
   Input,
   MaskedValue,
-  PanelTitle,
   Select,
   Text,
   Toggle,
@@ -35,10 +31,8 @@ import {
   DataFreshnessAuto,
   KVList,
   MetricBar,
-  MetricCard,
 } from '@/components/data-display'
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
-import { useToast } from '@/components/feedback/Toast'
+import { EmptyState, QueryError, Skeleton, useToast } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import {
@@ -49,34 +43,19 @@ import {
 } from '@/api/hooks/useRedisSignals'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
-import { fmtInt } from '@/lib/numberFormat'
-import { isApiError, type ApiError } from '@/lib/resilience'
+
+import { isApiError } from '@/lib/resilience'
+import { gaugeTone } from '@/lib/tokens'
 import { RedisDiagnosticEmptyState, type DiagnosticErrorProps } from '../components/RedisDiagnosticEmptyState'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { deriveDataState } from '@/api/dataState';
+import { RedisOperationalBrief } from '../components/statstrip-ingest-dlq-redis/RedisOperationalBrief';
 
 /* ─── signal categorization ─────────────────────────────────────────── */
 
 type SignalCategory = 'Battery' | 'Charging' | 'Driving' | 'Climate' | 'Other'
 
 const CATEGORY_ORDER: SignalCategory[] = ['Battery', 'Charging', 'Driving', 'Climate', 'Other']
-
-const CATEGORY_COLORS: Record<SignalCategory, 'success' | 'info' | 'warning' | 'neutral' | 'danger'> = {
-  Battery: 'success',
-  Charging: 'info',
-  Driving: 'warning',
-  Climate: 'danger',
-  Other: 'neutral',
-}
-
-// Toned-down hex per category for the breakdown bars. Passed as a dynamic
-// `color` prop to the shared <MetricBar>, never an inline static style, so
-// the bars stay on-palette with the category badges without neon body text.
-const CATEGORY_BAR_COLOR: Record<SignalCategory, string> = {
-  Battery: '#10b981',
-  Charging: '#06b6d4',
-  Driving: '#f59e0b',
-  Climate: '#f43f5e',
-  Other: '#64748b',
-}
 
 function categorizeSignal(name: string): SignalCategory {
   const n = name.toLowerCase()
@@ -89,10 +68,8 @@ function categorizeSignal(name: string): SignalCategory {
 
 /* ─── table row type ────────────────────────────────────────────────── */
 
-interface SignalRow {
+interface SignalRow extends RedisSignalEntry {
   name: string
-  value: number | string | boolean
-  type: string
   category: SignalCategory
 }
 
@@ -113,14 +90,25 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
   return [
     {
       key: 'name',
-      header: t('redis.signalName', 'Signal Name'),
+      filterValue: (row) => row.name ?? null,
+      header: t('redis.signalName', 'Signal name'),
       sortable: true,
-      render: (row) => <Text mono size="sm" color="primary">{row.name}</Text>,
+      render: (row) => <Text mono size="sm" color="primary" className="break-all">{row.name}</Text>,
     },
     {
       key: 'value',
       header: t('redis.value', 'Value'),
       render: (row) => {
+        if (row.value === undefined) {
+          return <Text size="sm" color="secondary">{t('common.unknown', 'Unknown')}</Text>
+        }
+        if (row.value === null || typeof row.value === 'object') {
+          return (
+            <Code className="block whitespace-pre-wrap break-all">
+              {JSON.stringify(row.value, null, 2)}
+            </Code>
+          )
+        }
         // Location signals are routed through MaskedValue so the raw
         // coordinate never sits on screen by default. The mask still
         // shows enough structure (••.•••) to confirm the row carries
@@ -136,17 +124,8 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
             />
           )
         }
-        // Per-type toned-down syntax-highlight colors avoid neon tabular body text.
-        // Mirrors common dev-console conventions:
-        //   number  → cyan-300, string → amber-300, boolean → purple-300.
-        const colorClass =
-          typeof row.value === 'number'
-            ? 'text-cyan-300'
-            : typeof row.value === 'boolean'
-              ? 'text-purple-300'
-              : 'text-amber-300'
         return (
-          <Text mono size="sm" className={colorClass}>
+          <Text mono size="sm" color="primary" className="break-all">
             {String(row.value)}
           </Text>
         )
@@ -154,11 +133,12 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
     },
     {
       key: 'type',
+      filterValue: (row) => row.type ?? null,
       header: t('redis.type', 'Type'),
       sortable: true,
       render: (row) => (
         <Badge
-          variant={row.type === 'number' ? 'info' : row.type === 'boolean' ? 'warning' : 'neutral'}
+          variant="neutral"
           size="sm"
         >
           {row.type}
@@ -167,10 +147,12 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
     },
     {
       key: 'category',
+      filterValue: (row) => row.category ?? null,
+      filterValueLabel: (_value, row) => t(`redis.categoryName.${row.category}`, row.category),
       header: t('redis.category', 'Category'),
       sortable: true,
       render: (row) => (
-        <Badge variant={CATEGORY_COLORS[row.category]} size="sm">
+        <Badge variant="neutral" size="sm">
           {t(`redis.categoryName.${row.category}`, row.category)}
         </Badge>
       ),
@@ -183,13 +165,15 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
    ═══════════════════════════════════════════════════════════════════════ */
 
 export default function RedisSignalViewerPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
-  usePageTitle(t('redis.title', 'Redis Signal Viewer'))
+  usePageTitle(t('redis.title', 'Redis signal viewer'))
   const { formatDateTime } = useDateFormat()
 
   const {
     vehicleId: selectedVehicleId,
     vehicles: vehicleList,
+    vehiclesState,
     setVehicleId: setSelectedVehicleId,
   } = useSelectedVehicle()
   const [search, setSearch] = useState('')
@@ -215,14 +199,21 @@ export default function RedisSignalViewerPage() {
   const signalQuery = useRedisSignals(selectedVehicleId, autoRefresh)
   const {
     data: signalData,
-    isLoading,
     isFetching,
-    error,
-    isError,
     refetch,
   } = signalQuery
   const purgeOne = usePurgeRedisSignals()
   const purgeAll = usePurgeAllRedisSignals()
+  const source = deriveDataState(signalQuery, { provenance: 'live' })
+  const fatalError = source.fatalError
+  const initialLoading = source.status === 'initial' && isFetching && !source.isRefreshBlocked
+  const initialNotice = source.status === 'initial' && !initialLoading ? (
+    <Text as="p" variant="bodySm" role="status">
+      {source.isRefreshBlocked
+        ? t('dataSources.status.paused', 'Refresh paused')
+        : t('dataSources.status.pending', 'Pending')}
+    </Text>
+  ) : null
 
   const selectedVehicle = useMemo(
     () => vehicleList.find((v) => v.id === selectedVehicleId),
@@ -303,9 +294,8 @@ export default function RedisSignalViewerPage() {
     if (!signalData?.signals) return []
     return Object.entries(signalData.signals)
       .map(([name, entry]: [string, RedisSignalEntry]) => ({
+        ...entry,
         name,
-        value: entry.value,
-        type: entry.type,
         category: categorizeSignal(name),
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -331,16 +321,6 @@ export default function RedisSignalViewerPage() {
     return counts
   }, [rows])
 
-  const typeCounts = useMemo(() => {
-    const counts = { number: 0, string: 0, boolean: 0 }
-    for (const row of rows) {
-      if (row.type === 'number') counts.number += 1
-      else if (row.type === 'string') counts.string += 1
-      else if (row.type === 'boolean') counts.boolean += 1
-    }
-    return counts
-  }, [rows])
-
   const columns = useMemo(() => buildColumns(t), [t])
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc')
 
@@ -349,34 +329,66 @@ export default function RedisSignalViewerPage() {
   // When the upstream query failed, the diagnostic
   // banner takes over so the operator sees the real failure mode (cache
   // not wired, redis unreachable, generic 5xx, network) instead of the
-  // legacy "no signals cached" black box. Metric cards also display a
+  // legacy "no signals cached" black box. Summary metrics also display a
   // placeholder so the top-of-page numbers don't lie about a 0 count.
-  const errorBannerProps: DiagnosticErrorProps = !isError
+  const errorBannerProps: DiagnosticErrorProps = !fatalError
     ? {}
-    : isApiError(error)
-      ? { serverError: error as ApiError }
+    : isApiError(fatalError)
+      ? { serverError: fatalError }
       : { serverError: null, networkError: true }
-  const showStatPlaceholder = isLoading || isError
 
   const vehicleOptions = vehicleList.map((v) => ({
     value: String(v.id),
     label: v.display_name || v.vin || t('redis.vehicleFallback', 'Vehicle {{id}}', { id: v.id }),
   }))
+  const fleetNotice = vehiclesState.fatalError
+    ? t('dataSources.status.failed', 'Failed')
+    : !vehiclesState.hasData
+      ? vehiclesState.isRefreshBlocked
+        ? t('dataSources.status.paused', 'Refresh paused')
+        : t('common.loading', 'Loading...')
+      : vehiclesState.refreshError
+        ? t('dataSources.status.refreshFailed', 'Cached · refresh failed')
+        : vehiclesState.isRefreshBlocked
+          ? t('dataSources.status.paused', 'Refresh paused')
+          : vehiclesState.isRefreshing
+            ? t('dataSources.status.refreshing', 'Refreshing')
+            : vehicleList.length === 0
+              ? t('common.noData', 'No data available')
+              : vehiclesState.status === 'stale'
+                ? t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')
+                : undefined
 
   /* ─── toolbar (header actions) ─── */
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-      <Select
-        aria-label={t('redis.selectVehicleLabel', 'Select vehicle')}
-        className="min-w-[11rem]"
-        value={selectedVehicleId !== null ? String(selectedVehicleId) : ''}
-        onChange={(e) => {
-          const val = e.target.value
-          setSelectedVehicleId(val ? Number(val) : null)
-        }}
-        options={[{ value: '', label: t('redis.selectVehicle', 'Select vehicle…') }, ...vehicleOptions]}
-      />
+      <div className="space-y-2" data-testid="redis-fleet-selector">
+        <Select
+          aria-label={t('redis.selectVehicleLabel', 'Select vehicle')}
+          className="min-w-44"
+          value={selectedVehicleId !== null ? String(selectedVehicleId) : ''}
+          onChange={(e) => {
+            const val = e.target.value
+            setSelectedVehicleId(val ? Number(val) : null)
+          }}
+          options={[{ value: '', label: t('redis.selectVehicle', 'Select vehicle…') }, ...vehicleOptions]}
+          disabled={!vehiclesState.hasData || vehicleList.length === 0}
+          hint={vehiclesState.fatalError ? undefined : fleetNotice}
+          error={vehiclesState.fatalError ? fleetNotice : undefined}
+        />
+        {vehiclesState.retry && (vehiclesState.fatalError || vehiclesState.status === 'stale' || vehiclesState.isRefreshBlocked) && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={vehiclesState.retry}
+            disabled={vehiclesState.isRefreshing}
+          >
+            {t('error.retry', 'Retry')}
+          </Button>
+        )}
+      </div>
       <Toggle
         label={t('redis.autoRefresh', 'Auto-refresh')}
         checked={autoRefresh}
@@ -390,92 +402,60 @@ export default function RedisSignalViewerPage() {
         onClick={() => refetch()}
         disabled={selectedVehicleId === null || isFetching}
       >
-        <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} aria-hidden="true" />
+        <Icon icon={RefreshCw} className={isFetching ? 'animate-spin motion-reduce:animate-none' : undefined} />
         <span className="hidden sm:inline">{t('redis.refresh', 'Refresh')}</span>
       </Button>
     </div>
   )
 
   return (
-    <PageContainer
-      title={t('redis.title', 'Redis Signal Viewer')}
+    <PageLayout
+      title={t('redis.title', 'Redis signal viewer')}
       subtitle={t('redis.subtitle', 'Inspect cached signal values in Redis (L2)')}
-      actions={actions}
+      contextActions={actions}
+      dataSources={[{
+        id: 'redis-signals',
+        label: t('redis.cachedSignals', 'Cached signals'),
+        query: signalQuery,
+        enabled: selectedVehicleId !== null,
+      }]}
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <section
-          aria-label={t('redis.kpis', 'Cache metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
-        >
-          <MetricCard
-            label={t('redis.totalSignals', 'Total Signals')}
-            value={showStatPlaceholder ? '—' : fmtInt(signalData?.signal_count ?? 0)}
-            icon={<Database className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('redis.numbers', 'Numbers')}
-            value={showStatPlaceholder ? '—' : fmtInt(typeCounts.number)}
-            icon={<Hash className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('redis.strings', 'Strings')}
-            value={showStatPlaceholder ? '—' : fmtInt(typeCounts.string)}
-            icon={<TypeIcon className="h-5 w-5" aria-hidden="true" />}
-            color="amber"
-          />
-          <MetricCard
-            label={t('redis.booleans', 'Booleans')}
-            value={showStatPlaceholder ? '—' : fmtInt(typeCounts.boolean)}
-            icon={<ToggleLeft className="h-5 w-5" aria-hidden="true" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('redis.l1Signals', 'L1 Signals')}
-            value={showStatPlaceholder || !meta ? '—' : fmtInt(meta.l1_signal_count)}
-            subtitle={t('redis.l1Subtitle', 'In-process store')}
-            icon={<Layers className="h-5 w-5" aria-hidden="true" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('redis.l2Fields', 'L2 Fields')}
-            value={showStatPlaceholder || !meta ? '—' : fmtInt(meta.redis_field_count)}
-            subtitle={t('redis.l2Subtitle', 'Redis HSET')}
-            icon={<Server className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-        </section>
+        <RedisOperationalBrief
+          data={selectedVehicleId === null ? undefined : signalData}
+          loading={selectedVehicleId !== null && initialLoading}
+          retained={source.hasData && source.status === 'stale'}
+          enabled={selectedVehicleId !== null}
+          error={fatalError}
+        />
+        {selectedVehicleId !== null && initialNotice}
       </FadeIn>
 
       {/* 2 — Main bento: signals table (hero) + cache side column */}
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 3xl:grid-cols-4">
         {/* Hero — cached signals table with its own filter row */}
         <FadeIn delay={0.05} className="xl:col-span-2 3xl:col-span-3">
-          <GlassPanel className="p-4 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <PanelTitle className="flex items-center gap-2">
-                <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('redis.cachedSignals', 'Cached Signals')}
-              </PanelTitle>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
+          <LayoutCard title={t('redis.cachedSignals', 'Cached signals')}>
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                <div className="min-w-0">
                   <Input
+                    label={t('redis.searchLabel', 'Filter signals by name')}
                     aria-label={t('redis.searchLabel', 'Filter signals by name')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={t('redis.searchPlaceholder', 'Filter signals…')}
-                    className="pl-9 sm:w-56"
+                    icon={<Icon icon={Search} />}
+                    className="min-h-11 sm:w-56 md:min-h-10"
                   />
                 </div>
                 <Select
+                  label={t('redis.categoryLabel', 'Filter by category')}
                   aria-label={t('redis.categoryLabel', 'Filter by category')}
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                   options={[
-                    { value: 'all', label: t('redis.allCategories', 'All Categories') },
+                    { value: 'all', label: t('redis.allCategories', 'All categories') },
                     ...CATEGORY_ORDER.map((c) => ({
                       value: c,
                       label: `${t(`redis.categoryName.${c}`, c)} (${categoryCounts[c] ?? 0})`,
@@ -483,15 +463,15 @@ export default function RedisSignalViewerPage() {
                   ]}
                 />
               </div>
-            </div>
-
             <div className="mt-4">
               {selectedVehicleId === null ? (
                 <EmptyState /* no-action: transient empty state — surfaces when no vehicle is selected; no specific recovery action available */
                   icon={<Database className="h-10 w-10" />}
                   message={t('redis.selectPrompt', 'Select a vehicle to view its cached Redis signals')}
                 />
-              ) : isLoading ? (
+              ) : initialNotice ? (
+                initialNotice
+              ) : initialLoading ? (
                 <div className="space-y-3">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
@@ -500,7 +480,7 @@ export default function RedisSignalViewerPage() {
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : filteredRows.length === 0 ? (
-                rows.length === 0 || isError ? (
+                rows.length === 0 || fatalError ? (
                   <RedisDiagnosticEmptyState
                     vehicleId={selectedVehicleId}
                     meta={meta}
@@ -517,8 +497,10 @@ export default function RedisSignalViewerPage() {
                 <DataTable
                   tableId="admin:redis-signals"
                   data={filteredRows}
+                  enableValueFilters
+                  filterData={rows}
                   columns={columns}
-                  mobileColumns={['name', 'value', 'type']}
+                  mobileColumns={['name', 'value', 'type', 'category']}
                   keyExtractor={(row) => row.name}
                   sortKey={sortKey}
                   sortDir={sortDir}
@@ -529,7 +511,7 @@ export default function RedisSignalViewerPage() {
                 />
               )}
             </div>
-          </GlassPanel>
+          </LayoutCard>
         </FadeIn>
 
         {/* Side column — diagnostics, category mix, destructive cache actions */}
@@ -537,20 +519,18 @@ export default function RedisSignalViewerPage() {
           {/* Cache diagnostics — folds the mode / VIN / last-seen chips into a
               richer meta readout that stays visible alongside the table. */}
           <FadeIn delay={0.1}>
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="flex items-center gap-2">
-                <Server className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('redis.cacheDiagnostics', 'Cache Diagnostics')}
-              </PanelTitle>
+            <LayoutCard title={t('redis.cacheDiagnostics', 'Cache diagnostics')}>
               <div className="mt-3">
                 {selectedVehicleId === null ? (
                   <EmptyState /* no-action: transient — no vehicle selected yet */
                     icon={<Server className="h-8 w-8" />}
                     message={t('redis.diagSelect', 'Select a vehicle to inspect its cache state')}
                   />
-                ) : isError ? (
-                  <QueryError error={error} onRetry={() => refetch()} resourceName={t('redis.resourceName', 'Redis signals')} />
-                ) : isLoading ? (
+                ) : fatalError ? (
+                  <QueryError error={fatalError} onRetry={() => refetch()} resourceName={t('redis.resourceName', 'Redis signals')} />
+                ) : initialNotice ? (
+                  initialNotice
+                ) : initialLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-6 w-full" />
                     <Skeleton className="h-6 w-full" />
@@ -582,29 +562,29 @@ export default function RedisSignalViewerPage() {
                   />
                 )}
               </div>
-            </GlassPanel>
+            </LayoutCard>
           </FadeIn>
 
           {/* Signal categories — surfaces the category mix that previously
               only lived inside the filter dropdown labels. */}
           <FadeIn delay={0.15}>
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('redis.categories', 'Signal Categories')}
-              </PanelTitle>
+            <LayoutCard title={t('redis.categories', 'Signal categories')}>
               <div className="mt-3">
                 {selectedVehicleId === null ? (
                   <EmptyState /* no-action: transient — no vehicle selected yet */
                     icon={<Layers className="h-8 w-8" />}
                     message={t('redis.catSelect', 'Select a vehicle to see its signal category mix')}
                   />
-                ) : isLoading ? (
+                ) : initialNotice ? (
+                  initialNotice
+                ) : initialLoading ? (
                   <div className="space-y-3">
                     <Skeleton className="h-8 w-full" />
                     <Skeleton className="h-8 w-full" />
                     <Skeleton className="h-8 w-full" />
                   </div>
+                ) : fatalError ? (
+                  <QueryError error={fatalError} onRetry={() => refetch()} resourceName={t('redis.resourceName', 'Redis signals')} />
                 ) : rows.length === 0 ? (
                   <EmptyState /* no-action: transient — no categorized signals cached */
                     icon={<Layers className="h-8 w-8" />}
@@ -618,53 +598,52 @@ export default function RedisSignalViewerPage() {
                         label={t(`redis.categoryName.${cat}`, cat)}
                         value={categoryCounts[cat] ?? 0}
                         max={Math.max(rows.length, 1)}
-                        color={CATEGORY_BAR_COLOR[cat]}
+                        color={gaugeTone.neutral}
+                        fill="solid"
                         sublabel={fmtInt(categoryCounts[cat] ?? 0)}
                       />
                     ))}
                   </div>
                 )}
               </div>
-            </GlassPanel>
+            </LayoutCard>
           </FadeIn>
 
           {/* Danger zone — destructive cache actions behind explicit confirm.
               Per-vehicle uses the standard danger-confirm; cluster-wide
               PurgeAll requires the operator to type "PURGE ALL". */}
           <FadeIn delay={0.2}>
-            <GlassPanel className="border border-rose-500/20 bg-rose-500/5 p-4 sm:p-5">
-              <PanelTitle className="flex items-center gap-2">
-                <Trash2 className="h-4 w-4 text-rose-300" aria-hidden="true" />
-                {t('redis.cacheActions', 'Cache Actions')}
-              </PanelTitle>
+            <LayoutCard title={t('redis.cacheActions', 'Cache actions')}>
               <HelperText className="mt-2">
                 {t('redis.cacheActionsHint', 'Purge deletes the Redis L2 HSET only. The in-process L1 cache on each pod is untouched and refills from new telemetry.')}
               </HelperText>
               <div className="mt-3 flex flex-col gap-2">
                 <Button
                   type="button"
-                  variant="danger"
+                  variant="outline"
                   onClick={openPurgeOne}
                   disabled={selectedVehicleId === null || isPurging}
+                  wrapLabel
                   className="justify-center"
                   title={t('redis.purgeButtonTitle', 'Delete this vehicle\u2019s cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.')}
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  <Icon icon={Trash2} />
                   {t('redis.purgeButton', 'Purge Redis (L2)')}
                 </Button>
                 <Button
                   type="button"
-                  variant="danger"
+                  variant="outline"
                   onClick={openPurgeAll}
                   disabled={isPurging}
-                  className="justify-center !bg-red-700 hover:!bg-red-800"
+                  wrapLabel
+                  className="justify-center"
                   title={t('redis.purgeAllButtonTitle', 'Delete every vehicle:*:signals HSET in Redis (L2). Requires typed confirmation.')}
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  {t('redis.purgeAllButton', 'Purge All Redis')}
+                  <Icon icon={Trash2} />
+                  {t('redis.purgeAllButton', 'Purge all Redis')}
                 </Button>
               </div>
-            </GlassPanel>
+            </LayoutCard>
           </FadeIn>
         </div>
       </section>
@@ -691,7 +670,7 @@ export default function RedisSignalViewerPage() {
         }
         confirmLabel={
           purgeMode === 'all'
-            ? t('redis.purgeAllConfirm', 'Purge All Vehicles')
+            ? t('redis.purgeAllConfirm', 'Purge all vehicles')
             : t('redis.purgeConfirm', 'Purge Redis (L2)')
         }
         cancelLabel={t('common.cancel', 'Cancel')}
@@ -709,6 +688,6 @@ export default function RedisSignalViewerPage() {
           setPurgeTargetLabel('')
         }}
       />
-    </PageContainer>
+    </PageLayout>
   )
 }

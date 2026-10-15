@@ -18,9 +18,10 @@
  *      backup-code count surfaces, and Regenerate + Disable render (Enable is
  *      gone). Each button raises its own callback; while `regenerating` only
  *      Regenerate is disabled/busy — Disable stays operable.
- *   4. Null-safety / hardening — a missing or negative backup count collapses
- *      to "0" (never a blank or "-1" cell), and a blank/whitespace `lastUsedAt`
- *      falls back to "Never" instead of formatting an "Invalid Date".
+ *   4. Null-safety / hardening — missing counts remain unknown, real zero
+ *      remains zero; invalid counts are unknown, not clamped or rounded.
+ *      Only nonnegative safe integers render as counts. Missing or invalid
+ *      `lastUsedAt` stays unknown rather than proving the credential was never used.
  *   5. Variant mapping — the pill flips success↔neutral with the activated flag.
  *
  * react-i18next is stubbed so `t(key, default)` echoes the English fallback —
@@ -188,10 +189,11 @@ describe('TotpStatusHero — active branch', () => {
     expect(screen.queryByText('Never')).toBeNull()
   })
 
-  it('shows "Never" and skips formatting when no timestamp is present', () => {
+  it('keeps verification evidence unknown and skips formatting when no timestamp is present', () => {
     renderHero({ activated: true, lastUsedAt: undefined })
 
-    expect(screen.getByText('Never')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('Never')).not.toBeInTheDocument()
     expect(formatDateTimeMock).not.toHaveBeenCalled()
   })
 
@@ -222,34 +224,59 @@ describe('TotpStatusHero — active branch', () => {
 })
 
 describe('TotpStatusHero — null-safety & hardening', () => {
-  it('clamps a negative backup count to "0"', () => {
-    renderHero({ activated: true, backupRemaining: -5 })
-    expect(screen.getByTestId('totp-backup-remaining')).toHaveTextContent('0')
-    expect(screen.getByTestId('totp-backup-remaining')).not.toHaveTextContent('-5')
-  })
-
-  it('renders "0" rather than a blank cell when the count is missing', () => {
-    // Simulate an upstream data bug that lets `undefined` slip past the typed
-    // contract — the cell must still read a concrete "0", never empty.
+  it.each([undefined, null])('keeps a missing backup count %s distinct from zero', backupRemaining => {
     renderHero({
       activated: true,
-      backupRemaining: undefined as unknown as number,
+      backupRemaining,
     })
-    expect(screen.getByTestId('totp-backup-remaining')).toHaveTextContent('0')
+    expect(screen.getByTestId('totp-backup-remaining')).toHaveTextContent('—')
+    expect(screen.getByTestId('totp-backup-remaining')).not.toHaveTextContent('0')
   })
 
-  it('treats a whitespace-only timestamp as "Never" (no Invalid Date)', () => {
-    renderHero({ activated: true, lastUsedAt: '   ' })
+  it.each([
+    -5,
+    -0.5,
+    0.5,
+    7.5,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    Number.MAX_SAFE_INTEGER + 1,
+    Number.MIN_SAFE_INTEGER,
+  ])('renders an invalid backup count %s as unknown without changing the raw input', backupRemaining => {
+    const props = Object.freeze(makeProps({ activated: true, backupRemaining }))
+    render(<TotpStatusHero {...props} />)
 
-    expect(screen.getByText('Never')).toBeInTheDocument()
-    expect(formatDateTimeMock).not.toHaveBeenCalled()
+    expect(screen.getByTestId('totp-backup-remaining').textContent).toBe('—')
+    expect(props.backupRemaining).toBe(backupRemaining)
   })
+
+  it.each([0, -0])('preserves a measured exhausted balance %s as zero', backupRemaining => {
+    renderHero({ activated: true, backupRemaining })
+    expect(screen.getByTestId('totp-backup-remaining').textContent).toBe('0')
+  })
+
+  it.each([+7, 9, Number.MAX_SAFE_INTEGER])('preserves a valid nonnegative safe-integer count %s', backupRemaining => {
+    renderHero({ activated: true, backupRemaining })
+    expect(screen.getByTestId('totp-backup-remaining').textContent).toBe(String(backupRemaining))
+  })
+
+  it.each(['', '   ', 'not-a-date', '2026-13-01T10:00:00Z'])(
+    'keeps invalid verification evidence %s unknown without claiming never-used',
+    lastUsedAt => {
+      renderHero({ activated: true, lastUsedAt })
+
+      expect(screen.getByText('—')).toBeInTheDocument()
+      expect(screen.queryByText('Never')).not.toBeInTheDocument()
+      expect(formatDateTimeMock).not.toHaveBeenCalled()
+    },
+  )
 })
 
 describe('TotpStatusHero — variant mapping & module surface', () => {
   it('flips the pill variant with the activated flag', () => {
     const { unmount } = renderHero({ activated: true })
-    expect(screen.getByTestId('totp-status-pill')).toHaveClass('bg-green-100')
+    expect(screen.getByTestId('totp-status-pill')).toHaveClass('bg-[var(--semantic-success-bg)]')
     unmount()
 
     renderHero({ activated: false })

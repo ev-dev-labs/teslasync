@@ -5,24 +5,40 @@
  * Route chunks are intentionally runtime-cached after use. This check reads
  * the generated Workbox manifest from dist/sw.js and prevents a future broad
  * glob from restoring the multi-megabyte first-install download.
+ *
+ * Usage: node scripts/check-pwa-precache.mjs [--dist <dir>]
+ * Relative output paths resolve from web/; the default remains web/dist.
  */
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { gzipSync } from 'node:zlib'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const DIST_ROOT = resolve(__dirname, '..', 'dist')
-const SW_PATH = join(DIST_ROOT, 'sw.js')
+const WEB_ROOT = resolve(__dirname, '..')
 const RAW_LIMIT_KB = Number(process.env.PWA_PRECACHE_RAW_LIMIT_KB ?? 150)
+
+export function resolveDistRoot(argv = process.argv.slice(2)) {
+  const distFlagIndex = argv.indexOf('--dist')
+  const distArgument = distFlagIndex === -1 ? 'dist' : argv[distFlagIndex + 1]
+  if (!distArgument || distArgument.startsWith('--')) {
+    throw new Error('--dist requires a directory argument')
+  }
+  return resolve(WEB_ROOT, distArgument)
+}
 
 function fmtKB(bytes) {
   return `${(bytes / 1024).toFixed(1)} KB`
 }
 
 function main() {
+  const DIST_ROOT = resolveDistRoot()
+  if (!existsSync(DIST_ROOT) || !statSync(DIST_ROOT).isDirectory()) {
+    throw new Error(`output directory not found: ${DIST_ROOT} — run build first`)
+  }
+  const SW_PATH = join(DIST_ROOT, 'sw.js')
   if (!existsSync(SW_PATH)) {
-    console.error('[pwa-precache] dist/sw.js not found — run `npm run build` first')
+    console.error(`[pwa-precache] ${SW_PATH} not found — run \`npm run build\` first`)
     process.exit(1)
   }
 
@@ -33,7 +49,7 @@ function main() {
   const urls = [...new Set(manifestUrls)]
 
   if (urls.length === 0) {
-    console.error('[pwa-precache] no Workbox manifest entries found in dist/sw.js')
+    console.error(`[pwa-precache] no Workbox manifest entries found in ${SW_PATH}`)
     process.exit(1)
   }
 
@@ -105,4 +121,11 @@ function main() {
   console.log('[pwa-precache] OK — route chunks remain on-demand')
 }
 
-main()
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    main()
+  } catch (error) {
+    console.error('[pwa-precache]', error.message)
+    process.exitCode = 1
+  }
+}

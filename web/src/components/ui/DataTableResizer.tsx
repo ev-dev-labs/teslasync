@@ -12,7 +12,7 @@ import { cn } from '@/lib/cn'
 import { tableTokens } from '@/lib/tokens'
 
 /**
- * Pointer capture lets a drag continue when the pointer leaves the ~1.5px
+ * Pointer capture lets a drag continue when the pointer leaves the resize
  * handle, but it is a best-effort convenience: it is unavailable in some
  * environments (jsdom, older engines) and `set`/`releasePointerCapture` can
  * throw (`NotFoundError` / `InvalidStateError`) when the pointer is no longer
@@ -165,7 +165,19 @@ export function DataTableResizer({
       aria-valuemin={minWidth}
       aria-valuemax={maxWidth}
       tabIndex={0}
-      className={cn(tableTokens.resizer, dragging && 'opacity-100 bg-cyan-400/60')}
+      className={cn(
+        tableTokens.resizer,
+        // Keep the visible divider narrow without making its hit target narrow.
+        'w-11 min-h-11 md:w-6 md:min-h-6 touch-none opacity-100 bg-transparent ' +
+          'hover:bg-transparent focus-visible:bg-transparent motion-reduce:transition-none ' +
+          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ' +
+          'focus-visible:outline-[var(--focus-ring)] ' +
+          'after:pointer-events-none after:absolute after:inset-y-0 after:right-0 after:w-0.5 ' +
+          'after:bg-[var(--text-secondary)] after:opacity-0 ' +
+          'hover:after:opacity-100 focus-visible:after:opacity-100 ' +
+          'forced-colors:focus-visible:outline-[Highlight] forced-colors:after:bg-[CanvasText]',
+        dragging && 'after:opacity-100',
+      )}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={finishDrag}

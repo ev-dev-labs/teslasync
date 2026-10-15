@@ -2,29 +2,35 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge, Zap, TrendingUp, Car, Activity } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui';
 import {
   ChartTooltip,
   BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
-  LinearGauge, EmbeddedChart,
+  LinearGauge, EmbeddedChart, axisTick,
 } from '@/components/charts';
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
+import { DynamicsPausedNotice } from '../components/driving-dynamics-modernization/DynamicsPausedNotice';
 import { FadeIn } from '@/components/motion';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 
 
 import { useRangeState } from '@/hooks/useRangeState';
-import { useSpeedProfile, useDrives } from '@/api/hooks/useDriving';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useSpeedProfile, useDriveCalendarHistory } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
-import { fmtNumber } from '@/lib/numberFormat';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
+
 import { getEfficiency } from '@/lib/drivesAggregation';
 import { neonColorMap, type NeonColor } from '@/lib/tokens';
-import { convertSpeedFromSI } from '@/lib/unitConversion';
+import { convertSpeedFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -32,10 +38,10 @@ import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 /** Map a speed-bucket label to a semantic accent (chip neon + chart fill). */
 export function bucketAccent(range: string): { neon: NeonColor; fill: string } {
-  if (range.startsWith('0') || range.includes('15')) return { neon: 'green', fill: '#10b981' };
-  if (range.startsWith('30') || range.includes('45')) return { neon: 'cyan', fill: '#00f0ff' };
-  if (range.startsWith('60') || range.includes('75')) return { neon: 'amber', fill: '#f59e0b' };
-  return { neon: 'red', fill: '#ef4444' };
+  if (range.startsWith('0') || range.includes('15')) return { neon: 'green', fill: 'var(--semantic-success)' };
+  if (range.startsWith('30') || range.includes('45')) return { neon: 'cyan', fill: 'var(--semantic-info)' };
+  if (range.startsWith('60') || range.includes('75')) return { neon: 'amber', fill: 'var(--semantic-warning)' };
+  return { neon: 'red', fill: 'var(--semantic-danger)' };
 }
 
 export function bucketIcon(range: string) {
@@ -46,47 +52,73 @@ export function bucketIcon(range: string) {
 
 /** Toned 300-level accent for an efficiency figure (lower Wh = better). */
 export function efficiencyClass(eff: number): string {
-  if (eff < 160) return 'text-emerald-300';
-  if (eff < 220) return 'text-amber-300';
-  return 'text-rose-300';
+  if (eff < 160) return neonColorMap.green.text;
+  if (eff < 220) return neonColorMap.amber.text;
+  return neonColorMap.red.text;
 }
 
 export { getEfficiency };
+
+/**
+ * Efficiency bands for the scatter. Thresholds stay in raw SI (Wh/km) so a
+ * drive's band never depends on the viewer's distance unit; only the legend
+ * text converts them for display.
+ */
+export const EFFICIENCY_BANDS = [
+  { id: 'efficient', maxWhPerKm: 140, color: 'var(--semantic-success)', chip: 'bg-[var(--semantic-success)]', labelKey: 'speedProfile.efficient', fallback: 'Efficient' },
+  { id: 'typical', maxWhPerKm: 200, color: 'var(--semantic-info)', chip: 'bg-[var(--semantic-info)]', labelKey: 'speedProfile.typical', fallback: 'Typical' },
+  { id: 'moderate', maxWhPerKm: 260, color: 'var(--semantic-warning)', chip: 'bg-[var(--semantic-warning)]', labelKey: 'speedProfile.moderate', fallback: 'Moderate' },
+  { id: 'high', maxWhPerKm: Number.POSITIVE_INFINITY, color: 'var(--semantic-danger)', chip: 'bg-[var(--semantic-danger)]', labelKey: 'speedProfile.highConsumption', fallback: 'High consumption' },
+] as const;
+
+export function efficiencyBand(whPerKm: number) {
+  return EFFICIENCY_BANDS.find((band) => whPerKm < band.maxWhPerKm) ?? EFFICIENCY_BANDS[EFFICIENCY_BANDS.length - 1];
+}
 
 /* ------------------------------------------------------------------ */
 /*  SpeedProfilePage                                                  */
 /* ------------------------------------------------------------------ */
 
 export default function SpeedProfilePage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('speedProfile.title', 'Speed Profile'));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const { start, end } = useRangeState({
-    persistKey: 'speed-profile.range',
-    defaultPresetId: 'all',
-  });
+  const { tz } = useDateFormat();
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({ timezone: tz });
 
-  const { data, isLoading, error, refetch } = useSpeedProfile(vehicleIdStr, start, end);
-  const {
-    data: allDrives,
-    isLoading: drivesLoading,
-    error: drivesError,
-    refetch: refetchDrives,
-  } = useDrives(vehicleIdStr);
+  const profileQuery = useSpeedProfile(vehicleIdStr, startInstant, endInstantExclusive);
+  const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
+  const profileState = useDataState(profileQuery, { provenance: 'historical' });
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
+  const missingSelection = vehicleId == null;
+  const data = missingSelection ? undefined : profileState.data;
+  const allDrives = missingSelection ? undefined : drivesState.data;
+  const profilePaused = !missingSelection && !profileState.hasData
+    && profileState.isRefreshBlocked && !profileState.fatalError;
+  const drivesPaused = !missingSelection && !drivesState.hasData
+    && drivesState.isRefreshBlocked && !drivesState.fatalError;
+  const isLoading = !missingSelection && profileState.status === 'initial' && !profilePaused;
+  const drivesLoading = !missingSelection && drivesState.status === 'initial' && !drivesPaused;
+  const error = missingSelection ? null : profileState.fatalError;
+  const drivesError = missingSelection ? null : drivesState.fatalError;
+  const { refetch } = profileQuery;
+  const { refetch: refetchDrives } = drivesQuery;
 
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
+  const chartTick = { ...axisTick, fontFamily: getChartFontFamily(), fontSize: getChartFontSize() };
 
   const toSpeedDisplay = useCallback(
     (value: number) => convertSpeedFromSI(value, unitPrefs.speed),
     [unitPrefs.speed],
   );
   const toEfficiencyDisplay = useCallback(
-    (whPerKm: number) => (unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm),
+    (whPerKm: number) => convertEfficiencyFromSI(whPerKm, unitPrefs.distance),
     [unitPrefs.distance],
   );
 
@@ -96,14 +128,16 @@ export default function SpeedProfilePage() {
   const drives = useMemo(() => {
     const list = allDrives ?? [];
     if (list.length === 0) return list;
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    const startMs = Date.parse(startInstant);
+    const endMs = Date.parse(endInstantExclusive);
     return list.filter((d) => {
       if (!d.startTs) return false;
       const ts = new Date(d.startTs).getTime();
-      return ts >= startMs && ts <= endMs;
+      return ts >= startMs && ts < endMs;
     });
-  }, [allDrives, start, end]);
+  }, [allDrives, startInstant, endInstantExclusive]);
+  const authoritativeNoDrives = drivesState.hasData && allDrives?.length === 0;
+  const sampleNoMatch = (allDrives?.length ?? 0) > 0 && drives.length === 0;
 
   const totalReadings = useMemo(
     () => (data?.distribution ?? []).reduce((s, b) => s + (b.readings ?? 0), 0),
@@ -138,12 +172,13 @@ export default function SpeedProfilePage() {
     const points: { speed: number; efficiency: number; color: string }[] = [];
     for (const d of drives) {
       const raw = getEfficiency(d);
-      if (d.avgSpeedMps == null || raw == null) continue;
+      if (d.avgSpeedMps == null || !Number.isFinite(d.avgSpeedMps)
+        || raw == null || !Number.isFinite(raw)) continue;
       const eff = toEfficiencyDisplay(raw);
       points.push({
-        speed: Math.round(toSpeedDisplay(d.avgSpeedMps)),
-        efficiency: Math.round(eff),
-        color: eff < 140 ? '#10b981' : eff < 200 ? '#00f0ff' : eff < 260 ? '#f59e0b' : '#ef4444',
+        speed: toSpeedDisplay(d.avgSpeedMps),
+        efficiency: eff,
+        color: efficiencyBand(raw).color,
       });
     }
     return points;
@@ -154,20 +189,20 @@ export default function SpeedProfilePage() {
     const acc = new Map<string, { totalEff: number; totalSpdMps: number; count: number }>();
     const ranges = data?.distribution ?? [];
     drives.forEach((d) => {
-      if (d.avgSpeedMps == null) return;
+      if (d.avgSpeedMps == null || !Number.isFinite(d.avgSpeedMps)) return;
       const eff = getEfficiency(d);
-      if (eff == null) return;
-      // Bucket labels ("0-15", "15-30", …) are in the user's display speed
-      // unit, so compare against the converted value while accumulating the
-      // SI value (m/s) for later conversion at display.
-      const speedDisplay = toSpeedDisplay(d.avgSpeedMps);
+      if (eff == null || !Number.isFinite(eff)) return;
+      // The source distribution uses fixed mph bands, independently of viewer
+      // preferences. Compare in that source unit; retain raw SI accumulators
+      // and convert averages only when displaying them.
+      const sourceSpeedMph = convertSpeedFromSI(d.avgSpeedMps, 'mph');
       for (const r of ranges) {
         const bucket = r.speedBucket ?? r.speed_bucket ?? '';
         const parts = bucket.match(/(\d+)/g);
         if (!parts) continue;
         const lo = Number(parts[0]);
         const hi = parts.length > 1 ? Number(parts[1]) : Number.POSITIVE_INFINITY;
-        if (speedDisplay >= lo && speedDisplay < hi) {
+        if (sourceSpeedMph >= lo && sourceSpeedMph < hi) {
           const existing = acc.get(bucket) ?? { totalEff: 0, totalSpdMps: 0, count: 0 };
           existing.totalEff += eff;
           existing.totalSpdMps += d.avgSpeedMps;
@@ -182,88 +217,131 @@ export default function SpeedProfilePage() {
       result.set(k, { avgEff: v.totalEff / v.count, avgSpeedMps: v.totalSpdMps / v.count }),
     );
     return result;
-  }, [drives, data, toSpeedDisplay]);
+  }, [drives, data]);
 
   const hasDistribution = distributionChartData.length > 0;
+  const profileRetained = !missingSelection && profileState.hasData
+    && (profileState.status === 'stale' || profileState.refreshError != null || profileState.isRefreshBlocked);
+  const drivesRetained = !missingSelection && drivesState.hasData
+    && (drivesState.status === 'stale' || drivesState.refreshError != null || drivesState.isRefreshBlocked);
+  const selectionMessage = t('driving.brief.selectVehicle', 'Select a vehicle');
+  const pausedMessage = t('dataSources.status.paused', 'Refresh paused');
+  const profilePlaceholder = missingSelection || profilePaused
+    ? <EmptyState message={missingSelection ? selectionMessage : pausedMessage}
+        actionTo={missingSelection ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
+        action={!missingSelection ? { label: t('common.retry', 'Retry'), onClick: () => { void profileQuery.refetch(); } } : undefined} />
+    : null;
+  const drivesPlaceholder = missingSelection || drivesPaused
+    ? <EmptyState message={missingSelection ? selectionMessage : pausedMessage}
+        actionTo={missingSelection ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
+        action={!missingSelection ? { label: t('common.retry', 'Retry'), onClick: () => { void drivesQuery.refetch(); } } : undefined} />
+    : null;
+  const driveValueStatus = missingSelection
+    ? selectionMessage
+    : drivesPaused
+      ? pausedMessage
+      : drivesLoading
+        ? t('driving.brief.loading', 'Loading source')
+        : drivesError || authoritativeNoDrives
+          ? t('common.unavailable', 'Unavailable')
+          : t('common.unknown', 'Unknown');
 
-  const kpiSpeed = (mps: number | null | undefined) =>
-    data ? fmtNumber(toSpeedDisplay(mps ?? 0), 0) : '—';
+  const displaySpeed = (mps: number | null | undefined) =>
+    mps != null && Number.isFinite(mps) ? toSpeedDisplay(mps) : null;
+  const gaugeSpeed = (mps: number | null | undefined) => {
+    const value = displaySpeed(mps);
+    return value != null ? Math.round(value) : null;
+  };
+  const summaryMetrics: readonly StatMetric[] = [
+    { metricId: 'speed', occurrenceId: 'average-speed', rawValue: data?.avgSpeedMps,
+      label: t('speedProfile.avgSpeed', 'Avg Speed') },
+    { metricId: 'speed', occurrenceId: 'peak-speed', rawValue: data?.peakSpeedMps,
+      label: t('speedProfile.peakSpeed', 'Peak Speed') },
+    { metricId: 'speed', occurrenceId: 'optimal-speed', rawValue: data?.optimalSpeedMps,
+      label: t('speedProfile.optimalSpeed', 'Optimal Speed') },
+    { metricId: 'count', occurrenceId: 'samples', rawValue: data ? totalReadings : null,
+      label: t('speedProfile.eligibleDrives', 'Eligible drives'),
+      context: !missingSelection && drivesState.hasData && !sampleNoMatch
+        ? t('speedProfile.drivesAnalyzed', '{{count}} drives analysed', { count: drives.length })
+        : t('speedProfile.brief.driveCoverageUnknown', 'Drive sample coverage is unavailable independently of the speed profile.') },
+  ];
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('speedProfile.title', 'Speed Profile')}
       subtitle={t('speedProfile.subtitle', 'Speed distribution and driving pattern analysis')}
-      loading={isLoading && !data}
+      query={[profileQuery, drivesQuery]}
+      busy={!missingSelection && (profileQuery.isFetching || drivesQuery.isFetching)}
     >
+      {!missingSelection && (
+        <>
+          <StaleRefreshWarning state={profileState} label={t('speedProfile.title', 'Speed Profile')} />
+          <StaleRefreshWarning state={drivesState} label={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')} />
+          <DynamicsPausedNotice state={profileState} label={t('speedProfile.title', 'Speed Profile')} />
+          <DynamicsPausedNotice state={drivesState} label={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')} />
+        </>
+      )}
       {/* 1 — KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('speedProfile.summaryAria', 'Speed summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 xl:gap-5"
-        >
-          <MetricCard
-            label={t('speedProfile.avgSpeed', 'Avg Speed')}
-            value={kpiSpeed(data?.avgSpeedMps)}
-            subtitle={speedUnit}
-            icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('speedProfile.peakSpeed', 'Peak Speed')}
-            value={kpiSpeed(data?.peakSpeedMps)}
-            subtitle={speedUnit}
-            icon={<TrendingUp className="h-5 w-5" aria-hidden="true" />}
-            color="red"
-          />
-          <MetricCard
-            label={t('speedProfile.optimalSpeed', 'Optimal Speed')}
-            value={kpiSpeed(data?.optimalSpeedMps)}
-            subtitle={speedUnit}
-            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('speedProfile.samples', 'Samples')}
-            value={data ? fmtNumber(totalReadings, 0) : '—'}
-            subtitle={t('speedProfile.drivesAnalyzed', '{{count}} drives analysed', {
-              count: drives.length,
-            })}
-            icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
-            color="blue"
-          />
-        </section>
+        <SectionErrorBoundary name="SpeedProfileSummary">
+        <DrivingSummaryBrief
+          id="speed-profile-brief"
+          title={t('speedProfile.summaryAria', 'Speed summary metrics')}
+          description={t('speedProfile.brief.description', 'Recorded speed statistics and eligible-drive counts; efficiency evidence comes from a separate drive query.')}
+          metrics={summaryMetrics}
+          scope={`${start} — ${end}`}
+          provenance={t('speedProfile.brief.provenance', 'Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage.')}
+          loading={isLoading}
+          unavailable={missingSelection || !profileState.hasData}
+          retained={profileRetained}
+          sourceStatus={missingSelection ? selectionMessage : profileState.isRefreshBlocked && !error && !profileState.refreshError
+            ? t('dataSources.status.paused', 'Refresh paused')
+            : !profileState.hasData && !isLoading && !error
+              ? t('common.unknown', 'Unknown') : undefined}
+          actions={error ? <QueryError error={error} onRetry={() => refetch()} /> : undefined}
+        />
+        </SectionErrorBoundary>
       </FadeIn>
 
       {/* 2 — Hero bento: distribution chart + speed-envelope gauges */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <SectionErrorBoundary name="SpeedProfileDistribution">
             <PanelTitle className="mb-3">{t('speedProfile.distribution', 'Speed Distribution')}</PanelTitle>
-            {error ? (
+            <Caption className="mb-3 block">{t('speedProfile.sourceBucketUnit', 'Source speed buckets are in mph; averages use your selected units.')}</Caption>
+            <Caption className="mb-3 block">{t('speedProfile.countPopulation', 'Each count is one drive with a recorded average speed greater than zero in the selected vehicle and date range. Shares divide each bucket count by the total eligible-drive count, not by driving time or telemetry samples.')}</Caption>
+            {profilePlaceholder ? profilePlaceholder : error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : isLoading ? (
               <Skeleton height={288} />
             ) : !hasDistribution ? (
               <EmptyState
                 icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
-                message={t('speedProfile.noDistribution', 'No speed distribution available yet')}
+                message={profileState.hasData
+                  ? t('speedProfile.noDistribution', 'No speed distribution available yet')
+                  : t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
               <div className="h-64 sm:h-72 xl:h-80">
-                {/* chart-a11y:no-table speed-bucket histogram — bucket count varies by drive set; readings not individually meaningful as rows */}
                 <EmbeddedChart
                   title={t('speedProfile.distribution', 'Speed Distribution')}
-                  ariaLabel={t('speedProfile.distributionAria', 'Speed-bucket time-share distribution bar chart')}
+                  ariaLabel={t('speedProfile.distributionAria', 'Eligible-drive counts by average-speed bucket bar chart')}
+                  data={distributionChartData}
+                  dataColumns={[
+                    { key: 'range', label: t('speedProfile.buckets', 'Speed Buckets') },
+                    { key: 'readings', label: t('speedProfile.driveCount', 'Drive count'), kind: 'count' },
+                  ]}
                   fluid
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={distributionChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
+                      <XAxis dataKey="range" tick={chartTick} />
+                      <YAxis tick={chartTick} allowDecimals={false} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Bar dataKey="readings" name={t('speedProfile.readings', 'Readings')} radius={[4, 4, 0, 0]}>
+                      <Bar dataKey="readings" name={t('speedProfile.driveCount', 'Drive count')} radius={[4, 4, 0, 0]}>
                         {distributionChartData.map((b) => (
                           <Cell key={b.range} fill={bucketAccent(b.range).fill} fillOpacity={0.75} />
                         ))}
@@ -273,27 +351,29 @@ export default function SpeedProfilePage() {
                 </EmbeddedChart>
               </div>
             )}
+            </SectionErrorBoundary>
           </GlassPanel>
 
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+            <SectionErrorBoundary name="SpeedProfileEnvelope">
             <PanelTitle className="mb-1">{t('speedProfile.envelope', 'Speed Envelope')}</PanelTitle>
             <Caption className="mb-3 block">
               {t('speedProfile.envelopeHint', 'Average, peak and most-efficient speed')}
             </Caption>
-            {error ? (
+            {profilePlaceholder ? profilePlaceholder : error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : isLoading ? (
               <Skeleton height={160} />
             ) : !data ? (
               <EmptyState
                 icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
-                message={t('speedProfile.noData', 'No speed profile data available yet')}
+                message={t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
               <div className="grid grid-cols-3 items-start gap-1 sm:gap-2">
                 <LinearGauge
-                  value={Math.round(toSpeedDisplay(data.avgSpeedMps ?? 0))}
+                  value={gaugeSpeed(data.avgSpeedMps)}
                   max={Math.max(1, Math.round(toSpeedDisplay(55.56)))}
                   label={t('speedProfile.avgSpeed', 'Avg Speed')}
                   unit={speedUnit}
@@ -301,7 +381,7 @@ export default function SpeedProfilePage() {
                   size={96}
                 />
                 <LinearGauge
-                  value={Math.round(toSpeedDisplay(data.peakSpeedMps ?? 0))}
+                  value={gaugeSpeed(data.peakSpeedMps)}
                   max={Math.max(1, Math.round(toSpeedDisplay(69.44)))}
                   label={t('speedProfile.peakSpeed', 'Peak Speed')}
                   unit={speedUnit}
@@ -309,7 +389,7 @@ export default function SpeedProfilePage() {
                   size={96}
                 />
                 <LinearGauge
-                  value={Math.round(toSpeedDisplay(data.optimalSpeedMps ?? 0))}
+                  value={gaugeSpeed(data.optimalSpeedMps)}
                   max={Math.max(1, Math.round(toSpeedDisplay(55.56)))}
                   label={t('speedProfile.optimalSpeed', 'Optimal Speed')}
                   unit={speedUnit}
@@ -318,6 +398,7 @@ export default function SpeedProfilePage() {
                 />
               </div>
             )}
+            </SectionErrorBoundary>
           </GlassPanel>
         </section>
       </FadeIn>
@@ -326,7 +407,10 @@ export default function SpeedProfilePage() {
       <FadeIn delay={0.2}>
         <section aria-label={t('speedProfile.buckets', 'Speed Buckets')}>
           <SectionTitle className="mb-3">{t('speedProfile.buckets', 'Speed Buckets')}</SectionTitle>
-          {error ? (
+          <Caption className="mb-3 block">{t('speedProfile.sourceBucketUnit', 'Source speed buckets are in mph; averages use your selected units.')}</Caption>
+          {profilePlaceholder ? (
+            <GlassPanel className="p-4 sm:p-5">{profilePlaceholder}</GlassPanel>
+          ) : error ? (
             <GlassPanel className="p-4 sm:p-5">
               <QueryError error={error} onRetry={() => refetch()} />
             </GlassPanel>
@@ -340,7 +424,9 @@ export default function SpeedProfilePage() {
             <GlassPanel className="p-4 sm:p-5">
               <EmptyState
                 icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
-                message={t('speedProfile.noBuckets', 'No speed buckets recorded for this window')}
+                message={profileState.hasData
+                  ? t('speedProfile.noBuckets', 'No speed buckets recorded for this window')
+                  : t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             </GlassPanel>
@@ -369,38 +455,39 @@ export default function SpeedProfilePage() {
                     </div>
                     <dl className="flex-1 space-y-2">
                       <div className="flex items-center justify-between gap-2">
-                        <Text as="dt" variant="caption">{t('speedProfile.timeShare', 'Time share')}</Text>
-                        <Text as="dd" size="sm" weight="bold" className={chip.text}>
-                          {fmtNumber(bucket.pct, 1)}%
+                        <Text as="dt" variant="caption">{t('speedProfile.driveCountShare', 'Drive count share')}</Text>
+                        <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
+                          {fmtNumber(bucket.pct)}%
                         </Text>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <Text as="dt" variant="caption">{t('speedProfile.readings', 'Readings')}</Text>
+                        <Text as="dt" variant="caption">{t('speedProfile.driveCount', 'Drive count')}</Text>
                         <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                          {fmtNumber(bucket.readings, 0)}
+                          {fmtInt(bucket.readings)}
                         </Text>
                       </div>
-                      {effData ? (
-                        <>
-                          <div className="flex items-center justify-between gap-2">
-                            <Text as="dt" variant="caption">{t('speedProfile.avgSpeed', 'Avg Speed')}</Text>
-                            <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                              {fmtNumber(toSpeedDisplay(effData.avgSpeedMps), 0)} {speedUnit}
-                            </Text>
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <Text as="dt" variant="caption">{efficiencyUnit}</Text>
-                            <Text
-                              as="dd"
-                              size="sm"
-                              weight="bold"
-                              className={cn('tabular-nums', efficiencyClass(effData.avgEff))}
-                            >
-                              {fmtNumber(toEfficiencyDisplay(effData.avgEff), 0)}
-                            </Text>
-                          </div>
-                        </>
-                      ) : null}
+                      <div className="flex items-center justify-between gap-2">
+                        <Text as="dt" variant="caption">{t('speedProfile.avgSpeed', 'Avg Speed')}</Text>
+                        <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
+                          {effData
+                            ? `${fmtNumber(toSpeedDisplay(effData.avgSpeedMps))} ${speedUnit}`
+                            : driveValueStatus}
+                        </Text>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <Text as="dt" variant="caption">{efficiencyUnit}</Text>
+                        <Text
+                          as="dd"
+                          size="sm"
+                          weight="bold"
+                          className={cn('tabular-nums', effData && efficiencyClass(effData.avgEff))}
+                        >
+                          {effData ? fmtNumber(toEfficiencyDisplay(effData.avgEff)) : driveValueStatus}
+                        </Text>
+                      </div>
+                      {drivesRetained && (
+                        <Caption as="div">{t('driving.brief.retained', 'Retained source')}</Caption>
+                      )}
                     </dl>
                   </GlassPanel>
                 );
@@ -414,27 +501,34 @@ export default function SpeedProfilePage() {
       <FadeIn delay={0.3}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <SectionErrorBoundary name="SpeedProfileScatter">
             <PanelTitle className="mb-1">{t('speedProfile.effVsSpeed', 'Efficiency vs Speed')}</PanelTitle>
             <Caption className="mb-3 block">
               {t('speedProfile.lower', 'Lower')} {efficiencyUnit} = {t('speedProfile.better', 'better')}
             </Caption>
-            {drivesError ? (
+            {drivesPlaceholder ? drivesPlaceholder : drivesError ? (
               <QueryError error={drivesError} onRetry={() => refetchDrives()} />
             ) : drivesLoading ? (
               <Skeleton height={240} />
             ) : scatterData.length === 0 ? (
               <EmptyState
                 icon={<Activity className="h-8 w-8" aria-hidden="true" />}
-                message={t('speedProfile.noScatter', 'Not enough drive data for the efficiency scatter yet')}
+                message={drivesState.hasData && !sampleNoMatch
+                  ? t('speedProfile.noScatter', 'Not enough drive data for the efficiency scatter yet')
+                  : t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
               <>
-                {/* chart-a11y:no-table per-drive scatter cloud — each point is one drive, not meaningful as tabular rows */}
                 <div className="h-56 sm:h-64 xl:h-72">
                   <EmbeddedChart
                     title={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')}
                     ariaLabel={t('speedProfile.effVsSpeedAria', 'Per-drive efficiency versus speed scatter plot')}
+                    data={scatterData}
+                    dataColumns={[
+                      { key: 'speed', label: `${t('speedProfile.speed', 'Speed')} (${speedUnit})`, format: value => typeof value === 'number' ? fmtNumber(value) : '—' },
+                      { key: 'efficiency', label: efficiencyUnit, format: value => typeof value === 'number' ? fmtNumber(value) : '—' },
+                    ]}
                     fluid
                   >
                     <ResponsiveContainer width="100%" height="100%">
@@ -444,13 +538,15 @@ export default function SpeedProfilePage() {
                           dataKey="speed"
                           name={t('speedProfile.speed', 'Speed')}
                           unit={` ${speedUnit}`}
-                          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                          tickFormatter={fmtNumber}
+                          tick={chartTick}
                         />
                         <YAxis
                           dataKey="efficiency"
                           name={efficiencyUnit}
                           unit={` ${efficiencyUnit}`}
-                          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                          tickFormatter={fmtNumber}
+                          tick={chartTick}
                         />
                         <Tooltip content={<ChartTooltip />} />
                         <Scatter data={scatterData} fillOpacity={0.75}>
@@ -462,27 +558,43 @@ export default function SpeedProfilePage() {
                     </ResponsiveContainer>
                   </EmbeddedChart>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
-                  <ScatterLegend colorClass="bg-emerald-400" label={t('speedProfile.efficient', 'Efficient')} />
-                  <ScatterLegend colorClass="bg-amber-400" label={t('speedProfile.moderate', 'Moderate')} />
-                  <ScatterLegend colorClass="bg-rose-400" label={t('speedProfile.highConsumption', 'High consumption')} />
-                </div>
+                <ul
+                  className="mt-3 flex flex-wrap items-center justify-end gap-x-3 gap-y-1"
+                  aria-label={t('speedProfile.efficiencyBands', 'Efficiency bands')}
+                  data-testid="speed-efficiency-bands"
+                >
+                  {EFFICIENCY_BANDS.map((band, index) => {
+                    const lower = index > 0 ? EFFICIENCY_BANDS[index - 1].maxWhPerKm : null;
+                    const format = (whPerKm: number) => fmtInt(toEfficiencyDisplay(whPerKm));
+                    const range = lower == null
+                      ? t('speedProfile.bandBelow', 'below {{max}} {{unit}}', { max: format(band.maxWhPerKm), unit: efficiencyUnit })
+                      : Number.isFinite(band.maxWhPerKm)
+                        ? t('speedProfile.bandBetween', '{{min}}–{{max}} {{unit}}', { min: format(lower), max: format(band.maxWhPerKm), unit: efficiencyUnit })
+                        : t('speedProfile.bandAtLeast', '{{min}} {{unit}} or more', { min: format(lower), unit: efficiencyUnit });
+                    return (
+                      <ScatterLegend key={band.id} colorClass={band.chip}
+                        label={t('speedProfile.bandLabel', '{{label}}: {{range}}', { label: t(band.labelKey, band.fallback), range })} />
+                    );
+                  })}
+                </ul>
               </>
             )}
+            </SectionErrorBoundary>
           </GlassPanel>
 
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+            <SectionErrorBoundary name="SpeedProfileInsight">
             <PanelTitle className="mb-3">{t('speedProfile.insightTitle', 'Efficiency Insight')}</PanelTitle>
-            {error ? (
+            {profilePlaceholder ? profilePlaceholder : error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : isLoading ? (
               <Skeleton height={120} />
             ) : (data?.optimalSpeedMps ?? 0) > 0 ? (
-              <div className="flex items-start gap-3 rounded-lg border-l-2 border-emerald-400/70 bg-emerald-400/5 p-3">
-                <Zap className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
+              <div className="flex items-start gap-3 rounded-lg border-l-2 border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+                <Zap className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
                 <Text as="p" size="sm" color="secondary">
-                  {t('speedProfile.insightText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.', {
-                    speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0), 0),
+                  {t('speedProfile.insightEvidenceText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. This profile does not quantify efficiency gains from reducing highway speed.', {
+                    speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0)),
                     unit: speedUnit,
                   })}
                 </Text>
@@ -490,23 +602,26 @@ export default function SpeedProfilePage() {
             ) : (
               <EmptyState
                 icon={<Zap className="h-8 w-8" aria-hidden="true" />}
-                message={t('speedProfile.noInsight', 'Efficiency insight appears once optimal-speed data is available')}
+                message={profileState.hasData
+                  ? t('speedProfile.noInsight', 'Efficiency insight appears once optimal-speed data is available')
+                  : t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             )}
+            </SectionErrorBoundary>
           </GlassPanel>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }
 
 /** Coloured legend chip for the efficiency scatter (colour paired with text). */
 function ScatterLegend({ colorClass, label }: { colorClass: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <li className="inline-flex items-center gap-1.5">
       <span className={cn('inline-block h-2 w-2 rounded-full', colorClass)} aria-hidden="true" />
       <Caption>{label}</Caption>
-    </span>
+    </li>
   );
 }

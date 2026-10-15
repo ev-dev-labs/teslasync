@@ -1,41 +1,45 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Boxes, Grid3X3, Network, RadioTower, Shuffle } from 'lucide-react';
+import { Grid3X3, Network, RadioTower } from 'lucide-react';
 
 import { useSignalHistory, useSignals } from '@/api/hooks/useTelemetry';
 import {
   Bar, BarChart, CartesianGrid, ChartContainer, ChartTooltip,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
-import { MetricCard } from '@/components/data-display';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import type { StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, GlassPanel, PanelTitle, Select, Text } from '@/components/ui';
+import { Badge, GlassPanel, Icon, PanelTitle, Select, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { cn } from '@/lib/cn';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import { analyzeSignalMutualInformation } from '../lib/signalMutualInformation';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 const HISTORY_HOURS = 24;
 function heatClass(contribution: number, maximum: number): string {
   const strength = maximum > 0 ? Math.abs(contribution) / maximum : 0;
-  const tone = contribution < 0 ? 'bg-rose-500' : 'bg-cyan-500';
-  const opacity = strength > 0.75
-    ? 'bg-opacity-40'
+  // Neutral intensity conveys magnitude; a dashed edge distinguishes negative cells.
+  const intensity = strength > 0.75
+    ? 'bg-[color-mix(in_srgb,var(--text-secondary)_8%,var(--surface-1))]'
     : strength > 0.4
-      ? 'bg-opacity-25'
+      ? 'bg-[color-mix(in_srgb,var(--text-secondary)_6%,var(--surface-1))]'
       : strength > 0
-        ? 'bg-opacity-10'
-        : 'bg-opacity-5';
-  return cn(tone, opacity);
+        ? 'bg-[color-mix(in_srgb,var(--text-secondary)_4%,var(--surface-1))]'
+        : 'bg-[var(--surface-1)]';
+  return cn(intensity, contribution < 0 ? 'border-dashed' : 'border-solid');
 }
 export default function SignalMutualInformationPage() {
+  const { fmtInt, fmtNumber, fmtScientificNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('signalMutualInformation.title', 'Signal Mutual Information'));
+  usePageTitle(t('signalMutualInformation.title', 'Signal mutual information'));
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
   const [signalA, setSignalA] = useState('');
@@ -43,6 +47,9 @@ export default function SignalMutualInformationPage() {
   const signalsQuery = useSignals(id);
   const historyA = useSignalHistory(id, signalA, HISTORY_HOURS);
   const historyB = useSignalHistory(id, signalB, HISTORY_HOURS);
+  const catalogState = useDataState(signalsQuery);
+  const historyAState = useDataState(historyA, { provenance: 'historical', unavailable: historyA.data?.data.length === 0 });
+  const historyBState = useDataState(historyB, { provenance: 'historical', unavailable: historyB.data?.data.length === 0 });
   const signalAChosen = signalA !== '';
   const signalBChosen = signalB !== '';
   const bothChosen = signalAChosen && signalBChosen;
@@ -97,9 +104,6 @@ export default function SignalMutualInformationPage() {
       })),
     [result, t],
   );
-  if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalMutualInformation.title', 'Signal Mutual Information')} />;
-  }
   const historyAHasData = historyA.data !== undefined;
   const historyBHasData = historyB.data !== undefined;
   const isLoading = bothChosen && (
@@ -107,20 +111,43 @@ export default function SignalMutualInformationPage() {
     || (!historyBHasData && historyB.isLoading)
   );
   const isError = bothChosen && (
-    (historyA.isError && !historyAHasData)
-    || (historyB.isError && !historyBHasData)
+    historyAState.fatalError != null
+    || historyBState.fatalError != null
   );
   const error =
-    historyA.isError && !historyAHasData
-      ? historyA.error
-      : historyB.error;
+    historyAState.fatalError ?? historyBState.fatalError;
   const maxContribution = Math.max(
     0,
     ...(result?.cells ?? []).map((cell) => Math.abs(cell.contribution)),
   );
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'aligned-samples', rawValue: bothChosen ? result?.alignedCount : null,
+      label: t('signalMutualInformation.kpis.samples', 'Aligned samples'),
+      display: { formatter: (raw) => ({ value: fmtInt(raw), unit: '' }) },
+      description: t('signalMutualInformation.kpis.cadence', '{{seconds}} s robust cadence', {
+        seconds: result == null ? '—' : fmtNumber(result.cadenceMs / 1_000),
+      }) },
+    { metricId: 'number', occurrenceId: 'mutual-information', rawValue: bothChosen ? result?.mutualInformation : null,
+      label: t('signalMutualInformation.kpis.mi', 'Mutual information'),
+      display: { formatter: (raw) => ({ value: fmtScientificNumber(raw, 3), unit: '' }) },
+      description: t('signalMutualInformation.kpis.bits', 'bits of shared state information') },
+    { metricId: 'percent', occurrenceId: 'normalized-mi', rawValue: bothChosen && result != null ? result.normalizedMutualInformation * 100 : null,
+      label: t('signalMutualInformation.kpis.normalized', 'Normalized MI'),
+      display: { formatter: (raw) => ({ value: fmtPercent(raw), unit: '' }) },
+      description: t('signalMutualInformation.kpis.range', '0% independent · 100% determined') },
+    { metricId: 'status', occurrenceId: 'permutation-test', rawValue: !bothChosen || result == null ? null
+        : result.significant ? t('signalMutualInformation.kpis.detected', 'Detected') : t('signalMutualInformation.kpis.null', 'Null-like'),
+      label: t('signalMutualInformation.kpis.signal', 'Permutation test'),
+      description: t('signalMutualInformation.kpis.threshold', '95% null threshold {{value}}', {
+        value: result == null ? '—' : fmtScientificNumber(result.nullThreshold, 3),
+      }) },
+  ];
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('signalMutualInformation.title', 'Signal mutual information')} />;
+  }
   return (
-    <PageContainer
-      title={t('signalMutualInformation.title', 'Signal Mutual Information')}
+    <PageLayout
+      title={t('signalMutualInformation.title', 'Signal mutual information')}
       subtitle={t(
         'signalMutualInformation.subtitle',
         'Detect nonlinear dependence between quantile states after robust cadence alignment — not linear signal correlation',
@@ -131,16 +158,17 @@ export default function SignalMutualInformationPage() {
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Network className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalMutualInformation.selection.title', 'Signals to Compare')}
+            <Icon icon={Network} className="text-[var(--text-secondary)]" />
+            {t('signalMutualInformation.selection.title', 'Signals to compare')}
           </PanelTitle>
-          {signalsQuery.isError ? (
-            <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
-          ) : signalsQuery.isLoading ? (
+          <StaleRefreshWarning state={catalogState} label={t('dataSources.labels.signalCatalog', 'Signal catalog')} />
+          {catalogState.fatalError ? (
+            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
+          ) : signalsQuery.data === undefined && signalsQuery.isLoading ? (
             <Skeleton height={96} />
           ) : options.length === 0 ? (
             <EmptyState /* no-action: the signal catalog populates automatically from ingested telemetry. */
-              icon={<RadioTower className="h-8 w-8" />}
+              icon={<Icon icon={RadioTower} size="xl" />}
               message={t(
                 'signalMutualInformation.selection.empty',
                 'No telemetry signals have been recorded for this vehicle yet.',
@@ -149,6 +177,8 @@ export default function SignalMutualInformationPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               <Select
+                id="mutual-information-signal-a"
+                className="min-h-11 md:min-h-10"
                 label={t('signalMutualInformation.selection.signalA', 'Signal A')}
                 value={signalA}
                 options={options}
@@ -156,6 +186,8 @@ export default function SignalMutualInformationPage() {
                 placeholder={t('signalMutualInformation.selection.placeholder', 'Choose a signal')}
               />
               <Select
+                id="mutual-information-signal-b"
+                className="min-h-11 md:min-h-10"
                 label={t('signalMutualInformation.selection.signalB', 'Signal B')}
                 value={signalB}
                 options={options}
@@ -173,77 +205,32 @@ export default function SignalMutualInformationPage() {
         </GlassPanel>
       </FadeIn>
       <FadeIn delay={0.1}>
-        <section
-          aria-label={t('signalMutualInformation.kpis.label', 'Mutual information metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError
-                error={error}
-                onRetry={() => {
-                  void signalsQuery.refetch();
-                  void historyA.refetch();
-                  void historyB.refetch();
-                }}
-              />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} height={96} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={t('signalMutualInformation.kpis.samples', 'Aligned Samples')}
-                value={result != null ? fmtNumber(result.alignedCount, 0) : '—'}
-                subtitle={t('signalMutualInformation.kpis.cadence', '{{seconds}} s robust cadence', {
-                  seconds: result != null ? fmtNumber(result.cadenceMs / 1_000, 1) : '—',
-                })}
-                icon={<Boxes className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('signalMutualInformation.kpis.mi', 'Mutual Information')}
-                value={result != null ? fmtNumber(result.mutualInformation, 3) : '—'}
-                subtitle={t('signalMutualInformation.kpis.bits', 'bits of shared state information')}
-                icon={<Grid3X3 className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('signalMutualInformation.kpis.normalized', 'Normalized MI')}
-                value={result != null
-                  ? fmtPercent(result.normalizedMutualInformation * 100, 1)
-                  : '—'}
-                subtitle={t('signalMutualInformation.kpis.range', '0% independent · 100% determined')}
-                icon={<Network className="h-5 w-5" />}
-                color="blue"
-              />
-              <MetricCard
-                label={t('signalMutualInformation.kpis.signal', 'Permutation Test')}
-                value={result == null
-                  ? '—'
-                  : result.significant
-                    ? t('signalMutualInformation.kpis.detected', 'Detected')
-                    : t('signalMutualInformation.kpis.null', 'Null-like')}
-                subtitle={t('signalMutualInformation.kpis.threshold', '95% null threshold {{value}}', {
-                  value: result != null ? fmtNumber(result.nullThreshold, 3) : '—',
-                })}
-                icon={<Shuffle className="h-5 w-5" />}
-                color={result?.significant ? 'green' : 'amber'}
-              />
-            </>
-          )}
-        </section>
+        {signalAChosen && <StaleRefreshWarning state={historyAState} label={t('dataSources.labels.signalAHistory', 'Signal A history')} />}
+        {signalBChosen && <StaleRefreshWarning state={historyBState} label={t('dataSources.labels.signalBHistory', 'Signal B history')} />}
+        <TelemetrySummaryBrief title={t('signalMutualInformation.kpis.label', 'Mutual information metrics')}
+          metrics={metrics} testId="signal-mutual-information-summary" loading={isLoading}
+          unavailable={isError} unknown={!bothChosen || result == null}
+          sourceStatus={historyAState.status === 'partial' || historyBState.status === 'partial' ? 'partial'
+            : historyAState.status === 'unavailable' || historyBState.status === 'unavailable' ? 'unavailable' : undefined}
+          retained={result != null && (historyAState.isRefreshing || historyBState.isRefreshing
+            || historyAState.status === 'stale' || historyBState.status === 'stale'
+            || historyAState.refreshError != null || historyBState.refreshError != null)}
+          scope={t('telemetry.brief.pairWindow', '{{hours}}h requested · {{signalA}} / {{signalB}} · aligned overlap only', {
+            hours: HISTORY_HOURS, signalA: signalA || '—', signalB: signalB || '—',
+          })}
+          sourceBounds={[
+            ...(signalA ? [{ signal: signalA, from: historyA.data?.from, to: historyA.data?.to }] : []),
+            ...(signalB ? [{ signal: signalB, from: historyB.data?.from, to: historyB.data?.to }] : []),
+          ]}
+          provenance={t('telemetry.brief.pairProvenance', 'Two independently queried signal histories; aligned numeric samples only')}
+          description={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
+        {isError && <QueryError error={error} onRetry={() => {
+          void signalsQuery.refetch(); void historyA.refetch(); void historyB.refetch();
+        }} />}
       </FadeIn>
       <FadeIn delay={0.2}>
-        {isError ? (
-          <GlassPanel className="p-4 sm:p-5">
-            <QueryError error={error} onRetry={() => historyA.refetch()} />
-          </GlassPanel>
-        ) : (
           <ChartContainer
-            title={t('signalMutualInformation.contributions.title', 'Top Joint-State Contributions')}
+            title={t('signalMutualInformation.contributions.title', 'Top joint-state contributions')}
             subtitle={t(
               'signalMutualInformation.contributions.subtitle',
               'Positive cells occur more often together than their marginal frequencies predict',
@@ -253,6 +240,15 @@ export default function SignalMutualInformationPage() {
               'Bar chart of quantile-pair contributions to mutual information',
             )}
             loading={isLoading}
+            error={isError ? error : undefined}
+            onRetry={() => {
+              if (historyAState.fatalError) historyAState.retry?.();
+              if (historyBState.fatalError) historyBState.retry?.();
+            }}
+            className="text-xs"
+            emptyMessage={bothChosen
+              ? t('signalMutualInformation.heatmap.noOverlap', 'At least 20 aligned numeric samples are required.')
+              : t('signalMutualInformation.heatmap.empty', 'Choose two signals to build the joint-state heatmap.')}
             empty={contributionData.length === 0}
             height={320}
             data={contributionData}
@@ -265,9 +261,9 @@ export default function SignalMutualInformationPage() {
             {/* Single contribution series; there is no second metric to toggle. */}
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={contributionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="cell" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                <XAxis dataKey="cell" tick={{ fill: chartTokens.axisStroke, fontSize: 'inherit' }} />
+                <YAxis tick={{ fill: chartTokens.axisStroke, fontSize: 'inherit' }} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar
                   dataKey="contribution"
@@ -278,17 +274,23 @@ export default function SignalMutualInformationPage() {
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
-        )}
       </FadeIn>
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Grid3X3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalMutualInformation.heatmap.title', 'Contribution Heatmap')}
+            <Icon icon={Grid3X3} className="text-[var(--text-secondary)]" />
+            {t('signalMutualInformation.heatmap.title', 'Contribution heatmap')}
           </PanelTitle>
-          {result == null ? (
+          {isLoading ? (
+            <Skeleton height={80} />
+          ) : isError ? (
+            <QueryError error={error} onRetry={() => {
+              if (historyAState.fatalError) historyAState.retry?.();
+              if (historyBState.fatalError) historyBState.retry?.();
+            }} />
+          ) : result == null ? (
             <EmptyState /* no-action: the two signal selectors above are the relevant next action. */
-              icon={<Grid3X3 className="h-8 w-8" />}
+              icon={<Icon icon={Grid3X3} size="xl" />}
               message={bothChosen
                 ? t('signalMutualInformation.heatmap.noOverlap', 'At least 20 aligned numeric samples are required.')
                 : t('signalMutualInformation.heatmap.empty', 'Choose two signals to build the joint-state heatmap.')}
@@ -299,7 +301,7 @@ export default function SignalMutualInformationPage() {
                 <div
                   key={`${cell.aBin}-${cell.bBin}`}
                   className={cn(
-                    'rounded-lg border border-[var(--border-subtle)] p-2',
+                    'min-w-0 rounded-lg border border-[var(--border-subtle)] p-2 break-words',
                     heatClass(cell.contribution, maxContribution),
                   )}
                   aria-label={t(
@@ -309,7 +311,7 @@ export default function SignalMutualInformationPage() {
                       a: cell.aBin + 1,
                       b: cell.bBin + 1,
                       count: cell.count,
-                      bits: fmtNumber(cell.contribution, 3),
+                      bits: fmtScientificNumber(cell.contribution, 3),
                     },
                   )}
                 >
@@ -322,12 +324,12 @@ export default function SignalMutualInformationPage() {
                   <Text as="p" variant="caption">
                     {t('signalMutualInformation.heatmap.value', '{{count}} samples · {{bits}} bits', {
                       count: cell.count,
-                      bits: fmtNumber(cell.contribution, 3),
+                      bits: fmtScientificNumber(cell.contribution, 3),
                     })}
                   </Text>
                   {cell.count > 0 ? (
                     <Badge variant="info" size="sm" className="mt-1">
-                      {fmtPercent(cell.probability * 100, 1)}
+                      {fmtPercent(cell.probability * 100)}
                     </Badge>
                   ) : null}
                 </div>
@@ -336,6 +338,6 @@ export default function SignalMutualInformationPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

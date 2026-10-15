@@ -1,0 +1,18 @@
+{
+  "task": "brief-regression-specialized",
+  "actualStartedUtc": "2026-10-06T23:35:53.779Z",
+  "hardStopUtc": "2026-10-07T00:14:53.934Z",
+  "files": [
+    {
+      "path": "web\\e2e\\operationalbrief-contracts\\specialized.smoke.spec.ts",
+      "exists": false
+    },
+    {
+      "path": "web\\e2e\\operationalbrief-contracts\\specialized.fixtures.ts",
+      "exists": false
+    }
+  ],
+  "capturedUtc": "2026-10-06T23:40:31.7839548Z",
+  "conservativeStartUtc": "2026-10-06T23:29:53.934Z",
+  "recoveryUsed": 0
+}

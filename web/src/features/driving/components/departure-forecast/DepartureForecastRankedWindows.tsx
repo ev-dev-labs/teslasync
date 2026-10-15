@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Badge, PanelTitle, Text } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { DepartureForecast } from '../../lib/departureForecast';
 import { DepartureForecastSectionBody } from './DepartureForecastSectionBody';
 import {
@@ -11,6 +11,7 @@ import {
   relativeDepartureLabel,
 } from './labels';
 import type { DepartureForecastQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DepartureForecastRankedWindowsProps {
   forecast: DepartureForecast;
@@ -25,6 +26,7 @@ export function DepartureForecastRankedWindows({
   locale,
   timeZone,
 }: DepartureForecastRankedWindowsProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const windows = forecast.rankedWindows;
 
@@ -32,7 +34,7 @@ export function DepartureForecastRankedWindows({
     <section data-testid="departure-ranked-windows">
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ListOrdered className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('departure.ranked.title', 'Strongest upcoming supported windows')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
@@ -78,41 +80,39 @@ export function DepartureForecastRankedWindows({
                       </Text>
                       <Text as="p" variant="caption">
                         {t(
-                          'departure.ranked.evidence',
-                          '{{relative}} · {{departures}} departures across {{occurrences}} observed cell occurrences',
+                          'departure.ranked.calendarEvidence',
+                          '{{relative}} · {{departures}} recorded departures / {{occurrences}} model-assumed calendar opportunities',
                           {
                             relative: relativeDepartureLabel(
                               t,
                               slot.minutesFromNow,
                             ),
                             departures: fmtInt(
-                              slot.historicalDepartures,
+                              slot.historicalDepartures, locale,
                             ),
-                            occurrences: fmtInt(slot.cellOccurrences),
+                            occurrences: fmtInt(slot.cellOccurrences, locale),
                           },
                         )}
                       </Text>
                     </div>
-                    <Badge
-                      variant={
-                        slot.p >= 0.5
-                          ? 'success'
-                          : slot.p >= 0.25
-                            ? 'info'
-                            : 'neutral'
-                      }
-                    >
+                    <Badge variant="neutral">
                       {t(
                         'departure.ranked.likelihood',
                         '{{value}}% modeled',
                         {
-                          value: fmtNumber(slot.p * 100, 1, locale),
+                          value: fmtNumber(slot.p * 100, undefined, locale),
                         },
                       )}
                     </Badge>
                   </li>
                 ))}
               </ol>
+              <Text as="p" variant="caption" className="mt-3">
+                {t(
+                  'departure.ranked.opportunityQualifier',
+                  'Opportunities count elapsed matching local-hour boundaries from the earliest included drive start to the fixed model anchor, not verified telemetry coverage.',
+                )}
+              </Text>
               {forecast.accounting.historyCapReached ? (
                 <AlertBanner className="mt-3" variant="warning">
                   <Text as="p" variant="caption">

@@ -1,0 +1,382 @@
+{
+  "item": "phase6-qa-admin-disk-forecast",
+  "phase": 6,
+  "reportStatus": "DONE",
+  "scope": "Read-only finished-page source QA; not native, visual, runtime, or application acceptance.",
+  "page": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+  "routes": ["/admin/disk-forecast"],
+  "purpose": "Inspect deployment-wide hypertable sizes, compression presentation, growth, quota estimates, trust states and direct request agreement.",
+  "clock": {
+    "firstObservedAt": "2026-10-13T09:20:21.1636465-07:00",
+    "lastInvestigationObservedAt": "2026-10-13T09:29:54.7388230-07:00",
+    "completedAt": "2026-10-13T09:33:11.5669741-07:00",
+    "elapsedSeconds": 770.403328,
+    "completionKind": "Source QA completion clock observed before final report validation; terminal validation/release clock is in the raw log.",
+    "returnTargetMinutes": 20,
+    "hardLimitMinutes": 25,
+    "maximumCommandMinutes": 8,
+    "note": "First observation is an actual shell clock, not an invented actor creation time. All commands were synchronous and completed; no shell, browser, server or nested agent is held."
+  },
+  "authority": {
+    "queue": "migration-queue.md:149-159,196 at first read; same existing item at line201 during final source read",
+    "acceptedSource": "migration-queue.md:1524",
+    "originalInventory": "docs\\frontend-audits\\audit-page-009.json",
+    "contract": ["MDC-002", "MDC-026", "MDC-033", "MDC-034", "MDC-040", "MDC-041", "MDC-043", "MDC-044", "MDC-045", "MDC-046", "MDC-060", "MDC-070"],
+    "instructionsRead": [
+      "docs\\orchestrator-loop.md",
+      "docs\\frontend-design-contract.md:1-260,419-605",
+      "docs\\frontend-mission.md:0-3,15-16,20-28,30-34,43-44",
+      "docs\\session-handoff.md:1-120,1700-1740",
+      "docs\\frontend-worker-conventions.md",
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\skills\\audit-violations\\audit.sh",
+      ".github\\skills\\verify-api-hooks\\verify.sh"
+    ],
+    "precedence": "Current rolling source-QA contract and explicit task prohibit source/tests/catalog/config/Git/full gates/helpers/browser/API writes. Historical modernization directions do not expand this lease."
+  },
+  "dataSources": [
+    {
+      "hook": "useDiskForecast",
+      "hookFile": "web\\src\\api\\hooks\\useOperatorConfidence.ts:174-185",
+      "request": "GET /admin/observability/disk-forecast",
+      "resolvedApiPath": "/api/v1/admin/observability/disk-forecast",
+      "mount": ["internal\\api\\router.go:3210,4595-4627", "internal\\handler\\v1\\admin_observability_handler.go:33-38,96-108"],
+      "agreement": "PASS source-only: router applies /api/v1 and invokes the route module Register. Exact GET path matches. No parameters, double prefix or camelCase query parameters.",
+      "response": "httputil.Respond wraps {data:{hypertables:rows}}; fetchEnvelope unwraps data. camelCaseKeys retains original snake_case keys.",
+      "responseEvidence": ["internal\\platform\\httputil\\response.go:9-13,36-40", "web\\src\\api\\hooks\\useOperatorConfidence.ts:49-60", "web\\src\\lib\\resilience.ts:26-39"],
+      "types": "web\\src\\types\\admin-operator-confidence.ts:102-117 matches internal\\database\\observability\\hypertable_metrics_repo.go:25-34. Sizes, chunk counts and growth are nonnullable numbers; estimated days is an optional pointer/optional nullable number.",
+      "policy": "Stable admin query key, AbortSignal forwarded, STANDARD staleTime 60000ms, SLOW interval 60000ms, background polling false, retry 1.",
+      "units": "Wire/cache bytes, bytes/day, count and estimated days remain raw. Summary adapts byte/day to canonical byteRate bytes/second and days to duration seconds only for presentation metrics, then displays day units.",
+      "sourceOwner": "internal\\app\\adminobssvc\\service.go:186-197; internal\\database\\observability\\hypertable_metrics_repo.go:56-153",
+      "workspace": "Deployment-wide snapshot: App.tsx:718 mounts /admin/disk-forecast; workspaceScope.ts:23-77 excludes it from range owners and :96 disables admin vehicle scope. No duplicate vehicle/range selector is present.",
+      "runtime": "NOTRUN: no browser, HTTP request, authentication, real database, deployment settings or identities inspected."
+    }
+  ],
+  "checks": [
+    {
+      "id": "loading-in-flight",
+      "status": "PASS",
+      "basis": "Source branch review only",
+      "evidence": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:292,309,368,428-432,454-458,496-500", "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx:66"],
+      "detail": "Initial fetching selects summary loading and section-shaped chart/200px/280px skeletons. This does not cover the cold paused branch, which separately FAILS."
+    },
+    {
+      "id": "fatal-error-and-retry",
+      "status": "PASS",
+      "basis": "Source branch review only",
+      "evidence": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:93-95,254,294,310-311,369-370,430-431,456-457,498-499", "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx:70-71"],
+      "detail": "Non-503 fatal failures select existing QueryError/retry, with unknown summary values rather than fabricated totals."
+    },
+    {
+      "id": "retained-error-and-paused-refresh",
+      "status": "PASS",
+      "basis": "Source branch review only",
+      "evidence": ["web\\src\\api\\dataState.ts:233-258", "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:93-97,263-268,292-294", "web\\src\\components\\layout\\PageContainer.tsx:253", "web\\src\\components\\feedback\\DataSourceNotice.tsx:73-115,160-174,220-234"],
+      "detail": "Retained data forces fatalError null, leaving summary/charts/growth/quota/table mounted on 500/503 refresh failure or paused refresh. Shared DataSourceNotice exposes nonblocking stale/retry state. Actual network recovery and announcements were NOTRUN."
+    },
+    {
+      "id": "authoritative-empty-inventory",
+      "status": "PASS",
+      "basis": "Source branch review only; copy qualification below",
+      "evidence": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:97,112-117,312,371,433-436,500-508", "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx:33-49"],
+      "detail": "A successful explicit empty hypertable list preserves all four content groups and supplies chart/growth/table empty states. Zero sums are valid for an empty measured inventory; largest/soonest stay missing. The quota explanation remains a confirmed FAIL, not a complete empty-state pass."
+    },
+    {"id": "cold-paused-without-payload", "status": "FAIL", "finding": "DF-QA-003"},
+    {"id": "unknown-quota-versus-no-quota", "status": "FAIL", "finding": "DF-QA-001"},
+    {"id": "quota-configuration-guidance", "status": "FAIL", "finding": "DF-QA-002"},
+    {"id": "compression-composition-agreement", "status": "FAIL", "finding": "DF-QA-004"},
+    {"id": "growth-bar-color-contract", "status": "FAIL", "finding": "DF-QA-005"},
+    {
+      "id": "zero-days-and-unknown-severity",
+      "status": "PASS",
+      "basis": "Source branch review only",
+      "evidence": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:104-107,134-140,165-170,226-246,476-480", "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx:48-50"],
+      "detail": "Null/absent estimate is excluded from quota ordering and printed as dash. Actual zero days remains numeric, is selected as soonest, and retains server critical severity. Unknown classification has localized Unknown text and neutral treatment. No frontend quota thresholds are invented."
+    },
+    {
+      "id": "display-units-and-preferences",
+      "status": "PASS",
+      "basis": "Source adapter/formatter review only; composition meaning fails separately",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx:26-50", "web\\src\\hooks\\useNumberFormatting.ts:19-46", "web\\src\\lib\\metric-reference\\formatMetric.ts:36-75,85", "web\\src\\lib\\numberFormat.ts:163-174"],
+      "detail": "Binary size formatting and day-rate/day-duration display match existing contracts; numeric precision/locale subscriptions survive. Page axis/table/tooltip use the same byte formatter. No deprecated measurement converter, unit suffix rename, wire/cache conversion, or source-unit adapter was introduced."
+    },
+    {
+      "id": "forecast-uncertainty",
+      "status": "PASS",
+      "basis": "Bounded semantics review, not predictive validity",
+      "evidence": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:259-261", "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx:65", "internal\\database\\observability\\hypertable_metrics_repo.go:105-109,120-150,157-164"],
+      "detail": "Page describes days as an estimate; summary explicitly says observation time and complete bounds are not supplied. Source projects rounded days using current sizes of old chunks as a 30-day historical proxy, clamps negative delta to zero, and is not a confidence-bounded regression or measured filesystem exhaustion. Confidence/sample-quality metadata and model accuracy remain unavailable; disclosure improvement is a candidate, not fabricated statistical certainty."
+    },
+    {
+      "id": "canonical-i18n-presence",
+      "status": "PASS",
+      "basis": "Executed read-only canonical English leaf probe",
+      "evidence": ["web\\src\\i18n\\en.json:11174-11227", "logs\\phase6-qa-admin-disk-forecast.log"],
+      "detail": "58 unique literal translation keys across page/summary, including multiline calls, resolve to string leaves; 0 missing. All locale bundles, interpolation/plural correctness and RTL rendering NOTRUN."
+    },
+    {
+      "id": "mobile-information-and-names",
+      "status": "PASS",
+      "basis": "Source declaration/consumer review only",
+      "evidence": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:299-303,422-425,471-474,512-530", "web\\src\\components\\ui\\DataTable.tsx:716-725,1128-1152,1172-1178"],
+      "detail": "Named embedded table retains a below-md 44px labeled row expander and renders all six original columns/chunk metadata in its details dl. Composition/outlook stack and hypertable names wrap. Original hidden-column, missing-caption and unknown-label findings are source-addressed; physical mobile/keyboard/overflow acceptance remains NOTRUN."
+    },
+    {
+      "id": "chart-alternatives-and-series",
+      "status": "PASS",
+      "basis": "Source-only accessibility contract",
+      "evidence": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:305-358,365-397", "web\\src\\components\\charts\\ChartContainer.tsx:784-833,865-944", "web\\src\\components\\charts\\ChartLegend.tsx:94-137", "web\\src\\components\\charts\\ChartTooltip.tsx:117-177"],
+      "detail": "Both charts supply localized names and fallback data columns. Composition stable chartKey controls both original series; shared legend uses named buttons and hidden state. Shared forced-colors data table retains full hypertable labels. Source presence is not screen-reader, OS forced-colors or composed contrast acceptance."
+    },
+    {
+      "id": "prohibited-patterns",
+      "status": "PASS",
+      "basis": "Executed scoped Select-String checks; not full audit.sh",
+      "detail": "Page and summary: static/other inline styles 0, raw prohibited controls 0, direct recharts/leaflet/framer-motion imports 0, old ../api and ../../api imports 0, text-neon matches 0, any matches 0. Disk hook: double prefix 0, camelCase query params 0. These exact-file counts do not certify all shared dependencies or full-repository compliance."
+    },
+    {"id": "typescript", "status": "NOTRUN", "detail": "No source edits. Explicit no unchanged passing reruns/full gates. Handoff records earlier parent literal npx tsc --noEmit exit0, which is historical context, not this item's pass."},
+    {"id": "tests-lint-build", "status": "NOTRUN", "detail": "No test/source edits or new runtime cases executed. Existing page and summary test bodies were inspected only; no discovered/executed/passed count is inferred."},
+    {"id": "native-and-browser", "status": "NOTRUN", "detail": "No grant, no browser/API/real identities. No screenshots, native host, route authentication, keyboard/focus, screen-reader, 320/375/390/430/768/1024/1280/1440/1920/2560 widths, narrow containers, themes, RTL, 200% text, contrast, forced colors, reduced motion or low-bandwidth acceptance."}
+  ],
+  "findings": [
+    {
+      "id": "DF-QA-001",
+      "status": "FAIL",
+      "confidence": "high",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 459,
+      "rule": "MDC-026 / unknown is not missing configuration",
+      "related": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:165-170,461-465", "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx:53", "internal\\database\\observability\\hypertable_metrics_repo.go:132-150"],
+      "mechanism": "QuotaWatch includes only defined estimates. Backend omits an estimate when a positive quota is configured but growth is zero and usage is below quota. Both the quota empty panel and soonest summary nevertheless assert No quota configured. Successful empty inventory and unsupported source also enter that condition.",
+      "repro": "Source trace, not executed: Forecast with quotaBytes=1000, TotalBytes=500, previous=500 gives growth=0, omitted est_days_to_quota, severity=ok. Page filters that row out and prints No quota configured, although the quota argument is positive.",
+      "fix": "One narrow page/summary copy fix: truthfully state no estimate is available and list possible causes without inferring quota configuration. Keep measured zero-day critical cases. Existing original audit-page-009 states issue is still unresolved.",
+      "owner": "page and existing summary integration",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "DF-QA-002",
+      "status": "FAIL",
+      "confidence": "high",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 464,
+      "rule": "MDC-002 / source-backed configuration guidance",
+      "related": ["internal\\api\\router.go:4595-4604", "internal\\app\\adminobssvc\\service.go:91,106-117,191", "web\\src\\i18n\\en.json:11221"],
+      "mechanism": "The mounted router does not pass QuotaBytes to adminobssvc.Options. New replaces zero with 100*1024^3 bytes, and the forecast always receives that default. The inspected internal/config source has no HYPERTABLE_QUOTA_BYTES binding. Setting the suggested variable cannot alter this shown constructor/request path.",
+      "repro": "Source trace, not deployed: vary HYPERTABLE_QUOTA_BYTES while keeping this Router invocation; Options.QuotaBytes remains zero and Service.New chooses 100 GiB each time. The empty-state suggested action does not configure this route.",
+      "fix": "Remove unsupported setup advice in a separately claimed page/catalog copy item, or explicitly authorize full config/router/deployment wiring as an independent integration item. Do not add configuration during this QA.",
+      "owner": "integration / canonical copy owner",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "DF-QA-003",
+      "status": "FAIL",
+      "confidence": "high",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 96,
+      "rule": "MDC-026 / paused is not authoritative empty",
+      "related": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:292,312,371,428-436,454-465,496-508", "web\\src\\api\\dataState.ts:191-224", "web\\src\\components\\feedback\\DataSourceNotice.tsx:76,103-113"],
+      "mechanism": "Page sections use query.isLoading rather than source.status initial. For an initially paused TanStack query, data is undefined, isPending true, isLoading false, fetchStatus paused, no error. Summary remains loading, but charts/outlook/detail table use empty branches and assert No hypertables/No quota configured despite no successful answer.",
+      "repro": "Source trace, not browser-tested: use that cold paused query shape. rows=[], showError=false, subsystemMissing=false, isLoading=false; table reaches line500 EmptyState, charts line312/371 empty=true, quota line459 no-quota copy. Shared paused/unavailable notice does not prevent those contradictory assertions.",
+      "fix": "One narrow source-state branch fix using existing initial/paused trust contract for no-payload sections; only successful authoritative responses select inventory-empty messages. Preserve retained paused data and source retry.",
+      "owner": "page",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "DF-QA-004",
+      "status": "FAIL",
+      "confidence": "high",
+      "severity": "high",
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 339,
+      "rule": "MDC-034 / chart composition must match wire semantics",
+      "related": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:113-117,304-308,339-355", "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx:30-40", "internal\\database\\observability\\hypertable_metrics_repo.go:60-70"],
+      "mechanism": "Backend calls before_compression_total_bytes uncompressed_bytes and after_compression_total_bytes compressed_bytes. These are before/after measurements of compressed chunks, not simultaneous additive pieces of current hypertable disk. Page stacks both as current storage composition and computes both as percentages of total_bytes, which is current hypertable_size. They need not sum to total and before-compression size can exceed current total.",
+      "repro": "Source-contract illustration, not a DB fixture run: a compressed chunk with before=100MiB, after=10MiB and current hypertable total=10MiB would produce a 110MiB stacked bar and 1000%+100% of total captions. The two payload fields are mapped directly from that before/after relationship; no normalizer repairs it.",
+      "fix": "Separately claim the producer/display semantic agreement. Either expose true simultaneous current compressed/uncompressed usage with an explicit total basis, or truthfully label the existing series as before/after comparison without additive stack/current-share claims. Do not silently subtract from total or invent physical disk capacity.",
+      "owner": "backend/frontend integration",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "DF-QA-005",
+      "status": "FAIL",
+      "confidence": "high",
+      "severity": "medium",
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 440,
+      "rule": "MDC-034 / preserve visible growth encoding with existing color API",
+      "related": ["web\\src\\features\\admin\\pages\\DiskForecastPage.tsx:60-65,445", "web\\src\\lib\\tokens.ts:339-350", "web\\src\\components\\data-display\\MetricBar.tsx:45,87"],
+      "mechanism": "Page supplies gaugeTone CSS variables as MetricBar.color but omits fill. MetricBar defaults to gradient and appends hex alpha 99 to the color token. For severity ok it generates linear-gradient(90deg, var(--semantic-success)99, var(--semantic-success)), whose first stop is invalid CSS; suffixing a substituted color with 99 is not alpha syntax.",
+      "repro": "Deterministic source expansion, not browser paint: a positive-growth ok row passes var(--semantic-success) at line445; MetricBar default line45 constructs the invalid declaration at line87. Warning/danger/neutral token values have the same issue. The numeric label survives, but this does not establish visible filled bars.",
+      "fix": "One narrow page adapter fix: supply the already-supported fill=solid so prepared CSS variables are used intact. No new formatter/color helper or shared MetricBar rewrite is needed.",
+      "owner": "page",
+      "runtimeReproduced": false
+    }
+  ],
+  "candidates": [
+    {
+      "id": "DF-C-001",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 331,
+      "detail": "132px category axis plus margins may leave a narrow 320px/card-width plot cramped. Full names survive in table alternatives. No measured overflow, clipping or unusability; native width checks required."
+    },
+    {
+      "id": "DF-C-002",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 112,
+      "detail": "Nullish size/growth/count values are summed or rendered as zero, whereas filters retain null. Under the inspected nonnullable Go contract these missing numeric values are not emitted. Malformed/partial transport could make unknown look measured; this is a defensive-input candidate, not a proven current server-payload defect."
+    },
+    {
+      "id": "DF-C-003",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 94,
+      "detail": "All fatal ApiError 503 responses are classified unsupported without checking SUBSYSTEM_NOT_CONFIGURED. The inspected handler uses that code for its own 503; gateway/service-outage 503 misclassification is plausible but was not reproduced or observed."
+    },
+    {
+      "id": "DF-C-004",
+      "status": "NOTRUN",
+      "file": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+      "line": 259,
+      "detail": "Consider explicit 30-day proxy/model caveats for estimated days and avoid implying measured filesystem free capacity. API supplies neither available/total filesystem capacity nor confidence interval/sample-quality metadata. Source already says estimate and unknown bounds; numerical forecast calibration/physical capacity cannot be accepted from this review."
+    }
+  ],
+  "preservation": {
+    "pageSha256": "F4F27EC725D60592ED362E016D0216D01791405DEC88F21E3B774E66EDEAC842",
+    "summarySha256": "DA309133751F5DEC28A1D0173C0D724F3B8B618D15AAB40BF8A90B10373A998E",
+    "hashScope": "Exact current source bytes observed in shell4596; not Git identity.",
+    "pageLines": 542,
+    "summaryLines": 73,
+    "currentComposedLines": 615,
+    "originalComposedLines": 595,
+    "originalEvidence": "audit-page-009.json: page522 + summary73; accepted Phase5 row independently records 615 versus595.",
+    "atLeast70Percent": true,
+    "lineCountLimitation": "103.36% of recorded original is not semantic, runtime or visual parity proof.",
+    "contentGroups": ["Six-metric summary", "Storage composition and severity", "Growth and quota outlook", "Full hypertable table"],
+    "layoutCards": 5,
+    "embeddedCharts": 2,
+    "directGlassPanelCount": 0,
+    "directChartContainerCount": 0,
+    "summaryMetricCount": 6,
+    "tableColumnCount": 6,
+    "sourceActions": ["Header refresh", "Per-source retry", "Composition series visibility", "Table value filters", "Pagination and saved column controls", "44px row expansion with all column details", "OperationalBrief Review details"],
+    "stableIds": ["admin:disk-forecast", "admin-disk-composition", "disk-forecast-summary"],
+    "existingTestsInspectedNotRun": {
+      "pageFile": "web\\src\\features\\admin\\pages\\DiskForecastPage.test.tsx",
+      "summaryFile": "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.test.tsx",
+      "coverageDescriptions": "Existing source assertions cover load, totals, source severity, actual zero days, mobile details, named charts/table, 503/fatal/empty paths, refresh-retained 503, summary preferences/signed growth and details drawer. Cold paused, composition producer meaning and valid browser CSS paint are not established by those assertions.",
+      "executionStatus": "NOTRUN",
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "note": "Zero execution is not a passing test run. Historical Phase5 receipt explicitly had external catalog startup failure/zero cases; source acceptance was not a fresh test or native pass."
+    },
+    "sourceChangedByThisItem": false
+  },
+  "commands": [
+    {"shellId": "4527", "command": "Bounded file discovery plus shell rg source search", "exitCode": 1, "result": "rg not recognized. Later built-in functions.rg reads succeeded; no product outcome inferred."},
+    {"shellId": "4544", "command": "Select-String -Path ..\\migration-queue.md -SimpleMatch 'phase6-qa-admin-disk-forecast','Rolling QA','rolling QA'; Get-Date -Format o", "exitCode": 0, "result": "Existing exact queue row196 and clock read."},
+    {"shellId": "4567", "command": "Select-String original phase5-page-admin-disk-forecast queue row; Get-Date; Test-Path assigned report/log", "exitCode": 0, "result": "Accepted source row1524 read; report/log initially absent."},
+    {"shellId": "4585", "command": "First combined PowerShell hash/pattern logging probe", "exitCode": 1, "result": "No output; log still absent at next probe. Failure cause not claimed."},
+    {"shellId": "4596", "command": "Get-Content/Get-FileHash plus Select-String patterns style\\s*=, <(button|input|textarea|select|table)\\b, text-neon-, <LayoutCard\\b, <EmbeddedChart\\b, <GlassPanel\\b, <ChartContainer\\b, <EmptyState\\b, \\bany\\b on exact page and summary; append raw counts/lines to assigned log", "exitCode": 0, "result": "Page542/summary73, exact hashes, 5 cards, 2 embedded charts, 3 page EmptyStates, prohibited matches0."},
+    {"shellId": "4617", "command": "Second combined PowerShell import/translation logging probe", "exitCode": 1, "result": "No output; not classified as a product failure or successful check."},
+    {"shellId": "4627", "command": "Select-String exact page/summary import regexes; Get-Content hook lines174-191; prefix/camel query scans; append output to assigned log", "exitCode": 0, "result": "Direct library0/old API0 for both files; disk prefix0/camel query0; raw hook body logged."},
+    {"shellId": "4640", "command": "Get-Content src\\i18n\\en.json -Raw | ConvertFrom-Json -AsHashtable; resolve unique regex \\bt\\(\\s*'([^']+)' keys from exact page/summary against nested canonical string leaves", "exitCode": 0, "result": "I18N_LITERAL_KEYS_SCANNED=58 MISSING=0."},
+    {"shellId": "4664", "command": "Select-String exact page/MetricBar/tokens/repo/router source mechanisms; append source line evidence and explicit NOTRUN coverage to assigned log", "exitCode": 0, "result": "Actual source line expansions retained; not runtime reproduction."}
+  ],
+  "rawOutput": [
+    "FILE=src\\features\\admin\\pages\\DiskForecastPage.tsx LINES=542 SHA256=F4F27EC725D60592ED362E016D0216D01791405DEC88F21E3B774E66EDEAC842",
+    "PATTERN=style\\s*= COUNT=0",
+    "PATTERN=<(button|input|textarea|select|table)\\b COUNT=0",
+    "PATTERN=<LayoutCard\\b COUNT=5",
+    "PATTERN=<EmbeddedChart\\b COUNT=2",
+    "FILE=src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx LINES=73 SHA256=DA309133751F5DEC28A1D0173C0D724F3B8B618D15AAB40BF8A90B10373A998E",
+    "DISK_HOOK_DOUBLE_PREFIX_COUNT=0 CAMEL_QUERY_COUNT=0",
+    "I18N_LITERAL_KEYS_SCANNED=58 MISSING=0",
+    "COMMAND_EXIT=0"
+  ],
+  "evidenceLimits": {
+    "acceptance": "Report completion only. Five source-confirmed defects remain; source-pass entries mean inspected static branches/declarations, not mounted behavior or fixed bugs.",
+    "fullAuditScript": "NOTRUN: audit.sh unconditionally invokes whole-package npx tsc --noEmit; unchanged passing parent gates must not be rerun. Actual scoped Select-String counts are separate evidence, not a fabricated audit-script exit.",
+    "apiVerifierScript": "NOTRUN: full hook-file extraction would include unrelated admin routes. This item verifies only its one disk hook through actual mounted router/module/client/envelope source.",
+    "realCapacity": "No filesystem free/available bytes or configured runtime quota read. Do not equate sum of current hypertable size with physical disk capacity; no unknown capacity is converted to measured zero by this report.",
+    "sharedScope": "Direct shared consumers were sampled for relevant props/branches; not a global shared-library, security, backend or catalog audit.",
+    "concurrentChanges": "No Git/working-tree or repository cleanliness claims. Hashes identify observed page and summary source; unrelated concurrent work is neither changed nor attributed.",
+    "privacy": "No real identities, payloads, credentials, HTTP requests, browser screenshots or preference writes.",
+    "prohibitedWork": "No source/tests/catalog/config edits, Git, subagents, installs, helper files/extensions, servers, full suites or Docker."
+  },
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\frontend-audits\\audit-page-009.json",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx",
+    "web\\src\\features\\admin\\pages\\DiskForecastPage.test.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.test.tsx",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts",
+    "web\\src\\lib\\resilience.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\i18n\\en.json",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\ChartTooltip.tsx",
+    "web\\src\\components\\charts\\ChartLegend.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\admin_observability_handler.go",
+    "internal\\app\\adminobssvc\\service.go",
+    "internal\\database\\observability\\hypertable_metrics_repo.go",
+    "internal\\platform\\httputil\\response.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\phase6-qa-admin-disk-forecast.json", "web\\logs\\phase6-qa-admin-disk-forecast.log"],
+  "needs": [
+    "Separate narrow no-estimate copy correction at DF-QA-001; historical audit already identified it.",
+    "Separately authorize removal or real wiring of unsupported HYPERTABLE_QUOTA_BYTES advice at DF-QA-002.",
+    "Cold-paused source-state branch correction at DF-QA-003.",
+    "Producer/display compression semantics correction at DF-QA-004.",
+    "Use existing solid MetricBar fill at DF-QA-005.",
+    "Native/runtime acceptance remains NOTRUN and must be separately authorized; do not close it from this report."
+  ],
+  "release": {
+    "allClaimsReleasedOnReturn": true,
+    "applicationWriteClaims": "none",
+    "reportAndLogClaims": "released with this terminal delivery",
+    "activeCommands": 0,
+    "browserClaims": 0,
+    "noPostReturnWrites": true
+  }
+}

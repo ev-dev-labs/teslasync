@@ -35,6 +35,10 @@
  * field still renders something readable.
  */
 
+import { parseLocaleNumber } from './localeNumber'
+
+export { parseLocaleNumber }
+
 const MICRO_SCALE = 1_000_000
 
 /**
@@ -210,19 +214,8 @@ export function parseCurrencyText(
   raw = stripCurrencyAdornments(raw, currency, locale)
   if (!raw) return null
 
-  // A leading sign may sit between the symbol and the digits ("$-1.50")
-  // or at the very front ("-$1.50"); collapse to one canonical leading sign.
-  if (raw.startsWith('-')) {
-    negative = !negative
-    raw = raw.slice(1).trim()
-  } else if (raw.startsWith('+')) {
-    raw = raw.slice(1).trim()
-  }
-
-  if (!raw) return null
-
   const n = parseLocaleNumber(raw, normaliseLocale(locale))
-  if (!Number.isFinite(n)) return null
+  if (!Number.isFinite(n) || (negative && n < 0)) return null
   return negative ? -n : n
 }
 
@@ -275,42 +268,4 @@ function stripCurrencyAdornments(
     out = out.replace(new RegExp(escaped, 'gi'), '')
   }
   return out.trim()
-}
-
-/**
- * Parse `text` as a number using the locale's decimal & group separators.
- * Falls back to plain `Number()` when the locale can't be inspected.
- *
- *   parseLocaleNumber('1,234.56', 'en-US') → 1234.56
- *   parseLocaleNumber('1.234,56', 'de-DE') → 1234.56
- *   parseLocaleNumber('1 234,56', 'fr-FR') → 1234.56
- */
-export function parseLocaleNumber(text: string, locale: string): number {
-  if (!text) return NaN
-  let groupSep = ','
-  let decimalSep = '.'
-  try {
-    const parts = new Intl.NumberFormat(locale).formatToParts(12345.6)
-    const g = parts.find((p) => p.type === 'group')?.value
-    const d = parts.find((p) => p.type === 'decimal')?.value
-    if (typeof g === 'string') groupSep = g
-    if (typeof d === 'string') decimalSep = d
-  } catch {
-    // keep defaults
-  }
-
-  let normalized = text
-  // fr-FR uses U+00A0 (NBSP) as group separator; users typing in the
-  // field will press the regular space bar. Normalise both to nothing.
-  if (groupSep === '\u00A0' || groupSep === ' ') {
-    normalized = normalized.split('\u00A0').join('').split(' ').join('')
-  } else if (groupSep && groupSep !== decimalSep) {
-    normalized = normalized.split(groupSep).join('')
-  }
-  if (decimalSep !== '.') {
-    normalized = normalized.split(decimalSep).join('.')
-  }
-  // Strip any remaining whitespace that may have hitch-hiked from a copy/paste.
-  normalized = normalized.replace(/\s+/g, '')
-  return Number(normalized)
 }

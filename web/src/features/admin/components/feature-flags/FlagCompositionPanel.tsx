@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricBar } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { gaugeTone } from '@/lib/tokens';
 import type { FeatureFlagEntry } from '@/types/admin-diagnostics';
 
 import {
@@ -29,17 +30,16 @@ interface FlagCompositionPanelProps {
 }
 
 /**
- * Per-kind accent colours. Dynamic hex passed to the shared MetricBar's
- * `color` prop (mirrors the reference Timeline page's STATE_COLORS
- * pattern) — not a static `var(--*)` inline style.
+ * Existing mode-aware roles retain the kind hue families without local
+ * bright colours. These identify value types, not success/warning states.
  */
 const KIND_COLOR: Record<FlagValueKind, string> = {
-  boolean: '#10b981',
-  number: '#22d3ee',
-  string: '#8b5cf6',
-  object: '#f59e0b',
-  array: '#38bdf8',
-  null: '#64748b',
+  boolean: gaugeTone.success,
+  number: gaugeTone.info,
+  string: gaugeTone.purple,
+  object: gaugeTone.warning,
+  array: gaugeTone.info,
+  null: gaugeTone.neutral,
 };
 
 export function FlagCompositionPanel({
@@ -116,6 +116,7 @@ export function FlagCompositionPanel({
               value={row.count}
               max={total || row.count}
               color={KIND_COLOR[row.kind]}
+              fill="solid"
               sublabel={t('admin.flags.composition.sublabel', '{{count}} · {{pct}}%', {
                 count: row.count,
                 pct,

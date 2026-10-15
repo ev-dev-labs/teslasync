@@ -1,0 +1,1049 @@
+{
+  "item": "phase6-qa-vehicle-systems-tire-pressure",
+  "attempt": 1,
+  "status": "DONE_REPORT_ONLY_SOURCE_FINDINGS",
+  "kind": "read-only-finished-page-QA",
+  "page": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx",
+  "routes": [
+    "/tire-pressure"
+  ],
+  "snapshotUTC": "2026-10-14T01:39:53.1552264Z",
+  "reservation": {
+    "hardUTC": "2026-10-14T01:49:50.678Z",
+    "reservedUTC": "2026-10-14T01:24:50.678Z",
+    "returnUTC": "2026-10-14T01:44:50.678Z",
+    "firstCommandUTC": "2026-10-14T01:27:57.3687432Z",
+    "clockNotReset": true
+  },
+  "authority": {
+    "actor": "1dffe29f-b9fb-43f0-a637-186fa80305a4",
+    "initialQALine": 67,
+    "dependency": "phase5-page-vehicle-systems-tire-pressure",
+    "concurrentLineDrift": "Parent queue changed67->68; worker never edits queue or Git.",
+    "dependencyStatus": "[x]",
+    "phase6": "unfinished",
+    "phase7": "NOTRUN",
+    "queueFile": "migration-queue.md",
+    "closedPhasesPreserved": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "acceptedScope": "Historical source only; prior Vitest startup1 external artifact guard/zero executed. Not current test/native/page acceptance.",
+    "acceptedCommit": "3e8826ff47bdb3f5cc496826bb4b29a1a99ce545",
+    "latestQALine": 68,
+    "dependencyLine": 2013
+  },
+  "ownedWritableFiles": [
+    "docs/frontend-audits/phase6-qa-vehicle-systems-tire-pressure.json",
+    "web/logs/phase6-qa-vehicle-systems-tire-pressure.log"
+  ],
+  "sourceWrites": 0,
+  "instructionsRead": [
+    "docs/orchestrator-loop.md FULL 1-EOF",
+    "docs/frontend-design-contract.md FULL 1-2539 with truncated reads continued",
+    "docs/frontend-mission.md 1-EOF including principles/state/domain/43-45",
+    "docs/session-handoff.md current recovery and visible historical context",
+    "docs/frontend-worker-conventions.md FULL",
+    "docs/frontend-inventory.md authority and exact tire row279; scoped proposal415 and replacement1417",
+    "docs/frontend-audits/audit-page-228.json 1-240 historical only",
+    ".github/copilot-instructions.md 1-470",
+    ".github/instructions/react-frontend.instructions.md 1-430",
+    ".github/instructions/frontend-si-cutover.instructions.md FULL",
+    ".github/instructions/unit-conversion.instructions.md FULL legacy examples superseded by current SI/design contract",
+    "docs/CONTRIBUTING.md 1-160"
+  ],
+  "purpose": "Review four-corner pressure, threshold status, TPMS warning flags, windowed history and opt-in30-day narration without confusing units, absence, retained sources or measurement freshness.",
+  "units": {
+    "display": "usePressureFormat55 divides Pa by1000 exactly once before convertPressureFromSI; unitConversion216-228 expects kPa, then bar /100 or psi /6.894757. PressureSummary35/44 uses Pa/1000 at numeric metric display boundary. Chart/current/table derive preferred display values without cache rewrites.",
+    "zero": "See C001: inherited zero sentinel is preserved, not asserted as proven vendor domain semantics.",
+    "wire": "Fixed bar for TpmsPressureFl/Fr/Rl/Rr; units/conversions.go104-108 defines exact fields",
+    "sourceDerivedExamples": [
+      "300000 Pa ->300 kPa ->3 bar ->approximately43.5113psi",
+      "300 Pa ->0.3kPa ->0.003bar; must never be guessed as300kPa",
+      "Small positive Pa preserved; missing/nonfinite/nonpositive presentation excluded under inherited sentinel policy"
+    ],
+    "cache": "usePressurePage returns raw request payload; readPressurePa selector keeps positive finite source values verbatim; production render never calls compatibility normalizer",
+    "runtimeLimits": "No persisted historical payload, vehicle unit setting, API response or device was queried; actual current producer contract inspected, runtime data purity NOT VERIFIED.",
+    "apiRaw": "Pa, projected verbatim: handler40-48 mappings, Latest113-118 map values, List124-134 flat timeline fields. Names alone were not used to infer units.",
+    "producer": "normalize.go192-197 calls units.ToSI and writes resulting float64 into atomic.Value; units.go66-67 multiplies fixed-bar pressure by100000"
+  },
+  "dataSources": [
+    {
+      "key": "tire-pressure-latest + vehicle",
+      "line": 18,
+      "hook": "usePressurePageLatest",
+      "name": "latest pressure",
+      "freshness": "No created_at in latest projection; last_seen fields mapped but untyped/unrendered; no inferred observation time",
+      "scope": "Current snapshot intentionally independent of history range; handler.LiveState(r.Context)",
+      "policy": "enabled selected!=null, cancellation signal, inherited QueryClient defaults",
+      "endpoint": "GET /tire-pressure/latest?vehicle_id=<selected>",
+      "file": "web/src/api/hooks/usePressurePage.ts"
+    },
+    {
+      "line": 32,
+      "bounds": "Reader455-468 rejects inverted/zero/>366day windows; seed<=from; window568-589 reads (from,to] ordered ASC. Empty TimelineOptions implies MaxEvents0 ->LIMIT NULLIF(0,0), no synthetic page cap. No result-completeness/backend execution claim.",
+      "scope": "Handler77 Timeline contextual read; current scalar date-bound bug F001",
+      "name": "history",
+      "file": "web/src/api/hooks/usePressurePage.ts",
+      "endpoint": "GET /tire-pressure?vehicle_id=<selected>&start=<calendar>&end=<calendar>",
+      "hook": "usePressurePageHistory",
+      "key": "tire-pressure-history + vehicle + both literal bounds"
+    },
+    {
+      "endpoint": "POST /ai/tire-pressure/trends/explain",
+      "scope": "Explicit independently described30-day narration, vehicle_id body and scopeKey, positive finite vehicle gate; AI-off conditional absence is intentional. No stream started.",
+      "line": 115,
+      "name": "AI narration",
+      "file": "web/src/components/ai/AITirePressureTrendReasoning.tsx"
+    }
+  ],
+  "preservation": {
+    "identities": [
+      "tire-pressure.range",
+      "tire-pressure-history",
+      "vehicle-systems:tire-pressure-history",
+      "Four stable grid IDs"
+    ],
+    "sections": [
+      "Conditional opt-in AI narration",
+      "Conditional source-backed TPMS warning banner",
+      "Persistent summary: avg/min/threshold-warning count/range history date",
+      "Persistent four-corner current readings and explicit statuses",
+      "Persistent four-series pressure history chart with gaps",
+      "Persistent history table: time/fl/fr/rl/rr/warnings"
+    ],
+    "conditionalSectionsAreExceptions": true,
+    "tableColumns": 6,
+    "shippingFiles": 8,
+    "pagePlusPressureShippingLines": 881,
+    "pageSHA256": "F06541649A5909BB89D6AC9EB680FDEB62F98D6B6C19CB51122AE6BCF5B3691D",
+    "metrics": 4,
+    "persistentGroupCount": 4,
+    "originalComparison": "No original immutable bytes were available in assigned scope and no Git used. Accepted receipt483->492 is historical context only, not a fresh original comparison or preservation test pass.",
+    "data": "Chronological copy preserves row multiplicity; null chart gaps connectNulls=false; retained values never blanked by refresh error; absent TPMS flags do not render OK; reported-corner0 warning count remains real0 when normal readings exist; summary has no invented latest observation timestamp.",
+    "resolvedHistoricalFindings": [
+      "Historical badges now include numeric pressure, unit and localized status; page365-377",
+      "Production threshold bands now use dynamic gaugeTone semantic color-mix; old pressureColor hex values only compatibility test exports",
+      "pressureWithStatus and unknownPressure canonical leaves now present"
+    ],
+    "sectionCount": 6,
+    "series": 4,
+    "actions": [
+      "Independent source retry/empty refresh",
+      "Time/corner raw-Pa sorting",
+      "Loaded-value filters",
+      "Columns/pagination through shared DataTable",
+      "Chart hidden-series URL preference/legend",
+      "Chart accessible data view/fullscreen/export via shared ChartContainer",
+      "Optional Narrate trend plus stream busy/error lifecycle"
+    ],
+    "corners": [
+      "fl",
+      "fr",
+      "rl",
+      "rr"
+    ],
+    "pageLines": 492
+  },
+  "states": {
+    "initialLoading": "Four current skeletons; chart/table source-local loading; summary retains independent history date. Authored fixtures not rerun.",
+    "initialPaused": "F004 source-local empty contradiction, global paused notice remains",
+    "unknown": "Missing corners keep visible labels; chart nulls; count/avg/min null when no reported corners; warning metadata absent is not OK",
+    "freshness": "Summary snapshot.observedAt null with Observation time unavailable; lastUpdated description scopes newest history row to selected window. Query fetch age is not tyre observation age. C002 remains open.",
+    "noVehicle": "Queries disabled and AI disabled; shells remain but local empty copy does not establish authoritative no-records.",
+    "retained": "RefreshError/paused with data retains measurements/chart/table, warnings/retries; summary retained flag. Repeated notices exist across chart/table/global but no duplication severity defect is asserted.",
+    "fatal": "deriveDataState fatalError only without retained data; individual QueryError/chart retry; no page-level fatal replacement"
+  },
+  "confirmedFindingCount": 7,
+  "violationInstanceCount": 19,
+  "ruleCounts": {
+    "unsupported-offline-cause": 1,
+    "initial-paused-not-empty": 3,
+    "category-barrel-import": 2,
+    "mobile-data-preservation": 1,
+    "date-preferences": 3,
+    "missing-canonical-i18n": 8,
+    "workspace-instant-bounds": 1
+  },
+  "findings": [
+    {
+      "id": "F001",
+      "file": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx",
+      "line": 230,
+      "rule": "workspace-instant-bounds",
+      "contract": "MDC-032",
+      "priority": "P1",
+      "confidence": "high",
+      "owner": "pressure-scope-integration",
+      "instances": 1,
+      "sites": [
+        {
+          "code": "usePressurePageHistory(activeVehicleId, start, end)",
+          "line": 242,
+          "file": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx"
+        },
+        {
+          "code": "start=${start}&end=${end}",
+          "line": 41,
+          "file": "web/src/api/hooks/usePressurePage.ts"
+        }
+      ],
+      "mechanism": "The page discards startInstant/endInstantExclusive and requests calendar date strings. useRangeState:656-673 distinguishes rolling live/24h instants and timezone calendar windows. The actual parser date_range.go:29-44 accepts RFC3339 exclusive ends but legacy dates use UTC midnight through 23:59:59. Backend already supports instants; the hook URL must encode offset plus signs safely.",
+      "repro": {
+        "executed": false,
+        "steps": "Select October 13 in America/Los_Angeles: expected 2026-10-13T07:00:00Z to 2026-10-14T07:00:00Z exclusive. Current date URL instead starts October13 00:00Z and ends October13 23:59:59Z: prior-local-day 04:00Z may enter and local-evening October14 02:00Z is excluded. A rolling24h selection is also expanded to calendar dates.",
+        "kind": "source-derived"
+      },
+      "fix": "Thread existing workspace instants through the typed hook/key and encoded start/end parameters; retain AbortSignal, vehicle enablement and inherited query policy. No second picker or client-only filtering.",
+      "needs": "N001,N002",
+      "historical": "Already identified in audit-page-228; no existing exact pressure-bound fix claim found. Do not remigrate accepted page."
+    },
+    {
+      "id": "F002",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryTable.tsx",
+      "line": 36,
+      "rule": "mobile-data-preservation",
+      "contract": "MDC-023/MDC-043",
+      "priority": "P1",
+      "confidence": "high",
+      "owner": "pressure-page-domain",
+      "instances": 1,
+      "sites": [
+        {
+          "code": "mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''",
+          "line": 743,
+          "file": "web/src/components/ui/DataTable.tsx"
+        },
+        {
+          "code": "mobileActive && mobilePresentation",
+          "line": 1404,
+          "file": "web/src/components/ui/DataTable.tsx"
+        }
+      ],
+      "mechanism": "Only created_at and warnings are in mobileColumns. All four historical pressure cells and headers get hidden below md. Caller supplies neither mobilePresentation nor expanded row details. The default columns menu changes visibility, not this independent mobile allow-list. The chart alternative preserves values elsewhere, but does not preserve this table row/filter/sort workflow.",
+      "repro": {
+        "executed": false,
+        "steps": "Below768px with one populated history row, Time and Warnings remain; fl/fr/rl/rr cells and their header sort/value-filter controls are hidden. No caller-wired row-detail action exposes them in the table.",
+        "kind": "source/CSS-derived"
+      },
+      "fix": "Use the existing mobilePresentation/full-detail contract, or preserve all columns in intentionally contained accessible scrolling. Keep every pressure/status, time/warning field, raw-value filter, sorting, row identity and pagination.",
+      "needs": "N001",
+      "historical": "Unresolved historical finding; source declaration is confirmed, actual viewport geometry NOTRUN."
+    },
+    {
+      "id": "F003",
+      "file": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx",
+      "line": 343,
+      "rule": "date-preferences",
+      "contract": "MDC-044/MDC-046",
+      "priority": "P2",
+      "confidence": "high",
+      "owner": "pressure-page-domain",
+      "instances": 3,
+      "sites": [
+        {
+          "code": "formatDateTime(row.created_at)",
+          "line": 343,
+          "file": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx"
+        },
+        {
+          "code": "time: formatDateTime(row.created_at)",
+          "line": 70,
+          "file": "web/src/features/vehicle-systems/components/pressure-modernization/pressureData.ts"
+        },
+        {
+          "code": "formatDateTime(lastUpdatedAt)",
+          "line": 62,
+          "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureSummary.tsx"
+        }
+      ],
+      "mechanism": "All three call sites omit formatter options. dateFormat.ts:43-61 defaults to browser locale/timezone, not selected settings. Existing useDateFormat:74-96 binds settings locale and tz_display_default. Chart row memoization also does not depend on a date formatter, so preference-only changes cannot rederive dates.",
+      "repro": {
+        "executed": false,
+        "steps": "Keep browser en-US/America-Los_Angeles, choose app de-DE/UTC or vehicle timezone, and render 2026-10-14T02:00:00Z. Table, chart/export time labels and summary date still use browser settings; changing app timezone alone cannot update memoized chart labels.",
+        "kind": "source-derived"
+      },
+      "fix": "Use existing useDateFormat at the render boundary and inject its formatter into the pure row projection; retain raw UTC timestamps and chronology. Include formatter dependencies. No new date engine.",
+      "needs": "N001",
+      "limits": "A separate explicit 12/24h setting was not established in the inspected hook; no claim that a new hour-cycle API is needed."
+    },
+    {
+      "id": "F004",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureCurrentCard.tsx",
+      "line": 42,
+      "rule": "initial-paused-not-empty",
+      "contract": "MDC-026",
+      "priority": "P2",
+      "confidence": "high",
+      "owner": "pressure-page-domain",
+      "instances": 3,
+      "sites": [
+        {
+          "code": "loading && !latest",
+          "line": 35,
+          "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureCurrentCard.tsx"
+        },
+        {
+          "code": "loading={loading && !source.hasData}; empty={rows.length === 0}",
+          "line": 38,
+          "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryCard.tsx"
+        },
+        {
+          "code": "loading && !source.hasData; !rows.length",
+          "line": 25,
+          "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryTable.tsx"
+        }
+      ],
+      "mechanism": "For first-load fetchStatus=paused with no retained data, TanStack isLoading is false and deriveDataState remains initial/isRefreshBlocked=true. PressureRefreshNotice:16 intentionally returns null without data. All three local sections then display authoritative no-readings/no-history EmptyState rather than unresolved paused state. Global DataSourceNotice does show paused status, so this is contradictory source-local emptiness, not a wholly absent page notice.",
+      "repro": {
+        "executed": false,
+        "steps": "Use a selected vehicle, fresh QueryClient, fetchStatus paused, data undefined, no error and isLoading false. Current card enters !latest EmptyState; history chart/table enter empty branches despite neither request completing.",
+        "kind": "source-derived"
+      },
+      "fix": "Render existing paused/deferred or pending source feedback before authoritatively empty branches, while keeping all shells, individual retries and independent neighboring data. Distinguish disabled/no-selected-vehicle from resolved empty too.",
+      "needs": "N001",
+      "coverage": "Existing pressureData.test.ts:91-101 covers paused WITH retained data only, not this mounted no-data branch."
+    },
+    {
+      "id": "F005",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "line": 164,
+      "rule": "unsupported-offline-cause",
+      "contract": "MDC-026",
+      "priority": "P2",
+      "confidence": "high",
+      "owner": "shared-data-source-notice",
+      "instances": 1,
+      "sites": [
+        {
+          "code": "query.fetchStatus === 'paused' -> 'paused'",
+          "line": 82,
+          "file": "web/src/components/feedback/DataSourceNotice.tsx"
+        }
+      ],
+      "mechanism": "Any paused query is labeled Paused offline. Although useOnlineStatus is read for classifier evidence, the paused status label is unconditional and does not use connectivity evidence. The pressure PageLayout supplies both queries to this shared notice. Paused/deferred is not proof of vehicle, device or network offline.",
+      "repro": {
+        "executed": false,
+        "steps": "Pass either pressure query with fetchStatus paused while online evidence is true; resolver selects paused and label still states Paused offline.",
+        "kind": "source-derived"
+      },
+      "fix": "At the existing shared owner, use cause-neutral localized paused/deferred copy unless actual connectivity evidence establishes offline; preserve individual retries, partial/retained severity and existing request outcomes. Do not patch a page-side substitute.",
+      "needs": "N003,N004",
+      "deduplication": "One shared owner for initial and retained pressure surfaces, not a finding per consumer. No exact current Phase6 DataSourceNotice write claim found."
+    },
+    {
+      "id": "F006",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureSummary.tsx",
+      "line": 4,
+      "rule": "category-barrel-import",
+      "contract": "MDC-002",
+      "priority": "P3",
+      "confidence": "high",
+      "owner": "pressure-page-domain",
+      "instances": 2,
+      "sites": [
+        {
+          "code": "useCardPlacement from '@/components/layout/layout-reference'",
+          "line": 4,
+          "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureSummary.tsx"
+        },
+        {
+          "code": "useCardPlacement from '@/components/layout/layout-reference'",
+          "line": 5,
+          "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryCard.tsx"
+        }
+      ],
+      "mechanism": "Both feature consumers bypass the layout category barrel. Current components/layout/index.ts:11 already exports the same existing hook. This is not a missing shared API, a runtime import cycle, or permission to edit a barrel.",
+      "repro": {
+        "executed": false,
+        "steps": "Inspect the two exact feature imports and compare existing layout/index.ts:11 export.",
+        "kind": "source import inspection"
+      },
+      "fix": "Import the existing hook through @/components/layout in each consumer without changing placement provider, grid observer, layout or public API.",
+      "needs": "N001"
+    },
+    {
+      "id": "F007",
+      "file": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx",
+      "line": 178,
+      "rule": "missing-canonical-i18n",
+      "contract": "MDC-044",
+      "priority": "P2",
+      "confidence": "high",
+      "owner": "canonical-i18n",
+      "instances": 8,
+      "sites": [
+        {
+          "code": "t(`tirePressure.tire.${pos}`, TIRE_LABELS[pos])",
+          "line": 178,
+          "file": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx"
+        },
+        {
+          "code": "t(`tirePressure.status.${status}`, STATUS_LABELS[status])",
+          "line": 183,
+          "file": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx"
+        },
+        {
+          "code": "tirePressure object lacks tire and status subtrees",
+          "line": 25520,
+          "file": "web/src/i18n/en.json"
+        }
+      ],
+      "missingKeys": [
+        "tirePressure.tire.fl",
+        "tirePressure.tire.fr",
+        "tirePressure.tire.rl",
+        "tirePressure.tire.rr",
+        "tirePressure.status.normal",
+        "tirePressure.status.low",
+        "tirePressure.status.high",
+        "tirePressure.status.critical"
+      ],
+      "mechanism": "The eight concrete dynamic lookups are absent from canonical English. t() is present, but each corner/status relies on an undeclared fallback rather than the required canonical key. Static referenced-key inspection found56 present plus these8 missing; this is not an assertion about every translation catalog or cold-i18n runtime.",
+      "repro": {
+        "executed": false,
+        "steps": "Resolve each exact dynamic key against parsed web/src/i18n/en.json; tire and status subtrees are absent. Page fallback maps preserve English names but do not install canonical keys.",
+        "kind": "executed read-only canonical-key lookup"
+      },
+      "fix": "Separately leased canonical owner adds exactly eight current fallback leaves and only normal generated outputs established by normal tooling. Keep identifiers/order/thresholds; no page-owned catalog edits or generator bypass.",
+      "needs": "N003",
+      "deduplication": "Existing pressureWithStatus and unknownPressure leaves ARE present. Do not duplicate/reopen the accepted two-key catalog followup."
+    }
+  ],
+  "candidateCount": 8,
+  "candidateCounts": {
+    "native": 4,
+    "conditional": 4
+  },
+  "candidates": [
+    {
+      "line": 23,
+      "repro": "For wire front_left=0, converter can return0 but readPressurePa returns null. Whether this violates domain semantics is conditional, not confirmed.",
+      "detail": "Selector excludes finite0 and negative pressure; inherited tests call0 a no-reading sentinel. Actual ToSI multiplication and handler projection do not encode that sentinel. No wire/device evidence establishes whether0 is unavailable or measured zero gauge pressure. Preserve accepted behavior pending authoritative contract; do not silently reinterpret0 as healthy or critical.",
+      "topic": "zero sentinel",
+      "kind": "conditional-integration",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/pressureData.ts",
+      "requiredEvidence": "Documented wire/signal unavailable representation and valid gauge-pressure-zero fixture, no live/device call authorized.",
+      "id": "C001"
+    },
+    {
+      "line": 40,
+      "kind": "conditional-integration",
+      "detail": "Mappings project four last_seen fields but no tpms_hard_warnings/tpms_soft_warnings. DTO does not expose last_seen fields and latest response has no created_at/id/vehicle_id. Summary explicitly says observation unavailable and newest selected-window row is not latest measurement time. Fetch success/row timestamps cannot establish per-corner currentness; missing warnings correctly remain unknown in table. Do not claim stale/healthy/complete vehicle from fetch freshness.",
+      "file": "internal/api/tirepressure/handler.go",
+      "topic": "per-corner freshness and TPMS flags",
+      "id": "C002",
+      "requiredEvidence": "Separately owned DTO/freshness/flag projection contract with actual typed value semantics. Absence of flags is not affirmative OK. Do not invent backend signals or remove preserved warning UI."
+    },
+    {
+      "line": 174,
+      "kind": "conditional-integration",
+      "detail": "TPMS is not in fixed-unit bypass at148-153. The general branch asks histRepo.At and drops ErrNotFound before units.ToSI, although units.go66-67 itself ignores active pressure preference. If unit-history context is absent, valid fixed-bar pressure can be dropped. Deployment occurrence was not observed.",
+      "file": "internal/tesla/normalize/normalize.go",
+      "topic": "fixed-bar pressure without unit history",
+      "id": "C003",
+      "requiredEvidence": "Targeted integration fixture proving absent-history TPMS handling, under a separately leased producer scope. Not a frontend source repair or live-data claim."
+    },
+    {
+      "line": 13,
+      "kind": "conditional-preference-review",
+      "detail": "Series use fixed CHART_COLORS indices; no local useChartPalette subscription. Tooltip receives ChartTooltip without valueFormatter and Lines have no unit prop. However chart header metadata explicitly displays unit and accessible/export column labels carry units. Saved palette policy and contextual tooltip interpretation need bounded owner/native evidence; do not promote to proven unlabeled reading or contrast failure.",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryCard.tsx",
+      "topic": "chart palette and tooltip unit context",
+      "id": "C004",
+      "requiredEvidence": "Existing chart preference-owner contract and mounted bar/psi/kPa, locale and palette observations."
+    },
+    {
+      "line": 25,
+      "kind": "native-unverified",
+      "detail": "Retry uses Button size sm with no mobile minimum; shared Button.tsx:38 h-9 declares36px at16px root, below contract44px mobile default. Actual composed targets/spacing/font scaling are not measured.",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureRefreshNotice.tsx",
+      "topic": "touch targets and narrow layout",
+      "id": "NATIVE001",
+      "requiredEvidence": "All10 mission widths plus767/768, allocated cards, long labels, RTL,200% text; actual hit boxes, unclipped focus, table repair and no page overflow."
+    },
+    {
+      "line": 149,
+      "kind": "native-unverified",
+      "detail": "Meter aria-valuenow and aria-valuetext use clamped track value. Current card:63-66 separately preserves actual extreme pressure as text. That source text is reachable; no loss or screen-reader defect is claimed without composed evidence.",
+      "file": "web/src/components/charts/ThresholdBar.tsx",
+      "topic": "extreme meter accessible value",
+      "id": "NATIVE002",
+      "requiredEvidence": "500000Pa and small positivePa, all units/precision; meter plus actual paragraph announcement, visible statuses and chart gap alternatives."
+    },
+    {
+      "line": 34,
+      "kind": "native-unverified",
+      "detail": "ChartContainer declares data table/export, hidden-series legend/fullscreen infrastructure; DataTable declares sorting/value filters/columns/pagination. Authored DOM mocks are not browser keyboard, focus or export correctness.",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryCard.tsx",
+      "topic": "keyboard and action preservation",
+      "id": "NATIVE003",
+      "requiredEvidence": "Keyboard/focus/escape for legend, chart data view, fullscreen/export and table filters/sort/pagination; synthetic read-only mounted environment, no production actions."
+    },
+    {
+      "line": 214,
+      "kind": "native-unverified",
+      "detail": "Bands are computed semantic color-mix values and statuses are localized text; no static-inline violation. FadeIn/shared controls own motion; source declarations do not prove reduced-motion/low-bandwidth or composed contrast.",
+      "file": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx",
+      "topic": "theme/contrast/motion",
+      "id": "NATIVE004",
+      "requiredEvidence": "Dark/light/custom/forced-colors, reduced motion/low bandwidth,200% text and long translations; measured contrast/visual review, no inferred screenshot pass."
+    }
+  ],
+  "needs": [
+    {
+      "dependsOn": "N002 only for bound contract coordination; N003 only for canonical copy. Reuse existing mobile/format/state/placement APIs, no new component.",
+      "findings": [
+        "F001 caller",
+        "F002",
+        "F003",
+        "F004",
+        "F006"
+      ],
+      "files": [
+        "web/src/features/vehicle-systems/pages/TirePressurePage.tsx",
+        "web/src/features/vehicle-systems/components/pressure-modernization/PressureCurrentCard.tsx",
+        "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryCard.tsx",
+        "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryTable.tsx",
+        "web/src/features/vehicle-systems/components/pressure-modernization/PressureSummary.tsx",
+        "web/src/features/vehicle-systems/components/pressure-modernization/pressureData.ts"
+      ],
+      "owner": "Existing pressure page/domain owner",
+      "id": "N001",
+      "instruction": "One serialized bounded feature repair scope; preserve existing tests. No shared component, catalog or backend edits. Actual task reservation remains parent-owned."
+    },
+    {
+      "files": [
+        "web/src/api/hooks/usePressurePage.ts"
+      ],
+      "id": "N002",
+      "owner": "Existing pressure typed-hook integration owner",
+      "findings": [
+        "F001"
+      ],
+      "instruction": "Safely encode existing RFC3339 bounds in URL/key and retain abort/enablement; coordinate caller/tests. Backend instant parser already exists; no presumed backend rewrite."
+    },
+    {
+      "files": [
+        "web/src/i18n/en.json"
+      ],
+      "id": "N003",
+      "owner": "Exclusive canonical i18n/generated-output owner",
+      "findings": [
+        "F007",
+        "F005 cause-neutral copy prerequisite"
+      ],
+      "instruction": "Eight exact pressure corner/status fallback leaves only; cause-neutral paused copy coordinated with shared owner. Preserve accepted two-key pressure copy; normal generated output set must be established separately. No worker catalog writes."
+    },
+    {
+      "files": [
+        "web/src/components/feedback/DataSourceNotice.tsx"
+      ],
+      "id": "N004",
+      "owner": "Existing shared DataSourceNotice owner",
+      "findings": [
+        "F005"
+      ],
+      "instruction": "One cross-consumer cause-neutral paused correction, not separate page wrappers; preserve actual online evidence, retry and severity. No exact overlapping queued owner found during scoped queue grep."
+    }
+  ],
+  "verification": {
+    "NOTRUN": [
+      "npx tsc --noEmit/global compiler",
+      "Build",
+      "ESLint/full audits/helper runners",
+      "Vitest including existing covering tests",
+      "Browser/server/API/device",
+      "Native viewport/contrast/forced-colors/keyboard/focus/motion/screenshots",
+      "Actual backend/data payload completeness",
+      "Git/status/commits/catalog generators"
+    ],
+    "pinStatus": "43/43 before-after MATCH",
+    "grepCorrection": "Initial PowerShell case-insensitive scan matched Button as button and activeVehicleId across URL text as camelCase key. Corrected -CaseSensitive greps both0; first raw output retained, not silently discarded.",
+    "commandsLog": "web/logs/phase6-qa-vehicle-systems-tire-pressure.log",
+    "JSONStatus": "VALID_JSON; final post-write parse/pins recorded in command log",
+    "failedInspections": [
+      "Initial new-report Get-Item nonexistent: nonterminating error; shell1117 exit0; report was absent",
+      "Early queue/inventory output limits848.3KB and38.0KB; not fully inspected, exact scoped retries performed",
+      "Wrong parser filenames internal/httputil/params.go and internal/platform/httputil/params.go returned missing-path errors; corrected real date_range.go body inspected",
+      "Report N001.files first serialization had11 split prefix/name entries; caught by actual parse inspection and corrected to6 exact existing paths; prior command numeric exit0 was not schema acceptance."
+    ],
+    "backendRuleGrep": "Executed handler + units + conversions + normalize: SQL fmt interpolation0, fmt/log.Println0, panic0. URL.Query matches are parameter reads, not DB Pool.Query. Actual Timeline/LiveState/histRepo calls pass context. Relevant signal reader SQL snippets parameterized with ctx; no full backend audit claimed.",
+    "tests": {
+      "passed": 0,
+      "authoredDeclarationCount": 69,
+      "executed": 0,
+      "runtimeDiscovered": null,
+      "fileCounts": {
+        "pressureData.test.ts": 7,
+        "AI on test": 3,
+        "TirePressurePage.test.tsx": 27,
+        "PressurePage.integration.test.tsx": 11,
+        "usePressureFormat.test.ts": 14,
+        "AI off test": 3,
+        "pressurePreservation.test.ts": 4
+      },
+      "failed": 0,
+      "skipped": 0,
+      "countsAre": "Static it() declarations, NOT Vitest discovery or skipped tests",
+      "authoredFiles": 7,
+      "reason": "No source/test changes; no-change workers do not launch tests. User forbids browser/API/native execution and full suites.",
+      "status": "NOTRUN"
+    },
+    "flatFrontendRuleGrep": "Executed12 direct production files. static-inline0, case-corrected raw-html0, direct-library-import0, old-api-import0, camelcase-param0, fetch/useEffect0, JSX English-text heuristic0. Two /api/v1 comment matches are not URL violations; three conditional notice/action matches are not hidden data panels. PageLayout -> PageContainer source confirmed. These narrow greps are not complete i18n/native acceptance.",
+    "canonicalKeys": {
+      "status": "NEGATIVE_FINDING, inspection command exit0",
+      "missing": 8,
+      "present": 56,
+      "inspected": 64
+    },
+    "pinMismatches": []
+  },
+  "pins": [
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "F06541649A5909BB89D6AC9EB680FDEB62F98D6B6C19CB51122AE6BCF5B3691D",
+      "file": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx",
+      "kind": "source",
+      "afterSHA256": "F06541649A5909BB89D6AC9EB680FDEB62F98D6B6C19CB51122AE6BCF5B3691D"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "941A62B08F20CD20DF6A2ECA508C6B30139AEE3F27A56756D6B8F97A0A53AAB0",
+      "file": "web/src/features/vehicle-systems/pages/TirePressurePage.test.tsx",
+      "kind": "test",
+      "afterSHA256": "941A62B08F20CD20DF6A2ECA508C6B30139AEE3F27A56756D6B8F97A0A53AAB0"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "04550B47393B6BD89F69D453C142A3755BE6A05FB6BD92339B064DD54788896C",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/index.ts",
+      "kind": "source",
+      "afterSHA256": "04550B47393B6BD89F69D453C142A3755BE6A05FB6BD92339B064DD54788896C"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "3AB692ED8CBACFA4A86A1F163E2D140AF81ED6EE0322573F92B60990C32ADFB7",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureCurrentCard.tsx",
+      "kind": "source",
+      "afterSHA256": "3AB692ED8CBACFA4A86A1F163E2D140AF81ED6EE0322573F92B60990C32ADFB7"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "EF23EE6020C814DA088BF7FD4A9ECF110721F9065E1DB5D92E09C42454F49F95",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/pressureData.test.ts",
+      "kind": "test",
+      "afterSHA256": "EF23EE6020C814DA088BF7FD4A9ECF110721F9065E1DB5D92E09C42454F49F95"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "1F0C8342DF36DC85A3812E5B8F5D2108DD757E67BFB580AD235B31760415CE51",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/pressureData.ts",
+      "kind": "source",
+      "afterSHA256": "1F0C8342DF36DC85A3812E5B8F5D2108DD757E67BFB580AD235B31760415CE51"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "AE4C578DF424286336A309EC6D0EF9E83899CCE2B043860470BACED2BE01A2ED",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryCard.tsx",
+      "kind": "source",
+      "afterSHA256": "AE4C578DF424286336A309EC6D0EF9E83899CCE2B043860470BACED2BE01A2ED"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "AE1A4054F8CA8B9ED100450CCBC4615E9422C6C4E6A1BB648F748C542C2A7C04",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryTable.tsx",
+      "kind": "source",
+      "afterSHA256": "AE1A4054F8CA8B9ED100450CCBC4615E9422C6C4E6A1BB648F748C542C2A7C04"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "57E102E94BDB706EF22EBD327613FE62994F5E9103EEDC3C4C5C1F7F8C131455",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressurePage.integration.test.tsx",
+      "kind": "test",
+      "afterSHA256": "57E102E94BDB706EF22EBD327613FE62994F5E9103EEDC3C4C5C1F7F8C131455"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "84BE2148F6D8DB94CB2FEE5607388D92AD4827D580BBD9B04F65CFADFB1F2CB9",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/pressurePreservation.test.ts",
+      "kind": "test",
+      "afterSHA256": "84BE2148F6D8DB94CB2FEE5607388D92AD4827D580BBD9B04F65CFADFB1F2CB9"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "077768F6C49353D376F8E31DCB602DB816EAB5869B7977F37561D27C593CA765",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureRefreshNotice.tsx",
+      "kind": "source",
+      "afterSHA256": "077768F6C49353D376F8E31DCB602DB816EAB5869B7977F37561D27C593CA765"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "5A3C0DAB078E55B42FB9B318E3F14D24BB0A4A726EA4E12ECE48C1FDE93E2BB6",
+      "file": "web/src/features/vehicle-systems/components/pressure-modernization/PressureSummary.tsx",
+      "kind": "source",
+      "afterSHA256": "5A3C0DAB078E55B42FB9B318E3F14D24BB0A4A726EA4E12ECE48C1FDE93E2BB6"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "041D0C1430369F17B0AABB9D9EFCCEB9901DE756FC543851AE49819831E8A7BC",
+      "file": "web/src/features/vehicle-systems/__tests__/TestTirePressureReasoningAIOffShowsThresholdsOnly.test.tsx",
+      "kind": "test",
+      "afterSHA256": "041D0C1430369F17B0AABB9D9EFCCEB9901DE756FC543851AE49819831E8A7BC"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "7E7B59DF77B3F16605761664C7318B77AB231C637C4665932B51DF0772196D28",
+      "file": "web/src/features/vehicle-systems/__tests__/TestTirePressureTrendReasoningAIOnWiredCallsRoute.test.tsx",
+      "kind": "test",
+      "afterSHA256": "7E7B59DF77B3F16605761664C7318B77AB231C637C4665932B51DF0772196D28"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "63DA02DB253066EE35CB1CD0F2D21502A06CCBE6D0C6416DC3C46DFCF015F317",
+      "file": "web/src/api/hooks/usePressurePage.ts",
+      "kind": "source",
+      "afterSHA256": "63DA02DB253066EE35CB1CD0F2D21502A06CCBE6D0C6416DC3C46DFCF015F317"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "1325079CCAB6E071DC6F96F6D4226F4954E701FC5A70845D28E73A8BA224160B",
+      "file": "web/src/hooks/usePressureFormat.ts",
+      "kind": "source",
+      "afterSHA256": "1325079CCAB6E071DC6F96F6D4226F4954E701FC5A70845D28E73A8BA224160B"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "BD3DD05FF7DFC733434EE595D7973B4375D1B15A07DC93F9E7E0F55745824EC8",
+      "file": "web/src/hooks/usePressureFormat.test.ts",
+      "kind": "test",
+      "afterSHA256": "BD3DD05FF7DFC733434EE595D7973B4375D1B15A07DC93F9E7E0F55745824EC8"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "6ED27CFFA4B31AB2279875800C010833B18A98EF36B48609F9C9A737B88565C7",
+      "file": "web/src/components/ai/AITirePressureTrendReasoning.tsx",
+      "kind": "source",
+      "afterSHA256": "6ED27CFFA4B31AB2279875800C010833B18A98EF36B48609F9C9A737B88565C7"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "E0B859E45485E60C9CCE07BBF523817C6971C9C95C3D4DDDB254294A19F2B173",
+      "file": "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "kind": "source",
+      "afterSHA256": "E0B859E45485E60C9CCE07BBF523817C6971C9C95C3D4DDDB254294A19F2B173"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "20B4468EB42608CBA61112D8E6CD4DCB1D2348FBD00B54BB780116A3F9F95F9B",
+      "file": "internal/api/tirepressure/handler.go",
+      "kind": "source",
+      "afterSHA256": "20B4468EB42608CBA61112D8E6CD4DCB1D2348FBD00B54BB780116A3F9F95F9B"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "8413AA7998BDF9EB318769E6B248FFC282CB5EBF5113A658A2BC885D9527DC28",
+      "file": "internal/tesla/units/units.go",
+      "kind": "source",
+      "afterSHA256": "8413AA7998BDF9EB318769E6B248FFC282CB5EBF5113A658A2BC885D9527DC28"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "EDBBD6E68ADD3E59FEDEFD2328B30AC091E817E3C4D88D08471A856FEF6B5E29",
+      "file": "internal/tesla/units/conversions.go",
+      "kind": "source",
+      "afterSHA256": "EDBBD6E68ADD3E59FEDEFD2328B30AC091E817E3C4D88D08471A856FEF6B5E29"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "B2B057ACE50A2E3A2D1FCD58317A541D38A55E267121AA57552A84A177D711C9",
+      "file": "internal/tesla/normalize/normalize.go",
+      "kind": "source",
+      "afterSHA256": "B2B057ACE50A2E3A2D1FCD58317A541D38A55E267121AA57552A84A177D711C9"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "5526C81EAFF016243772398B88B003112F3D0C0921B484C0DE3008B7D2656ADD",
+      "file": "internal/api/apiparams/params.go",
+      "kind": "source",
+      "afterSHA256": "5526C81EAFF016243772398B88B003112F3D0C0921B484C0DE3008B7D2656ADD"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "file": "web/src/i18n/en.json",
+      "kind": "catalog-readonly",
+      "afterSHA256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "file": "web/src/api/dataState.ts",
+      "kind": "source",
+      "afterSHA256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "file": "web/src/lib/dateFormat.ts",
+      "kind": "source",
+      "afterSHA256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "file": "web/src/hooks/useDateFormat.ts",
+      "kind": "source",
+      "afterSHA256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "kind": "source",
+      "afterSHA256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "file": "web/src/hooks/useRangeState.ts",
+      "kind": "source",
+      "afterSHA256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "file": "web/src/lib/workspaceScope.ts",
+      "kind": "source",
+      "afterSHA256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "file": "web/src/lib/unitConversion.ts",
+      "kind": "source",
+      "afterSHA256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "kind": "source",
+      "afterSHA256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "16105443F3F6C85FC73AE940F65F8B61F751A1FB30E77369B229D24EC7DFC642",
+      "file": "web/src/components/layout/index.ts",
+      "kind": "source",
+      "afterSHA256": "16105443F3F6C85FC73AE940F65F8B61F751A1FB30E77369B229D24EC7DFC642"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "kind": "source",
+      "afterSHA256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "kind": "source",
+      "afterSHA256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "48253F33B54E73FE7C2EE2A180CBEA8A8510B61DFFF985B533528675DBBCE122",
+      "file": "web/src/components/charts/ThresholdBar.tsx",
+      "kind": "source",
+      "afterSHA256": "48253F33B54E73FE7C2EE2A180CBEA8A8510B61DFFF985B533528675DBBCE122"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2",
+      "file": "web/src/components/charts/ChartTooltip.tsx",
+      "kind": "source",
+      "afterSHA256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "kind": "source",
+      "afterSHA256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "file": "web/src/components/ui/DataTable.tsx",
+      "kind": "source",
+      "afterSHA256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "file": "web/src/components/ui/Button.tsx",
+      "kind": "source",
+      "afterSHA256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "B795F5B19E37A53AA636B7D11C7268F8545F0B2A79BCECDBED4AA92E06AB7F08",
+      "file": "internal/signal/state_reader_log.go",
+      "kind": "source",
+      "afterSHA256": "B795F5B19E37A53AA636B7D11C7268F8545F0B2A79BCECDBED4AA92E06AB7F08"
+    },
+    {
+      "capture": "Before/report-start pin from logged raw Get-FileHash output; extra mechanism pins captured after first read, before report write. Not an atomic repository freeze.",
+      "matches": true,
+      "beforeSHA256": "DFD02F1856F1D22DD943F1D25CE4FE25787257DA3EDCBB31EB716DEB99F70050",
+      "file": "internal/platform/httputil/date_range.go",
+      "kind": "source",
+      "afterSHA256": "DFD02F1856F1D22DD943F1D25CE4FE25787257DA3EDCBB31EB716DEB99F70050"
+    }
+  ],
+  "filesRead": [
+    "web/src/features/vehicle-systems/pages/TirePressurePage.tsx",
+    "web/src/features/vehicle-systems/pages/TirePressurePage.test.tsx",
+    "web/src/features/vehicle-systems/components/pressure-modernization/index.ts",
+    "web/src/features/vehicle-systems/components/pressure-modernization/PressureCurrentCard.tsx",
+    "web/src/features/vehicle-systems/components/pressure-modernization/pressureData.test.ts",
+    "web/src/features/vehicle-systems/components/pressure-modernization/pressureData.ts",
+    "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryCard.tsx",
+    "web/src/features/vehicle-systems/components/pressure-modernization/PressureHistoryTable.tsx",
+    "web/src/features/vehicle-systems/components/pressure-modernization/PressurePage.integration.test.tsx",
+    "web/src/features/vehicle-systems/components/pressure-modernization/pressurePreservation.test.ts",
+    "web/src/features/vehicle-systems/components/pressure-modernization/PressureRefreshNotice.tsx",
+    "web/src/features/vehicle-systems/components/pressure-modernization/PressureSummary.tsx",
+    "web/src/features/vehicle-systems/__tests__/TestTirePressureReasoningAIOffShowsThresholdsOnly.test.tsx",
+    "web/src/features/vehicle-systems/__tests__/TestTirePressureTrendReasoningAIOnWiredCallsRoute.test.tsx",
+    "web/src/api/hooks/usePressurePage.ts",
+    "web/src/hooks/usePressureFormat.ts",
+    "web/src/hooks/usePressureFormat.test.ts",
+    "web/src/components/ai/AITirePressureTrendReasoning.tsx",
+    "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+    "internal/api/tirepressure/handler.go",
+    "internal/tesla/units/units.go",
+    "internal/tesla/units/conversions.go",
+    "internal/tesla/normalize/normalize.go",
+    "internal/api/apiparams/params.go",
+    "web/src/i18n/en.json",
+    "web/src/api/dataState.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/index.ts",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/feedback/DataSourceNotice.tsx",
+    "web/src/components/charts/ThresholdBar.tsx",
+    "web/src/components/charts/ChartTooltip.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/ui/Button.tsx",
+    "internal/signal/state_reader_log.go",
+    "internal/platform/httputil/date_range.go",
+    "internal/api/router.go:4134-4153",
+    "docs/orchestrator-loop.md FULL 1-EOF",
+    "docs/frontend-design-contract.md FULL 1-2539 with truncated reads continued",
+    "docs/frontend-mission.md 1-EOF including principles/state/domain/43-45",
+    "docs/session-handoff.md current recovery and visible historical context",
+    "docs/frontend-worker-conventions.md FULL",
+    "docs/frontend-inventory.md authority and exact tire row279; scoped proposal415 and replacement1417",
+    "docs/frontend-audits/audit-page-228.json 1-240 historical only",
+    ".github/copilot-instructions.md 1-470",
+    ".github/instructions/react-frontend.instructions.md 1-430",
+    ".github/instructions/frontend-si-cutover.instructions.md FULL",
+    ".github/instructions/unit-conversion.instructions.md FULL legacy examples superseded by current SI/design contract",
+    "docs/CONTRIBUTING.md 1-160"
+  ],
+  "limits": [
+    "Report complete is not page/native/application acceptance. Accepted source remains untouched.",
+    "Only assigned report/log written; no code/tests/catalog/queue/Git edits, no subagents/installs/servers or custom helper files.",
+    "Shared source/catalog pins are scoped read snapshots, not atomic freeze; any final drift must be reported.",
+    "Reproductions are source-derived unless explicitly described as executed canonical-key lookup; no mounted reproduction fabricated."
+  ],
+  "release": {
+    "sourceWriteClaim": "None: source/test files readonly throughout",
+    "logReleased": true,
+    "reportReleased": true,
+    "UTC": "2026-10-14T01:41:23.5486092Z",
+    "ongoingCommands": 0,
+    "commandsReleased": true
+  },
+  "summary": {
+    "sourceAcceptance": "Accepted source retained, QA report not whole-page/native acceptance",
+    "nativeCandidates": 4,
+    "confirmedFindings": 7,
+    "violationInstances": 19,
+    "filesWithMostPrimaryFindings": [
+      {
+        "file": "web/src/features/vehicle-systems/pages/TirePressurePage.tsx",
+        "count": 3
+      }
+    ],
+    "conditionalCandidates": 4,
+    "priorities": {
+      "P3": 1,
+      "P2": 4,
+      "P1": 2
+    },
+    "deduplicatedOwners": 4,
+    "priorityFixes": [
+      "Exact workspace instant boundaries",
+      "Preserve all historical corner fields/actions on mobile",
+      "Resolve8 missing canonical corner/status leaves and date preferences",
+      "Honest initial-paused and cause-neutral shared paused state"
+    ]
+  }
+}

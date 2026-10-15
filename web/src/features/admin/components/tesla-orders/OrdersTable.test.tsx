@@ -21,14 +21,18 @@
  * test-setup mock (en-US, UTC), so useDateFormat is fully offline — no network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+const translatedLabels = vi.hoisted(() => ({} as Record<string, string>));
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
+      t: (key: string, fallback?: unknown, values?: Record<string, unknown>) => {
+        const text = translatedLabels[key] ?? (typeof fallback === 'string' ? fallback : key);
+        return text.replace(/{{(\w+)}}/g, (match, name: string) => String(values?.[name] ?? match));
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -73,6 +77,7 @@ beforeEach(() => {
   // DataTable persists column widths / visibility keyed by tableId; clear so
   // one test's layout never bleeds into the next.
   window.localStorage.clear();
+  for (const key of Object.keys(translatedLabels)) delete translatedLabels[key];
 });
 
 afterEach(() => {
@@ -80,6 +85,72 @@ afterEach(() => {
 });
 
 describe('OrdersTable', () => {
+  it('searches visible English status phrases as well as raw codes', () => {
+    render(<OrdersTable orders={[
+      makeOrder({ id: 1, order_id: 'RN-READY', status: 'READY_FOR_DELIVERY' }),
+      makeOrder({ id: 2, order_id: 'RN-BOOKED', status: 'BOOKED' }),
+    ]} />);
+    const input = screen.getByRole('textbox', { name: 'Filter orders' });
+    for (const value of ['ready for delivery', 'READY_FOR_DELIVERY']) {
+      fireEvent.change(input, { target: { value } });
+      expect(dataRows()).toHaveLength(1);
+      expect(screen.getByText('RN-READY')).toBeInTheDocument();
+    }
+  });
+
+  it('uses localized statuses in rows, search and value filters and a localized table name', () => {
+    translatedLabels['admin.teslaOrders.status.readyForDelivery'] = 'Bereit zur Auslieferung';
+    translatedLabels['admin.teslaOrders.panels.details'] = 'Bestelldetails';
+    const order = makeOrder({ order_id: 'RN-READY', status: 'READY_FOR_DELIVERY' });
+    render(<OrdersTable orders={[order]} />);
+    expect(screen.getByRole('table', { name: 'Bestelldetails' })).toBeInTheDocument();
+    expect(screen.getByText('Bereit zur Auslieferung')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Filter orders' }), {
+      target: { value: 'bereit zur auslieferung' },
+    });
+    expect(screen.getByText('RN-READY')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }));
+    expect(screen.getByRole('checkbox', { name: 'Bereit zur Auslieferung' })).toBeInTheDocument();
+    expect(order.status).toBe('READY_FOR_DELIVERY');
+  });
+  it('filters the full loaded fleet before pagination, including values beyond the first page', () => {
+    const orders = Array.from({ length: 30 }, (_, index) =>
+      makeOrder({
+        id: index + 1,
+        order_id: `RN-${index + 1}`,
+        model: index === 29 ? 'Model Y' : 'Model 3',
+      }),
+    );
+    render(<OrdersTable orders={orders} />);
+    expect(screen.queryByText('RN-30')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Model filter' }));
+    const menu = screen.getByRole('dialog', { name: 'Model filter' });
+    expect(within(menu).getByRole('checkbox', { name: 'Model Y' })).toBeChecked();
+    fireEvent.click(within(menu).getByRole('checkbox', { name: 'Select all shown values' }));
+    fireEvent.click(within(menu).getByRole('checkbox', { name: 'Model Y' }));
+    fireEvent.click(within(menu).getByRole('button', { name: 'Done' }));
+
+    expect(dataRows()).toHaveLength(1);
+    expect(screen.getByText('RN-30')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Model filter' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(dataRows()).toHaveLength(25);
+  });
+
+  it('keeps checklist candidates from the complete loaded dataset when text search narrows visible rows', () => {
+    render(<OrdersTable orders={[
+      makeOrder({ id: 1, order_id: 'RN-3', model: 'Model 3' }),
+      makeOrder({ id: 2, order_id: 'RN-Y', model: 'Model Y' }),
+    ]} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Filter orders' }), { target: { value: 'RN-3' } });
+    expect(dataRows()).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Model filter' }));
+    expect(screen.getByRole('checkbox', { name: 'Model Y' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Model 3' })).toBeInTheDocument();
+  });
+
   it('renders every column and falls back to an em-dash for missing vin / delivery / upgradable', () => {
     const orders = [
       makeOrder({
@@ -128,8 +199,8 @@ describe('OrdersTable', () => {
     ];
     render(<OrdersTable orders={orders} />);
 
-    const inProgress = screen.getByText('In Production');
-    const ready = screen.getByText('Ready For Delivery');
+    const inProgress = screen.getByText('In production');
+    const ready = screen.getByText('Ready for delivery');
     const delivered = screen.getByText('Delivered');
     const cancelled = screen.getByText('Cancelled');
 
@@ -140,10 +211,10 @@ describe('OrdersTable', () => {
 
     // orderStatusVariant → Badge colour language: in-progress=warning(amber),
     // ready=info(blue), delivered=success(green), cancelled=danger(red).
-    expect(inProgress.className).toContain('yellow');
-    expect(ready.className).toContain('blue');
-    expect(delivered.className).toContain('green');
-    expect(cancelled.className).toContain('red');
+    expect(inProgress.className).toContain('bg-[var(--semantic-warning-bg)]');
+    expect(ready.className).toContain('bg-[var(--semantic-info-bg)]');
+    expect(delivered.className).toContain('bg-[var(--semantic-success-bg)]');
+    expect(cancelled.className).toContain('bg-[var(--semantic-danger-bg)]');
   });
 
   it('sorts by model ascending by default', () => {

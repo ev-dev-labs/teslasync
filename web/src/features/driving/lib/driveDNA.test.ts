@@ -18,8 +18,6 @@ function point(
   return {
     timestamp: '2025-01-01T00:00:00.000Z',
     speed: 20,
-    // The endpoint's legacy response field is kW.
-    power: 10,
     batteryLevel: null,
     outsideTemp: 18,
     insideTemp: 21,
@@ -41,6 +39,8 @@ function point(
     latitude: null,
     longitude: null,
     ...overrides,
+    // Test scenarios specify kW; the actual fixture wire value is watts.
+    power: overrides.power === undefined ? 10000 : overrides.power == null ? null : overrides.power * 1000,
   };
 }
 
@@ -131,17 +131,17 @@ describe('buildDriveDnaModel timeline normalization', () => {
 });
 
 describe('buildDriveDnaModel null and SI semantics', () => {
-  it('lifts legacy kW power exactly once into canonical watts', () => {
+  it('preserves canonical watts without rescaling', () => {
     const model = buildDriveDnaModel([
-      at(0, { power: 12.345 }),
-      at(1, { power: -4.5 }),
+      { ...at(0), power: 12345.125 },
+      { ...at(1), power: -4500.25 },
     ]);
 
     expect(model.timeline.map((row) => row.powerW)).toEqual([
-      12_345, -4_500,
+      12345.125, -4500.25,
     ]);
-    expect(model.stats.peakPropulsionW).toBe(12_345);
-    expect(model.stats.peakRegenW).toBe(4_500);
+    expect(model.stats.peakPropulsionW).toBe(12345.125);
+    expect(model.stats.peakRegenW).toBe(4500.25);
   });
 
   it('preserves measured zero while keeping missing channels unavailable', () => {

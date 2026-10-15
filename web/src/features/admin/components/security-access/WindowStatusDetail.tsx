@@ -8,10 +8,10 @@ import { parseWindowState, windowTone } from './helpers';
 import { StatusTile } from './StatusTile';
 
 const WINDOW_KEYS = [
-  { key: 'fdWindow' as const, i18nKey: 'admin.security.window.fd', fallback: 'Front Driver' },
-  { key: 'fpWindow' as const, i18nKey: 'admin.security.window.fp', fallback: 'Front Passenger' },
-  { key: 'rdWindow' as const, i18nKey: 'admin.security.window.rd', fallback: 'Rear Driver' },
-  { key: 'rpWindow' as const, i18nKey: 'admin.security.window.rp', fallback: 'Rear Passenger' },
+  { key: 'fdWindow' as const, i18nKey: 'admin.security.window.fd', fallback: 'Front driver' },
+  { key: 'fpWindow' as const, i18nKey: 'admin.security.window.fp', fallback: 'Front passenger' },
+  { key: 'rdWindow' as const, i18nKey: 'admin.security.window.rd', fallback: 'Rear driver' },
+  { key: 'rpWindow' as const, i18nKey: 'admin.security.window.rp', fallback: 'Rear passenger' },
 ] as const;
 
 /** 2×2 grid mirroring the physical front/rear × driver/passenger layout. */
@@ -31,7 +31,7 @@ export function WindowStatusDetail({ latest, isLoading, error, onRetry, classNam
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <PanelTitle className="mb-3">{t('admin.security.windowDetail', 'Window Status Detail')}</PanelTitle>
+      <PanelTitle className="mb-3">{t('admin.security.windowDetail', 'Window status detail')}</PanelTitle>
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : isLoading ? (

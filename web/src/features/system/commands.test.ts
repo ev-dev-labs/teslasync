@@ -1,12 +1,71 @@
 import { describe, it, expect } from 'vitest';
+import { deriveDataState } from '@/api/dataState';
+import type { VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
+import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
 
 import {
   COMMANDS,
   CATEGORY_ORDER,
   CATEGORY_META,
+  getChargingCurrentMaximum,
   type CommandDef,
   type CommandCategory,
 } from './commands';
+
+describe('current charging capability', () => {
+  const now = Date.parse('2026-10-14T07:45:00Z');
+  const response = (value: unknown = 32): VehicleLiveSignalsResponse => ({
+    vehicle_id: 42,
+    signals: { ChargeCurrentRequestMax: {
+      kind: 'ValueKindFloat', value, ts: new Date(now - 1000).toISOString(), source: 'l1', age_ms: 1000,
+    } },
+  });
+  const source = (data = response()) => deriveDataState({ data }, { provenance: 'live' });
+
+  it.each([0, 16, 32, 48])('uses the actual current maximum %s without a guessed ceiling', value => {
+    expect(getChargingCurrentMaximum(source(response(value)), 42, now)).toBe(value);
+  });
+
+  it.each([null, '32', -1, Infinity, NaN, Number.MAX_SAFE_INTEGER + 1])('keeps malformed capability %s unknown', value => {
+    expect(getChargingCurrentMaximum(source(response(value)), 42, now)).toBeNull();
+  });
+
+  it('rejects another vehicle, omitted signals, unknown kind/layer and legacy scalar values', () => {
+    for (const data of [
+      { ...response(), vehicle_id: 43 },
+      { vehicle_id: 42 },
+      { vehicle_id: 42, signals: { ChargeCurrentRequestMax: 32 } },
+      ...[
+        { kind: 'ValueKindString' }, { source: 'stale' }, { source: 'l2' },
+        { ts: undefined }, { age_ms: undefined }, { age_ms: -1 },
+        { age_ms: Infinity }, { ts: 'invalid' },
+        { ts: new Date(now + 1000).toISOString() },
+        { ts: new Date(now - TELEMETRY_STALE_AFTER_MS - 1).toISOString() },
+        { age_ms: TELEMETRY_STALE_AFTER_MS + 1 },
+      ].map(patch => ({
+        vehicle_id: 42,
+        signals: { ChargeCurrentRequestMax: {
+          ...(response().signals!.ChargeCurrentRequestMax as Record<string, unknown>), ...patch,
+        } },
+      })),
+    ]) {
+      expect(getChargingCurrentMaximum(source(data), 42, now)).toBeNull();
+    }
+  });
+
+  it('rejects failed, paused, historical and aged queries even with retained numeric data', () => {
+    for (const state of [
+      deriveDataState({ data: response(), error: new Error('refresh failed') }, { provenance: 'live' }),
+      deriveDataState({ data: response(), fetchStatus: 'paused' }, { provenance: 'live' }),
+      deriveDataState({ data: response() }, { provenance: 'historical' }),
+      deriveDataState({ data: response(), dataUpdatedAt: now - TELEMETRY_STALE_AFTER_MS - 1 }, {
+        provenance: 'live', maxAgeMs: TELEMETRY_STALE_AFTER_MS, now: () => now,
+      }),
+    ]) {
+      expect(getChargingCurrentMaximum(state, 42, now)).toBeNull();
+    }
+  });
+});
 
 // `commands.ts` is a config module: it exports the category metadata + the full
 // CommandDef catalogue plus the small per-command logic closures (`transform`,
@@ -183,6 +242,33 @@ describe('selectConfig options', () => {
 
 // ── Multi-field inputs ───────────────────────────────────────────────────────
 describe('multi-field inputConfig', () => {
+  it.each(['trigger_homelink', 'navigation_gps_request'])(
+    'numeric regression configures authoritative geographic bounds for %s',
+    (id) => {
+      expect(getInputConfig(id).fields).toMatchObject([
+        { name: 'lat', validation: 'decimal', min: -90, max: 90 },
+        { name: 'lon', validation: 'decimal', min: -180, max: 180 },
+      ]);
+    },
+  );
+
+  it('numeric regression configures charge percent, volume, amps and removable schedule IDs without guessed amp capacity', () => {
+    expect(getInputConfig('set_charge_limit')).toMatchObject({
+      paramName: 'percent', validation: 'number', min: 50, max: 100, defaultValue: '80',
+    });
+    expect(getInputConfig('adjust_volume')).toMatchObject({
+      paramName: 'volume', validation: 'decimal', min: 0, max: 11, defaultValue: '5',
+    });
+    expect(getInputConfig('set_charging_amps')).toMatchObject({
+      paramName: 'charging_amps', validation: 'number', min: 0,
+    });
+    expect(getInputConfig('set_charging_amps').max).toBeUndefined();
+    for (const id of ['remove_charge_schedule', 'remove_precondition_schedule']) {
+      expect(getInputConfig(id)).toMatchObject({ paramName: 'id', validation: 'number', min: 0 });
+      expect(getInputConfig(id).max).toBeUndefined();
+    }
+  });
+
   it('gives lat/lon field groups unique, non-empty names', () => {
     const multiField = COMMANDS.filter((c) => c.inputConfig?.fields);
     // trigger_homelink + navigation_gps_request both take a lat/lon pair.

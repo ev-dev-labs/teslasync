@@ -258,8 +258,10 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
   // duplicate `start()` calls.
   const abortRef = useRef<AbortController | null>(null);
   const runningRef = useRef(false);
+  const generationRef = useRef(0);
 
   const cancel = useCallback(() => {
+    generationRef.current++;
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
@@ -274,6 +276,8 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
   // ref-stable callback identity changes (it shouldn't, but defensive).
   useEffect(() => {
     return () => {
+      generationRef.current++;
+      runningRef.current = false;
       if (abortRef.current) {
         abortRef.current.abort();
         abortRef.current = null;
@@ -302,6 +306,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
     if (scopeKey === previousScopeKeyRef.current) return;
     previousScopeKeyRef.current = scopeKey;
 
+    generationRef.current++;
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
@@ -319,6 +324,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
   const start = useCallback(() => {
     if (runningRef.current) return;
     runningRef.current = true;
+    const generation = ++generationRef.current;
 
     setState('streaming');
     setText('');
@@ -330,6 +336,8 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
 
     const controller = new AbortController();
     abortRef.current = controller;
+    const ownsRequest = () => generationRef.current === generation
+      && abortRef.current === controller && !controller.signal.aborted;
 
     const requestBody = body !== undefined ? JSON.stringify(body) : undefined;
     const fullURL = `${getApiBase()}/api/v1${url.startsWith('/') ? url : `/${url}`}`;
@@ -349,6 +357,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
           credentials: serverCredentials(),
         });
 
+        if (!ownsRequest()) return;
         if (!res.ok) {
           // Off-mode (404), feature toggle off (404), 5xx, etc.
           // The component is expected to fall back to its non-AI
@@ -368,6 +377,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
 
         for (;;) {
           const { value, done } = await reader.read();
+          if (!ownsRequest()) return;
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
           // Each event is delimited by a blank line; the buffer may
@@ -381,10 +391,12 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
             const ev = parseSSEFrame(raw);
             if (!ev) continue;
             handleEvent(ev);
+            if (!ownsRequest()) return;
           }
         }
         // Drain any final fragment that arrived without a trailing
         // blank line (some intermediaries strip the final \n\n).
+        if (!ownsRequest()) return;
         if (buffer.trim()) {
           const ev = parseSSEFrame(buffer);
           if (ev) handleEvent(ev);
@@ -393,6 +405,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
           finalizeError('stream_incomplete');
         }
       } catch (err) {
+        if (!ownsRequest()) return;
         // AbortError is the user-cancel path — don't flag as error.
         if (err instanceof Error && err.name === 'AbortError') {
           setActivity(markRunningActivitiesFailed);
@@ -403,13 +416,18 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
         const msg = err instanceof Error ? err.message : String(err);
         finalizeError(msg);
       } finally {
-        runningRef.current = false;
-        abortRef.current = null;
+        // A canceled request may settle after its replacement has started.
+        if (generationRef.current === generation && abortRef.current === controller) {
+          runningRef.current = false;
+          abortRef.current = null;
+        }
       }
     })();
 
     function handleEvent(ev: AiStreamEvent) {
+      if (!ownsRequest()) return;
       onEventRef.current(ev);
+      if (!ownsRequest()) return;
       switch (ev.type) {
         case 'delta':
           setText((prev) => prev + ev.text);
@@ -460,6 +478,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
     }
 
     function finalizeError(message: string) {
+      if (!ownsRequest()) return;
       setActivity(markRunningActivitiesFailed);
       setError(message);
       setState('error');

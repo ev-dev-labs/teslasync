@@ -20,7 +20,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
-import '@/i18n';
+import i18n from '@/i18n';
 
 import { CommandConfirmDialog } from './CommandConfirmDialog';
 import { Icons } from '@/lib/icons';
@@ -45,6 +45,91 @@ const getCancel = () => screen.getByRole('button', { name: /cancel/i });
 describe('CommandConfirmDialog', () => {
   beforeEach(() => cleanup());
   afterEach(() => cleanup());
+
+  it('affordance: exposes a visible linked ERASE label rather than relying on the placeholder', () => {
+    render(
+      <CommandConfirmDialog open onClose={() => {}} onConfirm={() => {}} def={makeDef({ confirmInput: 'ERASE' })} />,
+    );
+    const input = screen.getByRole('textbox', { name: 'Type "ERASE" to confirm:' });
+    const label = screen.getByText('Type "ERASE" to confirm:');
+    expect(label.tagName).toBe('LABEL');
+    expect(label).toBeVisible();
+    expect(label).toHaveAttribute('for', input.id);
+    expect(input).toHaveAttribute('placeholder', 'ERASE');
+    expect(input).toHaveAttribute('autocomplete', 'off');
+    expect(getConfirm()).toBeDisabled();
+  });
+
+  it('affordance: localizes the linked label without changing identity, typed value or the ERASE token', async () => {
+    const originalLanguage = i18n.language;
+    i18n.addResource('fr', 'translation', 'commands.confirm.typeToConfirm', 'Saisissez "{{word}}" pour confirmer :');
+    try {
+      render(
+        <CommandConfirmDialog open onClose={() => {}} onConfirm={() => {}} def={makeDef({ confirmInput: 'ERASE' })} />,
+      );
+      const input = screen.getByRole('textbox', { name: 'Type "ERASE" to confirm:' });
+      const id = input.id;
+      fireEvent.change(input, { target: { value: '  erase  ' } });
+      await act(async () => { await i18n.changeLanguage('fr'); });
+      const localizedInput = screen.getByRole('textbox', { name: 'Saisissez "ERASE" pour confirmer :' });
+      expect(localizedInput).toBe(input);
+      expect(localizedInput).toHaveAttribute('id', id);
+      expect(screen.getByText('Saisissez "ERASE" pour confirmer :')).toHaveAttribute('for', id);
+      expect(localizedInput).toHaveValue('  erase  ');
+      expect(localizedInput).toHaveAttribute('placeholder', 'ERASE');
+      expect(getConfirm()).toBeEnabled();
+    } finally {
+      await act(async () => { await i18n.changeLanguage(originalLanguage); });
+      i18n.removeResourceBundle('fr', 'translation');
+    }
+  });
+
+  it('affordance: retains unique label associations when multiple confirmation instances are mounted', () => {
+    render(
+      <>
+        <CommandConfirmDialog open onClose={() => {}} onConfirm={() => {}} def={makeDef({ confirmInput: 'ERASE' })} />
+        <CommandConfirmDialog open onClose={() => {}} onConfirm={() => {}} def={makeDef({ confirmInput: 'ERASE' })} />
+      </>,
+    );
+    const inputs = screen.getAllByRole('textbox', { name: 'Type "ERASE" to confirm:' });
+    expect(inputs[0].id).not.toBe(inputs[1].id);
+    for (const input of inputs) {
+      expect(document.querySelector(`label[for="${input.id}"]`)).toHaveTextContent('Type "ERASE" to confirm:');
+    }
+  });
+
+  it('affordance: declares mobile44 minima and restores desktop compact footer sizing with growing labels', () => {
+    render(
+      <CommandConfirmDialog open onClose={() => {}} onConfirm={() => {}} def={makeDef()} />,
+    );
+    for (const button of [getCancel(), getConfirm()]) {
+      expect(button).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'h-auto', 'whitespace-normal');
+      expect(button).not.toHaveClass('h-9');
+      expect(button.querySelector('span')).toHaveClass('break-words');
+    }
+    expect(getConfirm().parentElement).toHaveClass('flex-wrap');
+  });
+
+  it('affordance: retains footer minima, usable cancellation and ERASE gating during countdown and loading', () => {
+    const onConfirm = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <CommandConfirmDialog open onClose={onClose} onConfirm={onConfirm} def={makeDef({ confirmInput: 'ERASE', countdown: 3 })} loading />,
+    );
+    const input = screen.getByRole('textbox', { name: 'Type "ERASE" to confirm:' });
+    fireEvent.change(input, { target: { value: 'ERASE' } });
+    const confirm = getConfirm();
+    expect(confirm).toBeDisabled();
+    expect(confirm).toHaveAttribute('aria-busy', 'true');
+    expect(confirm).toHaveTextContent('Confirm (3s)');
+    expect(confirm).toHaveClass('min-h-11', 'md:min-h-9');
+    expect(getCancel()).toBeEnabled();
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+    fireEvent.click(getCancel());
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 
   it('renders nothing when open=false', () => {
     render(

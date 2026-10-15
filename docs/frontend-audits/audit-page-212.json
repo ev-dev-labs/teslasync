@@ -1,0 +1,271 @@
+{
+  "item": "audit-page-212",
+  "page": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+  "routes": ["/signal-trend"],
+  "purpose": "Explain slow monotonic drift in one vehicle's numeric telemetry history using Theil-Sen magnitude, tie-aware Mann-Kendall significance and an evidence-limited forecast.",
+  "primaryGoal": "Choose a recorded signal, distinguish drift from noise, assess sample coverage and inspect historical values, robust baseline and forecast uncertainty without confusing this analysis with anomalies, change points or correlation.",
+  "dataSources": [
+    {
+      "id": "signal-catalog",
+      "hook": "useSignals(id)",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "endpoint": "/signals/{vehicleID}/available",
+      "source": "Signal handler's available catalog; hook normalizes rich catalog entries to names.",
+      "evidence": ["web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:37-45,64-66", "web\\src\\api\\hooks\\useTelemetry.ts:98-124", "internal\\api\\router.go:4886,4911,4929"],
+      "behavior": "Enabled only for a positive vehicle ID; standard stale time; safe-array normalization; cancellation signal forwarded. Names are offered without filtering numeric value kinds or retaining unit-kind metadata."
+    },
+    {
+      "id": "signal-history",
+      "hook": "useSignalAnalysisHistory(id, signalName, 168)",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "endpoint": "/signals/{vehicleID}/{encodedSignalName}/history?hours=168&limit=10000",
+      "source": "History handler route; backend query completeness, ordering, storage fallback and actual returned bounds were not inspected.",
+      "evidence": ["web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:30,43-45,69-101", "web\\src\\api\\hooks\\useTelemetry.ts:194-222", "internal\\api\\router.go:4886,4914,4932"],
+      "behavior": "Positive vehicle ID and nonempty signal enable the query; bounded hours and limit are query-key inputs; moderate stale time; standard polling with background polling disabled; cancellation forwarded. Statistical analysis only covers returned numeric samples. Optional from/to are disclosed by the brief, not fabricated."
+    },
+    {
+      "id": "trend-derivation",
+      "hook": null,
+      "owner": "web\\src\\features\\telemetry\\lib\\signalTrend.ts",
+      "endpoint": null,
+      "source": "Pure local analysis of retained history, not another backend or measurement source.",
+      "evidence": ["web\\src\\features\\telemetry\\lib\\signalTrend.ts:98-104,113-115,233-297", "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts:15-50"],
+      "behavior": "Finite numeric kinds with valid timestamps only; enum, text and boolean values excluded; sort and last-valid timestamp deduplication; robust pairwise slope capped to 300 comparison samples; tie-aware significance; MAD residual spread. Forecast requires at least eight samples, six observed hours and significant ordering; default horizon is min(24h, observed span), step at least 2h."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "@/components/layout", "role": "Existing page title, subtitle, query and data-source composition", "evidence": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:138-146", "inspection": "Call site only; shell/layout internals not audited."},
+    {"name": "GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip", "owner": "@/components/ui", "role": "Existing panels, typography, semantic significance/evidence badges and localized selector/help", "evidence": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:6,149-177,242-279", "inspection": "Page-specific call sites; no new primitive required."},
+    {"name": "TelemetrySummaryBrief", "owner": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx", "role": "Typed metrics adapter to existing OperationalBrief and useOperationalMetrics; source bounds and retained/unknown/loading status", "evidence": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:183-190; web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx:7-53", "inspection": "Direct feature adapter inspected; underlying brief internals not audited."},
+    {"name": "ChartContainer", "owner": "web\\src\\components\\charts\\ChartContainer.tsx", "role": "Canonical chart frame, retry/loading/error/empty, image export and accessible data fallback", "evidence": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:204-236; web\\src\\components\\charts\\ChartContainer.tsx:417-428,629-637,744-797", "inspection": "Relevant source excerpts only; CSV requires exportData and fullscreen requires opt-in, neither supplied here."},
+    {"name": "ChartLegend", "owner": "web\\src\\components\\charts\\ChartLegend.tsx", "role": "Existing series identity and keyboard-button toggle owner", "evidence": "web\\src\\components\\charts\\ChartLegend.tsx:40-49,72-79,116-139; web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:229-233"},
+    {"name": "ComposedChart, Line, Area, axes, grid, Tooltip, ChartTooltip, ResponsiveContainer", "owner": "@/components/charts", "role": "Existing chart category exports; no competing chart library", "evidence": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:13-17,223-234"},
+    {"name": "Skeleton, EmptyState, QueryError, FadeIn", "owner": "@/components/feedback; @/components/motion", "role": "Localized empty/error recovery and initial loading/entrance composition", "evidence": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:160-168,191-200,247-255", "inspection": "Call-site evidence only; reduced-motion implementation not exercised."},
+    {"name": "NoVehicleSelected", "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx", "role": "Existing selected-vehicle prerequisite, explanation and setup navigation", "evidence": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:133-135; web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx:44-77"},
+    {"name": "useDataState, useHiddenSeries, useNumberFormatting, chartTokens", "owner": "web\\src\\hooks\\useDataState.ts; web\\src\\hooks\\useHiddenSeries.ts; web\\src\\hooks\\useNumberFormatting.ts; web\\src\\lib\\tokens.ts", "role": "Reuse data trust, URL hidden-series persistence, saved number preferences and shared chart palette", "evidence": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx:22-28,33,40,44-45; web\\src\\hooks\\useHiddenSeries.ts:62-98; web\\src\\hooks\\useNumberFormatting.ts:19-49; web\\src\\lib\\tokens.ts:383-401"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+      "line": 258,
+      "rule": "MDC-015; mission 0 reuse",
+      "detail": "Two interpretation cells repeat the same local rounded surface, badge row and body layout at lines 258-278. These are two distinct explanations, not duplicate content. No second independent production consumer was established.",
+      "fix": "Retain both explanations; use a small local typed renderer or an existing layout primitive if useful. Do not propose a speculative shared explanation library.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": ["Panel padding changes from p-4 to sm:p-5 (149,197,242).", "Interpretation stacks below sm and becomes two columns above it (257).", "Chart takes 100% allocated width and fixed 340px height (213,223); axis labels use minTickGap 40 (226)."],
+    "unverifiedWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "issues": [
+      {
+        "file": "web\\src\\components\\charts\\ChartLegend.tsx",
+        "line": 121,
+        "rule": "MDC-040; MDC-043",
+        "detail": "The consumed legend button overrides minimum height with h-auto min-h-0 and p-0. Source does not demonstrate a 44px mobile target or a WCAG spacing exception; actual target dimensions and wrapping were not measured.",
+        "fix": "Have the shared legend owner provide reachable mobile toggle targets through the existing Button contract and validate spacing/wrapping with long translated labels, retaining mouse/keyboard and URL-toggle semantics.",
+        "owner": "shared",
+        "confidence": "high for class override; runtime target-size compliance unverified"
+      }
+    ]
+  },
+  "accessibility": {
+    "sourceEvidence": ["Select has a localized label (170-175).", "HelpTooltip has a localized accessible name (153-158).", "Heading icons are aria-hidden (151,244).", "Chart has localized ariaLabel and five explicit fallback columns including forecast low/high (207,215-220).", "ChartLegend uses Button with aria-pressed; ChartContainer contains a forced-colors accessible fallback (shared source citations in components)."],
+    "issues": [],
+    "sharedIssueReferences": ["responsive.issues[0]"],
+    "unverified": ["Keyboard/focus traversal, help open state, screen-reader interpretation, actual fallback contents, focus restoration, reduced motion, theme contrast, forced colors and target sizes were not exercised."]
+  },
+  "states": {
+    "sourceEvidence": [
+      {"state": "no selected vehicle", "evidence": "SignalTrendPage.tsx:133-135; NoVehicleSelected.tsx:44-77", "behavior": "Existing onboarding prerequisite with setup action; queries gated by id=0."},
+      {"state": "catalog loading/empty/fatal", "evidence": "SignalTrendPage.tsx:160-177", "behavior": "Skeleton, no-signals message or catalog retry; selector appears for names."},
+      {"state": "unchosen signal", "evidence": "SignalTrendPage.tsx:46,103-130,196-200,251-255", "behavior": "History query disabled, measurements null and choose-signal guidance remains."},
+      {"state": "history loading/fatal", "evidence": "SignalTrendPage.tsx:103-107,183-191,204-212,247-250", "behavior": "Brief loading, chart frame loading and interpretation skeleton; fatal error has independent retries."},
+      {"state": "retained refresh error/offline", "evidence": "SignalTrendPage.tsx:45,105,185-190; web\\src\\api\\dataState.ts:166-172,237-250; TelemetrySummaryBrief.tsx:37-52", "behavior": "FatalError-only gating preserves cached history and chart on refresh error; brief marks retained measurements. Page does not pass explicit freshness or locally surface the refresh-error reason; PageLayout trust UI was not inspected."},
+      {"state": "resolved empty/non-numeric", "evidence": "SignalTrendPage.tsx:69-70,107,126-130,196-200; signalHistorySamples.ts:27-39", "behavior": "Zero usable numeric samples, null derived metrics and history guidance; nonnumeric catalog selections are not distinguished from absent history."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+        "line": 115,
+        "rule": "MDC-026; unknown is not measured non-significance",
+        "detail": "hasData means only samples>0. A single sample produces mannKendall=null in signalTrend.ts:262, yet the metric says Not significant and interpretation says observed ordering does not clear the bar (260-267). For evidence-limited histories the statistical conclusion needs a clear qualification; no test result is not a negative test result.",
+        "fix": "Present unavailable/not-tested significance when Mann-Kendall is null; qualify evidence-limited results without changing the statistical model, thresholds or available tau/p values. Preserve both interpretation cards.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+        "line": 129,
+        "rule": "MDC-026; MDC-033",
+        "detail": "The always-created sample description substitutes summary.spanHours??0 even when there is no numeric history and spanHours is null. This supplies a synthetic 0h context to the brief; downstream visible loading/unknown suppression was not inspected.",
+        "fix": "Keep span unknown until measured and use the shared formatter's missing representation or localized unknown context; retain genuine single-sample zero span and resolved zero sample count.",
+        "owner": "page",
+        "confidence": "high for provided value; rendered exposure unverified"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+      "line": 151,
+      "rule": "MDC-010; MDC-012; mission 43",
+      "detail": "Fixed cyan-300 title icons recur at line 244 despite no semantic cyan distinction. These are decorative accents rather than explicit neon/glow. No literal neon, glow or pure-white class occurs in this page. Chart lines use shared blue/green and translucent amber tokens, not a local rainbow; rendered saturation/contrast is unverified.",
+      "fix": "Prefer neutral theme-aware decorative-icon tokens; retain meaningful actual/baseline/forecast distinctions and saved chart/theme choices. Do not force-reset preferences or invent a page palette.",
+      "owner": "page",
+      "confidence": "high for fixed decorative hue; visual impact unverified"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+      "line": 226,
+      "rule": "MDC-013; mission 43",
+      "detail": "Axis ticks prescribe 10px and 11px rather than a shared typography scale. Readability at mobile widths, text zoom and light theme is unverified.",
+      "fix": "Use existing shared chart typography policy and validate labels at narrow allocated widths and enlarged text; preserve labels, axes and full fallback data.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+      "line": 230,
+      "rule": "MDC-034; MDC-046",
+      "detail": "Both forecast Areas read hidden.isHidden('forecast'), but ChartLegend resolves its visible band identity from dataKey='bandRange' (ChartLegend.tsx:40-49,72-79). A legend click therefore stores bandRange while the plotted Areas consult forecast. Baseline and actual identities match. This is a source-confirmed inconsistent toggle path, not a browser reproduction.",
+      "fix": "Adapt the existing legend state at the page boundary so bandRange maps to the existing forecast group and both band Areas toggle together; preserve signal-trend-forecast and existing hidden_forecast URL state instead of silently renaming persisted keys.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+      "line": 30,
+      "rule": "MDC-032; mission 33",
+      "detail": "Analysis is fixed to 168h and consumes no workspace range. /signal-trend is absent from RANGE_ENABLED_PATHS (workspaceScope.ts:23-77). The analysis hook only accepts hours/limit (useTelemetry.ts:194-222). This is a dated analytical page without the canonical workspace range integration.",
+      "fix": "Coordinate route registration and a typed history-hook bounds contract with the shared owner; then consume the existing workspace range and send both server bounds. Keep 168h as the current preservation baseline until equivalence is verified; do not add a local picker or client-filter an already truncated history.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+      "line": 80,
+      "rule": "MDC-044; MDC-046",
+      "detail": "Chart time strings use browser-default toLocaleString(undefined) and omit explicit saved locale/timezone. Numeric metrics already use the preference-aware useNumberFormatting. Epoch ms is retained internally but fallback/export-facing time is only month/day/hour.",
+      "fix": "Use the existing application date formatter with saved locale/timezone, retaining an unambiguous full timestamp for accessible/export context and the compact axis presentation. Do not change sample epochs or statistical calculations.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Correct forecast toggle identity and untested significance semantics before presentation adoption; coordinate range integration separately from shared target-size work.",
+    "sequence": ["Preserve source baseline and all four sections.", "Resolve page-local forecast identity and evidence-state wording.", "Coordinate shared workspace-bound querying and legend touch targets.", "Subdue decorative icons and standardize timestamp/axis formatting.", "Parent-owned runtime, visual, accessibility and validation gates."]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace range integration for signal trend",
+      "owner": "web\\src\\lib\\workspaceScope.ts; web\\src\\api\\hooks\\useTelemetry.ts",
+      "file": "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+      "line": 43,
+      "rule": "MDC-032",
+      "detail": "Route and typed hook do not currently carry workspace start/end bounds.",
+      "fix": "Use the existing scope owner and extend the existing analysis hook, not a new scope engine.",
+      "confidence": "high",
+      "props": ["Existing RANGE_ENABLED_PATHS membership for /signal-trend", "Typed startInstant/endInstantExclusive inputs plus existing vehicleId/signalName/limit; preserve cancellation and query-key policy"],
+      "variants": ["Rolling presets", "Custom ranges with application timezone semantics"],
+      "states": ["Disabled without vehicle/signal", "Loading", "Resolved empty", "Retained refreshing/stale/offline", "Fatal and refresh error"],
+      "usedBy": ["web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx"],
+      "dependsOn": ["Verify actual history handler supports both bounds and full requested-window filtering; backend behavior not inspected.", "Canonical workspace range owner; preserve current 168h/source-limit semantics until coordinated migration."],
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:23-77", "web\\src\\api\\hooks\\useTelemetry.ts:194-222"]
+    },
+    {
+      "name": "Reachable chart legend toggle targets",
+      "owner": "web\\src\\components\\charts\\ChartLegend.tsx",
+      "file": "web\\src\\components\\charts\\ChartLegend.tsx",
+      "line": 121,
+      "rule": "MDC-040",
+      "detail": "Existing ghost/sm legend buttons remove minimum-height and padding.",
+      "fix": "Improve the existing shared target contract rather than duplicate a legend in this page.",
+      "confidence": "high for source override; measured compliance unverified",
+      "props": ["Existing state.toggle/isHidden contract", "Existing Button variant=ghost, size=sm and aria-pressed"],
+      "variants": ["Interactive legend", "Passive legend remains noninteractive"],
+      "states": ["Visible/hidden series", "Keyboard focus", "Long localized labels", "Mobile wrapping"],
+      "usedBy": ["web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx"],
+      "dependsOn": ["Existing Button sizing/focus owner", "Parent measured target-size/spacing and chart-layout verification"],
+      "evidence": ["web\\src\\components\\charts\\ChartLegend.tsx:116-139"]
+    }
+  ],
+  "competingImplementations": {
+    "found": [],
+    "evidence": "The page uses existing category chart/layout/UI owners and the existing TelemetrySummaryBrief. Local trend derivation is a specialist domain algorithm, not a second stats presentation or query cache.",
+    "limits": "No whole-repository duplicate search performed. Two local interpretation cells are noted under duplicatedPatterns; no new shared component is justified by this single page."
+  },
+  "preservation": {
+    "sourceHash": "EFA13719F1F75F9A5053D556620CAD2F22A20BE437EE0C068EF4609079568C81",
+    "hashAlgorithm": "SHA256",
+    "lineCount": 286,
+    "sectionCount": 4,
+    "sections": [
+      {"name": "Signal picker", "lines": [147,179], "count": 1, "preserve": "Catalog names, localized label/placeholder, selection action, robust-method help and independent catalog loading/empty/retry."},
+      {"name": "Trend metrics", "lines": [181,192], "count": 1, "preserve": "Four metrics: daily drift plus hourly context; significance with tau/p; MAD residual spread; usable sample count with observed span/evidence label. Retain scientific formatting, specialist help, 168h requested scope, returned bounds/unknown bounds, provenance and retained-state disclosure."},
+      {"name": "Baseline, actual and evidence-limited forecast", "lines": [194,238], "count": 1, "preserve": "Actual and robust baseline lines; paired forecast-band Areas; low/high data fallback, title/subtitle and chart aria label; retry/loading/empty, image-export actions and URL-persisted legend identities."},
+      {"name": "Reading the result", "lines": [240,283], "count": 1, "preserve": "Both significance and evidence interpretation cards and all conditional explanatory text; badges and loading/empty/error recovery."}
+    ],
+    "sourceComponentCounts": {"GlassPanel": 3, "ChartContainer": 1, "TelemetrySummaryBrief": 1, "PanelTitle": 2, "FadeIn": 4, "interpretationCards": 2, "metrics": 4, "fallbackColumns": 5},
+    "countNote": "JSX occurrence counts, not simultaneously mounted panel counts. Empty chart GlassPanel and ChartContainer are mutually exclusive; NoVehicleSelected is an alternate route branch.",
+    "actions": [
+      {"name": "Choose signal", "evidence": "SignalTrendPage.tsx:170-175"},
+      {"name": "Signal-method help", "evidence": "SignalTrendPage.tsx:153-158"},
+      {"name": "Retry catalog", "evidence": "SignalTrendPage.tsx:161"},
+      {"name": "Retry history from summary, chart or interpretation", "evidence": "SignalTrendPage.tsx:191,211,250"},
+      {"name": "Toggle actual/baseline/forecast series with shareable hidden state", "evidence": "SignalTrendPage.tsx:40,229-233; useHiddenSeries.ts:62-98", "note": "Forecast mismatch recorded, not asserted working."},
+      {"name": "Existing chart PNG/SVG export and clipboard image", "evidence": "ChartContainer.tsx:423-428,629-637", "note": "Source-defined default controls; actual browser capture unverified. CSV and fullscreen are not supplied by this page."},
+      {"name": "Set up TeslaSync when no vehicle", "evidence": "NoVehicleSelected.tsx:65-71"}
+    ],
+    "dataBehavior": [
+      "Keep raw SI history/cache and numeric-kind handling; do not guess per-signal units after the names-only catalog normalization.",
+      "Preserve epochs, sorting/deduplication, Theil-Sen/Mann-Kendall/MAD algorithms, configured evidence thresholds, forecast horizon cap, rounding and numeric formatting unless a separately validated correctness change authorizes alteration.",
+      "Preserve source/query identities, limit=10000, enablement, cancellation, polling/stale-time policy and fatal-versus-retained trust handling.",
+      "Keep real zero distinct from missing measurements; empty forecast is not permission to remove the section.",
+      "Retain all five fallback columns, specialist explanations, selected-vehicle ownership, hidden_signal-trend-forecast URL identity and user formatting/theme preferences."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Atomic Phase0 source inspection only. No source changes, Git commands, browser session, backend execution, project lint/build/test or TypeScript.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "route": "Requested /signal-trend scope used verbatim; router reachability/mount not exercised.",
+    "backend": "Only exact route registration excerpts inspected; no completeness, retention, storage fallback, response-bound or unit claims.",
+    "checks": [
+      {"command": "Get-FileHash 'web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx' -Algorithm SHA256; (Get-Content 'web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx').Count", "exitCode": 0, "output": "SHA256 EFA13719F1F75F9A5053D556620CAD2F22A20BE437EE0C068EF4609079568C81; 286"},
+      {"command": "PowerShell ordered regex source-pattern counter", "exitCode": 1, "output": "ParserError: Unexpected token ']' in expression or statement.", "note": "No counts produced; corrected using Python."},
+      {"command": "Python source-pattern counter via PowerShell here-string; one assigned page only", "exitCode": 0, "output": "inline_styles: 0\nraw_controls: 0\ndirect_libraries: 0\nold_api: 0\nneon_glow: 0\npure_white: 0\nglass_panels: 3\nchart_containers: 1\nsummary_briefs: 1", "note": "Literal-pattern counts, not semantic or visual acceptance. Exact patterns: style=\\{\\{; <(?:button|input|textarea|select|table)\\b; direct recharts/react-leaflet/framer-motion imports; ../api or ../../api imports; neon|glow; text-white|#(?:fff|ffffff)\\b."},
+      {"command": "bash .github\\skills\\audit-violations\\audit.sh <assigned-page>", "exitCode": null, "output": "NOTRUN: script inspected; it unconditionally runs project TypeScript. Assignment restricts this worker to source audit; bounded pattern checks substituted."},
+      {"command": "npx tsc --noEmit; full lint/build/tests", "exitCode": null, "output": "NOTRUN: centralized validation belongs to parent; source-only audit is not page acceptance."}
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-212.json", ".agent-status\\audit-page-212.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\SignalTrendPage.tsx",
+    "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+    "web\\src\\features\\telemetry\\lib\\signalTrend.ts",
+    "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useHiddenSeries.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\components\\charts\\ChartLegend.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\api\\dataState.ts",
+    "internal\\api\\router.go"
+  ]
+}

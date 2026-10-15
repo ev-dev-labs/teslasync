@@ -1,0 +1,395 @@
+{
+  "item": "audit-page-053",
+  "page": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx",
+  "routes": ["/tco", "/analytics/tco"],
+  "purpose": "Vehicle-scoped lifetime recorded charging versus modeled gasoline operating-cost evidence, supplemented by an owner-recorded fixed-cost ledger and opt-in Helix narration.",
+  "primaryGoal": "Understand measured versus modeled costs, savings or losses, source coverage and assumptions without mistaking an operating-cost comparison for verified complete ownership cost; inspect/export evidence and record or delete fixed costs.",
+  "dataSources": [
+    {
+      "name": "useCostBreakdown",
+      "owner": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 107,
+      "endpoint": "GET /analytics/tco?vehicle_id={encoded vehicleId}",
+      "routeEvidence": "internal\\api\\router.go:3853",
+      "consumerEvidence": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx:39-51",
+      "behavior": "Vehicle-scoped analyticsKeys.cost query, enabled only with a vehicle; forwards AbortSignal. No page date range: explicitly lifetime envelope. Pure analyzeTrueCost validates the unmodified payload and independently validates monthly fields.",
+      "unitEvidence": "web\\src\\features\\analytics\\lib\\trueCost.ts:1-7,489-524 and web\\src\\types\\analytics.ts:101-129",
+      "limits": "Frontend source explicitly describes legacy aggregate kilometres and watt-hours, configured price/unit and MPG. Backend computations, currency aggregation and actual responses were not inspected or exercised; do not silently migrate these wire fields during presentation work."
+    },
+    {
+      "name": "Fixed-cost ledger query and mutations",
+      "owner": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 121,
+      "hooks": ["useTcoLedger", "useAddTcoLedgerEntry", "useDeleteTcoLedgerEntry"],
+      "endpoints": ["GET /analytics/tco/ledger?vehicle_id={vehicleId}", "POST /analytics/tco/ledger", "DELETE /analytics/tco/ledger/{id}?vehicle_id={vehicleId}"],
+      "routeEvidence": "internal\\api\\router.go:3854-3856",
+      "consumerEvidence": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx:53-105",
+      "behavior": "Independent vehicle-keyed query with AbortSignal. Mutation success invalidates and broadcasts the vehicle ledger key; existing success/error toasts remain. Preserve category, amount, incurred date, note, entry IDs, currency metadata and totals.",
+      "limits": "No mutations executed; backend persistence, mixed-currency behavior and authorization unverified."
+    },
+    {
+      "name": "Helix narration",
+      "owner": "web\\src\\components\\ai\\AITCONarration.tsx",
+      "line": 126,
+      "hook": "useAiStream",
+      "endpoint": "POST /ai/analytics/tco/narrate",
+      "routeEvidence": "internal\\api\\ai_routes.go:542-559; internal\\api\\router.go:5098",
+      "behavior": "Body vehicle_id; vehicle identity is stream scopeKey. Feature HOC gates tco-narration; AIFeatureCard receives stream, buttonLabel, canStart, localized description and no-vehicle hint. Deterministic sections remain independent.",
+      "limits": "Route registration/source wiring only, not a successful SSE request or proof of feature-gate/runtime cancellation."
+    },
+    {
+      "name": "Workspace vehicle and display preferences",
+      "owner": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx",
+      "line": 36,
+      "hooks": ["useSelectedVehicle", "useSettings", "useTrueCostDisplay", "useNumberFormatting"],
+      "behavior": "Header-owned vehicle; gas-unit preference is fallback only after response gas_unit. Existing useUnits/useFormatting and locale/precision mechanisms format at display boundary.",
+      "evidence": "web\\src\\features\\analytics\\components\\true-cost\\useTrueCostDisplay.ts:18-92",
+      "limits": "Global providers/hooks were not expanded; saved preference and shell behavior not runtime verified."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Section / CardGrid",
+      "owner": "web\\src\\components\\layout",
+      "kind": "existing shared layout",
+      "props": ["PageLayout.title", "PageLayout.subtitle", "PageLayout.query", "Section.id", "Section.title", "CardGrid.label", "CardGrid.items[id,size,content]"],
+      "evidence": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx:7,76-180,183-207",
+      "limits": "Shared layout internals not re-audited."
+    },
+    {
+      "name": "TrueCostLayoutSlot",
+      "owner": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLayoutSlot.tsx",
+      "kind": "page-specific placement/motion adapter",
+      "props": ["children", "delay"],
+      "evidence": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLayoutSlot.tsx:14-26",
+      "behavior": "Forwards single CardGrid placement span and min-w-0 through existing FadeIn, without another surface or packing engine."
+    },
+    {
+      "name": "OperationalBrief",
+      "owner": "web\\src\\components\\data-display",
+      "kind": "existing shared composite",
+      "props": ["compact", "testId", "eyebrow", "title", "description", "statusLabel", "statusTone", "metrics", "scope", "provenance", "loading"],
+      "usedBy": ["TrueCostEvidenceLedger", "TrueCostSavingsEnvelope"],
+      "evidence": "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\TrueCostEvidenceLedger.tsx:61-89; web\\src\\features\\analytics\\components\\operationalbrief-n-z\\TrueCostSavingsEnvelope.tsx:43-65",
+      "behavior": "useOperationalMetrics adapts source numeric values with specialist display formatters, preserved missing values and source descriptions."
+    },
+    {
+      "name": "ChartContainer and category chart renderers",
+      "owner": "web\\src\\components\\charts",
+      "kind": "existing shared chart frame",
+      "props": ["title", "subtitle", "ariaLabel", "ariaDescription", "height", "exportable", "exportFilename", "exportData", "data", "dataColumns", "chartKey"],
+      "usedBy": ["TrueCostCumulativeChart", "TrueCostMonthlyCostChart", "TrueCostMonthlyDeltaChart", "TrueCostEnergyCostTrend", "TrueCostPerDistanceChart"],
+      "evidence": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostCumulativeChart.tsx:58-78; TrueCostMonthlyCostChart.tsx:57-85; TrueCostMonthlyDeltaChart.tsx:55-75; TrueCostEnergyCostTrend.tsx:60-88; TrueCostPerDistanceChart.tsx:56-82",
+      "behavior": "All five charts pass source-derived data and accessible data-column definitions; two pass persisted chartKey/hiddenSeries. Actual toolbar/exports/fullscreen accessibility not tested."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "kind": "existing shared interaction/persistence owner",
+      "props": ["columns", "data", "keyExtractor", "tableId", "pagination", "density", "mobileColumns", "enableValueFilters", "mobilePresentation", "expandable"],
+      "usedBy": ["TrueCostMonthlyDirectory", "TrueCostSensitivityMatrix", "TrueCostFixedLedger"],
+      "evidence": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyDirectory.tsx:142-156; TrueCostSensitivityMatrix.tsx:109-121; web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx:139-156; web\\src\\components\\ui\\DataTable.tsx:186,237-248,715-725",
+      "behavior": "Stable tableIds present. Existing mobilePresentation and expansion APIs should be reused to retain currently hidden details/actions, not replaced with a second table implementation."
+    },
+    {
+      "name": "Source presentation and query trust",
+      "owner": "web\\src\\features\\analytics\\components\\true-cost",
+      "kind": "existing domain owners",
+      "props": ["TrueCostSectionProps.analysis", "state", "display", "gasUnit", "TrueCostSectionBody.skeletonHeight", "TrueCostQueryState.onRetry"],
+      "usedBy": ["source-scope", "boundary", "cumulative", "monthly-cost", "monthly-delta", "energy-trend", "per-distance", "monthly-directory", "assumptions", "temporal-coverage", "break-even", "sensitivity", "accounting", "methodology"],
+      "evidence": "web\\src\\features\\analytics\\components\\true-cost\\types.ts:3-36; queryState.ts:14-37; TrueCostSectionBody.tsx:38-79; TrueCostQueryStatus.tsx:19-132",
+      "behavior": "Existing GlassPanel, PanelTitle, Text, Table, Badge, Code, EmptyState, Skeleton, QueryError, AlertBanner and Button retain source-specific sections, semantics and trust states."
+    },
+    {
+      "name": "Fixed-cost entry form and confirmation",
+      "owner": "web\\src\\features\\analytics\\components\\true-cost-modernization",
+      "kind": "existing page-specific form/columns",
+      "props": ["categories", "category/setCategory", "amount/setAmount", "incurredOn/setIncurredOn", "note/setNote", "canSubmit", "isPending", "onAdd", "ConfirmDialog.open/onConfirm/onCancel/loading"],
+      "evidence": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLedgerForm.tsx:5-64; TrueCostLedgerColumns.tsx:7-59; TrueCostFixedLedger.tsx:63-105,158-197"
+    },
+    {
+      "name": "AITCONarration / AIFeatureCard",
+      "owner": "web\\src\\components\\ai\\AITCONarration.tsx",
+      "kind": "existing shared AI surface with page-specific narration",
+      "props": ["vehicleId", "title", "description", "buttonLabel", "badgeLabel", "emptyHint", "canStart", "stream"],
+      "evidence": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx:71,191-193; web\\src\\components\\ai\\AITCONarration.tsx:142-182"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\true-cost\\index.ts",
+      "line": 7,
+      "rule": "MDC-002 / mission 0.6",
+      "detail": "Barrel continues exporting older EvidenceLedger, SavingsEnvelope and FixedLedger implementations while the mounted page explicitly imports operationalbrief-n-z and true-cost-modernization versions. This is source-level competing ownership, not proof that the older versions mount elsewhere.",
+      "fix": "Designate the mounted domain owners and reconcile barrel exports/callers in a separately owned integration change; do not delete alternate implementations until consumer and preservation evidence is established.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostAssumptionsLedger.tsx",
+      "line": 90,
+      "rule": "MDC-002 / shared composition",
+      "detail": "Assumptions, source-scope and temporal-coverage render analogous labeled evidence rows with the existing Table/Text pipeline; domain rows and distinct content remain necessary.",
+      "fix": "Reuse existing Table/typography now. Only extend a shared key/value presentation after cross-consumer proof; do not create a speculative new renderer or merge away domain explanations.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; all target widths unverified",
+    "observed": ["Single allocated-width CardGrid with 11 full and 6 half slots; min-w-0 placement/motion adapter.", "Panel paddings use p-4 sm:p-5; disclosures and break-even reflow at md; accounting at lg.", "Fixed ledger entry form is grid-cols-2 sm:grid-cols-5; charts use ResponsiveContainer and explicit frame heights."],
+    "requiredWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx",
+        "line": 144,
+        "rule": "MDC-043 / MDC-023 / no feature loss",
+        "detail": "mobileColumns includes only date/category/amount. DataTable.tsx:725 applies hidden md:table-cell to note and actions. No mobilePresentation or expansion is supplied, so the source has no alternate mobile delete or note-detail path.",
+        "fix": "Reuse existing DataTable mobilePresentation or accessible expansion to retain note, currency context and delete action at narrow widths while keeping desktop columns and persistence.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyDirectory.tsx",
+        "line": 154,
+        "rule": "MDC-043 / no data loss",
+        "detail": "Only source/month/disposition survive the mobile allow-list; six numeric evidence columns lack a mobile detail path. SensitivityMatrix.tsx:120 similarly hides highMpg while columnVisibility is disabled at line 114.",
+        "fix": "Use the same existing DataTable mobile detail/expansion owner for all source evidence and all nine scenarios; retain ordering, filters, pagination and tableIds.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "source-only; keyboard, focus, screen-reader, touch-target, forced-color and contrast acceptance unverified",
+    "observed": ["Localized section/chart aria labels and descriptions; semantic table row headers in evidence matrices.", "Chart dataColumns provide data alternatives at caller level; actual controls untested.", "Input/Select/Button/ConfirmDialog are shared primitives; delete has a localized aria-label and decorative icon aria-hidden."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLedgerForm.tsx",
+        "line": 27,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "Five-column form begins at sm while the parent ledger has limited allocated width; narrow targets and long translated labels need real viewport/text-zoom verification. Source alone cannot establish clipping or touch failure.",
+        "fix": "Exercise all contract widths, 200% text, long labels and RTL; adjust this form's responsive composition only if measured, keeping all fields and independent business date.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "status": "source-only; state transitions unexercised",
+    "observed": [
+      "Main query distinguishes no vehicle, initial loading, unresolved/pending, initial pause, fatal failure, retained refresh failure, retained paused refresh, refreshing, valid zero and malformed envelope.",
+      "TrueCostSectionBody retains section framing and source placeholders, without globally hiding all page content.",
+      "Boundary and methodology remain visible independently of data availability.",
+      "Charts gate data/export readiness and show per-chart empty states; valid negative deltas remain losses.",
+      "Fixed ledger preserves retained entries on refresh failure but has weaker independent-query trust and missing-input handling than the main cost model.",
+      "Helix gates optional UI and carries vehicle-scoped stream identity; no runtime state proof."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx",
+        "line": 107,
+        "rule": "MDC-026 / unknown is not zero",
+        "detail": "Raw missing main-query totals are defaulted to zero for the independent FixedLedger. FixedLedger.tsx:70-71 also substitutes zero for unavailable ledger totals and renders all-in cost in the header at lines 116-121 even during initial loading/fatal error/no vehicle. Main-query partial or malformed values bypass analyzeTrueCost's null validation here.",
+        "fix": "Keep nullable validated totals and source availability through the fixed-ledger presentation contract; show unknown or retained evidence until both numerator sources and positive distance are supported. Preserve a real measured zero distinctly.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx",
+        "line": 54,
+        "rule": "MDC-026 / asynchronous trust",
+        "detail": "Ledger rendering branches on loading and fatal/refresh error, not fetchStatus, initial/retained pause or vehicle absence. Disabled/unresolved ledger data can fall through to an empty-entry message and zero-total hint; offline semantics are not equivalent to the main query adapter.",
+        "fix": "Reuse the existing query/data-state policy for this independent source, preserving cached rows and adding truthful no-vehicle, paused, unresolved and retry states without blocking neighboring charts.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx",
+        "line": 98,
+        "rule": "MDC-026 / mutation recovery",
+        "detail": "Delete mutation is wired with pending and success handling, but only addMutation.isError has an inline ErrorText at lines 169-174. Delete failure currently depends on the shared mutation toast rather than persistent dialog feedback.",
+        "fix": "Retain existing mutation toast and confirmation; surface delete failure and retry without closing the pending entry or losing input.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyCostChart.tsx",
+      "line": 21,
+      "rule": "MDC-010 / MDC-034 / mission 43",
+      "detail": "Feature-local saturated cyan/rose hex palette overrides shared semantic chart ownership. EnergyCostTrend.tsx:22-23 repeats cyan with purple; MonthlyDeltaChart.tsx:21 uses amber; CumulativeChart.tsx:20 uses indigo. These are source color literals, not measured contrast or screenshots.",
+      "fix": "Map existing series identities through the canonical chart palette/tokens, preserve configured theme/chart choices and all series/legends/export identities; avoid new palette or glow.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostSensitivityMatrix.tsx",
+      "line": 44,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Fixed emerald-300, rose-300 and amber-300 presentation classes carry semantic signs but bypass theme-resolving semantic tokens. FixedLedger.tsx:113 also uses cyan-300 icon decoration. Light-theme contrast is unmeasured; do not call it a proven contrast failure.",
+      "fix": "Reuse severity/text tokens while retaining signed numerical values and badge labels; verify composed backgrounds in supported themes.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLedgerForm.tsx",
+      "line": 30,
+      "rule": "MDC-044 / preserve source identifiers",
+      "detail": "Select option labels display raw category codes; ledger columns likewise display e.category at TrueCostLedgerColumns.tsx:25. These are system enumerations rather than arbitrary user notes and are not localized.",
+      "fix": "Localize display labels with existing catalog ownership; retain category wire values and filter identities unchanged. Report missing keys to the catalog owner rather than editing catalogs in page scope.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx",
+      "line": 117,
+      "rule": "MDC-033 / MDC-045",
+      "detail": "Fixed-ledger all-in rate and lifetime hint always display /km and km, unlike useTrueCostDisplay's selected display distance in the analytical charts. AccountingIdentities.tsx:35 intentionally exposes source currency_per_km checks and should not be blindly converted.",
+      "fix": "Apply existing selected-distance display formatting to user-facing fixed-ledger rates/hints while explicitly retaining source-unit accounting identity semantics and unchanged wire/export values.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "Prioritize missing-versus-zero all-in totals and mobile detail/delete reachability; then independent ledger trust, ownership reconciliation, localization and restrained chart palette adoption. Existing 17-section composition is substantially shared; no wholesale redesign warranted.",
+    "order": ["validated all-in totals", "mobile complete data/actions", "ledger trust and mutation feedback", "canonical owner reconciliation", "localization/display distance", "palette/theme validation"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical chart palette adoption mapping",
+      "existingOwnerFile": "web\\src\\lib\\colors.ts",
+      "owner": "integration",
+      "change": "Verify and reuse the existing palette described by MDC-034; no new shared palette API or implementation is established as necessary by this audit.",
+      "props": ["existing theme/chart palette preferences", "series identity to semantic palette mapping"],
+      "variants": ["recorded charging", "modeled gasoline", "signed delta", "energy"],
+      "states": ["supported themes", "saved explicit chart color choices", "retained data"],
+      "usedBy": ["TrueCostCumulativeChart", "TrueCostMonthlyCostChart", "TrueCostMonthlyDeltaChart", "TrueCostEnergyCostTrend", "TrueCostPerDistanceChart"],
+      "dependsOn": ["foundation-owned colors/tokens contract", "existing chart preference preservation"],
+      "evidence": "docs\\frontend-design-contract.md:MDC-010,MDC-011,MDC-034; web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyCostChart.tsx:21-22",
+      "limits": "Owner path is contract-cited; palette internals not inspected. No speculative shared extension authorized."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "TrueCostEvidenceLedger",
+      "mountedOwner": "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\TrueCostEvidenceLedger.tsx",
+      "alternateOwner": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostEvidenceLedger.tsx",
+      "evidence": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx:30; web\\src\\features\\analytics\\components\\true-cost\\index.ts:7",
+      "difference": "Mounted OperationalBrief/useOperationalMetrics versus older MetricCard/Grid implementation.",
+      "limits": "Alternate first 65 lines inspected; other consumers not searched."
+    },
+    {
+      "name": "TrueCostSavingsEnvelope",
+      "mountedOwner": "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\TrueCostSavingsEnvelope.tsx",
+      "alternateOwner": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostSavingsEnvelope.tsx",
+      "evidence": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx:29; web\\src\\features\\analytics\\components\\true-cost\\index.ts:14",
+      "difference": "Mounted OperationalBrief versus older bespoke savings cards.",
+      "limits": "Alternate first 55 lines inspected; no deletion recommendation without caller proof."
+    },
+    {
+      "name": "TrueCostFixedLedger",
+      "mountedOwner": "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx",
+      "alternateOwner": "web\\src\\features\\analytics\\components\\true-cost\\TrueCostFixedLedger.tsx",
+      "evidence": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx:31; web\\src\\features\\analytics\\components\\true-cost\\index.ts:8",
+      "difference": "Mounted extracted form/columns and retained refresh-error handling versus older inline stateful ledger.",
+      "limits": "Alternate first 80 lines inspected; no global consumer inventory performed."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "2EFB88653B7010E2692F0D79B1A1B37A311B202417CAC4D41FF3064660901177",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 209,
+    "sectionCount": 17,
+    "pageSectionWrapperCount": 1,
+    "optionalNarrationSurfaceCount": 1,
+    "chartCount": 5,
+    "dataTableCount": 3,
+    "sectionNames": ["Evidence KPI ledger", "Source, filter, and scope ledger", "Operating-cost boundary disclosure", "Savings / loss envelope", "Fixed-cost ledger", "Cumulative fuel savings / loss", "Monthly recorded EV vs modeled gas", "Monthly fuel savings / loss", "Monthly charged energy + recorded cost", "Cost per selected distance", "Monthly evidence directory", "Assumption and settings ledger", "Temporal, coverage, and gap evidence", "Break-even analysis", "Bounded sensitivity matrix", "Exact accounting identities", "Methodology and limitations"],
+    "sectionEvidence": "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx:76-180,195-206",
+    "sectionIds": ["evidence", "source-scope", "boundary", "savings", "fixed-ledger", "cumulative", "monthly-cost", "monthly-delta", "energy-trend", "per-distance", "monthly-directory", "assumptions", "temporal-coverage", "break-even", "sensitivity", "accounting", "methodology"],
+    "counts": {"fullGridItems": 11, "halfGridItems": 6, "evidenceKpis": 8, "savingsMetrics": 3, "sourceScopeRows": 6, "assumptionRows": 6, "temporalRows": 6, "accountingChecks": 8, "sensitivityScenarios": 9, "methodologyLimitations": 8, "ledgerCategories": 8},
+    "actions": [
+      "Header-owned vehicle selection without adding local duplicate controls.",
+      "Main-query fatal retry and retained refresh retry via TrueCostQueryStatus.",
+      "Five chart exports retain filenames and raw source/derived column identities; accessible data views remain supplied.",
+      "Monthly cost and energy chart persisted series visibility keys: true-cost-monthly-cost and true-cost-energy-cost.",
+      "Monthly directory value filters, pagination 12/24/48, source row ordering/identities, stable analytics:true-cost-monthly-evidence tableId.",
+      "Sensitivity table stable analytics:true-cost-sensitivity identity and all nine scenarios.",
+      "Fixed-ledger sorting, value filters, pagination and stable analytics:tco-fixed-ledger tableId.",
+      "Record cost with eight category wire values, positive amount, incurred business date, optional trimmed note; default insurance and UTC-derived initial date remain source behavior, not a workspace range.",
+      "Delete entry through confirmation with pending state and cancel; ledger query retry; mutation success/error toasts and invalidation/broadcast.",
+      "Opt-in Explain ownership cost Helix narration with current feature gate, no-vehicle disabling, vehicle-scoped stream and unchanged deterministic evidence."
+    ],
+    "dataBehavior": [
+      "Lifetime vehicle aggregate remains separate from independent fixed-cost ledger and optional narrative; do not add date filtering unsupported by the inspected hook.",
+      "Preserve response/settings gas-unit fallback, locale, global number precision, source currency and display distance/energy preferences.",
+      "Keep missing, malformed, zero, negative loss, partial support and retained data distinct.",
+      "Preserve original monthly source order in directory; eligible unique YYYY-MM rows sort chronologically for charts; duplicates/invalid rows remain inspectable rather than silently removed.",
+      "Keep derived gas-minus-EV and cumulative deltas separately from API savings/cumulative columns and exports.",
+      "Retain positive-cost charging versus positive-drive scope disclosures, monthly energy-derived gas caveat, maintenance heuristic, exclusions, calendar/timezone limits, coverage gaps, thresholds, scenario factors and tolerance checks.",
+      "Retain legacy aggregate kilometre/rate fields and Wh untouched in wire/cache; no guessed SI cutover or backend capability changes.",
+      "Do not hide boundary or methodology on loading/error; do not erase existing entries on refresh failure; repair unknown-total rendering without fabricating zero."
+    ],
+    "sourceCounts": {"pageStaticInlineStyleMatches": 0, "pageRawRestrictedHtmlMatches": 0, "pageDirectChartMapMotionLibraryImports": 0, "pageNeonGlowFixedWhiteMatches": 0},
+    "countLimits": "Source-only counts for assigned orchestrator, not a clean dependency/theme audit. No historical page baseline comparison or runtime section-count assertion."
+  },
+  "evidenceLimits": [
+    "Atomic source audit only. Both route strings are assignment identities, not verified mounted navigation.",
+    "No source edits, Git, production requests/mutations, browser screenshots, viewport rendering, full lint/build, TypeScript or tests executed.",
+    "Violations skill script inspected but not run because it unconditionally executes project TypeScript; assignment and worker conventions prohibit project-wide validation during this audit. Page-only regex counts were executed instead.",
+    "Source hash and page line count measured directly. Exact runtime/visual/contrast/keyboard/focus/motion/RTL/theme/forced-color/export/SSE claims remain unverified.",
+    "Only directly relevant presentation/data owners and targeted router registrations inspected. Shared layout, palette, AI stream, formatter/provider and backend calculations not recursively audited.",
+    "Large initial combined terminal reads were truncated by the tool; substantive mounted presentation files were subsequently reread through bounded direct views/commands. Alternate implementations intentionally inspected only stated leading ranges.",
+    "Shared DataTable inspected only mobile-related declarations and implementation ranges to resolve this page's hidden-column behavior; no full shared-component audit.",
+    "No fixture data or prior acceptance receipts used. Backend filter/calculation descriptions are frontend disclosure evidence, not independent backend proof."
+  ],
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\TrueCostPage.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\index.ts",
+    "web\\src\\features\\analytics\\components\\true-cost\\types.ts",
+    "web\\src\\features\\analytics\\components\\true-cost\\queryState.ts",
+    "web\\src\\features\\analytics\\components\\true-cost\\useTrueCostDisplay.ts",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostSectionBody.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostQueryStatus.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostSourceScopeLedger.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostBoundaryDisclosure.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostCumulativeChart.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyCostChart.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyDeltaChart.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostEnergyCostTrend.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostPerDistanceChart.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMonthlyDirectory.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostAssumptionsLedger.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostTemporalCoverage.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostBreakEven.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostSensitivityMatrix.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostAccountingIdentities.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostMethodology.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostEvidenceLedger.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostSavingsEnvelope.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost\\TrueCostFixedLedger.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\TrueCostEvidenceLedger.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-n-z\\TrueCostSavingsEnvelope.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLayoutSlot.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostFixedLedger.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLedgerForm.tsx",
+    "web\\src\\features\\analytics\\components\\true-cost-modernization\\TrueCostLedgerColumns.tsx",
+    "web\\src\\features\\analytics\\lib\\trueCost.ts",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\types\\analytics.ts",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ai\\AITCONarration.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go"
+  ]
+}

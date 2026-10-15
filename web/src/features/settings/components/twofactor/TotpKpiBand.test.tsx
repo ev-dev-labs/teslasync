@@ -6,8 +6,8 @@
  * how healthy is the credential".
  *
  * The contract pinned here exercises every branch of the band:
- *   • loading swaps the whole band for skeleton placeholders, mounts none
- *     of the metric labels, yet keeps the same labelled landmark region so
+ *   • loading retains metric labels with static value placeholders,
+ *     suppresses measured-value claims, and keeps the labelled landmark region so
  *     the summary never loses its accessible name mid-fetch;
  *   • open-mode (the install has no forward-auth header) and a missing
  *     `data` object both collapse the status card to "Unavailable" and the
@@ -15,12 +15,12 @@
  *   • an activated session renders "Active", forwards its raw `last_used_at`
  *     ISO string to `formatDateTime` verbatim, and renders the formatter's
  *     result as the "Last verified" cell;
- *   • an activated session with no recorded use shows "Never" and never
+ *   • an activated session with missing or invalid use evidence stays unknown and never
  *     calls the formatter;
  *   • a session that exists but is not activated renders "Not enrolled" and
  *     dashes out the two per-user cells;
  *   • null-safety: a malformed session missing `backup_codes_remaining`
- *     degrades to `0` (proving the `?? 0` guard) rather than a blank cell,
+ *     degrades to an unknown dash rather than inventing zero,
  *     and a genuine zero backup-code balance renders "0" — distinct from the
  *     "—" a non-activated credential shows, so an exhausted balance is never
  *     silently hidden;
@@ -43,6 +43,13 @@ import type { ReactNode } from 'react'
 
 import type { TOTPStatus } from '@/api/types'
 
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C',
+    pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2 } }),
+}))
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}))
 // Deterministic date formatting: the real useDateFormat threads user settings
 // + timezone; stubbing it pins that `formatDateTime` receives the raw ISO
 // string verbatim and lets us assert an exact, timezone-stable cell value.
@@ -115,15 +122,17 @@ beforeEach(() => {
 })
 
 describe('TotpKpiBand', () => {
-  it('swaps the band for skeleton placeholders while loading and mounts no metric labels', () => {
+  it('retains the Brief labels while loading and suppresses measured-value claims', () => {
     const { container } = render(<TotpKpiBand data={undefined} isLoading />)
 
-    // None of the metric cards are mounted during the loading branch.
+    // Metric labels remain visible while their values are loading.
     for (const label of LABELS) {
-      expect(screen.queryByText(label)).not.toBeInTheDocument()
+      expect(screen.getByText(label)).toBeInTheDocument()
     }
-    // Skeleton placeholders stand in for the cards (one pulse per skeleton bar).
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4)
+    // The Brief uses static decorative value placeholders, not pulse animations.
+    expect(container.querySelectorAll('[data-operational-metric] span[aria-hidden="true"][class*="--surface-3"]').length).toBeGreaterThanOrEqual(4)
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true')
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0)
     // The formatter is never touched while there is no data.
     expect(formatDateTime).not.toHaveBeenCalled()
   })
@@ -160,13 +169,17 @@ describe('TotpKpiBand', () => {
     expect(screen.getByText('7')).toBeInTheDocument()
   })
 
-  it('shows "Never" and never calls the formatter when an activated session has no recorded use', () => {
-    render(<TotpKpiBand data={sessionStatus({ last_used_at: undefined })} isLoading={false} />)
+  it.each([undefined, '', '   ', 'not-a-date', '2026-13-01T10:00:00Z'])(
+    'keeps missing or invalid verification evidence %s unknown rather than claiming never-used',
+    last_used_at => {
+      render(<TotpKpiBand data={sessionStatus({ last_used_at })} isLoading={false} />)
 
-    expect(screen.getByText('Active')).toBeInTheDocument()
-    expect(screen.getByText('Never')).toBeInTheDocument()
-    expect(formatDateTime).not.toHaveBeenCalled()
-  })
+      expect(screen.getByText('Active')).toBeInTheDocument()
+      expect(screen.getByText('—')).toBeInTheDocument()
+      expect(screen.queryByText('Never')).not.toBeInTheDocument()
+      expect(formatDateTime).not.toHaveBeenCalled()
+    },
+  )
 
   it('renders "Not enrolled" and dashes the per-user cells for a session that is not activated', () => {
     render(<TotpKpiBand data={sessionStatus({ activated: false })} isLoading={false} />)
@@ -202,10 +215,7 @@ describe('TotpKpiBand', () => {
     }
   })
 
-  it('is null-safe: a session missing backup_codes_remaining degrades to 0, not a blank cell', () => {
-    // A stale/partial cached shape: activated, but the numeric aggregate and
-    // last-used timestamp are absent. The `?? 0` guard must keep the cell
-    // populated and the missing timestamp must resolve to "Never".
+  it('keeps a missing backup balance unknown instead of inventing an exhausted balance', () => {
     render(
       <TotpKpiBand
         data={{ mode: 'session', activated: true } as TOTPStatus}
@@ -214,10 +224,21 @@ describe('TotpKpiBand', () => {
     )
 
     expect(screen.getByText('Active')).toBeInTheDocument()
-    expect(screen.getByText('0')).toBeInTheDocument()
-    expect(screen.getByText('Never')).toBeInTheDocument()
-    expect(screen.queryByText('—')).not.toBeInTheDocument()
+    expect(screen.queryByText('0')).toBeNull()
+    expect(screen.queryByText('Never')).not.toBeInTheDocument()
+    expect(screen.getAllByText('—')).toHaveLength(2)
     expect(formatDateTime).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    -5, -0.5, 0.5, 7.5, Number.NaN, Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1, Number.MIN_SAFE_INTEGER,
+  ])('keeps invalid backup balance %s unknown in the summary', backup_codes_remaining => {
+    render(<TotpKpiBand data={sessionStatus({ backup_codes_remaining })} isLoading={false} />)
+
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('0')).not.toBeInTheDocument()
+    expect(screen.getByText('fmt:2026-02-01T10:00:00Z')).toBeInTheDocument()
   })
 
   it('renders an exhausted backup balance as "0" — distinct from the "—" of a disabled credential', () => {

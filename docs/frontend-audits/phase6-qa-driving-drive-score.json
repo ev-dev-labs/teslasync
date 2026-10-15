@@ -1,0 +1,1624 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-drive-score",
+  "phase": 6,
+  "attempt": 1,
+  "actor": "d07adcd5-c5a4-439c-936f-85d2490c5505",
+  "page": "web\\src\\features\\driving\\pages\\DriveScorePage.tsx",
+  "routes": [
+    "/drive-score"
+  ],
+  "status": "COMPLETE_WITH_CONFIRMED_SOURCE_FINDINGS",
+  "sourceOnly": true,
+  "existingReportCheckedFirst": true,
+  "existingReportAbsent": true,
+  "noSourceChangeNeededForAssignment": "Read-only finished-page QA; no remigration. Confirmed findings require separate owner reservations.",
+  "clocks": {
+    "commandLimitMinutes": 15,
+    "earlierClockWins": true,
+    "hardUtc": "2026-10-14T01:29:13.296Z",
+    "targetMinutes": 10,
+    "returnMinutes": 20,
+    "reservationUtc": "2026-10-14T01:04:13.296Z",
+    "actualStartUtc": "not independently clock-pinned; no invented launch timestamp",
+    "hardMinutes": 25,
+    "returnUtc": "2026-10-14T01:24:13.296Z"
+  },
+  "snapshotUtc": "2026-10-14T01:09:49.8004588Z",
+  "supportingSnapshotUtc": "2026-10-14T01:12:12.8926296Z",
+  "generatedUtc": "2026-10-14T01:23:36.1415271Z",
+  "sourceInventory": [
+    {
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "file": "web\\src\\api\\dataState.ts",
+      "lineCount": 434,
+      "byteCount": 15482
+    },
+    {
+      "sha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "lineCount": 454,
+      "byteCount": 17391
+    },
+    {
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "file": "web\\src\\App.tsx",
+      "lineCount": 919,
+      "byteCount": 68125
+    },
+    {
+      "sha256": "8F4386187B01634E552DC58B09682854A7859287493FE34BB096FB350FEE5478",
+      "file": "web\\src\\components\\charts\\ChartAnnotationLayer.tsx",
+      "lineCount": 40,
+      "byteCount": 1410
+    },
+    {
+      "sha256": "7C088ADD21D5D43F2D37F41C72517DB9B2EB7738174914BD8BF21B9FBC62DE5D",
+      "file": "web\\src\\components\\charts\\index.ts",
+      "lineCount": 88,
+      "byteCount": 3611
+    },
+    {
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "lineCount": 115,
+      "byteCount": 4093
+    },
+    {
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "lineCount": 17,
+      "byteCount": 658
+    },
+    {
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "lineCount": 259,
+      "byteCount": 10783
+    },
+    {
+      "sha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "file": "web\\src\\components\\ui\\DataTable.tsx",
+      "lineCount": 1707,
+      "byteCount": 77157
+    },
+    {
+      "sha256": "6E18B856286709D4DF9189B7DEFF8C960FA3733D94E6DDD9879FBF05DDC60A7F",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreAchievements.tsx",
+      "lineCount": 52,
+      "byteCount": 2074
+    },
+    {
+      "sha256": "AD6B0BE2A2B23B50C6D473CDA9219F2FE39D46F85260EF1409441B05B5512A77",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreCategoryCard.tsx",
+      "lineCount": 44,
+      "byteCount": 1549
+    },
+    {
+      "sha256": "3C51902A1B3CF813BF1418C71AB6E3C870F1E41D0AA7A36F7BDBF5133B0E23D8",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreCategoryChart.tsx",
+      "lineCount": 47,
+      "byteCount": 1980
+    },
+    {
+      "sha256": "C467B34678C5BA5A4A7319A3F79394B58F2C31E3134A0E5E52D51B8CD4ABD365",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreDistributionChart.tsx",
+      "lineCount": 43,
+      "byteCount": 1729
+    },
+    {
+      "sha256": "5F695828AECD5E6C81FA794C19F675A820FCB41C6F1710F2D8CBCE976C44E8E0",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreExtremeDrive.tsx",
+      "lineCount": 66,
+      "byteCount": 3268
+    },
+    {
+      "sha256": "43F272B7F05159D469E5AFA38496B20CA678FE4C760CE0F463BCEED82E648770",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreHistoryTable.tsx",
+      "lineCount": 44,
+      "byteCount": 1327
+    },
+    {
+      "sha256": "7AD1B5930189C69EFF529C10784A752F52EE7B95FC2F5FC34A02320145A5E24F",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScorePeriodAverages.tsx",
+      "lineCount": 76,
+      "byteCount": 3633
+    },
+    {
+      "sha256": "C8DB330EC414A90A90D0929DF42FAB33BEE8E77FA763285F3D651FA5061C5ECE",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreTrendChart.tsx",
+      "lineCount": 76,
+      "byteCount": 3549
+    },
+    {
+      "sha256": "29B6C288C2DAE77B345B0985764480AB7CF99F828D42BEB4BA5DB63CCA422E93",
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+      "lineCount": 53,
+      "byteCount": 1893
+    },
+    {
+      "sha256": "3A92F3A21116F5A2E4FDA32944C0084794EBFD55FBF5D37CD9FAE7DA975B7F35",
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ScoreEvidenceBrief.tsx",
+      "lineCount": 38,
+      "byteCount": 2955
+    },
+    {
+      "sha256": "A2D08A5AC8AD9F988534F0DE1585A71801C2CFABC01E91ED4F080B1AB0DBEED3",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreAchievements.tsx",
+      "lineCount": 110,
+      "byteCount": 3769
+    },
+    {
+      "sha256": "E619FD325C0EE66A7CC796B24CA5577B6DA1CE2814F9B66EE39913CF2A075B6D",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreAchievementsSection.tsx",
+      "lineCount": 22,
+      "byteCount": 892
+    },
+    {
+      "sha256": "13F1C2823AB68827966F423B30602A108FB84827D6105C91D3A2D03647AA26F2",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreCategoriesSection.tsx",
+      "lineCount": 59,
+      "byteCount": 2532
+    },
+    {
+      "sha256": "DF6A2D54298EB423EDB68EF261F6CACDE6ADCF13CF3FFA3777C3C3E3C345E89A",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreChartsSection.tsx",
+      "lineCount": 48,
+      "byteCount": 2040
+    },
+    {
+      "sha256": "15CD66BBF1C081279779E245A8251326A13D7F0DF16506ABFDAC5CF5BA62DE2A",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreDistributionTipsSection.tsx",
+      "lineCount": 70,
+      "byteCount": 2982
+    },
+    {
+      "sha256": "6E9119B76496F3C40666D7F058E07BA2E30D0E7714DFC8914405760A52B459CD",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreDomain.ts",
+      "lineCount": 138,
+      "byteCount": 3477
+    },
+    {
+      "sha256": "FE1C97DD6F7CDB9EF0BEC602A523C7344FF1F1173C0BAE14ADC023952ACBFFF1",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreExtremesSection.tsx",
+      "lineCount": 108,
+      "byteCount": 4824
+    },
+    {
+      "sha256": "1A94B28B6E996E7E96F0C431D9752918B1DAF16EFAD907C5596914C6FB5314F6",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreHeroSection.tsx",
+      "lineCount": 107,
+      "byteCount": 4898
+    },
+    {
+      "sha256": "F399A8DE39B2188778554410AA7492816BD5EBDB39FDC704DC704360E4D3BF3E",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreHistoryColumns.tsx",
+      "lineCount": 103,
+      "byteCount": 2806
+    },
+    {
+      "sha256": "2C011CA82C521F6B038C5FBFFE860CE244E1AEFDCFC395F1281095096573C7A2",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreHistorySection.tsx",
+      "lineCount": 36,
+      "byteCount": 1341
+    },
+    {
+      "sha256": "34D98FE9E858584E4F0FCDB27A14278DF8CE8060920D321B1F1F2CF4CC97960C",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreKpiSection.tsx",
+      "lineCount": 72,
+      "byteCount": 2888
+    },
+    {
+      "sha256": "C27D0AF889BF7FF0B3EF7FEA4E21E35D2F38095FD09E92C557148832FED5D0BE",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScorePeriodAveragesSection.tsx",
+      "lineCount": 25,
+      "byteCount": 964
+    },
+    {
+      "sha256": "C46BD0AF44FE7F4A7B8434AAED70B4EF8895F9ACF8437FCBEFF3C7D9E2E8CC9C",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScorePeriodStatisticsPanel.tsx",
+      "lineCount": 82,
+      "byteCount": 3098
+    },
+    {
+      "sha256": "39695D647D07AA94C675D2FB46CCA0193E70ECF76982BE28D313476A2D18C45B",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scorePeriodStats.ts",
+      "lineCount": 102,
+      "byteCount": 3666
+    },
+    {
+      "sha256": "6CBC3C02F7967293F8CC799A27578AC25A63F3991EAAC20819883DBCA52CA79D",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreSectionTypes.ts",
+      "lineCount": 14,
+      "byteCount": 420
+    },
+    {
+      "sha256": "3CD11F1ABE4FA0FBCE74E8B917C606A78541933B6DB17144212E62DB7348D387",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreSourceNotices.tsx",
+      "lineCount": 69,
+      "byteCount": 2874
+    },
+    {
+      "sha256": "DD99DF42121DE82A892F9503327E91B7421DA2419B344A839E6E85B6654B97A1",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreTips.tsx",
+      "lineCount": 85,
+      "byteCount": 2676
+    },
+    {
+      "sha256": "B5D8117612100B89DD47F717FBD04B4DC906907CE22869C14E47D9E41C27D552",
+      "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+      "lineCount": 371,
+      "byteCount": 13526
+    },
+    {
+      "sha256": "0FC4FC34CDB97DDB6318BCD0231B1257F65EC7C8A5418C2817F3CCDE7AF88280",
+      "file": "web\\src\\features\\driving\\pages\\DriveScorePage.tsx",
+      "lineCount": 121,
+      "byteCount": 6269
+    },
+    {
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "lineCount": 65,
+      "byteCount": 2035
+    },
+    {
+      "sha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "lineCount": 694,
+      "byteCount": 22200
+    },
+    {
+      "sha256": "5FCF90610A780F412B01E76B8E4EF7BFE620B2538F3BF14A8FB07DF8058AA0A6",
+      "file": "web\\src\\lib\\drivesAggregation.ts",
+      "lineCount": 511,
+      "byteCount": 17790
+    },
+    {
+      "sha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "file": "web\\src\\lib\\routeLoaders.ts",
+      "lineCount": 127,
+      "byteCount": 11392
+    },
+    {
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "lineCount": 168,
+      "byteCount": 4411
+    },
+    {
+      "sha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "file": "web\\src\\types\\driving.ts",
+      "lineCount": 411,
+      "byteCount": 10894
+    }
+  ],
+  "identity": {
+    "unmountedTypeOnlyRenderer": "ScoreKpiSection.tsx",
+    "mountedPresentationFileCount": 21,
+    "totalPinnedSourceFileCount": 44,
+    "localProductionFileCount": 29,
+    "mountedPresentationLineCount": 1268,
+    "localProductionLineCount": 2281,
+    "metadataOnlyTestFilePinsExcluded": 3,
+    "testsReadOrExecuted": false,
+    "pageLineCount": 121,
+    "pageSha256": "0FC4FC34CDB97DDB6318BCD0231B1257F65EC7C8A5418C2817F3CCDE7AF88280",
+    "pagePlusMountedPresentationLines": 1389
+  },
+  "routeEvidence": [
+    {
+      "line": 122,
+      "file": "web\\src\\App.tsx",
+      "detail": "lazy(routeLoaders.DriveScore)"
+    },
+    {
+      "line": 816,
+      "file": "web\\src\\App.tsx",
+      "detail": "drive-score inside SafeRoute"
+    },
+    {
+      "line": 40,
+      "file": "web\\src\\lib\\routeLoaders.ts",
+      "detail": "Import resolves audited page"
+    },
+    {
+      "line": 39,
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "detail": "Header-owned range enabled"
+    },
+    {
+      "line": 156,
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "detail": "Vehicle enabled: not in disabled sets",
+      "endLine": 167
+    }
+  ],
+  "queue": {
+    "file": "migration-queue.md",
+    "overlaps": [
+      {
+        "line": 302,
+        "purpose": "Unrelated shared filtered-empty copy; preserve claim",
+        "status": "[~]",
+        "item": "phase6-fix-table-filtered-empty-copy"
+      },
+      {
+        "line": 2036,
+        "purpose": "Reuse accepted DriveWindow support; do not redispatch",
+        "status": "[x]",
+        "item": "phase6-drivetrain-exact-range-integration"
+      }
+    ],
+    "dedup": "Exact local-source and Phase6 files-column scans; only shared DataTable copy repair and accepted drivetrain hook integration overlap, neither resolves DriveScore mechanisms.",
+    "acceptedCommit": "d4c6f1ec5d491b071f9676c1865288ba92f3dc10",
+    "historicalAudit": "audit-page-110 context reused, not restarted",
+    "dependencyStatus": "[x] accepted SOURCE ONLY",
+    "itemLine": 391,
+    "dependency": "phase5-page-driving-drive-score",
+    "dependencyLine": 1855,
+    "edited": false
+  },
+  "readEvidence": {
+    "handoff": "Current 2026-10-14T00:44Z head 1-175 plus inherited tail; phases0-5 closed, phase6 unfinished, phase7 NOTRUN",
+    "instructions": [
+      "frontend-si-cutover FULL",
+      "react-frontend FULL",
+      "observability FULL",
+      "unit-conversion FULL"
+    ],
+    "phases0through5Restarted": false,
+    "designContract": "FULL 1-2539 in complementary bounded ranges",
+    "mission": "43-45 at 1416 onward",
+    "orchestrator": "FULL 1-296"
+  },
+  "rawScanCounts": [
+    {
+      "pattern": "style\\s*=\\s*\\{\\{.*var\\(--",
+      "rawMatchedLines": 0,
+      "rawOccurrences": 0,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "static-inline-style"
+    },
+    {
+      "pattern": "<(?:button|input|textarea|select|table)(?:\\s|>)",
+      "rawMatchedLines": 1,
+      "rawOccurrences": 1,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "raw-html"
+    },
+    {
+      "pattern": "(?:from\\s*|import\\s*)[\"'](?:recharts|react-leaflet|framer-motion)[\"']",
+      "rawMatchedLines": 0,
+      "rawOccurrences": 0,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "direct-library-import"
+    },
+    {
+      "pattern": "from\\s*[\"'](?:\\.\\./)+api[\"']",
+      "rawMatchedLines": 0,
+      "rawOccurrences": 0,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "old-api-import"
+    },
+    {
+      "pattern": "/api/v1/",
+      "rawMatchedLines": 0,
+      "rawOccurrences": 0,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "double-prefix"
+    },
+    {
+      "pattern": "[?&](?:vehicleId|driveId|startDate|endDate)=",
+      "rawMatchedLines": 0,
+      "rawOccurrences": 0,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "camelcase-param"
+    },
+    {
+      "pattern": "&&\\s*<(?:GlassPanel|LayoutCard|section)",
+      "rawMatchedLines": 0,
+      "rawOccurrences": 0,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "hidden-panel-lexical"
+    },
+    {
+      "pattern": ">\\s*[A-Za-z][A-Za-z ]{2,}\\s*<",
+      "rawMatchedLines": 0,
+      "rawOccurrences": 0,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "hardcoded-visible-English-lexical"
+    },
+    {
+      "pattern": "\\b(?:fetch|useEffect)\\s*\\(",
+      "rawMatchedLines": 0,
+      "rawOccurrences": 0,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "fetch-useeffect-lexical"
+    },
+    {
+      "pattern": "#[0-9a-fA-F]{3,8}\\b",
+      "rawMatchedLines": 16,
+      "rawOccurrences": 16,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "literal-palette"
+    },
+    {
+      "pattern": "(?:max-w|min-w|w|h|min-h|max-h|grid-cols)-\\[(?!var)",
+      "rawMatchedLines": 1,
+      "rawOccurrences": 1,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "arbitrary-geometry"
+    },
+    {
+      "pattern": "<PageContainer\\b",
+      "rawMatchedLines": 0,
+      "rawOccurrences": 0,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "page-container-direct"
+    },
+    {
+      "pattern": "<PageLayout\\b",
+      "rawMatchedLines": 1,
+      "rawOccurrences": 1,
+      "caseSensitive": false,
+      "check": "C09",
+      "rule": "page-layout-adapter"
+    }
+  ],
+  "scanCorrections": [
+    {
+      "check": "C10",
+      "rawMatchedLines": 0,
+      "rawOccurrences": 0,
+      "originalC09Count": 1,
+      "caseSensitive": true,
+      "rule": "raw-html",
+      "reason": "Case-insensitive <Button> false positive at ScoreSourceNotices:38, shared component exception"
+    },
+    {
+      "check": "C10",
+      "literalTCallOccurrences": 183,
+      "limit": "Key existence only; not runtime catalog/fallback/plural parity",
+      "canonicalSha256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "missingNonstringKeys": 0,
+      "uniqueLiteralKeysIncludingHelp": 150
+    },
+    {
+      "check": "C12",
+      "camelcaseUrlParamOccurrences": 0,
+      "scope": "useDriving.ts URL scan",
+      "doublePrefixOccurrences": 0
+    },
+    {
+      "reason": "C12 case-insensitive exclusion confused domain scoreAchievements with mounted ScoreAchievements; corrected 20/1216 to 21/1268",
+      "check": "C13"
+    }
+  ],
+  "commands": [
+    {
+      "rawLogStartLine": 1,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C01",
+      "exitCode": 0,
+      "command": "preflight 2026-10-14T01:07:23.8635785Z"
+    },
+    {
+      "rawLogStartLine": 10,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C02",
+      "exitCode": 0,
+      "command": "current page numbered source"
+    },
+    {
+      "rawLogStartLine": 133,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C03",
+      "exitCode": 0,
+      "command": "related queue mechanisms"
+    },
+    {
+      "rawLogStartLine": 147,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C04",
+      "exitCode": 0,
+      "command": "authority snapshot 2026-10-14T01:07:49.5582048Z"
+    },
+    {
+      "rawLogStartLine": 157,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C05",
+      "exitCode": 0,
+      "command": "necessary hook route and domain references"
+    },
+    {
+      "rawLogStartLine": 217,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C06",
+      "exitCode": 0,
+      "command": "exact related queue files bounded"
+    },
+    {
+      "rawLogStartLine": 221,
+      "status": "PARTIAL_NONTERMINATING_MISSING_PATH_ERROR",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C07",
+      "exitCode": 0,
+      "command": "source dependency mechanism locations"
+    },
+    {
+      "rawLogStartLine": 293,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C08",
+      "exitCode": 0,
+      "command": "bounded current source snapshot 2026-10-14T01:09:49.8004588Z"
+    },
+    {
+      "rawLogStartLine": 332,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C09",
+      "exitCode": 0,
+      "command": "bounded native Select-String lexical scan 2026-10-14T01:10:25.2929029Z"
+    },
+    {
+      "rawLogStartLine": 367,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C10",
+      "exitCode": 0,
+      "command": "corrected case-sensitive scan, literal i18n lookup and exact queue dedup"
+    },
+    {
+      "rawLogStartLine": 485,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C11",
+      "exitCode": 0,
+      "command": "numbered mechanism evidence and necessary boundary pins 2026-10-14T01:12:12.8926296Z"
+    },
+    {
+      "rawLogStartLine": 848,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C12",
+      "exitCode": 0,
+      "command": "pin verification, exact queued writable overlap and hook URL scan 2026-10-14T01:13:18.5669782Z"
+    },
+    {
+      "rawLogStartLine": 859,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C13",
+      "exitCode": 0,
+      "command": "presentation count correction and exact overlapping queue rows 2026-10-14T01:13:59.0994117Z"
+    },
+    {
+      "rawLogStartLine": 886,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C14",
+      "exitCode": 0,
+      "command": "required-read completeness and route-loader reference"
+    },
+    {
+      "rawLogStartLine": 1016,
+      "status": "SOURCE_CHECK_ONLY",
+      "rawOutput": "Retained verbatim in permitted log; bounded read/Select-String/Get-FileHash operations",
+      "id": "C15",
+      "exitCode": 0,
+      "command": "actual DriveScore route loader pin 2026-10-14T01:14:47.2077945Z"
+    },
+    {
+      "status": "HOST_COMMAND_LAUNCH_FAILURE",
+      "rawOutput": "<error: The filename or extension is too long. (os error 206)>",
+      "noSourceExecution": true,
+      "id": "C16",
+      "exitCode": 1,
+      "command": "Oversized PowerShell structured report construction"
+    },
+    {
+      "id": "C17",
+      "command": "Get-Content raw log; native parse source pins/counts; ConvertTo-Json; .NET WriteAllText reserved report",
+      "status": "DOCUMENT_ONLY",
+      "exitCode": 0
+    },
+    {
+      "status": "DOCUMENT_ONLY",
+      "exitCode": 0,
+      "id": "C18",
+      "command": "Get-Content report -Raw | ConvertFrom-Json -AsHashtable; add source-confirmed findings/candidates; ConvertTo-Json; WriteAllText exact report"
+    },
+    {
+      "id": "C19",
+      "status": "DOCUMENT_ONLY",
+      "command": "Get-Content report -Raw|ConvertFrom-Json; add sections/actions/populations/owner-needs/limits; ConvertTo-Json; WriteAllText exact report",
+      "exitCode": 0
+    },
+    {
+      "status": "DOCUMENT_AND_READONLY_SOURCE_VERIFICATION",
+      "command": "Get-Content report -Raw|ConvertFrom-Json -AsHashtable; Select-String actual model/chart anchors; Get-FileHash -Algorithm SHA256 and Get-Content line counts for44pins; validate counts; WriteAllText final report; final ConvertFrom-Json/Get-FileHash",
+      "exitCode": 0,
+      "sourcePinMismatches": 0,
+      "id": "C20"
+    }
+  ],
+  "preflightCommands": [
+    {
+      "shellId": "538",
+      "command": "Test-Path report; conditional Get-Content/Get-FileHash",
+      "rawOutput": "REPORT_ABSENT; COMMAND_EXIT=0",
+      "exitCode": 0
+    },
+    {
+      "shellId": "537",
+      "command": "Get-ChildItem docs/root -Force",
+      "exitCode": 0
+    },
+    {
+      "shellId": "545",
+      "command": "Get-ChildItem .github/frontend-audits; Select-String queue/handoff",
+      "limit": "Mixed formatting yielded blank metadata lines; bounded later probes recovered scope",
+      "exitCode": 0
+    },
+    {
+      "shellId": "544",
+      "command": "Get-Content full orchestrator-loop and design-contract",
+      "limit": "Oversized output, fully read in bounded ranges",
+      "exitCode": 0
+    },
+    {
+      "shellId": "558",
+      "command": "Get-Content counts/Get-Item lengths; bounded docs reference searches",
+      "exitCode": 0
+    },
+    {
+      "shellId": "559",
+      "command": "Get-Content four required instruction files",
+      "limit": "Oversized output, fully read in complementary ranges",
+      "exitCode": 0
+    },
+    {
+      "shellId": "576",
+      "command": "Select-String reservation; Get-Content handoff -Tail 145; locate mission sections",
+      "exitCode": 0
+    },
+    {
+      "shellId": "583",
+      "command": "Select-String accepted dependency; Get-Content current handoff -TotalCount 175; locate mission43-45",
+      "exitCode": 0
+    }
+  ],
+  "rawLog": {
+    "outputRedirectionUsed": false,
+    "file": "web\\logs\\phase6-qa-driving-drive-score.log",
+    "ignoredEvidence": ".gitignore logs/ inspected in C01",
+    "retained": true
+  },
+  "findings": [
+    {
+      "condition": "Changed workspace range; source mechanism, not observed records.",
+      "evidence": "useDriveScore(vehicleIdStr); useDrives(vehicleIdStr); endDate + 86_400_000; ts <= end",
+      "rule": "workspace-range-bounds",
+      "line": 35,
+      "citations": [
+        {
+          "detail": "Default50 documentation and DriveWindow list support",
+          "endLine": 128,
+          "line": 87,
+          "file": "web\\src\\api\\hooks\\useDriving.ts"
+        },
+        {
+          "detail": "Vehicle-only independent score",
+          "endLine": 228,
+          "line": 218,
+          "file": "web\\src\\api\\hooks\\useDriving.ts"
+        },
+        {
+          "detail": "Canonical rolling/calendar instant authority",
+          "endLine": 682,
+          "line": 656,
+          "file": "web\\src\\hooks\\useRangeState.ts"
+        }
+      ],
+      "fix": "Pass both canonical bounds through existing typed complete-result facilities. Establish score range capability before extending its key/request; otherwise qualify independent coverage truthfully.",
+      "endLine": 74,
+      "mechanism": "Neither source receives canonical startInstant/endInstantExclusive. Drive list is filtered only after default-page request; score key/request is vehicle-only. Date-only parsing, fixed day arithmetic and inclusive end bypass rolling/timezone/DST semantics.",
+      "ownerNeed": "N01",
+      "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+      "id": "DS01",
+      "severity": "high"
+    },
+    {
+      "evidence": "a.check(allScores, filteredDrives)",
+      "rule": "score-population",
+      "line": 251,
+      "citations": [
+        {
+          "detail": "Scored descriptions and drives.length thresholds1/10/50",
+          "endLine": 46,
+          "line": 19,
+          "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreAchievements.tsx"
+        }
+      ],
+      "fix": "Align count inputs with scored cohort or approve truthful descriptions; preserve eight identities and thresholds.",
+      "condition": "Mixed scored/unscorable filtered cohort; no actual unlock observed.",
+      "mechanism": "First/10/50 achievement predicates count filtered drives including rejected admissions, although descriptions require scored drives. Other predicates use only admitted scores.",
+      "ownerNeed": "N03",
+      "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+      "id": "DS02",
+      "severity": "high"
+    },
+    {
+      "condition": "Worst-drive smoothness branch; not an observed driving incident.",
+      "evidence": "Aggressive acceleration and braking detected.",
+      "rule": "inference-vs-observation",
+      "line": 57,
+      "citations": [
+        {
+          "detail": "Intensity/averageW/maxmps-only formula",
+          "endLine": 74,
+          "line": 55,
+          "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreDomain.ts"
+        },
+        {
+          "detail": "Acceleration/braking/cornering/tunability help",
+          "endLine": 51,
+          "line": 50,
+          "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreHeroSection.tsx"
+        }
+      ],
+      "fix": "Qualify heuristic inference and actual local inputs; keep independent server explanation separate. Confirm server/settings support, separately lease exact canonical copy.",
+      "endLine": 59,
+      "mechanism": "Local smoothness derives solely from average power; no acceleration/braking/cornering measurements enter this heuristic. Low smoothness is presented as detected behavior. Hero help describes different inputs and tunability for the same local fallback.",
+      "ownerNeed": "N04",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreExtremesSection.tsx",
+      "id": "DS03",
+      "severity": "high"
+    },
+    {
+      "evidence": "apiScore?.trend ?? 'flat'",
+      "rule": "unknown-trend",
+      "line": 120,
+      "citations": [
+        {
+          "detail": "Visible trend mapping",
+          "endLine": 344,
+          "line": 326,
+          "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts"
+        },
+        {
+          "detail": "Independent trend used as computed mean context",
+          "line": 15,
+          "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ScoreEvidenceBrief.tsx"
+        }
+      ],
+      "fix": "Keep trend unknown or omit unsupported context; do not synthesize flat.",
+      "condition": "Scored history exists while independent score source absent/fatal.",
+      "mechanism": "Absent server trend becomes Stable in Hero and computed-average context. No local trend is calculated.",
+      "ownerNeed": "N02",
+      "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+      "id": "DS04",
+      "severity": "medium"
+    },
+    {
+      "evidence": "!hasData && (isLoading || isPending)",
+      "rule": "initial-paused-state",
+      "line": 45,
+      "citations": [
+        {
+          "detail": "Initial score/loading precedence",
+          "endLine": 48,
+          "line": 42,
+          "file": "web\\src\\features\\driving\\pages\\DriveScorePage.tsx"
+        },
+        {
+          "detail": "Initial preserves paused flag",
+          "endLine": 218,
+          "line": 193,
+          "file": "web\\src\\api\\dataState.ts"
+        },
+        {
+          "detail": "No-data returns null",
+          "line": 60,
+          "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx"
+        }
+      ],
+      "fix": "Source-local paused/deferred presentation before loading using existing trust flags and truthful localized recovery.",
+      "condition": "Initial fetchStatus paused; no device/offline inference.",
+      "mechanism": "No-data paused query stays pending and becomes loading. Combined score fallback uses initial without isRefreshBlocked. StaleRefreshWarning returns null without retained data, so no initial-paused explanation/recovery is declared.",
+      "ownerNeed": "N02",
+      "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+      "id": "DS05",
+      "severity": "medium"
+    },
+    {
+      "evidence": "mobileColumns={['date','score','grade']}",
+      "rule": "mobile-data-loss",
+      "line": 24,
+      "citations": [
+        {
+          "detail": "Mobile presentation opt-in",
+          "line": 506,
+          "file": "web\\src\\components\\ui\\DataTable.tsx"
+        },
+        {
+          "detail": "Excluded cells hidden md:table-cell",
+          "endLine": 743,
+          "line": 733,
+          "file": "web\\src\\components\\ui\\DataTable.tsx"
+        }
+      ],
+      "fix": "Use existing complete mobile details/expansion in this caller; preserve all eight fields, tableId, sorting, pagination, eleven raw SI export fields.",
+      "condition": "Below-md declaration, not mounted browser evidence.",
+      "mechanism": "Five of eight columns (route/distance/duration/consumption/category breakdown) hidden below md. Caller supplies no mobilePresentation/expanded details; shared mobile mode is opt-in.",
+      "ownerNeed": "N05",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreHistoryTable.tsx",
+      "id": "DS06",
+      "severity": "high"
+    },
+    {
+      "condition": "Both week/month values present; no actual comparison observed.",
+      "evidence": "aria-hidden icons and Math.abs(current - previous)",
+      "rule": "comparison-direction",
+      "line": 25,
+      "fix": "Localized signed/directional/equal text or accessible label; retain both values and six tiles.",
+      "endLine": 28,
+      "mechanism": "Comparison delta loses its sign; direction is conveyed by color/hidden icon only. Equal values take positive branch.",
+      "ownerNeed": "N06",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScorePeriodAverages.tsx",
+      "id": "DS07",
+      "severity": "medium"
+    },
+    {
+      "condition": "Weekly boundary before retained clock or last-month final day after midnight; logical source condition only.",
+      "evidence": "weekStart.setDate(...); lastMonthEnd = new Date(year,month,0); d <= lastMonthEnd",
+      "rule": "period-boundaries",
+      "line": 29,
+      "fix": "Existing calendar/timezone utilities with half-open next-period bounds, preserving every output.",
+      "endLine": 54,
+      "mechanism": "Week start retains now time-of-day. Last-month upper bound is midnight at beginning of last day, excluding its remainder. Calendar arithmetic lacks explicit workspace timezone.",
+      "ownerNeed": "N06",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scorePeriodStats.ts",
+      "id": "DS08",
+      "severity": "high"
+    },
+    {
+      "condition": "All existing bucket means zero; no generated fixture/test.",
+      "evidence": "bestWeek/bestMonth={avg:0,label:'—'}; a > best.avg",
+      "rule": "zero-period-identity",
+      "line": 77,
+      "fix": "Initialize from first real bucket or nullable best; retain zero and deterministic ties/identity.",
+      "endLine": 85,
+      "mechanism": "Nonempty all-zero measured score buckets never select a best identity; valid zero remains paired with unknown label.",
+      "ownerNeed": "N06",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scorePeriodStats.ts",
+      "id": "DS09",
+      "severity": "medium"
+    },
+    {
+      "condition": "Declarations only; composed contrast/theme appearance NOTRUN.",
+      "evidence": "A+ '#39ff14'; local grade/category palettes",
+      "rule": "palette-token-bypass",
+      "line": 39,
+      "citations": [
+        {
+          "detail": "Five histogram colors",
+          "endLine": 216,
+          "line": 212,
+          "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts"
+        },
+        {
+          "detail": "Fixed dark capacity fill",
+          "line": 42,
+          "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreCategoryChart.tsx"
+        }
+      ],
+      "fix": "Adopt existing restrained semantic/chart roles locally; preserve identity and saved preferences; no new theme engine or reset.",
+      "endLine": 53,
+      "mechanism": "Mounted gauges and series use fluorescent/fixed local palette instead of existing restrained semantic/chart roles. Histogram has five fixed hues and capacity bar fixed dark fill. One local-palette mechanism, not sixteen incidents; dynamic/API colors are NOT static-inline-style violations.",
+      "ownerNeed": "N07",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreDomain.ts",
+      "id": "DS10",
+      "severity": "medium"
+    },
+    {
+      "condition": "Returned filtered drives have physical measurements but no admitted score.",
+      "evidence": "driveState(...), configured from !hasDrives",
+      "rule": "source-empty-gating",
+      "line": 23,
+      "citations": [
+        {
+          "detail": "driveState !hasDrives",
+          "line": 69,
+          "file": "web\\src\\features\\driving\\pages\\DriveScorePage.tsx"
+        },
+        {
+          "detail": "hasDrives=scoredDrives.length>0",
+          "line": 90,
+          "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts"
+        },
+        {
+          "detail": "Physical values from filteredDrives",
+          "endLine": 69,
+          "line": 34,
+          "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScorePeriodStatisticsPanel.tsx"
+        }
+      ],
+      "fix": "Use payload/filter/field coverage for physical facts; keep score cohort for score counts; retain shell/retry/unknowns.",
+      "endLine": 27,
+      "mechanism": "Physical statistics derive filteredDrives distance/duration/speed, but content is gated by scoredDrives nonemptiness. Valid unscored physical facts are replaced by score-empty body.",
+      "ownerNeed": "N02",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScorePeriodStatisticsPanel.tsx",
+      "id": "DS11",
+      "severity": "medium"
+    },
+    {
+      "condition": "Known measured values rejected by policy; no actual records inspected.",
+      "evidence": "excluded because measured energy, average power, or maximum speed is unavailable",
+      "rule": "admission-reason",
+      "line": 55,
+      "citations": [
+        {
+          "detail": "Minimum1000m/positive energy gate",
+          "endLine": 61,
+          "line": 48,
+          "file": "web\\src\\lib\\drivesAggregation.ts"
+        },
+        {
+          "detail": "Finite/nonnegative gates",
+          "endLine": 65,
+          "line": 55,
+          "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreDomain.ts"
+        }
+      ],
+      "fix": "Domain admission reasons and truthful localized counts, preserving thresholds and zero versus unknown.",
+      "endLine": 62,
+      "mechanism": "All rejected scores receive unavailable-input reason although admission also rejects measured short distance, zero/nonpositive energy, negative numeric power/speed.",
+      "ownerNeed": "N02",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreSourceNotices.tsx",
+      "id": "DS12",
+      "severity": "medium"
+    },
+    {
+      "evidence": "renderAnnotationLines(annotations,(ts)=>ts)",
+      "rule": "annotation-x-identity",
+      "line": 58,
+      "citations": [
+        {
+          "detail": "formatDateShort startTs",
+          "line": 176,
+          "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts"
+        },
+        {
+          "detail": "XAxis date",
+          "line": 52,
+          "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreTrendChart.tsx"
+        },
+        {
+          "detail": "ReferenceLine x=toXValue(timestamp)",
+          "line": 25,
+          "file": "web\\src\\components\\charts\\ChartAnnotationLayer.tsx"
+        }
+      ],
+      "fix": "Retain real timestamp/drive identity in chart data, format labels only, map annotations consistently; preserve all series/exports/legend/chart IDs.",
+      "condition": "Timestamped annotation exists; none created/rendered here.",
+      "mechanism": "Trend categorical X values are localized date strings; annotation X values stay raw timestamps. Producers do not map to the same domain; same-day drives also share date identity.",
+      "ownerNeed": "N08",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreTrendChart.tsx",
+      "id": "DS13",
+      "severity": "medium"
+    },
+    {
+      "condition": "Non-default locale/large counts; locale/browser NOTRUN.",
+      "evidence": "raw stats values/interpolation and {tile.value}; fmtInt only percentage",
+      "rule": "number-formatting",
+      "line": 33,
+      "fix": "Use existing fmtInt/formatters at display boundary with whole localized messages, retaining null/zero.",
+      "endLine": 69,
+      "mechanism": "Primary tile values and comparisons bypass existing locale formatter, including large drive counts. Domain numbers should stay raw; display should honor preferences.",
+      "ownerNeed": "N06",
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScorePeriodAverages.tsx",
+      "id": "DS14",
+      "severity": "low"
+    }
+  ],
+  "candidates": [
+    {
+      "line": 59,
+      "evidence": "Negative avgPower rejected; nonpositive energy rejected",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreDomain.ts",
+      "whyNotConfirmed": "Producer/product policy for net-regenerative values is uninspected. No raw source abs/clamping or real trip incident established.",
+      "needs": "Domain/typed producer contract owner; preserve raw signed SI.",
+      "topic": "Signed physical-power/energy admissibility",
+      "id": "DC01",
+      "endLine": 65
+    },
+    {
+      "line": 117,
+      "evidence": "knownNumber finite only; public grade string; per-field fallbacks",
+      "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+      "whyNotConfirmed": "No malformed, out-of-cap or partial live response inspected; typed shape validity unverified.",
+      "needs": "Typed score validation owner only if precise behavior is proven; do not guess API incidents.",
+      "topic": "Malformed/partial server assessment",
+      "id": "DC02",
+      "endLine": 129
+    },
+    {
+      "id": "DC03",
+      "topic": "Mobile/RTL/text scaling fit",
+      "whyNotConfirmed": "Source declarations cannot establish clipping, composed contrast or touch/focus outcomes.",
+      "line": 15,
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScorePeriodAveragesSection.tsx",
+      "evidence": "Base grid-cols-2; ScoreCategoryChart.tsx:37 YAxis width110",
+      "needs": "Later authorized Edge msedge on parent5173 with explicit lock; no downloads."
+    },
+    {
+      "id": "DC04",
+      "topic": "Geometry role mapping",
+      "whyNotConfirmed": "Exact named equivalent/design disposition not established; no guessed token replacement or waiver.",
+      "line": 28,
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreHistoryColumns.tsx",
+      "evidence": "max-w-[16rem]; ScoreAchievements.tsx:24 auto-fill/minmax declaration",
+      "needs": "Existing design/token owner to disposition exact geometry preserving fields."
+    },
+    {
+      "line": 66,
+      "evidence": "Streak scans allScores without rejected gaps; scoreDrive does not inspect live/endTs",
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreAchievements.tsx",
+      "whyNotConfirmed": "Server order and intended consecutive/completion policy unknown. Count mismatch is DS02, not an invented observed streak defect.",
+      "needs": "N03 policy clarification and separately reserved tests; retain all achievements.",
+      "topic": "Consecutive/completed cohort policy",
+      "id": "DC05",
+      "endLine": 78
+    }
+  ],
+  "preciseOwnersNeeds": [
+    {
+      "findings": [
+        "DS01"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+        "web\\src\\api\\hooks\\useDriving.ts"
+      ],
+      "queueDedup": "Accepted phase6-drivetrain-exact-range-integration supplies shared hook capability, not DriveScore coverage; do not redispatch. No exact local repair row found.",
+      "needs": "Reuse accepted DriveWindow/both canonical bounds and complete-result facilities. Score endpoint range capability unknown: establish exact support before extension, preserve keys/signal/retry/source scope; no backend ownership granted.",
+      "owner": "Workspace/controller integration plus separately serialized typed-hook owner only if needed",
+      "id": "N01"
+    },
+    {
+      "findings": [
+        "DS04",
+        "DS05",
+        "DS11",
+        "DS12"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+        "web\\src\\features\\driving\\pages\\DriveScorePage.tsx",
+        "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreSourceNotices.tsx",
+        "web\\src\\features\\driving\\components\\score-orchestrator\\ScorePeriodStatisticsPanel.tsx",
+        "web\\src\\features\\driving\\components\\score-orchestrator\\scoreDomain.ts"
+      ],
+      "queueDedup": "No exact file-specific Phase6 repair row. Controller/domain overlaps with N01/N03/N07/N08 require serialized exclusive leases.",
+      "needs": "Reserve narrow separate source/test pairs for unknown trend, no-data paused, physical-statistics emptiness and precise admission reasons. Existing retained/fatal independence stays complete. New copy requires parent catalog lease.",
+      "owner": "Local source-trust/admission domain/caller owners",
+      "id": "N02"
+    },
+    {
+      "findings": [
+        "DS02"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+        "web\\src\\features\\driving\\components\\score-orchestrator\\scoreAchievements.tsx"
+      ],
+      "queueDedup": "No exact Phase6 fix; serialize controller overlap.",
+      "needs": "Align first/10/50 scored counts; clarify consecutive/completed policy from actual contract. Preserve eight IDs/thresholds; explicitly reserve future tests.",
+      "owner": "Local achievement/domain policy owner",
+      "id": "N03"
+    },
+    {
+      "findings": [
+        "DS03"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreHeroSection.tsx",
+        "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreExtremesSection.tsx",
+        "web\\src\\i18n\\en.json"
+      ],
+      "queueDedup": "Completed catalog closures remain complete; no exact local explanatory repair found.",
+      "needs": "Truthful local inference versus server explanation. Exact approved copy keys/generated paths must be reserved before writes. No translation campaign or undeclared fallback-only keys.",
+      "owner": "Hero/extremes explanation owner and parent-serialized canonical English owner",
+      "id": "N04"
+    },
+    {
+      "findings": [
+        "DS06"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreHistoryTable.tsx"
+      ],
+      "queueDedup": "Unrelated phase6-fix-table-filtered-empty-copy holds DataTable. Preserve that lease; do not duplicate shared empty-copy root.",
+      "needs": "Use existing mobile details/expansion, all eight fields and eleven SI export values, original tableId/sort/pagination; reserve exact source/covering-test pair later, no shared table edit.",
+      "owner": "ScoreHistoryTable mobile caller owner",
+      "id": "N05"
+    },
+    {
+      "findings": [
+        "DS07",
+        "DS08",
+        "DS09",
+        "DS14"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\components\\score-orchestrator\\scorePeriodStats.ts",
+        "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScorePeriodAverages.tsx"
+      ],
+      "queueDedup": "No exact existing Phase6 period source repair row.",
+      "needs": "Separate atomic calendar/zero-bucket and signed/locale display repairs with explicitly reserved tests. Preserve six tiles, injected clock and returned cohort. New direction/equal copy separately serialized.",
+      "owner": "Local period domain and presenter owners",
+      "id": "N06"
+    },
+    {
+      "findings": [
+        "DS10"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\components\\score-orchestrator\\scoreDomain.ts",
+        "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+        "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreCategoryChart.tsx"
+      ],
+      "queueDedup": "Completed unrelated export/secret-rotation/vehicle-access palette rows are not DriveScore repairs.",
+      "needs": "Restrained existing semantic/chart roles, preserve category/bin/grade identity and saved preferences. No new token/theme/store/config edits; missing role reported to existing design owner. Serialize model/domain.",
+      "owner": "Local palette adoption using existing tokens/colors",
+      "id": "N07"
+    },
+    {
+      "findings": [
+        "DS13"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+        "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreTrendChart.tsx"
+      ],
+      "queueDedup": "No exact trend repair row; serialize controller ownership.",
+      "needs": "Real timestamp X identity for data/annotations, labels only formatted; preserve deliberate last20, all four series, export/legend/chart IDs. No actual mutation. Reserve covering tests later.",
+      "owner": "Local trend model/presenter owner",
+      "id": "N08"
+    }
+  ],
+  "release": {
+    "reportReleased": true,
+    "browserLock": "NONE",
+    "status": "RELEASED_AFTER_C20_EXIT_0",
+    "parent5173Untouched": true,
+    "noBackgroundCommandOrServiceStarted": true,
+    "commandsReleased": true,
+    "noLaterWritesAfterTerminal": true,
+    "logReleased": true,
+    "sourceWriteClaim": "NONE",
+    "utc": "2026-10-14T01:23:36.1411061Z"
+  },
+  "findingCount": 14,
+  "candidateCount": 5,
+  "summary": {
+    "countsAreDeduplicatedMechanisms": true,
+    "priorityOrder": [
+      "DS01 scope and complete populations",
+      "DS02 achievement denominator",
+      "DS03 truthful inference",
+      "DS06 mobile completeness",
+      "DS05/11 paused/physical source trust",
+      "DS08/09 period boundaries and zero",
+      "Other remaining trust/presentation mechanisms"
+    ],
+    "filesWithMostIssues": [
+      {
+        "primaryFindingCount": 4,
+        "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts"
+      },
+      {
+        "primaryFindingCount": 2,
+        "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScorePeriodAverages.tsx"
+      },
+      {
+        "primaryFindingCount": 2,
+        "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scorePeriodStats.ts"
+      },
+      {
+        "primaryFindingCount": 1,
+        "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreHistoryTable.tsx"
+      },
+      {
+        "primaryFindingCount": 1,
+        "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreTrendChart.tsx"
+      },
+      {
+        "primaryFindingCount": 1,
+        "file": "web\\src\\features\\driving\\components\\score-orchestrator\\scoreDomain.ts"
+      },
+      {
+        "primaryFindingCount": 1,
+        "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreExtremesSection.tsx"
+      },
+      {
+        "primaryFindingCount": 1,
+        "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScorePeriodStatisticsPanel.tsx"
+      },
+      {
+        "primaryFindingCount": 1,
+        "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreSourceNotices.tsx"
+      }
+    ],
+    "byPrimaryRule": [
+      {
+        "count": 1,
+        "rule": "admission-reason"
+      },
+      {
+        "count": 1,
+        "rule": "annotation-x-identity"
+      },
+      {
+        "count": 1,
+        "rule": "comparison-direction"
+      },
+      {
+        "count": 1,
+        "rule": "inference-vs-observation"
+      },
+      {
+        "count": 1,
+        "rule": "initial-paused-state"
+      },
+      {
+        "count": 1,
+        "rule": "mobile-data-loss"
+      },
+      {
+        "count": 1,
+        "rule": "number-formatting"
+      },
+      {
+        "count": 1,
+        "rule": "palette-token-bypass"
+      },
+      {
+        "count": 1,
+        "rule": "period-boundaries"
+      },
+      {
+        "count": 1,
+        "rule": "score-population"
+      },
+      {
+        "count": 1,
+        "rule": "source-empty-gating"
+      },
+      {
+        "count": 1,
+        "rule": "unknown-trend"
+      },
+      {
+        "count": 1,
+        "rule": "workspace-range-bounds"
+      },
+      {
+        "count": 1,
+        "rule": "zero-period-identity"
+      }
+    ],
+    "actualIncidentsClaimed": 0
+  },
+  "preciseOwnerNeedCount": 8,
+  "sectionCount": 9,
+  "sections": [
+    {
+      "source": "operationalbrief-a-m/ScoreEvidenceBrief.tsx:11-35",
+      "population": "Returned admitted score cohort, independent trend context",
+      "pageLine": 101,
+      "id": "A",
+      "preserved": true,
+      "name": "Four-metric evidence brief"
+    },
+    {
+      "source": "score-orchestrator/ScoreHeroSection.tsx:23-104",
+      "population": "Independent server first, local admitted fallback, separate counts",
+      "pageLine": 104,
+      "id": "B",
+      "preserved": true,
+      "name": "Overall score and grade"
+    },
+    {
+      "source": "score-orchestrator/ScoreCategoriesSection.tsx:24-55",
+      "population": "40/30/30 caps and scored-cohort physical readings",
+      "pageLine": 106,
+      "id": "C",
+      "preserved": true,
+      "name": "Three category gauges"
+    },
+    {
+      "source": "score-orchestrator/ScoreChartsSection.tsx:21-45",
+      "population": "Four trend series, last20 chronological scored drives; category readings",
+      "pageLine": 108,
+      "id": "D",
+      "preserved": true,
+      "name": "Trend and category charts"
+    },
+    {
+      "source": "score-orchestrator/ScoreDistributionTipsSection.tsx:23-67",
+      "population": "All returned admitted scores; three weakest-category tips from nine templates",
+      "pageLine": 110,
+      "id": "E",
+      "preserved": true,
+      "name": "Five-bin distribution and improvement tips"
+    },
+    {
+      "source": "score-orchestrator/ScoreExtremesSection.tsx:24-105",
+      "population": "Scored extremes, independent score readings, filtered-returned physical totals",
+      "pageLine": 112,
+      "id": "F",
+      "preserved": true,
+      "name": "Best/worst, score breakdown and physical statistics"
+    },
+    {
+      "source": "continuation-driving-primary/ScoreHistoryTable.tsx:16-41",
+      "population": "Eight columns; loaded scored rows; eleven raw SI export fields",
+      "pageLine": 114,
+      "id": "G",
+      "preserved": true,
+      "mobileCompleteness": "DS06",
+      "name": "Drive history"
+    },
+    {
+      "source": "continuation-driving-primary/ScorePeriodAverages.tsx:31-74",
+      "population": "Admitted scores within returned/filter cohort",
+      "pageLine": 116,
+      "id": "H",
+      "preserved": true,
+      "name": "Six weekly/monthly tiles"
+    },
+    {
+      "source": "score-orchestrator/scoreAchievements.tsx:17-109",
+      "population": "Mixed filtered/admitted predicates DS02",
+      "pageLine": 118,
+      "id": "I",
+      "preserved": true,
+      "name": "Eight achievements"
+    }
+  ],
+  "auxiliarySections": [
+    "Independent source notices",
+    "No selected vehicle",
+    "Partial admission reasons"
+  ],
+  "populatedPanelDeclarationCount": 21,
+  "operationalBriefSeparateCount": 1,
+  "panelCountMethod": "2hero+3category+2trend/category+2histogram/tips+4extremes/breakdown/physical+1history+6period+1achievements; source declaration count, not mounted DOM",
+  "actionGroups": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\DriveScorePage.tsx",
+      "name": "Both-source Refresh",
+      "declaration": "Localized name, base h/w44 md40, disabled without selected vehicle, both refetches",
+      "line": 76,
+      "endLine": 88
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreSourceNotices.tsx",
+      "name": "Independent retained and fatal retries",
+      "declaration": "Two per-source stale warnings; independent server retry",
+      "line": 19,
+      "endLine": 39
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\DriveScorePage.tsx",
+      "name": "Section error recovery",
+      "declaration": "Server-only combined failure routes to score refetch, otherwise drives",
+      "line": 53,
+      "endLine": 55
+    },
+    {
+      "file": "web\\src\\features\\driving\\hooks\\useDriveScorePage.ts",
+      "name": "Header range/vehicle",
+      "declaration": "No duplicated workspace picker; both bounds issue DS01",
+      "line": 31,
+      "endLine": 60
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreHistoryTable.tsx",
+      "name": "History sorting/pagination/export",
+      "declaration": "date/distance/efficiency/score sorting, page10, tableId driving:drive-score-history, exportFilename drive-score-history, loaded-row SI export",
+      "line": 16,
+      "endLine": 41
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreTrendChart.tsx",
+      "name": "Three chart toolbar/table/export groups",
+      "declaration": "Canonical ChartCard and localized data-column alternatives; shared implementation not fully audited",
+      "line": 28,
+      "endLine": 46
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\continuation-driving-primary\\ScoreTrendChart.tsx",
+      "name": "Trend legend/annotations",
+      "declaration": "Four hiddenSeries controls, chartKey/chartId drive-score-trend, selected vehicle/scope efficiency. Existing mutation UI only declared; none executed",
+      "line": 45,
+      "endLine": 70
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\score-orchestrator\\ScoreHeroSection.tsx",
+      "name": "Contextual help",
+      "declaration": "Localized HelpTooltip retained; explanatory truth DS03",
+      "line": 47,
+      "endLine": 54
+    }
+  ],
+  "populations": {
+    "scored": "Filtered drives with measured finite distance>=1000m, positive Wh, nonnegative avgW/maxmps",
+    "periodStats": "Physical facts from filtered drives; score counts from admitted cohort",
+    "filtered": "Returned rows passing date-only local filter, not all server records",
+    "trend": "Explicit last20 chronological admitted subset; not itself an unauthorized sampling finding",
+    "server": "Independent vehicle-keyed score; coverage/computation/denominator contract unverified",
+    "exports": "Eleven raw SI fields in loaded scored rows, never whole-result claim",
+    "returned": "Hook payload; absent caller options means documented default50 page, not whole range",
+    "averages": "Arithmetic score means over admitted cohort, caps40/30/30; intensity=total admittedWh/total admittedmeters",
+    "achievements": "Three counts filtered, other checks scored: DS02",
+    "histogram": "Five bins over admitted scores",
+    "provenance": "DataStates historical; brief explicitly distinguishes computed returned cohort from independent assessment. Fetch success is not observation/complete coverage."
+  },
+  "unitsUnknown": {
+    "display": "Existing useUnits distance/speed/power; Wh/km to Wh/mi x1.609344 at render/model display boundary; no wire/cache conversion",
+    "unknown": "knownNumber and hasDrives protect public score readings from internal empty-average zeros; missing duration remains dash",
+    "signs": "No raw abs conversion; domain signed admission remains DC01, comparison sign loss DS07",
+    "displayPreferences": "Locale formatter used for efficiency/percentage, tile bypass DS14. Fixed Efficiency(Wh/km) label on dimensionless subscore needs source/copy qualification, not a claimed real unit incident.",
+    "rawSI": [
+      "meters",
+      "seconds",
+      "Wh",
+      "W",
+      "m/s"
+    ]
+  },
+  "states": {
+    "connectivity": "Paused is not verified device offline",
+    "initialPaused": "DS05: no-data pending presented as loading",
+    "unknown": "Null readings retained except unknown trend DS04, zero-bucket identity DS09",
+    "loading": "Persistent Skeleton bodies; no global loading/error wipes independent neighbors",
+    "fatal": "Only fatalError replaces source body; score/history failures independently noticed",
+    "empty": "Panel shells remain, selected-vehicle and score-empty messages; physical-statistic emptiness DS11",
+    "retry": "Both-source header and source-local section/notices",
+    "retained": "Per-source StaleRefreshWarning/retry plus retained brief flag; retained data not erased"
+  },
+  "declarationReview": {
+    "mobile": "Reflow/min-w-0 declarations preserved; actual widths/RTL/zoom/theme/contrast/touch/focus NOTRUN",
+    "imports": "Shared category boundaries used; feature-local parts expected; direct recharts inside shared ChartAnnotationLayer is building-block exception",
+    "i18n": "183 literal calls /150 unique literal keys including help,0 missing canonical strings. Runtime loading/plurals/full guards/fallback parity NOTRUN",
+    "container": "PageLayout -> PageContainer confirmed; direct PageContainer regex0 is acceptable adapter, not missing-container",
+    "a11y": "Localized Refresh, named sections, decorative hidden icons, chart text/table alternatives declared. Comparison direction DS07 and mobile data preservation DS06 violate source contract",
+    "tokens": "16 raw palette literal matches => one mechanism DS10; one max-width geometry candidate DC04; dynamic/API props not static-inline violations",
+    "observability": "No page fetch/useEffect/EventSource/RUM bootstrap in 29-file scan. No backend telemetry or runtime audit."
+  },
+  "gates": {
+    "testExecuted": 0,
+    "native": "NOTRUN",
+    "globalTypeScript": "NOTRUN",
+    "screenshots": "NOTRUN",
+    "testFailed": null,
+    "supportedRuntimeExecution": "NOTRUN",
+    "build": "NOTRUN",
+    "testDiscovered": null,
+    "backend": "NOTRUN",
+    "mutation": "NOTRUN",
+    "API": "NOTRUN",
+    "runtime": "NOTRUN",
+    "pagePASS": "NOTRUN",
+    "tests": "NOTRUN",
+    "device": "NOTRUN",
+    "lint": "NOTRUN",
+    "testSkipped": null,
+    "browser": "NOTRUN",
+    "testPassed": null,
+    "Phase7": "NOTRUN"
+  },
+  "limits": [
+    "Source-only conditions, not actual drive/location/identity/API incidents. No data/API/device/mutation/browser access.",
+    "Only report and ignored raw log written. Source/tests/catalog/backend/config/queue/handoff read-only. No Git/subagents/installs/server/Docker/customhelpers/extensions/heartbeats.",
+    "44 relevant production source pins; local29 fully reviewed, supporting modules selected ranges only. No repository-wide clean-worktree claim.",
+    "Documented list default50/cap1000 are hook evidence, not live backend observations. Server scoring coverage/range/units/sign policy remains unverified.",
+    "C07 missing guessed chartUtils path produced nonterminating error despite exit0; C08 actual ChartAnnotationLayer recovered. C09 case-insensitive native HTML and C12 presentation count corrected with originals retained.",
+    "C16 host command launch failed exit1 due command length; no source/report write occurred. Bounded report commands recovered; no helper or permission workaround.",
+    "Literal canonical key lookup only, not runtime i18n/full guard/translation parity.",
+    "No browser lock; parent5173 untouched/unprobed. Later authorized browser must use installed Edge msedge with explicit lock, no downloads.",
+    "Mission43-45 complete responsive/theme/extreme-data/a11y/keyboard/focus/contrast/forced-colors/reduced-motion/native/page and application acceptance remain NOTRUN/open. Earlier tests/build/TSC receipts historical, not rerun.",
+    "No Phases0-5 restart; accepted source kept. Findings/candidates require parent-managed exact new leases, not unauthorized fixes."
+  ],
+  "authorityInventory": [
+    {
+      "file": "docs\\orchestrator-loop.md",
+      "lineCount": 296,
+      "sha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767"
+    },
+    {
+      "file": "docs\\frontend-design-contract.md",
+      "lineCount": 2539,
+      "sha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E"
+    },
+    {
+      "file": "docs\\frontend-mission.md",
+      "lineCount": 1593,
+      "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F"
+    },
+    {
+      "file": "docs\\session-handoff.md",
+      "lineCount": 2460,
+      "sha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2"
+    },
+    {
+      "file": ".github\\instructions\\frontend-si-cutover.instructions.md",
+      "lineCount": 94,
+      "sha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4"
+    },
+    {
+      "file": ".github\\instructions\\react-frontend.instructions.md",
+      "lineCount": 629,
+      "sha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E"
+    },
+    {
+      "file": ".github\\instructions\\observability.instructions.md",
+      "lineCount": 45,
+      "sha256": "B56E5B2639AC71DC6C7755E943EAE19DCE41A4BD372B00304819D99472301A42"
+    },
+    {
+      "file": ".github\\instructions\\unit-conversion.instructions.md",
+      "lineCount": 221,
+      "sha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315"
+    }
+  ],
+  "finalPinVerification": {
+    "limits": "Relevant source pins only, not global worktree/Git acceptance",
+    "sha256AndLineMismatches": 0,
+    "sourceUnchangedSincePins": true,
+    "sourceFiles": 44,
+    "utc": "2026-10-14T01:23:36.1348208Z"
+  },
+  "commandSummary": {
+    "numericExitZeroCount": 27,
+    "nonterminatingPartialCheckCount": 1,
+    "nativeCommandCount": 28,
+    "notRun": [
+      "tests",
+      "lint",
+      "build",
+      "global TSC",
+      "browser",
+      "API",
+      "Git",
+      "device",
+      "mutation"
+    ],
+    "numericExitOneCount": 1,
+    "failure": "C16 host command length launch failure, recovered in bounded C17-19; C07 exit0 missing guessed path honestly partial and recovered C08",
+    "toolViewReads": "Readonly range reads; not native check commands"
+  }
+}

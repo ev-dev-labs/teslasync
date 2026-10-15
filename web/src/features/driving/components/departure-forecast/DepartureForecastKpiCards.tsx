@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { DepartureForecast } from '../../lib/departureForecast';
 import {
   departureClock,
@@ -19,6 +19,7 @@ import {
   relativeDepartureLabel,
 } from './labels';
 import type { DepartureForecastQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 2, md: 3, xl: 6 } as const;
 
@@ -35,6 +36,7 @@ export function DepartureForecastKpiCards({
   locale,
   timeZone,
 }: DepartureForecastKpiCardsProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const ready = state.isResolved && !state.error;
   const hasEvidence = ready && forecast.totalDepartures > 0;
@@ -107,7 +109,7 @@ export function DepartureForecastKpiCards({
           'Peak modeled likelihood',
         )}
         value={
-          peak ? `${fmtNumber(peak.p * 100, 1, locale)}%` : unavailable
+          peak ? `${fmtNumber(peak.p * 100, undefined, locale)}%` : unavailable
         }
         subtitle={
           peak
@@ -128,7 +130,7 @@ export function DepartureForecastKpiCards({
         )}
         value={
           horizon != null
-            ? `${fmtNumber(horizon * 100, 1, locale)}%`
+            ? `${fmtNumber(horizon * 100, undefined, locale)}%`
             : unavailable
         }
         subtitle={
@@ -196,7 +198,7 @@ export function DepartureForecastKpiCards({
         )}
         value={
           evidence
-            ? `${fmtNumber(evidence.value * 100, 0, locale)}%`
+            ? `${fmtNumber(evidence.value * 100, undefined, locale)}%`
             : unavailable
         }
         subtitle={

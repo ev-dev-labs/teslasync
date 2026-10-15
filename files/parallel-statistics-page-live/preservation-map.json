@@ -1,0 +1,30 @@
+{
+  "baseline": {
+    "page": "web/src/features/analytics/pages/StatisticsPage.tsx",
+    "sha256": "A0EE427CEFDFABF55AE3159FCB62059EE37E853D440C72F68A7308271B9D0DFC",
+    "lines": 391,
+    "existingTestSha256": "B1B4C96B387D2E1658494613D8706D110B1167AE0DE9D4EDA83031597B6F66FB",
+    "exactBytes": "StatisticsPage.baseline.tsx",
+    "existingTestBytes": "StatisticsPage.test.baseline.tsx"
+  },
+  "sources": [
+    {"id":"period","url":"/analytics/period-stats?vehicle_id=${activeId}","router":"r.Get(\"/analytics/period-stats\", periodStatsHandler.Get)","key":["period-stats","activeId"],"enabled":"!!activeId","scope":"no date bounds supplied; do not infer lifetime or completeness","existingInlineQuery":"preserve; no existing period hook and shared API writes outside lease"},
+    {"id":"battery","hook":"useBatteryHealthAnalytics(activeId || null)","url":"/analytics/battery-health?vehicle_id=${vehicleId}","router":"r.Get(\"/analytics/battery-health\", batteryDegradationHandler.Health)"},
+    {"id":"mileage","hook":"useMileageStats(activeId)","url":"/mileage/stats?vehicle_id=...","router":"r.Route(\"/mileage\") -> r.Get(\"/stats\", mileageHandler.Stats)"},
+    {"id":"state","hook":"useStateSummary(activeId)","url":"/vehicle-states/summary?vehicle_id=...","router":"r.Route(\"/vehicle-states\") -> r.Get(\"/summary\", vehicleStatesHandler.Summary)","note":"route exists in current inherited source; hook deprecation text stale"},
+    {"id":"fleet","hook":"useFleetAnalytics({ start: startDate, end: endDate })","url":"/analytics/fleet?start=...&end=...","router":"r.Get(\"/analytics/fleet\", analyticsHandler.Fleet)"}
+  ],
+  "sections": [
+    {"id":"totals","metrics":["total_distance: fmtInt(fromKm(value ?? 0)) + distanceUnit","total_drives: fmtInt(value ?? 0)","energy_used: fmtNumber(value ?? 0) + kWh","total_cost: formatCurrency(value ?? 0)","co2_saved: fmtNumber(value ?? 0) + kg"],"destination":"PeriodStatistics.tsx"},
+    {"id":"averages","metrics":["avgDriveDistance: total_drives > 0 ? (total_distance ?? 0) / total_drives : 0; fmtNumber(fromKm(...))","avg_efficiency: fmtNumber(whPerKmToDisplay(value ?? 0)) + efficiencyUnit","costPerKm: distance > 0 ? formatCurrency((total_cost ?? 0) / total_distance) : em dash"],"destination":"PeriodStatistics.tsx"},
+    {"id":"battery","metrics":["health: Math.round(current_soh ?? 0), max 100, % LinearGauge","estimated_capacity_wh: formatEnergy(value ?? 0)","degradation_rate_pct_per_year: fmtNumber(value ?? 0) + %/yr","total_cycles: fmtInt(value ?? 0)","battery_age_months: value ?? 0 + mo"],"destination":"BatteryStatistics.tsx"},
+    {"id":"state","metrics":["totalMin ?? total_min ?? 0; sum denominator Math.max(total, 1); percent Math.round(minutes / denominator * 100)","name: e.state","fill: STATE_COLORS[e.state] ?? palette[5]"],"capabilities":["Pie/PieChart/Cell","Legend","ChartTooltip","innerRadius 50 / outerRadius 90 / paddingAngle 3","exportFilename state-distribution","height 280","existing ChartContainer semantics/fullscreen/export"],"destination":"StatisticsPage.tsx"},
+    {"id":"mileage","metrics":["lifetime_km: fmtInt(fromKm(value ?? 0))","last_30d_km: fmtNumber(fromKm((value ?? 0) / 30))","drive_count_lifetime: fmtInt(value ?? 0)","yearlyProjection: fmtInt(fromKm(((last_30d_km ?? 0) / 30) * 365))"],"destination":"MileageStatistics.tsx"},
+    {"id":"fleet","metrics":["v.name ?? Vehicle ${v.id}","distance: Math.round(fromKm(v.distance))","energy: Math.round(v.energy)"],"capabilities":["compData.length > 1","BarChart/chartGrid/XAxis name/YAxis/ChartTooltip","ChartLegend fleetCompareHidden","distance fill palette[0] and energy fill palette[1]","hide distance/energy with existing isHidden","radius [4,4,0,0]","chartKey fleet-vehicle-comparison","exportFilename vehicle-comparison","height 300","existing ChartContainer semantics/fullscreen/export"],"destination":"StatisticsPage.tsx"}
+  ],
+  "actionsAndIdentity": ["usePageTitle statistics.title","existing statistics.subtitle wording preserved; not scope evidence","DataFreshnessAuto query=statsQuery","refresh void refetch()","SavedViewMenu route /statistics currentQuery/apply","empty drives link /drives","empty fleet link /vehicles","statistics.range defaultPresetId 1y","useSelectedVehicle single header owner","useHiddenSeries fleet-vehicle-comparison","useChartPalette reactive preferences","fromKm SI conversion METERS_PER_KM=1000","whPerKmToDisplay KM_PER_MILE=1.609344","all existing empty messages/descriptions/icons"],
+  "statDecision": "Retain specialist MetricCard and LinearGauge renderers: generic equivalence for source fallback-zero behavior, formatting/units, per-km currency and suffixes is not proven. Do not introduce guessed alltime/analysis provenance.",
+  "tables": "No source table/record-selection/filter/paging/brush subtree exists in this baseline. Existing chart capability owners remain intact; do not invent or remove tables.",
+  "plannedDelta": "PageLayout/Section/CardGrid/LayoutCard; charts retain original ChartContainer via placement wrapper; cohesive metric extracts; errors nonfatal when source retains data; state source gains explicit error/retry without gating independent sources.",
+  "validation": {"semantic":"NOTRUN","runtime":"NOTRUN","typescript":"NOTRUN parent serialized validation","originalTests":"read-only"}
+}

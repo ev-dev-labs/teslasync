@@ -48,7 +48,8 @@ const driveColumns = `id, vehicle_id, started_at, ended_at, duration_s, distance
 	start_place, end_place, start_lat, start_lng, end_lat, end_lng,
 	start_soc_pct, end_soc_pct,
 	energy_used_wh, regen_energy_wh, avg_speed_mps, max_speed_mps, avg_power_w,
-	ambient_temp_c_avg, start_geofence_id, end_geofence_id`
+	ambient_temp_c_avg, start_geofence_id, end_geofence_id,
+	start_odometer_m, end_odometer_m`
 
 // scanDrive scans the SI canonical column list into a drivemodel.Drive. No unit
 // conversion is performed — both struct and DB are SI canonical.
@@ -66,6 +67,7 @@ func scanDrive(row interface{ Scan(dest ...any) error }) (*drivemodel.Drive, err
 		&startSocPct, &endSocPct,
 		&d.EnergyUsedWh, &d.RegenEnergyWh, &d.AvgSpeedMps, &d.MaxSpeedMps, &d.AvgPowerW,
 		&d.OutsideTempAvgC, &d.StartGeofenceID, &d.EndGeofenceID,
+		&d.StartOdometerM, &d.EndOdometerM,
 	)
 	if err != nil {
 		return nil, err

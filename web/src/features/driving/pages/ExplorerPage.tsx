@@ -3,10 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
-import { FadeIn } from '@/components/motion';
+import { Grid, PageLayout } from '@/components/layout';
+import { AlertBanner, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { Button, Text } from '@/components/ui';
+import { useDataState } from '@/hooks/useDataState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 
@@ -37,9 +40,11 @@ export default function ExplorerPage() {
   const vehicleIdString =
     vehicleId != null ? String(vehicleId) : undefined;
   const { formatDistance } = useUnits();
+  const { startInstant, endInstantExclusive } = useRangeState();
   const historyQuery = useDriveHistory(
     vehicleIdString,
     EXPLORER_HISTORY_LIMIT,
+    { start: startInstant, end: endInstantExclusive },
   );
   const summary = useMemo(
     () =>
@@ -48,6 +53,7 @@ export default function ExplorerPage() {
       }),
     [historyQuery.data],
   );
+  const sourceState = useDataState(historyQuery, { provenance: 'historical' });
 
   if (vehicleId == null) {
     return (
@@ -58,78 +64,100 @@ export default function ExplorerPage() {
   }
 
   const sectionState: ExplorerSectionState = {
-    isLoading: historyQuery.isLoading,
-    error: historyQuery.isError ? historyQuery.error : null,
+    isLoading: sourceState.status === 'initial',
+    error: sourceState.fatalError,
     onRetry: () => {
       void historyQuery.refetch();
     },
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('explorer.title', 'Explorer')}
       subtitle={t(
         'explorer.subtitle',
         'How far and how wide your car actually roams',
       )}
       query={historyQuery}
+      busy={(sectionState.isLoading && !sourceState.isRefreshBlocked) || sourceState.isRefreshing}
     >
-      <FadeIn>
+      {sourceState.status === 'initial' && sourceState.isRefreshBlocked ? (
+        <AlertBanner
+          variant="info"
+          role="status"
+          data-refresh-blocked
+          title={t('dataSources.status.paused', 'Refresh paused')}
+        >
+          <Text as="p" variant="bodySm" color="secondary">
+            {t('explorer.brief.pending', 'Located-arrival evidence is not available yet.')}
+          </Text>
+          <Button variant="ghost" size="sm" onClick={sectionState.onRetry}>
+            {t('common.refresh', 'Refresh')}
+          </Button>
+        </AlertBanner>
+      ) : null}
+      <StaleRefreshWarning state={sourceState} label={t('explorer.title', 'Explorer')} />
+      <SectionErrorBoundary name="ExplorerKpis">
         <ExplorerKpis
           summary={summary}
           state={sectionState}
           formatDistance={formatDistance}
+          retained={sourceState.status === 'stale' || sourceState.refreshError != null}
         />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.05}>
-        <Grid cols={PRIMARY_COLUMNS} gap={4}>
+      <Grid cols={PRIMARY_COLUMNS} gap={4}>
+        <SectionErrorBoundary name="ExplorerDestinationDirectory">
           <DestinationDirectory
             summary={summary}
             state={sectionState}
             formatDistance={formatDistance}
             className="xl:col-span-3"
           />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="ExplorerNewRepeatBehavior">
           <NewRepeatBehavior
             summary={summary}
             state={sectionState}
             className="xl:col-span-2"
           />
-        </Grid>
-      </FadeIn>
+        </SectionErrorBoundary>
+      </Grid>
 
-      <FadeIn delay={0.1}>
+      <SectionErrorBoundary name="ExplorerMonthlyExplorationChart">
         <MonthlyExplorationChart
           summary={summary}
           state={sectionState}
         />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.15}>
-        <Grid cols={EVEN_COLUMNS} gap={4}>
+      <Grid cols={EVEN_COLUMNS} gap={4}>
+        <SectionErrorBoundary name="ExplorerDistanceBandsChart">
           <DistanceBandsChart
             summary={summary}
             state={sectionState}
             formatDistance={formatDistance}
           />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="ExplorerDestinationRankings">
           <DestinationRankings
             summary={summary}
             state={sectionState}
             formatDistance={formatDistance}
           />
-        </Grid>
-      </FadeIn>
+        </SectionErrorBoundary>
+      </Grid>
 
-      <FadeIn delay={0.2}>
+      <SectionErrorBoundary name="ExplorerEvidenceCoverage">
         <EvidenceCoverage summary={summary} state={sectionState} />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.25}>
+      <SectionErrorBoundary name="ExplorerMethodology">
         <ExplorerMethodology
           summary={summary}
           state={sectionState}
         />
-      </FadeIn>
-    </PageContainer>
+      </SectionErrorBoundary>
+    </PageLayout>
   );
 }

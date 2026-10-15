@@ -24,14 +24,17 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import '../components/operationalbrief-all/metricPreferencesTestSetup';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import english from '@/i18n/en.json';
 
 import { ToastProvider } from '@/components/feedback/Toast';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
 import type { SignalDiffRow, SignalDiffServerResponse } from '@/api/hooks/useTelemetry';
+import { typography } from '@/lib/tokens';
 
 // ── Hoisted, per-test controllable state ─────────────────────────────
 const h = vi.hoisted(() => ({
@@ -39,12 +42,14 @@ const h = vi.hoisted(() => ({
   signals: [] as string[],
   pinnedItems: [] as Array<{ item_id: string }>,
   diff: undefined as unknown,
+  pins: undefined as unknown,
 }));
 
 const mockNavigate = vi.fn();
 const mockRefetch = vi.fn();
 const mockToggleMutateAsync = vi.fn();
 const diffArgs = vi.fn();
+const diffTableRows = vi.fn();
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -122,17 +127,16 @@ vi.mock('@/api/hooks/usePinned', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/usePinned')>();
   return {
     ...actual,
-    usePinned: () => ({ data: h.pinnedItems }),
+    usePinned: () => h.pins ?? ({ data: h.pinnedItems }),
     useTogglePin: () => ({ mutateAsync: mockToggleMutateAsync }),
   };
 });
 
 // SavedViewMenu fires its own saved-views query; stub it so the header stays
-// network-free. MetricCard + BulkActionsToolbar stay real.
-vi.mock('@/components/data-display', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/components/data-display')>();
-  return { ...actual, SavedViewMenu: () => <div data-testid="saved-view-menu" /> };
-});
+// network-free. OperationalBrief + BulkActionsToolbar stay real.
+vi.mock('@/components/data-display/SavedViewMenu', () => ({
+  SavedViewMenu: () => <div data-testid="saved-view-menu" />,
+}));
 
 // The two heavy child bands are stubbed to thin harnesses that surface the
 // props the page threads into them (row counts, filter/selection/error state)
@@ -143,38 +147,53 @@ vi.mock('../components/SignalDiffTable', () => ({
     filterActive?: boolean;
     selectedSignals: string[];
     onSelectionChange: (s: string[]) => void;
-  }) => (
-    <div
-      data-testid="signal-diff-table"
-      data-rows={props.rows.length}
-      data-filter-active={String(Boolean(props.filterActive))}
-      data-selected={props.selectedSignals.join(',')}
-    >
-      <button type="button" onClick={() => props.onSelectionChange(['battery_level'])}>
-        stub-select-one
-      </button>
-      <button type="button" onClick={() => props.onSelectionChange(['battery_level', 'vehicle_speed'])}>
-        stub-select-two
-      </button>
-    </div>
-  ),
+  }) => {
+    diffTableRows(props.rows);
+    return (
+      <div
+        data-testid="signal-diff-table"
+        data-rows={props.rows.length}
+        data-filter-active={String(Boolean(props.filterActive))}
+        data-selected={props.selectedSignals.join(',')}
+      >
+        <button type="button" onClick={() => props.onSelectionChange(['battery_level'])}>
+          stub-select-one
+        </button>
+        <button type="button" onClick={() => props.onSelectionChange(['battery_level', 'vehicle_speed'])}>
+          stub-select-two
+        </button>
+      </div>
+    );
+  },
 }));
 
 vi.mock('../components/SignalDiffBreakdown', () => ({
   SignalDiffBreakdown: (props: {
     rows: SignalDiffRow[];
     loading?: boolean;
+    unknown?: boolean;
+    pinnedLoading?: boolean;
+    pinnedState?: { hasData: boolean; fatalError: unknown; refreshError: unknown };
     error?: unknown;
     onRetry?: () => void;
+    onClearFilters?: () => void;
   }) => (
     <div
       data-testid="signal-diff-breakdown"
       data-rows={props.rows.length}
       data-loading={String(Boolean(props.loading))}
+      data-unknown={String(Boolean(props.unknown))}
+      data-pinned-loading={String(Boolean(props.pinnedLoading))}
+      data-pinned-known={String(Boolean(props.pinnedState?.hasData))}
+      data-pinned-error={String(Boolean(props.pinnedState?.fatalError))}
+      data-pinned-retained={String(Boolean(props.pinnedState?.refreshError))}
       data-error={String(Boolean(props.error))}
     >
       <button type="button" onClick={() => props.onRetry?.()}>
         stub-breakdown-retry
+      </button>
+      <button type="button" onClick={() => props.onClearFilters?.()}>
+        stub-clear-filters
       </button>
     </div>
   ),
@@ -186,6 +205,15 @@ vi.mock('@/lib/csvExport', async (importOriginal) => {
 });
 
 import SignalDiffPage, { toNum, formatSpan } from './SignalDiffPage';
+
+it('offers keyboard-accessible snapshot comparison help even when the source fails', () => {
+  h.diff = makeQuery({ isError: true, error: new Error('diff failed') });
+  renderPage();
+  const help = screen.getByRole('button', { name: 'Signal differences' });
+  help.focus();
+  expect(help).toHaveFocus();
+  expect(help).toHaveAccessibleDescription(english.help.signal.diff);
+});
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 const ROWS: SignalDiffRow[] = [
@@ -204,6 +232,7 @@ interface QueryStub {
   isStale: boolean;
   dataUpdatedAt: number;
   refetch: () => void;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
 }
 
 function makeQuery(overrides: Partial<QueryStub> = {}): QueryStub {
@@ -228,6 +257,11 @@ function diffResponse(rows: SignalDiffRow[]): SignalDiffServerResponse {
 // the diff query is "enabled" and the empty-state guard can fire.
 const ROUTE = '/telemetry/signal-diff?vehicle=7&a=2024-01-01T00:00&b=2024-01-01T01:00';
 
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location-search">{location.search}</output>;
+}
+
 function renderPage(route = ROUTE) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -237,18 +271,28 @@ function renderPage(route = ROUTE) {
       <ToastProvider>
         <MemoryRouter initialEntries={[route]}>
           <SignalDiffPage />
+          <LocationProbe />
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>,
   );
 }
 
-/** Read the value paragraph of the MetricCard whose label is `label`. */
+function deferredMutation() {
+  let resolve!: () => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<void>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  return { promise, resolve, reject };
+}
+
+/** Read the actual OperationalBrief value whose label is `label`. */
 function kpiValueText(label: string): string {
-  const card = screen.getByText(label).closest('div.flex-1');
+  const card = screen.getByText(label).closest('[data-operational-metric]');
   if (!card) throw new Error(`no metric card for "${label}"`);
-  const paragraphs = card.querySelectorAll('p');
-  return paragraphs[1]?.textContent ?? '';
+  return card.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -262,6 +306,7 @@ beforeEach(() => {
   h.signals = ['battery_level', 'vehicle_speed', 'charge_state', 'climate_keeper_mode'];
   h.pinnedItems = [{ item_id: 'signal:battery_level' }];
   h.diff = makeQuery({ data: diffResponse(ROWS) });
+  h.pins = undefined;
 });
 
 afterEach(() => {
@@ -271,10 +316,146 @@ afterEach(() => {
 /* ── Page render ─────────────────────────────────────────────────── */
 
 describe('SignalDiffPage', () => {
+  it('forwards paused sources as unknown, not loading or resolved empty', () => {
+    h.diff = makeQuery({ fetchStatus: 'paused', isLoading: true });
+    h.pins = { fetchStatus: 'paused', isPending: true };
+    renderPage();
+    const breakdown = screen.getByTestId('signal-diff-breakdown');
+    expect(breakdown).toHaveAttribute('data-unknown', 'true');
+    expect(breakdown).toHaveAttribute('data-loading', 'false');
+    expect(breakdown).toHaveAttribute('data-pinned-loading', 'false');
+    expect(breakdown).toHaveAttribute('data-pinned-known', 'false');
+    expect(kpiValueText('Changed signals')).toBe('—');
+    expect(kpiValueText('Pinned')).toBe('—');
+    expect(screen.queryByText('No signals changed between the two snapshots')).not.toBeInTheDocument();
+  });
+
+  it('does not report cached zero as resolved when snapshot prerequisites are invalid', () => {
+    h.diff = makeQuery({ data: diffResponse([]) });
+    renderPage('/signal-diff?vehicle=7&a=invalid&b=2024-01-01T01:00');
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-unknown', 'true');
+    expect(kpiValueText('Changed signals')).toBe('—');
+    expect(diffArgs.mock.calls.at(-1)?.[0]).toMatchObject({ options: { enabled: false } });
+  });
+
+  it('wires independent pin loading, retained failure and recovery', () => {
+    h.pins = { isFetching: true, isLoading: true, fetchStatus: 'fetching' };
+    const view = renderPage();
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-pinned-loading', 'true');
+    expect(kpiValueText('Changed signals')).toBe('4');
+    h.pins = { data: h.pinnedItems, error: new Error('pins refresh failed'), refetch: mockRefetch };
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider><MemoryRouter initialEntries={[ROUTE]}><SignalDiffPage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-pinned-retained', 'true');
+    expect(kpiValueText('Pinned')).toBe('1');
+    h.pins = { data: [], fetchStatus: 'idle' };
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider><MemoryRouter initialEntries={[ROUTE]}><SignalDiffPage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-pinned-retained', 'false');
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-pinned-known', 'true');
+    expect(kpiValueText('Pinned')).toBe('0');
+  });
+
+  it('uses neutral shared decorative icons without changing comparison actions', () => {
+    renderPage();
+    const heading = screen.getByRole('heading', { name: /^Signal differences/ });
+    const icon = heading.querySelector('svg');
+    expect(icon).toHaveClass(typography.color.muted);
+    expect(icon).not.toHaveClass('text-cyan-300');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveAttribute('focusable', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    for (const action of ['Pin selected', 'Unpin selected', 'Add as alert rule']) {
+      expect(screen.getByRole('button', { name: action }).querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
+  it.each([
+    { caseName: 'unresolved response', route: ROUTE, noVehicles: false },
+    { caseName: 'missing vehicle', route: '/signal-diff?a=2024-01-01T00:00&b=2024-01-01T01:00', noVehicles: true },
+    { caseName: 'invalid snapshot', route: '/signal-diff?vehicle=7&a=invalid&b=2024-01-01T01:00', noVehicles: false },
+  ])('keeps $caseName unknown instead of asserting no changes', ({ route, noVehicles }) => {
+    h.diff = makeQuery();
+    if (noVehicles) h.vehicles = [];
+    renderPage(route);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('No signals changed between the two snapshots')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('signal-diff-table')).not.toBeInTheDocument();
+    expect(kpiValueText('Changed signals')).toBe('—');
+    expect(kpiValueText('Pinned')).toBe(noVehicles ? '—' : '1');
+    expect(screen.getByTestId('signal-diff-breakdown')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Vehicle' })).toBeInTheDocument();
+  });
+
+  it('forwards raw values, nulls, types and source ages unchanged to the detail table', () => {
+    const rawRows: SignalDiffRow[] = [
+      { name: 'vehicle_speed', value_a: 0, value_b: 13.75, source_a: 'log', source_b: 'stale', age_ms_a: 1500, age_ms_b: 180000, changed: true },
+      { name: 'battery_level', value_a: null, value_b: ' 0 ', source_a: undefined, source_b: 'l2', changed: true },
+      { name: 'climate_keeper_mode', value_a: false, value_b: { mode: 'On' }, source_a: 'l1', source_b: 'log', changed: true },
+    ];
+    h.diff = makeQuery({ data: diffResponse(rawRows) });
+    renderPage();
+    expect(diffTableRows.mock.calls.at(-1)?.[0]).toBe(rawRows);
+    expect(diffTableRows.mock.calls.at(-1)?.[0]).toEqual([
+      { name: 'vehicle_speed', value_a: 0, value_b: 13.75, source_a: 'log', source_b: 'stale', age_ms_a: 1500, age_ms_b: 180000, changed: true },
+      { name: 'battery_level', value_a: null, value_b: ' 0 ', source_a: undefined, source_b: 'l2', changed: true },
+      { name: 'climate_keeper_mode', value_a: false, value_b: { mode: 'On' }, source_a: 'l1', source_b: 'log', changed: true },
+    ]);
+    expect(diffArgs.mock.calls.at(-1)?.[0]).toMatchObject({
+      vehicleId: 7,
+      signalsCsv: 'battery_level,vehicle_speed,charge_state,climate_keeper_mode',
+      options: { enabled: true },
+    });
+  });
+
+  it('keeps retained diff metrics, breakdown and rows through refresh failure', () => {
+    h.diff = makeQuery({ data: diffResponse(ROWS), isError: true, error: new Error('refresh failed') });
+    renderPage();
+    expect(kpiValueText('Changed signals')).toBe('4');
+    expect(kpiValueText('Numeric changes')).toBe('2');
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-rows', '4');
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '4');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+    const brief = screen.getByTestId('signal-diff-page-summary');
+    expect(brief).toHaveTextContent('Retained source data');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('All returned changed rows before name and category filters.');
+    expect(drawer).toHaveTextContent('Independent saved pins for this vehicle');
+    expect(drawer).toHaveTextContent('not a sample coverage duration');
+    expect(within(drawer).getByText('Window span')).toBeInTheDocument();
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '4');
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('recovers a retained diff refresh failure to confirmed zero changes', () => {
+    h.diff = makeQuery({ data: diffResponse(ROWS), error: new Error('refresh failed'), isError: true });
+    const view = renderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-error', 'false');
+    h.diff = makeQuery({ data: diffResponse([]) });
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider><MemoryRouter initialEntries={[ROUTE]}><SignalDiffPage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(kpiValueText('Changed signals')).toBe('0');
+    expect(screen.getByText('No signals changed between the two snapshots')).toBeInTheDocument();
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-unknown', 'false');
+  });
   it('renders the header, KPI band, and derived counts when the diff resolves', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Signal Diff' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Signal diff' })).toBeInTheDocument();
     expect(
       screen.getByText('Compare signal values between two snapshots in time'),
     ).toBeInTheDocument();
@@ -320,7 +501,7 @@ describe('SignalDiffPage', () => {
     expect(kpiValueText('Window span')).toBe('1h');
 
     // Table band shows the six skeleton rows; no table stub leaks through.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(6);
+    expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThanOrEqual(6);
     expect(screen.queryByTestId('signal-diff-table')).not.toBeInTheDocument();
     expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-loading', 'true');
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
@@ -397,6 +578,89 @@ describe('SignalDiffPage', () => {
     expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-filter-active', 'false');
   });
 
+  it('clears both filters atomically while preserving the comparison and unrelated URL state', async () => {
+    renderPage(`${ROUTE}&q=missing&cat=battery&keep=retained`);
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '0');
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    const comparison = diffArgs.mock.lastCall?.[0];
+    diffArgs.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: 'stub-clear-filters' }));
+
+    await waitFor(() => expect(kpiValueText('Visible after filter')).toBe('4'));
+    const params = new URLSearchParams(screen.getByTestId('location-search').textContent ?? '');
+    expect(params.has('q')).toBe(false);
+    expect(params.has('cat')).toBe(false);
+    expect(params.get('vehicle')).toBe('7');
+    expect(params.get('a')).toBe('2024-01-01T00:00');
+    expect(params.get('b')).toBe('2024-01-01T01:00');
+    expect(params.get('keep')).toBe('retained');
+    expect(screen.getByLabelText('Filter signals')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Battery' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-filter-active', 'false');
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-rows', '4');
+    expect(kpiValueText('Numeric changes')).toBe('2');
+    expect(kpiValueText('Changed signals')).toBe('4');
+    for (const [args] of diffArgs.mock.calls) expect(args).toEqual(comparison);
+  });
+
+  it('labels the selected CSV download accurately and preserves its filename and schema', async () => {
+    expect(english.signalDiff.bulk.csv).toBe('Download CSV');
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+
+    expect(screen.queryByRole('button', { name: 'Copy CSV' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
+
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledWith(
+      'signal-diff-vehicle-7.csv', 'MOCK_CSV',
+    ));
+    expect(downloadCSV).toHaveBeenCalledTimes(1);
+    expect(objectsToCSV).toHaveBeenCalledWith([
+      { signal: 'battery_level', window_a: 80, window_b: 75, source_a: undefined, source_b: 'l1' },
+    ]);
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+  });
+
+  it.each([
+    { label: 'missing', a: null, b: undefined, cells: ',' },
+    { label: 'missing versus measured zero', a: null, b: 0, cells: ',0' },
+    { label: 'false versus missing', a: false, b: undefined, cells: 'false,' },
+    { label: 'measured zero and false', a: 0, b: false, cells: '0,false' },
+    { label: 'signed fractions', a: -3.5, b: 0.125, cells: '-3.5,0.125' },
+    { label: 'positive numbers', a: 3.5, b: 42, cells: '3.5,42' },
+    { label: 'invalid numeric inputs', a: '12abc', b: '', cells: '12abc,' },
+    { label: 'non-finite inputs', a: Number.NaN, b: Infinity, cells: 'NaN,Infinity' },
+    {
+      label: 'structured values',
+      a: { reading: 0, active: false, nested: { value: null } },
+      b: [0, false, null, -1.25],
+      cells: '"{""reading"":0,""active"":false,""nested"":{""value"":null}}","[0,false,null,-1.25]"',
+    },
+    { label: 'formula strings', a: '=1+1', b: '@SUM(A1)', cells: "'=1+1,'@SUM(A1)" },
+    { label: 'signed strings', a: '-3.5', b: '+0.125', cells: "'-3.5,'+0.125" },
+    { label: 'whitespace-prefixed formula', a: ' =1+1', b: false, cells: "' =1+1,false" },
+    { label: 'CSV quoting', a: 'a,"b"\nc', b: true, cells: '"a,""b""\nc",true' },
+  ])('exports $label through the existing serializer without lossy coercion', async ({ a, b, cells }) => {
+    const actual = await vi.importActual<typeof import('@/lib/csvExport')>('@/lib/csvExport');
+    vi.mocked(objectsToCSV).mockImplementation(actual.objectsToCSV);
+    h.diff = makeQuery({ data: diffResponse([
+      { name: 'battery_level', value_a: a, value_b: b, source_a: 'l1', source_b: 'log', changed: true },
+    ]) });
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
+
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledWith(
+      'signal-diff-vehicle-7.csv',
+      `signal,window_a,window_b,source_a,source_b\r\nbattery_level,${cells},l1,log`,
+    ));
+    expect(objectsToCSV).toHaveBeenCalledWith([
+      { signal: 'battery_level', window_a: a, window_b: b, source_a: 'l1', source_b: 'log' },
+    ]);
+  });
+
   it('surfaces the bulk toolbar on selection and wires CSV export + alert-rule nav', async () => {
     renderPage();
 
@@ -411,13 +675,13 @@ describe('SignalDiffPage', () => {
     );
 
     // CSV export builds the two-row payload and downloads it for this vehicle.
-    fireEvent.click(screen.getByRole('button', { name: 'Copy CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
     await waitFor(() =>
       expect(vi.mocked(downloadCSV)).toHaveBeenCalledWith('signal-diff-vehicle-7.csv', 'MOCK_CSV'),
     );
     expect(vi.mocked(objectsToCSV)).toHaveBeenCalledWith([
-      { signal: 'battery_level', window_a: '80', window_b: '75', source_a: '', source_b: 'l1' },
-      { signal: 'vehicle_speed', window_a: '0', window_b: '30', source_a: '', source_b: 'l1' },
+      { signal: 'battery_level', window_a: 80, window_b: 75, source_a: undefined, source_b: 'l1' },
+      { signal: 'vehicle_speed', window_a: 0, window_b: 30, source_a: undefined, source_b: 'l1' },
     ]);
 
     // Alert-rule action hands the selection to Alert Studio via navigation.
@@ -446,6 +710,162 @@ describe('SignalDiffPage', () => {
       }),
     );
     expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('exports and acts on all selected rows even when search and category hide them', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.change(screen.getByPlaceholderText('Filter signals…'), { target: { value: 'battery' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Battery' }));
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '1');
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Download CSV' }));
+    await waitFor(() => expect(objectsToCSV).toHaveBeenCalledWith([
+      { signal: 'battery_level', window_a: 80, window_b: 75, source_a: undefined, source_b: 'l1' },
+      { signal: 'vehicle_speed', window_a: 0, window_b: 30, source_a: undefined, source_b: 'l1' },
+    ]));
+    fireEvent.click(screen.getByRole('button', { name: 'Add as alert rule' }));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith(
+      '/alert-studio?signals=battery_level%2Cvehicle_speed&from=signal-diff',
+    ));
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    await waitFor(() => expect(mockToggleMutateAsync).toHaveBeenCalledWith({
+      itemId: 'signal:vehicle_speed', context: 'signal-diff:vehicle:7', pin: true,
+    }));
+  });
+
+  it.each(['vehicle', 'a', 'b'])('clears selection when the %s comparison scope changes', (field) => {
+    const { container } = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    if (field === 'vehicle') {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), { target: { value: '9' } });
+    } else {
+      const inputs = container.querySelectorAll('input[type="datetime-local"]');
+      fireEvent.change(inputs[field === 'a' ? 0 : 1], { target: { value: '2024-01-02T00:00' } });
+    }
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', '');
+    expect(screen.queryByText('2 selected')).not.toBeInTheDocument();
+  });
+
+  it.each(['vehicle', 'a', 'b'])('ignores stale pin completion after %s changes during pending work', async (field) => {
+    h.pinnedItems = [];
+    const pending = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(pending.promise);
+    const { container } = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level,vehicle_speed');
+    if (field === 'vehicle') {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), { target: { value: '9' } });
+    } else {
+      const inputs = container.querySelectorAll('input[type="datetime-local"]');
+      fireEvent.change(inputs[field === 'a' ? 0 : 1], { target: { value: '2024-01-02T00:00' } });
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    await act(async () => pending.resolve());
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+    expect(mockToggleMutateAsync).toHaveBeenCalledWith({
+      itemId: 'signal:battery_level', context: 'signal-diff:vehicle:7', pin: true,
+    });
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+    expect(screen.getByRole('button', { name: 'Pin selected' })).toBeEnabled();
+  });
+
+  it('does not revive old completion authority when the vehicle changes away and back', async () => {
+    h.pinnedItems = [];
+    const pending = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(pending.promise);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    const picker = screen.getByRole('combobox', { name: 'Vehicle' });
+    fireEvent.change(picker, { target: { value: '9' } });
+    fireEvent.change(picker, { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    await act(async () => pending.resolve());
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+  });
+
+  it('retains selection on rejection and clears it only after a matching successful retry', async () => {
+    const pending = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(pending.promise);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    expect(screen.getByRole('button', { name: 'Pin selected' })).toBeDisabled();
+    await act(async () => pending.reject(new Error('pin failed')));
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level,vehicle_speed');
+    expect(screen.getByRole('button', { name: 'Pin selected' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    await waitFor(() => expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', ''));
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not clear a changed selection on successful completion within the same scope', async () => {
+    const pending = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(pending.promise);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    await act(async () => pending.resolve());
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+  });
+
+  it.each([
+    { action: 'Pin selected', pin: true },
+    { action: 'Unpin selected', pin: false },
+  ])('clears a matching selection only after every $action write succeeds', async ({ action, pin }) => {
+    h.pinnedItems = pin ? [] : [
+      { item_id: 'signal:battery_level' }, { item_id: 'signal:vehicle_speed' },
+    ];
+    const first = deferredMutation();
+    const second = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: action }));
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+    await act(async () => first.resolve());
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level,vehicle_speed');
+    expect(mockToggleMutateAsync).toHaveBeenLastCalledWith({
+      itemId: 'signal:vehicle_speed', context: 'signal-diff:vehicle:7', pin,
+    });
+    await act(async () => second.resolve());
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', '');
+    expect(screen.queryByRole('region', { name: 'Bulk actions for selected items' })).not.toBeInTheDocument();
+  });
+
+  it('stops pending unpin work after a snapshot change without clearing the new selection', async () => {
+    h.pinnedItems = [{ item_id: 'signal:battery_level' }, { item_id: 'signal:vehicle_speed' }];
+    const pending = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(pending.promise);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Unpin selected' }));
+    fireEvent.change(screen.getByLabelText('Window B'), { target: { value: '2024-01-02T00:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    await act(async () => pending.resolve());
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+    expect(mockToggleMutateAsync).toHaveBeenCalledWith({
+      itemId: 'signal:battery_level', context: 'signal-diff:vehicle:7', pin: false,
+    });
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+  });
+
+  it('reconciles selected names against refreshed comparison rows', () => {
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    h.diff = makeQuery({ data: diffResponse([ROWS[0]]) });
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider><MemoryRouter initialEntries={[ROUTE]}><SignalDiffPage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
   });
 
   it('clears the selection when Clear selection is pressed', async () => {
@@ -479,7 +899,7 @@ describe('SignalDiffPage', () => {
 
     expect(screen.getByRole('region', { name: 'Diff summary' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Vehicle' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Signal Diff' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Signal diff' })).toBeInTheDocument();
   });
 });
 

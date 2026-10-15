@@ -1,15 +1,17 @@
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { ChartCard, LayoutCard } from '@/components/layout';
 import { QueryError } from '@/components/feedback';
 import {
-  ChartContainer, ChartTooltip,
+  ChartTooltip,
   chartGrid, axisTick, chartMarginLabeled, CHART_COLORS,
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { cn } from '@/lib/cn';
 import { formatDateShort } from '@/lib/dateFormat';
+import { fmtPercent } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { PowerHistoryPoint } from './PowerHistoryChart';
 
 interface BatterySocChartProps {
@@ -36,35 +38,44 @@ export function formatSocTimeTick(value: number | string | Date | null | undefin
 }
 
 /** Format a Y-axis state-of-charge tick as a percentage label, null-safe. */
-export function formatSocPercentTick(value: number | null | undefined): string {
-  return `${value ?? 0}%`;
+export function formatSocPercentTick(value: number | null | undefined, formatPercent = fmtPercent): string {
+  return value == null || !Number.isFinite(value) ? '—' : formatPercent(value);
 }
 
 /** Battery state-of-charge percentage over the selected history window. */
 export function BatterySocChart({ data, loading, error, onRetry, className }: BatterySocChartProps) {
   const { t } = useTranslation();
+  const { fmtPercent: formatPercent } = useNumberFormatting();
+  const formatSoc = (value: number | null | undefined) => formatSocPercentTick(value, formatPercent);
 
   if (error) {
     return (
-      <GlassPanel className={cn('p-4 sm:p-5', className)}>
-        <PanelTitle className="mb-3">{t('powerFlow.socOverTime', 'Battery State of Charge')}</PanelTitle>
+      <div className={cn('min-w-0', className)}>
+      <LayoutCard title={t('powerFlow.socOverTime', 'Battery State of Charge')}>
         <QueryError error={error} onRetry={onRetry} />
-      </GlassPanel>
+      </LayoutCard>
+      </div>
     );
   }
 
   const points = data ?? [];
+  const evidence = points.map(({ time, soc }) => ({ time, soc }));
 
   return (
-    // chart-a11y:no-table dense per-sample SOC trace; current SOC is shown on the battery gauge tile
-    <ChartContainer
-      className={className}
+    <div className={cn('min-w-0', className)}>
+    <ChartCard toolbar exportable size="standard"
       title={t('powerFlow.socOverTime', 'Battery State of Charge')}
       subtitle={t('powerFlow.socOverTimeDesc', 'Battery percentage over time')}
       ariaLabel={t('powerFlow.socOverTimeAria', 'Battery state of charge percentage over time line chart')}
       loading={loading}
       empty={points.length === 0}
       height={CHART_HEIGHT}
+      data={evidence}
+      exportData={evidence}
+      dataColumns={[
+        { key: 'time', label: t('powerFlow.lastUpdate', 'Updated'), format: value => value != null ? formatSocTimeTick(Number(value)) : '—' },
+        { key: 'soc', label: t('powerFlow.stateOfCharge', 'State of Charge'), format: value => formatSoc(typeof value === 'number' ? value : undefined) },
+      ]}
     >
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <LineChart data={points} margin={chartMarginLabeled}>
@@ -74,8 +85,8 @@ export function BatterySocChart({ data, loading, error, onRetry, className }: Ba
             tickFormatter={(v) => formatSocTimeTick(v)}
             {...axisTick}
           />
-          <YAxis domain={[0, 100]} tickFormatter={(v: number) => formatSocPercentTick(v)} {...axisTick} />
-          <Tooltip content={<ChartTooltip />} />
+          <YAxis domain={[0, 100]} tickFormatter={formatSoc} {...axisTick} />
+          <Tooltip content={<ChartTooltip valueFormatter={value => formatSoc(typeof value === 'number' ? value : undefined)} />} />
           <Line
             {...AREA_DEFAULTS}
             dataKey="soc"
@@ -84,6 +95,7 @@ export function BatterySocChart({ data, loading, error, onRetry, className }: Ba
           />
         </LineChart>
       </ResponsiveContainer>
-    </ChartContainer>
+    </ChartCard>
+    </div>
   );
 }

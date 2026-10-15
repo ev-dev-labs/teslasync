@@ -1,0 +1,293 @@
+{
+  "item": "audit-page-106",
+  "page": "web\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx",
+  "routes": ["/destination-transitions"],
+  "purpose": "Describe continuity-safe first-order historical destination flows, support, temporal profiles, and complete accounting of returned drive rows.",
+  "primaryGoal": "Understand observed destinations and successors without interpreting descriptive historical evidence as a prediction.",
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr, 1000)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<encoded selected vehicle>&limit=1000",
+      "routeEvidence": "internal\\api\\router.go:3463-3464 registers /drives and GET / with driveHandler.ListByVehicle.",
+      "owner": "Existing driving API hook and backend drive handler; no destination-specific API.",
+      "behavior": "Vehicle-gated query; isolated ['drives', vehicleId, 'history', boundedLimit] cache key; MODERATE stale time; request cancellation signal; safeArray selection.",
+      "limits": "Single returned window, not established lifetime history. Backend ordering, authorization, cap enforcement and response contents were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle / useTimezone('vehicle')",
+      "file": "web\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx",
+      "line": 39,
+      "endpoint": null,
+      "owner": "Existing workspace selection and timezone hooks",
+      "behavior": "Header owns selected vehicle. Locale comes from i18n.language. Derived model resolves vehicle-local calendar timezone."
+    },
+    {
+      "hook": "buildDestinationTransitions",
+      "file": "web\\src\\features\\driving\\lib\\destinationTransitions.ts",
+      "line": 1018,
+      "endpoint": null,
+      "owner": "Driving-domain pure analytical model",
+      "behavior": "Classifies every row; preserves unusable chronological boundaries; matches endpoints; rejects overlap; derives observed shares, entropy, support, top matrix, edge rankings and calendar profiles without mutating source arrays.",
+      "limits": "Read selected model ranges and symbol matches, not the entire 1,500-line algorithm; mathematical correctness was not tested."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "contract": "PageContainer props; min-w-0, full-width container, inherited shell gutters; query metadata, semantic page heading and existing error boundary."},
+    {"name": "Grid / FadeIn", "owner": "@/components/layout / @/components/motion", "contract": "Page uses one column below xl and two at xl; nine entrance groups. Implementations not inspected; reduced-motion behavior unverified."},
+    {"name": "OperationalBrief", "owner": "@/components/data-display", "contract": "Existing DrivingSummaryBrief and NestedDrivingBrief adapt raw StatMetric values via useOperationalMetrics; retain descriptions, scope, provenance, missing values and specialist display formatters."},
+    {"name": "ChartContainer / EmbeddedChart", "owner": "web\\src\\components\\charts\\ChartContainer.tsx", "contract": "title, ariaLabel, ariaDescription, data/dataColumns, height/mobileHeight, chartKey, function children hiddenSeries, exportable/exportFilename, loading/error/empty/onRetry. EmbeddedChart owns embedded chrome and fluid sizing, not a second chart library."},
+    {"name": "GlassPanel / PanelTitle / Heading / Text / Badge / Button", "owner": "@/components/ui", "contract": "Existing surfaces, typography roles, semantic support badges and retry action; use neutral surface/border/text variables instead of page palettes."},
+    {"name": "DestinationTransitionsSectionBody / DestinationTransitionsQueryStatus", "owner": "web\\src\\features\\driving\\components\\destination-transitions", "contract": "Shared within this feature: passive per-section gates and one actionable query status, respectively; requirements none/visits/transitions/origins/months."},
+    {"name": "DestinationTransitionEdgeList / DestinationTransitionProfilePlot", "owner": "web\\src\\features\\driving\\components\\destination-transitions", "contract": "Existing frequency/information edge list and count/concentration profile reuse; keep domain calculations outside shared presentation."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionProfilePlot.tsx",
+      "line": 78,
+      "rule": "MDC-002/MDC-034 single chart controller",
+      "detail": "Three profile sections wrap the same EmbeddedChart in their own ChartContainer, duplicating chart figures, accessible tables and hidden-series controllers.",
+      "fix": "Use a plot-only renderer inside each existing host ChartContainer and inherit that host's legend controller. Do not remove host columns or exports.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceObserved": [
+      "DestinationTransitionsPage.tsx:33,95,124,139 stacks paired sections until xl.",
+      "LeadingSuccessorsDirectory.tsx:61 and DestinationTransitionsMethodology.tsx:175 use md two-column / xl three-column article grids.",
+      "DestinationTransitionEdgeList.tsx:32 stacks edges before sm.",
+      "TopTransitionMatrix.tsx:78-96 contains horizontal scrolling with fixed w-36 origin and w-28 destination cells.",
+      "DestinationVisitShareChart.tsx:127-134 forces all category ticks; profile plot:95-102 and origin plot:99-106 likewise show every label."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\destination-transitions\\DestinationVisitShareChart.tsx",
+        "line": 127,
+        "rule": "MDC-043/MDC-034 small-container chart readability",
+        "detail": "Up to twelve full destination strings are forced onto the horizontal axis with interval=0 and no page-specific label-width adaptation. Long address collision at narrow widths is a source-evidenced risk, not a rendered finding.",
+        "fix": "Use existing chart label/axis presentation contracts or a horizontal-bar orientation; retain complete destination labels in accessible data and tooltip, all visit metadata and the same top-twelve population.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verifiedWidths": [],
+    "status": "Viewport, container overflow, RTL and 200% text behavior unverified."
+  },
+  "accessibility": {
+    "sourceObserved": [
+      "Localized chart names/descriptions and full host dataColumns are present for five charts.",
+      "Matrix uses role=table,row,columnheader,rowheader,cell and explicit per-cell descriptions; unsupported origin also has dashed styling and Below gate text.",
+      "Decorative icons generally have aria-hidden=true; retry uses shared Button.",
+      "QueryStatus provides polite loading status and an alert for refresh failure."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\destination-transitions\\TopTransitionMatrix.tsx",
+        "line": 78,
+        "rule": "MDC-023/MDC-040 keyboard-reachable semantic matrix",
+        "detail": "The overflow matrix div has no explicit tabIndex and contains no focusable cells. Keyboard access to offscreen columns depends on browser scroll-container focus behavior; native shared Table semantics are bypassed by manually composed div roles.",
+        "fix": "Reuse the existing Table matrix primitive with associated row/column headers and a named, keyboard-reachable scroll region where necessary. Preserve counts, full origin denominators, support annotations and every cell.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "status": "Keyboard, focus, screen-reader reading order, composed contrast, forced colors and touch targets unverified; no accessibility pass claimed."
+  },
+  "states": {
+    "initial": "Selected vehicle plus no data maps to initial; each section skeleton/passive state stays mounted and KPI raw values remain null.",
+    "empty": "Returned zero rows, no qualified rows, no accepted continuity and no supported origins have separate explanatory messages.",
+    "fatalError": "Only drivesState.fatalError gates content; QueryStatus renders QueryError with refetch.",
+    "refreshError": "Retained arrays and derived sections remain; QueryStatus renders warning and retry; hero brief marks retained.",
+    "offlinePaused": "Page renders StaleRefreshWarning for isRefreshBlocked; retained content survives. With no retained data, section state still maps to initial loading, alongside the blocked warning.",
+    "historyCap": "Exactly/reaching 1,000 returned rows is explicitly bounded-history evidence, not lifetime completeness.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsMetricGroup.tsx",
+        "line": 19,
+        "rule": "MDC-026 preserve source trust in nested briefs",
+        "detail": "Evidence-quality metric groups call NestedDrivingBrief without retained or unavailable flags. NestedDrivingBrief.tsx:58-63 defaults to Returned evidence, even while the page has a background refresh error and the hero marks Retained evidence.",
+        "fix": "Thread retained/blocked trust from the page state through evidence-quality and metric-group props into the existing NestedDrivingBrief retained contract; keep all usable measurements. Do not invent independent freshness calculations.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\destination-transitions\\TopTransitionMatrix.tsx",
+      "line": 134,
+      "rule": "MDC-010/MDC-011 reduced-noise semantic palette",
+      "detail": "Observed cells hardcode border-neon-cyan/20 bg-neon-cyan/5 rather than neutral/theme-owned semantic presentation. This is actual source styling, not measured visual intensity.",
+      "fix": "Use subdued existing surface/border tokens and restrained theme-owned emphasis for observed cells. Retain dashed below-gate distinction, textual labels and counts; do not reset saved chart/theme preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsMethodology.tsx",
+      "line": 181,
+      "rule": "MDC-010/MDC-016 hierarchy without decorative saturation",
+      "detail": "Every methodology article heading/icon wrapper is text-cyan-300; matrix, directory and quality titles also apply fixed cyan icons. Not every informational section needs the same accent.",
+      "fix": "Use primary/secondary text tokens for headings and muted icons; reserve semantic color for support/warning meaning. Keep all nine explanation articles.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx",
+      "line": 44,
+      "rule": "MDC-045/MDC-046 preserve analytical time semantics",
+      "detail": "nowMs is frozen at mount and survives successful query refetches/vehicle changes. Model classification at destinationTransitions.ts:736-737 excludes any drive whose start/end is later than that mount instant. A legitimately completed drive returned after mount can therefore be incorrectly classified future; age also stays tied to the old clock.",
+      "fix": "Define an explicit analysis-as-of clock that advances on successful history snapshots using existing query timing, while keeping retained data anchored coherently and the model's injected deterministic clock. Add focused regression coverage for refetch and vehicle switch; do not change continuity formulas.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionProfilePlot.tsx",
+      "line": 79,
+      "rule": "MDC-034/MDC-046 independent stable legend state",
+      "detail": "Hour, weekday and month plots all mount EmbeddedChart with chartKey=destination-transition-profile, below distinct parent chart keys. EmbeddedChart.tsx:30 instantiates another ChartContainer; ChartContainer.tsx:723 provides its own legend context. useHiddenSeries.ts:58-60 maps identical keys to the same URL parameter, coupling all three inner legends and potentially overriding the intended host controller.",
+      "fix": "Keep existing host keys destination-two-hour-profile, destination-weekday-profile and destination-month-trend authoritative; render plot/legend within their contexts rather than introducing inner controllers. Preserve existing URL state compatibility deliberately and full tables/exports.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Correct frozen analysis clock and nested legend ownership first; then trust propagation, restrained matrix styling and bounded responsive/a11y validation.",
+    "implementationScope": "Page and explicitly assigned destination-transitions dependencies only; no shared, router, workspace or catalog edits."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing single-host chart controller and embedded presentation contract",
+      "existingOwnerFile": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "change": "No new shared component required on current evidence. Page adoption should consume the existing host legend context; a shared change is contingent on a demonstrated missing capability, not assumed.",
+      "propsVariantsStates": ["chartKey", "children({hiddenSeries})", "data/dataColumns", "variant=panel or embedded", "height/mobileHeight/fluid", "loading/error/empty/onRetry", "exportable/exportFilename"],
+      "usedBy": ["LocalTwoHourTransitionProfile", "WeekdayTransitionProfile", "MonthlyTransitionTrend", "OriginConcentrationSupportChart"],
+      "dependsOn": ["Existing ChartHiddenSeriesProvider and useHiddenSeries URL persistence", "Preservation of host accessible tables and export capabilities"]
+    },
+    {
+      "name": "Existing operational metric/trust contract",
+      "existingOwnerFile": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+      "change": "Reuse existing retained/loading/unavailable props by wiring page trust; no speculative global trust registry.",
+      "propsVariantsStates": ["readonly StatMetric[] raw values", "displayValue specialist formatter", "StatPeriod unknown label/reason", "retained", "loading", "unavailable", "preferences", "testId"],
+      "usedBy": ["DestinationTransitionsMetricGroup", "DestinationTransitionsEvidenceQuality"],
+      "dependsOn": ["useDataState fatalError/refreshError/isRefreshBlocked", "useOperationalMetrics", "OperationalBrief"]
+    }
+  ],
+  "competingImplementations": [
+    "Nested profile EmbeddedChart controllers compete with already-present ChartContainer hosts; consolidate page ownership rather than introduce a new chart wrapper.",
+    "Matrix manually implements a semantic table with div roles; assess the current shared Table primitive before retaining a local table pipeline.",
+    "Existing SectionBody and EdgeList already centralize feature repetition. No evidence justifies a new universal destination component or state library.",
+    "No duplicate local date/vehicle selector is mounted. WorkspaceScope currently yields vehicle=true, range=false for this historical-window route; preserve that explicit bounded-history behavior. Do not silently convert it to a date-filtered model."
+  ],
+  "preservation": {
+    "sourceHash": "D71D1E15513C22B37225C88E252BB3996949AF07A93B78FDF79FD2F54AF3CAB1",
+    "hashAlgorithm": "SHA256",
+    "sourceFile": "web\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx",
+    "currentLineCount": 182,
+    "dependencyDirectoryLineCount": 3375,
+    "dependencyDirectoryCountCaveat": "Includes all 27 barrel-directory files, including legacy KPI components not mounted by this page. Not a mounted-only preservation baseline.",
+    "sections": {
+      "count": 12,
+      "names": ["Continuity-safe destination evidence summary", "Destination visit share", "Origin concentration and support", "Top transition matrix", "Historical leading successors by origin", "Frequent accepted edges", "Empirical information edges", "Local two-hour transition profile", "Vehicle-timezone weekday profile", "Local-month transition trend", "Evidence quality, accounting and continuity", "Methodology and limitations"],
+      "mountedChartContainerCount": 5,
+      "mountedGlassPanelCount": 6,
+      "evidenceQualityMetricGroups": 4,
+      "methodologyArticleCount": 9,
+      "heroMetricCount": 6
+    },
+    "actions": [
+      "Header workspace vehicle selection; no page-local selector",
+      "Fatal/refresh error retry via drivesQuery.refetch",
+      "Five chart export menus gated by resolved usable data with stable export filenames",
+      "Interactive legends and URL-hidden series state for origin/hour/weekday/month plots",
+      "Chart accessible data alternatives and complete declared metadata columns",
+      "Horizontal access to the full top matrix"
+    ],
+    "data": [
+      "Keep 1,000-row isolated history query, cancellation, enablement, safeArray, cache keys and inherited retry/stale-time policy.",
+      "Keep raw SI Drive durationS and meter GPS tolerance; do not add legacy wire/cache fields or unit conversions.",
+      "Keep missing values distinct from zero; index/share/entropy null formatting remains an em dash.",
+      "Keep per-origin full outgoing denominators even when matrix/chart populations are top subsets.",
+      "Keep top twelve destination visits, top ten origin chart, top eight matrix states and complete supported/unsupported origin directory.",
+      "Keep row and candidate-pair exclusive accounting, unusable chronology boundaries, overlap/endpoint/gap gates and actual-latest-row qualifications.",
+      "Keep all support ingredients, entropy/concentration definitions, active local day/week counts, local hour/weekday/month grouping and timezone/locale formatting.",
+      "Keep retained payload on failed/blocked refresh; no all-page data conditional or zero fabrication.",
+      "Keep history-cap warnings, normalization uncertainty and explicit not-a-prediction limitations."
+    ]
+  },
+  "evidenceLimits": {
+    "auditMode": "Phase 0 read-only source audit; only report and heartbeat written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Route source verified; requests and handler/query behavior not exercised.",
+    "validation": [
+      "No Git, source edits, API mutations, tests, lint, builds or TypeScript were run.",
+      "Loaded audit-violations skill and read its script; did not execute it because its final step runs project-wide TypeScript, prohibited for this read-only audit.",
+      "PowerShell case-sensitive source scan exit 0: raw button/input/textarea/select/table count=0. Earlier case-insensitive scan falsely counted shared Button and was corrected.",
+      "Scoped source scan exit 0: style= count=0; direct recharts/react-leaflet/framer-motion import count=0; text-neon count=0; neon surface/border match count=1.",
+      "All-barrel-directory scan found GlassPanel=7 and ChartContainer=5; one GlassPanel belongs to the unused legacy KPI band. Actual mounted page graph contains six panel sections and five chart sections.",
+      "One PowerShell inspection command failed with parser exit 1; corrected measurement command subsequently ran exit 0.",
+      "One initial batched source output exceeded tool display limits; relevant chart sources were subsequently read directly or with bounded excerpts. No acceptance is borrowed from historical receipts."
+    ],
+    "assumptions": [
+      "Audit identity/page string is the explicitly assigned repository-relative TSX path.",
+      "Shared component implementations were inspected only where necessary to establish concrete page dependency contracts, not as an application-wide foundation audit.",
+      "No mandatory new shared API is proven; existing shared contracts should be adopted before requesting expansion."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DestinationEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\index.ts",
+    "web\\src\\features\\driving\\components\\destination-transitions\\TopTransitionMatrix.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationVisitShareChart.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\LeadingSuccessorsDirectory.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsQueryStatus.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsMethodology.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsEvidenceQuality.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionEdgeList.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionProfilePlot.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\OriginConcentrationPlot.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\OriginConcentrationSupportChart.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\MonthlyTransitionTrend.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\LocalTwoHourTransitionProfile.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\WeekdayTransitionProfile.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\FrequentAcceptedEdges.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\EmpiricalInformationEdges.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsMetricGroup.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationRowAccountingMetrics.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationContinuityMetrics.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationCoverageMetrics.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\DestinationSupportMetrics.tsx",
+    "web\\src\\features\\driving\\components\\destination-transitions\\labels.ts",
+    "web\\src\\features\\driving\\components\\destination-transitions\\kpiLabels.ts",
+    "web\\src\\features\\driving\\components\\destination-transitions\\types.ts",
+    "web\\src\\features\\driving\\lib\\destinationTransitions.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useHiddenSeries.ts",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx"
+  ]
+}

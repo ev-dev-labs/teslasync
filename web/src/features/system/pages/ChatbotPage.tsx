@@ -11,14 +11,14 @@ import { useTranslation } from 'react-i18next';
 import { Send, Square, History as HistoryIcon } from 'lucide-react';
 import { HelixMark } from '@/components/branding/HelixMark';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Textarea, Text } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { GlassPanel, Button, Drawer, Textarea, Text, Icon, IconBox } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { VisuallyHidden } from '@/components/a11y';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useIsMobile } from '@/hooks/useMediaQuery';
-import { cn } from '@/lib/cn';
+import { iconSize, neonColorMap } from '@/lib/tokens';
 import {
   useChatSessions,
   useChatHistory,
@@ -40,10 +40,10 @@ import { ChatWelcome } from '../components/chatbot/ChatWelcome';
 // Chatbot LLM surface
 // rendered conditionally via withAiFeature('chatbot-llm', …); absent
 // in off mode (ADR-015 §I5 + §I6).
-import { AIChatbotIndicator } from '@/components/ai/AIChatbotIndicator';
+import { AIChatbotIndicator } from '@/components/ai';
 // Optional browser STT/TTS panel
 // mounted above the conversation; absent in off mode via withAiFeature.
-import { AIVoiceMode } from '@/components/ai/AIVoiceMode';
+import { AIVoiceMode } from '@/components/ai';
 
 // History sidebar visibility persists across reloads via localStorage so
 // that a desktop user who opens the History panel finds it still open
@@ -97,6 +97,16 @@ export default function ChatbotPage() {
   const [sessionId, setSessionId] = useState('');
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<UIChatMessage[]>([]);
+  const sessionIdRef = useRef('');
+  const generationRef = useRef(0);
+  const [sessionGeneration, setSessionGeneration] = useState(0);
+  const localTranscriptRef = useRef(false);
+  const requestRef = useRef<{
+    generation: number;
+    sessionId: string;
+    revision?: { prefix: UIChatMessage[]; resolve: (accepted: boolean) => void };
+  } | null>(null);
+  const [baselinePending, setBaselinePending] = useState(false);
   const isMobile = useIsMobile();
   // History panel visibility:
   //   - Default: hidden (cleaner first-launch focus on the conversation).
@@ -165,22 +175,12 @@ export default function ChatbotPage() {
   //      sessionId so switching to a *different* session that happens to
   //      be empty still clears the panel correctly.)
   useEffect(() => {
-    if (!historyQuery.data) return;
+    if (!historyQuery.data || historyQuery.isPlaceholderData || sessionId !== sessionIdRef.current ||
+        localTranscriptRef.current || requestRef.current) return;
     const data = historyQuery.data;
-    setMessages((prev) => {
-      const firstSessionId = prev[0]?.session_id;
-      const optimisticForCurrent =
-        typeof firstSessionId === 'string' &&
-        firstSessionId === sessionIdRef.current;
-      if (optimisticForCurrent && streamingMsgIdRef.current !== null) {
-        return prev;
-      }
-      if (data.length === 0 && optimisticForCurrent) {
-        return prev;
-      }
-      return data.map(toUIMessage);
-    });
-  }, [historyQuery.data]);
+    if (data.some((message) => message.session_id !== sessionId)) return;
+    setMessages(data.map(toUIMessage));
+  }, [historyQuery.data, historyQuery.isPlaceholderData, sessionId, sessionGeneration]);
 
   const renameMut = useRenameChatSession();
   const deleteMut = useDeleteChatSession();
@@ -203,26 +203,7 @@ export default function ChatbotPage() {
     },
   });
 
-  const sendMut = useSendChatMessage({
-    onSuccess: (data) => {
-      if (!sessionId) setSessionId(data.session_id);
-      const assistantId = nextLocalId();
-      const created = new Date().toISOString();
-      const assistantMsg: UIChatMessage = {
-        id: assistantId,
-        session_id: data.session_id,
-        role: 'assistant',
-        content: data.response,
-        created_at: created,
-        isStreaming: true,
-        streamedText: '',
-        links: data.links ?? [],
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-      stream.start(assistantId, data.response);
-      sessionsQuery.refetch();
-    },
-  });
+  const sendMut = useSendChatMessage();
 
   /* ─── AI-on path ─────────────────────────────────────────────────────── */
 
@@ -243,20 +224,30 @@ export default function ChatbotPage() {
   // on done/error/stop so the next click can target a fresh row.
   const [streamingMsgId, setStreamingMsgId] = useState<number | null>(null);
   const streamingMsgIdRef = useRef<number | null>(null);
-  useEffect(() => {
-    streamingMsgIdRef.current = streamingMsgId;
-  }, [streamingMsgId]);
-
-  const sessionIdRef = useRef<string>(sessionId);
-  useEffect(() => {
-    sessionIdRef.current = sessionId;
-  }, [sessionId]);
+  const finishAiRequest = useCallback((accepted: boolean) => {
+    const request = requestRef.current;
+    if (request?.revision && accepted) {
+      const id = streamingMsgIdRef.current;
+      setMessages((previous) => [
+        ...request.revision!.prefix.map((message) => ({ ...message, session_id: request.sessionId })),
+        ...previous.filter((message) => message.id === id),
+      ]);
+    }
+    request?.revision?.resolve(accepted);
+    requestRef.current = null;
+    streamingMsgIdRef.current = null;
+    setStreamingMsgId(null);
+    setPendingAiRequest(null);
+  }, []);
 
   const handleAiEvent = useCallback(
     (ev: AiStreamEvent) => {
       const id = streamingMsgIdRef.current;
-      if (!id) return;
+      const request = requestRef.current;
+      if (id === null || !request || request.generation !== generationRef.current ||
+          request.sessionId !== sessionIdRef.current) return;
       if (ev.type === 'delta') {
+        aiStreamTextRef.current += ev.text;
         setMessages((prev) =>
           prev.map((m) =>
             m.id === id
@@ -307,12 +298,15 @@ export default function ChatbotPage() {
                   content: m.streamedText ?? m.content,
                   streamedText: undefined,
                   aiUsage: ev.usage,
+                  aiActivity: settlePendingActivity(m.aiActivity),
+                  aiState: 'done',
+                  outcome: (m.streamedText ?? m.content).trim() ? undefined : 'empty',
                 }
               : m,
           ),
         );
-        setStreamingMsgId(null);
-        setPendingAiRequest(null);
+        // Only an actual text delta accepts a revision; tool execution alone is not an answer.
+        finishAiRequest(aiStreamTextRef.current.trim().length > 0);
         sessionsQuery.refetch();
       } else if (ev.type === 'error') {
         // AI error: keep what was streamed so far (if any) and append
@@ -334,21 +328,31 @@ export default function ChatbotPage() {
                     }),
                   streamedText: undefined,
                   aiActivity: settlePendingActivity(m.aiActivity),
+                  aiState: 'error',
+                  outcome: 'error',
                 }
               : m,
           ),
         );
-        setStreamingMsgId(null);
-        setPendingAiRequest(null);
+        finishAiRequest(false);
+      } else if (ev.type === 'confirm_request') {
+        setMessages((prev) => prev.map((m) => m.id === id ? {
+          ...m, isStreaming: false, content: m.streamedText ?? m.content,
+          streamedText: undefined, aiActivity: settlePendingActivity(m.aiActivity),
+          aiState: 'paused-confirm', outcome: 'canceled',
+        } : m));
+        finishAiRequest(false);
       }
     },
-    [sessionsQuery, t, pendingAiRequest?.message],
+    [sessionsQuery, t, pendingAiRequest?.message, finishAiRequest],
   );
 
+  const aiStreamTextRef = useRef('');
   const aiStream = useAiStream({
     url: '/ai/chatbot',
     body: pendingAiRequest,
     onEvent: handleAiEvent,
+    scopeKey: `${sessionGeneration}:${sessionId}`,
   });
 
   // Trigger the stream whenever a fresh pendingAiRequest is set. The
@@ -361,6 +365,10 @@ export default function ChatbotPage() {
     // intentionally omit aiStream from deps — start is idempotent and
     // including it would re-fire on every state change inside the hook
   }, [pendingAiRequest]);
+
+  useEffect(() => {
+    if (aiStream.state === 'paused-confirm') aiStream.cancel();
+  }, [aiStream.state, aiStream.cancel]);
 
   // When the AI feature is toggled off mid-stream, cancel the SSE and
   // clear in-flight state. Keeps any user message already persisted
@@ -379,14 +387,15 @@ export default function ChatbotPage() {
                 content: m.streamedText ?? m.content,
                 streamedText: undefined,
                 aiActivity: settlePendingActivity(m.aiActivity),
+                aiState: 'idle',
+                outcome: 'canceled',
               }
             : m,
         ),
       );
-      setStreamingMsgId(null);
-      setPendingAiRequest(null);
+      finishAiRequest(false);
     }
-  }, [aiEnabled, streamingMsgId, aiStream]);
+  }, [aiEnabled, streamingMsgId, aiStream, finishAiRequest]);
 
   // Transport-level SSE failure (non-2xx response, dropped connection)
   // flips useAiStream to state='error' WITHOUT emitting an 'error' event
@@ -418,14 +427,15 @@ export default function ChatbotPage() {
                   }),
                 streamedText: undefined,
                 aiActivity: settlePendingActivity(m.aiActivity),
+                aiState: 'error',
+                outcome: 'error',
               }
             : m,
         ),
       );
     }
-    setStreamingMsgId(null);
-    setPendingAiRequest(null);
-  }, [aiStream.state, aiStream.error, pendingAiRequest, t]);
+    finishAiRequest(false);
+  }, [aiStream.state, aiStream.error, t, finishAiRequest]);
 
   // Auto-scroll on every new message AND while a reveal is in progress
   // (so the user sees the text grow rather than having it appear below
@@ -459,26 +469,34 @@ export default function ChatbotPage() {
   const newAiSessionId = () => `s_${crypto.randomUUID()}`;
 
   const submitMessage = useCallback(
-    (text: string) => {
+    (text: string, revision?: { prefix: UIChatMessage[]; resolve: (accepted: boolean) => void }) => {
       const msg = text.trim();
-      if (!msg) return;
+      if (!msg || requestRef.current || stream.isActive ||
+          (sessionId && !localTranscriptRef.current && (historyQuery.isPending || historyQuery.isError)) ||
+          (deleteMut.isPending && deleteMut.variables?.sessionId === sessionId)) return false;
       if (aiEnabled) {
         // AI-on path: SSE stream against /api/v1/ai/chatbot.
-        if (aiStream.state === 'streaming' || pendingAiRequest) return;
+        if (aiStream.state === 'streaming' || pendingAiRequest) return false;
+        localTranscriptRef.current = true;
         const sid = sessionId || newAiSessionId();
-        if (!sessionId) setSessionId(sid);
+        if (!sessionId) {
+          sessionIdRef.current = sid;
+          setSessionId(sid);
+        }
+        requestRef.current = { generation: generationRef.current, sessionId: sid, revision };
+        aiStreamTextRef.current = '';
         const userId = nextLocalId();
         const assistantId = nextLocalId();
         const created = new Date().toISOString();
         setMessages((prev) => [
           ...prev,
-          {
+          ...(!revision ? [{
             id: userId,
             session_id: sid,
-            role: 'user',
+            role: 'user' as const,
             content: msg,
             created_at: created,
-          },
+          }] : []),
           {
             id: assistantId,
             session_id: sid,
@@ -489,14 +507,18 @@ export default function ChatbotPage() {
             streamedText: '',
           },
         ]);
+        streamingMsgIdRef.current = assistantId;
         setStreamingMsgId(assistantId);
         setPendingAiRequest({ message: msg, session_id: sid });
-        return;
+        return true;
       }
       // AI-off path: legacy heuristic POST /chatbot.
-      if (sendMut.isPending) return;
+      localTranscriptRef.current = true;
+      const request = { generation: generationRef.current, sessionId: sessionIdRef.current, revision };
+      requestRef.current = request;
+      setBaselinePending(true);
       const userId = nextLocalId();
-      setMessages((prev) => [
+      if (!revision) setMessages((prev) => [
         ...prev,
         {
           id: userId,
@@ -506,14 +528,59 @@ export default function ChatbotPage() {
           created_at: new Date().toISOString(),
         },
       ]);
-      sendMut.mutate({ message: msg, sessionId: sessionId || undefined });
+      sendMut.mutate({ message: msg, sessionId: sessionId || undefined }, {
+        onSuccess: (data) => {
+          if (requestRef.current !== request || request.generation !== generationRef.current ||
+              request.sessionId !== sessionIdRef.current) return;
+          const accepted = !!data.response?.trim() &&
+            (!request.sessionId || request.sessionId === data.session_id);
+          if (!accepted) {
+            requestRef.current = null;
+            setBaselinePending(false);
+            revision?.resolve(false);
+            setMessages((prev) => [...prev, {
+              id: nextLocalId(), session_id: sessionIdRef.current, role: 'assistant',
+              content: '', created_at: new Date().toISOString(), outcome: 'empty',
+            }]);
+            return;
+          }
+          sessionIdRef.current = data.session_id;
+          setSessionId(data.session_id);
+          const assistantId = nextLocalId();
+          const assistantMsg: UIChatMessage = {
+            id: assistantId, session_id: data.session_id, role: 'assistant',
+            content: data.response, created_at: new Date().toISOString(),
+            isStreaming: true, streamedText: '', links: data.links ?? [],
+          };
+          setMessages((prev) => [
+            ...(revision?.prefix ?? prev).map((m) => ({ ...m, session_id: data.session_id })),
+            assistantMsg,
+          ]);
+          requestRef.current = null;
+          setBaselinePending(false);
+          revision?.resolve(true);
+          stream.start(assistantId, data.response);
+          void sessionsQuery.refetch();
+        },
+        onError: () => {
+          if (requestRef.current !== request) return;
+          requestRef.current = null;
+          setBaselinePending(false);
+          revision?.resolve(false);
+          setMessages((prev) => [...prev, {
+            id: nextLocalId(), session_id: sessionIdRef.current, role: 'assistant',
+            content: '', created_at: new Date().toISOString(), outcome: 'error',
+          }]);
+        },
+      });
+      return true;
     },
-    [aiEnabled, aiStream.state, pendingAiRequest, sendMut, sessionId],
+    [aiEnabled, aiStream.state, pendingAiRequest, sendMut, sessionId, stream,
+      historyQuery.isPending, historyQuery.isError, deleteMut.isPending, deleteMut.variables, sessionsQuery],
   );
 
   const handleSend = useCallback(() => {
-    submitMessage(input);
-    setInput('');
+    if (submitMessage(input)) setInput('');
   }, [input, submitMessage]);
 
   const handleKeyDown = useCallback(
@@ -555,21 +622,30 @@ export default function ChatbotPage() {
                       content: m.streamedText ?? m.content,
                       streamedText: undefined,
                       aiActivity: settlePendingActivity(m.aiActivity),
+                      aiState: 'idle',
+                      outcome: 'canceled',
                     }
                   : m,
               ),
             );
-            setStreamingMsgId(null);
-            setPendingAiRequest(null);
+            finishAiRequest(false);
           }
         }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stream, aiStream]);
+  }, [stream, aiStream, finishAiRequest]);
 
   const startNewSession = useCallback(() => {
+    generationRef.current++;
+    setSessionGeneration(generationRef.current);
+    sessionIdRef.current = '';
+    localTranscriptRef.current = false;
+    requestRef.current?.revision?.resolve(false);
+    requestRef.current = null;
+    streamingMsgIdRef.current = null;
+    setBaselinePending(false);
     stream.stop();
     aiStream.cancel();
     setStreamingMsgId(null);
@@ -582,11 +658,20 @@ export default function ChatbotPage() {
 
   const loadSession = useCallback(
     (sid: string) => {
+      generationRef.current++;
+      setSessionGeneration(generationRef.current);
+      sessionIdRef.current = sid;
+      localTranscriptRef.current = false;
+      requestRef.current?.revision?.resolve(false);
+      requestRef.current = null;
+      streamingMsgIdRef.current = null;
+      setBaselinePending(false);
       stream.stop();
       aiStream.cancel();
       setStreamingMsgId(null);
       setPendingAiRequest(null);
       setSessionId(sid);
+      setMessages([]);
     },
     [stream, aiStream],
   );
@@ -602,44 +687,12 @@ export default function ChatbotPage() {
         .reverse()
         .find((m) => m.role === 'user');
       if (!userMsg) return;
-      stream.stop();
-      aiStream.cancel();
       const truncated = messages.slice(0, idx);
-      if (aiEnabled) {
-        if (aiStream.state === 'streaming' || pendingAiRequest) return;
-        const sid = sessionId || newAiSessionId();
-        if (!sessionId) setSessionId(sid);
-        const assistantId = nextLocalId();
-        setMessages([
-          ...truncated,
-          {
-            id: assistantId,
-            session_id: sid,
-            role: 'assistant',
-            content: '',
-            created_at: new Date().toISOString(),
-            isStreaming: true,
-            streamedText: '',
-          },
-        ]);
-        setStreamingMsgId(assistantId);
-        setPendingAiRequest({ message: userMsg.content, session_id: sid });
-        return;
-      }
-      setMessages(truncated);
-      sendMut.mutate({
-        message: userMsg.content,
-        sessionId: sessionId || undefined,
-      });
+      submitMessage(userMsg.content, { prefix: truncated, resolve: () => undefined });
     },
     [
-      aiEnabled,
-      aiStream,
       messages,
-      pendingAiRequest,
-      sendMut,
-      sessionId,
-      stream,
+      submitMessage,
     ],
   );
 
@@ -648,9 +701,8 @@ export default function ChatbotPage() {
       // Truncate history at this user message and resubmit with the new
       // text — same model as ChatGPT-style "edit and regenerate".
       const idx = messages.findIndex((m) => m.id === userMsg.id);
-      if (idx < 0) return;
-      stream.stop();
-      aiStream.cancel();
+      if (idx < 0 || (userMsg.session_id !== sessionIdRef.current &&
+          !(userMsg.session_id === 'pending' && !sessionIdRef.current))) return false;
       const truncated = messages.slice(0, idx);
       const editedId = nextLocalId();
       const editedMsg: UIChatMessage = {
@@ -659,39 +711,13 @@ export default function ChatbotPage() {
         content: newText,
         created_at: new Date().toISOString(),
       };
-      if (aiEnabled) {
-        if (aiStream.state === 'streaming' || pendingAiRequest) return;
-        const sid = sessionId || newAiSessionId();
-        if (!sessionId) setSessionId(sid);
-        const assistantId = nextLocalId();
-        setMessages([
-          ...truncated,
-          editedMsg,
-          {
-            id: assistantId,
-            session_id: sid,
-            role: 'assistant',
-            content: '',
-            created_at: new Date().toISOString(),
-            isStreaming: true,
-            streamedText: '',
-          },
-        ]);
-        setStreamingMsgId(assistantId);
-        setPendingAiRequest({ message: newText, session_id: sid });
-        return;
-      }
-      setMessages([...truncated, editedMsg]);
-      sendMut.mutate({ message: newText, sessionId: sessionId || undefined });
+      return new Promise<boolean>((resolve) => {
+        if (!submitMessage(newText, { prefix: [...truncated, editedMsg], resolve })) resolve(false);
+      });
     },
     [
-      aiEnabled,
-      aiStream,
       messages,
-      pendingAiRequest,
-      sendMut,
-      sessionId,
-      stream,
+      submitMessage,
     ],
   );
 
@@ -704,18 +730,21 @@ export default function ChatbotPage() {
 
   const handleDelete = useCallback(
     (sid: string) => {
-      deleteMut.mutate({ sessionId: sid });
-      if (sid === sessionId) {
-        startNewSession();
-      }
+      const generation = generationRef.current;
+      deleteMut.mutate({ sessionId: sid }, {
+        onSuccess: () => {
+          if (sid === sessionIdRef.current && generation === generationRef.current) startNewSession();
+        },
+      });
     },
-    [deleteMut, sessionId, startNewSession],
+    [deleteMut, startNewSession],
   );
 
   /* ─── derived ─────────────────────────────────────────────────────── */
 
   const lastAssistantId = useMemo(
-    () => [...messages].reverse().find((m) => m.role === 'assistant')?.id,
+    () => [...messages].reverse().find((m) => m.role === 'assistant' && !m.outcome)?.id ??
+      [...messages].reverse().find((m) => m.role === 'assistant')?.id,
     [messages],
   );
   const lastUserId = useMemo(
@@ -723,10 +752,10 @@ export default function ChatbotPage() {
     [messages],
   );
 
-  const isAiStreaming = aiStream.state === 'streaming';
+  const isAiStreaming = pendingAiRequest !== null && streamingMsgId !== null;
   const isStreaming = stream.isActive || isAiStreaming;
   const isWaiting =
-    (sendMut.isPending && !stream.isActive) ||
+    (baselinePending && !stream.isActive) ||
     (isAiStreaming &&
       messages.find((m) => m.id === streamingMsgId)?.streamedText === '');
 
@@ -744,33 +773,35 @@ export default function ChatbotPage() {
                 content: m.streamedText ?? m.content,
                 streamedText: undefined,
                 aiActivity: settlePendingActivity(m.aiActivity),
+                aiState: 'idle',
+                outcome: 'canceled',
               }
             : m,
         ),
       );
-      setStreamingMsgId(null);
-      setPendingAiRequest(null);
+      finishAiRequest(false);
     }
-  }, [stream, aiStream]);
+  }, [stream, aiStream, finishAiRequest]);
 
   /* ─── render ──────────────────────────────────────────────────────── */
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('chatbot.title', 'Helix')}
       subtitle={t(
         'chatbot.subtitle',
         'Evidence-grounded intelligence across your fleet and TeslaSync knowledge',
       )}
-      actions={
+      metadataActions={<AIChatbotIndicator />}
+      secondaryActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <AIChatbotIndicator />
           <Button
             onClick={() => setShowSessions((s) => !s)}
             variant="ghost"
             size="sm"
-            icon={<HistoryIcon className="h-4 w-4" />}
+            icon={<Icon icon={HistoryIcon} />}
             aria-pressed={showSessions}
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
           >
             {t('chatbot.history', 'History')}
           </Button>
@@ -786,18 +817,13 @@ export default function ChatbotPage() {
         <div className="relative flex min-h-0 gap-4 h-[calc(100dvh_-_12rem)]">
           {showSessions &&
             (isMobile ? (
-              <div
-                className="fixed inset-0 z-40 flex"
-                role="dialog"
-                aria-modal="true"
-                aria-label={t('chatbot.history', 'History')}
+              <Drawer
+                open
+                side="left"
+                size="sm"
+                title={t('chatbot.history', 'History')}
+                onClose={() => setShowSessions(false)}
               >
-                <div
-                  className="absolute inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
-                  onClick={() => setShowSessions(false)}
-                  aria-hidden="true"
-                />
-                <div className="relative h-full w-[85vw] max-w-sm">
                   <SessionList
                     sessions={sessions}
                     activeSessionId={sessionId}
@@ -814,8 +840,7 @@ export default function ChatbotPage() {
                     isLoading={sessionsQuery.isLoading}
                     className="h-full w-full"
                   />
-                </div>
-              </div>
+              </Drawer>
             ) : (
               <FadeIn>
                 <SessionList
@@ -841,7 +866,32 @@ export default function ChatbotPage() {
             >
               <div className="flex min-h-full flex-col items-center px-3 py-4 sm:px-4">
                 <div className="flex w-full max-w-3xl flex-1 flex-col space-y-3">
-                  {messages.length === 0 ? (
+                  {sessionId && !localTranscriptRef.current && (
+                    historyQuery.isPending || historyQuery.isError || historyQuery.fetchStatus === 'paused'
+                  ) && (
+                    <div role={historyQuery.isError ? 'alert' : 'status'}>
+                      <Text as="p" variant="bodySm">
+                        {historyQuery.isError
+                          ? t('chatbot.historyFailed', 'Conversation history could not be loaded.')
+                          : historyQuery.fetchStatus === 'paused'
+                            ? t('chatbot.historyPaused', 'Conversation history is waiting for a connection.')
+                            : t('chatbot.historyLoading', 'Loading conversation history…')}
+                      </Text>
+                      {historyQuery.isError && (
+                        <Button variant="secondary" size="sm" onClick={() => void historyQuery.refetch()}>
+                          {t('common.retry', 'Retry')}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                  {deleteMut.variables?.sessionId === sessionId && (deleteMut.isPending || deleteMut.isError) && (
+                    <Text as="p" variant="bodySm" role={deleteMut.isError ? 'alert' : 'status'}>
+                      {deleteMut.isPending
+                        ? t('chatbot.deleting', 'Deleting conversation…')
+                        : t('chatbot.deleteFailed', 'Conversation was not deleted. Your messages and draft are retained; try again from History.')}
+                    </Text>
+                  )}
+                  {messages.length === 0 && (!sessionId || historyQuery.isSuccess) ? (
                     <ChatWelcome
                       onPick={(text) => {
                         setInput(text);
@@ -862,7 +912,7 @@ export default function ChatbotPage() {
                           isLastUser={msg.id === lastUserId}
                           isFirstInGroup={isFirstInGroup}
                           isLastInGroup={isLastInGroup}
-                          actionsDisabled={isStreaming || sendMut.isPending}
+                          actionsDisabled={isStreaming || baselinePending || deleteMut.isPending}
                           onRegenerate={handleRegenerate}
                           onEditAndResend={handleEditAndResend}
                         />
@@ -873,18 +923,12 @@ export default function ChatbotPage() {
                   {isWaiting && (
                     <FadeIn>
                       <div className="flex items-start gap-3">
-                        <div className="rounded-lg border border-purple-500/20 bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-1.5">
-                          <HelixMark className="h-4 w-4 text-purple-300" aria-hidden="true" />
-                        </div>
-                        <GlassPanel className="flex items-center gap-2 !p-3">
-                          <TypingDots reduceMotion={motion.reduce} />
-                          <Text size="sm" color="secondary">
-                            {aiStream.activity.length > 0
-                              ? t(
-                                  'chatbot.grounding',
-                                  'Helix is grounding the answer in TeslaSync evidence…',
-                                )
-                              : t('chatbot.planning', 'Helix is planning the investigation…')}
+                        <IconBox color="neutral" size="sm">
+                          <HelixMark className={iconSize.md} aria-hidden="true" />
+                        </IconBox>
+                        <GlassPanel className="min-w-0 !p-3">
+                          <Text as="p" variant="bodySm" className="break-words">
+                            {t('chatbot.processing', 'Helix is processing your request…')}
                           </Text>
                         </GlassPanel>
                       </div>
@@ -896,7 +940,7 @@ export default function ChatbotPage() {
               </div>
             </div>
 
-            <div className="border-t border-[var(--glass-border)] px-3 py-3 sm:px-4">
+            <div className={`border-t ${neonColorMap.neutral.border} px-3 py-3 sm:px-4`}>
               <div className="flex justify-center">
                 <div className="w-full max-w-3xl">
                   <VisuallyHidden as="label" htmlFor="chatbot-input">
@@ -915,7 +959,7 @@ export default function ChatbotPage() {
                           'Ask Helix to investigate, compare, or explain…',
                         )}
                         rows={1}
-                        className="max-h-40 min-h-[44px] resize-none"
+                        className="max-h-40 min-h-11 resize-none"
                         aria-label={t('chatbot.inputLabel', 'Message')}
                       />
                     </div>
@@ -923,21 +967,23 @@ export default function ChatbotPage() {
                       <Button
                         onClick={stopAll}
                         variant="secondary"
-                        icon={<Square className="h-4 w-4" />}
+                        icon={<Icon icon={Square} />}
                         aria-label={t('chatbot.actions.stopStreaming', 'Stop streaming')}
                         title={t('chatbot.actions.stopHint', 'Stop reveal (Esc)')}
-                        className="shrink-0"
+                        className="min-h-11 min-w-11 shrink-0 md:min-h-10 md:min-w-0"
                       >
                         <span className="hidden sm:inline">{t('chatbot.actions.stop', 'Stop')}</span>
                       </Button>
                     ) : (
                       <Button
                         onClick={handleSend}
-                        disabled={!input.trim() || sendMut.isPending || isAiStreaming}
+                        disabled={!input.trim() || baselinePending || isAiStreaming ||
+                          (deleteMut.isPending && deleteMut.variables?.sessionId === sessionId) ||
+                          (!!sessionId && !localTranscriptRef.current && (historyQuery.isPending || historyQuery.isError))}
                         variant="primary"
-                        icon={<Send className="h-4 w-4" />}
+                        icon={<Icon icon={Send} />}
                         aria-label={t('chatbot.actions.send', 'Send message')}
-                        className="shrink-0"
+                        className="min-h-11 min-w-11 shrink-0 md:min-h-10 md:min-w-0"
                       />
                     )}
                   </div>
@@ -947,7 +993,7 @@ export default function ChatbotPage() {
           </GlassPanel>
         </div>
       </section>
-    </PageContainer>
+    </PageLayout>
   );
 }
 
@@ -1080,33 +1126,4 @@ function useTypewriterStream(opts: TypewriterOptions): TypewriterStream {
   useEffect(() => () => cleanup(), [cleanup]);
 
   return { start, stop, isActive: active };
-}
-
-/**
- * Three-dot "thinking" indicator. Honors prefers-reduced-motion by
- * collapsing to a static dot trio when motion is suppressed.
- */
-function TypingDots({ reduceMotion }: { reduceMotion: boolean }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1"
-      aria-hidden="true"
-      role="presentation"
-    >
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className={cn(
-            'h-1.5 w-1.5 rounded-full bg-purple-300',
-            !reduceMotion && 'motion-safe:animate-bounce',
-          )}
-          style={
-            !reduceMotion
-              ? { animationDelay: `${i * 120}ms`, animationDuration: '900ms' }
-              : undefined
-          }
-        />
-      ))}
-    </span>
-  );
 }

@@ -6,28 +6,21 @@ import {
   Trash2, Battery,
   Activity, Bell, Car, MapPin, Route, Wrench,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
-import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
-import { Badge, GlassPanel, Pagination, SectionTitle, Text } from '@/components/ui';
-import { FadeIn } from '@/components/motion';
-import { StaggerContainer } from '@/components/motion/StaggerContainer';
-import { StaggerItem } from '@/components/motion/StaggerItem';
-import { DataStateNotice, QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { EmptyStateThreshold } from '@/components/feedback/EmptyStateThreshold';
-import { InlineCallout } from '@/components/feedback/InlineCallout';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { PillFilterBar, type PillItem } from '@/components/forms';
-import { SearchInput } from '@/components/forms/SearchInput';
-import { FilterBar } from '@/components/forms/FilterBar';
-import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
+import { PageLayout, PageHeaderSticky } from '@/components/layout';
+import { Badge, Button, Caption, GlassPanel, Icon, Pagination, PanelTitle, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import {
+  DataStateNotice, QueryError, StaleRefreshWarning,
+  EmptyState, EmptyStateGuidanceDetails, InlineCallout, Skeleton,
+} from '@/components/feedback';
+import {
+  FilterBar, ActiveFilterChips, type FilterChipDescriptor, ListExportMenu,
+} from '@/components/forms';
 import { DensityToggle, type Density } from '@/components/forms/DensityToggle';
 import { SortControl, type SortDirection } from '@/components/forms/SortControl';
-import { ListExportMenu } from '@/components/forms/ListExportMenu';
 import {
   SavedViewMenu,
-  KpiOverviewCard, MetricCard, DateGroupedList, type DateGroupedListGroup,
+  DateGroupedList, type DateGroupedListGroup,
   BulkActionsToolbar, DataProvenanceBadge, OperationalBrief, type BulkAction,
   EntityPreviewDrawer, type OperationalAttention,
 } from '@/components/data-display';
@@ -37,41 +30,47 @@ import { useUrlBatch, useUrlBoolean, useUrlEnum, useUrlNumber, useUrlString } fr
 import { useRangeState } from '@/hooks/useRangeState';
 import { parseSearchQuery, matchesTokens, compareNumeric, parseDurationToken, matchesYmdPrefix } from '@/lib/searchQuery';
 import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
-import { useVehicleState } from '@/api/hooks/useVehicles';
+import { isVehicleStateFieldCurrent, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useDataState } from '@/hooks/useDataState';
+import { useAsOfDate } from '@/hooks/useAsOfDate';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDayKey } from '@/lib/dateFormat';
+import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDayKey, formatTime } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
-import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
+
 import { buildContextHref } from '@/lib/contextNavigation';
 import type { ChargingSession } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { ChargingSessionCard } from '../components/ChargingSessionCard';
+import { ChargingEvidenceTable } from '../components/ChargingEvidenceTable';
+import { CHARGING_VALUE_COLUMNS, chargingColumnValue, parseChargingValueSelections, type ChargingValueColumn } from '../components/chargingGridValues';
+import { ChargingInsights } from '../components/charging-list/ChargingInsights';
+import { ChargingSearchControl } from '../components/charging-list/ChargingSearchControl';
 import { ChargeQueuePlanner } from '../components/ChargeQueuePlanner';
+import { ChargingOverviewStats } from '../components/stat-modernization';
 import {
   computeChargingPeriodStats, priorPeriod, detectChargingAnomalies,
   detectNotableSessions, dailyChargingTrend, getChargerCategory,
-  durationMinutes, avgPowerW, localDayKey,
+  durationMinutes, avgPowerW, sessionAveragePowerW, blendedRecordedCostPerKwh, localDayKey,
   type ChargingTrendMetric, type ChargingPeriodStats, type ChargingAnomaly,
 } from '@/lib/chargingAggregation';
 import {
-  AcDcStatsPanel,
-  BatteryLevelChart,
-  ChargeRatePanel,
-  ChargerSpecsPanel,
-  OptimizerSection,
   computeAcDcBreakdown,
   computeStartLevelDist,
   computeChargeRateStats,
   computeChargerSpecs,
+  OptimizerSection,
 } from '../components/charging-list';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 /* ----------------------------------------------------------------*/
 /*  URL allowlists */
@@ -84,19 +83,13 @@ const SORT_FIELDS = ['date', 'energy', 'cost', 'duration', 'power'] as const;
 type SortField = typeof SORT_FIELDS[number];
 const DENSITY_VALUES = ['compact', 'comfortable'] as const;
 
-/* ----------------------------------------------------------------*/
-/*  Thresholds for conditional sections */
-/* ----------------------------------------------------------------*/
-const THRESHOLD_OPTIMIZER = 10;
-const THRESHOLD_SPECS = 5;
-const THRESHOLD_BATTERY_DIST = 5;
-const THRESHOLD_AC_DC = 1;
-
 export default function ChargingListPage() {
+  const { fmtNumber, fmtInt, fmtCompact } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  usePageTitle(t('charging.list.title', 'Charging Sessions'));
+  usePageTitle(t('charging.list.title', 'Charging sessions'));
   const savedView = useSavedViewUrl();
+  const isDesktopEvidence = useMediaQuery('(min-width: 1024px)');
 
   /* ── Data ─────────────────────────────────────────────────────── */
   const { vehicleId } = useSelectedVehicle();
@@ -108,6 +101,8 @@ export default function ChargingListPage() {
     [unitPrefs.distance],
   );
   const { formatCurrency, currencySymbol } = useFormatting();
+  const chartPalette = useChartPalette();
+  const { asOf } = useAsOfDate();
 
   /* ── URL state ───────────────────────────────────────────────── */
   const { start: startDate, end: endDate, startInstant, endInstantExclusive } = useRangeState({
@@ -119,17 +114,14 @@ export default function ChargingListPage() {
   const [trendMetric, setTrendMetric] = useUrlEnum<ChargingTrendMetric>('trend', TREND_METRICS, 'sessions');
   const [sortBy, setSortBy] = useUrlEnum<SortField>('sort', SORT_FIELDS, 'date');
   const [sortDesc, setSortDesc] = useUrlBoolean('sort_desc', true);
-  const [density, setDensity] = useUrlEnum<Density>('density', DENSITY_VALUES, 'comfortable');
-  const [page, setPage] = useUrlNumber('page', 1);
-  const [pageSize] = useUrlNumber('size', 50);
+  const [density, setDensity] = useUrlEnum<Density>('density', DENSITY_VALUES, isDesktopEvidence ? 'compact' : 'comfortable');
+  const [requestedPage, setPage] = useUrlNumber('page', 1);
+  const [requestedPageSize] = useUrlNumber('size', 50);
+  const pageSize = Number.isSafeInteger(requestedPageSize) && requestedPageSize > 0 ? requestedPageSize : 50;
   const setUrlBatch = useUrlBatch();
-  const previousRange = useRef(`${startDate}:${endDate}`);
-  useEffect(() => {
-    const currentRange = `${startDate}:${endDate}`;
-    if (previousRange.current === currentRange) return;
-    previousRange.current = currentRange;
-    if (page !== 1) setUrlBatch({ page: null });
-  }, [startDate, endDate, page, setUrlBatch]);
+  const [gridValues] = useUrlString('grid_values');
+  const valueFilter = useMemo(() => parseChargingValueSelections(gridValues), [gridValues]);
+  const hasValueFilters = valueFilter.invalid || Object.keys(valueFilter.selections).length > 0;
 
   /* ── Source query ────────────────────────────────────────────── */
   const chargingQuery = useChargingSessionsPaginated(vehicleId, {
@@ -138,16 +130,51 @@ export default function ChargingListPage() {
     start: startInstant,
     end: endInstantExclusive,
   });
-  const { data: sessions, isLoading, error, refetch } = chargingQuery;
+  const { data: sessions, isLoading: sourceLoading, refetch } = chargingQuery;
   /* Retained sessions survive a failed background refresh: only an initial
    * failure (nothing cached) is allowed to replace the list with an error. */
   const chargingState = useDataState(chargingQuery, { provenance: 'historical' });
+  const historyAvailable = chargingState.hasData && Array.isArray(sessions);
+  const historyPending = !historyAvailable && chargingState.fatalError == null;
+  const isLoading = sourceLoading || historyPending;
   const vehicleStateQuery = useVehicleState(vehicleId ?? 0);
-  const vehicleStateDataState = useDataState(vehicleStateQuery, { provenance: 'live' });
+  const vehicleStateDataState = useDataState(vehicleStateQuery, { provenance: asOf ? 'historical' : 'live' });
   const liveState = vehicleStateQuery.data?.state;
   const [previewSession, setPreviewSession] = useState<ChargingSession | null>(null);
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
-  const { data: optimizer } = useChargingOptimizer(vehicleIdStr);
+  const optimizerQuery = useChargingOptimizer(vehicleIdStr);
+  const optimizerState = useDataState(optimizerQuery, { provenance: 'historical' });
+  const optimizerContent = (
+    <div className="space-y-4">
+      <StaleRefreshWarning state={optimizerState} label={t('charging.section.optimizer', 'Cost optimizer & heatmap')} />
+      {optimizerState.hasData && optimizerState.data ? (
+        <OptimizerSection optimizer={optimizerState.data} />
+      ) : (
+        <GlassPanel className="p-4 sm:p-6">
+          <PanelTitle>{t('charging.section.optimizer', 'Cost optimizer & heatmap')}</PanelTitle>
+          <Text variant="bodySm" color="secondary" className="my-4">
+            {t('charging.brief.optimizerScope', 'Independent optimizer source; its history bounds are not reported. Recommendations and savings are illustrative, not measured outcomes.')}
+          </Text>
+          {optimizerState.fatalError != null ? (
+            <QueryError error={optimizerState.fatalError} onRetry={optimizerState.retry ?? undefined} />
+          ) : optimizerQuery.isFetching && !optimizerState.isRefreshBlocked ? (
+            <div role="status" aria-busy="true" aria-label={t('charging.section.optimizer', 'Cost optimizer & heatmap')}>
+              <Skeleton className="h-40" />
+            </div>
+          ) : (
+            <DataStateNotice state="unavailable">
+              <Text variant="bodySm" color="secondary">
+                {t('dataState.unavailable.message', 'A required service is unavailable. This section will recover when the dependency returns.')}
+              </Text>
+              <Button variant="ghost" size="sm" onClick={optimizerState.retry ?? undefined}>
+                {t('common.refresh', 'Refresh')}
+              </Button>
+            </DataStateNotice>
+          )}
+        </GlassPanel>
+      )}
+    </div>
+  );
 
   /* ── Date filter (vehicle-tz day buckets) ────────────────────── */
   const dateFilteredSessions = useMemo(() => {
@@ -167,12 +194,8 @@ export default function ChargingListPage() {
     [dateFilteredSessions, tz],
   );
   const priorRange = useMemo(() => priorPeriod(startDate, endDate), [startDate, endDate]);
-  const priorStats = useMemo<ChargingPeriodStats | null>(
-    () => priorRange && sessions
-      ? computeChargingPeriodStats(sessions, priorRange.start, priorRange.end, tz)
-      : null,
-    [sessions, priorRange, tz],
-  );
+  // The capped current-range query does not establish prior-period coverage.
+  const priorStats: ChargingPeriodStats | null = null;
 
   /* ── Collection counts (computed BEFORE filter) ──────────────── */
   const anomalies = useMemo(
@@ -198,7 +221,7 @@ export default function ChargingListPage() {
     [dateFilteredSessions],
   );
   const freeSessions = useMemo(
-    () => dateFilteredSessions.filter((s) => s.cost_decimal == null || s.cost_decimal === 0),
+    () => dateFilteredSessions.filter((s) => s.cost_decimal === 0),
     [dateFilteredSessions],
   );
 
@@ -220,8 +243,13 @@ export default function ChargingListPage() {
   /* ── Search filter (with structured kv tokens) ───────────────── */
   const deferredSearch = useDeferredValue(search);
   const isSearchPending = !Object.is(search, deferredSearch);
-  const searchTokens = useMemo(() => parseSearchQuery(deferredSearch), [deferredSearch]);
-  const filteredSessions = useMemo(() => {
+  const hasListFilters = deferredSearch.trim().length > 0 || collection !== 'all' || hasValueFilters;
+  const searchTokens = useMemo(() => parseSearchQuery(deferredSearch).map((token) =>
+    token.kind === 'text' && token.value === 'free'
+      ? { kind: 'kv' as const, key: 'free', op: '=' as const, value: '' }
+      : token,
+  ), [deferredSearch]);
+  const searchedSessions = useMemo(() => {
     if (searchTokens.length === 0) return collectionFiltered;
     return collectionFiltered.filter((s) =>
       matchesTokens(s, searchTokens, {
@@ -243,7 +271,8 @@ export default function ChargingListPage() {
           cost: (sess, token) => {
             const target = Number(token.value);
             if (!Number.isFinite(target)) return null;
-            return compareNumeric(sess.cost_decimal ?? 0, token.op, target);
+            if (sess.cost_decimal == null || !Number.isFinite(sess.cost_decimal)) return false;
+            return compareNumeric(sess.cost_decimal, token.op, target);
           },
           // kwh:>20
           kwh: (sess, token) => {
@@ -255,14 +284,17 @@ export default function ChargingListPage() {
           power: (sess, token) => {
             const target = Number(token.value);
             if (!Number.isFinite(target)) return null;
-            const peak = (sess.peak_power_w ?? 0) / 1000;
+            if (sess.peak_power_w == null || !Number.isFinite(sess.peak_power_w)) return false;
+            const peak = sess.peak_power_w / 1000;
             return compareNumeric(peak, token.op, target);
           },
           // dur:>1h | dur:30m | dur:>2d
           dur: (sess, token) => {
             const target = parseDurationToken(token.value);
             if (target == null) return null;
-            return compareNumeric(durationMinutes(sess), token.op, target);
+            const minutes = durationMinutes(sess);
+            if (minutes <= 0) return false;
+            return compareNumeric(minutes, token.op, target);
           },
           // in:2025 | in:2025-04 | in:2025-04-15
           in: (sess, token) => {
@@ -276,11 +308,32 @@ export default function ChargingListPage() {
             return place.includes(want);
           },
           // free (bare keyword treated as kv `free:` with empty value)
-          free: (sess) => sess.cost_decimal == null || sess.cost_decimal === 0,
+          free: (sess) => sess.cost_decimal === 0,
         },
       }),
     );
-  }, [collectionFiltered, searchTokens, tz]);
+  }, [collectionFiltered, searchTokens, tz, fmtNumber]);
+
+  const filteredSessions = useMemo(() => valueFilter.invalid ? [] : searchedSessions.filter((session) =>
+    CHARGING_VALUE_COLUMNS.every((column) =>
+      valueFilter.selections[column] == null
+        || matchesTableValueSelection(chargingColumnValue(session, column), valueFilter.selections[column])),
+  ), [searchedSessions, valueFilter]);
+  const changeValueSelection = useCallback((column: ChargingValueColumn, values: string[] | null) => {
+    const next = { ...valueFilter.selections };
+    if (values == null) delete next[column];
+    else {
+      const available = Array.from(new Set(dateFilteredSessions.map((session) =>
+        tableValueKey(chargingColumnValue(session, column)))));
+      next[column] = compactTableValueSelection(values, available);
+    }
+    setUrlBatch({ grid_values: Object.keys(next).length ? JSON.stringify(next) : null, page: null });
+  }, [valueFilter.selections, dateFilteredSessions, setUrlBatch]);
+  const clearValueFilter = useCallback((column: ChargingValueColumn) => {
+    const next = { ...valueFilter.selections };
+    delete next[column];
+    setUrlBatch({ grid_values: Object.keys(next).length ? JSON.stringify(next) : null, page: null });
+  }, [valueFilter.selections, setUrlBatch]);
 
   /* ── Sort ────────────────────────────────────────────────────── */
   const sortedSessions = useMemo(() => {
@@ -301,6 +354,22 @@ export default function ChargingListPage() {
   }, [filteredSessions, sortBy, sortDesc]);
 
   /* ── Pagination ──────────────────────────────────────────────── */
+  const paginationScope = JSON.stringify([vehicleId, startDate, endDate, tz, deferredSearch, collection, gridValues, pageSize]);
+  const previousPaginationScope = useRef(paginationScope);
+  const scopeChanged = previousPaginationScope.current !== paginationScope;
+  const normalizedPage = Number.isFinite(requestedPage) ? Math.max(1, Math.floor(requestedPage)) : 1;
+  const totalPages = Math.max(1, Math.ceil(sortedSessions.length / pageSize));
+  const canClampPage = historyAvailable && !isLoading && !isSearchPending;
+  const page = scopeChanged ? 1 : canClampPage ? Math.min(normalizedPage, totalPages) : normalizedPage;
+  useEffect(() => {
+    previousPaginationScope.current = paginationScope;
+    if (requestedPage !== page || requestedPageSize !== pageSize) {
+      setUrlBatch({
+        page: page === 1 ? null : String(page),
+        size: pageSize === 50 ? null : String(pageSize),
+      });
+    }
+  }, [paginationScope, requestedPage, requestedPageSize, page, pageSize, setUrlBatch]);
   const paginatedSessions = useMemo(() => {
     const start = (page - 1) * pageSize;
     return sortedSessions.slice(start, start + pageSize);
@@ -331,7 +400,7 @@ export default function ChargingListPage() {
           items,
         };
       });
-  }, [paginatedSessions, t, tz, sortDesc]);
+  }, [paginatedSessions, t, tz, sortDesc, fmtNumber]);
 
   /* ── Trend chart series ──────────────────────────────────────── */
   const trendSeries = useMemo(() => ({
@@ -342,15 +411,15 @@ export default function ChargingListPage() {
   } satisfies Record<ChargingTrendMetric, ReturnType<typeof dailyChargingTrend>>), [dateFilteredSessions, tz]);
 
   const trendMetricsConfig: MetricSwitcherMetric<{ date: string; value: number }>[] = useMemo(() => [
-    { key: 'sessions', label: t('charging.metric.sessions', 'Sessions'), chart: 'bar', color: '#10b981', accent: 'green',
+    { key: 'sessions', label: t('charging.metric.sessions', 'Sessions'), chart: 'bar', color: chartPalette[0], accent: 'cyan',
       formatValue: (v) => fmtInt(v), formatTick: (v) => fmtInt(v) },
-    { key: 'energy', label: t('charging.metric.energy', 'Energy'), chart: 'bar', color: '#06b6d4', accent: 'cyan',
+    { key: 'energy', label: t('charging.metric.energy', 'Energy'), chart: 'bar', color: chartPalette[1], accent: 'cyan',
       formatValue: (v) => `${fmtNumber(v)} kWh`, formatTick: (v) => fmtNumber(v) },
-    { key: 'cost', label: t('charging.metric.cost', 'Cost'), chart: 'bar', color: '#ef4444', accent: 'red',
-      formatValue: (v) => formatCurrency(v), formatTick: (v) => formatCurrency(v, 0) },
-    { key: 'power', label: t('charging.metric.power', 'Avg power'), chart: 'line', color: '#a855f7', accent: 'purple',
-      formatValue: (v) => `${fmtNumber(v)} kW`, formatTick: (v) => fmtNumber(v, 0) },
-  ], [t, formatCurrency]);
+    { key: 'cost', label: t('charging.metric.cost', 'Cost'), chart: 'bar', color: chartPalette[2], accent: 'cyan',
+      formatValue: (v) => formatCurrency(v), formatTick: (v) => formatCurrency(v) },
+    { key: 'power', label: t('charging.metric.power', 'Avg power'), chart: 'line', color: chartPalette[4], accent: 'cyan',
+      formatValue: (v) => `${fmtNumber(v)} kW`, formatTick: (v) => fmtNumber(v) },
+  ], [t, chartPalette, formatCurrency, fmtInt, fmtNumber]);
 
   const formatChartXTick = useCallback(
     (key: string) => formatDayKey(key, { style: 'short' }),
@@ -376,6 +445,10 @@ export default function ChargingListPage() {
     });
   }, []);
   const clearBulk = useCallback(() => setBulkSelected(new Set()), []);
+  useEffect(() => {
+    setPreviewSession(null);
+    clearBulk();
+  }, [vehicleId, clearBulk]);
   const bulkDeleteMut = useBulkDeleteCharging();
   const bulkActions = useMemo<BulkAction[]>(() => [
     {
@@ -394,11 +467,16 @@ export default function ChargingListPage() {
         confirmLabel: t('common.delete', 'Delete'),
       },
       onClick: async (ids) => {
-        await bulkDeleteMut.mutateAsync(ids.map(Number));
-        clearBulk();
+        const submitted = ids.map(Number);
+        const result = await bulkDeleteMut.mutateAsync(submitted);
+        const failed = new Set((result.failed ?? []).map(({ id }) => id));
+        const successful = result.deleted === submitted.length - failed.size;
+        setBulkSelected((previous) => new Set(
+          Array.from(previous).filter((id) => !submitted.includes(id) || failed.has(id) || !successful),
+        ));
       },
     },
-  ], [t, bulkSelected.size, bulkDeleteMut, clearBulk]);
+  ], [t, bulkSelected.size, bulkDeleteMut]);
 
   /* ── Export ──────────────────────────────────────────────────── */
   const exportRows = useCallback((scope: 'visible' | 'selected'): ChargingSession[] => {
@@ -421,6 +499,8 @@ export default function ChargingListPage() {
     const header = ['id', 'started_at', 'ended_at', 'charger_type', 'kwh', 'cost', 'duration_min', 'avg_kw', 'peak_kw', 'start_place'];
     const lines = [header.join(',')];
     for (const s of rows) {
+      const minutes = durationMinutes(s);
+      const power = sessionAveragePowerW(s);
       const fields: (string | number)[] = [
         s.id,
         s.started_at,
@@ -428,9 +508,9 @@ export default function ChargingListPage() {
         s.charger_type ?? '',
         (s.total_energy_added_wh / 1000).toFixed(3),
         s.cost_decimal ?? '',
-        durationMinutes(s).toFixed(1),
-        (avgPowerW(s) / 1000).toFixed(2),
-        ((s.peak_power_w ?? 0) / 1000).toFixed(2),
+        minutes > 0 ? minutes.toFixed(1) : '',
+        power != null ? (power / 1000).toFixed(2) : '',
+        s.peak_power_w != null ? (s.peak_power_w / 1000).toFixed(2) : '',
         (s.start_place ?? '').replace(/"/g, '""'),
       ];
       lines.push(fields.map((v) => {
@@ -451,14 +531,9 @@ export default function ChargingListPage() {
   const datePresetLabel = datePreset ? t(datePreset.i18nKey, datePreset.fallback) : null;
   const formattedRange = `${formatDayKey(startDate, { style: 'long' })} – ${formatDayKey(endDate, { style: 'long' })}`;
   const periodLabel = datePresetLabel ? `${datePresetLabel} · ${formattedRange}` : formattedRange;
-  const priorHasData = priorStats != null && priorStats.count > 0;
-  const priorLabel: string | undefined = priorHasData && priorRange
-    ? t('charging.priorPeriod', 'prior period: {{start}} – {{end}}', {
-        start: formatDayKey(priorRange.start, { style: 'long' }),
-        end: formatDayKey(priorRange.end, { style: 'long' }),
-      })
-    : priorRange
-      ? t('charging.noPriorData', 'No charging in prior period: {{start}} – {{end}}', {
+  const priorHasData = false;
+  const priorLabel: string | undefined = priorRange
+      ? t('charging.priorUnavailable', 'Prior-period comparison unavailable: {{start}} – {{end}}', {
           start: formatDayKey(priorRange.start, { style: 'long' }),
           end: formatDayKey(priorRange.end, { style: 'long' }),
         })
@@ -500,7 +575,7 @@ export default function ChargingListPage() {
           <span className="opacity-50">·</span>
           <span>
             {t('charging.batteryScore', 'Battery score')}{' '}
-            <Text as="span" weight="semibold" style={{ color: currentStats.batteryFriendlyGrade.color }}>
+            <Text as="span" weight="semibold" color="secondary">
               {currentStats.batteryFriendlyGrade.label}
             </Text>
           </span>
@@ -511,7 +586,7 @@ export default function ChargingListPage() {
           <span className="opacity-50">·</span>
           <span>
             {t('charging.mostCommon', 'Most common start: {{hour}}', {
-              hour: formatHour(currentStats.mostCommonStartHour),
+              hour: formatHour(currentStats.mostCommonStartHour, unitPrefs.locale),
             })}
           </span>
         </>
@@ -519,25 +594,23 @@ export default function ChargingListPage() {
     </span>
   ) : null;
 
-  /* ── Collection filters ────────────────────────────────────────── */
-  const collectionPills: PillItem[] = useMemo(() => [
-    { key: 'all',          label: t('charging.coll.all', 'All'),                  count: dateFilteredSessions.length },
-    { key: 'home',         label: t('charging.coll.home', 'Home'),                count: homeSessions.length },
-    { key: 'supercharger', label: t('charging.coll.supercharger', 'Supercharger'), count: scSessions.length },
-    { key: 'dc',           label: t('charging.coll.dc', 'DC Fast'),               count: dcSessions.length },
-    { key: 'free',         label: t('charging.coll.free', 'Free'),                count: freeSessions.length },
-    { key: 'anomalies',    label: t('charging.coll.anomalies', 'Anomalies'),      count: anomalies.length },
-    { key: 'notable',      label: t('charging.coll.notable', 'Notable'),          count: notable.length },
-    { key: 'tagged',       label: t('charging.coll.tagged', 'Tagged'),            count: 0, disabled: true },
-  ], [t, dateFilteredSessions.length, homeSessions.length, scSessions.length, dcSessions.length, freeSessions.length, anomalies.length, notable.length]);
-
-  const collectionLabel = collectionPills.find((p) => p.key === collection)?.label ?? 'All';
+  const collectionLabels: Record<Collection, string> = {
+    all: t('charging.coll.all', 'All'),
+    home: t('charging.coll.home', 'Home'),
+    supercharger: t('charging.coll.supercharger', 'Supercharger'),
+    dc: t('charging.coll.dc', 'DC fast'),
+    free: t('charging.coll.free', 'Free'),
+    anomalies: t('charging.coll.anomalies', 'Anomalies'),
+    notable: t('charging.coll.notable', 'Notable'),
+    tagged: t('charging.coll.tagged', 'Tagged'),
+  };
+  const collectionLabel = collectionLabels[collection];
 
   /* ── Sticky summary ──────────────────────────────────────────── */
   const stickySummary = (
     <>
       <Text as="span" color="secondary" className="truncate">
-        {t('charging.list.title', 'Charging Sessions')}
+        {t('charging.list.title', 'Charging sessions')}
       </Text>
       <span className="opacity-50">·</span>
       <span className="truncate">{periodLabel}</span>
@@ -549,7 +622,7 @@ export default function ChargingListPage() {
         <>
           <span className="opacity-50">·</span>
           <span>{t('charging.avgScore', 'avg')}{' '}
-            <Text as="span" weight="semibold" style={{ color: currentStats.batteryFriendlyGrade.color }}>
+            <Text as="span" weight="semibold" color="secondary">
               {currentStats.batteryFriendlyGrade.label}
             </Text>
           </span>
@@ -589,16 +662,33 @@ export default function ChargingListPage() {
         ((currentStats.count - reliabilityIssueSessions) / currentStats.count) * 100,
       ))
     : null;
-  const blendedCostPerKwh = currentStats.totalEnergyWh > 0
-    ? currentStats.totalCost / (currentStats.totalEnergyWh / 1000)
-    : null;
-  const isChargingNow = liveState?.is_charging === true;
+  const blendedCostPerKwh = blendedRecordedCostPerKwh(dateFilteredSessions);
+  const hasRecordedCosts = dateFilteredSessions.some(
+    (session) => session.cost_decimal != null && Number.isFinite(session.cost_decimal),
+  );
+  const postureCurrent = !asOf && isVehicleStateFieldCurrent(vehicleStateQuery.data, 'is_charging');
+  const batteryCurrent = !asOf && isVehicleStateFieldCurrent(vehicleStateQuery.data, 'battery_level');
+  const isChargingNow = postureCurrent && liveState?.is_charging === true;
+  const hasChargingPosture = typeof liveState?.is_charging === 'boolean';
   const departureBatteryPct = liveState?.battery_level;
-  const timeToTarget = isChargingNow && (liveState?.time_to_full_charge ?? 0) > 0
+  const numericBriefMetrics = useOperationalMetrics([
+    { metricId: 'percent', occurrenceId: 'departure', rawValue: departureBatteryPct,
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '%' }) } },
+    { metricId: 'currency', occurrenceId: 'cost', rawValue: hasRecordedCosts ? currentStats.totalCost : null,
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+    { metricId: 'count', occurrenceId: 'interruptions',
+      rawValue: chargingState.hasData ? interruptionAnomalies.length : null,
+      display: { formatter: raw => ({ value: String(raw), unit: '' }) } },
+    { metricId: 'percent', occurrenceId: 'reliability', rawValue: historyAvailable ? reliabilityPct : null,
+      display: { formatter: raw => ({ value: t('operations.charging.reliabilityValue',
+        '{{value}}% clear', { value: fmtInt(raw) }), unit: '' }) } },
+  ]);
+  const timeToTarget = isChargingNow && isVehicleStateFieldCurrent(vehicleStateQuery.data, 'time_to_full_charge')
+    && (liveState?.time_to_full_charge ?? 0) > 0
     ? formatDurationMinutes((liveState?.time_to_full_charge ?? 0) * 60)
     : null;
   const chargingAttention: OperationalAttention[] = [
-    ...(liveState && !isChargingNow && liveState.battery_level < 20
+    ...(postureCurrent && batteryCurrent && liveState?.is_charging === false && liveState.battery_level != null && liveState.battery_level < 20
       ? [{
           key: 'departure-readiness',
           title: t(
@@ -623,7 +713,7 @@ export default function ChargingListPage() {
           ? 'danger'
           : 'warning',
       })),
-    ...(currentStats.count === 0
+    ...(historyAvailable && currentStats.count === 0
       ? [{
           key: 'charging-empty',
           title: t('operations.charging.noDataTitle', 'No charging activity in this window'),
@@ -673,7 +763,9 @@ export default function ChargingListPage() {
       };
     });
   const narrative: OperationalNarrative = {
-    whatChanged: t(
+    whatChanged: !historyAvailable
+      ? historyPending ? t('common.loading', 'Loading...') : t('common.unavailable', 'Unavailable')
+      : t(
       'operations.charging.narrative.whatChanged',
       '{{sessions}} sessions delivered {{energy}} in the selected window; {{exceptions}} require review.',
       {
@@ -688,19 +780,24 @@ export default function ChargingListPage() {
     ),
     confidence: {
       label:
-        currentStats.count > 0 && !vehicleStateQuery.isError
+        currentStats.count > 0 && chargingState.status === 'ok' && postureCurrent && batteryCurrent && !vehicleStateQuery.isError
           ? 'high'
           : currentStats.count > 0 || liveState != null
             ? 'medium'
             : 'low',
       score: null,
       basis: [
-        t(
+        historyAvailable ? t(
           'operations.charging.narrative.sessionBasis',
           '{{count}} sessions were evaluated in the active period.',
           { count: currentStats.count },
-        ),
-        vehicleStateQuery.isError
+        ) : historyPending ? t('common.loading', 'Loading...') : t('common.unavailable', 'Unavailable'),
+        vehicleStateDataState.refreshError != null
+          ? t(
+              'operations.charging.narrative.liveRetainedBasis',
+              'Charging and battery state is retained from the last successful vehicle-state read; its refresh has not recovered.',
+            )
+          : vehicleStateDataState.fatalError != null || !postureCurrent || !batteryCurrent
           ? t(
               'operations.charging.narrative.liveLimitedBasis',
               'Live charging and battery state could not be resolved.',
@@ -727,7 +824,14 @@ export default function ChargingListPage() {
         'operations.charging.narrative.reliabilityLimitation',
         'The clear-session ratio is an exception heuristic, not a charger-uptime service level.',
       ),
-      ...(vehicleStateQuery.isError
+      ...(vehicleStateDataState.refreshError != null
+        ? [
+            t(
+              'operations.charging.narrative.liveRetainedLimitation',
+              'Departure readiness uses retained battery state until the live vehicle-state refresh recovers.',
+            ),
+          ]
+        : vehicleStateDataState.fatalError != null || !postureCurrent || !batteryCurrent
         ? [
             t(
               'operations.charging.narrative.liveLimitation',
@@ -761,7 +865,7 @@ export default function ChargingListPage() {
 
   /* ── Defensive: no vehicle ──────────────────────────────────── */
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('charging.list.title', 'Charging Sessions')} />;
+    return <NoVehicleSelected pageTitle={t('charging.list.title', 'Charging sessions')} />;
   }
 
   const previewFrom = localDayKey(previewSession?.started_at, tz);
@@ -769,10 +873,25 @@ export default function ChargingListPage() {
     previewSession?.ended_at ?? previewSession?.started_at,
     tz,
   ) ?? previewFrom;
+  const renderSession = (session: ChargingSession) => (
+    <StaggerItem key={session.id}>
+      <ChargingSessionCard
+        session={session}
+        toDistanceDisplay={toDistanceDisplay}
+        distanceUnit={distanceUnit}
+        selected={bulkSelected.has(session.id)}
+        onToggleSelect={toggleSessionSelected}
+        anomaly={anomalyById.get(session.id)}
+        density={density === 'compact' ? 'compact' : 'comfortable'}
+        onPreview={setPreviewSession}
+      />
+    </StaggerItem>
+  );
 
   return (
-    <PageContainer
-      title={t('charging.list.title', 'Charging Sessions')}
+    <PageLayout
+      compactHeader
+      title={t('charging.list.title', 'Charging sessions')}
       subtitle={t(
         'charging.list.subtitle',
         'Live readiness, cost exposure, charger behavior, and charging history',
@@ -797,14 +916,18 @@ export default function ChargingListPage() {
         </PageHeaderSticky>
 
         {chargingState.status === 'initialFailure' ? (
-          <QueryError error={error as Error} onRetry={refetch} />
+          <QueryError error={chargingState.fatalError} onRetry={refetch} />
         ) : (
           <StaleRefreshWarning
             state={chargingState}
-            label={t('charging.list.title', 'Charging Sessions')}
+            label={t('charging.list.title', 'Charging sessions')}
           />
         )}
-        {vehicleStateQuery.isError && (
+        <StaleRefreshWarning
+          state={vehicleStateDataState}
+          label={t('operations.charging.liveStateSource', 'Live vehicle state')}
+        />
+        {vehicleStateDataState.fatalError != null && (
           <DataStateNotice
             state="partial"
             title={t(
@@ -819,216 +942,17 @@ export default function ChargingListPage() {
           </DataStateNotice>
         )}
 
-        <OperationalBrief
-          testId="charging-operational-brief"
-          eyebrow={t('operations.charging.eyebrow', 'Charging posture')}
-          title={t('operations.charging.title', 'Cost, reliability, and battery-friendly behavior')}
-          description={t(
-            'operations.charging.description',
-            'Current charging state, departure readiness, cost exposure, and charger behavior are paired with the selected session history.',
-          )}
-          statusLabel={
-            isChargingNow
-              ? t('operations.charging.statusCharging', 'Charging now')
-              : currentStats.count === 0
-              ? t('operations.status.awaitingData', 'Awaiting data')
-              : anomalies.length > 0 || vehicleStateQuery.isError
-                ? t('operations.status.review', 'Review recommended')
-                : t('operations.status.onTrack', 'On track')
-          }
-          statusTone={
-            isChargingNow
-              ? 'info'
-              : currentStats.count === 0
-              ? 'neutral'
-              : anomalies.length > 0 || vehicleStateQuery.isError
-                ? 'warning'
-                : 'success'
-          }
-          narrative={narrative}
-          scope={<Badge variant="neutral" size="sm">{periodLabel}</Badge>}
-          freshness={
-            <div className="flex flex-wrap items-center gap-2">
-              <DataProvenanceBadge
-                provenance={vehicleStateDataState.provenance}
-                status={vehicleStateDataState.status}
-                updatedAt={vehicleStateDataState.updatedAt}
-              />
-              <DataProvenanceBadge
-                provenance={chargingState.provenance}
-                status={chargingState.status}
-                updatedAt={chargingState.updatedAt}
-              />
-            </div>
-          }
-          metricColumns={3}
-          metrics={[
-            {
-              key: 'posture',
-              label: t('operations.charging.currentPosture', 'Current posture'),
-              value: vehicleStateQuery.isLoading
-                ? t('operations.charging.checkingLiveState', 'Checking')
-                : vehicleStateQuery.isError || !liveState
-                  ? t('common.unavailable', 'Unavailable')
-                  : isChargingNow
-                    ? t('operations.charging.chargingNow', 'Charging')
-                    : t('operations.charging.notCharging', 'Not charging'),
-              detail: vehicleStateQuery.isError
-                ? t(
-                    'operations.charging.currentPostureUnavailable',
-                    'Live state could not be resolved; session history remains available.',
-                  )
-                : isChargingNow
-                  ? t(
-                      'operations.charging.currentPostureCharging',
-                      'Battery is at {{battery}}%{{eta}}.',
-                      {
-                        battery: fmtInt(departureBatteryPct ?? 0),
-                        eta: timeToTarget
-                          ? t(
-                              'operations.charging.currentPostureEta',
-                              ' with {{duration}} to target',
-                              { duration: timeToTarget },
-                            )
-                          : '',
-                      },
-                    )
-                  : liveState
-                    ? t(
-                        'operations.charging.currentPostureIdle',
-                        'Latest battery state is {{battery}}%; the vehicle is not drawing charge.',
-                        { battery: fmtInt(departureBatteryPct ?? 0) },
-                      )
-                    : t(
-                        'operations.charging.currentPostureMissing',
-                        'Live state has not arrived; session history remains available.',
-                      ),
-              tone: vehicleStateQuery.isLoading || vehicleStateQuery.isError || !liveState
-                ? 'neutral'
-                : isChargingNow
-                  ? 'info'
-                  : 'success',
-            },
-            {
-              key: 'departure',
-              label: t('operations.charging.departureReadiness', 'Departure readiness'),
-              value: liveState ? `${fmtInt(departureBatteryPct ?? 0)}%` : '—',
-              detail: !liveState
-                ? t(
-                    'operations.charging.departureUnavailable',
-                    'Current battery state is required to assess near-term departure readiness.',
-                  )
-                : timeToTarget
-                  ? t(
-                      'operations.charging.departureEta',
-                      'Estimated {{duration}} to the configured charge target.',
-                      { duration: timeToTarget },
-                    )
-                  : (departureBatteryPct ?? 0) >= 40
-                    ? t(
-                        'operations.charging.departureReady',
-                        'Battery state supports near-term departure; confirm route range before leaving.',
-                      )
-                    : t(
-                        'operations.charging.departureLow',
-                        'Additional charging is recommended before the next departure.',
-                      ),
-              tone: !liveState
-                ? 'neutral'
-                : (departureBatteryPct ?? 0) < 20
-                  ? 'danger'
-                  : (departureBatteryPct ?? 0) < 40
-                    ? 'warning'
-                    : 'success',
-            },
-            {
-              key: 'cost',
-              label: t('operations.charging.costExposure', 'Cost exposure'),
-              value: formatCurrency(currentStats.totalCost),
-              detail: blendedCostPerKwh != null
-                ? t(
-                    'operations.charging.costExposureDetail',
-                    '{{rate}}/kWh blended across recorded charging energy.',
-                    { rate: formatCurrency(blendedCostPerKwh) },
-                  )
-                : t(
-                    'operations.charging.costExposureUnavailable',
-                    'A blended rate requires both recorded energy and cost.',
-                  ),
-              tone: 'neutral',
-            },
-            {
-              key: 'efficiency',
-              label: t('operations.charging.efficiency', 'Charging efficiency'),
-              value: t('operations.charging.efficiencyNotMeasured', 'Not measured'),
-              detail: t(
-                'operations.charging.efficiencyNotMeasuredDetail',
-                'Independent wall-input and battery-retained energy are not present in the session contract; delivery rate is shown below instead.',
-              ),
-              tone: 'neutral',
-            },
-            {
-              key: 'interruptions',
-              label: t('operations.charging.interruptions', 'Potential interruptions'),
-              value: interruptionAnomalies.length,
-              detail: t(
-                'operations.charging.interruptionsDetail',
-                'Sessions with a telemetry gap or sustained unexpectedly low DC power.',
-              ),
-              tone: interruptionAnomalies.length > 0 ? 'danger' : 'success',
-            },
-            {
-              key: 'reliability',
-              label: t('operations.charging.reliability', 'Charger reliability'),
-              value: reliabilityPct == null
-                ? '—'
-                : t(
-                    'operations.charging.reliabilityValue',
-                    '{{value}}% clear',
-                    { value: fmtInt(reliabilityPct) },
-                  ),
-              detail: t(
-                'operations.charging.reliabilityDetail',
-                'Share of sessions without telemetry gaps, sustained low power, or prolonged trickle behavior; not a charger-uptime SLA.',
-              ),
-              tone: reliabilityPct == null
-                ? 'neutral'
-                : reliabilityPct >= 95
-                  ? 'success'
-                  : reliabilityPct >= 80
-                    ? 'warning'
-                    : 'danger',
-            },
-          ]}
-          attention={chargingAttention}
-          provenance={t(
-            'operations.charging.provenance',
-            'Derived from live vehicle state, charging-session telemetry, configured cost data, and vehicle-local day boundaries.',
-          )}
-        />
 
         {/* Search + active filter chips */}
         <FadeIn>
           <section aria-label={t('charging.section.filters', 'Search and filters')}>
-          <FilterBar>
-            <div className="relative w-full sm:w-[28rem]">
-              <SearchInput
-                value={search}
-                onChange={(v) => { setUrlBatch({ q: v || null, page: null }); }}
-                placeholder={t('charging.searchPlaceholder', 'Search charging — try "charger:home", "cost:>5", "kwh:>20", "Costco"')}
-                className="w-full"
-                historyScope="charging"
-              />
-              {isSearchPending && (
-                <span
-                  role="status"
-                  aria-live="polite"
-                  aria-label={t('filter.pending', 'Filtering…')}
-                  className="pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 inline-block h-3 w-3 rounded-full border-2 border-cyan-400/40 border-t-cyan-400 animate-spin"
-                />
-              )}
-            </div>
-          </FilterBar>
+          {!isDesktopEvidence && <FilterBar>
+            <ChargingSearchControl
+              value={search}
+              onChange={(value) => setUrlBatch({ q: value || null, page: null })}
+              pending={isSearchPending}
+            />
+          </FilterBar>}
           <ActiveFilterChips
             className="mt-3"
             filters={
@@ -1045,251 +969,96 @@ export default function ChargingListPage() {
                   value: collectionLabel,
                   onRemove: () => { setUrlBatch({ coll: null, page: null }); },
                 } satisfies FilterChipDescriptor : null,
+                hasValueFilters ? {
+                  key: 'grid_values',
+                  label: t('table.filter.values', 'Available values'),
+                  value: fmtInt(Object.keys(valueFilter.selections).length),
+                  onRemove: () => { setUrlBatch({ grid_values: null, page: null }); },
+                } satisfies FilterChipDescriptor : null,
               ].filter(Boolean) as FilterChipDescriptor[]) as readonly FilterChipDescriptor[]
             }
             onClearAll={() => {
-              setUrlBatch({ q: null, coll: null, page: null });
+              setUrlBatch({ q: null, coll: null, grid_values: null, page: null });
             }}
           />
           </section>
         </FadeIn>
 
-        {/* Shared-charger queue planner */}
-        <FadeIn>
-          <ChargeQueuePlanner />
-        </FadeIn>
-
         {/* Overview KPI card */}
+        <div className="grid min-w-0 grid-cols-1 gap-4">
         <FadeIn>
           <section aria-label={t('charging.section.overview', 'Overview')}>
-          {currentStats.count > 0 ? (
-            <KpiOverviewCard
-              id="charging-overview"
-              testId="charging-overview"
-              header={{
-                title: t('charging.overview', 'Overview'),
-                currentLabel: periodLabel,
-                comparisonLabel: priorLabel,
-              }}
-              kpis={
-                <>
-                  <MetricCard
-                    label={t('charging.totalSessions', 'Sessions')}
-                    value={fmtCompact(currentStats.count)}
-                    color="cyan"
-                    delta={priorHasData ? {
-                      metric: 'trip_count',
-                      previous: priorStats!.count,
-                      current: currentStats.count,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                  <MetricCard
-                    label={t('charging.totalEnergy', 'Energy (kWh)')}
-                    value={fmtCompact(currentStats.totalEnergyWh / 1000, 10000)}
-                    color="green"
-                    delta={priorHasData ? {
-                      metric: 'energy_consumed',
-                      previous: priorStats!.totalEnergyWh / 1000,
-                      current: currentStats.totalEnergyWh / 1000,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                  <MetricCard
-                    label={t('charging.totalCost', 'Cost')}
-                    value={formatCurrency(currentStats.totalCost)}
-                    color="red"
-                    delta={priorHasData ? {
-                      metric: 'cost',
-                      previous: priorStats!.totalCost,
-                      current: currentStats.totalCost,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                  <MetricCard
-                    label={t('charging.avgRate', 'Avg rate (kW)')}
-                    value={currentStats.avgRateKw != null ? fmtNumber(currentStats.avgRateKw) : '—'}
-                    color="purple"
-                    delta={priorHasData && currentStats.avgRateKw != null && priorStats!.avgRateKw != null ? {
-                      metric: { direction: 'neutral' },
-                      previous: priorStats!.avgRateKw,
-                      current: currentStats.avgRateKw,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                  <MetricCard
-                    label={t('charging.avgDuration', 'Avg duration')}
-                    value={currentStats.avgDurationMin != null ? formatDurationMinutes(currentStats.avgDurationMin) : '—'}
-                    color="blue"
-                    delta={priorHasData && currentStats.avgDurationMin != null && priorStats!.avgDurationMin != null ? {
-                      metric: { direction: 'neutral' },
-                      previous: priorStats!.avgDurationMin,
-                      current: currentStats.avgDurationMin,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                  <MetricCard
-                    label={t('charging.avgPower', 'Avg power (kW)')}
-                    value={currentStats.avgPowerW != null ? fmtNumber(currentStats.avgPowerW / 1000) : '—'}
-                    color="amber"
-                    delta={priorHasData && currentStats.avgPowerW != null && priorStats!.avgPowerW != null ? {
-                      metric: { direction: 'neutral' },
-                      previous: priorStats!.avgPowerW / 1000,
-                      current: currentStats.avgPowerW / 1000,
-                      display: 'percent',
-                    } : undefined}
-                  />
-                </>
-              }
-              secondary={secondaryLine}
-              footer={anomalyFooter}
-            />
-          ) : (
-            <GlassPanel className="p-6">
-              <EmptyState
-                /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                message={t('charging.noStatsRange', 'No charging sessions in this range')}
-              />
-            </GlassPanel>
-          )}
+          <ChargingOverviewStats
+            stats={currentStats}
+            priorStats={priorStats}
+            priorHasData={priorHasData}
+            hasRecordedCosts={hasRecordedCosts}
+            period={{
+              kind: 'analysis', label: periodLabel, start: startInstant,
+              endExclusive: endInstantExclusive, timezone: tz, completeness: 'unknown',
+              provenance: t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 }),
+            }}
+            priorLabel={priorLabel}
+            loading={isLoading}
+            retained={chargingState.status === 'stale' || chargingState.isRefreshing}
+            error={chargingState.fatalError}
+            onRetry={refetch}
+            secondary={secondaryLine}
+            footer={anomalyFooter}
+          />
           </section>
         </FadeIn>
 
         {/* Trend chart */}
-        {currentStats.count > 0 && (
           <FadeIn>
             <section aria-label={t('charging.section.trend', 'Charging over time')}>
-            <MetricSwitcherChart
+            <Caption>{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Caption>
+            {isLoading ? (
+              <GlassPanel className="p-4">
+                <SectionTitle>{t('charging.overTime', 'Charging over time')}</SectionTitle>
+                <Skeleton className="mt-3 h-52" />
+              </GlassPanel>
+            ) : chargingState.fatalError != null ? (
+              <GlassPanel className="p-4">
+                <SectionTitle>{t('charging.overTime', 'Charging over time')}</SectionTitle>
+                <QueryError error={chargingState.fatalError} onRetry={refetch} />
+              </GlassPanel>
+            ) : <MetricSwitcherChart
               title={t('charging.overTime', 'Charging over time')}
-              ariaLabel={t('charging.overTime.aria', 'Charging over time chart with metric switcher')}
+              ariaLabel={t('charging.overTimeAria', 'Charging over time chart with metric switcher')}
               series={trendSeries}
               metrics={trendMetricsConfig}
               activeMetric={trendMetric}
               onMetricChange={(k) => setTrendMetric(k as ChargingTrendMetric)}
               formatXTick={formatChartXTick}
-              emptyMessage={t('charging.overTime.empty', 'No data for this metric in the selected range')}
+              emptyMessage={t('charging.overTimeEmpty', 'No data for this metric in the selected range')}
               testId="charging-trend-chart"
-            />
+            />}
             </section>
           </FadeIn>
-        )}
-
-        {/* Collections */}
-        <FadeIn>
-          <section aria-label={t('charging.section.collections', 'Collections')}>
-          <PillFilterBar
-            items={collectionPills}
-            activeKey={collection}
-            onChange={(k) => setUrlBatch({ coll: k === 'all' ? null : k, page: null })}
-            ariaLabel={t('charging.collections.aria', 'Filter charging sessions by collection')}
-            testId="charging-collections"
-          />
-          </section>
-        </FadeIn>
-
-        {/* Charging insights — analytical bento that reflows into columns on wide screens */}
-        {sessions && (
-          <FadeIn delay={0.15}>
-            <section
-              aria-label={t('charging.section.insights', 'Charging insights')}
-              className="space-y-4 xl:space-y-5"
-            >
-              <SectionTitle>{t('charging.insights.title', 'Charging Insights')}</SectionTitle>
-
-              {sessions.length === 0 && (
-                <GlassPanel className="p-6">
-                  {/* no-action: recovery uses the vehicle, period, and collection filters above. */}
-                  <EmptyState
-                    icon={<Plug className="h-8 w-8" aria-hidden="true" />}
-                    message={t(
-                      'charging.insights.emptyMessage',
-                      'Charging insights need completed sessions in the selected range.',
-                    )}
-                    description={t(
-                      'charging.insights.emptyDescription',
-                      'Battery-start patterns, charger comparisons, and scheduling guidance appear as session history accumulates.',
-                    )}
-                    className="py-8"
-                  />
-                </GlassPanel>
-              )}
-
-              <div className="grid grid-cols-1 gap-4 xl:gap-5 2xl:grid-cols-6">
-                {/* AC vs DC — wide table, spans the majority of the row on wide screens */}
-                {acDcBreakdown && (acDcBreakdown.ac.count + acDcBreakdown.dc.count >= THRESHOLD_AC_DC) ? (
-                  <div className="min-w-0 2xl:col-span-4">
-                    <AcDcStatsPanel breakdown={acDcBreakdown} />
-                  </div>
-                ) : null}
-
-                {/* Battery start-level distribution — needs ≥ 5 sessions to be meaningful */}
-                {startLevelDist.length > 0 && sessions.length >= THRESHOLD_BATTERY_DIST ? (
-                  <div className="min-w-0 2xl:col-span-2">
-                    <BatteryLevelChart data={startLevelDist} />
-                  </div>
-                ) : sessions.length > 0 && sessions.length < THRESHOLD_BATTERY_DIST ? (
-                  <div className="min-w-0 2xl:col-span-2">
-                    <EmptyStateThreshold
-                      currentCount={sessions.length}
-                      threshold={THRESHOLD_BATTERY_DIST}
-                      itemNoun={t('charging.itemNoun', 'sessions')}
-                      sectionLabel={t('charging.section.batteryDist', 'Battery start-level distribution')}
-                      description={t('charging.section.batteryDistDesc', 'See where you typically start charging.')}
-                    />
-                  </div>
-                ) : null}
-
-                {/* Delivery rate is measurable from session energy and elapsed time. */}
-                {chargeRateStats ? (
-                  <div className="min-w-0 2xl:col-span-6">
-                    <ChargeRatePanel stats={chargeRateStats} />
-                  </div>
-                ) : null}
-
-                {/* Charger specs — needs ≥ 5 to compare */}
-                {chargerSpecs && sessions.length >= THRESHOLD_SPECS ? (
-                  <div className="min-w-0 2xl:col-span-6">
-                    <ChargerSpecsPanel specs={chargerSpecs} />
-                  </div>
-                ) : sessions.length > 0 && sessions.length < THRESHOLD_SPECS ? (
-                  <div className="min-w-0 2xl:col-span-6">
-                    <EmptyStateThreshold
-                      currentCount={sessions.length}
-                      threshold={THRESHOLD_SPECS}
-                      itemNoun={t('charging.itemNoun', 'sessions')}
-                      sectionLabel={t('charging.section.specs', 'Charger specs breakdown')}
-                    />
-                  </div>
-                ) : null}
-              </div>
-
-              {/* Optimizer + heatmap — full-width band (has its own internal grid) */}
-              {optimizer && sessions.length >= THRESHOLD_OPTIMIZER ? (
-                <OptimizerSection optimizer={optimizer} />
-              ) : sessions.length > 0 && sessions.length < THRESHOLD_OPTIMIZER ? (
-                <EmptyStateThreshold
-                  currentCount={sessions.length}
-                  threshold={THRESHOLD_OPTIMIZER}
-                  itemNoun={t('charging.itemNoun', 'sessions')}
-                  sectionLabel={t('charging.section.optimizer', 'Cost optimizer & heatmap')}
-                  description={t('charging.section.optimizerDesc', 'Smart scheduling recommendations require pattern recognition.')}
-                />
-              ) : null}
-            </section>
-          </FadeIn>
-        )}
+        </div>
 
         {/* Session list — full-width detail band */}
+        {(valueFilter.invalid || (!isDesktopEvidence && hasValueFilters)) && (
+          <InlineCallout
+            variant={valueFilter.invalid ? 'warning' : 'info'}
+            action={{ label: t('table.filter.clear', 'Clear'), onClick: () => setUrlBatch({ grid_values: null, page: null }) }}
+          >
+            {valueFilter.invalid
+              ? t('table.filter.invalidValues', 'This saved value filter is invalid. Clear it to reset.')
+              : t('table.filter.mobileValues', 'Column value filters are active. Open the desktop grid to edit them, or clear them here.')}
+          </InlineCallout>
+        )}
         <FadeIn delay={0.2}>
           <section
             aria-label={t('charging.section.sessions', 'All charging sessions')}
             className="space-y-3"
             data-tour="charging-list"
           >
-            {sortedSessions.length > 0 && (
+            {!isDesktopEvidence && sortedSessions.length > 0 && (
               <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
                 <SectionTitle className="flex items-center gap-2">
-                  <Plug className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+                  <Icon icon={Plug} size="md" className="text-[var(--text-secondary)]" />
                   {t('charging.allSessions', 'All sessions')}
                   <Text as="span" size="xs" weight="regular" color="muted">
                     ({fmtCompact(sortedSessions.length)})
@@ -1322,81 +1091,349 @@ export default function ChargingListPage() {
                 </div>
               </div>
             )}
+            {!isDesktopEvidence && (
+              <Caption>{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Caption>
+            )}
 
+            <BulkActionsToolbar
+              selectedIds={Array.from(bulkSelected)}
+              total={filteredSessions.length}
+              selectionScope="filtered"
+              onClear={clearBulk}
+              actions={bulkActions}
+              itemNoun={{
+                one: t('bulk.noun.session_one', 'session'),
+                other: t('bulk.noun.session_other', 'sessions'),
+              }}
+            />
+            {isDesktopEvidence && !isLoading && historyAvailable && (
+              <ChargingEvidenceTable
+                sessions={paginatedSessions}
+                availableSessions={dateFilteredSessions}
+                valueSelections={valueFilter.selections}
+                invalidValueSelection={valueFilter.invalid}
+                onValueSelectionChange={changeValueSelection}
+                onValueFilterClear={clearValueFilter}
+                timezone={tz}
+                selectedIds={bulkSelected}
+                onSelectionChange={setBulkSelected}
+                onPreview={setPreviewSession}
+                anomalies={anomalyById}
+                sortBy={sortBy}
+                sortDir={sortDesc ? 'desc' : 'asc'}
+                onSort={(key) => {
+                  if (key === sortBy) setSortDesc(!sortDesc);
+                  else setUrlBatch({ sort: key, sort_desc: 'true', page: null });
+                }}
+                density={density === 'compact' ? 'compact' : 'comfortable'}
+                paginationControls={{
+                  page,
+                  pageSize,
+                  total: sortedSessions.length,
+                  onPageChange: setPage,
+                  onPageSizeChange: (size) => setUrlBatch({ size: String(size), page: null }),
+                }}
+                toolbarHeading={
+                  <div>
+                    <SectionTitle>{t('charging.allSessions', 'All sessions')} ({fmtCompact(sortedSessions.length)})</SectionTitle>
+                    <Caption>{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Caption>
+                  </div>
+                }
+                controls={{
+                  search: {
+                    value: search,
+                    onChange: (value) => setUrlBatch({ q: value || null, page: null }),
+                    pending: isSearchPending,
+                    placeholder: t('charging.searchPlaceholder', 'Search charging — try "charger:home", "cost:>5", "kwh:>20", "Costco"'),
+                    historyScope: 'charging',
+                  },
+                  density: { value: density, onChange: setDensity, options: ['compact', 'comfortable'], testId: 'charging-density' },
+                  exports: {
+                    onExportCsv: handleExportCsv,
+                    onExportJson: handleExportJson,
+                    selectedCount: bulkSelected.size,
+                    visibleCount: sortedSessions.length,
+                    testId: 'charging-export',
+                  },
+                }}
+              />
+            )}
             {isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)}
               </div>
             ) : paginatedSessions.length > 0 ? (
               <>
-                <BulkActionsToolbar
-                  selectedIds={Array.from(bulkSelected)}
-                  total={filteredSessions.length}
-                  onClear={clearBulk}
-                  actions={bulkActions}
-                  itemNoun={{
-                    one: t('bulk.noun.session_one', 'session'),
-                    other: t('bulk.noun.session_other', 'sessions'),
-                  }}
-                />
-                <StaggerContainer>
-                  <DateGroupedList
+                {!isDesktopEvidence && <StaggerContainer>
+                  {sortBy === 'date' ? <DateGroupedList
                     groups={groupedSessions}
                     itemKey={(s) => s.id}
-                    renderItem={(s) => (
-                      <StaggerItem>
-                        <ChargingSessionCard
-                          session={s}
-                          toDistanceDisplay={toDistanceDisplay}
-                          distanceUnit={distanceUnit}
-                          selected={bulkSelected.has(s.id)}
-                          onToggleSelect={toggleSessionSelected}
-                          anomaly={anomalyById.get(s.id)}
-                          density={density === 'compact' ? 'compact' : 'comfortable'}
-                          onPreview={setPreviewSession}
-                        />
-                      </StaggerItem>
-                    )}
-                  />
-                </StaggerContainer>
-                <Pagination
+                    renderItem={renderSession}
+                  /> : <div className="space-y-3">{paginatedSessions.map(renderSession)}</div>}
+                </StaggerContainer>}
+                {!isDesktopEvidence && <Pagination
                   page={page}
                   pageSize={pageSize}
                   total={sortedSessions.length}
                   onPageChange={setPage}
                   onPageSizeChange={(s) => { setUrlBatch({ size: String(s), page: null }); }}
-                />
+                />}
               </>
-            ) : !isLoading && (
+            ) : chargingState.fatalError != null ? (
+              <QueryError error={chargingState.fatalError} onRetry={refetch} />
+            ) : historyPending ? (
+              <Text color="secondary">{t('common.loading', 'Loading...')}</Text>
+            ) : (
               <>
                 <EmptyState
                   icon={<Battery className="h-8 w-8" />}
                   title={
-                    collection !== 'all'
+                    hasListFilters
                       ? t('charging.emptyForCollection', 'No charging sessions in this view')
                       : t('charging.emptyTitle', 'No charging sessions yet')
                   }
                   message={
-                    collection !== 'all'
-                      ? t('charging.emptyForCollection.msg', 'Try switching to a different collection or clearing your filters.')
+                    hasListFilters
+                      ? t('charging.emptyForCollectionMessage', 'Try switching to a different collection or clearing your filters.')
                       : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')
                   }
                   action={{
                     label: t('charging.empty.cta', 'Reset filters'),
                     onClick: () => {
-                      setUrlBatch({ q: null, from: null, to: null, coll: null, sort: null, page: null });
+                      setUrlBatch({ q: null, from: null, to: null, coll: null, grid_values: null, sort: null, page: null });
                     },
                   }}
                 />
                 {/* HELP-02 — governed prerequisite + likely cause. Only for
                     the unfiltered view; the filtered branch above already
                     tells the user to clear filters. */}
-                {collection === 'all' && (
+                {!hasListFilters && (
                   <EmptyStateGuidanceDetails guidanceId="charging.list" className="mx-auto" />
                 )}
               </>
             )}
           </section>
+        </FadeIn>
+
+        <OperationalBrief
+          compact
+          testId="charging-operational-brief"
+          eyebrow={t('operations.charging.eyebrow', 'Charging posture')}
+          title={t('operations.charging.title', 'Cost, reliability, and battery-friendly behavior')}
+          description={t(
+            'operations.charging.description',
+            'Current charging state, departure readiness, cost exposure, and charger behavior are paired with the selected session history.',
+          )}
+          statusLabel={
+            isChargingNow
+              ? t('operations.charging.statusCharging', 'Charging now')
+              : !historyAvailable || currentStats.count === 0
+              ? t('operations.status.awaitingData', 'Awaiting data')
+              : anomalies.length > 0 || vehicleStateQuery.isError || chargingState.status !== 'ok' || !postureCurrent || !batteryCurrent
+                ? t('operations.status.review', 'Review recommended')
+                : t('charging.brief.available', 'Source measurements available')
+          }
+          statusTone={
+            isChargingNow
+              ? 'info'
+              : !historyAvailable || currentStats.count === 0
+              ? 'neutral'
+              : anomalies.length > 0 || vehicleStateQuery.isError || chargingState.status !== 'ok' || !postureCurrent || !batteryCurrent
+                ? 'warning'
+                : 'success'
+          }
+          narrative={narrative}
+          scope={<Badge variant="neutral" size="sm">{periodLabel}</Badge>}
+          freshness={
+            <div className="flex flex-wrap items-center gap-2">
+              <DataProvenanceBadge
+                provenance={vehicleStateDataState.provenance}
+                status={vehicleStateDataState.status}
+                updatedAt={vehicleStateDataState.updatedAt}
+              />
+              <DataProvenanceBadge
+                provenance={chargingState.provenance}
+                status={chargingState.status}
+                updatedAt={chargingState.updatedAt}
+              />
+            </div>
+          }
+          metricColumns={3}
+          metrics={[
+            {
+              key: 'posture',
+              label: t('operations.charging.currentPosture', 'Current posture'),
+              value: vehicleStateQuery.isLoading
+                ? t('operations.charging.checkingLiveState', 'Checking')
+                : vehicleStateDataState.fatalError != null || !liveState || !hasChargingPosture
+                  ? t('common.unavailable', 'Unavailable')
+                  : liveState.is_charging === true
+                    ? t('operations.charging.chargingNow', 'Charging')
+                    : t('operations.charging.notCharging', 'Not charging'),
+              detail: vehicleStateDataState.fatalError != null || !hasChargingPosture || !postureCurrent
+                ? t(
+                    'operations.charging.currentPostureUnavailable',
+                    'Live state could not be resolved; session history remains available.',
+                  )
+                : departureBatteryPct == null
+                  ? t(
+                      'operations.charging.departureUnavailable',
+                      'Current battery state is required to assess near-term departure readiness.',
+                    )
+                : isChargingNow
+                  ? t(
+                      'operations.charging.currentPostureCharging',
+                      'Battery is at {{battery}}%{{eta}}.',
+                      {
+                        battery: fmtInt(departureBatteryPct),
+                        eta: timeToTarget
+                          ? t(
+                              'operations.charging.currentPostureEta',
+                              ' with {{duration}} to target',
+                              { duration: timeToTarget },
+                            )
+                          : '',
+                      },
+                    )
+                  : liveState
+                    ? t(
+                        'operations.charging.currentPostureIdle',
+                        'Latest battery state is {{battery}}%; the vehicle is not drawing charge.',
+                        { battery: fmtInt(departureBatteryPct) },
+                      )
+                    : t(
+                        'operations.charging.currentPostureMissing',
+                        'Live state has not arrived; session history remains available.',
+                      ),
+              tone: vehicleStateQuery.isLoading || vehicleStateDataState.fatalError != null || !liveState || !hasChargingPosture || !postureCurrent
+                ? 'neutral'
+                : isChargingNow
+                  ? 'info'
+                  : 'success',
+            },
+            {
+              ...numericBriefMetrics[0],
+              key: 'departure',
+              label: t('operations.charging.departureReadiness', 'Departure readiness'),
+              value: numericBriefMetrics[0].value,
+              detail: departureBatteryPct == null || !batteryCurrent
+                ? t(
+                    'operations.charging.departureUnavailable',
+                    'Current battery state is required to assess near-term departure readiness.',
+                  )
+                : timeToTarget
+                  ? t(
+                      'operations.charging.departureEta',
+                      'Estimated {{duration}} to the configured charge target.',
+                      { duration: timeToTarget },
+                    )
+                  : departureBatteryPct >= 40
+                    ? t(
+                        'operations.charging.departureReady',
+                        'Battery state supports near-term departure; confirm route range before leaving.',
+                      )
+                    : t(
+                        'operations.charging.departureLow',
+                        'Additional charging is recommended before the next departure.',
+                      ),
+              tone: departureBatteryPct == null || !batteryCurrent
+                ? 'neutral'
+                : departureBatteryPct < 20
+                  ? 'danger'
+                  : departureBatteryPct < 40
+                    ? 'warning'
+                    : 'success',
+            },
+            {
+              ...numericBriefMetrics[1],
+              key: 'cost',
+              loading: historyPending,
+              label: t('operations.charging.costExposure', 'Cost exposure'),
+              value: numericBriefMetrics[1].value,
+              detail: blendedCostPerKwh != null
+                ? t(
+                    'operations.charging.costExposureDetail',
+                    '{{rate}}/kWh blended across recorded charging energy.',
+                    { rate: formatCurrency(blendedCostPerKwh) },
+                  )
+                : t(
+                    'operations.charging.costExposureUnavailable',
+                    'A blended rate requires both recorded energy and cost.',
+                  ),
+              tone: 'neutral',
+            },
+            {
+              key: 'efficiency',
+              label: t('operations.charging.efficiency', 'Charging efficiency'),
+              value: t('operations.charging.efficiencyNotMeasured', 'Not measured'),
+              detail: t(
+                'operations.charging.efficiencyNotMeasuredDetail',
+                'Independent wall-input and battery-retained energy are not present in the session contract; delivery rate is shown below instead.',
+              ),
+              tone: 'neutral',
+            },
+            {
+              ...numericBriefMetrics[2],
+              key: 'interruptions',
+              loading: historyPending,
+              label: t('operations.charging.interruptions', 'Potential interruptions'),
+              value: numericBriefMetrics[2].value,
+              detail: t(
+                'operations.charging.interruptionsDetail',
+                'Sessions with a telemetry gap or sustained unexpectedly low DC power.',
+              ),
+              tone: !historyAvailable ? 'neutral' : interruptionAnomalies.length > 0 ? 'danger' : 'success',
+            },
+            {
+              ...numericBriefMetrics[3],
+              key: 'reliability',
+              loading: historyPending,
+              label: t('operations.charging.reliability', 'Charger reliability'),
+              value: numericBriefMetrics[3].value,
+              detail: t(
+                'operations.charging.reliabilityDetail',
+                'Share of sessions without telemetry gaps, sustained low power, or prolonged trickle behavior; not a charger-uptime SLA.',
+              ),
+              tone: reliabilityPct == null
+                ? 'neutral'
+                : reliabilityPct >= 95
+                  ? 'success'
+                  : reliabilityPct >= 80
+                    ? 'warning'
+                    : 'danger',
+            },
+          ]}
+          attention={chargingAttention}
+          provenance={t(
+            'operations.charging.provenance',
+            'Derived from live vehicle state, charging-session telemetry, configured cost data, and vehicle-local day boundaries.',
+          )}
+        />
+
+
+        <FadeIn>
+          <ChargeQueuePlanner />
+        </FadeIn>
+
+        <FadeIn delay={0.15}>
+          {chargingState.fatalError != null ? (
+            <section aria-label={t('charging.section.insights', 'Charging insights')} className="space-y-4">
+              <SectionTitle>{t('charging.insights.title', 'Charging insights')}</SectionTitle>
+              <QueryError error={chargingState.fatalError} onRetry={refetch} />
+              <section aria-label={t('charging.section.optimizer', 'Cost optimizer & heatmap')}>
+                {optimizerContent}
+              </section>
+            </section>
+          ) : <ChargingInsights
+            sessions={sessions}
+            loading={isLoading || historyPending}
+            optimizer={optimizerState.data}
+            optimizerContent={optimizerContent}
+            acDcBreakdown={acDcBreakdown}
+            startLevelDist={startLevelDist}
+            chargeRateStats={chargeRateStats}
+            chargerSpecs={chargerSpecs}
+          />}
         </FadeIn>
 
         <EntityPreviewDrawer
@@ -1419,9 +1456,11 @@ export default function ChargingListPage() {
           statusLabel={
             previewSession?.live
               ? t('charging.preview.active', 'Active')
-              : t('charging.preview.completed', 'Completed')
+              : previewSession?.ended_at
+                ? t('charging.preview.completed', 'Completed')
+                : t('common.unknown', 'Unknown')
           }
-          statusTone={previewSession?.live ? 'info' : 'success'}
+          statusTone={previewSession?.live ? 'info' : previewSession?.ended_at ? 'success' : 'neutral'}
           fields={
             previewSession
               ? [
@@ -1537,13 +1576,12 @@ export default function ChargingListPage() {
           }
         />
       </PullToRefresh>
-    </PageContainer>
+    </PageLayout>
   );
 }
 
-export function formatHour(h: number): string {
-  if (h === 0) return '12 AM';
-  if (h === 12) return '12 PM';
-  if (h < 12) return `${h} AM`;
-  return `${h - 12} PM`;
+export function formatHour(h: number, locale = 'en-US'): string {
+  if (!Number.isInteger(h) || h < 0 || h > 23) return '—';
+  // This is an already-local hour bucket, not an instant to shift into another zone.
+  return formatTime(new Date(Date.UTC(2000, 0, 1, h)), { locale, tz: 'UTC' });
 }

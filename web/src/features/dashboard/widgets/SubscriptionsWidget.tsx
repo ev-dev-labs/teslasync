@@ -5,15 +5,17 @@ import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicleSubscriptions, useVehicles } from '@/api/hooks/useVehicles';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDataState } from '@/hooks/useDataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { WidgetShell } from './WidgetShell';
-import { WidgetDetailCard, type DetailEntry } from './shared';
+import { WidgetBigNumber, WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 
 /** Safely extract a string from an unknown value */
 export function asString(val: unknown): string | null {
   if (val == null) return null;
   if (typeof val === 'string' && val.length > 0) return val;
-  if (typeof val === 'number') return String(val);
+  if (typeof val === 'number' && Number.isFinite(val)) return String(val);
   return null;
 }
 
@@ -32,8 +34,8 @@ const SUBSCRIPTION_TYPES = [
   { key: 'full_self_driving', labelKey: 'widget.subscriptions.fsd', fallback: 'Full Self-Driving' },
   { key: 'enhanced_autopilot', labelKey: 'widget.subscriptions.enhancedAutopilot', fallback: 'Enhanced Autopilot' },
   { key: 'standard_connectivity', labelKey: 'widget.subscriptions.standardConnectivity', fallback: 'Standard Connectivity' },
-  { key: 'data_sharing', labelKey: 'widget.subscriptions.dataSharing', fallback: 'Data Sharing' },
-  { key: 'satellite_connectivity', labelKey: 'widget.subscriptions.satellite', fallback: 'Satellite Connectivity' },
+  { key: 'data_sharing', labelKey: 'widget.subscriptions.dataSharing', fallback: 'Data sharing' },
+  { key: 'satellite_connectivity', labelKey: 'widget.subscriptions.satellite', fallback: 'Satellite connectivity' },
 ] as const;
 
 export interface ParsedSub {
@@ -108,11 +110,14 @@ export function parseSubscriptions(
 
 export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { fmtInt } = useNumberFormatting();
+  const vehiclesQuery = useVehicles();
+  const { data: vehicles } = vehiclesQuery;
   const numericId = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const stringId = numericId > 0 ? String(numericId) : undefined;
+  const stringId = Number.isSafeInteger(numericId) && numericId > 0 ? String(numericId) : undefined;
   const { formatDate: fmtDate } = useDateFormat();
 
+  const subscriptionsQuery = useVehicleSubscriptions(stringId);
   const {
     data: envelope,
     isLoading,
@@ -121,9 +126,16 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useVehicleSubscriptions(stringId);
+  } = subscriptionsQuery;
+  const subscriptionsState = useDataState(subscriptionsQuery, {
+    partial: envelope !== undefined && envelope?.data == null,
+  });
+  const vehiclesState = useDataState(vehiclesQuery);
 
   const subsData = envelope?.data ?? null;
+  const emptyMessage = subsData == null
+    ? t('widget.emptyMessage', 'This widget has no qualifying data yet.')
+    : t('widget.subscriptions.noData', 'No subscriptions');
   const isCompact = size.cols <= 1;
 
   const parsed = useMemo(() => parseSubscriptions(subsData, t), [subsData, t]);
@@ -153,25 +165,21 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
   }, [parsed, t, fmtDate]);
 
   const handleRefresh = useCallback(() => {
+    if (!stringId) {
+      void vehiclesQuery.refetch();
+      return;
+    }
     void refetch();
-  }, [refetch]);
-
-  // An errored INITIAL load (no cached data) surfaces an error panel instead of
-  // the misleading "No subscriptions" empty state. A background-refetch error
-  // over already-loaded data keeps the list on screen — the freshness dot still
-  // flags the error — so a transient blip never blanks out a working widget.
-  const errorMessage =
-    isError && !subsData
-      ? t('widget.subscriptions.error', 'Failed to load subscriptions')
-      : undefined;
+  }, [stringId, vehiclesQuery.refetch, refetch]);
 
   const shellProps = {
+    title: t('widget.subscriptions.title', 'Subscriptions'),
     loading: isLoading,
-    error: errorMessage,
-    updatedAt: dataUpdatedAt ?? 0,
-    isFetching,
-    isStale,
-    isError,
+    dataState: stringId ? subscriptionsState : vehiclesState,
+    updatedAt: (stringId ? dataUpdatedAt : vehiclesQuery.dataUpdatedAt) ?? 0,
+    isFetching: stringId ? isFetching : vehiclesQuery.isFetching,
+    isStale: stringId ? isStale : vehiclesQuery.isStale,
+    isError: stringId ? isError : vehiclesQuery.isError,
     onRefresh: handleRefresh,
   };
 
@@ -183,17 +191,17 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
           {parsed.length > 0 ? (
             <>
               <CreditCard className="h-4 w-4 text-sky-400" />
-              <span className="text-2xl font-bold text-[var(--text-primary)]">
-                {activeCount}
-              </span>
-              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-                {t('widget.subscriptions.activeCount', 'active')}
-              </span>
+              <WidgetBigNumber
+                value={fmtInt(activeCount)}
+                label={t('widget.subscriptions.activeCount', 'active')}
+                align="center"
+                size="secondary"
+              />
               {nextExpiry && (
                 <Badge
                   variant="neutral"
                   size="sm"
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center text-center truncate max-w-full"
+                  className="min-h-[44px] min-w-[44px] max-w-full whitespace-normal break-words text-center"
                 >
                   {fmtDate(nextExpiry.expiryDate) ?? '—'}
                 </Badge>
@@ -202,7 +210,7 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
           ) : (
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
               icon={<CreditCard className="h-5 w-5" />}
-              message={t('widget.subscriptions.noData', 'No subscriptions')}
+              message={emptyMessage}
               className="py-2"
             />
           )}
@@ -214,14 +222,13 @@ export default function SubscriptionsWidget({ vehicleId, size }: WidgetProps) {
   // ── Standard layout (2×4): full subscription list ──
   return (
     <WidgetShell
-      title={t('widget.subscriptions.title', 'Subscriptions')}
       icon={<CreditCard className="h-3.5 w-3.5 text-sky-400" />}
       {...shellProps}
     >
       <WidgetDetailCard
         entries={entries}
         compact={isCompact}
-        emptyMessage={t('widget.subscriptions.noData', 'No subscriptions')}
+        emptyMessage={emptyMessage}
         emptyIcon={<CreditCard className="h-5 w-5" />}
       />
     </WidgetShell>

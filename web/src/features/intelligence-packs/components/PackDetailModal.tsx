@@ -9,19 +9,20 @@
  * lives in `InstalledInventoryPanel` — this modal only ever creates a new
  * `InstalledPackRecord` or supersedes one with a newer version.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldAlert } from 'lucide-react';
 import { Badge, Button, ConfirmDialog, Modal } from '@/components/ui';
 import { Text } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
-import { usePackVerification } from '../hooks/usePackVerification';
+import { packEnvelopeIdentity, usePackVerification } from '../hooks/usePackVerification';
 import { usePackActions } from '../hooks/usePackActions';
 import { VerificationStatusBadge } from './VerificationStatusBadge';
 import { TrustDistinctionNote } from './TrustDistinctionNote';
 import { PublisherFingerprintDisplay } from './PublisherFingerprintDisplay';
 import { CapabilityRequestList } from './CapabilityRequestList';
 import { CompatibilityBadge } from './CompatibilityBadge';
+import { PackRecommendations } from './PackRecommendations';
 import type { CatalogEntryWithStatus } from '../hooks/useCatalog';
 import type { PackCapabilityId } from '../lib/manifestTypes';
 import type { TrustDecisionKind } from '../lib/trust';
@@ -38,6 +39,27 @@ export interface PackDetailModalProps {
 type ConfirmMode = 'none' | 'install-verified' | 'install-unsigned';
 
 export function PackDetailModal({ entry, open, onClose }: PackDetailModalProps) {
+  if (!entry || !open) return null;
+  const identity = packEnvelopeIdentity(entry.envelope);
+  // A new envelope owns a new confirmation lifecycle, including typed approval.
+  return (
+    <CurrentPackDetailModal
+      key={JSON.stringify([identity, entry.installedVersion, entry.isUpToDate])}
+      entry={entry}
+      open={open}
+      onClose={onClose}
+    />
+  );
+}
+
+function CurrentPackDetailModal({ entry: currentEntry, open, onClose }: PackDetailModalProps) {
+  const [entry] = useState(() => currentEntry ? structuredClone(currentEntry) : null);
+  const active = useRef(false);
+  const committing = useRef(false);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
   const { t } = useTranslation();
   const { install, upgrade, recordTrustDecision } = usePackActions();
   const [confirmMode, setConfirmMode] = useState<ConfirmMode>('none');
@@ -67,22 +89,34 @@ export function PackDetailModal({ entry, open, onClose }: PackDetailModalProps) 
   }
 
   async function performInstall() {
-    if (!entry || !manifest || !verification.data) return;
-    const approvedCapabilities: PackCapabilityId[] = [...manifest.capabilities];
-    await recordTrustDecision.mutateAsync({
-      packId: manifest.id,
-      decision: trustKindFor(),
-      publisherFingerprint: verification.data.recomputedPublisherFingerprint,
-      decidedAtIso: new Date().toISOString(),
-      approvedCapabilities,
-    });
-    if (isUpgrade) {
-      await upgrade.mutateAsync({ packId: manifest.id, envelope: entry.envelope, verification: verification.data });
-    } else {
-      await install.mutateAsync({ envelope: entry.envelope, verification: verification.data, enabled: true });
+    if (!active.current || committing.current || !entry || !manifest || !verification.data) return;
+    if (
+      (confirmMode !== 'install-verified' || status !== 'signature-valid') &&
+      (confirmMode !== 'install-unsigned' || status !== 'unsigned')
+    ) return;
+    committing.current = true;
+    try {
+      const approvedCapabilities: PackCapabilityId[] = [...manifest.capabilities];
+      await recordTrustDecision.mutateAsync({
+        packId: manifest.id,
+        decision: trustKindFor(),
+        publisherFingerprint: verification.data.recomputedPublisherFingerprint,
+        decidedAtIso: new Date().toISOString(),
+        approvedCapabilities,
+      });
+      if (!active.current) return;
+      if (isUpgrade) {
+        await upgrade.mutateAsync({ packId: manifest.id, envelope: entry.envelope, verification: verification.data });
+      } else {
+        await install.mutateAsync({ envelope: entry.envelope, verification: verification.data, enabled: true });
+      }
+      if (active.current) {
+        setConfirmMode('none');
+        onClose();
+      }
+    } finally {
+      committing.current = false;
     }
-    setConfirmMode('none');
-    onClose();
   }
 
   async function blockPack() {
@@ -148,6 +182,8 @@ export function PackDetailModal({ entry, open, onClose }: PackDetailModalProps) 
               </li>
             </ul>
           </section>
+
+          <PackRecommendations recommendations={manifest.automationRecommendations} />
 
           {installability === 'blocked' && (
             <AlertBanner variant="danger" title={t('intelPacks.detail.blockedTitle', 'This pack cannot be installed')} icon={<ShieldAlert className="h-4 w-4" />}>

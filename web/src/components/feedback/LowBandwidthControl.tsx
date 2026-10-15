@@ -1,13 +1,16 @@
 import { useTranslation } from 'react-i18next'
 import { Gauge } from 'lucide-react'
 
-import { Caption, HelperText, Select } from '@/components/ui'
+import { Icon } from '@/components/ui/Icon'
+import { Select } from '@/components/ui/Select'
+import { Caption, HelperText, Text } from '@/components/ui/Typography'
 import {
   useDataSaverPolicy,
   useLowBandwidthMode,
   type LowBandwidthMode,
 } from '@/hooks/useLowBandwidthMode'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 
 /**
  * User-facing control for low-bandwidth mode (PWA-07).
@@ -39,9 +42,9 @@ export function LowBandwidthControl({ className }: LowBandwidthControlProps) {
   ]
 
   return (
-    <div className={cn('space-y-2', className)} data-testid="low-bandwidth-control">
-      <div className="flex items-center gap-2">
-        <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+    <div className={cn('min-w-0 space-y-2 break-words', className)} data-testid="low-bandwidth-control">
+      <div className="flex min-w-0 items-center gap-2">
+        <Icon icon={Gauge} size="md" className={typography.color.secondary} aria-hidden={true} />
         <Caption>{t('pwa.lowBandwidth.heading', 'Low-bandwidth mode')}</Caption>
       </div>
 
@@ -53,8 +56,10 @@ export function LowBandwidthControl({ className }: LowBandwidthControlProps) {
         onChange={(event) => setMode(event.target.value as LowBandwidthMode)}
       />
 
-      <p
-        className="text-xs text-[var(--text-secondary)]"
+      <Text
+        as="p"
+        size="xs"
+        color="secondary"
         data-testid="low-bandwidth-status"
         data-enabled={enabled ? 'true' : 'false'}
         data-source={source}
@@ -67,7 +72,7 @@ export function LowBandwidthControl({ className }: LowBandwidthControlProps) {
           : source === 'user'
             ? t('pwa.lowBandwidth.statusUser', 'Active — enabled manually on this device.')
             : t('pwa.lowBandwidth.statusOff', 'Not active — the app is using full quality.')}
-      </p>
+      </Text>
 
       <HelperText>
         {enabled

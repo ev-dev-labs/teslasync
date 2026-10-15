@@ -2,7 +2,8 @@ import { ClipboardList, FileOutput, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner, EmptyState } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
 
@@ -20,23 +21,13 @@ export function BatteryPassportRecommendations({
 
   return (
     <section data-testid="battery-passport-recommendations">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ClipboardList
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.recommendations.title',
             'Server-generated recommendation directory',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.recommendations.subtitle',
             'Verbatim outputs from deterministic server rules, retained as certificate evidence rather than presented as prescriptions.',
-          )}
-        </Text>
+          )} actions={<ClipboardList className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <AlertBanner
             className="mb-4"
@@ -96,7 +87,7 @@ export function BatteryPassportRecommendations({
             />
           )}
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

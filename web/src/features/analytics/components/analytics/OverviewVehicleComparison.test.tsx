@@ -40,13 +40,30 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 import type { FleetAnalytics } from '@/api/types';
 import { OverviewVehicleComparison } from './OverviewVehicleComparison';
+import { FleetOverviewBrief } from '../operationalbrief-a-m/FleetOverviewBrief';
+import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
 import type { FleetAnalyticsQuery } from './constants';
+
+vi.mock('@/components/data-display', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/data-display')>();
+  return {
+    ...actual,
+    OperationalBrief: ({ metrics }: OperationalBriefProps) => (
+      <div>{metrics.map((metric) => (
+        <div key={metric.key} data-testid={metric.key}
+          data-raw={String(metric.rawValue)} data-state={metric.valueState}>
+          {metric.label}: {metric.value}
+        </div>
+      ))}</div>
+    ),
+  };
+});
 
 // ── i18n: echo the English fallback (2nd arg) so assertions read on copy. ──
 vi.mock('react-i18next', () => {
@@ -112,16 +129,19 @@ vi.mock('@/components/charts', async (importOriginal) => {
     dataKey,
     name,
     stroke,
+    hide,
   }: {
     dataKey?: string;
     name?: string;
     stroke?: string;
+    hide?: boolean;
   }) => (
     <span
       data-testid={`series-${String(dataKey ?? '')}`}
       data-key={String(dataKey ?? '')}
       data-name={String(name ?? '')}
       data-stroke={String(stroke ?? '')}
+      data-hidden={String(hide ?? false)}
     />
   );
   const Pie = ({ data, children }: { data?: unknown; children?: ReactNode }) => (
@@ -198,20 +218,68 @@ function makeQuery(over: QueryOverride = {}): FleetAnalyticsQuery {
   } as unknown as FleetAnalyticsQuery;
 }
 
-function renderCmp(query: FleetAnalyticsQuery) {
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location-search">{location.search}</span>;
+}
+
+function renderCmp(query: FleetAnalyticsQuery, initialEntry = '/') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = (current: FleetAnalyticsQuery) => (
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <ToastProvider>
-          <OverviewVehicleComparison query={query} />
+          <OverviewVehicleComparison query={current} />
+          <LocationProbe />
         </ToastProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const result = render(tree(query));
+  return { ...result, rerenderQuery: (current: FleetAnalyticsQuery) => result.rerender(tree(current)) };
 }
 
 type Row = Record<string, number | string>;
+
+describe('FleetOverviewBrief — estimated savings', () => {
+  it.each([
+    { distance: 100, cost: 10, expected: 2.75, label: 'Gas savings' },
+    { distance: 100, cost: 15, expected: -2.25, label: 'Additional spending' },
+    { distance: 0, cost: 0, expected: 0, label: 'Gas savings' },
+    { distance: 100, cost: 12.75, expected: 0, label: 'Gas savings' },
+    { distance: 0, cost: -0.125, expected: 0.125, label: 'Gas savings' },
+    { distance: 0, cost: 0.125, expected: -0.125, label: 'Additional spending' },
+  ])('preserves $expected with label $label', ({ distance, cost, expected, label }) => {
+    const data = { ...analytics([]), total_distance_km: distance, total_cost: cost };
+    render(<FleetOverviewBrief query={makeQuery({ data })} scope="Selected range" retained={false} />);
+    const metric = screen.getByTestId('fleet-overview-gas-savings');
+    expect(Number(metric.getAttribute('data-raw'))).toBeCloseTo(expected, 12);
+    expect(metric).toHaveAttribute('data-state', 'value');
+    expect(metric).toHaveTextContent(label);
+    expect(metric).toHaveTextContent(expected < 0 ? '$-' : '$');
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '12.75'])(
+    'keeps invalid/missing input %s distinct from measured zero',
+    (input) => {
+      for (const field of ['total_distance_km', 'total_cost']) {
+        const data = Object.assign(analytics([]), { total_distance_km: 100, total_cost: 12.75 }, { [field]: input });
+        const result = render(<FleetOverviewBrief query={makeQuery({ data })} scope="Selected range" retained={false} />);
+        const metric = screen.getByTestId('fleet-overview-gas-savings');
+        expect(metric).toHaveAttribute('data-raw', 'null');
+        expect(metric).not.toHaveAttribute('data-state', 'value');
+        expect(metric).not.toHaveTextContent('$0');
+        result.unmount();
+      }
+    },
+  );
+
+  it('does not turn an overflowing estimate into a valid amount', () => {
+    const data = { ...analytics([]), total_distance_km: Number.MAX_VALUE, total_cost: -Number.MAX_VALUE };
+    render(<FleetOverviewBrief query={makeQuery({ data })} scope="Selected range" retained={false} />);
+    expect(screen.getByTestId('fleet-overview-gas-savings')).toHaveAttribute('data-raw', 'null');
+  });
+});
 
 /** The donut's projected [{ name, value }] payload. */
 function pieRows(): Array<{ name: string; value: number }> {
@@ -252,16 +320,37 @@ beforeEach(() => {
 
 describe('OverviewVehicleComparison — loading', () => {
   it('renders skeletons in every panel and draws no chart', () => {
-    const { container } = renderCmp(makeQuery({ isLoading: true }));
+    renderCmp(makeQuery({ isLoading: true }));
 
     // Panel titles frame all four sections even while loading…
-    expect(screen.getByText('Fleet Usage')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency Leaderboard')).toBeInTheDocument();
-    expect(screen.getByText('Vehicle Comparison')).toBeInTheDocument();
-    expect(screen.getByText('Energy & Activity')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fleet usage' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Efficiency leaderboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vehicle comparison' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Energy & activity' })).toBeInTheDocument();
 
-    // …pulsing skeletons are on screen…
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // Every chart owns a busy static silhouette, with no real chart semantics.
+    ['Fleet usage', 'Vehicle comparison', 'Energy & activity'].forEach((title) => {
+      const panel = screen.getByRole('figure', { name: title });
+      expect(panel).toHaveAttribute('aria-busy', 'true');
+      expect(panel).toHaveAttribute('data-chart-state', 'loading');
+      const placeholder = within(panel).getByRole('status', { name: 'Loading chart…' });
+      expect(placeholder).toHaveAttribute('aria-busy', 'true');
+      expect(placeholder).toHaveClass('h-full');
+      const bars = placeholder.querySelectorAll<HTMLElement>('.flex-1.rounded-t');
+      expect(bars).toHaveLength(7);
+      expect(Array.from(bars, (bar) => bar.style.height)).toEqual(['50%', '45%', '63%', '64%', '37%', '8%', '33%']);
+      bars.forEach((bar) => expect(bar).toHaveAttribute('aria-hidden', 'true'));
+      expect(within(panel).queryAllByRole('img')).toHaveLength(0);
+      expect(panel.querySelector('[data-testid^="chart-"]:not([data-testid="chart-skeleton"])')).toBeNull();
+    });
+    const leaderboard = screen.getByRole('heading', { name: 'Efficiency leaderboard' }).closest('[aria-busy]');
+    expect(leaderboard).toHaveAttribute('aria-busy', 'true');
+    const placeholders = leaderboard?.querySelectorAll<HTMLElement>('.w-full.rounded[aria-hidden="true"]') ?? [];
+    expect(placeholders).toHaveLength(1);
+    expect(placeholders[0]).toHaveStyle({ height: '260px' });
+    expect(placeholders[0]).toHaveClass('h-4', 'w-full');
+    expect(leaderboard?.querySelector('[class*="animate-"]')).toBeNull();
+    expect(leaderboard?.querySelector('[data-testid="efficiency-leader-fill"]')).toBeNull();
 
     // …and no chart / leaderboard row has been drawn yet.
     expect(screen.queryByTestId('chart-pie')).toBeNull();
@@ -371,11 +460,68 @@ describe('OverviewVehicleComparison — populated', () => {
     expect(rows).toHaveLength(4);
     const distance = rows.find((r) => r.metric === 'Distance')!;
     // Bravo has the larger distance (300 vs 100) → it pins the spoke at 100.
-    expect(distance.Bravo).toBe(100);
-    expect(distance.Alpha).toBeCloseTo((100 / 300) * 100, 5);
+    expect(distance.vehicle_2).toBe(100);
+    expect(distance.vehicle_1).toBeCloseTo((100 / 300) * 100, 5);
     // Efficiency is inverted: the *more* efficient Alpha (150) scores higher.
     const efficiency = rows.find((r) => r.metric === 'Efficiency')!;
-    expect(Number(efficiency.Alpha)).toBeGreaterThan(Number(efficiency.Bravo));
+    expect(Number(efficiency.vehicle_1)).toBeGreaterThan(Number(efficiency.vehicle_2));
+  });
+});
+
+describe('OverviewVehicleComparison — stable vehicle identities', () => {
+  it('keeps duplicate and reserved display names separate in radar data and export columns', () => {
+    renderCmp(makeQuery({ data: analytics([
+      veh({ id: 11, name: 'metric', distance: 100 }),
+      veh({ id: 12, name: 'metric', distance: 300 }),
+    ]) }));
+
+    const distance = radarRows().find((row) => row.metric === 'Distance')!;
+    expect(distance.metric).toBe('Distance');
+    expect(distance.vehicle_11).toBeCloseTo(100 / 3);
+    expect(distance.vehicle_12).toBe(100);
+    expect(radarSeriesNames()).toEqual(['metric', 'metric']);
+    expect(screen.getByTestId('series-vehicle_11')).toHaveAttribute('data-key', 'vehicle_11');
+    expect(screen.getByTestId('series-vehicle_12')).toHaveAttribute('data-key', 'vehicle_12');
+
+    const panel = screen.getByRole('figure', { name: 'Vehicle comparison' });
+    expect(within(panel).getAllByRole('columnheader', { name: 'metric' })).toHaveLength(2);
+    expect(within(panel).getAllByRole('cell', { name: '100' }).length).toBeGreaterThan(0);
+  });
+
+  it('migrates saved names to IDs and retains visibility through renaming and reordering', () => {
+    const { rerenderQuery } = renderCmp(
+      makeQuery({ data: analytics(TWO) }),
+      '/?hidden_analytics-vehicle-radar-comparison=Alpha,vehicle_2,absent&keep=value',
+    );
+    expect(screen.getByTestId('series-vehicle_1')).toHaveAttribute('data-hidden', 'true');
+    expect(screen.getByTestId('series-vehicle_2')).toHaveAttribute('data-hidden', 'true');
+    const params = new URLSearchParams(screen.getByTestId('location-search').textContent ?? '');
+    expect(params.get('hidden_analytics-vehicle-radar-comparison')).toBe('absent,vehicle_1,vehicle_2');
+    expect(params.get('keep')).toBe('value');
+
+    rerenderQuery(makeQuery({ data: analytics([
+      veh({ id: 2, name: 'Renamed Bravo' }),
+      veh({ id: 1, name: 'Renamed Alpha' }),
+    ]) }));
+    expect(radarSeriesNames()).toEqual(['Renamed Bravo', 'Renamed Alpha']);
+    expect(screen.getByTestId('series-vehicle_1')).toHaveAttribute('data-hidden', 'true');
+    expect(screen.getByTestId('series-vehicle_2')).toHaveAttribute('data-hidden', 'true');
+  });
+
+  it('migrates a shared legacy name to every matching vehicle after loading completes', () => {
+    const { rerenderQuery } = renderCmp(
+      makeQuery({ isLoading: true }),
+      '/?hidden_analytics-vehicle-radar-comparison=Shared',
+    );
+    expect(screen.getByTestId('location-search')).toHaveTextContent('=Shared');
+    rerenderQuery(makeQuery({ data: analytics([
+      veh({ id: 1, name: 'Shared' }),
+      veh({ id: 2, name: 'Shared' }),
+    ]) }));
+    expect(screen.getByTestId('series-vehicle_1')).toHaveAttribute('data-hidden', 'true');
+    expect(screen.getByTestId('series-vehicle_2')).toHaveAttribute('data-hidden', 'true');
+    const params = new URLSearchParams(screen.getByTestId('location-search').textContent ?? '');
+    expect(params.get('hidden_analytics-vehicle-radar-comparison')).toBe('vehicle_1,vehicle_2');
   });
 });
 
@@ -399,8 +545,8 @@ describe('OverviewVehicleComparison — efficiency leaderboard', () => {
   it('labels each row with its efficiency in the active unit', () => {
     renderCmp(makeQuery({ data: analytics(TWO) }));
 
-    expect(screen.getByText('150.0 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('300.0 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('300.00 Wh/km')).toBeInTheDocument();
   });
 });
 
@@ -418,7 +564,7 @@ describe('OverviewVehicleComparison — miles preference', () => {
     expect(rows[1].value).toBeCloseTo(186.41, 1);
 
     // Efficiency Wh/km → Wh/mi (× 1.609344): 150 → 241.4.
-    expect(screen.getByText('241.4 Wh/mi')).toBeInTheDocument();
+    expect(screen.getByText('241.40 Wh/mi')).toBeInTheDocument();
 
     // The donut's accessible label follows the active unit.
     expect(

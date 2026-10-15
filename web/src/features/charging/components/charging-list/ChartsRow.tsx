@@ -8,8 +8,9 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell,
   AREA_DEFAULTS,
 } from '@/components/charts';
-import { fmtNumber, fmtWithUnit } from '@/lib/numberFormat';
+
 import type { EnergyTrendPoint, ChargerBreakdownEntry, CostByTypeEntry } from './helpers';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartsRowProps {
   energyTrend: EnergyTrendPoint[];
@@ -18,6 +19,7 @@ interface ChartsRowProps {
 }
 
 export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsRowProps) {
+  const { fmtWithUnit, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Null-safety: callers derive these from a possibly-empty session list, and a

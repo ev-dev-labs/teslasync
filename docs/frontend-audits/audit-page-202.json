@@ -1,0 +1,242 @@
+{
+  "item": "audit-page-202",
+  "page": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx",
+  "routes": ["/signal-change-points"],
+  "purpose": "Detect abrupt level changes in one selected vehicle's numeric signal history with a robust two-sided Page-Hinkley detector, distinguishing abrupt shifts from slow drift and aggregate drive-week regimes.",
+  "primaryGoal": "Choose a signal, inspect detected changes, segment means and the largest shift, and understand the evidence window and interpretation without changing telemetry.",
+  "dataSources": [
+    {
+      "name": "Vehicle signal catalog",
+      "hooks": ["useSignals", "useDataState"],
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "endpoints": ["GET /api/v1/signals/{vehicleID}/available"],
+      "citations": ["web\\src\\api\\hooks\\useTelemetry.ts:98-124", "internal\\api\\router.go:4886-4914,4917-4932"],
+      "behavior": "Query key ['signals', vehicleId], enabled only for positive ID, 60000ms stale time, inherited retry policy and forwarded AbortSignal. Rich entries or older arrays normalize to names; malformed entries are dropped. Page exposes all returned names, not only numeric signals, and loses category/value-kind/unit-kind metadata. No double API prefix or camelCase query parameter in inspected requests."
+    },
+    {
+      "name": "Selected signal history",
+      "hooks": ["useSignalAnalysisHistory", "useDataState"],
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "endpoints": ["GET /api/v1/signals/{vehicleID}/{signalName}/history?hours=72&limit=10000"],
+      "citations": ["web\\src\\api\\hooks\\useTelemetry.ts:194-222", "web\\src\\lib\\constants.ts:36,54", "internal\\api\\router.go:4914,4932", "internal\\api\\signalinspect\\handler.go:243-324,404-436"],
+      "behavior": "Key ['signal-analysis-history', vehicleId, signalName, boundedHours, boundedLimit]; encoded signal name, positive-ID/nonempty-name enablement, 15000ms stale time, 30000ms foreground polling and AbortSignal. Backend reads typed signal_log rows ordered ascending with a row limit and inclusive BETWEEN bounds. Explicit RFC3339 from/to are already parsed by backend, but this hook/caller provides hours only. Response from/to are request bounds, not first/last returned measurements. A DB-unavailable handler returns a successful empty envelope; runtime backend health and actual coverage remain unverified."
+    },
+    {
+      "name": "Numeric sample extraction and change-point analysis",
+      "owner": "web\\src\\features\\telemetry\\lib\\signalChangePoints.ts",
+      "endpoints": [],
+      "citations": ["web\\src\\features\\telemetry\\lib\\signalChangePoints.ts:94-111,144-150,175-287", "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts:14-49"],
+      "behavior": "Pure source derivation, not a new server aggregate: finite numeric ValueKind measurements and valid timestamps only; excludes booleans, enums, text and nulls; chronological sorting and last-valid-row timestamp deduplication. Fixed minimum five samples, MAD-of-first-differences noise estimate, clipped two-sided statistic, reset segments, lookahead after-mean, direction, confidence and biggest magnitude. Existing detector rounding and tiny-spread fallback are baseline behavior, not authorization to change the algorithm."
+    },
+    {
+      "name": "Workspace and display preferences",
+      "hooks": ["useSelectedVehicle", "useNumberFormatting", "useOperationalMetrics through TelemetrySummaryBrief"],
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "endpoints": [],
+      "citations": ["web\\src\\hooks\\useSelectedVehicle.ts:48-90,160-174", "web\\src\\lib\\workspaceScope.ts:23-77,175-185", "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:32-43,72-86,99-116", "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx:25-50"],
+      "behavior": "Existing header/URL/store vehicle owner retained, with first-vehicle fallback; no competing local vehicle selector. Route is vehicle-enabled but range-disabled. Metrics use existing numeric formatter/operational summary adapter; timestamps instead use browser locale/timezone. Raw signal values stay in source units with no guessed physical conversion. Formatting hook internals and settings endpoints were not independently audited."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "kind": "shared layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "citations": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-16", "web\\src\\components\\layout\\PageContainer.tsx:126-163,178-224"], "use": "Canonical full-width min-w-0 container, localized title, compact subtitle help, named source notices, worst-query freshness and shared shell composition."},
+    {"name": "TelemetrySummaryBrief / OperationalBrief", "kind": "domain adapter of existing shared composite", "owner": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx", "citations": ["web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx:8-50", "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:99-116,169-176"], "use": "Four metrics, specialist scientific magnitude formatter, confidence/direction and minimum-segment context, retained/loading/unknown source status, requested hours and bounds disclosure. No competing stats pipeline."},
+    {"name": "GlassPanel / PanelTitle / Text / Badge", "kind": "shared primitives", "owner": "web\\src\\components\\ui", "citation": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:135-145,226-263", "use": "Persistent picker and interpretation sections; semantic textual shift/stable status. Two interpretation blocks use restrained surface variables rather than bright decoration."},
+    {"name": "Select / HelpTooltip", "kind": "shared field and contextual help", "owner": "web\\src\\components\\ui\\Select.tsx; web\\src\\components\\ui\\HelpTooltip.tsx", "citations": ["web\\src\\components\\ui\\Select.tsx:32-36,58-60,71-106", "web\\src\\components\\ui\\HelpTooltip.tsx:65-78,107-128"], "use": "Labeled native select with shared focus styling; localized, preference-gated help with meaningful name and decorative hidden icon. Caller uses default md select and sm help."},
+    {"name": "ChartContainer / LineChart / ChartTooltip", "kind": "canonical chart frame and category exports", "owner": "web\\src\\components\\charts\\ChartContainer.tsx", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:191-220", "web\\src\\components\\charts\\ChartContainer.tsx:423-429,627-637,792-850", "web\\src\\components\\charts\\ChartTooltip.tsx:73-103,132-145"], "use": "Named figure, retry/loading/error states, three-column accessible data table and default PNG/SVG/copy-image export. No exportData, fullscreen, annotation or persisted legend toggles supplied. Two series intentionally always visible; markers use dashed reference lines."},
+    {"name": "DataSourceNotice / useDataState", "kind": "shared independent-source trust", "owner": "web\\src\\components\\feedback\\DataSourceNotice.tsx; web\\src\\api\\dataState.ts", "citations": ["web\\src\\components\\feedback\\DataSourceNotice.tsx:71-115,129-136,187-199", "web\\src\\api\\dataState.ts:125-146,191-235"], "use": "Named catalog/history sources, disabled history omitted until chosen, independent recovery and retained background failures. Source notice does not fully classify retained offline-paused payloads."},
+    {"name": "Skeleton / EmptyState / QueryError / NoVehicleSelected", "kind": "shared feedback and domain prerequisite", "owner": "web\\src\\components\\feedback; web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:119-120,146-162,177,182-188,231-239", "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx:44-80"], "use": "Source-specific placeholders and explicit retry; no-vehicle onboarding CTA and governed explanation. History fatal recovery is repeated across three sections."},
+    {"name": "FadeIn", "kind": "shared motion", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "citation": "web\\src\\components\\motion\\FadeIn.tsx:23-38", "use": "Four staggered section entrances with existing reduced-motion hook; no ambient loop. Runtime OS/low-bandwidth behavior unverified."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx", "line": 177, "rule": "MDC-026/MDC-002", "detail": "One fatal history query creates a summary QueryError, chart QueryError and interpretation QueryError, in addition to the shared named-source notice. Each page recovery calls the same refetch.", "fix": "Keep all four sections and contextual failure states, but establish one dominant source-recovery action using existing feedback owners rather than adding another error component.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:177,196-197,233-234"]}
+  ],
+  "responsive": {
+    "runtime": "unverified",
+    "sourceStrategy": [
+      {"citation": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:11-13", "detail": "Full-width min-w-0 container retains shared shell gutters."},
+      {"citation": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:135,183,226,241", "detail": "Panels use smaller base padding and interpretation stacks below sm, becoming two columns at sm. No section is explicitly removed on mobile."},
+      {"citation": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:199,207,210-211", "detail": "Responsive chart width, desktop height override and sparse ticks; shared sizing computes mobile geometry. Actual 320px axis readability, long signal labels and source-bound wrapping are untested."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx", "line": 136, "rule": "MDC-040/MDC-043", "detail": "Picker title, icon and help are a single flex row without wrapping; long translations plus help can strain narrow allocated width. Chart uses 10/11px ticks independent of typography preferences. Overflow/legibility are risks, not measured failures.", "fix": "Exercise long localized titles, signal names and bounds at constrained widths; use existing title wrapping and shared chart sizing/typography policies without hiding explanation or measurements.", "owner": "page", "confidence": "medium"}
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "runtime": "unverified",
+    "sourceStrengths": [
+      "Localized page/title/field/status/help text and explicit chart ariaLabel (page:34,143,157,194,244-261).",
+      "Section icons are aria-hidden; shift/stable meaning is textual, not color alone (page:137,228,244-253).",
+      "Chart supplies time/value/segment-mean rows to the canonical accessible table; shared table has caption and scoped column headers (ChartContainer.tsx:792-850).",
+      "Shared select wires label and focus-visible styles; help composes existing Tooltip and contextual-help preference (Select.tsx:71-106; HelpTooltip.tsx:65-78,107-128).",
+      "Existing FadeIn reduced-motion branch avoids initial opacity/translation when reduction is requested (FadeIn.tsx:23-38)."
+    ],
+    "issues": [
+      {"file": "web\\src\\components\\ui\\HelpTooltip.tsx", "line": 113, "rule": "MDC-040", "detail": "Default sm help is a 14px icon-only inline-flex trigger with no explicit padding/minimum target; page passes no enlargement. Select md minimum is 40px. The source does not establish a 44px mobile hit area or a documented spacing exception.", "fix": "Shared help owner should establish a non-overlapping mobile target using existing trigger APIs; assess select sizing with existing lg/auto variants. Verify actual hit rectangles, nearby targets, keyboard focus and touch opening before asserting failure/pass.", "owner": "shared", "confidence": "medium", "citations": ["web\\src\\components\\ui\\HelpTooltip.tsx:43-47,113-128", "web\\src\\components\\ui\\Select.tsx:32-36", "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:139-144,156-162"]},
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx", "line": 201, "rule": "MDC-034/MDC-040/MDC-044", "detail": "Fallback numeric columns supply neither kind nor formatter, so the shared table uses String(raw) while tooltip uses saved numeric formatting. Neither table nor description identifies individual detected change points; marker meaning is primarily a dashed colored line.", "fix": "Use existing dataColumns kind/format and contextual ariaDescription or an existing accessible marker-detail presentation, preserving all underlying timestamps, values, segment means and detected shifts. No new chart/table engine.", "owner": "page", "confidence": "high", "citations": ["web\\src\\components\\charts\\ChartContainer.tsx:823-834", "web\\src\\components\\charts\\ChartTooltip.tsx:87-103", "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:201-217"]}
+    ],
+    "unverified": ["Keyboard order and select/help/chart-export reachability", "Screen-reader announcements and detected-marker alternatives", "Effective contrast in composed themes", "Forced colors", "RTL", "200% text", "Touch targets", "Reduced-motion runtime"]
+  },
+  "states": {
+    "noVehicle": {"citation": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:36-43,119-120", "detail": "Queries are called with disabled ID zero, then canonical onboarding empty state replaces scaffold; existing vehicle hook cannot distinguish loading/failure from genuine missing selection in its returned API."},
+    "catalog": {"citation": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:146-162", "detail": "Fatal error plus retry, initial loading skeleton, empty catalog explanation or select; retained catalog remains after refresh failure through named-source notice."},
+    "selection": {"citation": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:38,44,93-116,182-186,235-238", "detail": "No choice disables history and leaves sections with prompts/unknown values; chosen empty or nonnumeric history leads to no timeline and generic interpretation prompt."},
+    "historyLoadingFatal": {"citation": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:93-97,169-177,191-205,231-239", "detail": "Initial history loading drives summary, chart and reading skeleton; only fatalError replaces retained evidence. Explicit retry exists on fatal surfaces."},
+    "retained": {"citation": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:43,171-176; web\\src\\components\\feedback\\DataSourceNotice.tsx:71-115", "detail": "Retained history stays visible while refreshing or failing, summary explicitly says retained. Shared source notice recovers refresh failures; offline-paused retained data is a classification gap below."},
+    "issues": [
+      {"file": "web\\src\\components\\feedback\\DataSourceNotice.tsx", "line": 79, "rule": "MDC-026", "detail": "Paused classification is guarded by !hasData. A paused query with retained data is later returned as ready, and noticeState emits no offline notice if the catalog is ready. Page summary says retained but not paused/offline and provides no source-specific stale warning.", "fix": "Integration/shared owner should reconcile existing DataSourceNotice with DataState.isRefreshBlocked for retained-paused sources, preserving data and existing online recovery. Page can adopt StaleRefreshWarning rather than create a parallel state model.", "owner": "shared", "confidence": "high", "citations": ["web\\src\\components\\feedback\\DataSourceNotice.tsx:76-92,96-115", "web\\src\\api\\dataState.ts:134-146,191-208", "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:171-172"]},
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx", "line": 94, "rule": "MDC-026", "detail": "Initial paused history has no payload, no fatal error and isLoading false. Timeline then says not enough history; reading says pick a signal despite a chosen signal. Shared source notice may disclose pause but local states conflate unavailable retrieval with resolved empty evidence.", "fix": "Derive source section state from existing DataState, separate unchosen, pending/paused, resolved empty and nonnumeric history, and retain all section content/recovery.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:182-186,235-238"]},
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx", "line": 110, "rule": "MDC-026/MDC-033", "detail": "Before history resolves or selection exists, empty analysis yields description 'no shift detected' and noise scale 0 even while metric values are null. Any positive numeric sample count, including fewer than fixed five, also permits a green 'Stable throughout' conclusion although no minimum-length alarm test ran.", "fix": "Keep measured zero change counts after valid analysis, but distinguish unknown/insufficient evidence in descriptions and interpretation before applying a stability conclusion. Preserve detector threshold and behavior; do not invent results or alter algorithm as cosmetic work.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:97,104-116,244-253", "web\\src\\features\\telemetry\\lib\\signalChangePoints.ts:94,231-233"]}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx", "line": 137, "rule": "MDC-010/MDC-012/MDC-016", "detail": "Two neutral section icons use fixed text-cyan-300 rather than theme-aware structural tokens. Scoped page scan found zero direct neon/glow/fixed-white matches and no static inline style. This is limited source evidence, not proof of restrained rendered composition or contrast.", "fix": "Use current muted/secondary icon role for ordinary headings; keep semantic badges and source identity. Do not reset theme/chart preferences.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:137,228"]},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx", "line": 214, "rule": "MDC-010/MDC-034", "detail": "Segment mean and every change marker use chartTokens.series[3], currently saturated #ef4444, with 2px mean stroke stronger than the 1.5px raw series. Non-error reference context can visually imply danger and dominate source data.", "fix": "Reuse existing chart palette/reference semantics with subdued reference treatment and distinguish line styles, preserving both series, all markers and saved explicit chart color choices. No new palette or page-local hex colors.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:214-217", "web\\src\\lib\\tokens.ts:401"]},
+    {"file": "web\\src\\components\\charts\\ChartTooltip.tsx", "line": 140, "rule": "MDC-010/MDC-015", "detail": "Shared tooltip hardcodes a broad rgba black shadow and backdrop-blur-xl rather than shared elevation/surface treatment. No glow or pure-white text is present in the inspected tooltip excerpt; actual visual intensity remains unverified.", "fix": "Chart owner should reconcile existing tooltip surface/elevation tokens once, retaining formatting and tooltip semantics; page must not replace shared tooltip to bypass the owner.", "owner": "shared", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx", "line": 29, "rule": "MDC-032/MDC-046", "detail": "Analysis fixes the window to 72h and does not consume useRangeState. /signal-change-points is absent from RANGE_ENABLED_PATHS, so workspace range settings cannot scope this historical analytical page. Backend supports explicit bounds already; shared analysis hook does not.", "fix": "Integration-owned range registration and typed analysis-hook from/to extension should precede page adoption of header-owned range. Preserve current default, rolling/custom/timezone semantics, query cancellation and analysis row limit; resolve backend inclusive-to versus endInstantExclusive without guessing. Do not add a second picker.", "owner": "integration", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:29,41,173,261", "web\\src\\lib\\workspaceScope.ts:23-77,175-185", "web\\src\\api\\hooks\\useTelemetry.ts:194-222", "internal\\api\\signalinspect\\handler.go:308-324,404-423"]},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx", "line": 72, "rule": "MDC-044/MDC-046", "detail": "Local toLocaleString(undefined) bypasses saved app locale/timezone. Formatted labels omit seconds and become X-axis identity and ReferenceLine React keys. Distinct high-frequency samples can share one label; multiple detected markers can collide or target ambiguous positions. Exact rendering consequences are unexercised.", "fix": "Keep numeric ms as axis/marker/key identity and apply existing useDateFormat to ticks, tooltip and accessible table at display boundary. Include precise timestamp in data alternatives. Preserve chronology and detection indices.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:72-90,202,210,213-214", "web\\src\\hooks\\useDateFormat.ts:76-106"]},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx", "line": 82, "rule": "MDC-033/MDC-045", "detail": "Timeline rounds numeric measurements to three decimals before chart/table input; physical unit is unnamed, magnitude uses empty unit, and catalog names-only normalization drops unit metadata. Small nonzero raw measurements can display as zero. Raw cache is unchanged, but display evidence can lose precision and unit context.", "fix": "Keep raw SI measurements and segment means in presentation data; use existing formatting callbacks at render boundary. Integration must establish trustworthy canonical signal units before any useUnits conversion; preserve generic/raw behavior for unproved unit mapping, never guess units or convert cache values.", "owner": "page", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:82-83,104-106,201-217", "web\\src\\api\\hooks\\useTelemetry.ts:81-96,105-119", "web\\src\\api\\hooks\\useSignals.ts:134-153,215-223,237-252"]},
+    {"file": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx", "line": 34, "rule": "MDC-026/MDC-033", "detail": "Adapter labels response from/to as 'source bounds'. Inspected backend returns requested bounds and first 10000 ascending rows, not observed coverage endpoints. Page caveat correctly says full coverage is not guaranteed, but bounds terminology can still imply actual evidence coverage.", "fix": "Shared telemetry summary contract must separate requested bounds, observed first/last valid timestamps, truncation/coverage unknown and last-success freshness. Preserve source envelope and page caveat; do not assert full-window coverage from from/to.", "owner": "integration", "confidence": "high", "citations": ["web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx:173-176", "internal\\api\\signalinspect\\handler.go:289-302,308-324"]}
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Source trust, minimum-evidence conclusions, temporal identity and workspace range integration precede presentation polish. Existing canonical components and all four sections can be preserved; no source edits are authorized by this audit.",
+    "order": ["Evidence/paused/unknown/insufficient states", "Timestamp identity and range ownership", "Unit/precision and observed coverage disclosure", "Accessible marker data and narrow-width checks", "Neutral icons/reference/tooltip styling"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Bounded analysis history and workspace range ownership",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts; web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": ["Existing useSignalAnalysisHistory vehicle/signal/hours/limit contract extended with typed from/to", "Cache identity and AbortSignal for bounds", "RANGE_ENABLED_PATHS /signal-change-points", "Rolling/custom ranges and exact end-bound semantics"],
+      "usedBy": ["SignalChangePointsPage /signal-change-points"],
+      "dependsOn": ["Existing useRangeState header ownership", "Backend History range parser and inclusive BETWEEN contract", "Integration-owned compatibility verification for existing hook consumers"],
+      "changeNeeded": "Shared/config owner extension plus page adoption; no page-local date selector or competing query engine."
+    },
+    {
+      "name": "Telemetry measurement metadata and honest coverage summary",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts; web\\src\\api\\hooks\\useSignals.ts; web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+      "propsVariantsStates": ["Canonical numeric kind and verified SI unit identity", "Requested bounds separate from observed bounds", "Row cap and unknown completeness", "Unknown/insufficient/empty versus zero", "Retained/fatal/refresh freshness"],
+      "usedBy": ["SignalChangePointsPage /signal-change-points", "Existing TelemetrySummaryBrief consumers not independently audited"],
+      "dependsOn": ["Actual typed catalog/UnitKind compatibility", "Existing signalHistorySamples numeric-only contract", "Backend returned bounds and row-cap semantics", "Existing operational formatting pipeline"],
+      "changeNeeded": "Integration review of existing owners; do not introduce a unit registry or switch normalized ValueKind shapes without compatibility proof."
+    },
+    {
+      "name": "Retained-paused source recovery",
+      "owner": "web\\src\\components\\feedback\\DataSourceNotice.tsx; web\\src\\api\\dataState.ts",
+      "propsVariantsStates": ["DataSourceDescriptor enabled/query", "Retained payload with fetchStatus paused", "Offline-blocked versus refresh-failed/fatal", "Existing retry and online behavior", "DataState.isRefreshBlocked"],
+      "usedBy": ["SignalChangePointsPage /signal-change-points", "Other DataSourceNotice consumers not enumerated in this audit"],
+      "dependsOn": ["Existing DataState trust model", "Existing StaleRefreshWarning rather than another state engine", "Focused shared-owner paused-state tests"],
+      "changeNeeded": "Deduplicated shared source-state correction or page adoption of existing stale warning; retain useful evidence."
+    },
+    {
+      "name": "Reachable contextual help target",
+      "owner": "web\\src\\components\\ui\\HelpTooltip.tsx",
+      "propsVariantsStates": ["Existing size sm and localized ariaLabel", "Contextual-help preference", "44px mobile reachability or verified spacing exception", "Existing Tooltip focus/touch behavior"],
+      "usedBy": ["SignalChangePointsPage /signal-change-points"],
+      "dependsOn": ["Shared tooltip/field conventions", "Measured open-state hit-target and keyboard QA"],
+      "changeNeeded": "Shared trigger sizing review; source risk only, no measured accessibility violation claimed."
+    },
+    {
+      "name": "Canonical restrained chart tooltip surface",
+      "owner": "web\\src\\components\\charts\\ChartTooltip.tsx",
+      "propsVariantsStates": ["Existing valueFormatter/labelFormatter/timezone/precision", "Existing theme-aware surface/border/elevation roles", "Role tooltip and numeric missingness"],
+      "usedBy": ["SignalChangePointsPage /signal-change-points"],
+      "dependsOn": ["Existing tokens and chart owner", "Composed theme/contrast visual QA"],
+      "changeNeeded": "Shared elevation/blur reconciliation; no replacement tooltip or palette."
+    }
+  ],
+  "competingImplementations": {
+    "found": true,
+    "detail": "Local timestamp formatter duplicates the existing useDateFormat policy. Otherwise the page reuses layout, stats, field, chart, query and trust owners. Raw/names-only and typed signal hook families already coexist; they are compatibility dependencies, not authorization to create a third hook/formatter/unit engine."
+  },
+  "preservation": {
+    "sourceHash": "9BC27BBDBBB53A07EEAE95BD375E092507343ED82E863543DB0D40C349204C55",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact current bytes of repository-root-relative page file",
+    "currentLineCount": 270,
+    "sections": ["Signal picker and detector calibration help", "Change-point metrics summary", "Regime timeline with segment means and detected markers", "Reading the result: shift/stability and detector scope"],
+    "sectionCount": 4,
+    "sourceCounts": {"GlassPanelOpeningSites": 3, "ChartContainer": 1, "TelemetrySummaryBrief": 1, "FadeIn": 4, "PanelTitle": 2, "summaryMetrics": 4, "chartSeries": 2, "chartDataColumns": 3, "interpretationBlocks": 2},
+    "lineInventory": [
+      {"lines": "29-70", "content": "72h baseline, selected vehicle/signal, queries and independent data sources, names and analysis summary"},
+      {"lines": "72-116", "content": "Timeline derivation, marker mapping, four metrics, scientific magnitude, confidence/direction and noise/min-segment context"},
+      {"lines": "119-132", "content": "No-vehicle onboarding fallback and canonical page title/subtitle/freshness/source notice"},
+      {"lines": "133-165", "content": "Persistent catalog picker, help, loading/empty/error/retry"},
+      {"lines": "167-178", "content": "Operational summary, retained trust, requested window and bounds/coverage explanation"},
+      {"lines": "180-222", "content": "Timeline placeholder or named accessible chart, source and step mean, every dashed marker"},
+      {"lines": "224-267", "content": "Interpretation loading/error/empty, shift/stable explanation and one-signal-versus-weekly-clustering scope"}
+    ],
+    "actions": [
+      "Global header/URL/store selected-vehicle changes and canonical no-vehicle onboarding navigation.",
+      "Choose/clear a signal with existing Select; preserve raw signal identities rather than translating or recasing them.",
+      "Preference-gated detector calibration help via existing Tooltip.",
+      "Catalog and history retry/refetch, existing 30-second foreground history polling, cancellation and inherited cache/retry policy.",
+      "Default chart PNG/SVG/copy-image actions supplied by ChartContainer; no page CSV, fullscreen, zoom, annotation mutation or legend toggle is currently supplied.",
+      "Always retain both raw-value and step-mean series plus every detected reference marker; intentional always-visible series explanation must survive."
+    ],
+    "dataBehavior": [
+      "Preserve every returned history row and typed metadata in wire/cache; only finite numeric measurements participate in detector, with valid chronological timestamp deduplication.",
+      "Keep fixed minimum segment length, robust noise calibration, clipped statistics, reset behavior, direction/confidence, biggest-change choice and existing detector rounding unless a separately authorized behavior correction has tests.",
+      "All four metrics and explanations survive: count, largest shift, segment count, samples; retain min-segment, confidence, noise and returned-sample caveats.",
+      "Retain last usable history/catalog on refresh errors and keep successful independent sources visible; no whole-page data gate.",
+      "Keep measured zero distinct from missing or insufficient data; do not turn empty/nonnumeric history into a physical zero or a proven stable regime.",
+      "72h requested and 10000-row cap are current baseline; any authorized workspace integration must explicitly preserve/resolve defaults and disclose coverage without silently changing detector population.",
+      "SI is preserved in storage/wire/query values; display conversion requires verified signal metadata and current saved preferences, never guessed units.",
+      "Preserve literal signal identities, source request bounds, observed timestamp identity, all source/segment data, route and testId signal-change-points-summary.",
+      "Do not remove specialist distinctions among abrupt shifts, slow drift and weekly clustering or rewrite detection as generic trend.",
+      "Read-only analytical page: no MQTT publish, vehicle command or telemetry mutation exists."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "screenshots": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendBehavior": "Router, request shape and narrowly relevant History parser/query inspected only. No backend request, actual payload, production health, server completeness or runtime unit behavior exercised.",
+    "commands": [
+      {"command": "Get-FileHash 'web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx' -Algorithm SHA256; (Get-Content page).Count", "exitCode": 0, "output": "Hash : 9BC27BBDBBB53A07EEAE95BD375E092507343ED82E863543DB0D40C349204C55; LineCount=270"},
+      {"command": "Bounded PowerShell regex counts on SignalChangePointsPage.tsx only", "exitCode": 0, "output": "GlassPanel=3; ChartContainer=1; SummaryBrief=1; RawControls=0; InlineStyle=0; NoisyClasses=0; CyanIcons=2"},
+      {"command": "Scoped functions.rg lookup internal\\api\\signal\\handler.go", "exitCode": null, "output": "Search paths do not exist; corrected using scoped glob to internal\\api\\signalinspect\\handler.go."}
+    ],
+    "notRun": ["Git", "Full skill audit script because it invokes whole-frontend TypeScript", "TypeScript", "Lint/build/tests", "Browser/runtime/screenshots", "Keyboard/screen-reader/contrast/viewport testing", "Production requests or mutations", "Nested delegation"],
+    "scope": "Read-only Phase 0 one-page audit. Only assigned report and heartbeat writable. Regex zero counts are scoped source observations, not a complete violations pass. Conventions define required JSON fields rather than a separately supplied machine JSON Schema."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-201.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\SignalChangePointsPage.tsx",
+    "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+    "web\\src\\features\\telemetry\\lib\\signalChangePoints.ts",
+    "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\hooks\\useSignals.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\telemetry.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\ChartTooltip.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\HelpTooltip.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\signalinspect\\handler.go"
+  ]
+}

@@ -590,10 +590,10 @@ function addHourlyInterval(
   let cursor = startMs;
   while (cursor < endMs) {
     const current = new Date(cursor);
-    const nextHour = new Date(cursor);
-    nextHour.setMinutes(0, 0, 0);
-    nextHour.setHours(nextHour.getHours() + 1);
-    const segmentEnd = Math.min(endMs, nextHour.getTime());
+    // Advance elapsed time to the next boundary, including repeated DST hours.
+    const untilNextHourMs = (60 - current.getMinutes()) * 60_000
+      - current.getSeconds() * 1000 - current.getMilliseconds();
+    const segmentEnd = Math.min(endMs, cursor + untilNextHourMs);
     const durationS = (segmentEnd - cursor) / 1000;
     const hour = current.getHours();
     const bucket = buckets[hour]!;

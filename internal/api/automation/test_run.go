@@ -144,9 +144,10 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 }
 
 type testRunConditionConfig struct {
-	condType string
-	raw      json.RawMessage
-	err      error
+	condType   string
+	raw        json.RawMessage
+	err        error
+	timeWindow *models.AutomationStepConditionTimeWindow
 }
 
 // evaluateTestConditions parses and evaluates each condition in the automation.
@@ -168,6 +169,17 @@ func (h *AutomationHandler) evaluateTestConditions(af *models.AutomationFull, no
 				Result: "unknown",
 				Reason: cfg.err.Error(),
 			})
+			continue
+		}
+		if cfg.timeWindow != nil {
+			c := cfg.timeWindow
+			base := testConditionResult{Index: i, Type: cfg.condType}
+			res, snapshot, err := condition.EvaluateTypedTimeWindow(c.StartTime, c.EndTime, c.Timezone, c.DaysOfWeek, now)
+			if err != nil {
+				results = append(results, withUnknown(base, "evaluation error: "+err.Error()))
+			} else {
+				results = append(results, withResult(base, res, snapshot))
+			}
 			continue
 		}
 		var peek struct {
@@ -237,12 +249,7 @@ func testRunConditionTimeWindow(c *models.AutomationStepConditionTimeWindow) tes
 	if c == nil {
 		return testRunConditionConfig{condType: "time_window", err: fmt.Errorf("time_window condition is nil")}
 	}
-	return marshalTestRunCondition("time_window", map[string]any{
-		"type":       "time_window",
-		"start_time": c.StartTime.Format("15:04"),
-		"end_time":   c.EndTime.Format("15:04"),
-		"timezone":   c.Timezone,
-	})
+	return testRunConditionConfig{condType: "time_window", timeWindow: c}
 }
 
 func testRunConditionSignal(c *models.AutomationStepConditionSignal) testRunConditionConfig {
@@ -485,12 +492,30 @@ func testRunActionConfigs(af *models.AutomationFull) ([]action.ActionConfig, err
 
 func testRunActionConfigFrom(item any) ([]action.ActionConfig, error) {
 	switch a := item.(type) {
+	case *models.AutomationStepActionWait:
+		if a == nil {
+			return nil, fmt.Errorf("typed wait action is nil")
+		}
+		raw, err := json.Marshal(a)
+		if err != nil {
+			return nil, fmt.Errorf("marshal typed wait: %w", err)
+		}
+		return []action.ActionConfig{{Type: "wait", Raw: raw, Payload: a}}, nil
+	case models.AutomationStepActionWait:
+		return testRunActionConfigFrom(&a)
 	case json.RawMessage:
 		return parseTestRunActionRaw(a)
 	case []byte:
 		return parseTestRunActionRaw(json.RawMessage(a))
 	case *models.AutomationAction:
-		return parseTestRunActionRaw(testRunCommandActionRaw(a))
+		if a == nil {
+			return nil, fmt.Errorf("typed command action is nil")
+		}
+		raw, err := json.Marshal(a)
+		if err != nil {
+			return nil, fmt.Errorf("marshal typed command: %w", err)
+		}
+		return []action.ActionConfig{{Type: "command", Raw: raw, Payload: a}}, nil
 	case models.AutomationAction:
 		return testRunActionConfigFrom(&a)
 	case *models.AutomationStepActionNotify:
@@ -594,12 +619,22 @@ func testRunStopOnFailure(_ *models.AutomationFull) bool {
 func validateActionConfig(cfg action.ActionConfig) error {
 	switch cfg.Type {
 	case "command":
+		if a, ok := cfg.Payload.(*models.AutomationAction); ok {
+			_, err := action.DecodeTypedCommandSpec(a)
+			return err
+		}
 		_, err := action.ParseCommandConfig(cfg.Raw)
 		return err
 	case "notify":
 		_, err := action.ParseNotifyConfig(cfg.Raw)
 		return err
 	case "wait":
+		if a, ok := cfg.Payload.(*models.AutomationStepActionWait); ok {
+			if a == nil || a.DurationS < 1 || a.DurationS > action.MaxWaitSeconds {
+				return fmt.Errorf("duration_s must be between 1 and %d", action.MaxWaitSeconds)
+			}
+			return nil
+		}
 		_, err := action.ParseWaitConfig(cfg.Raw)
 		return err
 	case "set_variable":

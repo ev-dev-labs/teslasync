@@ -70,7 +70,7 @@ interface InnerSectionProps {
  * Visual contract:
  *   - One GlassPanel sized to sit above the charging curve charts on
  *     ChargingCurvePage.
- *   - Cyan AI badge in the header (matches the chatbot brand colour).
+ *   - Neutral Helix badge in the header.
  *   - Explain button is disabled while a stream is open OR when no
  *     vehicleId is available from the active-vehicle context.
  *   - Title attribute carries the long-form explanation so a user
@@ -106,22 +106,22 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     scopeKey: Number.isFinite(numericVehicleId) && numericVehicleId > 0 ? numericVehicleId : null,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
-    return (
+  return (
     <AIFeatureCard
       title={t(
-                  'charging.aiClustering.title',
-                  'Explain the charging-curve cluster fingerprints',
-                )}
+        'charging.aiClustering.title',
+        'Explain the charging-curve cluster fingerprints',
+      )}
       description={t(
-                'charging.aiClustering.description',
-                'Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing \u2014 it grounds every sentence in the same per-cluster numbers the curves below render.',
-              )}
+        'charging.aiClustering.independentDescription',
+        'Ask Helix to name and explain cluster fingerprints from retrieved charging history and a separate per-vehicle feature-query tool. That tool uses its own lookback window (90 days by default), not the workspace date range; retrieved history is not limited to the chart window. The narrator does not change cluster bucketing, and its source data is not established as equivalent to the charts below.',
+      )}
       buttonLabel={t('charging.aiClustering.generateButton', 'Explain clusters')}
       badgeLabel={t('charging.aiClustering.badge', 'Helix')}
       emptyHint={t(
-                'charging.aiClustering.emptyHint',
-                'Select a vehicle to explain its charging-curve clusters.',
-              )}
+        'charging.aiClustering.emptyHint',
+        'Select a vehicle to explain its charging-curve clusters.',
+      )}
       canStart={haveInputs}
       stream={stream}
     />

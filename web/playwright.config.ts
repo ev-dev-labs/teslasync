@@ -61,7 +61,10 @@ export const baseConfig: PlaywrightTestConfig = {
     ...viewportProjects,
     {
       name: 'chromium-smoke',
-      testMatch: /\.smoke\.spec\.ts/,
+      testMatch: [
+        /\.smoke\.spec\.ts/,
+        /operationalbrief-contracts[\\/][^\\/]+\.supported\.spec\.ts$/,
+      ],
       testIgnore: [/performance\.perf\.spec\.ts/, /accessibility\.smoke\.spec\.ts/],
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, colorScheme: 'dark' },
     },

@@ -43,6 +43,25 @@ const windowSelect = () =>
   screen.getByRole('combobox', { name: 'Window' }) as HTMLSelectElement;
 
 describe('LiveControls — live/freeze toggling', () => {
+  it('uses a static semantic dot and moves the selected cue without changing callbacks', () => {
+    const { props, container, rerender } = setup();
+    const live = screen.getByRole('button', { name: 'Live' });
+    const freeze = screen.getByRole('button', { name: 'Freeze' });
+    const dot = live.querySelector('[aria-hidden="true"]');
+
+    expect(dot).toHaveClass('bg-[var(--semantic-success)]');
+    expect(live).toHaveClass('border-[var(--text-secondary)]');
+    expect(freeze).not.toHaveClass('border-[var(--text-secondary)]');
+    expect(container.querySelector('[class*="animate-"]')).toBeNull();
+
+    rerender(<LiveControls {...props} isLive={false} />);
+    expect(dot).toHaveClass('bg-[var(--text-secondary)]');
+    expect(live).not.toHaveClass('border-[var(--text-secondary)]');
+    expect(freeze).toHaveClass('border-[var(--text-secondary)]');
+    expect(freeze).toHaveAttribute('aria-pressed', 'true');
+    expect(props.onToggleLive).not.toHaveBeenCalled();
+  });
+
   it('reflects the live state via aria-pressed and freezes on Freeze', () => {
     const { props } = setup({ isLive: true });
 
@@ -160,24 +179,48 @@ describe('LiveControls — window dropdown', () => {
 });
 
 describe('LiveControls — buffered counter', () => {
-  it('shows the dual window/24 h scope and explains the gap in the tooltip', () => {
+  it('keeps legacy window/buffer counts generic instead of inventing a 24-hour scope', () => {
     setup({ windowMinutes: 10, windowCount: 3, totalCount: 23 });
 
     const counter = screen.getByTestId('live-controls-counter');
-    expect(counter.textContent).toContain('3 in window · 23 in 24 h');
+    expect(counter.textContent).toContain('3 in window · 23 buffered');
 
     const tooltip = screen.getByRole('tooltip');
     expect(tooltip.textContent).toContain('10-minute');
-    // 23 total − 3 in-window = 20 outside the active window.
-    expect(tooltip.textContent).toContain('20 more');
+    expect(tooltip.textContent).toContain('not a full-range total');
+    expect(tooltip.textContent).not.toContain('24 h');
   });
 
-  it('collapses to the single "buffered" copy when everything is inside the window', () => {
+  it('preserves explicit window scope when everything is inside the buffer', () => {
     setup({ windowCount: 5, totalCount: 5 });
 
     const counter = screen.getByTestId('live-controls-counter');
-    expect(counter.textContent).toContain('5 buffered');
-    expect(counter.textContent).not.toContain('in window');
+    expect(counter.textContent).toContain('5 in window · 5 buffered');
+  });
+
+  it('distinguishes a filtered buffer from the loaded page and matching range total', () => {
+    setup({ windowCount: 2, filteredBufferCount: 4, loadedCount: 50, totalCount: 233,
+      page: 2, rangeScope: '[2026-03-08T08:00:00Z, 2026-03-09T07:00:00Z)',
+      bufferSince: '2026-03-08T10:00:00Z', windowEnd: '2026-03-08T12:00:00Z' });
+    expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
+      '2 in window · 4 in filtered buffer · 50 loaded · 233 matching',
+    );
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Loaded server page: 2');
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      '[2026-03-08T08:00:00Z, 2026-03-09T07:00:00Z)',
+    );
+    expect(screen.getByRole('tooltip')).toHaveTextContent('2026-03-08T10:00:00Z');
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      '[2026-03-08T11:50:00.000Z, 2026-03-08T12:00:00Z]',
+    );
+  });
+
+  it('does not substitute loaded rows for a missing matching total', () => {
+    setup({ windowCount: 5, filteredBufferCount: 5, loadedCount: 5 });
+    expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
+      '5 in window · 5 in filtered buffer · 5 loaded · — matching',
+    );
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Not cleared');
   });
 
   it('falls back to the deprecated bufferCount scalar when new counts are absent', () => {

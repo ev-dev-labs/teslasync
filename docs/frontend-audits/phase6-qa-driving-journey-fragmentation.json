@@ -1,0 +1,1165 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-journey-fragmentation",
+  "attempt": 1,
+  "phase": 6,
+  "status": "SOURCE_QA_DELIVERED_WITH_FINDINGS",
+  "page": "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+  "purpose": "Source-only QA of accepted capped-history continuity analysis; no remigration/live journey inspection/page acceptance.",
+  "routes": [
+    {
+      "path": "/journey-fragmentation",
+      "file": "web\\src\\App.tsx",
+      "lazyImportLine": 101,
+      "line": 871,
+      "guard": "SafeRoute JourneyFragmentation",
+      "mount": "NOTRUN",
+      "workspaceVehicle": true,
+      "workspaceRange": false,
+      "scopeEvidence": "workspaceScope.ts:23-77,93-168"
+    }
+  ],
+  "firstReuseCheck": {
+    "utc": "2026-10-14T01:12:18.0585701Z",
+    "reportExisted": false,
+    "logExisted": false,
+    "result": "No reserved report to reuse; historical audit and accepted Phase5 preserved; no source writes."
+  },
+  "timing": {
+    "reservationUTC": "2026-10-14T01:10:24.802Z",
+    "returnDeadlineUTC": "2026-10-14T01:30:24.802Z",
+    "hardDeadlineUTC": "2026-10-14T01:35:24.802Z",
+    "actualFirstCommandUTC": "2026-10-14T01:12:18.0585701Z",
+    "earlierActual20And25MinuteDeadlineWins": true,
+    "targetMinutes": 10,
+    "returnMinutes": 20,
+    "commandMaximumMinutes": 15,
+    "reportWrittenUTC": "2026-10-14T01:27:34.4846722Z"
+  },
+  "acceptedDependency": {
+    "item": "phase5-page-driving-journey-fragmentation",
+    "queueLine": 1865,
+    "status": "[x]",
+    "commit": "ef299d12eb73dc0c5e7fe87e13bfc7d5f94892ac",
+    "preserved": true,
+    "limits": "SOURCE ONLY; historical18 authored cases unexecuted/startup1/zero discovery. Historical lint/style not rerun; native/application acceptance never implied."
+  },
+  "currentPhase": "Queue1-40: Phases0-5 closed with source debt; Phase6 unfinished; Phase7 NOTRUN. Inherited cadence1906 TSC exit2/25 diagnostics and active catalog-projection root preserved, not rerun/waived.",
+  "requiredReading": [
+    "migration-queue.md exact reservation401/dependency1865/header1-46/bounded dedup",
+    "docs/orchestrator-loop.md FULL",
+    "docs/frontend-design-contract.md FULL2539lines",
+    "docs/session-handoff.md latest current recovery1-45",
+    "docs/frontend-mission.md43-45",
+    "docs/frontend-worker-conventions.md FULL",
+    ".github/copilot-instructions.md FULL",
+    ".github/instructions/frontend-si-cutover.instructions.md FULL",
+    ".github/instructions/react-frontend.instructions.md FULL",
+    ".github/instructions/observability.instructions.md FULL",
+    ".github/instructions/unit-conversion.instructions.md FULL",
+    "docs/frontend-audits/audit-page-119.json FULL"
+  ],
+  "instructionPrecedence": "Explicit source-QA report/log-only permissions. Current design/SI contract supersedes legacy unit/neon examples. No Git/tests/compiler/browser/heartbeat work.",
+  "preservation": {
+    "pageLines": 157,
+    "mountedPresentationParts": 12,
+    "mountedPresentationPartLines": 615,
+    "pagePlus12PartsLines": 772,
+    "mountedBriefAdapters": 3,
+    "mountedBriefAdapterLines": 175,
+    "pagePlusPartsPlusBriefAdaptersLines": 947,
+    "originalPagePlus12PartsLines": 739,
+    "lineCountComparison": "772 versus historical739 same page+12parts definition; no reconstructed baseline or behavioral pass.",
+    "unmountedEvidenceBandLines": 102,
+    "unmountedEvidenceBandExcluded": true,
+    "helperLines": 14,
+    "barrelLines": 13,
+    "sectionCount": 14,
+    "sectionErrorBoundarySites": 13,
+    "chartContainerSites": 6,
+    "glassPanelSitesInDirectParts": 6,
+    "nestedBriefSites": 3,
+    "footerCardSites": 1,
+    "rawMetricDescriptors": 14,
+    "actionGroups": 8,
+    "sections": [
+      {
+        "name": "Journey evidence and summary",
+        "pageLine": 80,
+        "source": "JourneyEvidenceBrief.tsx:11-58",
+        "preserve": "Five raw metrics, included/returned/cap, no vehicle, fatal retry, source scope/provenance/details."
+      },
+      {
+        "name": "Chain-length distribution",
+        "pageLine": 93,
+        "source": "ChainLengthChart.tsx:8-52",
+        "preserve": "Fragments/counts, median/p90, table/export."
+      },
+      {
+        "name": "Stopover-gap distribution",
+        "pageLine": 96,
+        "source": "StopoverGapChart.tsx:8-55",
+        "preserve": "Linked-gap population, half-open minute bins/final open bin, median/p90/count/table."
+      },
+      {
+        "name": "Threshold sensitivity",
+        "pageLine": 99,
+        "source": "ThresholdSensitivityChart.tsx:7-50",
+        "preserve": "30/60/120/240, journeys/linkedPairs, stable chartKey/hidden-series IDs, same source population."
+      },
+      {
+        "name": "Elapsed composition",
+        "pageLine": 102,
+        "source": "ElapsedComposition.tsx:11-42",
+        "preserve": "Driving and linked-parking seconds, linked stopovers, scoped details/duration display."
+      },
+      {
+        "name": "Short-fragment and chain structure",
+        "pageLine": 107,
+        "source": "StructureIndicators.tsx:13-54",
+        "preserve": "Short count/all-included denominator, short distance/share, compact chains/included meters, display preference."
+      },
+      {
+        "name": "Observed energy-intensity comparison",
+        "pageLine": 110,
+        "source": "EnergyIntensityPanel.tsx:22-72",
+        "preserve": "Single/multi complete-energy populations/distances/coverage, signed difference, support3/group, noncausal caveat."
+      },
+      {
+        "name": "Local two-hour journey-start profile",
+        "pageLine": 115,
+        "source": "StartProfileChart.tsx:7-39",
+        "preserve": "12 local journey-start buckets, timezone/table."
+      },
+      {
+        "name": "Weekday journey-start profile",
+        "pageLine": 118,
+        "source": "WeekdayProfileChart.tsx:7-51",
+        "preserve": "Seven localized weekdays and all counts."
+      },
+      {
+        "name": "Monthly observed trend",
+        "pageLine": 121,
+        "source": "MonthlyTrendChart.tsx:7-39",
+        "preserve": "Sparse local months, no imputation/sampling."
+      },
+      {
+        "name": "Ranked observed journey directory",
+        "pageLine": 124,
+        "source": "JourneyDirectory.tsx:10-48",
+        "preserve": "Top8 fragments then distance; rank/count/distance/both addresses/unknowns/duration/gaps; no invented links."
+      },
+      {
+        "name": "Evidence and continuity accounting",
+        "pageLine": 129,
+        "source": "AccountingPanel.tsx:23-84",
+        "preserve": "Five row categories+excluded total, six pair categories, returned/included spans/recency/local days/weeks."
+      },
+      {
+        "name": "Methodology and interpretation limits",
+        "pageLine": 132,
+        "source": "MethodologyPanel.tsx:8-29",
+        "preserve": "Six explanations: segmented sort, continuity, invariant, complete energy, frozen clock/timezone, cap/noncausality."
+      },
+      {
+        "name": "Report context",
+        "pageLine": 136,
+        "source": "JourneyFragmentationPage.tsx:136-153",
+        "preserve": "Pending skeleton versus authoritative empty/populated; mounted."
+      }
+    ],
+    "actions": [
+      {
+        "name": "Maximum parking gap",
+        "evidence": "page33,38,55-58,68-76",
+        "preserve": "Shared native Select localized options30/60/120/240/default120; local analysis, no mutation."
+      },
+      {
+        "name": "Fatal source retry",
+        "evidence": "page85-86; DrivingSummaryBrief.tsx:51",
+        "preserve": "Same history refetch."
+      },
+      {
+        "name": "Retained refresh retry",
+        "evidence": "page79; StaleRefreshWarning.tsx:94-114",
+        "preserve": "Shared retry disabled/busy refreshing; paused not device offline."
+      },
+      {
+        "name": "Sensitivity visibility",
+        "evidence": "ThresholdSensitivityChart.tsx:28,41-43",
+        "preserve": "Stable chartKey; journeys/linkedPairs independently hidden."
+      },
+      {
+        "name": "Chart image export/copy",
+        "evidence": "ChartContainer.tsx:478-484,721-729",
+        "preserve": "PNG/SVG/copy when six charts populated; no configured CSV/fullscreen/annotations; source capabilities not executed18 controls."
+      },
+      {
+        "name": "Evidence/nested details",
+        "evidence": "OperationalBrief.tsx:158-170,246-251",
+        "preserve": "Four potential details drawers; real shared Close/Escape/focus owner, NOTRUN."
+      },
+      {
+        "name": "Subtitle help",
+        "evidence": "PageContainer.tsx:197-212",
+        "preserve": "Complete subtitle through localized shared tooltip."
+      },
+      {
+        "name": "Workspace vehicle change",
+        "evidence": "page37,41-42; useSelectedVehicle.ts:48-74,132-139",
+        "preserve": "Shared header/mobile selection and query identity; workspace action group, not local duplicate."
+      }
+    ],
+    "sectionNames": [
+      "Journey evidence and summary",
+      "Chain-length distribution",
+      "Stopover-gap distribution",
+      "Threshold sensitivity",
+      "Elapsed composition",
+      "Short-fragment and chain structure",
+      "Observed energy-intensity comparison",
+      "Local two-hour journey-start profile",
+      "Weekday journey-start profile",
+      "Monthly observed trend",
+      "Ranked observed journey directory",
+      "Evidence and continuity accounting",
+      "Methodology and interpretation limits",
+      "Report context"
+    ]
+  },
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr,1000)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 143,
+      "requestPath": "/drives?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}",
+      "route": "GET /api/v1/drives",
+      "routeEvidence": "router.go:3506-3507; listing.go:23-58",
+      "policy": "Vehicle enabled; history key47-48; bounded1..1000; MODERATE staleTime; signal cancellation; safeArray; no placeholderData/previous-vehicle retention."
+    },
+    {
+      "hook": "useSelectedVehicle/useTimezone(vehicle)",
+      "file": "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+      "line": 37,
+      "scope": "Shared owner; no local picker; no start/end supplied intentionally latest capped history, not lifetime/workspace range."
+    },
+    {
+      "hook": "analyzeJourneyFragmentation",
+      "file": "web\\src\\features\\driving\\lib\\journeyFragmentation.ts",
+      "line": 711,
+      "scope": "Pure derived model; frozen mount clock page40 disclosed MethodologyPanel24; refresh does not advance it."
+    }
+  ],
+  "analysisContracts": {
+    "sessionIdentity": "repo.go168-184 WHERE vehicle_id=$1 and started_at DESC,id DESC; one request/no merge. Model463 retains drive IDs; directory27 joins IDs as key. Duplicate/foreign ID validation absent; candidate not incident.",
+    "rows": "journeyFragmentation.ts291-320 priority live/incomplete, invalid timestamp/order, future, invalid/nonpositive duration, included. All rows accounted744-751,773-781; excluded rollup not sixth exclusive category.",
+    "boundaries": "journeyFragmentation.ts395-420 stable start sorting within segments; unparseable start stays boundary. Excluded adjacent records break chains; no skipping to bridge.",
+    "continuity": "journeyFragmentation.ts360-393,422-449: both included; no negative overlap; gap<=selected threshold; normalized-address match OR valid GPS<=250m; address precedence; no location values inspected.",
+    "denominators": "journeyFragmentation.ts565-580,729-738,791-805: journeys=included-linked by construction; multi-share/all journeys; average all included/all journeys; short count/all included, not known-distance-only; short-distance share/summed included distance; histogram/summary linked gaps only; active days/weeks included drive starts; profiles journey starts.",
+    "energy": "329-335,452-482,565-581,739-743,809-818: finite nonnegative energy includes0; every journey row requires energy+positive distance; sum Wh/complete meters; coverage complete/group summed meters; unknown intensity/difference null; signed multi-minus-single; minimum3 complete/group; noncausal.",
+    "rawSI": "drive.go7-21,31-36,62-66 seconds/meters/Wh; resilience.ts27-41 naming aliases leave numbers unchanged; raw typed history. useUnits render-only conversion; Wh/m scaled to preferred distance then energy display; formatMetric25-56 finite validation before custom formatter, signed efficiency allowed.",
+    "bounds": "Descriptive returned/included min/max spans684-695 not request bounds; elapsed days/86400 versus active local day/week sets; sparse months no filling. Frozen capped-history scope intentional, not missing-range defect.",
+    "provenance": "Page43 historical DataState; evidence source/threshold disclosed; query updatedAt last successful fetch not observation. One history source all derivatives, no live location/device/mutation. Retained bytes preserved; nested trust defect reported."
+  },
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-qa-driving-journey-fragmentation.json",
+    "web\\logs\\phase6-qa-driving-journey-fragmentation.log"
+  ],
+  "sourceChanges": [],
+  "confirmedFindings": [
+    {
+      "id": "JF-01",
+      "file": "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+      "line": 53,
+      "rule": "source-local-state",
+      "severity": "high",
+      "confidence": "high",
+      "detail": "Only initial-active loading boolean goes to analytical children, not paused/fatal/available state. Elapsed tests zero journeys before loading; four other non-chart bodies ignore loading. Initial unresolved data therefore shows empty five panels; initial-paused/fatal also give empty charts rather than source paused/unavailable/retry. Confirmed branch mechanism, not observed outage.",
+      "evidence": [
+        "page44-54,94-130",
+        "ElapsedComposition.tsx:20-25",
+        "StructureIndicators.tsx:13,27-30",
+        "EnergyIntensityPanel.tsx:22,56-60",
+        "JourneyDirectory.tsx:10,22",
+        "AccountingPanel.tsx:23,51",
+        "_types.ts:3-6",
+        "ChartContainer.tsx:793-825"
+      ],
+      "fix": "Lease page/_types/affected child source-state propagation. Distinguish initial-active, initial-paused, fatal-no-data and authoritative empty through existing feedback/retry; retain all shells/payload; no new trust model.",
+      "owner": "page/feature integration",
+      "existingCorrectiveQueueItem": null
+    },
+    {
+      "id": "JF-02",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx",
+      "line": 23,
+      "rule": "retained-source-trust",
+      "severity": "high",
+      "confidence": "high",
+      "detail": "Elapsed/structure/energy omit retained/unavailable flags to NestedDrivingBrief. Both default false, so populated nested content says Returned evidence during source stale/refresh-blocked. Top warning is preserved; nested status is not source-qualified.",
+      "evidence": [
+        "StructureIndicators.tsx:30-50",
+        "EnergyIntensityPanel.tsx:60-64",
+        "NestedDrivingBrief.tsx:27,56-63",
+        "page88"
+      ],
+      "fix": "Thread existing retained/unavailable/loading semantics from same drivesState to three nested briefs without losing readings or duplicating retries.",
+      "owner": "page/feature integration",
+      "existingCorrectiveQueueItem": null
+    },
+    {
+      "id": "JF-03",
+      "file": "web\\src\\features\\driving\\lib\\journeyFragmentation.ts",
+      "line": 323,
+      "rule": "unknown-as-zero",
+      "severity": "high",
+      "confidence": "high",
+      "detail": "distanceM maps absent/nonfinite/negative operands to0, summing into displayed included/directory distance without coverage. Inclusion checks timestamps/duration, not distance; unknown distance remains in short-fragment denominator. Confirmed loss of unknown/invalid-versus-measured0 in guard, not evidence a live response contains missing DistanceM; wire field nonnullable.",
+      "evidence": [
+        "journeyFragmentation.ts:291-326,453-458,565-580,733-736,799-805",
+        "JourneyDirectory.tsx:35",
+        "StructureIndicators.tsx:44-49"
+      ],
+      "fix": "Domain owner assess nullable/coverage-aware derived distance; disclose unknown/invalid operands while preserving wire/cache and accepted populations/denominators. Do not silently redefine aggregates.",
+      "owner": "feature domain integration",
+      "existingCorrectiveQueueItem": null
+    },
+    {
+      "id": "JF-04",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx",
+      "line": 17,
+      "rule": "measured-zero-suppressed",
+      "severity": "medium",
+      "confidence": "high",
+      "detail": "shortFragmentDistanceM>0 shows distance, else em dash. With included positive long drives and no short fragments, empty short-row sum is known0 but caption hides it as unknown while count/share may show0.",
+      "evidence": [
+        "StructureIndicators.tsx:17-19,35-40",
+        "journeyFragmentation.ts:733-736,799-805"
+      ],
+      "fix": "After missing-distance disposition, display finite valid0; em dash only unknown/invalid; retain count/coverage distinctions.",
+      "owner": "page presentation",
+      "existingCorrectiveQueueItem": null
+    },
+    {
+      "id": "JF-05",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx",
+      "line": 10,
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "confidence": "high",
+      "detail": "Visible threshold and accessible table text interpolate number plus literal English min outside t().",
+      "fix": "Reuse canonical journeyFragmentation.gapMinutes interpolation and locale number owner; preserve thresholds/key IDs.",
+      "owner": "page presentation",
+      "existingCorrectiveQueueItem": null
+    },
+    {
+      "id": "JF-06",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx",
+      "line": 47,
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "confidence": "high",
+      "detail": "Localized support sentence inserts raw supported/thin/unavailable enum as visible band; outer t does not translate enum.",
+      "fix": "Map domain bands to approved canonical human labels. Separate catalog owner only if suitable approved labels missing; preserve thresholds/enum.",
+      "owner": "page presentation/canonical-copy owner",
+      "existingCorrectiveQueueItem": null
+    },
+    {
+      "id": "JF-07",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx",
+      "line": 13,
+      "rule": "display-preferences",
+      "severity": "medium",
+      "confidence": "high",
+      "detail": "Visible dates force en-US/default hour cycle, bypass locale/12-24h preferences. Percent helper uses Math.round/string output; accounting category values render raw numbers. Domain en-US calendar parsing is technical, not this UI date violation.",
+      "evidence": [
+        "AccountingPanel.tsx:13-17,58,62,67-70",
+        "_types.ts:8-10",
+        "EnergyIntensityPanel.tsx:18",
+        "StructureIndicators.tsx:39",
+        "useNumberFormatting.ts:20-39"
+      ],
+      "fix": "Reuse existing date/number display owners with locale/hour cycle/timezone/precision. Preserve raw ratios and source timezone; no legacy source-unit adapter.",
+      "owner": "page presentation",
+      "existingCorrectiveQueueItem": null
+    },
+    {
+      "id": "JF-08",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx",
+      "line": 58,
+      "rule": "semantic-surface-token",
+      "severity": "medium",
+      "confidence": "high",
+      "detail": "Four fixed-white surface/border utilities on three lines bypass semantic neutral roles: two accounting tile backgrounds and directory bg/border. Source violation, not measured composed contrast.",
+      "evidence": [
+        "AccountingPanel.tsx:58,62",
+        "JourneyDirectory.tsx:27"
+      ],
+      "fix": "Use existing neutral surface/border roles or shared card variant without changing totals/ranks/addresses/layout.",
+      "owner": "page presentation",
+      "existingCorrectiveQueueItem": null
+    },
+    {
+      "id": "JF-09",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx",
+      "line": 15,
+      "rule": "nested-panel-chrome",
+      "severity": "medium",
+      "confidence": "high",
+      "detail": "Three GlassPanel sections embed NestedDrivingBrief -> OperationalBrief -> another GlassPanel and repeat descriptions/surface hierarchy. Confirmed source composition, not screenshot judgment.",
+      "evidence": [
+        "ElapsedComposition.tsx:15,23-25",
+        "StructureIndicators.tsx:22,30-31",
+        "EnergyIntensityPanel.tsx:51,60-62",
+        "NestedDrivingBrief.tsx:51-54",
+        "OperationalBrief.tsx:132-139"
+      ],
+      "fix": "Review existing embedded composition owner; prefer one surface preserving explanations/scope/metrics/provenance/details. Any global API extension requires separate authority/independent consumers.",
+      "owner": "shared composition/feature adoption",
+      "existingCorrectiveQueueItem": null
+    }
+  ],
+  "candidates": [
+    {
+      "id": "JC-01",
+      "file": "web\\src\\lib\\safeArray.ts",
+      "line": 9,
+      "rule": "identity-and-response-validation-review",
+      "confidence": "medium",
+      "detail": "safeArray normalizes null/non-array to[]; model accepts IDs without dedup/wrong-vehicle assertion. Server filter/order confirmed, so no duplicate/foreign/malformed incident claimed.",
+      "evidence": [
+        "useDriving.ts:143-156",
+        "journeyFragmentation.ts:463,721-723",
+        "JourneyDirectory.tsx:27",
+        "repo.go:168-184"
+      ],
+      "preciseNeed": "Authorized typed hook/domain fixtures for invalid shape/duplicate ID/wrong vehicle before corrective assignment; no live identity/API inspection."
+    },
+    {
+      "id": "JC-02",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx",
+      "line": 25,
+      "rule": "container-and-mobile-review",
+      "confidence": "medium",
+      "detail": "Inner md2 directory sits inside parent lg2 grid; source addresses lack explicit break-anywhere. Narrow cards/long strings/RTL overflow unmeasured.",
+      "preciseNeed": "Mission widths, narrow allocation,200% text,longRTL mounted proof; preserve8 entries/all fields."
+    },
+    {
+      "id": "JC-03",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\MonthlyTrendChart.tsx",
+      "line": 33,
+      "rule": "palette-and-label-review",
+      "confidence": "medium",
+      "detail": "Repeated journey count uses shared CHART_COLORS indices0/3/4/5. Palette consistency/saved preferences and weekday/two-hour/month tick reachability unverified. Array fill Recharts prop acceptable, not inline-style violation.",
+      "evidence": [
+        "StartProfileChart.tsx:33",
+        "WeekdayProfileChart.tsx:45",
+        "MonthlyTrendChart.tsx:33",
+        "ChainLengthChart.tsx:46"
+      ],
+      "preciseNeed": "Current shared palette owner and authorized themes/forced-colors/long-label table proof before claiming rainbow/preference loss/clipping."
+    },
+    {
+      "id": "JC-04",
+      "file": "web\\src\\lib\\timezone.ts",
+      "line": 37,
+      "rule": "timezone-provenance-review",
+      "confidence": "medium",
+      "detail": "Vehicle mode resolves absent/UTC vehicle timezone to user/browser timezone, while copy says vehicle-local. Accepted fallback preserved; actual vehicle-zone availability not inspected.",
+      "evidence": [
+        "timezone.ts:29-38,46-49",
+        "MethodologyPanel.tsx:24",
+        "AccountingPanel.tsx:67-70"
+      ],
+      "preciseNeed": "Design/source fixtures for known vehicleUTC/missing timezone/user override; qualify fallback provenance if required, no real location or calendar-semantic rewrite."
+    }
+  ],
+  "checks": {
+    "nativePowerShellOnly": true,
+    "rawLog": "web\\logs\\phase6-qa-driving-journey-fragmentation.log",
+    "interpretation": "Actual commands/raw output/numeric exits and exact scope retained verbatim; source counts not render/compiler/test passes.",
+    "rawOutput": "COMMAND: Test-Path authorized existing report/log; Get-FileHash SHA256 and Get-Content line counts for current page, direct parts, typed model and source owners\r\nSOURCE_SNAPSHOT_UTC=2026-10-14T01:14:46.8401460Z\r\nEXISTING_REPORT=False\r\nEXISTING_LOG=False\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx | lines=157 | bytes=7109 | SHA256=f49c0fe7769c79a8cec8e90b84378c9691cdd8355715943a7d6e9222f0bf183a\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts | lines=850 | bytes=29597 | SHA256=868e60b4174f3332870df18120568bae83fb5fb1ac8fb63df80fe6b06d8806c5\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\JourneyEvidenceBrief.tsx | lines=59 | bytes=4645 | SHA256=ab9c30d1574da57fa2e05ac1c3e75bf2167d4bc0e9b4234a0f8f0294de9986c2\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx | lines=53 | bytes=1893 | SHA256=29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx | lines=63 | bytes=2974 | SHA256=682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba\r\nweb\\src\\api\\hooks\\useDriving.ts | lines=454 | bytes=17391 | SHA256=c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392\r\nweb\\src\\types\\driving.ts | lines=411 | bytes=10894 | SHA256=ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161\r\nweb\\src\\lib\\workspaceScope.ts | lines=168 | bytes=4411 | SHA256=aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7\r\nweb\\src\\hooks\\useDataState.ts | lines=65 | bytes=2035 | SHA256=785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b\r\nweb\\src\\api\\dataState.ts | lines=434 | bytes=15482 | SHA256=21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761\r\nweb\\src\\App.tsx | lines=919 | bytes=68125 | SHA256=10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c\r\ninternal\\api\\router.go | lines=5363 | bytes=260353 | SHA256=343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\_types.ts | lines=14 | bytes=490 | SHA256=fb897c015d3143e24f41b7c2e0b92751145323a17225225241f7d75e1970a661\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx | lines=84 | bytes=5188 | SHA256=f5bb9cad5443b6d33a123d0a43164db79f1f7a6ab72a38a38ba27ed632d5dcb5\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ChainLengthChart.tsx | lines=52 | bytes=2586 | SHA256=518436a875e28d07653a9f37f6d36ad60c04a76096633608e055163e38f680f7\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx | lines=42 | bytes=2717 | SHA256=e8ee621e6c8c2f292439d3cc2be88401679d945fb481af7c79a4ce1bca5b292d\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx | lines=72 | bytes=4582 | SHA256=f37fb26fe5b939e5639fa173d25bdd90f3b74b60412059e1c086a65430b25c3d\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EvidenceBand.tsx | lines=102 | bytes=4813 | SHA256=bef6362ffeeb85ee0abdb4a89e05be903c5310f64cffba7ded7d6c7f31a5113e\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\index.ts | lines=13 | bytes=751 | SHA256=cacbb667c8fc65d444ea9307fe22046828d1bfb68caaf94e06d0ed7999038386\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx | lines=48 | bytes=2956 | SHA256=f945f03acbedba7a50977e09b8975dc5abc99c3906e5b800bec9db871673336d\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\MethodologyPanel.tsx | lines=29 | bytes=2368 | SHA256=68f7fa589f7f345556a4707ce3655b90e370fb7ed0a54c65ba9f476293bf09ca\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\MonthlyTrendChart.tsx | lines=39 | bytes=2020 | SHA256=aebedb391d06162909bb91fd914c65b8238e78f3b0b256c2bb08c7d56180a563\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StartProfileChart.tsx | lines=39 | bytes=2104 | SHA256=3a3d23c101d5bf9fd35f5abfa14acebb2c837da5bb5672a9610faa441d018b60\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StopoverGapChart.tsx | lines=55 | bytes=2671 | SHA256=5222a2b545c4d2947a71e3c3e601da06a70f8c1865e1f2a1a7d1589dd9253a0d\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx | lines=54 | bytes=3706 | SHA256=05dfeae31af65466c40cdbfbcabfde5e6a1fe28b6e0a6a99e207b9875ee0219e\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx | lines=50 | bytes=2877 | SHA256=74cb1d599d2f9ff8424f9f3914a77eab35299012dfcc3d6b9671686a0be5d660\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\WeekdayProfileChart.tsx | lines=51 | bytes=2501 | SHA256=3d087c335be2df9696425d3357eaf4f8ad91e994e9b63837dc87f587956c2702\r\nNUMERIC_EXIT=0\r\nCOMMAND: Native PowerShell Select-String against exact 16-file mounted presentation scope; read useDriveHistory lines143-157 for URL patterns; count matched lines, not render failures\r\nSCAN_UTC=2026-10-14T01:15:39.2894072Z\r\nSCOPE_FILES=16\r\nPAGE_LINES=157\r\nMOUNTED_PARTS_LINES=615\r\nPAGE_PLUS_12_PARTS_LINES=772\r\nstatic-inline-style-candidates: matchedLines=0\r\nraw-html: matchedLines=1\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:68: <Select\r\ndirect-library-import: matchedLines=0\r\nold-api-import: matchedLines=0\r\nfetch-useeffect-candidates: matchedLines=0\r\nhidden-section-candidates: matchedLines=0\r\nhardcoded-string-candidates: matchedLines=3\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:13: return new Intl.DateTimeFormat('en-US', {\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:47: band: comparison.supportBand, count: comparison.minimumSupportedJourneys,\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx:10: threshold: `${point.thresholdMin} min`,\r\nwhite-surface-token-candidates: matchedLines=3\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:58: <div className=\"grid grid-cols-2 gap-2\">{rows.map(([label, value]) => <div key={label} className=\"rounded-lg bg-white/[0.03] p-2\"><Text as=\"p\" variant=\"caption\">{label}</Text><Text as=\"p\" variant=\"body\">{value}</Text></div>)}</div>\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:62: <div className=\"grid grid-cols-2 gap-2\">{pairs.map(([label, value]) => <div key={label} className=\"rounded-lg bg-white/[0.03] p-2\"><Text as=\"p\" variant=\"caption\">{label}</Text><Text as=\"p\" variant=\"body\">{value}</Text></div>)}</div>\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx:27: <div key={journey.driveIds.join('-')} className=\"rounded-xl border border-white/[0.06] bg-white/[0.02] p-4\">\r\nneon-body: matchedLines=0\r\ncharts: matchedLines=6\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ChainLengthChart.tsx:24: <ChartContainer\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\MonthlyTrendChart.tsx:11: <ChartContainer\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StartProfileChart.tsx:11: <ChartContainer\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StopoverGapChart.tsx:27: <ChartContainer\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx:15: <ChartContainer\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\WeekdayProfileChart.tsx:23: <ChartContainer\r\npanels: matchedLines=6\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:43: <GlassPanel className=\"space-y-4 p-4 sm:p-5\">\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:15: <GlassPanel className=\"space-y-4 p-4 sm:p-5\">\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:51: <GlassPanel className=\"space-y-4 p-4 sm:p-5\">\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx:17: <GlassPanel className=\"space-y-4 p-4 sm:p-5\">\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\MethodologyPanel.tsx:11: <GlassPanel className=\"space-y-3 p-4 sm:p-5\">\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx:22: <GlassPanel className=\"space-y-4 p-4 sm:p-5\">\r\nsection-boundaries: matchedLines=13\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:80: <SectionErrorBoundary name=\"JourneyFragmentationEvidence\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:93: <SectionErrorBoundary name=\"JourneyFragmentationChainLength\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:96: <SectionErrorBoundary name=\"JourneyFragmentationStopoverGap\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:99: <SectionErrorBoundary name=\"JourneyFragmentationThresholdSensitivity\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:102: <SectionErrorBoundary name=\"JourneyFragmentationElapsedComposition\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:107: <SectionErrorBoundary name=\"JourneyFragmentationStructureIndicators\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:110: <SectionErrorBoundary name=\"JourneyFragmentationEnergyIntensity\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:115: <SectionErrorBoundary name=\"JourneyFragmentationStartProfile\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:118: <SectionErrorBoundary name=\"JourneyFragmentationWeekdayProfile\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:121: <SectionErrorBoundary name=\"JourneyFragmentationMonthlyTrend\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:124: <SectionErrorBoundary name=\"JourneyFragmentationDirectory\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:129: <SectionErrorBoundary name=\"JourneyFragmentationAccounting\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:132: <SectionErrorBoundary name=\"JourneyFragmentationMethodology\">\r\nnested-briefs: matchedLines=3\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:23: <NestedDrivingBrief title={t('journeyFragmentation.brief.elapsedTitle', 'Linked journey timing')}\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:60: <NestedDrivingBrief metrics={metrics}\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx:30: <NestedDrivingBrief title={t('journeyFragmentation.brief.structureTitle', 'Observed chain quantities')}\r\nfooter-card: matchedLines=1\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:136: <LayoutCard title={t('journeyFragmentation.footer.title', 'Report context')}>\r\nSCOPED_HISTORY_HOOK_double-prefix_MATCHES=0\r\nSCOPED_HISTORY_HOOK_camelcase-param_MATCHES=1\r\nPAGE_CONTAINER_MECHANISM=PageLayout.tsx:11 invokes PageContainer (not a missing-page-container violation)\r\nRUNTIME_NATIVE_PAGE_PASS=NOT_RUN\r\nTESTS_discovered=0 executed=0 passed=0 failed=0 skipped=0 notRun=true\r\nNUMERIC_EXIT=0\r\nCOMMAND: Case-sensitive .NET regex occurrence counts over exact mounted 16 files; native Select-String on hook143-157, _types and readonly listing Go patterns\r\nCORRECTED_SCAN_UTC=2026-10-14T01:16:22.9341159Z\r\nraw-html_OCCURRENCES=0\r\ndirect-library-import_OCCURRENCES=0\r\nold-api-import_OCCURRENCES=0\r\nstatic-inline-style_OCCURRENCES=0\r\nfetch-useeffect_OCCURRENCES=0\r\nhidden-section_OCCURRENCES=0\r\nwhite-surface-tokens_OCCURRENCES=4\r\nhistory-double-prefix_MATCHES=0\r\nhistory-camelcase-query_MATCHES=0\r\nINITIAL_SCAN_FALSE_POSITIVES=case-insensitive Select and query-param pattern; raw original retained; corrected case-sensitive counts govern.\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\_types.ts:9: return value == null || !Number.isFinite(value) ? '—' : `${Math.round(value * 100)}%`;\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\_types.ts:13: return value == null || !Number.isFinite(value) ? '—' : String(value);\r\nlisting_pattern=fmt\\.Sprintf\\([^\\n]*(SELECT|INSERT|UPDATE|DELETE) matchedLines=0\r\nlisting_pattern=(fmt|log)\\.Println\\s*\\( matchedLines=0\r\nlisting_pattern=\\bpanic\\s*\\( matchedLines=0\r\nlisting_context=listing.go:24 span derives r.Context; listing.go:43 repository call receives ctx\r\nNUMERIC_EXIT=0\r\nCOMMAND: Parse readonly canonical en.json with ConvertFrom-Json -AsHashtable; regex-extract literal t() keys from exact16 source files; traverse dot segments; Select-String exact locale/unknown-zero/sign mechanisms\r\nCATALOG_SCAN_UTC=2026-10-14T01:17:32.4550727Z\r\nUNIQUE_LITERAL_T_KEYS=152\r\nMISSING_CANONICAL_KEYS=0\r\nCAVEAT=literal t() lookup only, not generated namespace/runtime/plural/fallback equivalence validation\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx:10: threshold: `${point.thresholdMin} min`,\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:40: distance: group.completeEnergyDistanceM > 0 ? formatDistance(group.completeEnergyDistanceM) : '—',\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:47: band: comparison.supportBand, count: comparison.minimumSupportedJourneys,\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:13: return new Intl.DateTimeFormat('en-US', {\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx:17: const shortDistance = result.shortFragmentDistanceM > 0\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx:19: : '—';\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:112: observedDifferenceWhPerM: number | null;\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:156: shortFragmentDenominator: number;\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:278: new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format(0);\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:323: function distanceM(drive: Drive): number {\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:324: return typeof drive.distanceM === 'number' && Number.isFinite(drive.distanceM) && drive.distanceM > 0\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:578: distanceCoverage: totalDistanceM > 0 ? completeEnergyDistanceM / totalDistanceM : null,\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:590: const formatter = new Intl.DateTimeFormat('en-US', {\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:800: shortFragmentDenominator: includedRows.length,\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:803: totalDistanceM > 0\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:811: observedDifferenceWhPerM:\r\nCANONICAL_CATALOG_SHA256=8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893\r\nNUMERIC_EXIT=0\r\nCOMMAND: Select-String -SimpleMatch -CaseSensitive exact9 needles in canonical migration-queue.md; project only line/status/phase/item/files; Select-String exact source-state branches and repo.go GetByVehicle\r\nQUEUE_SCAN_UTC=2026-10-14T01:18:10.5883203Z\r\nNEEDLE=JourneyFragmentationPage MATCHED_ROWS=4\r\n401 | status=[~] | phase=6 | item=phase6-qa-driving-journey-fragmentation | files=docs\\frontend-audits\\phase6-qa-driving-journey-fragmentation.json\r\n610 | status=[x] | phase=0 | item=audit-page-119 | files=web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx; docs\\frontend-audits\\audit-page-119.json\r\n1459 | status=[x] | phase=3 | item=phase3-suite939-file-004 | files=web\\src\\features\\driving\\pages\\JourneyFragmentationPage.test.tsx\r\n1865 | status=[x] | phase=5 | item=phase5-page-driving-journey-fragmentation | files=web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx; web\\src\\features\\driving\\pages\\JourneyFragmentationPage.test.tsx\r\nNEEDLE=journey-fragmentation MATCHED_ROWS=5\r\n401 | status=[~] | phase=6 | item=phase6-qa-driving-journey-fragmentation | files=docs\\frontend-audits\\phase6-qa-driving-journey-fragmentation.json\r\n489 | status=[x] | phase=5 | item=phase5-current-source-catalog-closure | files=web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-action-center.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\locale-analytics.json; web\\src\\i18n\\en\\locale-automations.json; web\\src\\i18n\\en\\locale-battery.json; web\\src\\i18n\\en\\locale-benchmarks.json; web\\src\\i18n\\en\\locale-charging.json; web\\src\\i18n\\en\\locale-dashboard.json; web\\src\\i18n\\en\\locale-dashcam.json; web\\src\\i18n\\en\\locale-detail-achievements.json; web\\src\\i18n\\en\\locale-detail-activity.json; web\\src\\i18n\\en\\locale-detail-addressInput.json; web\\src\\i18n\\en\\locale-detail-alerts.json; web\\src\\i18n\\en\\locale-detail-annotation.json; web\\src\\i18n\\en\\locale-detail-anomalies.json; web\\src\\i18n\\en\\locale-detail-apiLogs.json; web\\src\\i18n\\en\\locale-detail-app.json; web\\src\\i18n\\en\\locale-detail-arrivalReliability.json; web\\src\\i18n\\en\\locale-detail-battery.json; web\\src\\i18n\\en\\locale-detail-browserNotifications.json; web\\src\\i18n\\en\\locale-detail-bulk.json; web\\src\\i18n\\en\\locale-detail-calculationDetails.json; web\\src\\i18n\\en\\locale-detail-carbon.json; web\\src\\i18n\\en\\locale-detail-chart.json; web\\src\\i18n\\en\\locale-detail-chatbot.json; web\\src\\i18n\\en\\locale-detail-coldStart.json; web\\src\\i18n\\en\\locale-detail-combobox.json; web\\src\\i18n\\en\\locale-detail-commands.json; web\\src\\i18n\\en\\locale-detail-consent.json; web\\src\\i18n\\en\\locale-detail-dashboard.json; web\\src\\i18n\\en\\locale-detail-dataState.json; web\\src\\i18n\\en\\locale-detail-date.json; web\\src\\i18n\\en\\locale-detail-dayLog.json; web\\src\\i18n\\en\\locale-detail-delta.json; web\\src\\i18n\\en\\locale-detail-departure.json; web\\src\\i18n\\en\\locale-detail-departureForecast.json; web\\src\\i18n\\en\\locale-detail-destinationTransitions.json; web\\src\\i18n\\en\\locale-detail-developerReference.json; web\\src\\i18n\\en\\locale-detail-diagnostic.json; web\\src\\i18n\\en\\locale-detail-digitalTwin.json; web\\src\\i18n\\en\\locale-detail-draft.json; web\\src\\i18n\\en\\locale-detail-driveCompare.json; web\\src\\i18n\\en\\locale-detail-driveDetail.json; web\\src\\i18n\\en\\locale-detail-driveDna.json; web\\src\\i18n\\en\\locale-detail-drives.json; web\\src\\i18n\\en\\locale-detail-driveScore.json; web\\src\\i18n\\en\\locale-detail-drivetrain.json; web\\src\\i18n\\en\\locale-detail-driving.json; web\\src\\i18n\\en\\locale-detail-drivingSecondary.json; web\\src\\i18n\\en\\locale-detail-dynamics.json; web\\src\\i18n\\en\\locale-detail-editConflict.json; web\\src\\i18n\\en\\locale-detail-efficiency.json; web\\src\\i18n\\en\\locale-detail-effTarget.json; web\\src\\i18n\\en\\locale-detail-emptyState.json; web\\src\\i18n\\en\\locale-detail-energyAnatomy.json; web\\src\\i18n\\en\\locale-detail-entityContext.json; web\\src\\i18n\\en\\locale-detail-error.json; web\\src\\i18n\\en\\locale-detail-explorer.json; web\\src\\i18n\\en\\locale-detail-export.json; web\\src\\i18n\\en\\locale-detail-exports.json; web\\src\\i18n\\en\\locale-detail-feedback.json; web\\src\\i18n\\en\\locale-detail-feedbackTriage.json; web\\src\\i18n\\en\\locale-detail-filters.json; web\\src\\i18n\\en\\locale-detail-forms.json; web\\src\\i18n\\en\\locale-detail-freshness.json; web\\src\\i18n\\en\\locale-detail-fsd.json; web\\src\\i18n\\en\\locale-detail-fsm.json; web\\src\\i18n\\en\\locale-detail-glossary.json; web\\src\\i18n\\en\\locale-detail-guard.json; web\\src\\i18n\\en\\locale-detail-helix.json; web\\src\\i18n\\en\\locale-detail-help.json; web\\src\\i18n\\en\\locale-detail-impersonation.json; web\\src\\i18n\\en\\locale-detail-journeyFragmentation.json; web\\src\\i18n\\en\\locale-detail-kiosk.json; web\\src\\i18n\\en\\locale-detail-landscape.json; web\\src\\i18n\\en\\locale-detail-live.json; web\\src\\i18n\\en\\locale-detail-liveLogs.json; web\\src\\i18n\\en\\locale-detail-logbook.json; web\\src\\i18n\\en\\locale-detail-maps.json; web\\src\\i18n\\en\\locale-detail-mqttSseInspector.json; web\\src\\i18n\\en\\locale-detail-notifications.json; web\\src\\i18n\\en\\locale-detail-onboarding.json; web\\src\\i18n\\en\\locale-detail-operationalMode.json; web\\src\\i18n\\en\\locale-detail-operations.json; web\\src\\i18n\\en\\locale-detail-originConcentration.json; web\\src\\i18n\\en\\locale-detail-pagination.json; web\\src\\i18n\\en\\locale-detail-paint.json; web\\src\\i18n\\en\\locale-detail-palette.json; web\\src\\i18n\\en\\locale-detail-polling.json; web\\src\\i18n\\en\\locale-detail-presentation.json; web\\src\\i18n\\en\\locale-detail-problemReport.json; web\\src\\i18n\\en\\locale-detail-productPreferences.json; web\\src\\i18n\\en\\locale-detail-pwa.json; web\\src\\i18n\\en\\locale-detail-rangeBuffer.json; web\\src\\i18n\\en\\locale-detail-rbac.json; web\\src\\i18n\\en\\locale-detail-recentPages.json; web\\src\\i18n\\en\\locale-detail-regen.json; web\\src\\i18n\\en\\locale-detail-replay.json; web\\src\\i18n\\en\\locale-detail-requiresAuth.json; web\\src\\i18n\\en\\locale-detail-rhythm.json; web\\src\\i18n\\en\\locale-detail-routeEfficiency.json; web\\src\\i18n\\en\\locale-detail-savedViews.json; web\\src\\i18n\\en\\locale-detail-search.json; web\\src\\i18n\\en\\locale-detail-seasonalEfficiency.json; web\\src\\i18n\\en\\locale-detail-segments.json; web\\src\\i18n\\en\\locale-detail-serviceMode.json; web\\src\\i18n\\en\\locale-detail-session.json; web\\src\\i18n\\en\\locale-detail-settings.json; web\\src\\i18n\\en\\locale-detail-shortcuts.json; web\\src\\i18n\\en\\locale-detail-signalConfig.json; web\\src\\i18n\\en\\locale-detail-signalQuery.json; web\\src\\i18n\\en\\locale-detail-sourceLayer.json; web\\src\\i18n\\en\\locale-detail-speedProfile.json; web\\src\\i18n\\en\\locale-detail-speedSweetSpot.json; web\\src\\i18n\\en\\locale-detail-stateMachineDebugger.json; web\\src\\i18n\\en\\locale-detail-statusBar.json; web\\src\\i18n\\en\\locale-detail-sudo.json; web\\src\\i18n\\en\\locale-detail-sweetSpot.json; web\\src\\i18n\\en\\locale-detail-systemStatus.json; web\\src\\i18n\\en\\locale-detail-table.json; web\\src\\i18n\\en\\locale-detail-tagInput.json; web\\src\\i18n\\en\\locale-detail-tesla.json; web\\src\\i18n\\en\\locale-detail-teslaOnly.json; web\\src\\i18n\\en\\locale-detail-theme.json; web\\src\\i18n\\en\\locale-detail-timeline.json; web\\src\\i18n\\en\\locale-detail-timeMachine.json; web\\src\\i18n\\en\\locale-detail-toast.json; web\\src\\i18n\\en\\locale-detail-tour.json; web\\src\\i18n\\en\\locale-detail-tripPlanner.json; web\\src\\i18n\\en\\locale-detail-vehicleHero.json; web\\src\\i18n\\en\\locale-detail-voiceMode.json; web\\src\\i18n\\en\\locale-detail-watch.json; web\\src\\i18n\\en\\locale-detail-watchFaceNL.json; web\\src\\i18n\\en\\locale-detail-whatIf.json; web\\src\\i18n\\en\\locale-diagnostics.json; web\\src\\i18n\\en\\locale-driving-arrival-reliability.json; web\\src\\i18n\\en\\locale-driving-cold-start.json; web\\src\\i18n\\en\\locale-driving-departure-forecast.json; web\\src\\i18n\\en\\locale-driving-destination-transitions.json; web\\src\\i18n\\en\\locale-driving-drive-compare.json; web\\src\\i18n\\en\\locale-driving-drive-dna.json; web\\src\\i18n\\en\\locale-driving-drive-score.json; web\\src\\i18n\\en\\locale-driving-drivetrain-health.json; web\\src\\i18n\\en\\locale-driving-driving-dynamics.json; web\\src\\i18n\\en\\locale-driving-driving-rhythm.json; web\\src\\i18n\\en\\locale-driving-efficiency-target.json; web\\src\\i18n\\en\\locale-driving-efficiency.json; web\\src\\i18n\\en\\locale-driving-explorer.json; web\\src\\i18n\\en\\locale-driving-fsdinsights.json; web\\src\\i18n\\en\\locale-driving-journey-fragmentation.json; web\\src\\i18n\\en\\locale-driving-range-buffer.json; web\\src\\i18n\\en\\locale-driving-regen-efficiency.json; web\\src\\i18n\\en\\locale-driving-route-efficiency.json; web\\src\\i18n\\en\\locale-driving-seasonal-efficiency.json; web\\src\\i18n\\en\\locale-driving-segments.json; web\\src\\i18n\\en\\locale-driving-speed-profile.json; web\\src\\i18n\\en\\locale-driving-speed-sweet-spot.json; web\\src\\i18n\\en\\locale-driving-trip-logbook.json; web\\src\\i18n\\en\\locale-driving-trip-planner.json; web\\src\\i18n\\en\\locale-driving-what-if.json; web\\src\\i18n\\en\\locale-driving.json; web\\src\\i18n\\en\\locale-explore.json; web\\src\\i18n\\en\\locale-exports.json; web\\src\\i18n\\en\\locale-fleet-ops.json; web\\src\\i18n\\en\\locale-home-energy.json; web\\src\\i18n\\en\\locale-intelligence-packs.json; web\\src\\i18n\\en\\locale-maps.json; web\\src\\i18n\\en\\locale-notifications.json; web\\src\\i18n\\en\\locale-ownership.json; web\\src\\i18n\\en\\locale-power-user.json; web\\src\\i18n\\en\\locale-resale-vault.json; web\\src\\i18n\\en\\locale-science.json; web\\src\\i18n\\en\\locale-service-intelligence.json; web\\src\\i18n\\en\\locale-settings.json; web\\src\\i18n\\en\\locale-sharing.json; web\\src\\i18n\\en\\locale-system.json; web\\src\\i18n\\en\\locale-telemetry.json; web\\src\\i18n\\en\\locale-trips.json; web\\src\\i18n\\en\\locale-unreferenced.json; web\\src\\i18n\\en\\locale-vehicle-systems.json; web\\src\\i18n\\en\\locale-vehicles.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\shell.json; web\\src\\i18n\\en\\usage-manifest.json\r\n610 | status=[x] | phase=0 | item=audit-page-119 | files=web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx; docs\\frontend-audits\\audit-page-119.json\r\n1731 | status=[b] | phase=5 | item=phase5-feature-migration | files=-\r\n1865 | status=[x] | phase=5 | item=phase5-page-driving-journey-fragmentation | files=web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx; web\\src\\features\\driving\\pages\\JourneyFragmentationPage.test.tsx\r\nNEEDLE=NestedDrivingBrief MATCHED_ROWS=1\r\n1357 | status=[x] | phase=3 | item=phase3-nested-driving-brief | files=web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx; web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.test.tsx\r\nNEEDLE=missing-distance MATCHED_ROWS=0\r\nNEEDLE=distance-coverage MATCHED_ROWS=0\r\nNEEDLE=supportBand MATCHED_ROWS=0\r\nNEEDLE=thresholdMin MATCHED_ROWS=0\r\nNEEDLE=AccountingPanel MATCHED_ROWS=0\r\nNEEDLE=StructureIndicators MATCHED_ROWS=0\r\nDEDUP_DISPOSITION=preserve audit-page-119 and accepted phase5-page-driving-journey-fragmentation; no exact queued corrective row for current journey mechanisms found by these exact names/files.\r\nrepo.go:165: func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*drivemodel.Drive, error) {\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:4: import { useDriveHistory } from '@/api/hooks/useDriving';\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:40: const [analysisNowMs] = useState(() => Date.now());\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:42: const drivesQuery = useDriveHistory(vehicleIdStr, HISTORY_LIMIT);\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:47: analysisNowMs,\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:51: [analysisNowMs, drivesQuery.data, maxGapMin, timeZone],\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:53: const initialLoading = vehicleId != null && drivesState.status === 'initial' && !drivesState.isRefreshBlocked;\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:54: const pendingContext = vehicleId != null && !drivesState.hasData;\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:83: loading={initialLoading}\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:85: error={drivesState.fatalError}\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:88: retained={drivesState.status === 'stale' || drivesState.refreshError != null}\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:94: <ChainLengthChart result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:97: <StopoverGapChart result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:100: <ThresholdSensitivityChart result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:103: <ElapsedComposition result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:108: <StructureIndicators result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:111: <EnergyIntensityPanel result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:116: <StartProfileChart result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:119: <WeekdayProfileChart result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:122: <MonthlyTrendChart result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:125: <JourneyDirectory result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:130: <AccountingPanel result={result} loading={initialLoading} />\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:137: {pendingContext ? (\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:138: <div aria-busy={initialLoading || undefined} className=\"min-w-0 space-y-3\">\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:142: {initialLoading && <Skeleton lines={2} />}\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:149: {!pendingContext && result.returnedRows === 0 && (\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:27: retained = false, unavailable = false, testId,\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:56: loading={loading && !retained} testId={testId}\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:57: statusLabel={retained\r\nFAILED_DISCOVERY_PROBES=missing optional AGENTS paths (tool780 exit1); LiteralPath wildcard *.go invalid (tool929 nonterminating Select-String error, overall exit0); corrected explicit repo.go lookup here.\r\nNUMERIC_EXIT=0\r\nCOMMAND: Select-String -CaseSensitive exact source mechanisms over7 files; classify known shared/dynamic/capped-history exceptions\r\nMECHANISM_SCAN_UTC=2026-10-14T01:18:40.1412092Z\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:6: import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:11: export function ElapsedComposition({ result, loading = false }: JourneyFragmentationSectionProps) {\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:20: {result.journeyCount === 0 ? (\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:23: <NestedDrivingBrief title={t('journeyFragmentation.brief.elapsedTitle', 'Linked journey timing')}\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:25: loading={loading}\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:7: import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:22: export function EnergyIntensityPanel({ result }: JourneyFragmentationSectionProps) {\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:56: {result.journeyCount === 0 ? (\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:60: <NestedDrivingBrief metrics={metrics}\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx:6: import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx:13: export function StructureIndicators({ result }: JourneyFragmentationSectionProps) {\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx:27: {result.includedDrives === 0 ? (\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx:30: <NestedDrivingBrief title={t('journeyFragmentation.brief.structureTitle', 'Observed chain quantities')}\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx:10: export function JourneyDirectory({ result }: JourneyFragmentationSectionProps) {\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx:22: {journeys.length === 0 ? (\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:23: export function AccountingPanel({ result }: JourneyFragmentationSectionProps) {\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:51: {result.returnedRows === 0 ? (\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\_types.ts:8: export function percent(value: number | null): string {\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\_types.ts:9: return value == null || !Number.isFinite(value) ? '—' : `${Math.round(value * 100)}%`;\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\_types.ts:12: export function count(value: number | null | undefined): string {\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:66: driveIds: number[];\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:241: export function resolveJourneyFragmentationOptions(\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:324: return typeof drive.distanceM === 'number' && Number.isFinite(drive.distanceM) && drive.distanceM > 0\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:326: : 0;\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:332: && drive.energyUsedWh >= 0\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:454: const energyRows = chain.map((row) => ({\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:458: const completeEnergy = energyRows.every((row) => row.energy != null && row.distance > 0);\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:463: driveIds: chain.map((row) => row.drive.id),\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:571: const completeEnergyDistanceM = complete.reduce((sum, journey) => sum + journey.distanceM, 0);\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:580: completeEnergyDistanceM > 0 ? totalEnergyWh / completeEnergyDistanceM : null,\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:633: if (journeys.length === 0) return [];\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:711: export function analyzeJourneyFragmentation(\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:742: const energyAvailable = singleEnergy.energyIntensityWhPerM != null\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:743: && multiEnergy.energyIntensityWhPerM != null;\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:791: multiDriveShare: journeys.length > 0 ? multiDriveJourneys / journeys.length : null,\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:792: averageFragmentsPerJourney: journeys.length > 0 ? includedRows.length / journeys.length : null,\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:800: shortFragmentDenominator: includedRows.length,\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:813: ? (multiEnergy.energyIntensityWhPerM as number)\r\nweb\\src\\features\\driving\\lib\\journeyFragmentation.ts:814: - (singleEnergy.energyIntensityWhPerM as number)\r\nCASE_SENSITIVE_RAW_CONTROLS_EXCEPTION=shared Select.tsx native select is a primitive and is excluded from page violation count\r\nDYNAMIC_COLOR_EXCEPTION=CHART_COLORS array lookups used as Recharts fill props; no static-inline-style violation\r\nCLOCK_EXCEPTION=page40 frozen mount clock is disclosed by MethodologyPanel24 and intentionally preserves accepted analysis snapshot\r\nWORKSPACE_EXCEPTION=capped-history route is intentionally not range-enabled; no guessed missing-range violation\r\nOLD_SELECT_TARGET_FINDING_SUPERSEDED=Select.tsx35 sm uses min-h-11 md:min-h-9; nominal44px belowmd, not measured device acceptance\r\nNUMERIC_EXIT=0\r\nCOMMAND: Final case-sensitive bounded native source scan with exact per-pattern commands and explicit scope\r\nFINAL_BOUNDED_SCANS_UTC=2026-10-14T01:19:26.4592603Z\r\nEXACT_SCOPE_START\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ChainLengthChart.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\MethodologyPanel.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\MonthlyTrendChart.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StartProfileChart.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StopoverGapChart.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\WeekdayProfileChart.tsx\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\JourneyEvidenceBrief.tsx\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx\r\nEXACT_SCOPE_END\r\nCOMMAND: Select-String -CaseSensitive -LiteralPath $scope -Pattern style\\s*=\\s*\\{\\{\r\nMATCHED_LINES=0\r\nNUMERIC_EXIT=0\r\nCOMMAND: Select-String -CaseSensitive -LiteralPath $scope -Pattern <(button|input|textarea|select|table)\\b\r\nMATCHED_LINES=0\r\nNUMERIC_EXIT=0\r\nCOMMAND: Select-String -CaseSensitive -LiteralPath $scope -Pattern from\\s+['\"`](recharts|react-leaflet|framer-motion)['\"`]\r\nMATCHED_LINES=0\r\nNUMERIC_EXIT=0\r\nCOMMAND: Select-String -CaseSensitive -LiteralPath $scope -Pattern from\\s+['\"`](\\.\\./api|\\.\\./\\.\\./api)['\"`]\r\nMATCHED_LINES=0\r\nNUMERIC_EXIT=0\r\nCOMMAND: Select-String -CaseSensitive -LiteralPath $scope -Pattern \\bfetch\\s*\\(|\\buseEffect\\s*\\(\r\nMATCHED_LINES=0\r\nNUMERIC_EXIT=0\r\nCOMMAND: Select-String -CaseSensitive -LiteralPath $scope -Pattern &&\\s*<(GlassPanel|LayoutCard|ChartContainer|PageLayout|PageContainer)\\b\r\nMATCHED_LINES=0\r\nNUMERIC_EXIT=0\r\nCOMMAND: Select-String -CaseSensitive -LiteralPath $scope -Pattern <(PageLayout|PageContainer)\\b\r\nweb\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:61: <PageLayout\r\nMATCHED_LINES=1\r\nNUMERIC_EXIT=0\r\nCOMMAND: Select-String -CaseSensitive -LiteralPath $scope -Pattern (?:bg|border)-white\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:58: <div className=\"grid grid-cols-2 gap-2\">{rows.map(([label, value]) => <div key={label} className=\"rounded-lg bg-white/[0.03] p-2\"><Text as=\"p\" variant=\"caption\">{label}</Text><Text as=\"p\" variant=\"body\">{value}</Text></div>)}</div>\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:62: <div className=\"grid grid-cols-2 gap-2\">{pairs.map(([label, value]) => <div key={label} className=\"rounded-lg bg-white/[0.03] p-2\"><Text as=\"p\" variant=\"caption\">{label}</Text><Text as=\"p\" variant=\"body\">{value}</Text></div>)}</div>\r\nweb\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx:27: <div key={journey.driveIds.join('-')} className=\"rounded-xl border border-white/[0.06] bg-white/[0.02] p-4\">\r\nMATCHED_LINES=3\r\nNUMERIC_EXIT=0\r\nCOMMAND: $repo[164..193] | Select-String -CaseSensitive -Pattern fmt.Sprintf|Pool.Query\r\nquery += fmt.Sprintf(\" AND started_at >= $%d\", argIdx)\r\nquery += fmt.Sprintf(\" AND started_at <= $%d\", argIdx)\r\nquery += fmt.Sprintf(\" ORDER BY started_at DESC, id DESC LIMIT $%d OFFSET $%d\", argIdx, argIdx+1)\r\nrows, err := r.db.Pool.Query(ctx, query, args...)\r\nBACKEND_INTERPOLATION_REVIEW=3 fmt.Sprintf sites construct numeric placeholder positions only; values supplied as args; fixed driveColumns identifier; Pool.Query(ctx,query,args...) propagates context; not user-value interpolation\r\nNUMERIC_EXIT=0\r\nPAGE_NATIVE_RUNTIME=NOTRUN; browsergrant=false; Edge channel msedge required if separately authorized later; parent preview5173 untouched\r\nNUMERIC_EXIT=0\r\nFAILED_COMMAND: initial all-in-one report write invocation1035\r\nRAW_ERROR: The filename or extension is too long. (os error 206)\r\nNUMERIC_EXIT=1\r\nEXECUTION=host refused command before PowerShell ran; no JSON write or validation claimed; split authorized artifact writes below\r\nCOMMAND: Native authorized JSON base serialization and Get-FileHash SHA256/Get-Content line counts\r\nBASE_JSON_WRITTEN=true\r\nSOURCE_PINS=\r\n48\r\nUTC=\r\n2026-10-14T01:24:55.7793032Z\r\nNUMERIC_EXIT=0\r\nCOMMAND: Serialize9 deduplicated source-confirmed findings and exact state contracts\r\nCONFIRMED_FINDINGS=9\r\nNUMERIC_EXIT=0\r\nCOMMAND: Serialize4 candidates separate from9 confirmed findings; precise needs, queue dedup, limits, raw checks\r\nCONFIRMED_FINDINGS=9 CANDIDATES=4\r\nSOURCE_ONLY=true; native/runtime/pagePASS NOTRUN\r\nNUMERIC_EXIT=0\r\nCOMMAND: ConvertFrom-Json final report; verify9/4 findings,14 sections,8 actions, primary exact line citations and48 source SHA256/line pins\r\nJF-01 web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:53: const initialLoading = vehicleId != null && drivesState.status === 'initial' && !drivesState.isRefreshBlocked;\r\nJF-02 web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:23: <NestedDrivingBrief title={t('journeyFragmentation.brief.elapsedTitle', 'Linked journey timing')}\r\nJF-03 web\\src\\features\\driving\\lib\\journeyFragmentation.ts:323: function distanceM(drive: Drive): number {\r\nJF-04 web\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx:17: const shortDistance = result.shortFragmentDistanceM > 0\r\nJF-05 web\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx:10: threshold: `${point.thresholdMin} min`,\r\nJF-06 web\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:47: band: comparison.supportBand, count: comparison.minimumSupportedJourneys,\r\nJF-07 web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:13: return new Intl.DateTimeFormat('en-US', {\r\nJF-08 web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:58: <div className=\"grid grid-cols-2 gap-2\">{rows.map(([label, value]) => <div key={label} className=\"rounded-lg bg-white/[0.03] p-2\"><Text as=\"p\" variant=\"caption\">{label}</Text><Text as=\"p\" variant=\"body\">{value}</Text></div>)}</div>\r\nJF-09 web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:15: <GlassPanel className=\"space-y-4 p-4 sm:p-5\">\r\nJSON_PARSE=PASS\r\nCONFIRMED_FINDINGS=9\r\nCANDIDATES=4\r\nSECTIONS=14\r\nACTION_GROUPS=8\r\nSOURCE_PINS=48\r\nINITIAL_SOURCE_PINS_PRESERVED=27\r\nPIN_DRIFT=0\r\nVERIFIED_UTC=2026-10-14T01:27:34.4492142Z\r\nNUMERIC_EXIT=0\r\nNOT_ACCEPTANCE=native/runtime/pagePASS/tests/lint/build/globalTSC NOTRUN\r\n"
+  },
+  "release": {
+    "parentPreview": "Parent-owned5173 untouched, no browsergrant; installed Edge/msedge only if later authorized; no downloads",
+    "boundedCommandsRunning": 0,
+    "preReturnReleaseUTC": "2026-10-14T01:27:34.4846722Z",
+    "noPostReturnWrites": true,
+    "reportWriteReleased": true,
+    "allReadOnlySourceOwnershipReleased": true,
+    "sourceWriteClaim": "NONE",
+    "status": "RELEASED_AT_TERMINAL_RETURN",
+    "logWriteReleased": true,
+    "allCommandOwnershipReleased": true
+  },
+  "snapshotUTC": "2026-10-14T01:24:55.1464626Z",
+  "sourcePins": [
+    {
+      "lines": 115,
+      "readScope": "FULL",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "bytes": 4093
+    },
+    {
+      "lines": 17,
+      "readScope": "FULL",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "bytes": 658
+    },
+    {
+      "lines": 119,
+      "readScope": "FULL",
+      "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "file": "web\\src\\components\\ui\\Select.tsx",
+      "bytes": 4432
+    },
+    {
+      "lines": 14,
+      "readScope": "FULL",
+      "sha256": "fb897c015d3143e24f41b7c2e0b92751145323a17225225241f7d75e1970a661",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\_types.ts",
+      "bytes": 490
+    },
+    {
+      "lines": 84,
+      "readScope": "FULL",
+      "sha256": "f5bb9cad5443b6d33a123d0a43164db79f1f7a6ab72a38a38ba27ed632d5dcb5",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx",
+      "bytes": 5188
+    },
+    {
+      "lines": 52,
+      "readScope": "FULL",
+      "sha256": "518436a875e28d07653a9f37f6d36ad60c04a76096633608e055163e38f680f7",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\ChainLengthChart.tsx",
+      "bytes": 2586
+    },
+    {
+      "lines": 42,
+      "readScope": "FULL",
+      "sha256": "e8ee621e6c8c2f292439d3cc2be88401679d945fb481af7c79a4ce1bca5b292d",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx",
+      "bytes": 2717
+    },
+    {
+      "lines": 72,
+      "readScope": "FULL",
+      "sha256": "f37fb26fe5b939e5639fa173d25bdd90f3b74b60412059e1c086a65430b25c3d",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx",
+      "bytes": 4582
+    },
+    {
+      "lines": 102,
+      "readScope": "FULL",
+      "sha256": "bef6362ffeeb85ee0abdb4a89e05be903c5310f64cffba7ded7d6c7f31a5113e",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\EvidenceBand.tsx",
+      "bytes": 4813
+    },
+    {
+      "lines": 13,
+      "readScope": "FULL",
+      "sha256": "cacbb667c8fc65d444ea9307fe22046828d1bfb68caaf94e06d0ed7999038386",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\index.ts",
+      "bytes": 751
+    },
+    {
+      "lines": 48,
+      "readScope": "FULL",
+      "sha256": "f945f03acbedba7a50977e09b8975dc5abc99c3906e5b800bec9db871673336d",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx",
+      "bytes": 2956
+    },
+    {
+      "lines": 29,
+      "readScope": "FULL",
+      "sha256": "68f7fa589f7f345556a4707ce3655b90e370fb7ed0a54c65ba9f476293bf09ca",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\MethodologyPanel.tsx",
+      "bytes": 2368
+    },
+    {
+      "lines": 39,
+      "readScope": "FULL",
+      "sha256": "aebedb391d06162909bb91fd914c65b8238e78f3b0b256c2bb08c7d56180a563",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\MonthlyTrendChart.tsx",
+      "bytes": 2020
+    },
+    {
+      "lines": 39,
+      "readScope": "FULL",
+      "sha256": "3a3d23c101d5bf9fd35f5abfa14acebb2c837da5bb5672a9610faa441d018b60",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\StartProfileChart.tsx",
+      "bytes": 2104
+    },
+    {
+      "lines": 55,
+      "readScope": "FULL",
+      "sha256": "5222a2b545c4d2947a71e3c3e601da06a70f8c1865e1f2a1a7d1589dd9253a0d",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\StopoverGapChart.tsx",
+      "bytes": 2671
+    },
+    {
+      "lines": 54,
+      "readScope": "FULL",
+      "sha256": "05dfeae31af65466c40cdbfbcabfde5e6a1fe28b6e0a6a99e207b9875ee0219e",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx",
+      "bytes": 3706
+    },
+    {
+      "lines": 50,
+      "readScope": "FULL",
+      "sha256": "74cb1d599d2f9ff8424f9f3914a77eab35299012dfcc3d6b9671686a0be5d660",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx",
+      "bytes": 2877
+    },
+    {
+      "lines": 51,
+      "readScope": "FULL",
+      "sha256": "3d087c335be2df9696425d3357eaf4f8ad91e994e9b63837dc87f587956c2702",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\WeekdayProfileChart.tsx",
+      "bytes": 2501
+    },
+    {
+      "lines": 53,
+      "readScope": "FULL",
+      "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+      "bytes": 1893
+    },
+    {
+      "lines": 59,
+      "readScope": "FULL",
+      "sha256": "ab9c30d1574da57fa2e05ac1c3e75bf2167d4bc0e9b4234a0f8f0294de9986c2",
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\JourneyEvidenceBrief.tsx",
+      "bytes": 4645
+    },
+    {
+      "lines": 63,
+      "readScope": "FULL",
+      "sha256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba",
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+      "bytes": 2974
+    },
+    {
+      "lines": 850,
+      "readScope": "FULL",
+      "sha256": "868e60b4174f3332870df18120568bae83fb5fb1ac8fb63df80fe6b06d8806c5",
+      "file": "web\\src\\features\\driving\\lib\\journeyFragmentation.ts",
+      "bytes": 29597
+    },
+    {
+      "lines": 157,
+      "readScope": "FULL",
+      "sha256": "f49c0fe7769c79a8cec8e90b84378c9691cdd8355715943a7d6e9222f0bf183a",
+      "file": "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+      "bytes": 7109
+    },
+    {
+      "lines": 65,
+      "readScope": "FULL",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "bytes": 2035
+    },
+    {
+      "lines": 47,
+      "readScope": "FULL",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "file": "web\\src\\hooks\\useNumberFormatting.ts",
+      "bytes": 2095
+    },
+    {
+      "lines": 24,
+      "readScope": "FULL",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "file": "web\\src\\hooks\\useOperationalMetrics.tsx",
+      "bytes": 1161
+    },
+    {
+      "lines": 174,
+      "readScope": "FULL",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "bytes": 6593
+    },
+    {
+      "lines": 194,
+      "readScope": "FULL",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "bytes": 6545
+    },
+    {
+      "lines": 137,
+      "readScope": "FULL",
+      "sha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "file": "web\\src\\lib\\metric-reference\\formatMetric.ts",
+      "bytes": 7868
+    },
+    {
+      "lines": 53,
+      "readScope": "FULL",
+      "sha256": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+      "file": "web\\src\\lib\\operationalMetrics.tsx",
+      "bytes": 2801
+    },
+    {
+      "lines": 28,
+      "readScope": "FULL",
+      "sha256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14",
+      "file": "web\\src\\lib\\safeArray.ts",
+      "bytes": 859
+    },
+    {
+      "lines": 51,
+      "readScope": "FULL",
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "file": "web\\src\\lib\\timezone.ts",
+      "bytes": 1863
+    },
+    {
+      "lines": 168,
+      "readScope": "FULL",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "bytes": 4411
+    },
+    {
+      "lines": 454,
+      "readScope": "1-220",
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "bytes": 17391
+    },
+    {
+      "lines": 411,
+      "readScope": "1-190",
+      "sha256": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+      "file": "web\\src\\types\\driving.ts",
+      "bytes": 10894
+    },
+    {
+      "lines": 434,
+      "readScope": "1-295",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "file": "web\\src\\api\\dataState.ts",
+      "bytes": 15482
+    },
+    {
+      "lines": 919,
+      "readScope": "101,871 route search",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "file": "web\\src\\App.tsx",
+      "bytes": 68125
+    },
+    {
+      "lines": 5363,
+      "readScope": "3500-3532",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "file": "internal\\api\\router.go",
+      "bytes": 260353
+    },
+    {
+      "lines": 606,
+      "readScope": "1-155",
+      "sha256": "da0d6486c0f98e9f911825ce2e7bcaee8e9ac4a6993ea77eda90f0a789cd53c1",
+      "file": "internal\\api\\drives\\listing.go",
+      "bytes": 18991
+    },
+    {
+      "lines": 710,
+      "readScope": "155-250",
+      "sha256": "259ab3223e7ec7e74a4f6ebb1f6b1147340ba97e682fb85586a67d7cc1aa5426",
+      "file": "internal\\database\\drive\\repo.go",
+      "bytes": 24829
+    },
+    {
+      "lines": 128,
+      "readScope": "1-76",
+      "sha256": "53a16694fe796f73dd785aab26dd94e467c456da540b615d53dc77728c163789",
+      "file": "internal\\models\\drive\\drive.go",
+      "bytes": 7235
+    },
+    {
+      "lines": 458,
+      "readScope": "70-98,247-280/request searches",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "file": "web\\src\\api\\client.ts",
+      "bytes": 17825
+    },
+    {
+      "lines": 1008,
+      "readScope": "20-43",
+      "sha256": "e100c50c5ce8080aadde8badbf083254f1ed4730978e52fa4b690876cd2f0bca",
+      "file": "web\\src\\lib\\resilience.ts",
+      "bytes": 38732
+    },
+    {
+      "lines": 500,
+      "readScope": "325-495",
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "file": "web\\src\\lib\\unitConversion.ts",
+      "bytes": 16774
+    },
+    {
+      "lines": 259,
+      "readScope": "115-290",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "bytes": 10783
+    },
+    {
+      "lines": 321,
+      "readScope": "1-290",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "file": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "bytes": 11591
+    },
+    {
+      "lines": 1006,
+      "readScope": "440-585,711-750,780-868/searches",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "bytes": 41517
+    },
+    {
+      "lines": 38994,
+      "readScope": "Parsed literal152 key lookups only",
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "file": "web\\src\\i18n\\en.json",
+      "bytes": 1842282
+    }
+  ],
+  "filesRead": [
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\_types.ts",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\ChainLengthChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\EvidenceBand.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\index.ts",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\MethodologyPanel.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\MonthlyTrendChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\StartProfileChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\StopoverGapChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\WeekdayProfileChart.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\JourneyEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\features\\driving\\lib\\journeyFragmentation.ts",
+    "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts",
+    "web\\src\\lib\\operationalMetrics.tsx",
+    "web\\src\\lib\\safeArray.ts",
+    "web\\src\\lib\\timezone.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\drives\\listing.go",
+    "internal\\database\\drive\\repo.go",
+    "internal\\models\\drive\\drive.go",
+    "web\\src\\api\\client.ts",
+    "web\\src\\lib\\resilience.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\i18n\\en.json",
+    "migration-queue.md exact reservation401/dependency1865/header1-46/bounded dedup",
+    "docs/orchestrator-loop.md FULL",
+    "docs/frontend-design-contract.md FULL2539lines",
+    "docs/session-handoff.md latest current recovery1-45",
+    "docs/frontend-mission.md43-45",
+    "docs/frontend-worker-conventions.md FULL",
+    ".github/copilot-instructions.md FULL",
+    ".github/instructions/frontend-si-cutover.instructions.md FULL",
+    ".github/instructions/react-frontend.instructions.md FULL",
+    ".github/instructions/observability.instructions.md FULL",
+    ".github/instructions/unit-conversion.instructions.md FULL",
+    "docs/frontend-audits/audit-page-119.json FULL"
+  ],
+  "queueSnapshot": [
+    {
+      "line": 407,
+      "row": "| [~] | 6 | phase6-qa-driving-journey-fragmentation | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-driving-journey-fragmentation.json | phase5-page-driving-journey-fragmentation | 1 | conservative reservation=2026-10-14T01:10:24.802Z; return=2026-10-14T01:30:24.802Z; hard=2026-10-14T01:35:24.802Z; actor=6c4a278c-83c8-4dbf-8e10-1458671208ee; LastConsumed=-1 | - | CurrentacceptedJourneyFragmentationPage/directparts source-onlyQA; report/logonly/no realjourney/locations/API/browser/native/source/test/catalog/fullsuite. Fragmentdefinitions/bounds/denominators/rawSI/preferences/trust/unknownzero/actions/sections; no remigration. Actual ready exact scope reserved; NOT a running worker, no browserlock. Actual built-in launch accepted; exact exclusive files/no browserlock. |"
+    },
+    {
+      "line": 1871,
+      "row": "| [x] | 5 | phase5-page-driving-journey-fragmentation | original-page-migration | web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx; web\\src\\features\\driving\\pages\\JourneyFragmentationPage.test.tsx | - | 1 | 2026-10-13T02:28:21.1593489Z | ef299d12eb73dc0c5e7fe87e13bfc7d5f94892ac | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/journey-fragmentation; audit=docs\\frontend-audits\\audit-page-119.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Fourteenth rolling refill from actual16-runtime census (AlertRules since concluded): genuinely unstarted originalpage/exclusivepair, not wholepage rework/prior no-output/provenance/new audit. Actor pending; no runtime/QA/source delivery inferred from reservation. Actual fourteenth launch REFUSED by harness32 concurrent cap. No actor/source execution/result/attempt fabricated. Reservation returned pending0; fresh original first execution remains eligible once actual capacity opens. SAME genuinely unstarted original objective after actual prior harness32 refusal, no no-output worker ever existed. Fresh capacity launch pending; exact FOURTEENTH exclusive assignment reused, no invented source/native/attempt claim if refused again. Actual fresh firstexecution launched successfully actor199d2651-cd3a-4b72-8fb7-14f86fe821af after prior harnessrefusal. Original FOURTEENTH descriptor/commoninstructions reused; independent FIFTEENTH oneactor registration persisted ledger237. Not delivery/native/behaviorpass; originalfirstattempt not no-output-retry. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; ActualREADterminal0/idle exclusivepair/rawlogverified. SOURCEONLY externalusage-manifeststartupVitest1 ZEROdiscovered/executed EIGHTEENcasesunexecuted/no pass. ESLint0/pageSTYLE0 testSTYLE1 SIXinheritedfixturecolors accuratelyretained. FOURTEENsource sections772of739mountedlines/alloriginalassertions preserved. Widgetisolation/nostagger/thresholdvisible/truthfulunresolvedfooter; childloading/retainedAPIs/neutralsurfaces/localeformattingneeds reported existingintegrationnot silentlyclaimed. No Type/native/fullapplicationacceptance.; commit=ef299d12eb73dc0c5e7fe87e13bfc7d5f94892ac; pushed. |"
+    }
+  ],
+  "summary": {
+    "priority": "Source initial/paused/fatal/retained and unknown distance first; then zero/localization/preferences/surfaces.",
+    "counting": "Unique confirmed mechanisms, not each affected site; candidates separate; four white tokens one finding; raw scan counts separate.",
+    "candidateCount": 4,
+    "confirmedFindingCount": 9,
+    "byRule": {
+      "hardcoded-string": 2,
+      "retained-source-trust": 1,
+      "nested-panel-chrome": 1,
+      "source-local-state": 1,
+      "display-preferences": 1,
+      "measured-zero-suppressed": 1,
+      "unknown-as-zero": 1,
+      "semantic-surface-token": 1
+    }
+  },
+  "filesWithMostConfirmedPrimaryIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx",
+      "confirmedPrimaryIssues": 2
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx",
+      "confirmedPrimaryIssues": 2
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx",
+      "confirmedPrimaryIssues": 1
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx",
+      "confirmedPrimaryIssues": 1
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx",
+      "confirmedPrimaryIssues": 1
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\journeyFragmentation.ts",
+      "confirmedPrimaryIssues": 1
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+      "confirmedPrimaryIssues": 1
+    }
+  ],
+  "states": {
+    "initial": "Evidence and six charts get active initialLoading; five bodies select empty first JF-01; footer pending/skeleton correct",
+    "retry": "Same-source fatal/stale refetch; no new independent endpoints/API execution",
+    "noVehicle": "History disabled; summary chooses workspace vehicle, nullable metrics; empty shells retained",
+    "boundary": "13 explicit section boundaries plus shared page/chart owners; no data&&panel hiding; mounted recovery NOTRUN",
+    "authoritativeEmpty": "Resolved[] counts as data; genuine0 row/pair metrics; all14 shells/methodology/footer visible",
+    "initialPaused": "page53 loadingfalse; shared warning59 requires retained data. Summary unavailable/derivatives empty, not explicit paused JF-01; no fabricated device offline",
+    "retained": "Query bytes retained; top warning/summary correct; three nested badges Returned evidence JF-02",
+    "fatal": "Only evidence gets fatal+retry; PageLayout does not replace whole page, neighbors masquerade empty JF-01"
+  },
+  "queueDeduplication": {
+    "snapshotUTC": "2026-10-14T01:18:10.5883203Z",
+    "checkedNeedles": [
+      "JourneyFragmentationPage",
+      "journey-fragmentation",
+      "NestedDrivingBrief",
+      "missing-distance",
+      "distance-coverage",
+      "supportBand",
+      "thresholdMin",
+      "AccountingPanel",
+      "StructureIndicators"
+    ],
+    "matchedRowCounts": [
+      4,
+      5,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "preservedItems": [
+      "audit-page-119[x]610",
+      "phase3-suite939-file-004[x]1459",
+      "phase3-nested-driving-brief[x]1357",
+      "phase5-page-driving-journey-fragmentation[x]1865",
+      "phase5-current-source-catalog-closure[x]489"
+    ],
+    "disposition": "No exact corrective row for journey mechanisms found by exact page/component/semantic scans. Historical findings fresh-cited, not reopened migrations. Adjacent JourneyAssurance/Drivetrain/DataTable/API-error/catalog scopes distinct; preserve them. Parent alone reserves new narrow fixes."
+  },
+  "preciseNeeds": [
+    {
+      "name": "Journey source-state propagation",
+      "findings": [
+        "JF-01",
+        "JF-02"
+      ],
+      "proposedScope": "Page/_types/affected direct parts and separately reserved matching tests",
+      "reuse": "Existing useDataState/feedback/NestedDrivingBrief retained/unavailable APIs",
+      "limits": "No implementation lease created; preserve query/cache/SI/populations."
+    },
+    {
+      "name": "Distance coverage and measured-zero disposition",
+      "findings": [
+        "JF-03",
+        "JF-04"
+      ],
+      "proposedScope": "journeyFragmentation domain+matching tests; separate StructureIndicators/JourneyDirectory adoption if metadata approved",
+      "limits": "Domain decision before nullable/coverage API; keep wire/cache/all-included denominator, no backend guess."
+    },
+    {
+      "name": "Locale and approved support-band labels",
+      "findings": [
+        "JF-05",
+        "JF-06",
+        "JF-07"
+      ],
+      "proposedScope": "ThresholdSensitivityChart/EnergyIntensityPanel/AccountingPanel/_types/affected consumers and matching tests",
+      "reuse": "gapMinutes and existing date/number/useUnits; separate canonical-copy owner only if labels proven missing",
+      "limits": "152 literal canonical keys found does not prove runtime namespace/plurals/fallbacks; preserve catalog projection root."
+    },
+    {
+      "name": "Neutral surfaces and single-panel composition",
+      "findings": [
+        "JF-08",
+        "JF-09"
+      ],
+      "proposedScope": "AccountingPanel/JourneyDirectory neutral adoption; separate actual shared OperationalBrief composition design/adoption if necessary",
+      "limits": "No global token/API/scanner changes under report lease; retain all descriptions/drawers/metrics."
+    },
+    {
+      "name": "Separately authorized composed/native acceptance",
+      "findings": [],
+      "proposedScope": "Evidence only after accepted corrective scopes",
+      "limits": "No browsergrant. Parent5173/installed Edge channel msedge only if later authorized; no downloads/real journey/location/identity/API/device/mutations."
+    }
+  ],
+  "accessibility": {
+    "sourceDeclarations": "Select localized visible label/ARIA/opaque useId; Select35 sm=min-h-11 md:min-h-9, nominal44px belowmd; old36px mobile allegation superseded, not measured. Six charts ariaLabel/data/dataColumns, sensitivity group for legend ChartContainer790; forced-colors table fallback source; headings and decorative icon hiding retained; retry/details mobile44 classes.",
+    "limits": "Keyboard/focus/touch rectangles/spacing/contrast/screen reader/OS forced colors/reduced motion NOTRUN, no a11y PASS."
+  },
+  "responsive": {
+    "sourceDeclarations": "Page wfull/minw0, wrapping action rail; default1/lg2 grids; p4/sm5 panels; directory md2/accounting lg2+inner2; shared chart minw0/maxwfull; no measured reflow/safe-area proof.",
+    "requiredWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "otherCases": [
+      "narrow containers",
+      "dark/light/saved custom",
+      "RTL/longstrings",
+      "200% text",
+      "forced colors",
+      "reduced motion/low bandwidth",
+      "unknown/zero/negative-valid/huge",
+      "initial-paused/fatal/retained/retry"
+    ],
+    "status": "NOTRUN"
+  },
+  "ruleScan": {
+    "scope": "Page+12parts+3briefs=16TSX; helper/domain/hook read separately",
+    "staticInlineStyleOccurrences": 0,
+    "rawHtmlOccurrences": 0,
+    "directLibraryImportOccurrences": 0,
+    "oldApiImportOccurrences": 0,
+    "fetchUseEffectOccurrences": 0,
+    "hiddenSectionAndPanelOccurrences": 0,
+    "historyDoublePrefixMatchedLines": 0,
+    "historyCamelCaseQueryMatchedLines": 0,
+    "pageLayoutMatchedLines": 1,
+    "whiteSurfaceMatchedLines": 3,
+    "whiteSurfaceUtilityOccurrences": 4,
+    "literalTranslationKeys": 152,
+    "missingCanonicalLiteralKeys": 0,
+    "exceptions": [
+      "PageLayout11 forwards PageContainer; not missing container",
+      "Shared Select native select primitive excluded",
+      "Dynamic CHART_COLORS Recharts fill acceptable",
+      "Domain en-US technical parsing not visible date formatting",
+      "repo3 Sprintf sites placeholder indices only; args/context preserved"
+    ]
+  },
+  "failedProbes": [
+    {
+      "probe": "Optional AGENTS discovery780",
+      "exitCode": 1,
+      "detail": "Missing optional paths; applicable .github instructions read; no app result."
+    },
+    {
+      "probe": "LiteralPath wildcard929",
+      "exitCode": 0,
+      "commandError": true,
+      "detail": "Invalid literal *.go; nonterminating error and subsequent successful commands yielded overall0. Corrected explicit repo lookup948; not claimed wildcard pass."
+    },
+    {
+      "probe": "Case-insensitive scan877",
+      "exitCode": 0,
+      "detail": "False Select1/camelcase1 retained; corrected case-sensitive895/979 govern."
+    },
+    {
+      "probe": "view operationalMetrics.ts",
+      "exitCode": null,
+      "detail": "Absent path; actual .tsx read."
+    },
+    {
+      "probe": "Initial report-write1035",
+      "exitCode": 1,
+      "detail": "Host os206 command too long, did not execute. Split authorized writes1043/1053 and final validations preserve failure; no initial-write pass claimed."
+    }
+  ],
+  "evidenceLimits": {
+    "mode": "SOURCE ONLY",
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "pagePASS": "NOTRUN",
+    "browser": "NOTRUN-no grant",
+    "screenshots": "NOTRUN",
+    "api": "NOTRUN",
+    "realJourneysLocationsIdentity": "NOTREAD",
+    "device": "NOTRUN",
+    "mutations": "NOTRUN",
+    "tests": {
+      "status": "NOTRUN",
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0
+    },
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "globalTypeScript": "NOTRUN",
+    "Git": "NOTRUN",
+    "subagents": "NOTRUN",
+    "installsServersDockerHelpersExtensionsHeartbeats": "NOTRUN",
+    "preservationCLI": "NOTRUN",
+    "statement": "Only static mechanisms and artifact validation; no live incident/mount/compiler/test/composed/native/app acceptance. Parent preview/source owners untouched."
+  },
+  "artifactValidation": {
+    "rawOutput": "COMMAND: ConvertFrom-Json final report; verify9/4 findings,14 sections,8 actions, primary exact line citations and48 source SHA256/line pins\nJF-01 web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:53: const initialLoading = vehicleId != null && drivesState.status === 'initial' && !drivesState.isRefreshBlocked;\nJF-02 web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:23: <NestedDrivingBrief title={t('journeyFragmentation.brief.elapsedTitle', 'Linked journey timing')}\nJF-03 web\\src\\features\\driving\\lib\\journeyFragmentation.ts:323: function distanceM(drive: Drive): number {\nJF-04 web\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx:17: const shortDistance = result.shortFragmentDistanceM > 0\nJF-05 web\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx:10: threshold: `${point.thresholdMin} min`,\nJF-06 web\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx:47: band: comparison.supportBand, count: comparison.minimumSupportedJourneys,\nJF-07 web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:13: return new Intl.DateTimeFormat('en-US', {\nJF-08 web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx:58: <div className=\"grid grid-cols-2 gap-2\">{rows.map(([label, value]) => <div key={label} className=\"rounded-lg bg-white/[0.03] p-2\"><Text as=\"p\" variant=\"caption\">{label}</Text><Text as=\"p\" variant=\"body\">{value}</Text></div>)}</div>\nJF-09 web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx:15: <GlassPanel className=\"space-y-4 p-4 sm:p-5\">\nJSON_PARSE=PASS\nCONFIRMED_FINDINGS=9\nCANDIDATES=4\nSECTIONS=14\nACTION_GROUPS=8\nSOURCE_PINS=48\nINITIAL_SOURCE_PINS_PRESERVED=27\nPIN_DRIFT=0\nVERIFIED_UTC=2026-10-14T01:27:34.4492142Z\nNUMERIC_EXIT=0\nNOT_ACCEPTANCE=native/runtime/pagePASS/tests/lint/build/globalTSC NOTRUN",
+    "command": "Get-Content authorized JSON -Raw | ConvertFrom-Json -AsHashtable; compare each sourcePins SHA256/Get-Content line count and primary citation bounds",
+    "confirmedFindingCount": 9,
+    "initialPinsPreserved": 27,
+    "exitCode": 0,
+    "scope": "Artifact/source integrity only, not application acceptance",
+    "sectionCount": 14,
+    "actionGroups": 8,
+    "sourcePinCount": 48,
+    "candidateCount": 4,
+    "pinDrift": 0,
+    "verificationUTC": "2026-10-14T01:27:34.4492142Z"
+  }
+}

@@ -1,0 +1,1720 @@
+{
+  "item": "phase6-qa-vehicle-systems-software-updates",
+  "attempt": 1,
+  "status": "report-complete-needs-fixes",
+  "actual_start_utc": "2026-10-14T01:27:52.8711386Z",
+  "return_deadline_utc": "2026-10-14T01:44:50.678Z",
+  "hard_deadline_utc": "2026-10-14T01:49:50.678Z",
+  "pins_before": {
+    "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx": {
+      "sha256": "a83878d0bee3556760c2796eb51cb46fe1125780ff9acdc8eb7df79b5e152353",
+      "bytes": 19539
+    },
+    "web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute.test.tsx": {
+      "sha256": "4d4857c6aa206faef18c45c2305b678056f332370edcf8f705965d4dd6b59e5d",
+      "bytes": 11781
+    },
+    "web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly.test.tsx": {
+      "sha256": "adc8c9eb69afa2266b04533eb7bf47f584bb6a24ea1e0d6b1f2184314f880777",
+      "bytes": 5907
+    },
+    "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareCadenceCard.tsx": {
+      "sha256": "fb96ad7cf550c361f801912f3fc4c326697e9e6f0768cce3057217ec89562a4b",
+      "bytes": 2613
+    },
+    "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareHistoryItem.tsx": {
+      "sha256": "fd965e5b2486d3471ff810f0153b566cfe37fdbecc1b0888e98a7a49586ac728",
+      "bytes": 599
+    },
+    "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareUpdatesPage.test.tsx": {
+      "sha256": "a5483a1cf5e50febc5f29ebaa93b9ebef30f05abe8fe2e2ad9a4f37eba7e8aaa",
+      "bytes": 8548
+    },
+    "web/src/features/vehicle-systems/components/SoftwareUpdateCadenceChart.test.tsx": {
+      "sha256": "273fb1fc43c6ae06a61a8d18033e265b5ad69405bbda6c99701a5b617e7d0e0b",
+      "bytes": 7572
+    },
+    "web/src/features/vehicle-systems/components/SoftwareUpdateCadenceChart.tsx": {
+      "sha256": "a255dfe4e65d9bf99807aa7fb107a588d41c2b3f267feef260cae33eae00992a",
+      "bytes": 3661
+    },
+    "web/src/features/vehicle-systems/components/softwareUpdateStatus.test.tsx": {
+      "sha256": "3c17d0d11f9576dc6b7b4915dfff1f0526214c229cee34e6b31bb2fed442d417",
+      "bytes": 7477
+    },
+    "web/src/features/vehicle-systems/components/softwareUpdateStatus.ts": {
+      "sha256": "521c5ada9c157ee37037a1a5202b7bca7d307d347677f09eb62b7f06f12fd285",
+      "bytes": 3144
+    },
+    "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.test.tsx": {
+      "sha256": "90b5bab86aedd187fcdf038807827aeb9c1ccd77e606f4128d6d0ab4f8520010",
+      "bytes": 7515
+    },
+    "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.tsx": {
+      "sha256": "e66e08c7ccb19ee64f900e90d17024bb5edd62f4022c721fd7e0f2d1b757f2b5",
+      "bytes": 2961
+    },
+    "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.test.tsx": {
+      "sha256": "3fef062551227d5b063ea3bb1f3236d4dccd8c77d6fc48965ceb5e24049ddfe5",
+      "bytes": 21957
+    },
+    "web/src/api/hooks/useSoftwareUpdatesPage.ts": {
+      "sha256": "2872f303e37c2ae12aa2ae243a056b56178cb76be18388ccd48303ff6e40aaaf",
+      "bytes": 1037
+    },
+    "web/src/features/vehicle-systems/components/software-updates-modernization/presenter.ts": {
+      "sha256": "f0137a72ba236424a0aeab19a7393e10169eed9fd3b26088d675daa088a729bb",
+      "bytes": 610
+    },
+    "web/src/features/vehicle-systems/components/VehicleSourceContent.tsx": {
+      "sha256": "1b17cbf2559e17de73ebfbb0d231bd68c7aedd4a5bad01cdfa42bdef05e3bd64",
+      "bytes": 1355
+    },
+    "web/src/features/vehicle-systems/components/VehicleSourceContent.test.tsx": {
+      "sha256": "91682d8ca33d2efbd215f407be986076971923d2af30f34a8f1ddecfee1e44bd",
+      "bytes": 5291
+    },
+    "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx": {
+      "sha256": "e0b859e45485e60c9cce07bbf523817c6971c9c95c3d4dddb254294a19f2b173",
+      "bytes": 3234
+    },
+    "web/src/hooks/useRangeState.ts": {
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "bytes": 22200
+    },
+    "web/src/hooks/useSelectedVehicle.ts": {
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "bytes": 6593
+    },
+    "web/src/hooks/useNumberFormatting.ts": {
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "bytes": 2095
+    },
+    "web/src/lib/dateFormat.ts": {
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "bytes": 18863
+    },
+    "web/src/api/dataState.ts": {
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes": 15482
+    },
+    "web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx": {
+      "sha256": "b14c1f732631ade27f7b678e60f096f50d36fe292b99ce57368b7ae28d28c5b1",
+      "bytes": 8131
+    },
+    "web/src/components/ui/Pagination.tsx": {
+      "sha256": "7c07a1069af3b7a334382686c315a156643c33c92f6da56bbd3f051188f39c7e",
+      "bytes": 9393
+    },
+    "web/vite.config.ts": {
+      "sha256": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+      "bytes": 19987
+    },
+    "web/package.json": {
+      "sha256": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a",
+      "bytes": 10780
+    },
+    "web/src/components/layout/layout-reference/PageLayout.tsx": {
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658
+    },
+    "web/src/components/layout/layout-reference/SourceContent.tsx": {
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "bytes": 3322
+    },
+    "web/src/components/layout/layout-reference/CardGrid.tsx": {
+      "sha256": "7003a02baede8079ba897b91a0c84b68a0ea5ecca5607587dd23f5210d0148cf",
+      "bytes": 1533
+    },
+    "web/src/components/layout/layout-reference/ChartCard.tsx": {
+      "sha256": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "bytes": 1958
+    },
+    "web/src/lib/workspaceScope.ts": {
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411
+    },
+    "web/src/hooks/useUrlState.ts": {
+      "sha256": "1b8fd7f191489f94e58bfc7960115e8bd56bb2721ad04b7b28f6ee159a46aa53",
+      "bytes": 10028
+    },
+    "web/src/hooks/useOperationalMetrics.tsx": {
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "bytes": 1161
+    },
+    "web/src/api/types.ts": {
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "bytes": 120243
+    },
+    "web/src/api/hooks/useSoftwareUpdatesPage.test.tsx": {
+      "sha256": "51c7f525350061461645cae0e39fbf591b0f9d07b74009f8558b8b518ae12b03",
+      "bytes": 9532
+    },
+    "web/src/components/layout/PageContainer.tsx": {
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes": 10783,
+      "pin_stage": "extended cohort after read, before final checks"
+    },
+    "web/src/i18n/en.json": {
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "bytes": 1842282,
+      "pin_stage": "extended cohort after read, before final checks"
+    },
+    "web/src/components/ui/Button.tsx": {
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytes": 5174,
+      "pin_stage": "extended cohort after read, before final checks"
+    },
+    "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx": {
+      "sha256": "e871e533be1616ed3445e75e4b881dc020b8efb084a3404e6433222aa0df8bb5",
+      "bytes": 736,
+      "pin_stage": "existing sibling pause adapter discovered in direct support test; pinned before read"
+    }
+  },
+  "commands": [
+    {
+      "command": "node -e exact-source in-memory mechanism probes (full script in log)",
+      "exit": 0,
+      "started_utc": "2026-10-14T01:33:00.133441+00:00",
+      "counts": {
+        "executed": 8,
+        "passed": 8,
+        "failed": 0
+      },
+      "limit": "Transpilation only, stubs for imports; not global TSC, not mounted tests, no real requests"
+    },
+    {
+      "command": "node -e TypeScript AST enumeration of eight existing test files (full script/raw output in log)",
+      "exit": 0,
+      "started_utc": "2026-10-14T01:33:38.251601+00:00"
+    },
+    {
+      "command": "node -e two additional exact-source in-memory preference/status probes (full script in log)",
+      "exit": 0,
+      "started_utc": "2026-10-14T01:36:01.057686+00:00",
+      "counts": {
+        "executed": 2,
+        "passed": 2,
+        "failed": 0
+      }
+    },
+    {
+      "command": "node -e enumerate direct VehicleSourceContent trust test declarations (full script in log)",
+      "exit": 0
+    },
+    {
+      "command": "node -e corrected direct trust test AST enumeration (full script in log)",
+      "exit": 0
+    }
+  ],
+  "literal_scan": {
+    "files": [
+      "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+      "web/src/api/hooks/useSoftwareUpdatesPage.ts",
+      "web/src/features/vehicle-systems/components/software-updates-modernization/presenter.ts",
+      "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareCadenceCard.tsx",
+      "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareHistoryItem.tsx",
+      "web/src/features/vehicle-systems/components/softwareUpdateStatus.ts",
+      "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.tsx",
+      "web/src/features/vehicle-systems/components/SoftwareUpdateCadenceChart.tsx",
+      "web/src/features/vehicle-systems/components/VehicleSourceContent.tsx",
+      "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+      "web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx"
+    ],
+    "candidate_counts": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 0,
+      "missing-page-container": 1,
+      "fetch-useeffect": 1
+    },
+    "scope": "production files only; tests and shared primitive transitive graph excluded",
+    "command_exit": 0
+  },
+  "existing_test_declarations": {
+    "declarations": 69,
+    "cases": 79,
+    "files": [
+      {
+        "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.test.tsx",
+        "declarations": 15,
+        "cases": 15,
+        "names": [
+          {
+            "line": 261,
+            "name": "renders the title/subtitle and refresh control and requests snake_case-safe params",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 287,
+            "name": "forwards the resolved vehicleId to the AI summarizer",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 295,
+            "name": "derives current version, totals, installed/pending counts and cadence from the rows",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 309,
+            "name": "bins updates into sorted calendar-month cadence points and tallies status counts",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 333,
+            "name": "renders a card per update with status badge, vehicle name, date lines and a labelled release-notes link",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 360,
+            "name": "refetches the update list when the refresh control is clicked",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 372,
+            "name": "shows per-section skeletons while loading and still renders the KPI band",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 388,
+            "name": "shows an error state with retry in every data section on request failure",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 398,
+            "name": "renders explicit empty states (never blank panels) when there are no updates",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 412,
+            "name": "disables the query and passes an undefined vehicleId to the summarizer when the fleet is empty",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 426,
+            "name": "applies the new range AND clears the page in one navigation when changed from page â‰¥ 2",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 447,
+            "name": "keeps every populated section and release-note action on a failed background refresh",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 465,
+            "name": "marks all four data sections retained during a paused refresh without inventing a server failure",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 488,
+            "name": "keeps unresolved counts unknown for malformed rows and preserves every section shell",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 504,
+            "name": "preserves status text, encoded firmware links, and vehicle-name fallback without firmware commands",
+            "cases": 1,
+            "parameterized": false
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareUpdatesPage.test.tsx",
+        "declarations": 5,
+        "cases": 5,
+        "names": [
+          {
+            "line": 103,
+            "name": "keeps unknown counts distinct from a successful observed empty page",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 113,
+            "name": "refreshes unavailable status and timeline from the existing read query without manufacturing counts",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 126,
+            "name": "offers vehicle management from every unavailable surface when no vehicle is selected",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 135,
+            "name": "retains exact row identities, release-note link, vehicle and AI scope on refresh failure",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 151,
+            "name": "keeps the original non-installed scheduled-date condition and reset callback",
+            "cases": 1,
+            "parameterized": false
+          }
+        ]
+      },
+      {
+        "file": "web/src/api/hooks/useSoftwareUpdatesPage.test.tsx",
+        "declarations": 11,
+        "cases": 20,
+        "names": [
+          {
+            "line": 52,
+            "name": "keeps PAGE_SIZE, URL operand order, encoding and the complete cache key",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 69,
+            "name": "enables every non-null numeric vehicle operand without normalization: %s",
+            "cases": 5,
+            "parameterized": true
+          },
+          {
+            "line": 81,
+            "name": "disables only null but preserves its key and allows an explicit refetch",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 97,
+            "name": "preserves page arithmetic for page %s",
+            "cases": 3,
+            "parameterized": true
+          },
+          {
+            "line": 106,
+            "name": "isolates each vehicle/page/start/end key and reuses an exact fresh cache entry",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 140,
+            "name": "returns raw array order, unknown status and nullable/unparsed date fields",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 151,
+            "name": "does not select, default or normalize a raw success payload: %j",
+            "cases": 4,
+            "parameterized": true
+          },
+          {
+            "line": 162,
+            "name": "preserves rejected Error identity without inventing empty data",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 171,
+            "name": "retains successful data when refetch fails, with the original error",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 182,
+            "name": "forwards the actual query signal, which QueryClient cancellation aborts",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 197,
+            "name": "inherits client retry/stale/poll/error policy rather than overriding it",
+            "cases": 1,
+            "parameterized": false
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/SoftwareUpdateCadenceChart.test.tsx",
+        "declarations": 7,
+        "cases": 7,
+        "names": [
+          {
+            "line": 108,
+            "name": "threads the cadence points verbatim into <BarChart> and labels the figure for AT",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 123,
+            "name": "wires the Bar series and X axis from the shared design tokens",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 138,
+            "name": "applies the responsive height utilities to the chart wrapper",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 145,
+            "name": "keeps the margin + tooltip cursor referentially stable across renders (perf)",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 155,
+            "name": "renders exactly one Bar for a single-point range",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 164,
+            "name": "renders an accessible empty state (never a bare axis frame) for an empty array",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 177,
+            "name": "treats absent data as empty via null-safety and shows the same empty state",
+            "cases": 1,
+            "parameterized": false
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.test.tsx",
+        "declarations": 7,
+        "cases": 7,
+        "names": [
+          {
+            "line": 49,
+            "name": "renders one bar per known status with a positive count, in canonical order (not insertion order)",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 76,
+            "name": "formats the count and colors the bar while keeping the count legible",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 92,
+            "name": "skips zero, negative, absent, and unknown-status counts",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 121,
+            "name": "renders an EmptyState â€” never a blank panel â€” when total > 0 but every update has an unknown status",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 140,
+            "name": "renders an EmptyState when the counts map is empty",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 150,
+            "name": "exposes the bars as a list named \"By Status\" (a11y)",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 158,
+            "name": "does not divide by zero when total is 0 but a known status has a positive count",
+            "cases": 1,
+            "parameterized": false
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/softwareUpdateStatus.test.tsx",
+        "declarations": 13,
+        "cases": 13,
+        "names": [
+          {
+            "line": 50,
+            "name": "defines a complete meta for every ordered status key",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 64,
+            "name": "uses only neon colour tokens that exist in the shared token map",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 72,
+            "name": "uses 6-digit hex gradients for the dynamic MetricBar",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 78,
+            "name": "points every status at a Badge variant the shared component accepts",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 84,
+            "name": "namespaces every i18n label under softwareUpdates.status with a non-empty fallback",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 94,
+            "name": "enumerates every registry key exactly once",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 102,
+            "name": "keeps the documented installedâ†’scheduled reading order",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 109,
+            "name": "resolves each known wire status to its exact registry meta",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 116,
+            "name": "falls back to `available` for nullish, empty, or unknown statuses",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 125,
+            "name": "never leaks inherited Object.prototype members as a status (regression)",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 152,
+            "name": "always returns a fully-populated meta for arbitrary input",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 171,
+            "name": "renders every status glyph as an accessible svg",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 184,
+            "name": "drives the shared <Badge> with an accepted variant for every status",
+            "cases": 1,
+            "parameterized": false
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly.test.tsx",
+        "declarations": 3,
+        "cases": 3,
+        "names": [
+          {
+            "line": 82,
+            "name": "TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly: renders nothing when ai_mode=off even with the software-update-changelog-summarizer toggle on",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 112,
+            "name": "TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly: renders nothing when ai_mode is non-off but the software-update-changelog-summarizer toggle is false",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 133,
+            "name": "TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly: renders the section when ai_mode=cloud AND software-update-changelog-summarizer toggle is on (positive control)",
+            "cases": 1,
+            "parameterized": false
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute.test.tsx",
+        "declarations": 3,
+        "cases": 3,
+        "names": [
+          {
+            "line": 134,
+            "name": "TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute: clicking the action button POSTs once to /api/v1/ai/software-updates/summarize and renders the first delta",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 225,
+            "name": "TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute: a second click while streaming is a no-op (double-submit guard)",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 281,
+            "name": "TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute: action button is disabled when no vehicleId is available (computed, not literal)",
+            "cases": 1,
+            "parameterized": false
+          }
+        ]
+      },
+      {
+        "file": "web/src/features/vehicle-systems/components/VehicleSourceContent.test.tsx",
+        "declarations": 5,
+        "cases": 6,
+        "names": [
+          {
+            "line": 32,
+            "name": "does not infer an empty response from an initial offline pause and keeps a source-local retry",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 45,
+            "name": "replaces only a fatal source and retries its read without hiding a neighbor",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 66,
+            "name": "retains real zero and false during %s",
+            "cases": 2,
+            "parameterized": true
+          },
+          {
+            "line": 88,
+            "name": "leaves specialist prerequisites and unresolved loading with their callers",
+            "cases": 1,
+            "parameterized": false
+          },
+          {
+            "line": 109,
+            "name": "does not turn missing observations into zero or disabled state",
+            "cases": 1,
+            "parameterized": false
+          }
+        ]
+      }
+    ]
+  },
+  "pins_after": {
+    "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx": {
+      "sha256": "a83878d0bee3556760c2796eb51cb46fe1125780ff9acdc8eb7df79b5e152353",
+      "bytes": 19539,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute.test.tsx": {
+      "sha256": "4d4857c6aa206faef18c45c2305b678056f332370edcf8f705965d4dd6b59e5d",
+      "bytes": 11781,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly.test.tsx": {
+      "sha256": "adc8c9eb69afa2266b04533eb7bf47f584bb6a24ea1e0d6b1f2184314f880777",
+      "bytes": 5907,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareCadenceCard.tsx": {
+      "sha256": "fb96ad7cf550c361f801912f3fc4c326697e9e6f0768cce3057217ec89562a4b",
+      "bytes": 2613,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareHistoryItem.tsx": {
+      "sha256": "fd965e5b2486d3471ff810f0153b566cfe37fdbecc1b0888e98a7a49586ac728",
+      "bytes": 599,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareUpdatesPage.test.tsx": {
+      "sha256": "a5483a1cf5e50febc5f29ebaa93b9ebef30f05abe8fe2e2ad9a4f37eba7e8aaa",
+      "bytes": 8548,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/SoftwareUpdateCadenceChart.test.tsx": {
+      "sha256": "273fb1fc43c6ae06a61a8d18033e265b5ad69405bbda6c99701a5b617e7d0e0b",
+      "bytes": 7572,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/SoftwareUpdateCadenceChart.tsx": {
+      "sha256": "a255dfe4e65d9bf99807aa7fb107a588d41c2b3f267feef260cae33eae00992a",
+      "bytes": 3661,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/softwareUpdateStatus.test.tsx": {
+      "sha256": "3c17d0d11f9576dc6b7b4915dfff1f0526214c229cee34e6b31bb2fed442d417",
+      "bytes": 7477,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/softwareUpdateStatus.ts": {
+      "sha256": "521c5ada9c157ee37037a1a5202b7bca7d307d347677f09eb62b7f06f12fd285",
+      "bytes": 3144,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.test.tsx": {
+      "sha256": "90b5bab86aedd187fcdf038807827aeb9c1ccd77e606f4128d6d0ab4f8520010",
+      "bytes": 7515,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.tsx": {
+      "sha256": "e66e08c7ccb19ee64f900e90d17024bb5edd62f4022c721fd7e0f2d1b757f2b5",
+      "bytes": 2961,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.test.tsx": {
+      "sha256": "3fef062551227d5b063ea3bb1f3236d4dccd8c77d6fc48965ceb5e24049ddfe5",
+      "bytes": 21957,
+      "matches_before": true
+    },
+    "web/src/api/hooks/useSoftwareUpdatesPage.ts": {
+      "sha256": "2872f303e37c2ae12aa2ae243a056b56178cb76be18388ccd48303ff6e40aaaf",
+      "bytes": 1037,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/software-updates-modernization/presenter.ts": {
+      "sha256": "f0137a72ba236424a0aeab19a7393e10169eed9fd3b26088d675daa088a729bb",
+      "bytes": 610,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/VehicleSourceContent.tsx": {
+      "sha256": "1b17cbf2559e17de73ebfbb0d231bd68c7aedd4a5bad01cdfa42bdef05e3bd64",
+      "bytes": 1355,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/VehicleSourceContent.test.tsx": {
+      "sha256": "91682d8ca33d2efbd215f407be986076971923d2af30f34a8f1ddecfee1e44bd",
+      "bytes": 5291,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx": {
+      "sha256": "e0b859e45485e60c9cce07bbf523817c6971c9c95c3d4dddb254294a19f2b173",
+      "bytes": 3234,
+      "matches_before": true
+    },
+    "web/src/hooks/useRangeState.ts": {
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "bytes": 22200,
+      "matches_before": true
+    },
+    "web/src/hooks/useSelectedVehicle.ts": {
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "bytes": 6593,
+      "matches_before": true
+    },
+    "web/src/hooks/useNumberFormatting.ts": {
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "bytes": 2095,
+      "matches_before": true
+    },
+    "web/src/lib/dateFormat.ts": {
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "bytes": 18863,
+      "matches_before": true
+    },
+    "web/src/api/dataState.ts": {
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes": 15482,
+      "matches_before": true
+    },
+    "web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx": {
+      "sha256": "b14c1f732631ade27f7b678e60f096f50d36fe292b99ce57368b7ae28d28c5b1",
+      "bytes": 8131,
+      "matches_before": true
+    },
+    "web/src/components/ui/Pagination.tsx": {
+      "sha256": "7c07a1069af3b7a334382686c315a156643c33c92f6da56bbd3f051188f39c7e",
+      "bytes": 9393,
+      "matches_before": true
+    },
+    "web/vite.config.ts": {
+      "sha256": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+      "bytes": 19987,
+      "matches_before": true
+    },
+    "web/package.json": {
+      "sha256": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a",
+      "bytes": 10780,
+      "matches_before": true
+    },
+    "web/src/components/layout/layout-reference/PageLayout.tsx": {
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658,
+      "matches_before": true
+    },
+    "web/src/components/layout/layout-reference/SourceContent.tsx": {
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "bytes": 3322,
+      "matches_before": true
+    },
+    "web/src/components/layout/layout-reference/CardGrid.tsx": {
+      "sha256": "7003a02baede8079ba897b91a0c84b68a0ea5ecca5607587dd23f5210d0148cf",
+      "bytes": 1533,
+      "matches_before": true
+    },
+    "web/src/components/layout/layout-reference/ChartCard.tsx": {
+      "sha256": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "bytes": 1958,
+      "matches_before": true
+    },
+    "web/src/lib/workspaceScope.ts": {
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411,
+      "matches_before": true
+    },
+    "web/src/hooks/useUrlState.ts": {
+      "sha256": "1b8fd7f191489f94e58bfc7960115e8bd56bb2721ad04b7b28f6ee159a46aa53",
+      "bytes": 10028,
+      "matches_before": true
+    },
+    "web/src/hooks/useOperationalMetrics.tsx": {
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "bytes": 1161,
+      "matches_before": true
+    },
+    "web/src/api/types.ts": {
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "bytes": 120243,
+      "matches_before": true
+    },
+    "web/src/api/hooks/useSoftwareUpdatesPage.test.tsx": {
+      "sha256": "51c7f525350061461645cae0e39fbf591b0f9d07b74009f8558b8b518ae12b03",
+      "bytes": 9532,
+      "matches_before": true
+    },
+    "web/src/components/layout/PageContainer.tsx": {
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes": 10783,
+      "matches_before": true
+    },
+    "web/src/i18n/en.json": {
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "bytes": 1842282,
+      "matches_before": true
+    },
+    "web/src/components/ui/Button.tsx": {
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytes": 5174,
+      "matches_before": true
+    },
+    "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx": {
+      "sha256": "e871e533be1616ed3445e75e4b881dc020b8efb084a3404e6433222aa0df8bb5",
+      "bytes": 736,
+      "matches_before": true
+    }
+  },
+  "pin_verification": {
+    "checked_utc": "2026-10-14T01:42:57.649085+00:00",
+    "files": 40,
+    "matched": 40,
+    "drift": [],
+    "stage": "final dedicated verification; all input pin/excerpt assertions passed"
+  },
+  "localization_check": {
+    "literal_pairs": 70,
+    "literal_missing": 0,
+    "literal_fallback_differences": 0,
+    "metadata_pairs": 5,
+    "metadata_missing_or_different": [],
+    "limit": "English catalog only; translated locales and mounted locale switching NOTRUN"
+  },
+  "queue_snapshot": {
+    "checked_utc": "2026-10-14T01:37:04.161475+00:00",
+    "canonical_matches": [
+      {
+        "line": 66,
+        "raw": "| [~] | 6 | phase6-qa-vehicle-systems-software-updates | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-vehicle-systems-software-updates.json; web\\logs\\phase6-qa-vehicle-systems-software-updates.log | phase5-page-vehicle-systems-software-updates | 1 | actor=26a0b8bc-4f4a-4e28-a566-71edc1db1c64; reserved01:24:50.678Z; LastConsumed=-1 | - | Accepted84384d5fb source only; SoftwareUpdatesPage/direct supports; no update/download/install or live vehicle actions. |"
+      }
+    ]
+  },
+  "counting_corrections": [
+    {
+      "file": "web/src/features/vehicle-systems/components/VehicleSourceContent.test.tsx",
+      "initial_declarations": 4,
+      "initial_cases": 4,
+      "corrected_declarations": 5,
+      "corrected_cases": 6,
+      "reason": "First enumeration omitted it.each as const; partial raw output and exit 0 retained in log."
+    }
+  ],
+  "schemaVersion": 1,
+  "actor": "26a0b8bc-4f4a-4e28-a566-71edc1db1c64",
+  "phase": 6,
+  "mode": "read-only/source-QA/no-change",
+  "outcome": "Canonical source report complete; six confirmed source mechanisms; page/native acceptance NOTRUN",
+  "page": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+  "routes": [
+    "/software-updates",
+    "/vehicle-systems/software"
+  ],
+  "snapshotUTC": "2026-10-14T01:41:12.836180+00:00",
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-vehicle-systems-software-updates.json",
+    "web/logs/phase6-qa-vehicle-systems-software-updates.log"
+  ],
+  "sourceWrites": false,
+  "testWrites": false,
+  "catalogWrites": false,
+  "gitWrites": false,
+  "deviceOrNetworkRequestsIssued": 0,
+  "findings": [
+    {
+      "id": "SW01",
+      "classification": "confirmed-source-mechanism",
+      "rule": "scope-bounds",
+      "contract": [
+        "MDC-026",
+        "MDC-032",
+        "MDC-044"
+      ],
+      "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+      "line": 63,
+      "title": "Precise workspace bounds are not forwarded",
+      "mechanism": "Page consumes start/end calendar labels and passes them to the hook; query key and URL omit the available startInstant/endInstantExclusive. Minute-by-minute rolling windows can share an unchanged calendar key, and exclusive/local-day semantics are lost before the request seam.",
+      "reproduction": "Use a 24h header range whose instant lower/upper bounds move without changing calendar labels. Inert actual-hook probe received start=2026-10-13&end=2026-10-14, not precise RFC3339 bounds. No real request issued; server filtering remains unproved.",
+      "fix": "Consume shared precise bounds; pass both through typed hook and cache identity, preserving cancellation, vehicle selection, pagination/reset and server semantics. Validate inclusive lower/exclusive upper in separately authorized integration.",
+      "owner": "page/domain",
+      "priority": "high",
+      "confidence": "high for cited source mechanism; mounted behavior NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 63,
+          "endLine": 74,
+          "excerpt": "  const { start, end, presetId, reset: resetRange } = useRangeState({\n    persistKey: 'software-updates.range',\n    defaultPresetId: 'all',\n  });\n\n  const updatesQuery = useSoftwareUpdatesPage(vehicleId, page, start, end);\n  const { data, isLoading, isError, error, refetch } = updatesQuery;\n  const source = softwareSourceState(data, isLoading, isError);\n  const historySource = deriveDataState(updatesQuery, { provenance: 'historical' });\n  // Paused refreshes retain the same historical rows; they are not server failures.\n  const refreshBlocked = source.available && historySource.isRefreshBlocked;\n  const retained = source.retained || refreshBlocked;"
+        },
+        {
+          "file": "web/src/api/hooks/useSoftwareUpdatesPage.ts",
+          "line": 20,
+          "endLine": 32,
+          "excerpt": "  return useQuery({\n    queryKey: ['software-updates', vehicleId, page, start, end],\n    queryFn: ({ signal }) => {\n      const params = new URLSearchParams({\n        vehicle_id: String(vehicleId),\n        limit: String(PAGE_SIZE),\n        offset: String((page - 1) * PAGE_SIZE),\n        start,\n        end,\n      });\n      return request<SoftwareUpdate[]>(`/software-updates?${params.toString()}`, { signal });\n    },\n    enabled: vehicleId !== null,"
+        },
+        {
+          "file": "web/src/hooks/useRangeState.ts",
+          "line": 656,
+          "endLine": 682,
+          "excerpt": "  const { startInstant, endInstantExclusive } = useMemo(() => {\n    if (presetId === 'live' || presetId === '24h') {\n      const durationMs =\n        presetId === 'live' ? LIVE_WINDOW_MS : 24 * 60 * 60_000;\n      return {\n        startInstant: new Date(rollingNow - durationMs).toISOString(),\n        endInstantExclusive: new Date(rollingNow).toISOString(),\n      };\n    }\n    return calendarRangeToInstants({\n        startDate: effective.start,\n        endDate: effective.end,\n        timezone: resolvedTimezone,\n      });\n  }, [\n    effective.start,\n    effective.end,\n    presetId,\n    resolvedTimezone,\n    rollingNow,\n  ]);\n\n  return {\n    start: effective.start,\n    end: effective.end,\n    startInstant,\n    endInstantExclusive,"
+        }
+      ],
+      "queueDisposition": "No existing exact Phase6 software-update fix owner found; predecessor stays completed. Orchestrator must assign a narrow source-exclusive follow-up, not reopen migration."
+    },
+    {
+      "id": "SW02",
+      "classification": "confirmed-source-mechanism",
+      "rule": "initial-paused-state",
+      "contract": [
+        "MDC-026",
+        "MDC-032",
+        "MDC-044"
+      ],
+      "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+      "line": 73,
+      "title": "Initial paused history is shown as unavailable prerequisite data",
+      "mechanism": "For selected vehicle + undefined data + isPending=true + isLoading=false + fetchStatus=paused, shared DataState is initial/blocked. Local presenter is neither loading nor available; refreshBlocked additionally requires an array. Summary/status/timeline take unavailable branches and cadence uses unavailable copy. VehicleSourceContent retains only paused data with hasData=true.",
+      "reproduction": "Exact-source probe: shared status=initial/isRefreshBlocked=true; local available=false/initialLoading=false; page refreshBlocked=false. Thus the selected vehicle is told to select a vehicle instead of learning that the initial read is paused. Native header may independently expose freshness; that does not repair these section branches.",
+      "fix": "Render explicit source-local initial-paused explanation/retry while counts remain null and all shells stay mounted. Reuse existing VehicleSourcePause rather than add a competing component; keep retained-pause separate.",
+      "owner": "page/domain",
+      "priority": "high",
+      "confidence": "high for cited source mechanism; mounted behavior NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 70,
+          "endLine": 74,
+          "excerpt": "  const source = softwareSourceState(data, isLoading, isError);\n  const historySource = deriveDataState(updatesQuery, { provenance: 'historical' });\n  // Paused refreshes retain the same historical rows; they are not server failures.\n  const refreshBlocked = source.available && historySource.isRefreshBlocked;\n  const retained = source.retained || refreshBlocked;"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 180,
+          "endLine": 186,
+          "excerpt": "  const resetAction = presetId !== 'all'\n    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }\n    : undefined;\n  const unavailableMessage = t('softwareUpdates.source.unavailable', 'Update history is not available. Select a vehicle to load its history.');\n  const unavailableContent = <EmptyState message={unavailableMessage}\n    action={vehicleId != null ? { label: t('common.refresh', 'Refresh'), onClick: handleRetry } : undefined}\n    actionTo={vehicleId == null ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' } : undefined} />;"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 210,
+          "endLine": 215,
+          "excerpt": "          footer={refreshBlocked ? (\n            <VehicleSourceContent source={historySource} enabled={vehicleId != null}\n              label={t('softwareUpdates.kpi.label', 'Software update summary')}>\n              {null}\n            </VehicleSourceContent>\n          ) : !source.available && !isLoading ? retryContent ?? unavailableContent : undefined}"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/software-updates-modernization/presenter.ts",
+          "line": 1,
+          "endLine": 16,
+          "excerpt": "/** Presentation state only. Query keys, operands and wire rows stay with the page. */\nexport function softwareSourceState(data: unknown, loading: boolean, failed: boolean) {\n  const available = Array.isArray(data);\n  return {\n    available,\n    initialLoading: loading && !available,\n    fatalError: failed && !available,\n    retained: failed && available,\n    empty: available && data.length === 0,\n  };\n}\n\n/** Unknown source counts are not observed zeros; successful empty arrays are. */\nexport function observedCount(available: boolean, count: number): number | null {\n  return available ? count : null;\n}"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/VehicleSourceContent.tsx",
+          "line": 18,
+          "endLine": 27,
+          "excerpt": "  const retained = source.refreshError != null || (source.hasData && source.isRefreshBlocked);\n  return (\n    <SourceContent\n      state={!enabled ? 'ready' : source.fatalError ? 'error' : retained ? 'retained' : 'ready'}\n      label={label}\n      error={source.fatalError}\n      errorMessage={`${t('error.loadFailed', 'Failed to load data')}: ${label}`}\n      emptyMessage={label}\n      retainedMessage={`${t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')} · ${label}${source.refreshError ? `: ${getErrorMessage(source.refreshError)}` : ''}`}\n      errorRecovery={{ onRetry: source.retry ?? undefined, resourceName: label }}"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx",
+          "line": 4,
+          "endLine": 16,
+          "excerpt": "export function VehicleSourcePause({ label, message, retained, onRetry }: {\n  label: string;\n  message: string;\n  retained: boolean;\n  onRetry: () => void;\n}) {\n  const { t } = useTranslation();\n  return <SourceContent state={retained ? 'retained' : 'empty'} label={label}\n    emptyMessage={message} errorMessage={message}\n    retainedMessage={`${t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')} ${message}`}\n    errorRecovery={{ onRetry, resourceName: label }}\n    emptyRecovery={{ action: { label: t('error.retry', 'Retry'), onClick: onRetry } }}\n  >{null}</SourceContent>;"
+        }
+      ],
+      "queueDisposition": "No existing exact Phase6 software-update fix owner found; predecessor stays completed. Orchestrator must assign a narrow source-exclusive follow-up, not reopen migration."
+    },
+    {
+      "id": "SW03",
+      "classification": "confirmed-source-mechanism",
+      "rule": "unknown-update-status",
+      "contract": [
+        "MDC-025",
+        "MDC-026",
+        "MDC-033"
+      ],
+      "file": "web/src/features/vehicle-systems/components/softwareUpdateStatus.ts",
+      "line": 102,
+      "title": "Unknown update lifecycle becomes Available and disappears from distribution",
+      "mechanism": "getUpdateStatus falls back to known available metadata. Breakdown filters solely to the five known keys, dropping unknown identities/counts while retaining them in the denominator. These are two manifestations of one status-identity defect, counted once.",
+      "reproduction": "Actual source metadata returns Available for future-status and constructor. Actual breakdown initializer returns only installed for {installed:1,future-status:1}, and [] for {future-status:2}. Existing tests assert this fallback/omission; historical or future green tests would not prove the required unknown-state contract.",
+      "fix": "Preserve raw unknown/future lifecycle identity with localized neutral metadata and uncategorized count, preserving known order, all-row denominator and prototype-safety check. Serialize matching page-test expectation changes with the page owner.",
+      "owner": "feature status metadata/breakdown",
+      "priority": "high",
+      "confidence": "high for cited source mechanism; mounted behavior NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/components/softwareUpdateStatus.ts",
+          "line": 98,
+          "endLine": 103,
+          "excerpt": "export function getUpdateStatus(status: string | null | undefined): UpdateStatusMeta {\n  const key = status ?? '';\n  return Object.prototype.hasOwnProperty.call(UPDATE_STATUS, key)\n    ? UPDATE_STATUS[key as UpdateStatusKey]\n    : UPDATE_STATUS.available;\n}"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.tsx",
+          "line": 39,
+          "endLine": 48,
+          "excerpt": "  const rows = UPDATE_STATUS_ORDER.filter((key) => (counts?.[key] ?? 0) > 0);\n\n  if (rows.length === 0) {\n    return (\n      <EmptyState /* no-action: transient — reachable only when every update's status falls outside UPDATE_STATUS_ORDER; the parent (SoftwareUpdatesPage) already gates this panel behind its own `total === 0` empty state for the ordinary no-updates case. */\n        icon={<ListChecks className=\"h-8 w-8\" />}\n        message={t(\n          'softwareUpdates.breakdown.noKnownStatus',\n          'No categorized update statuses to show',\n        )}"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.tsx",
+          "line": 58,
+          "endLine": 73,
+          "excerpt": "      {rows.map((key) => {\n        const meta = UPDATE_STATUS[key];\n        const value = counts?.[key] ?? 0;\n        // `total` counts ALL updates (known + unknown status), so it is the\n        // correct denominator. Guard against a non-positive / NaN total — every\n        // rendered row has value > 0, so falling back to `value` keeps the bar\n        // at 100% instead of dividing by zero.\n        const max = total > 0 ? total : value;\n        return (\n          <li key={key}>\n            <MetricBar\n              label={t(meta.labelKey, meta.labelFallback)}\n              value={value}\n              max={max}\n              color={meta.hex}\n              sublabel={fmtInt(value)}"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/softwareUpdateStatus.test.tsx",
+          "line": 116,
+          "endLine": 133,
+          "excerpt": "  it('falls back to `available` for nullish, empty, or unknown statuses', () => {\n    expect(getUpdateStatus(null)).toBe(UPDATE_STATUS.available);\n    expect(getUpdateStatus(undefined)).toBe(UPDATE_STATUS.available);\n    expect(getUpdateStatus('')).toBe(UPDATE_STATUS.available);\n    expect(getUpdateStatus('pending-reboot')).toBe(UPDATE_STATUS.available);\n    // Resolution is exact-match / case-sensitive: a mismatched case is unknown.\n    expect(getUpdateStatus('INSTALLED')).toBe(UPDATE_STATUS.available);\n  });\n\n  it('never leaks inherited Object.prototype members as a status (regression)', () => {\n    // A bare `UPDATE_STATUS[key] ?? available` lookup walks the prototype chain,\n    // so these inherited members resolve to truthy Object.prototype functions\n    // and slip past the fallback — handing consumers a meta whose icon/color/hex\n    // are undefined and crashing the timeline-card render.\n    const inherited = [\n      'constructor',\n      'toString',\n      'valueOf',"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.test.tsx",
+          "line": 92,
+          "endLine": 119,
+          "excerpt": "  it('skips zero, negative, absent, and unknown-status counts', () => {\n    render(\n      <SoftwareUpdateStatusBreakdown\n        counts={{\n          installed: 0, // zero → excluded\n          downloading: -2, // negative → excluded\n          available: 5, // rendered\n          scheduled: 3, // rendered\n          failed: 99, // unknown status → excluded\n          rebooting: 7, // unknown status → excluded\n        }}\n        total={8}\n      />,\n    );\n\n    const items = screen.getAllByRole('listitem');\n    expect(items).toHaveLength(2);\n\n    // Only the two positive, known statuses render, in canonical order.\n    expect(within(items[0]).getByText('Available')).toBeInTheDocument();\n    expect(within(items[1]).getByText('Scheduled')).toBeInTheDocument();\n\n    expect(screen.queryByText('Installed')).not.toBeInTheDocument();\n    expect(screen.queryByText('Downloading')).not.toBeInTheDocument();\n    // Unknown wire statuses have no bar and no visible label.\n    expect(screen.queryByText('failed')).not.toBeInTheDocument();\n    expect(screen.queryByText('99')).not.toBeInTheDocument();\n  });"
+        }
+      ],
+      "queueDisposition": "No existing exact Phase6 software-update fix owner found; predecessor stays completed. Orchestrator must assign a narrow source-exclusive follow-up, not reopen migration."
+    },
+    {
+      "id": "SW04",
+      "classification": "confirmed-source-mechanism",
+      "rule": "false-exact-pagination-total",
+      "contract": [
+        "MDC-025",
+        "MDC-026",
+        "MDC-033"
+      ],
+      "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+      "line": 138,
+      "title": "A full page supplies a fabricated exact result total",
+      "mechanism": "For 50 rows on page 1, paginationTotal is 51. Pagination defaults totalKind to exact because the caller passes no totalKind. It announces Showing 1–50 of 51 and derives two pages despite no total/next-page proof in the array contract.",
+      "reproduction": "Actual-source initializer yields totalProp=51 for returnedRows=50; actual Pagination signature defaults to exact. This proves a source total/provenance error, not whether the backend honors offset.",
+      "fix": "Use existing unknown/loaded total presentation with separately source-backed next-page capability. Do not invent exact totals or delete pagination actions to mask missing integration. Establish safe paging capability with hook/backend owner before changing navigation semantics.",
+      "owner": "page/domain",
+      "priority": "high",
+      "confidence": "high for cited source mechanism; mounted behavior NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 138,
+          "endLine": 141,
+          "excerpt": "  const paginationTotal =\n    updates.length < PAGE_SIZE\n      ? (page - 1) * PAGE_SIZE + updates.length\n      : page * PAGE_SIZE + 1;"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 354,
+          "endLine": 359,
+          "excerpt": "              <Pagination\n                page={page}\n                pageSize={PAGE_SIZE}\n                total={paginationTotal}\n                onPageChange={setPage}\n              />"
+        },
+        {
+          "file": "web/src/components/ui/Pagination.tsx",
+          "line": 14,
+          "endLine": 18,
+          "excerpt": "  /** Defaults to exact. In loaded mode total counts rows on the requested page; unknown mode ignores total. */\n  totalKind?: 'exact' | 'loaded' | 'unknown'\n  /** Non-exact totals never infer another page from a full loaded page. */\n  hasNextPage?: boolean\n  onPageChange: (page: number) => void"
+        },
+        {
+          "file": "web/src/components/ui/Pagination.tsx",
+          "line": 24,
+          "endLine": 35,
+          "excerpt": "export function Pagination({ page, pageSize, total, totalKind = 'exact', hasNextPage, onPageChange, onPageSizeChange, pageSizeOptions = [25, 50, 100] }: PaginationProps) {\n  const { t } = useTranslation()\n  const { fmtInt } = useNumberFormatting()\n  const inputId = useId()\n  const configuredOptions = [...new Set((pageSizeOptions ?? []).filter(size => Number.isSafeInteger(size) && size > 0))]\n  const safePageSize = Number.isSafeInteger(pageSize) && pageSize > 0 ? pageSize : (configuredOptions[0] ?? 25)\n  const safeTotal = Number.isFinite(total) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(total))) : 0\n  const totalPages = Math.max(1, Math.ceil(safeTotal / safePageSize))\n  const exactTotal = totalKind === 'exact'\n  const safePage = Number.isFinite(page) ? Math.min(Math.max(1, Math.floor(page)), exactTotal ? totalPages : Number.MAX_SAFE_INTEGER) : 1\n  const canGoNext = safePage < Number.MAX_SAFE_INTEGER && (exactTotal ? safePage < totalPages : hasNextPage === true)\n  const start = safeTotal > 0 ? (safePage - 1) * safePageSize + 1 : 0"
+        },
+        {
+          "file": "web/src/components/ui/Pagination.tsx",
+          "line": 61,
+          "endLine": 70,
+          "excerpt": "            start: fmtInt(start), end: fmtInt(Math.min(safePage * safePageSize, safeTotal)), total: fmtInt(safeTotal),\n          }) : totalKind === 'loaded' ? t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {\n            filtered: fmtInt(safeTotal), loaded: fmtInt(safeTotal),\n          }) : t('pagination.currentPage', 'Page {{page}} of {{total}}', {\n            page: fmtInt(safePage), total: t('common.unknown', 'Unknown'),\n          })}\n          {totalKind === 'loaded' && <Text variant=\"caption\" className=\"block\">\n            {t('pagination.currentPage', 'Page {{page}} of {{total}}', {\n              page: fmtInt(safePage), total: t('common.unknown', 'Unknown'),\n            })}"
+        }
+      ],
+      "queueDisposition": "No existing exact Phase6 software-update fix owner found; predecessor stays completed. Orchestrator must assign a narrow source-exclusive follow-up, not reopen migration."
+    },
+    {
+      "id": "SW05",
+      "classification": "confirmed-source-mechanism",
+      "rule": "misleading-all-time-recovery",
+      "contract": [
+        "MDC-026",
+        "MDC-032",
+        "MDC-044"
+      ],
+      "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+      "line": 181,
+      "title": "View all time resets to workspace default instead",
+      "mechanism": "All empty-state recovery variants use resetRange with View all time. On both header-owned aliases, useRangeState overrides page default all with saved defaultAnalysisRange (7d fallback); reset resolves that effective default, not all.",
+      "reproduction": "Exact-source default initializer with headerOwned=true, defaultAnalysisRange=7d and page default all returns 7d. Actual reset callback calls getFallbackPreset(defaultPresetId). Clicking this advertised recovery therefore need not select all time; no UI action was issued in this audit.",
+      "fix": "Use existing explicit all-time preset/atomic pagination-reset APIs when product supports all time, or label the actual default recovery honestly. Retain shared header ownership and all current recovery surfaces.",
+      "owner": "page/domain",
+      "priority": "medium",
+      "confidence": "high for cited source mechanism; mounted behavior NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 180,
+          "endLine": 182,
+          "excerpt": "  const resetAction = presetId !== 'all'\n    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }\n    : undefined;"
+        },
+        {
+          "file": "web/src/hooks/useRangeState.ts",
+          "line": 301,
+          "endLine": 318,
+          "excerpt": "  const headerOwned = getWorkspaceRouteScope(pathname).range &&\n    !opts.fromKey && !opts.toKey && !opts.scopeKey;\n  const {\n    fromKey = 'from',\n    toKey = 'to',\n    compareKey = 'compare',\n    scopeKey = DEFAULT_SCOPE_KEY,\n    minDate,\n    enableCompare = false,\n    timezone,\n  } = opts;\n  const defaultPresetId = headerOwned\n    ? isWorkspaceRangePresetAvailable(pathname, preferences.defaultAnalysisRange)\n      ? preferences.defaultAnalysisRange\n      : DEFAULT_PRESET_ID\n    : opts.defaultPresetId ?? DEFAULT_PRESET_ID;\n  const persistKey = headerOwned ? undefined : opts.persistKey;\n  const inheritSharedPreference = headerOwned || (opts.inheritSharedPreference ?? true);"
+        },
+        {
+          "file": "web/src/hooks/useRangeState.ts",
+          "line": 481,
+          "endLine": 495,
+          "excerpt": "  const resetWithUrlUpdates = useCallback((\n    urlUpdates: Record<string, string | null | undefined>,\n  ) => {\n    const preset = getFallbackPreset(defaultPresetId);\n    const defaultRange = preset.resolve(new Date(), resolvedTimezone);\n    const preference = createPreference(defaultRange, preset.id);\n    saveToStorage(SHARED_RANGE_STORAGE_KEY, preference);\n    saveToStorage(persistKey, preference);\n    setParams(\n      (prev) => {\n        const next = new URLSearchParams(prev);\n        resetPagination(next);\n        applyUrlUpdates(next, urlUpdates);\n        next.delete(fromKey);\n        next.delete(toKey);"
+        },
+        {
+          "file": "web/src/hooks/useRangeState.ts",
+          "line": 515,
+          "endLine": 518,
+          "excerpt": "  const reset = useCallback(\n    () => resetWithUrlUpdates({}),\n    [resetWithUrlUpdates],\n  );"
+        }
+      ],
+      "queueDisposition": "No existing exact Phase6 software-update fix owner found; predecessor stays completed. Orchestrator must assign a narrow source-exclusive follow-up, not reopen migration."
+    },
+    {
+      "id": "SW06",
+      "classification": "confirmed-source-mechanism",
+      "rule": "locale-timezone-preference",
+      "contract": [
+        "MDC-026",
+        "MDC-032",
+        "MDC-044"
+      ],
+      "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+      "line": 47,
+      "title": "Date/month display and month bins use host preferences",
+      "mechanism": "monthLabel passes undefined locale; month buckets use browser getFullYear/getMonth; all four formatDate calls omit supported locale/tz options. Numeric displays subscribe to saved locale, so selected-language/timezone dates can disagree with the rest of the page. This is one preference-consumption defect, not four separate counts.",
+      "reproduction": "Actual monthLabel probe: host en-US, selected fr-FR, actual Mar 26 vs preferred mars 26. Actual dateFormat probe with number-format bridge fr-FR but omitted opts: Feb 28, 2026 vs explicit selected 28 févr. 2026. Timezone reliance is source-confirmed from omitted options/local getters; differing-timezone native rendering was not run.",
+      "fix": "Use existing selected locale/timezone presentation APIs consistently for date text and month semantics; include preference dependencies when memoized. Preserve raw ISO timestamps, engineering SI cadence seconds, specialist day formatting and existing ranges.",
+      "owner": "page/domain",
+      "priority": "medium",
+      "confidence": "high for cited source mechanism; mounted behavior NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 44,
+          "endLine": 50,
+          "excerpt": "function monthLabel(key: string): string {\n  const [y, m] = key.split('-').map(Number);\n  if (!Number.isFinite(y) || !Number.isFinite(m)) return key;\n  return new Date(y, m - 1, 1).toLocaleDateString(undefined, {\n    month: 'short',\n    year: '2-digit',\n  });"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 120,
+          "endLine": 129,
+          "excerpt": "      const iso = u.installed_at ?? u.created_at;\n      const d = new Date(iso);\n      if (Number.isNaN(d.getTime())) continue;\n      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;\n      buckets.set(key, (buckets.get(key) ?? 0) + 1);\n    }\n    return Array.from(buckets.entries())\n      .sort((a, b) => a[0].localeCompare(b[0]))\n      .map(([month, count]) => ({ month, label: monthLabel(month), count }));\n  }, [updates]);"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 176,
+          "endLine": 177,
+          "excerpt": "    { metricId: 'text', occurrenceId: 'software-last-installed', label: t('softwareUpdates.kpi.lastInstalled', 'Last installed'), description: t('softwareUpdates.kpi.lastHelp', 'Latest nonempty installation date among loaded installed updates.'), rawValue: lastInstalledAt ? formatDate(lastInstalledAt) : null },\n    { metricId: 'duration', occurrenceId: 'software-average-cadence', label: t('softwareUpdates.kpi.avgCadence', 'Avg cadence'), description: t('softwareUpdates.kpi.cadenceHelp', 'Span in days divided by the number of intervals between valid installation dates on this page.'), rawValue: avgCadence, display: { formatter: raw => ({ value: t('softwareUpdates.kpi.cadenceDays', '{{days}}d', { days: fmtInt(raw / 86400) }), unit: '' }) } },"
+        },
+        {
+          "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+          "line": 330,
+          "endLine": 347,
+          "excerpt": "                          {u.installed_at && (\n                            <div className=\"flex items-center gap-1.5\">\n                              <Calendar className=\"h-3.5 w-3.5 text-[var(--text-muted)]\" aria-hidden=\"true\" />\n                              <Text variant=\"bodySm\">\n                                {t('softwareUpdates.timeline.installedOn', 'Installed {{date}}', { date: formatDate(u.installed_at) })}\n                              </Text>\n                            </div>\n                          )}\n                          {u.scheduled_at && !u.installed_at && (\n                            <div className=\"flex items-center gap-1.5\">\n                              <Clock className=\"h-3.5 w-3.5 text-[var(--text-muted)]\" aria-hidden=\"true\" />\n                              <Text size=\"xs\">\n                                {t('softwareUpdates.timeline.scheduledFor', 'Scheduled {{date}}', { date: formatDate(u.scheduled_at) })}\n                              </Text>\n                            </div>\n                          )}\n                          <Caption className=\"block\">\n                            {t('softwareUpdates.timeline.detected', 'Detected {{date}}', { date: formatDate(u.created_at) })}"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 37,
+          "endLine": 50,
+          "excerpt": "function intlOpts(base: Intl.DateTimeFormatOptions, opts?: FormatOptions): Intl.DateTimeFormatOptions {\n  if (opts?.tz) {\n    return { ...base, timeZone: opts.tz }\n  }\n  return base\n}\n\nfunction intlLocale(opts?: FormatOptions): string | undefined {\n  const raw = opts?.locale\n  // Empty / whitespace-only strings would throw RangeError if handed to\n  // `Intl.*`. Treat them as \"no override\" so the runtime falls back to\n  // the browser's default locale.\n  if (typeof raw === 'string' && raw.trim().length > 0) return raw\n  return undefined"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 65,
+          "endLine": 72,
+          "excerpt": "export function formatDate(iso: string | Date | null | undefined, opts?: FormatOptions): string {\n  if (!iso) return '—'\n  const d = new Date(iso)\n  if (isNaN(d.getTime())) return '—'\n  return d.toLocaleDateString(intlLocale(opts), intlOpts({\n    year: 'numeric', month: 'short', day: 'numeric',\n  }, opts))\n}"
+        }
+      ],
+      "queueDisposition": "No existing exact Phase6 software-update fix owner found; predecessor stays completed. Orchestrator must assign a narrow source-exclusive follow-up, not reopen migration."
+    }
+  ],
+  "clocks": {
+    "reservationUTC": "2026-10-14T01:24:50.678Z",
+    "firstObservedUTC": "2026-10-14T01:27:52.8711386Z",
+    "returnUTC": "2026-10-14T01:44:50.678Z",
+    "hardUTC": "2026-10-14T01:49:50.678Z",
+    "reset": false,
+    "effectivePolicy": "Earlier fixed deadlines or actual+20/25; immutable fixed deadlines are earlier here."
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "acceptedPredecessor": "phase5-page-vehicle-systems-software-updates",
+    "acceptedCommit": "84384d5fbb5fcfa9a6054437adce27ab053ca1cb",
+    "baseline": "docs/frontend-audits/audit-page-226.json",
+    "closedPhasesPreserved": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "phase6": "unfinished",
+    "phase7": "NOTRUN",
+    "fullReads": [
+      "docs/orchestrator-loop.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "relevantReads": [
+      "docs/frontend-design-contract.md authority/architecture/interaction/trust/SI/preferences/mobile/a11y/evidence sections",
+      "docs/frontend-mission.md principles/states/date-time/mobile/definition-of-done",
+      "docs/frontend-inventory.md existing software-update route reference",
+      "docs/session-handoff.md latest new-machine phase/receipts/conventions",
+      "migration-queue.md exact QA/predecessor/history/shared-owner/dedup rows",
+      "docs/frontend-worker-conventions.md",
+      ".github/copilot-instructions.md relevant integrity/frontend/data/verification instructions"
+    ],
+    "limits": "No claim to have read every unrelated contract addendum or the entire route inventory. Explicit two-artifact task overrides historical heartbeat/server/gate directions.",
+    "inventoryReadLimit": "Existing route reference inspected via scoped grep; long inventory row generated host-truncated output, preserved in full log. Audit baseline and current source establish source page scope; no live route mount was rechecked."
+  },
+  "unprovedCandidates": [
+    {
+      "id": "U01",
+      "file": "internal/api/softwareupdate/handler.go",
+      "line": 43,
+      "classification": "historical-integration-candidate-NOT-reconfirmed",
+      "detail": "audit-page-226 historically reported ignored offset and repository SQL without OFFSET. Backend files lie outside this readonly page/direct-support scope and were not reinspected. Current repeat-row/last-page behavior is unproved, distinct from confirmed false exact total SW04.",
+      "need": "Orchestrator-owned narrowly authorized backend pagination inspection/tests; no API calls."
+    },
+    {
+      "id": "U02",
+      "file": "web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx",
+      "line": 132,
+      "classification": "scope-candidate-with-unproved-response",
+      "detail": "Source body contains vehicle_id only and stream identity follows vehicle, not page/range. AI narrative temporal/result scope may differ from loaded deterministic history; backend response and actual narration correctness unproved.",
+      "need": "Keep explicit opt-in and disclose source scope; authorized fixture/native review later. No summarize/stream or device action was triggered."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "N01",
+      "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+      "line": 235,
+      "detail": "Cadence View all time Button has no size/class override; shared Button defaults size md with h-10 (Button.tsx:38,62). Source declarations do not establish the below-md 44px target.",
+      "status": "Candidate, not measured native target violation; verify composed hit rectangle and long labels."
+    },
+    {
+      "id": "N02",
+      "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+      "line": 279,
+      "detail": "Loaded history uses container-aware CardGrid; loading history uses viewport md/2xl/3xl columns. Full reflow, shell safe-area/chrome, long firmware/VIN, RTL and 200% text unmeasured.",
+      "status": "NOTRUN at all ten mission widths and narrow allocated containers."
+    },
+    {
+      "id": "N03",
+      "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+      "line": 162,
+      "detail": "Refresh is a named shared Button; release notes use named native anchors with visible-focus classes, safe rel/target and 44px declarations. Keyboard activation/order/unclipped focus and shared pagination/help behavior unexercised.",
+      "status": "Keyboard/native NOTRUN; no browser/OS acceptance inferred."
+    },
+    {
+      "id": "N04",
+      "file": "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+      "line": 299,
+      "detail": "Timeline list surrounds CardGrid group/grid wrappers and named listitems. Cadence supplies month/count data columns to ChartCard; actual accessibility tree, chart alternative reachability and announcements unverified.",
+      "status": "Screen-reader/a11y native NOTRUN."
+    },
+    {
+      "id": "N05",
+      "file": "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.tsx",
+      "line": 72,
+      "detail": "Status bars use fixed domain hex colors; shared styling may render gradients. Composed dark/light/saved theme contrast, forced colors, reduced motion and visual restraint were not measured.",
+      "status": "Visual/native candidate only; not a proven contrast defect."
+    }
+  ],
+  "preservation": {
+    "sourceSHA256": "a83878d0bee3556760c2796eb51cb46fe1125780ff9acdc8eb7df79b5e152353",
+    "currentPageLines": 367,
+    "historicalPageLines": 355,
+    "sectionCount": 5,
+    "deterministicSourceSections": 4,
+    "sections": [
+      "Software update summary",
+      "Update cadence",
+      "By status",
+      "Helix changelog summarizer (intentional opt-in)",
+      "Update timeline"
+    ],
+    "metricCount": 6,
+    "metrics": [
+      "Current version",
+      "Total updates",
+      "Installed",
+      "Pending",
+      "Last installed",
+      "Avg cadence"
+    ],
+    "actions": [
+      "Refresh existing read query",
+      "Retry source",
+      "Empty-range recovery",
+      "Manage vehicles prerequisite link",
+      "Public version-specific release-note link",
+      "History pagination",
+      "Opt-in AI summarize scaffold (NOT invoked)"
+    ],
+    "actionsIssued": 0,
+    "observations": [
+      "PageLayout delegates to PageContainer; no missing-page-container violation.",
+      "All four deterministic source shells remain rendered; AI absence while off is an intentional feature exception.",
+      "Timeline CardGrid keys use exact update id; version/release-note path preserves encodeURIComponent; vehicle label uses display name then VIN/translated id fallback.",
+      "Current version is first returned history row; explicit help denies independently observed installed snapshot. No claim to know current physical firmware.",
+      "Loaded-page scope up to 50 updates is disclosed; total/pending metrics do not prove complete fleet history. Pending means all non-installed statuses, not a device instruction.",
+      "Installed/scheduled/detected timestamp fields and scheduled-only-when-not-installed condition remain.",
+      "Average cadence derives finite installed-date intervals as seconds; /86400 occurs only in specialized day display. No SI wire/cache conversion, sign or source identity changes.",
+      "Shared selected-vehicle and range preferences are retained; header owns both aliases and no duplicate picker is rendered.",
+      "Numeric locale subscription is present; date/time consumption gap is SW06. Query signal, snake_case parameters and client prefix remain correct."
+    ],
+    "historicalComparisons": "Historical baseline is context, not fresh Git diff/mounted preservation acceptance. Exact old source/test body restoration and line-count alone do not establish parity."
+  },
+  "states": {
+    "initialLoading": "Local presenter suppresses unresolved values and renders per-source skeletons inside persistent sections; source inspected, mounted tests NOTRUN.",
+    "fatalNoData": "Only source-local no-retained failure replaces section bodies with retry; page layout is not globally error-gated.",
+    "retainedRefreshFailure": "Array remains available, summary/cadence and history sections retain rows/release-note actions; explicit error/retry context.",
+    "retainedPaused": "Page integrates shared blocked flag when data array exists; inert source probe passed; existing paused test declared but NOTRUN.",
+    "initialPaused": "Confirmed gap SW02; shared blocked state is not represented by section content.",
+    "observedEmpty": "Successful [] yields observed zero count, while firmware/date/cadence stay unknown; empty panels and recovery actions remain.",
+    "unknownMalformed": "Non-array top-level payload is marked unavailable and derivations coerce to []; unresolved counts remain null. Individual malformed array entries were not validated.",
+    "unknownLifecycle": "Confirmed gap SW03; future statuses are falsely Available and omitted from distribution.",
+    "provenanceFreshness": "Historical DataState is explicit; summary period says loaded history/not live-state observation. Page passes actual query to shared freshness adapter. Actual last-success freshness display and OS/browser stale transitions NOTRUN.",
+    "ai": "Conditional opt-in remains separate; positive-integer vehicle guarded; no AI/network/device action invoked."
+  },
+  "deduplicatedNeeds": [
+    {
+      "owner": "orchestrator to assign serialized page/query follow-up(s)",
+      "findings": [
+        "SW01",
+        "SW02",
+        "SW04",
+        "SW05",
+        "SW06"
+      ],
+      "files": [
+        "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+        "web/src/api/hooks/useSoftwareUpdatesPage.ts",
+        "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.test.tsx",
+        "web/src/api/hooks/useSoftwareUpdatesPage.test.tsx"
+      ],
+      "note": "These objectives share page/test files and cannot have overlapping writers. Reuse existing precise-range APIs, VehicleSourcePause and Pagination unknown/loaded mode. Do not reopen completed predecessor."
+    },
+    {
+      "owner": "feature software status metadata/breakdown follow-up",
+      "findings": [
+        "SW03"
+      ],
+      "files": [
+        "web/src/features/vehicle-systems/components/softwareUpdateStatus.ts",
+        "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.tsx",
+        "web/src/features/vehicle-systems/components/softwareUpdateStatus.test.tsx",
+        "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.test.tsx"
+      ],
+      "note": "One underlying unknown-state owner, not separate fallback/omission fix owners. Matching page-test expectation update must serialize with page owner."
+    },
+    {
+      "owner": "orchestrator integration inspection",
+      "candidates": [
+        "U01",
+        "U02"
+      ],
+      "note": "Reconfirm actual pagination and narration scope before treating historical/backend behavior as current findings."
+    },
+    {
+      "owner": "parent canonical catalog integration if new unknown/paused copy is required",
+      "note": "Current 70 literal + 5 metadata English pairs match. No catalog writes; report precise new keys from assigned implementation instead of speculative catalog changes."
+    },
+    {
+      "owner": "native/page acceptance owner",
+      "candidates": [
+        "N01",
+        "N02",
+        "N03",
+        "N04",
+        "N05"
+      ],
+      "note": "Explicit browser/native authorization required; no current acceptance claim."
+    }
+  ],
+  "queueDeduplication": {
+    "checkedUTC": "2026-10-14T01:37:04.161475+00:00",
+    "exactCurrentOwner": "phase6-qa-vehicle-systems-software-updates",
+    "exactSoftwareFixOwnerFound": false,
+    "relatedNotDuplicate": [
+      {
+        "item": "phase6-fix-relative-future-dates",
+        "file": "web/src/lib/dateFormat.ts",
+        "reason": "Active different shared objective, not page date/preference consumption SW06; its source claim is not permission to edit it."
+      },
+      {
+        "item": "phase6-fix-action-center-history-pagination",
+        "reason": "Different feature/files, not SoftwareUpdates paging owner."
+      },
+      {
+        "item": "phase6-drivetrain-exact-range-integration",
+        "reason": "Completed different feature objective; do not rerun it or infer a global range fix."
+      }
+    ],
+    "historicalDuplicatesPreserved": [
+      "audit-page-226 source audit",
+      "phase3-suite939-file-099 historical test repair",
+      "phase5-page-vehicle-systems-software-updates source migration"
+    ],
+    "queueWrites": false
+  },
+  "inspectionFailures": [
+    {
+      "shellId": "1205",
+      "exit": 1,
+      "failure": "UnicodeEncodeError cp1252 output; pins written but context stdout/log append did not finish; full traceback retained, UTF-8 retry exited 0."
+    },
+    {
+      "shellId": "1455",
+      "exit": 1,
+      "failure": "UnicodeDecodeError cp1252 reading UTF-8 report; failed before mutation; full traceback retained, explicit UTF-8 retry exited 0."
+    }
+  ],
+  "evidenceLimits": {
+    "sourceOnly": true,
+    "runtime": "NOTRUN",
+    "visual": "NOTRUN",
+    "keyboard": "NOTRUN",
+    "contrast": "NOTRUN",
+    "viewport": "NOTRUN",
+    "existingVitest": "NOTRUN: no source/test changes; installed config invokes repository helper scripts at buildStart and runner may write config/cache beyond two authorized artifacts. No alternate config/cache/guard bypass attempted.",
+    "globalTSC": "NOTRUN explicitly prohibited; transpileModule is not typechecking. No TypeScript-pass claim.",
+    "lintBuildFullSuites": "NOTRUN explicitly prohibited",
+    "browserAPI": "NOTRUN explicitly prohibited; zero real requests including download/install/update/device/AI",
+    "installsServersSubagentsHelperTools": "NOTRUN; no helper files/custom extensions/configs created. One-shot native Node/Python source-reading/AST/assertion commands only.",
+    "backendRules11to14": "NOT_APPLICABLE: no internal Go file in assigned scope",
+    "inspectionScope": "Focused page, immediate feature/presentation/data supports and nine direct test files; not a systematic whole-repository audit. Shared transitive graph and actual server contracts unproved.",
+    "inputPins": "Before/after cohorts collected prior to probes and final checks. Three extended shared-owner pins were collected after their read; their stage is recorded, not presented as pre-inspection locks. No atomic whole-repository freeze.",
+    "testInspection": "Nine files read through AST declarations/parameter tables; page/helper/support tests and selected status assertions inspected in detail. Not every assertion in AI/chart fixture suites manually reviewed; all existing runtime cases NOTRUN."
+  },
+  "counts": {
+    "confirmedFindings": 6,
+    "byRule": {
+      "scope-bounds": 1,
+      "initial-paused-state": 1,
+      "unknown-update-status": 1,
+      "false-exact-pagination-total": 1,
+      "misleading-all-time-recovery": 1,
+      "locale-timezone-preference": 1
+    },
+    "primaryFilesWithMostFindings": {
+      "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx": 5,
+      "web/src/features/vehicle-systems/components/softwareUpdateStatus.ts": 1
+    },
+    "unprovedIntegrationCandidates": 2,
+    "nativeAcceptanceCandidates": 5,
+    "sections": 5,
+    "metrics": 6,
+    "preservedActionKinds": 7,
+    "inertSourceProbes": {
+      "executed": 10,
+      "passed": 10,
+      "failed": 0,
+      "limit": "Exact-source logic with inert dependency stubs, not existing test suites."
+    },
+    "existingTests": {
+      "files": 9,
+      "declarations": 69,
+      "staticallyEnumeratedCases": 79,
+      "runtimeDiscovered": null,
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notrun": 79
+    },
+    "pinnedInputs": 40,
+    "matchedPins": 40,
+    "inspectionCommandFailures": 2,
+    "countingCorrections": 1,
+    "realRequests": 0
+  },
+  "release": {
+    "artifactClaims": "RELEASED: two authorized artifacts complete after final parse/pin verification",
+    "sourceTestCatalogGitClaims": "never acquired; no writes",
+    "commandClaims": "RELEASED: every prior owned synchronous check returned; this final bounded check exits below. No owned background processes, servers or subagents started. Unrelated shared services/shells left intact.",
+    "releasedUTC": "2026-10-14T01:42:57.830523+00:00",
+    "finalVerification": "JSON parse/count/citation checks PASS; 40/40 pins MATCH; no application/native acceptance implied"
+  },
+  "filesRead": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-audits/audit-page-226.json",
+    "docs/frontend-audits/phase6-qa-driving-speed-sweet-spot.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "web/package.json",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useSoftwareUpdatesPage.test.tsx",
+    "web/src/api/hooks/useSoftwareUpdatesPage.ts",
+    "web/src/api/types.ts",
+    "web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/layout-reference/CardGrid.tsx",
+    "web/src/components/layout/layout-reference/ChartCard.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/SourceContent.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/Pagination.tsx",
+    "web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute.test.tsx",
+    "web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly.test.tsx",
+    "web/src/features/vehicle-systems/components/SoftwareUpdateCadenceChart.test.tsx",
+    "web/src/features/vehicle-systems/components/SoftwareUpdateCadenceChart.tsx",
+    "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.test.tsx",
+    "web/src/features/vehicle-systems/components/SoftwareUpdateStatusBreakdown.tsx",
+    "web/src/features/vehicle-systems/components/VehicleSourceContent.test.tsx",
+    "web/src/features/vehicle-systems/components/VehicleSourceContent.tsx",
+    "web/src/features/vehicle-systems/components/VehicleSourcePause.tsx",
+    "web/src/features/vehicle-systems/components/operationalbrief-all/VehicleOperationalBrief.tsx",
+    "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareCadenceCard.tsx",
+    "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareHistoryItem.tsx",
+    "web/src/features/vehicle-systems/components/software-updates-modernization/SoftwareUpdatesPage.test.tsx",
+    "web/src/features/vehicle-systems/components/software-updates-modernization/presenter.ts",
+    "web/src/features/vehicle-systems/components/softwareUpdateStatus.test.tsx",
+    "web/src/features/vehicle-systems/components/softwareUpdateStatus.ts",
+    "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.test.tsx",
+    "web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/i18n/en.json",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/test-setup.ts",
+    "web/src/test/setup.ts",
+    "web/vite.config.ts"
+  ],
+  "checks": [
+    {
+      "command": "Scoped inline Python regex grep across 11 production page/support files for the ten frontend rules",
+      "exit": 0,
+      "rawOutput": "See log CHECK scoped literal grep; candidate counts preserved in literal_scan",
+      "classification": "Two positive scans are exceptions: PageLayout adapter and URL-reset-only useEffect. No whole-app or runtime clean claim."
+    },
+    {
+      "command": "Canonical English JSON lookup for scoped literal t pairs plus five metadata status pairs",
+      "exit": 0,
+      "literalPairs": 70,
+      "metadataPairs": 5,
+      "missing": 0,
+      "different": 0
+    },
+    {
+      "command": "Initial/final SHA256 file comparisons",
+      "exit": 0,
+      "files": 40,
+      "matches": 40,
+      "limit": "Final dedicated parse/recheck follows; no atomic workspace lock."
+    },
+    {
+      "command": "node -e exact-source in-memory mechanism probes (full script in log)",
+      "exit": 0,
+      "started_utc": "2026-10-14T01:33:00.133441+00:00",
+      "counts": {
+        "executed": 8,
+        "passed": 8,
+        "failed": 0
+      },
+      "limit": "Transpilation only, stubs for imports; not global TSC, not mounted tests, no real requests"
+    },
+    {
+      "command": "node -e TypeScript AST enumeration of eight existing test files (full script/raw output in log)",
+      "exit": 0,
+      "started_utc": "2026-10-14T01:33:38.251601+00:00"
+    },
+    {
+      "command": "node -e two additional exact-source in-memory preference/status probes (full script in log)",
+      "exit": 0,
+      "started_utc": "2026-10-14T01:36:01.057686+00:00",
+      "counts": {
+        "executed": 2,
+        "passed": 2,
+        "failed": 0
+      }
+    },
+    {
+      "command": "node -e enumerate direct VehicleSourceContent trust test declarations (full script in log)",
+      "exit": 0
+    },
+    {
+      "command": "node -e corrected direct trust test AST enumeration (full script in log)",
+      "exit": 0
+    }
+  ],
+  "finalValidation": {
+    "jsonParse": "PASS",
+    "countConsistency": "PASS",
+    "allFindingCitationExcerpts": "PASS",
+    "inputPins": "40/40 MATCH",
+    "inspectionFailuresPreserved": true,
+    "exit": 0,
+    "UTC": "2026-10-14T01:42:57.830523+00:00",
+    "limit": "Source report integrity only; tests/native/global gates NOTRUN"
+  }
+}

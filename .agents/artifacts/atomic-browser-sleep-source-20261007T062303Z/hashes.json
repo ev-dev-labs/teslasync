@@ -1,0 +1,65 @@
+[
+  {
+    "path": "web\\e2e\\operationalbrief-contracts\\battery-sleep-retention.supported.spec.ts",
+    "role": "new-owned-source",
+    "sha256": "2BA7B5B42FB9A190E96E9A08CE0AC77DD91A72386685F69EB905DC43CF5333AA",
+    "copySha256": "2BA7B5B42FB9A190E96E9A08CE0AC77DD91A72386685F69EB905DC43CF5333AA",
+    "matches": true
+  },
+  {
+    "path": "web\\e2e\\operationalbrief-contracts\\battery-sleep-retention.supported.fixtures.ts",
+    "role": "new-owned-source",
+    "sha256": "6E0C20E52FCD0798DB2ED435C3A882C53C4B0E9969C2C99B656DBBC27643BCBD",
+    "copySha256": "6E0C20E52FCD0798DB2ED435C3A882C53C4B0E9969C2C99B656DBBC27643BCBD",
+    "matches": true
+  },
+  {
+    "path": "web\\e2e\\operationalbrief-contracts\\battery.smoke.spec.ts",
+    "role": "read-only-dependency-never-written",
+    "sha256": "51E6D95470C1BF6CFE8BF7A5305ED6EEE27E9B0CF4690CEEAEF235AECB9A75EB",
+    "copySha256": "51E6D95470C1BF6CFE8BF7A5305ED6EEE27E9B0CF4690CEEAEF235AECB9A75EB",
+    "matches": true
+  },
+  {
+    "path": "web\\e2e\\operationalbrief-contracts\\battery.fixtures.ts",
+    "role": "read-only-dependency-never-written",
+    "sha256": "6EA68365D6A31995C564121175D34D2F224BD0D75F585D69D5E8C3EB117B149A",
+    "copySha256": "6EA68365D6A31995C564121175D34D2F224BD0D75F585D69D5E8C3EB117B149A",
+    "matches": true
+  },
+  {
+    "path": "web\\e2e\\mockApi.ts",
+    "role": "read-only-dependency-never-written",
+    "sha256": "476E613BF23D5A1E3E341E6E83718CB9985CAB0956EB5A7205992DB8EB5156E6",
+    "copySha256": "476E613BF23D5A1E3E341E6E83718CB9985CAB0956EB5A7205992DB8EB5156E6",
+    "matches": true
+  },
+  {
+    "path": "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+    "role": "read-only-dependency-never-written",
+    "sha256": "7477FCF06395B89C85D20AB7516B6DE37361BD70D7E747B2BF953AF2A9967313",
+    "copySha256": "7477FCF06395B89C85D20AB7516B6DE37361BD70D7E747B2BF953AF2A9967313",
+    "matches": true
+  },
+  {
+    "path": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepEvidenceOverview.tsx",
+    "role": "read-only-dependency-never-written",
+    "sha256": "75D07BCD2F982699E359F19925CFD36EB6D04F0A8B87377E5FA9ACFB96C1235E",
+    "copySha256": "75D07BCD2F982699E359F19925CFD36EB6D04F0A8B87377E5FA9ACFB96C1235E",
+    "matches": true
+  },
+  {
+    "path": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "role": "read-only-dependency-never-written",
+    "sha256": "E954755F164A93FFB2E056CEA1385B2466C3964D92230A45A526CDD995816AA0",
+    "copySha256": "E954755F164A93FFB2E056CEA1385B2466C3964D92230A45A526CDD995816AA0",
+    "matches": true
+  },
+  {
+    "path": "web\\src\\api\\queryClient.ts",
+    "role": "read-only-dependency-never-written",
+    "sha256": "6CEBFB8ECDF6F4482756692866BD98B635E84974476D015CCE780ECB797EBC57",
+    "copySha256": "6CEBFB8ECDF6F4482756692866BD98B635E84974476D015CCE780ECB797EBC57",
+    "matches": true
+  }
+]

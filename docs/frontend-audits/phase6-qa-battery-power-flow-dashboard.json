@@ -1,0 +1,513 @@
+{
+  "item": "phase6-qa-battery-power-flow-dashboard",
+  "status": "DONE_SOURCE_QA",
+  "sourceVerdict": "Six deterministic source findings recorded. No source remediation, runtime, native, full-page or physical power-flow acceptance.",
+  "page": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+  "routes": ["/power-flow"],
+  "purpose": "Review Tesla Energy live power, stored energy, battery SOC, solar charging advice and selected-window historical observations.",
+  "primaryGoal": "Distinguish measured W from stored Wh, signed import/export and charging/discharging from unknown readings, and trustworthy current evidence from retained or modeled advice.",
+  "scope": {
+    "mode": "READ_ONLY_SOURCE_QA",
+    "requestUtc": "2026-10-13T21:58:58.219Z",
+    "firstObservedCommandUtc": "2026-10-13T21:59:09.9064857Z",
+    "clockLimit": "Original actual-creation budget: return at 20 minutes, hard stop at 25; no reset or additional work.",
+    "writes": [
+      "docs\\frontend-audits\\phase6-qa-battery-power-flow-dashboard.json",
+      "logs\\phase6-qa-battery-power-flow-dashboard.log"
+    ],
+    "rootLogIgnoreEvidence": ".gitignore:80 logs/",
+    "sourceTestSharedCatalogBackendQueueWrites": 0,
+    "subagents": 0,
+    "physicalPowerDeviceActions": 0,
+    "energyControlActions": 0,
+    "apiHttpBrowserNativeActions": 0,
+    "parentOwnership": "Queue, dispatch, health, integration, source correction and acceptance remain parent-owned. No scheduled health work followed."
+  },
+  "preflight": {
+    "duplicate": "Existing exact report absent at first command and logged preflight; exactly one queued QA row. No completed duplicate was found.",
+    "queue": "migration-queue.md:328 literal [ ] phase6-qa-battery-power-flow-dashboard",
+    "dependency": "migration-queue.md:1751 literal [x] phase5-page-battery-power-flow-dashboard",
+    "acceptedSourceCommitContext": "8dcb5bb54dfc5ddc3b493196a06e48028a9e9363",
+    "historicalReceipt": "docs\\frontend-audits\\audit-page-072-attempt-2.json",
+    "historicalEvidenceLimit": "Recorded source acceptance is context, not current runtime, native, telemetry or physics proof. No Git was run."
+  },
+  "guidance": {
+    "read": [
+      "docs\\frontend-mission.md:1-220",
+      "docs\\frontend-worker-conventions.md:1-170",
+      "docs\\frontend-design-contract.md:1-200,388-590",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\react-frontend.instructions.md:1-400",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\skills\\audit-violations\\audit.sh"
+    ],
+    "skillsLoaded": ["audit-violations", "verify-api-hooks"],
+    "guidanceResolution": "Current MDC-026/033/040/043/044/045 and SI cutover govern. Older mixed-unit and deprecated-converter examples are not authorization to guess SI or remigrate the page.",
+    "wrappers": "audit.sh and verify.sh NOTRUN: user expressly restricted this leaf to builtin case-sensitive bounded scans and consumed method/path source comparison.",
+    "heartbeat": "NOTRUN: user write allowlist excludes .agent-status."
+  },
+  "identity": {
+    "registry": "web\\src\\lib\\routeRegistry.ts:197",
+    "loader": "web\\src\\lib\\routeLoaders.ts:30",
+    "mount": "web\\src\\App.tsx:75,822 lazy(routeLoaders.PowerFlowDashboard), SafeRoute, path power-flow",
+    "currentPageSha256": "335116258199752AD48750B3C21BC58C5B351269ED7DF9D054DBAFDA944F0BE3",
+    "pinSource": "Owned log PIN records contain SHA256 and line counts for the page, actual direct feature parts and consumed source producers.",
+    "pinLimit": "Filesystem snapshots, not deployed-build identity or an atomic repository-wide lock.",
+    "finalPinComparison": "36 recorded source pins compared by SHA256;0 drift at2026-10-13T22:09:11.5734887Z. Final validation also recorded in owned log.",
+    "currentDirectPins": [
+      {"file":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx","sha256":"335116258199752AD48750B3C21BC58C5B351269ED7DF9D054DBAFDA944F0BE3","lines":446},
+      {"file":"web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx","sha256":"E52E38F40D4321C55244506C22B7A367526C4EC378CEA46929389B09F914BFDF","lines":146},
+      {"file":"web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx","sha256":"F07FE854CAB282A510C5801C0AC1D3F470BD2FA4DC51765175DBC24B6E2C16F6","lines":97},
+      {"file":"web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx","sha256":"8D0CF84C64D3971F86CF75239070EA5F47F0E78474E14D7980739B3F65CF434A","lines":60},
+      {"file":"web\\src\\features\\battery\\components\\power-flow\\helpers.ts","sha256":"3FA4F72ED59B11B58C755F16B2770078704042FEA660B4286A1E32CD8ADBE1CE","lines":28},
+      {"file":"web\\src\\features\\battery\\components\\power-flow\\constants.ts","sha256":"63470E7E44DB517B398245EA189C61DA3885317D42999F6592DFF80C4AF65869","lines":30},
+      {"file":"web\\src\\features\\battery\\components\\power-flow\\index.ts","sha256":"C4B4D5BCB7344BE749453763222E2C6E570E5FC55516A4D0E85359F525D968D3","lines":5},
+      {"file":"web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx","sha256":"B8BFBDBBAF32E7BE98597CEB3478346DA3ACA2E5438A5EE8E48F8A40DCB00D7A","lines":58}
+    ]
+  },
+  "dataSources": [
+    {
+      "id": "live-energy-status",
+      "hook": "useTeslaEnergyLiveStatus",
+      "hookFile": "web\\src\\api\\hooks\\useEnergy.ts",
+      "hookLines": "396-404",
+      "consumer": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:118",
+      "method": "GET",
+      "path": "/tesla/energy-sites/{siteID}/live-status",
+      "router": "internal\\api\\router.go:3603,3616",
+      "contract": "SOURCE_METHOD_PATH_MATCH",
+      "key": ["tesla-live-status", "siteId"],
+      "policy": "Truthy site enablement; STANDARD interval; AbortSignal forwarded; request returns raw snapshot.",
+      "dto": "web\\src\\types\\energy.ts:411-429 TeslaEnergyLiveStatus",
+      "fields": "id, energy_site_id, nullable solar_power/battery_power/load_power/grid_power/grid_services_power, energy_left/total_pack_energy, percentage_charged, grid_status, backup_capable/storm_mode_active, timestamp/fetched_at.",
+      "units": "Consumer explicitly treats power as W, stored energy as Wh, SOC as percent. Server units and timestamp semantics not independently inspected.",
+      "trust": "useDataState(liveQuery,{provenance:'live'}); only fatalError replaces live-source content; separate retained warning. Record validity additionally requires id."
+    },
+    {
+      "id": "energy-status-history",
+      "hook": "useTeslaEnergyLiveStatusHistory",
+      "hookFile": "web\\src\\api\\hooks\\useEnergy.ts",
+      "hookLines": "417-437",
+      "consumer": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:119",
+      "method": "GET",
+      "path": "/tesla/energy-sites/{siteID}/live-status/history",
+      "router": "internal\\api\\router.go:3603,3617",
+      "contract": "SOURCE_METHOD_PATH_MATCH",
+      "queryParameters": ["since", "until", "limit"],
+      "key": ["tesla-live-status-history", "siteId", "since", "until", "limit"],
+      "policy": "Truthy site enablement; STANDARD staleTime; signal cancellation; safeArray selection; page requests limit=1000.",
+      "dto": "TeslaEnergyLiveStatus[]",
+      "mapping": "Page:158-172 preserves nullable power/SOC samples, converts timestamp to epoch milliseconds, and also computes a formatted label.",
+      "trust": "Historical useDataState, independent fatal error and stale warning, common source for two separately bounded chart regions.",
+      "bounds": "Both parameters exist, but date-only page start/end are passed instead of startInstant/endInstantExclusive; F01.",
+      "serverUnknowns": ["date parsing", "bound inclusivity", "ordering", "pagination/truncation", "complete-range coverage"]
+    },
+    {
+      "id": "solar-charge-advice",
+      "hook": "useSolarChargeAdvice",
+      "hookFile": "web\\src\\api\\hooks\\useEnergy.ts",
+      "hookLines": "407-415",
+      "consumer": "web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx:34",
+      "method": "GET",
+      "path": "/tesla/energy-sites/{siteID}/charge-advice",
+      "router": "internal\\api\\router.go:3603,3618",
+      "contract": "SOURCE_METHOD_PATH_MATCH",
+      "key": ["tesla-charge-advice", "siteId"],
+      "policy": "Independent truthy-site STANDARD polling, signal forwarded.",
+      "dto": "web\\src\\types\\energy.ts:432-442 SolarChargeAdvice",
+      "fields": "verdict, surplus_w, solar_w, home_w, battery_charge_w, recommended_amps, snapshot_age_s, explanation.",
+      "trust": "Strip consumes only data, not query state; omitted from page dataSources. Advice is a server-derived recommendation, not proof of an issued control command. F02/F03.",
+      "units": "surplus_w is divided by1000 only for display; recommended_amps is A, not power or energy."
+    },
+    {
+      "id": "refresh-live-energy",
+      "hook": "useRefreshTeslaEnergyLiveStatus",
+      "hookFile": "web\\src\\api\\hooks\\useEnergy.ts",
+      "hookLines": "440-456",
+      "consumer": "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:219,314,350,376",
+      "method": "POST",
+      "path": "/tesla/energy-sites/{siteID}/live-status/refresh",
+      "router": "internal\\api\\router.go:3603,3619",
+      "contract": "SOURCE_METHOD_PATH_MATCH",
+      "policy": "Existing mutation success invalidates live and history keys; success/failure use mutation toast; advice is not invalidated.",
+      "execution": "NOTRUN. Source read only; no Tesla request, device or energy-control operation."
+    }
+  ],
+  "workspaceScope": {
+    "actualRoute": "/power-flow",
+    "rangeEnabled": "web\\src\\lib\\workspaceScope.ts:55,165",
+    "vehicleDisabled": "web\\src\\lib\\workspaceScope.ts:124,156-166",
+    "vehicleMeaning": "Tesla Energy site page intentionally does not consume the selected vehicle. No missing selected-vehicle filter defect promoted.",
+    "site": "Page:112-113 uses DEFAULT_SITE_ID=1, constants.ts:30. Fixed site/no picker is an explicit accepted limitation, not a newly inferred vehicle-scope bug.",
+    "rangeOwner": "Header workspace View settings; page renders no second picker. WorkspaceScope:79-92 exposes24h/7d/30d/90d and permits24h/live on this route, confirming F01's rolling case.",
+    "sharedInheritance": "useRangeState.ts:298-319 recognizes this header-owned route, overrides local7d/persistKey with shared product preference, and preserves from/to/scope URL selection.",
+    "preciseBounds": "useRangeState.ts:654-685 computes rolling ISO instants and calendarRangeToInstants with resolved timezone; page:113 consumes only start/end.",
+    "liveVersusHistory": "Range changes history only. Current live status and advice remain site-scoped snapshots; do not interpret them as historical playback."
+  },
+  "components": [
+    {"name":"PageLayout / PageContainer","owner":"web\\src\\components\\layout\\layout-reference\\PageLayout.tsx; web\\src\\components\\layout\\PageContainer.tsx","role":"Header, help, actions, nonfatal source notice and progressively retained children. Page passes no all-page loading/error/empty gate."},
+    {"name":"BatteryEvidenceBrief / OperationalBrief","owner":"web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx; web\\src\\components\\data-display\\OperationalBrief.tsx","role":"Four raw power metrics, per-metric validation, scope/freshness, retained/loading label and Review details drawer."},
+    {"name":"FlowArrow","owner":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:44-83","role":"One local reusable renderer; signed group name, magnitude-only visible value, wrapping endpoints, decorative arrow and supplied charging/export direction text."},
+    {"name":"PowerHistoryChart","owner":"web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx","role":"Four independently toggleable area series, raw evidence/exportData, finite formatting, history retry, canonical ChartCard."},
+    {"name":"BatterySocChart","owner":"web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx","role":"SOC line,0-100 axis, evidence/exportData and history retry; no legend toggle needed for one series."},
+    {"name":"SolarChargeAdviceStrip","owner":"web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx","role":"Read-only modeled recommendation; independent source state incomplete."},
+    {"name":"ChartCard / EmbeddedChart / ChartContainer","owner":"web\\src\\components\\layout\\layout-reference\\ChartCard.tsx; web\\src\\components\\charts\\EmbeddedChart.tsx; web\\src\\components\\charts\\ChartContainer.tsx","role":"One canonical frame, toolbar, loading/error/empty handling, image/CSV exports, named chart group/image and SR/forced-colors data alternative."},
+    {"name":"LinearGauge / Energy / feedback / Icon","owner":"Existing category primitives; exact consumed implementations listed in filesRead","role":"Unknown-preserving SOC meter, Wh-to-readable-energy display, source warnings/retry and decorative icon semantics."}
+  ],
+  "regions": [
+    {
+      "id":"status-strip","file":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx","lines":"240-276","source":"live-energy-status",
+      "fields":["grid status","optional storm active badge","optional backup badge","snapshot timestamp"],
+      "states":{"loading":"Three skeletons.","initialPaused":"Unavailable caption, alongside page source notice Paused offline; not a resolved empty source.","fatal":"Unavailable caption; source error/retry is elsewhere in live cards and DataSourceNotice.","unresolved":"Unavailable caption, not an explicit initial placeholder.","empty":"Unavailable caption for no-record response.","retained":"Badges/timestamp remain, with nonblocking live-source warning.","retry":"Header refresh and shared source retry."}
+    },
+    {
+      "id":"solar-advice","file":"web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx","lines":"31-60","source":"solar-charge-advice",
+      "fields":["server verdict","surplus kW","recommended A"],
+      "states":{"loading":"Returns null.","initialPaused":"Returns null.","fatal":"Returns null without local error/retry.","unresolved":"Returns null.","empty":"no_data returns null.","retained":"Cached advice remains without stale/paused indication.","retry":"No advice retry UI; independent polling only. Header refresh does not invalidate advice."}
+    },
+    {
+      "id":"current-power","file":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx","lines":"286-295","source":"live-energy-status",
+      "fields":["solar W","signed battery W and direction","home W","signed grid W and direction"],
+      "states":{"loading":"Brief suppresses numeric output using real loading flag.","initialPaused":"Unknown metrics with Source readings unavailable, page notice can identify pause.","fatal":"Unknown metrics, not fabricated0; other live cards expose errors.","unresolved":"Unknown readings, not fictitious power.","empty":"Unknown metrics and unavailable scope.","retained":"Retained source evidence label, readings/timestamp preserved.","retry":"Header/live-source warning and source notice; Review details remains independent."}
+    },
+    {
+      "id":"battery-state","file":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx","lines":"304-338","source":"live-energy-status",
+      "fields":["SOC percent","energy remaining Wh","total capacity Wh"],
+      "states":{"loading":"200-height skeleton.","initialPaused":"Premature No battery data message plus refresh; F06.","fatal":"QueryError onRetryLive.","unresolved":"No battery data before initial source resolution; F06.","empty":"Explicit EmptyState with refresh.","retained":"Existing SOC/energy retained with source warning.","retry":"GET refetch on fatal, existing refresh mutation on empty; no control action executed."}
+    },
+    {
+      "id":"power-diagram","file":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx","lines":"340-363","source":"live-energy-status",
+      "fields":["solar/Home","battery/Home","grid/Home","conditional nonzero grid-services/Grid"],
+      "states":{"loading":"180-height skeleton.","initialPaused":"No power flow data yet despite unresolved source; F06.","fatal":"QueryError onRetryLive.","unresolved":"Empty placeholder; source notice distinguishes pending.","empty":"EmptyState with refresh.","retained":"Known signed rows remain with source warning.","retry":"GET refetch/refresh mutation. Optional grid-services row omission does not hide the whole region."}
+    },
+    {
+      "id":"site-details","file":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx","lines":"366-413","source":"live-energy-status",
+      "fields":["grid status","storm tri-state","backup tri-state","snapshot timestamp"],
+      "states":{"loading":"180-height skeleton.","initialPaused":"Premature No site data message; F06.","fatal":"QueryError onRetryLive.","unresolved":"EmptyState before confirmed empty; F06.","empty":"Explicit EmptyState and refresh.","retained":"Fields retained; null booleans remain Unknown, not Off/No.","retry":"GET refetch or existing refresh mutation."}
+    },
+    {
+      "id":"power-history","file":"web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx","lines":"40-146","source":"energy-status-history",
+      "fields":["solar","battery","grid","home","time"],
+      "states":{"loading":"Canonical chart skeleton.","initialPaused":"rows=[], loading=false produces No data available before source resolution; F06.","fatal":"LayoutCard QueryError/onRetryHistory.","unresolved":"Same premature empty result.","empty":"Canonical chart EmptyState, no chart-local recovery action supplied.","retained":"Chart and evidence retained; separate history warning/retry.","retry":"History GET refetch from fatal or source warning/notice."}
+    },
+    {
+      "id":"soc-history","file":"web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx","lines":"44-97","source":"energy-status-history",
+      "fields":["SOC percent","time"],
+      "states":{"loading":"Canonical chart skeleton.","initialPaused":"points=[], loading=false leads to premature chart-empty message; F06.","fatal":"LayoutCard QueryError/onRetryHistory.","unresolved":"Same unresolved-to-empty collapse.","empty":"Canonical EmptyState.","retained":"SOC samples and table remain with independent history warning.","retry":"History GET refetch; no independent physical action."}
+    }
+  ],
+  "unitAndPhysicsReview": {
+    "powerVsEnergy": "Page knownNumber inputs and chart series remain raw W. Energy props use wh for stored Wh, never integrate W samples into invented Wh. SOC is dimensionless percent and advice amperage is A.",
+    "display": "helpers.ts:12-16 fmtWatts auto-scales W/kW; Energy.tsx:18-40 derives readable Wh/kWh. Unit arithmetic stays at the render boundary. No new legacy converter introduced.",
+    "preferences": "Page and PowerHistoryChart subscribe to useNumberFormatting; fmtWatts respects current locale/precision. Energy also subscribes. SOC history uses a raw template string and omits preferences; F05. useUnits.ts:71-80 centralizes fixed defaults kWh/kW, not currently selectable power/energy preferences; no nonexistent user-unit bug promoted.",
+    "unknownVsZero": "knownNumber leaves unknown scalar measurements null. fmtWatts and Energy render dash for missing/nonfinite readings, while actual0 displays0. Nullable SOC uses LinearGauge missing display rather than a zero meter. Grid/boolean unknown states are explicit.",
+    "batteryDirection": "Page:183-188: batteryW<0 Charging, batteryW>0 Discharging, zero/null no direction; FlowArrow reverses its visual glyph according to sign.",
+    "gridDirection": "Page:189-194: gridW>0 Importing, gridW<0 Exporting, zero/null no direction.",
+    "accessibilityDirection": "Current FlowArrow:57 signed fmtWatts accessible group name,82 sr-only supplied direction; visible magnitude is aria-hidden. Historical missing-sign finding is not promoted again.",
+    "topology": "Solar/Home, Battery/Home, Grid/Home labels describe source-level net readings. They are not evidence of branch-specific routing, conservation or measured physical connectivity; C03.",
+    "modeling": "Advice verdict/surplus/recommended A come from server DTO. No control submission, generated telemetry, hidden model execution or energy physics experiment performed. snapshot_age_s/explanation are unused; F03.",
+    "provenance": "Live/historical source descriptors and current-power snapshot label exist. Retained readings are nonfatally warned. fetched_at is not displayed. History lacks explicit chart range/timezone/source metadata; grouped context limitation in F01/F04."
+  },
+  "actions": [
+    {"id":"refresh-live","source":"Page:215-225,314,350,376; useEnergy.ts:440-456","state":"Header pending indicator; empty-card actions remain local.","scope":"Fixed energy site1, live/history invalidation only.","outcome":"Mutation toast success/error and existing invalidation; NOTRUN."},
+    {"id":"live-retry","source":"Page:196,309,345,371","state":"Only live-source fatal branches replace corresponding content.","scope":"Existing live GET refetch.","outcome":"NOTRUN."},
+    {"id":"history-retry","source":"Page:197,430,439","state":"Both charts call the same source-specific history retry.","scope":"Site1, currently passed date-only bounds and1000 limit.","outcome":"NOTRUN."},
+    {"id":"source-retries","source":"DataSourceNotice.tsx:193-202,267-284; StaleRefreshWarning.tsx:85-106","state":"Individual/group unavailable-source retry; stale warning disables while refreshing.","scope":"Only registered live/history queries; advice missing.","outcome":"Source presence only; NOTRUN."},
+    {"id":"evidence-review","source":"OperationalBrief.tsx:171-174 and its existing drawer state","state":"Review details is mounted with real metrics/scope; numeric loading suppression retained.","scope":"Four current-power metrics and snapshot provenance.","outcome":"No drawer interaction; NOTRUN."},
+    {"id":"power-series-toggle","source":"PowerHistoryChart.tsx:76,111-142; ChartContainer.tsx:64-72,799-808","state":"Stable power-flow-history identity, four hiddenSeries mappings.","scope":"Rendering visibility, not altered raw history/exportData.","outcome":"No legend interaction; NOTRUN."},
+    {"id":"chart-export","source":"Both charts exportData=evidence; ChartContainer.tsx:480-495,720-726","state":"PNG/SVG/copy image and CSV available only with resolved chartable rows; loading/error/empty suppress export menu.","scope":"Raw time-ms and W or SOC values in evidence; no SI rewrite.","outcome":"No capture, clipboard or file export; NOTRUN."},
+    {"id":"page-help","source":"PageContainer.tsx:207-216","state":"Localized More info button and shared tooltip.","scope":"Existing page subtitle only.","outcome":"No keyboard/native interaction; NOTRUN."}
+  ],
+  "findings": [
+    {
+      "id":"F01","severity":"high","confidence":"high","classification":"CONFIRMED_SOURCE_MECHANISM",
+      "file":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx","line":113,
+      "related":["web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:119","web\\src\\hooks\\useRangeState.ts:654-685","web\\src\\api\\hooks\\useEnergy.ts:423-431"],
+      "rule":"Workspace precise bounds / MDC-045",
+      "detail":"History consumes calendar start/end rather than startInstant/endInstantExclusive. The precise rolling-window endpoint and timezone-aware exclusive end produced by the shared owner never reach the hook.",
+      "mechanism":"Destructured start:since,end:until feed URLSearchParams unchanged. Selecting24h/live can change precise instants while transmitted date pair remains unchanged; inclusive endDate is not an exclusive bound.",
+      "reproduction":{"status":"SOURCE_DERIVED_UNEXECUTED","steps":["At /power-flow select header24h, then inspect shared range result and hook arguments.","Compare start/end calendar strings with startInstant/endInstantExclusive ISO values.","Observe source only passes calendar strings; advance within same calendar dates to see same cache-key bounds despite changing rolling window."]},
+      "fix":"Parent assigns page+typed-hook/integration ownership to pass both precise instants and verify server filtering/inclusivity; preserve header ownership and all regions.",
+      "owner":"page + API integration","limits":"Actual server filtering and result mismatch NOTRUN; defect here is missing precise frontend propagation, not an invented backend result."
+    },
+    {
+      "id":"F02","severity":"high","confidence":"high","classification":"CONFIRMED_SOURCE_MECHANISM",
+      "file":"web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx","line":34,
+      "related":["web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx:36","web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:137-153,280-282"],
+      "rule":"MDC-026 independent source state / mission no hidden regions",
+      "detail":"Independent advice query consumes only data and returns null for absent/no_data, conflating loading, initial pause, fatal error, unresolved and authoritatively empty. It also retains cached advice without refresh-error/pause warning or retry.",
+      "mechanism":"No data-state hook or query error/loading/fetchStatus/refetch use; page dataSources registers only live/history. Live-source state cannot stand in for this different request.",
+      "reproduction":{"status":"SOURCE_DERIVED_UNEXECUTED","steps":["Resolve live/history normally but leave advice query pending, paused or failed without data.","Advice contributes no visible source shell/state/retry.","Retain a successful verdict then set advice refresh error: same recommendation remains with no advice-specific trust downgrade."]},
+      "fix":"Preserve the advice region and model output; use existing state/feedback APIs for this independent query, including retained-warning and advice retry. Do not gate neighboring content.",
+      "owner":"battery feature direct component + parent integration"
+    },
+    {
+      "id":"F03","severity":"medium","confidence":"high","classification":"CONFIRMED_SOURCE_MECHANISM",
+      "file":"web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx","line":47,
+      "related":["web\\src\\types\\energy.ts:439-441","web\\src\\api\\hooks\\useEnergy.ts:449-453"],
+      "rule":"MDC-026/044/045 modeling and actionable provenance",
+      "detail":"Advice displays charge_now/soon/wait plus solar-matched amperage, but never exposes snapshot_age_s or explanation. Explicit refresh success invalidates live/history but not advice, so recommendation provenance can remain different from the freshly shown live snapshot.",
+      "mechanism":"Only verdict, surplus_w and recommended_amps are consumed; model age/reason are not rendered and advice key is absent from mutation invalidation.",
+      "reproduction":{"status":"SOURCE_DERIVED_UNEXECUTED","steps":["Use valid advice charge_now with snapshot_age_s=600 and an explanation; compare rendered source fields.","Age/reason have no rendered path, regardless of their supplied values.","After source-defined refresh success, inspect invalidation keys: live/history only, not tesla-charge-advice."]},
+      "fix":"Show available model age/reason/provenance without inventing a validity threshold; parent domain owner decides freshness policy and coherent refresh invalidation. Recommendation remains read-only.",
+      "owner":"battery feature + shared consumed hook integration","limits":"No unsafe device action or incorrect physical recommendation claimed; this is missing supplied trust context, not physics validation."
+    },
+    {
+      "id":"F04","severity":"medium","confidence":"high","classification":"CONFIRMED_SOURCE_MECHANISM",
+      "file":"web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx","line":106,
+      "related":["web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx:85","web\\src\\components\\charts\\ChartTooltip.tsx:65-78,87-104","web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:161-168"],
+      "rule":"MDC-044/045 time and unit interpretation",
+      "detail":"Both charts pass bare ChartTooltip while X uses epoch-ms time. Default tooltip converts numeric labels to raw strings, not dates. Series supply no unit/value formatter, so hover power values lack W/kW and SOC lacks percent even though axes/table provide specialized labels.",
+      "mechanism":"DefaultLabelFormatter recognizes ISO strings only; numeric time falls through String(label). DefaultValueFormatter appends a unit only when supplied. Chart areas/line have no unit and Tooltip no formatter.",
+      "reproduction":{"status":"SOURCE_DERIVED_UNEXECUTED","steps":["Use a valid history timestamp and solar=2000W,SOC=75.","Inspect default tooltip path for the epoch numeric label and payload entries.","Expected source-derived text is raw epoch and number-only2000/75, unlike specialized axes/table2kW/75%."]},
+      "fix":"At these chart callsites provide existing label/value formatters with locale/timezone and actual W/% units; preserve raw W/SOC for chart/export data.",
+      "owner":"battery power-flow chart components; no shared tooltip rewrite needed"
+    },
+    {
+      "id":"F05","severity":"medium","confidence":"high","classification":"CONFIRMED_SOURCE_MECHANISM",
+      "file":"web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx","line":40,
+      "related":["web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx:73,84","web\\src\\hooks\\useNumberFormatting.ts:19-38"],
+      "rule":"MDC-044 numeric preferences/localization",
+      "detail":"SOC formatter interpolates `${value}%` directly, bypassing existing locale/precision. Its axis and fallback-table cells therefore do not follow the subscribed numeric formatter used elsewhere on this page.",
+      "mechanism":"formatSocPercentTick only finite-checks then template-string converts; BatterySocChart does not subscribe to useNumberFormatting.",
+      "reproduction":{"status":"SOURCE_DERIVED_UNEXECUTED","steps":["Use valid SOC73.25 and current preference de-DE,decimal_precision=1.","SOC evidence formatter emits source string73.25%, not locale-formatted73,3%.","Compare with subscribed current SOC gauge formatting; no runtime preference test executed."]},
+      "fix":"Use existing numeric formatting subscription in the component and preserve finite/null guard plus raw SOC values.",
+      "owner":"battery SOC chart component"
+    },
+    {
+      "id":"F06","severity":"medium","confidence":"high","classification":"CONFIRMED_SOURCE_MECHANISM",
+      "file":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx","line":132,
+      "related":["web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx:133,305-314,342-350,368-376","web\\src\\api\\dataState.ts:211-227","web\\src\\components\\feedback\\DataSourceNotice.tsx:79-90","web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx:78","web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx:67"],
+      "rule":"MDC-026 initial/paused/unresolved versus resolved empty",
+      "detail":"No-retained-data initial pause or idle-pending state is not loading under the page's isLoading-only guards, yet local live cards and both charts render no-data/empty messages before a successful empty response.",
+      "mechanism":"DataState retains initial/isRefreshBlocked for such a query. Page tests only !hasData&&query.isLoading, then !live or rows.length===0. Shared notice correctly labels paused/pending, but does not prevent contradictory local resolved-empty copy.",
+      "reproduction":{"status":"SOURCE_DERIVED_UNEXECUTED","steps":["Use a legitimate first-load query state data=undefined,isPending=true,isLoading=false,fetchStatus=paused,error=null.","Source DataState is initial with blocked refresh; no fatalError.","Live cards choose No battery/site/flow data and history charts choose No data available. Page notice separately reports pause, so the entire page is not blank and is not falsely treated as a server fatal error."]},
+      "fix":"Retain separate region shells and source-specific paused/unresolved presentation; reserve authoritatively empty messages for resolved empty sources, without dropping retained payloads.",
+      "owner":"page-local state orchestration; existing shared APIs should be reused"
+    }
+  ],
+  "candidates": [
+    {
+      "id":"C01","classification":"UNPROMOTED_INTEGRATION_UNKNOWN","file":"web\\src\\api\\hooks\\useEnergy.ts","line":426,
+      "detail":"1000-record cap and unspecified server date/order/filter behavior may limit full-window evidence. No handler/query read or API call authorized, so neither truncation nor server correctness is claimed.",
+      "owner":"API integration","nextEvidence":"Parent-owned bounded server contract/full-range proof."
+    },
+    {
+      "id":"C02","classification":"UNPROMOTED_DOMAIN_EMPTY_POLICY","file":"web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx","line":78,
+      "related":["web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx:67"],
+      "detail":"A valid nullable DTO can contain history rows with all power or SOC values null. Charts use row count for empty; source can produce a no-trace plot while accessible table truthfully contains dashes. Whether to add a no-readable-series state needs domain/render evidence; no corrupt input or crash asserted.",
+      "owner":"battery chart/domain owner"
+    },
+    {
+      "id":"C03","classification":"UNPROMOTED_PHYSICAL_TOPOLOGY","file":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx","line":354,
+      "detail":"Fixed endpoint labels and net source readings do not establish actual branch-level physical routing or energy conservation. Current negative battery/grid accessible direction is present. No physical direction defect inferred from glyph orientation or mnemonic palette.",
+      "owner":"energy-domain integration","nextEvidence":"Authorized telemetry sign/topology documentation and later physical/runtime validation, never this leaf."
+    },
+    {
+      "id":"C04","classification":"UNPROMOTED_SNAPSHOT_AGE_POLICY","file":"web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx","line":121,
+      "detail":"Live DataState tracks HTTP query success and has no maxAgeMs policy tied to source timestamp; timestamp is visibly displayed, fetched_at is unused. An old source snapshot may deserve stronger age context, but no server freshness guarantee or threshold was inspected, so stale-device misrepresentation is not promoted.",
+      "owner":"energy trust/integration"
+    },
+    {
+      "id":"C05","classification":"UNPROMOTED_RESOLVED_MOBILE_ALLOCATION","file":"web\\src\\components\\layout\\PageContainer.tsx","line":213,
+      "detail":"Shared help button has h-11/w-11 with sm:h-9/sm:w-9, raising a640-767px below-md allocation question against44px guidance. Button resolved min-size/CSS/native hit geometry was not inspected or measured; this is not a confirmed target-size failure or authorization for shared edits.",
+      "owner":"shared layout/mobile QA","nextEvidence":"Parent-authorized resolved/native allocation check."
+    }
+  ],
+  "intentionalAndNotPromoted": [
+    "W/kW,Wh/kWh,A,% are technical unit symbols, not untranslated English labels.",
+    "charge_now/charge_soon/wait/no_data, query keys, chartKey and boundary names are technical identities, not a localization defect.",
+    "neonColorMap/chartTokens/CHART_COLORS/FLOW_COLORS names alone do not prove decorative-neon/contrast bugs; chart source colors are data identity. No palette-only defect promoted.",
+    "Solar strip's historical comment calling disappearance intentional does not satisfy independent source-state requirements; F02 records current mechanism, not a remigration.",
+    "Fixed DEFAULT_SITE_ID=1 is accepted explicit scope debt. Vehicle header is intentionally disabled and no site-selector capability is invented.",
+    "Current accessible battery/grid sign and direction improvements are present; historical pre-migration missing-direction finding not re-promoted.",
+    "Power areas have no stackId although ariaLabel/comment says stacked. Label mismatch is source context only, not a false conservation/physics claim.",
+    "No evidence of actual malformed/corrupt DTO, a page crash, observed palette contrast, mobile clipping or issued physical control."
+  ],
+  "responsive": {
+    "sourcePresence": [
+      "Page FlowArrow:59 uses min-w-0,flex-wrap; endpoints/value break words; logical ms-auto alignment.",
+      "Status and advice wrap; header refresh uses wrapLabel,min-h-11,min-w-11 and desktop min-h-10.",
+      "Live overview page:301 uses one column,md2,xl3; history page:422 stacks until2xl3.",
+      "Chart wrappers min-w-0; ResponsiveContainer width100%; fixed internal heights320/260 preserve bounded region geometry.",
+      "OperationalBrief source keeps rich detail visible and Review details min-h-11 belowmd; chart toolbar declares44px controls belowmd."
+    ],
+    "unverified": "Allocated card widths under wide-shell layouts, RTL,200% text, safe areas, clipped focus, actual rendered chart heights and all mission/native viewports.",
+    "nativeWidthsTested": [],
+    "mobileDefectsPromoted": 0
+  },
+  "accessibility": {
+    "sourcePresence": [
+      "Localized status/live-overview/history names; separate seven section error boundaries.",
+      "Flow group signed reading and explicit sr-only Charging/Discharging/Importing/Exporting; magnitude hidden from SR.",
+      "Decorative icons use canonical Icon default aria-hidden; advice's glyphs explicitly hidden.",
+      "SOC gauge's source preserves missing-value output and exposes a named meter only for real reading.",
+      "Both charts supply ariaLabel and formatted evidence columns; canonical ChartContainer contains SR/forced-colors alternative.",
+      "Power chart stable key exposes toggleable viewport as group, not img with hidden interactive legend.",
+      "Source retry buttons and model advice role=status exist where rendered, but advice state disappearance remains F02."
+    ],
+    "unverified": "Actual accessibility tree, keyboard/focus/return behavior, hit regions, contrast, forced-colors, reduced-motion implementation, live-announcement cadence and native reachability.",
+    "noBrowserTools": true
+  },
+  "localization": {
+    "sourcePresence": "Human labels/actions/status/empty messages use useTranslation with fallbacks. Numeric preference bridge is read, not a new formatter. SOC raw-percent issue F05.",
+    "catalogLookup": "NOTRUN: no full catalog read, split/generated catalog check or catalog mutation.",
+    "dateLimit": "Date formatter callsites preserved, but bare numeric tooltip labels do not invoke them; F04. Timezone/calendar labels and precise history scope are not claimed validated.",
+    "intentionalTechnicalTokens": ["W","kW","Wh","kWh","A","%","power-flow-history","PowerFlowSolarAdvice"]
+  },
+  "preservation": {
+    "pageLinesBefore": 446,
+    "pageLinesAfter": 446,
+    "currentPageRetentionRatio": 1,
+    "acceptedOriginalPageLinesHistorical": 425,
+    "historicalRatioLimit": "Historical425 is recorded queue context, not a fresh Git baseline or extracted-component baseline.",
+    "directFeatureLines": {
+      "PowerHistoryChart.tsx":146,
+      "BatterySocChart.tsx":97,
+      "SolarChargeAdviceStrip.tsx":60,
+      "helpers.ts":28,
+      "constants.ts":30,
+      "index.ts":5,
+      "BatteryEvidenceBrief.tsx":58
+    },
+    "pagePlusActualDirectFeatureLines": 870,
+    "topLevelPageSections": 4,
+    "liveLayoutCards": 3,
+    "actualRenderedRegions": 8,
+    "sectionErrorBoundaries": 7,
+    "currentPowerMetrics": 4,
+    "flowRowsInSource": 4,
+    "historyCharts": 2,
+    "pageLiteralGlassPanelCount": 0,
+    "pageLiteralChartContainerCount": 0,
+    "literalCountMeaning": "Page adopts existing LayoutCard/ChartCard/OperationalBrief; zero literal GlassPanel/ChartContainer is not missing sections. Counts cover page+actual rendered directparts, not every file in battery.",
+    "actionFamilies": 8,
+    "sourceChanges": 0,
+    "testChanges": 0,
+    "tests": "NOTRUN; inherited19/25-case receipts are not current test executions."
+  },
+  "staticScans": {
+    "method": "PowerShell Select-String/Get-Content/Get-FileHash only, case-sensitive fixed allowlist; raw log includes exact match counts and numeric exit markers.",
+    "scope": "Page plus seven actual direct feature files; only useEnergy.ts:396-456 for consumed hook URL/query scans.",
+    "staticInlineVar": 0,
+    "rawInteractiveHtml": 0,
+    "directVendorImports": 0,
+    "oldApiImports": 0,
+    "explicitAny": 0,
+    "neonBodyTokens": 0,
+    "consumedHookDoublePrefix": 0,
+    "consumedCamelCaseQueryParams": 0,
+    "componentRootRawCandidates": 15,
+    "authorizedCategoryBarrels": 15,
+    "componentRootViolationsAfterReview": 0,
+    "routeMethodMatches": 4,
+    "routeMethodComparisons": 4,
+    "notGlobalCleanClaim": "These are bounded textual checks only. Semantic findings remain; wrappers/global audits NOTRUN.",
+    "failedInspectionCommand": "One initial builtin anchor scan exited1 because guessed useOperationalMetrics.ts was absent. Correct path useOperationalMetrics.tsx was then read. Actual exit1 and correction preserved in log; not a failed test, not silently reported green.",
+    "missingViewLookups": "A separate view for guessed lib\\operationalMetrics.ts returned path absent; no source content was read and no extra helper trace pursued."
+  },
+  "requiredSharedChanges": [
+    {"name":"Precise history bounds","owner":"web\\src\\api\\hooks\\useEnergy.ts + parent-owned endpoint integration","usedBy":["PowerFlowDashboardPage history"],"needs":"Both precise instants through existing hook and complete server filter proof.","dependsOn":"Parent authorized correction/integration, not this QA leaf."},
+    {"name":"Advice trust and refresh coherence","owner":"SolarChargeAdviceStrip.tsx + web\\src\\api\\hooks\\useEnergy.ts","usedBy":["PowerFlowDashboardPage advice"],"needs":"Independent state/retry and supplied model age/reason; any threshold remains domain-owned.","dependsOn":"Parent claim and bounded corrective scope."}
+  ],
+  "competingImplementations": "No new framework, source-state engine, chart frame, formatter, catalog, helper or extension created.",
+  "producerDrift": {
+    "initialPins": "Page/direct source pins observed2026-10-13T22:00:58.6148425Z; later exact consumed shared trace pins appended to same log.",
+    "finalComparison": "36 logged pins,0 changed hashes in owned preservation validation. No concurrent producer drift detected; no authorization attribution needed.",
+    "policy": "Concurrent producer hash movement is separate from leaf preservation and not automatically a QA failure. Authorization/ownership cannot be inferred from a changed hash; parent owns attribution.",
+    "catalogDrift": "NOTRUN: no catalog pin/read/global freshness claim."
+  },
+  "counts": {
+    "regions":8,
+    "independentReadSources":3,
+    "mutationSources":1,
+    "actionFamilies":8,
+    "confirmedSourceFindings":6,
+    "unpromotedCandidates":5,
+    "promotedPhysicsDefects":0,
+    "testsExecuted":0,
+    "runtimeChecksExecuted":0,
+    "nativeChecksExecuted":0
+  },
+  "validation": {
+    "jsonParse":"PASS: PowerShell ConvertFrom-Json,exit0; final post-stamp parse recorded in owned log.",
+    "countConsistency":"PASS:8regions,6findings,5candidates,8actions and all7state dimensions per region,exit0.",
+    "sourcePinPreservation":"PASS:36recorded SHA256 pins compared,0drift; page446lines,4sections,3cards,7boundaries,retention1.0;exit0.",
+    "TypeScript":"NOTRUN",
+    "tests":"NOTRUN",
+    "build":"NOTRUN",
+    "lint":"NOTRUN",
+    "auditWrappers":"NOTRUN",
+    "browserRuntime":"NOTRUN",
+    "nativeCapture":"NOTRUN",
+    "fullPage":"NOTRUN",
+    "physicalPhysicsValidation":"NOTRUN"
+  },
+  "evidenceLimits": [
+    "Source presence is not runtime/native/rendered/full-page/physics acceptance.",
+    "Source-derived reproductions were not executed; valid ordinary DTO states only, no speculative corruption.",
+    "No API/HTTP/browser/native/control/server/Git/Docker/Discord/install/helper/extension/subagent operation.",
+    "Read only consumed frontend source mechanisms and endpoint method/path declarations; no server handler/query semantics.",
+    "No full catalog read, broad framework walk or whole-feature/global gate.",
+    "Reports/source files were not remigrated; original page and directly rendered parts remain intact."
+  ],
+  "filesRead": [
+    "migration-queue.md:header,exact task/dependency rows,guidance-reference matches",
+    ".gitignore:logs rule",
+    "docs\\frontend-mission.md:1-220",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md:1-200,388-590,heading-only locators",
+    "docs\\frontend-audits\\audit-page-072-attempt-2.json:1-170",
+    "docs\\frontend-audits\\phase6-qa-battery-energy-flow.json:1-130 convention only",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md:1-400",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\PowerFlowDashboardPage.tsx",
+    "web\\src\\features\\battery\\components\\power-flow\\PowerHistoryChart.tsx",
+    "web\\src\\features\\battery\\components\\power-flow\\BatterySocChart.tsx",
+    "web\\src\\features\\battery\\components\\power-flow\\SolarChargeAdviceStrip.tsx",
+    "web\\src\\features\\battery\\components\\power-flow\\helpers.ts",
+    "web\\src\\features\\battery\\components\\power-flow\\constants.ts",
+    "web\\src\\features\\battery\\components\\power-flow\\index.ts",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useEnergy.ts:396-456,import/policy anchors",
+    "web\\src\\types\\energy.ts:1-220,405-469",
+    "web\\src\\hooks\\useRangeState.ts:160-390,640-694",
+    "web\\src\\lib\\workspaceScope.ts:power-flow matches,72-100,103-168",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts:1-308",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\numberFormat.ts:1-160",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useUnits.ts:1-190",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts:1-100,anchor matches",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx:1-230",
+    "web\\src\\components\\data-display\\format\\Energy.tsx",
+    "web\\src\\components\\charts\\ChartTooltip.tsx",
+    "web\\src\\components\\charts\\LinearGauge.tsx:1-180",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx:1-235,250-400,430-640,705-840",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx:1-285",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ui\\Icon.tsx",
+    "web\\src\\lib\\routeRegistry.ts:power-flow matches",
+    "web\\src\\lib\\routeLoaders.ts:PowerFlowDashboard matches",
+    "web\\src\\App.tsx:PowerFlowDashboard matches",
+    "web\\src\\api\\client.ts:request/path anchors only",
+    "internal\\api\\router.go:3596-3626,consumed method/path anchors only"
+  ],
+  "release": {
+    "report":"RELEASED",
+    "log":"RELEASED",
+    "json":"RELEASED",
+    "commands":"RELEASED",
+    "postReturnWrites":"NONE",
+    "needs":"Parent-owned bounded source fixes for F01-F06 and separately authorized runtime/native/full-page/integration verification; no physics/control action authorized."
+  }
+}

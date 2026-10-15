@@ -8,6 +8,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
 	"github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
+	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
 
 // DashboardHandler handles dashboard HTTP endpoints.
@@ -25,23 +27,16 @@ func (h *DashboardHandler) Register(r chi.Router) {
 	r.Get("/dashboard/stats", h.GetStats)
 }
 
-// GetStats returns aggregated dashboard statistics.
-//
-// Open-mode tolerance: TeslaSync supports a provider-agnostic ForwardAuth
-// model where AUTH_ENABLED defaults to false and no JWT middleware runs.
-// In that mode the request never has a *UserClaims in its context, so we
-// fall back to the empty-string subject — the documented open-mode scope
-// key already used by other endpoints (notification_quiet_hours.user_id,
-// auth_session_handler, etc.). This matches the rest of the platform and
-// keeps single-user installs working without any auth provider configured.
+// GetStats reads the same shared fleet as /vehicles. The composition root
+// mounts both behind ForwardAuth, including its explicit configured dev mode.
 func (h *DashboardHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	var userID string
-	if claims, ok := middleware.UserFromContext(r.Context()); ok {
-		userID = claims.UserID
-	}
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.dashboard.stats")
+	defer span.End()
 
-	stats, err := h.svc.GetStats(r.Context(), userID)
+	stats, err := h.svc.GetStats(ctx)
 	if err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to read dashboard fleet statistics")
 		middleware.HandleError(w, err)
 		return
 	}

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Combobox } from '@/components/forms';
+import { DataStateNotice, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useGeocodeSearch } from '@/api/hooks/useDriving';
+import { useDataState } from '@/hooks/useDataState';
 import { MapPin } from 'lucide-react';
 import type { GeocodeResult, TripLocation } from '@/types/driving';
 
@@ -37,7 +39,9 @@ export function AddressInput({ value, onChange, onSelect, placeholder, label }: 
     return () => clearTimeout(id);
   }, [value]);
 
-  const { data: results, isLoading } = useGeocodeSearch(debouncedQuery);
+  const query = useGeocodeSearch(debouncedQuery);
+  const sourceState = useDataState(query);
+  const { data: results, isLoading } = query;
 
   const handleSelect = useCallback(
     (result: GeocodeResult | null) => {
@@ -57,8 +61,10 @@ export function AddressInput({ value, onChange, onSelect, placeholder, label }: 
   // a misleading "No results" for up to 400ms before the spinner appears.
   const trimmedQuery = value.trim();
   const debouncePending = trimmedQuery !== debouncedQuery.trim();
+  const showSourceFeedback = !debouncePending && trimmedQuery.length >= MIN_QUERY_LENGTH;
   const loading =
-    (isLoading || debouncePending) && trimmedQuery.length >= MIN_QUERY_LENGTH;
+    (debouncePending || (isLoading && !sourceState.isRefreshBlocked)) &&
+    trimmedQuery.length >= MIN_QUERY_LENGTH;
 
   // Stabilise the option list + accessors so the Combobox's internal
   // filter/render memoisation is not invalidated on every parent keystroke.
@@ -86,24 +92,40 @@ export function AddressInput({ value, onChange, onSelect, placeholder, label }: 
   );
 
   return (
-    <Combobox<GeocodeResult>
-      label={label ?? t('addressInput.label', 'Address')}
-      hideLabel={!label}
-      placeholder={placeholder}
-      icon={icon}
-      noChevron
-      noClearButton
-      value={null}
-      onChange={handleSelect}
-      inputValue={value}
-      onInputChange={onChange}
-      options={options}
-      getOptionLabel={getOptionLabel}
-      getOptionKey={getOptionKey}
-      loading={loading}
-      maxVisibleOptions={5}
-      allowFreeText
-      renderOption={renderOption}
-    />
+    <div className="space-y-2">
+      <Combobox<GeocodeResult>
+        label={label ?? t('addressInput.label', 'Address')}
+        hideLabel={!label}
+        placeholder={placeholder}
+        icon={icon}
+        noChevron
+        noClearButton
+        value={null}
+        onChange={handleSelect}
+        inputValue={value}
+        onInputChange={onChange}
+        options={options}
+        getOptionLabel={getOptionLabel}
+        getOptionKey={getOptionKey}
+        loading={loading}
+        maxVisibleOptions={5}
+        allowFreeText
+        renderOption={renderOption}
+      />
+      {showSourceFeedback && (
+        <>
+          {sourceState.fatalError && (
+            <QueryError error={sourceState.fatalError} onRetry={sourceState.retry ?? undefined} compact />
+          )}
+          {!sourceState.hasData && sourceState.isRefreshBlocked && !sourceState.fatalError && (
+            <DataStateNotice state="unavailable" role="status" />
+          )}
+          <StaleRefreshWarning
+            state={sourceState}
+            label={label ?? t('addressInput.label', 'Address')}
+          />
+        </>
+      )}
+    </div>
   );
 }

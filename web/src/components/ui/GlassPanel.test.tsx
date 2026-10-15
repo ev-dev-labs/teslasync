@@ -1,7 +1,7 @@
 /**
  * `<GlassPanel>` primitive contract tests.
  *
- * GlassPanel is the glassmorphism surface used in 200+ call sites (cards,
+ * GlassPanel is the neutral panel surface used in 200+ call sites (cards,
  * sections, hero panels) and is frequently driven by runtime data
  * (`glow={HEALTH_GLOW[status]}`, `glow={active ? 'green' : 'none'}`,
  * `padding="none"`). These tests lock in:
@@ -10,7 +10,7 @@
  *   2. The base surface + forced-colors (Windows High Contrast) classes are
  *      always present so a panel is never invisible.
  *   3. `glow` is gated behind `hover`: colour tokens only apply when hover is on,
- *      and each glow maps to its own hover-border/shadow token.
+ *      and each saved glow ID maps to its own semantic hover-border token.
  *   4. Every `padding` scale maps to its token; `none`/omitted add no padding.
  *   5. Null-safety: an out-of-union `glow`/`padding` (which reaches the component
  *      at runtime from index lookups) degrades to the no-glow / no-padding tokens
@@ -64,7 +64,7 @@ describe('GlassPanel — base surface + forced-colors', () => {
     // Panel surface tokens are shared verbatim with Card so the two
     // primitives cannot drift apart again (index.css → PANEL SURFACE).
     expect(cls).toContain('bg-[var(--panel-bg)]');
-    expect(cls).toContain('backdrop-blur-[var(--panel-blur)]');
+    expect(cls).not.toContain('backdrop-blur');
     expect(cls).toContain('border-[var(--panel-border)]');
     expect(cls).toContain('rounded-panel');
     expect(cls).toContain('shadow-panel');
@@ -90,13 +90,17 @@ describe('GlassPanel — hover + glow gating', () => {
     expect(cls).not.toContain(PURPLE_GLOW);
   });
 
-  it('adds the transition affordance when hover is enabled', () => {
+  it('adds the immediate hover affordance when hover is enabled', () => {
     render(
       <GlassPanel hover data-testid="panel">
         x
       </GlassPanel>,
     );
-    expect(screen.getByTestId('panel').className).toContain('transition-all duration-normal');
+    const cls = screen.getByTestId('panel').className;
+    expect(cls).toContain('hover:border-[var(--panel-border-hover)]');
+    expect(cls).toContain('forced-colors:hover:border-[CanvasText]');
+    expect(cls).not.toContain('transition-');
+    expect(cls).not.toContain('hover:shadow-');
   });
 
   it.each([
@@ -125,14 +129,14 @@ describe('GlassPanel — hover + glow gating', () => {
     expect(cls).not.toContain('transition-all');
   });
 
-  it('adds the transition but no coloured glow for glow="none" + hover', () => {
+  it('adds the neutral hover border but no coloured accent for glow="none" + hover', () => {
     render(
       <GlassPanel hover glow="none" data-testid="panel">
         x
       </GlassPanel>,
     );
     const cls = screen.getByTestId('panel').className;
-    expect(cls).toContain('transition-all');
+    expect(cls).toContain('hover:border-[var(--panel-border-hover)]');
     expect(cls).not.toContain(CYAN_GLOW);
     expect(cls).not.toContain(GREEN_GLOW);
     expect(cls).not.toContain(PURPLE_GLOW);
@@ -152,8 +156,8 @@ describe('GlassPanel — hover + glow gating', () => {
     expect(cls).not.toContain(CYAN_GLOW);
     expect(cls).not.toContain(GREEN_GLOW);
     expect(cls).not.toContain(PURPLE_GLOW);
-    // The hover transition still applies — only the colour degrades.
-    expect(cls).toContain('transition-all');
+    // The neutral hover affordance still applies — only the colour degrades.
+    expect(cls).toContain('hover:border-[var(--panel-border-hover)]');
   });
 });
 
@@ -250,6 +254,42 @@ describe('GlassPanel — ref + prop pass-through', () => {
     expect(ref.current).not.toBeNull();
     expect(ref.current?.tagName).toBe('DIV');
     expect(ref.current?.getAttribute('data-print-card')).not.toBeNull();
+  });
+
+  describe('GlassPanel — restrained presentation preservation', () => {
+    it('retains every public glow ID with real semantic border roles', () => {
+      expect(Object.keys(GLOW_CLASSES)).toEqual(['cyan', 'green', 'purple', 'none']);
+      expect(GLOW_CLASSES).toEqual({
+        cyan: 'hover:border-[var(--semantic-info-border)]',
+        green: 'hover:border-[var(--semantic-success-border)]',
+        purple: 'hover:border-[var(--semantic-purple-border)]',
+        none: '',
+      });
+    });
+
+    it.each(['cyan', 'green', 'purple', 'none'] as const)(
+      'keeps %s hover static, without blur, colored shadows or saturated chrome',
+      (glow) => {
+        render(<GlassPanel hover glow={glow} data-testid="panel">x</GlassPanel>);
+        const cls = screen.getByTestId('panel').className;
+        expect(cls).not.toMatch(/transition-|duration-|animate-|backdrop-|hover:shadow-|border-(?:cyan|emerald|purple)-|white/);
+        expect(cls).toContain('forced-colors:hover:border-[CanvasText]');
+        expect(screen.getByTestId('panel')).toHaveAttribute('data-print-card');
+      },
+    );
+
+    it('preserves long translated content, measured zero and a shell with missing children', () => {
+      const label = 'Batteriezustandsinformationen '.repeat(20).trim();
+      const { rerender } = render(
+        <GlassPanel id="saved-panel" role="region" aria-label={label}>{0}</GlassPanel>,
+      );
+      expect(screen.getByRole('region', { name: label })).toHaveTextContent('0');
+      rerender(<GlassPanel id="saved-panel" role="region" aria-label={label}>{label}</GlassPanel>);
+      expect(screen.getByRole('region', { name: label })).toHaveTextContent(label.trim());
+      rerender(<GlassPanel id="saved-panel" role="region" aria-label={label}>{null}</GlassPanel>);
+      expect(screen.getByRole('region', { name: label })).toBeEmptyDOMElement();
+      expect(screen.getByRole('region', { name: label })).toHaveAttribute('id', 'saved-panel');
+    });
   });
 
   it('passes through arbitrary HTML and ARIA attributes', () => {

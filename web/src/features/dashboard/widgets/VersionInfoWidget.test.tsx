@@ -33,7 +33,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, within, fireEvent, cleanup, act } from '@testing-library/react';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -158,6 +159,8 @@ function statValue(label: string): string {
 }
 
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   mockVersion.mockReturnValue(qr({ data: makeVersion() }));
   mockCapture.mockReturnValue(qr({ data: makeCapture() }));
 });
@@ -167,13 +170,44 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+describe.each([1, 2, 3])('VersionInfoWidget — identifying heading at cols=%i', (cols) => {
+  it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
+    'keeps exactly one visible shell heading when %s',
+    (state) => {
+      const populated = state === 'populated' || state === 'retained failure';
+      const failed = state === 'initial failure' || state === 'retained failure';
+      mockVersion.mockReturnValue(qr({
+        data: populated ? makeVersion() : state === 'empty' ? null : undefined,
+        isLoading: state === 'loading',
+        isError: failed,
+        error: failed ? new Error('offline') : null,
+      }));
+      // Match the primary's availability to exercise true initial/empty states.
+      if (!populated) mockCapture.mockReturnValue(qr({ data: state === 'empty' ? null : undefined, isLoading: state === 'loading' }));
+      const { container } = renderWidget({ cols, rows: 2 });
+      const headings = screen.getAllByRole('heading', { name: 'Version info', level: 3 });
+      expect(headings).toHaveLength(1);
+      expect(headings[0]).toBeVisible();
+      if (populated) {
+        expect(screen.getByText('1.4.2')).toBeInTheDocument();
+        expect(screen.getByText('abcdef1')).toBeInTheDocument();
+        if (cols > 1) expect(kvValue('Uptime')).toBe('1d 1h 1m');
+      }
+      if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+      if (state === 'empty') expect(screen.getByText('No version data available')).toBeInTheDocument();
+      if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
+      if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    },
+  );
+});
+
 describe('VersionInfoWidget — key/value list & uptime fix (regression)', () => {
   it('renders every version row, surfacing uptime from uptime_seconds (not the missing uptime string)', () => {
     renderWidget(STANDARD);
 
     expect(kvValue('Version')).toBe('1.4.2');
-    expect(kvValue('Build Date')).toBe('2025-01-15');
-    expect(kvValue('Go Version')).toBe('go1.25.0');
+    expect(kvValue('Build date')).toBe('2025-01-15');
+    expect(kvValue('Go version')).toBe('go1.25.0');
     // The bug: reading a non-existent `uptime` string always rendered "—".
     // The fix formats the real `uptime_seconds` (90,061s) into the ladder.
     expect(kvValue('Uptime')).toBe('1d 1h 1m');
@@ -219,7 +253,7 @@ describe('VersionInfoWidget — null-safety on a realistic payload', () => {
     renderWidget(STANDARD);
 
     expect(kvValue('Version')).toBe('9.9.9');
-    expect(kvValue('Build Date')).toBe('—');
+    expect(kvValue('Build date')).toBe('—');
     expect(kvValue('Git SHA')).toBe('—');
     expect(kvValue('Uptime')).toBe('—');
   });
@@ -229,11 +263,11 @@ describe('VersionInfoWidget — stat grid', () => {
   it('renders the two throughput tiles at standard width and hides the wide-only tiles', () => {
     renderWidget(STANDARD);
 
-    expect(statValue('Signals/sec')).toBe('12.5');
-    expect(statValue('Messages Today')).toBe('34,567');
+    expect(statValue('Signals/sec')).toBe('12.50');
+    expect(statValue('Messages today')).toBe('34,567');
     // Byte + latency tiles are wide-layout only.
-    expect(screen.queryByText('Bytes Processed')).toBeNull();
-    expect(screen.queryByText('Avg Latency')).toBeNull();
+    expect(screen.queryByText('Bytes processed')).toBeNull();
+    expect(screen.queryByText('Avg latency')).toBeNull();
   });
 
   it('adds the OS/arch line and byte + latency tiles in the wide layout', () => {
@@ -241,18 +275,18 @@ describe('VersionInfoWidget — stat grid', () => {
 
     expect(screen.getByText('OS: linux')).toBeInTheDocument();
     expect(screen.getByText('Arch: amd64')).toBeInTheDocument();
-    expect(statValue('Bytes Processed')).toBe('1.5 MB');
-    expect(statValue('Avg Latency')).toBe('3.4 ms');
+    expect(statValue('Bytes processed')).toBe('1.50 MB');
+    expect(statValue('Avg latency')).toBe('3.40 ms');
   });
 
-  it('paints every tile with placeholder zeros when the capture payload is undefined', () => {
+  it('keeps missing capture metrics unknown rather than claiming zero throughput', () => {
     mockCapture.mockReturnValue(qr({ data: undefined }));
     renderWidget(STANDARD);
 
     // Never a blank panel — the tiles degrade to zero, not to nothing.
     expect(screen.getByText('Signals/sec')).toBeInTheDocument();
-    expect(statValue('Signals/sec')).toBe('0.0');
-    expect(statValue('Messages Today')).toBe('0');
+    expect(statValue('Signals/sec')).toBe('—');
+    expect(statValue('Messages today')).toBe('—');
   });
 });
 
@@ -266,7 +300,7 @@ describe('VersionInfoWidget — compact layout', () => {
     expect(screen.getByText('3.3.3')).toBeInTheDocument();
     expect(screen.getByText('deadbee')).toBeInTheDocument();
     // The full KV list is not rendered in the compact chip.
-    expect(screen.queryByText('Go Version')).toBeNull();
+    expect(screen.queryByText('Go version')).toBeNull();
     expect(screen.queryByText('Signals/sec')).toBeNull();
   });
 });
@@ -276,8 +310,19 @@ describe('VersionInfoWidget — shell states', () => {
     mockVersion.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Go Version')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByText('Go version')).toBeNull();
+  });
+
+  it('keeps version locally pending without hiding resolved capture readings', () => {
+    mockVersion.mockReturnValue(qr({ data: undefined, isLoading: false, error: null }));
+    const { container } = renderWidget(STANDARD);
+
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading Version info' })).toBeInTheDocument();
+    expect(screen.getByText('Signals/sec')).toBeInTheDocument();
+    expect(screen.queryByText('No version data available')).not.toBeInTheDocument();
+    expect(screen.queryByText('Go version')).not.toBeInTheDocument();
   });
 
   it('surfaces a QueryError instead of the panel when the version query fails', () => {
@@ -288,16 +333,71 @@ describe('VersionInfoWidget — shell states', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Go Version')).toBeNull();
+    expect(screen.queryByText('Go version')).toBeNull();
   });
 
-  it('shows an empty state (never a blank panel) when there is no version data', () => {
-    mockVersion.mockReturnValue(qr({ data: undefined }));
-    renderWidget(STANDARD);
+  it('shows an empty state (never a blank panel) when version data is confirmed empty', () => {
+    mockVersion.mockReturnValue(qr({ data: null, isSuccess: true }));
+    const { container } = renderWidget(STANDARD);
 
-    const status = screen.getByRole('status');
+    const status = screen.getByText('No version data available').closest<HTMLElement>('[role="status"]')!;
     expect(within(status).getByText('No version data available')).toBeInTheDocument();
-    expect(screen.queryByText('Go Version')).toBeNull();
+    expect(container.querySelector('[data-data-state="initial"]')).toBeNull();
+    expect(screen.queryByText('Go version')).toBeNull();
+  });
+
+  describe('VersionInfoWidget — source trust and reactive preferences', () => {
+    it.each([COMPACT, STANDARD, WIDE])('keeps deployment evidence after a failed version refresh at $cols columns', (size) => {
+      mockVersion.mockReturnValue(qr({ data: makeVersion(), error: new Error('offline'), isError: true }));
+      const { container } = renderWidget(size);
+      expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+      expect(screen.getByText('1.4.2')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    });
+
+    it('recovers both reads without hiding version rows when capture fails initially', () => {
+      const versionRefetch = vi.fn();
+      const captureRefetch = vi.fn();
+      mockVersion.mockReturnValue(qr({ data: makeVersion(), refetch: versionRefetch }));
+      mockCapture.mockReturnValue(qr({ data: undefined, error: new Error('capture failed'), refetch: captureRefetch }));
+      const { container } = renderWidget(WIDE);
+      expect(container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+      expect(kvValue('Version')).toBe('1.4.2');
+      expect(statValue('Signals/sec')).toBe('—');
+      fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
+      expect(versionRefetch).toHaveBeenCalledOnce();
+      expect(captureRefetch).toHaveBeenCalledOnce();
+    });
+
+    it('preserves every established metric section without fabricating readings absent from the real CaptureStats contract', () => {
+      mockCapture.mockReturnValue(qr({ data: {
+        mongodb_enabled: true, capture_enabled: true, total_documents: 34567, distinct_vins: null,
+      } }));
+      renderWidget(WIDE);
+      for (const label of ['Signals/sec', 'Messages today', 'Bytes processed', 'Avg latency']) {
+        expect(statValue(label)).toBe('—');
+      }
+    });
+
+    it('rejects nonfinite throughput values', () => {
+      mockCapture.mockReturnValue(qr({ data: makeCapture({
+        signals_per_sec: NaN, messages_today: Infinity, bytes_processed: NaN, avg_processing_latency_ms: Infinity,
+      }) }));
+      renderWidget(WIDE);
+      for (const label of ['Signals/sec', 'Messages today', 'Bytes processed', 'Avg latency']) {
+        expect(statValue(label)).toBe('—');
+      }
+    });
+
+    it('reactively reformats memoized capture metrics without re-fetching', () => {
+      renderWidget(WIDE);
+      expect(statValue('Signals/sec')).toBe('12.50');
+      act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(1); });
+      expect(statValue('Signals/sec')).toBe('12,5');
+      expect(statValue('Messages today')).toBe('34.567');
+      expect(statValue('Bytes processed')).toBe('1,5 MB');
+      expect(statValue('Avg latency')).toBe('3,4 ms');
+    });
   });
 
   it('retries the version query when the refresh control is activated', () => {

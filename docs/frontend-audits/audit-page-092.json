@@ -1,0 +1,323 @@
+{
+  "item": "audit-page-092",
+  "page": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+  "routes": ["/glance"],
+  "purpose": "Selected-vehicle quick glance: source-backed operating summary, battery/range, charging/climate, security/location, software and three remote controls.",
+  "primaryGoal": "Understand the latest returned vehicle evidence and safely invoke lock/unlock, climate on/off or horn without opening the full application.",
+  "routeEvidence": ["web\\src\\App.tsx:33,562", "web\\src\\lib\\workspaceScope.ts:23-77,100-136,155-166"],
+  "dataSources": [
+    {
+      "hook": "useVehicles / useSelectedVehicle",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 74,
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwner": "vehicleHandler.List; internal\\api\\router.go:3319-3320",
+      "consumerEvidence": "GlancePage.tsx:158-165; useSelectedVehicle.ts:48-76,162-174",
+      "contract": "vehicleKeys.all, FAST staleTime, safeArray select and request cancellation. Selection precedence: path, vehicle_id URL, persisted store, first known fleet vehicle. Same registry query is subscribed through selection; no evidence of duplicate network requests.",
+      "scope": "Header-owned selected vehicle; /glance is vehicle-scoped but not a date-range route. No local picker or date control."
+    },
+    {
+      "hook": "useVehicleState",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 259,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/state, optionally ?as_of=<encoded instant>",
+      "sourceOwner": "vehicleHandler.CurrentState -> VehicleService.ResolveCurrentState, or signal_log reconstruction for as_of",
+      "routeEvidence": "internal\\api\\router.go:3328-3333",
+      "backendEvidence": "internal\\api\\vehicle\\handler.go:265-346",
+      "consumerEvidence": "GlancePage.tsx:172-181,198-219,316-493",
+      "contract": "vehicleKeys.state(vehicleId, asOf), enabled id > 0, abort signal, live queryPolicy. Page requests connection-aware 10s polling; historical mode stops the timer. Mapper keeps absent readings null and exposes live, observedAt, freshness and verifiedFields (useVehicles.ts:148-155,219-299).",
+      "limits": "Page consumes state and query completion time, not source observation/freshness metadata. Live reader internals, actual payloads and signal-level observation times not exercised."
+    },
+    {
+      "hook": "useLocationSnapshotLatest",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 491,
+      "endpoint": "GET /api/v1/location-snapshots/latest?vehicle_id=<selected id>",
+      "sourceOwner": "locationSnapshotHandler.Latest; internal\\api\\router.go:1015,4146-4148",
+      "consumerEvidence": "GlancePage.tsx:183-192,497-521",
+      "contract": "['location-latest', vehicleId], enabled id > 0, abort signal, supplied 30000ms interval. Independent null/error/retained source; no as_of forwarded by this hook.",
+      "limits": "Latest handler implementation not read. LocationSnapshot minutes_to_arrival field name is known (api\\types.ts:2272-2290), but server duration conversion and completeness remain unknown."
+    },
+    {
+      "hook": "useVehicleCommand",
+      "file": "web\\src\\api\\hooks\\useVehicleCommand.ts",
+      "line": 50,
+      "endpoint": "POST /api/v1/vehicles/{vehicleID}/command",
+      "sourceOwner": "commandHandler.SendCommand; internal\\api\\router.go:3335, rate limited 20/IP/minute",
+      "consumerEvidence": "GlancePage.tsx:188-191,541-591",
+      "contract": "Body {command, params}; requiresLiveMode=true; networkMode=always. HTTP-success results still inspect success flag; translated success/error toast, invalidation of vehicle state/registry and command latest/history, Tesla-auth recovery queue retained (useVehicleCommand.ts:55-94).",
+      "limits": "No command invoked; server authorization, Tesla execution and replay behavior not verified."
+    }
+  ],
+  "components": [
+    {
+      "name": "DashboardSourceBrief -> OperationalBrief",
+      "owner": "web\\src\\features\\dashboard\\components\\operationalbrief-all\\DashboardSourceBrief.tsx",
+      "sharedOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "contracts": "Typed readonly StatMetric[] + DataState + source description/scope/freshness/loading/testId; compact shared brief, status/provenance, six metrics, Review details drawer and original metric descriptions. useOperationalMetrics preserves existing source/display preference bridge.",
+      "evidence": ["GlancePage.tsx:203-219,300-310", "DashboardSourceBrief.tsx:9-52", "OperationalBrief.tsx:115-190,231-266", "web\\src\\hooks\\useOperationalMetrics.tsx:11-24"],
+      "preserve": "Prior OperationalBrief migration is authoritative; do not replace with KPI cards, a new summary renderer or QuickStats."
+    },
+    {
+      "name": "PageLayout / Section / SourceContent",
+      "owner": "web\\src\\components\\layout\\layout-reference",
+      "contracts": "Existing PageContainer forwarding; w-full min-w-0 container; labelled Section ids; SourceContent ready/loading/error/empty/retained with caller-supplied skeleton and recovery.",
+      "evidence": ["GlancePage.tsx:235-272,316,534", "PageLayout.tsx:9-16", "Section.tsx:11-22", "SourceContent.tsx:10-34,45-79", "web\\src\\components\\layout\\PageContainer.tsx:102-108,222,245-253"]
+    },
+    {
+      "name": "LinearGauge / FreshnessIndicator / KVList",
+      "owner": "Existing charts and data-display category owners",
+      "contracts": "Gauge nullable measurement, preserveReadingAndScale=true, 0-100 percent, size 180, semantic tone/raw color and accessible meter. FreshnessIndicator expects datum timestamp, with fresh/stale/offline/unknown accessible name. KVList responsive wrapping rows.",
+      "evidence": ["GlancePage.tsx:111-146,333-361", "web\\src\\components\\charts\\LinearGauge.tsx:11-56,138-146,208-219", "web\\src\\components\\data-display\\FreshnessIndicator.tsx:104-163"],
+      "limits": "KVList implementation not inspected; its supplied responsive/wrap props are source evidence, not rendered wrapping proof."
+    },
+    {
+      "name": "Button / Badge / typography / feedback / FadeIn",
+      "owner": "Existing ui, feedback and motion category owners",
+      "contracts": "Shared named loading/disabled controls, textual semantic badges, PanelTitle/Subhead/Text/Caption, independent QueryError/EmptyState/StaleRefreshWarning/Skeleton, reduced-motion entrance.",
+      "evidence": ["GlancePage.tsx:24-40,89-104,322-325,376-448,535-591", "web\\src\\components\\motion\\FadeIn.tsx:23-35"],
+      "limits": "Button focus/toast announcement/overlay implementations not audited."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+      "line": 119,
+      "rule": "MDC-002 shared reuse",
+      "detail": "DetailRow and StatusRow repeat the same one-item responsive KVList shell, differing only in value type. Existing KVList already owns the rendering; duplication is small and page-local.",
+      "fix": "If extracting the page into feature files, reuse one typed ReactNode-value row or call KVList directly; do not introduce a competing shared key/value system.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceConfirmed": ["Live cards stack at base, two columns at md, three at xl; identity spans both md columns (GlancePage.tsx:317-319).", "Commands wrap with flex-1, min width 5.5rem and minimum height 4.5rem; labels wrap (89-104,541).", "Existing compact OperationalBrief has one/two/three/six columns and break-word values (OperationalBrief.tsx:165-190); full scope caption remains in brief."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+        "line": 317,
+        "rule": "MDC-043 allocated container width",
+        "detail": "Live cards use viewport md/xl breakpoints although PageLayout supplies an allocated-width container. A narrow desktop shell allocation may force multiple cramped columns; no overflow was observed.",
+        "fix": "Use existing container-aware layout contract where measured allocations require it, preserving every card/subsection and commands. Test all ten widths and narrow shell allocations with long vehicle/destination/translated labels.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "320/375/390/430/768/1024/1280/1440/1920/2560, RTL, 200% text zoom, overflow and actual touch geometry unverified."
+  },
+  "accessibility": {
+    "sourceConfirmed": ["Overview is named; live/control Section headings use labelled ids; icon actions have translated aria-labels and decorative icons aria-hidden (GlancePage.tsx:97-103,224-233,296-298,316,534).", "Battery meter keeps nullable readings and 0-100 scale; no measured zero substituted (333-347; LinearGauge.tsx:138-146,208-219).", "Freshness has an accessible status plus age; Review details uses the shared Button/Drawer rather than a new focus system.", "FadeIn honors OS/low-bandwidth reduced-motion preference in its inspected source."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+        "line": 341,
+        "rule": "MDC-025 / MDC-040 non-color meaning",
+        "detail": "Battery fill changes at >60 and >25 but no qualitative status is supplied to LinearGauge. The exact numeric reading remains accessible; any intended good/warning/critical meaning is only in color.",
+        "fix": "Either supply a localized, source-appropriate threshold explanation/status using existing gauge props or retain a neutral magnitude fill. Do not invent battery health or safety claims.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "acceptanceRequired": ["Keyboard/focus/return focus/Escape for Review details drawer; toast announcements and pending command changes.", "Refresh icon and footer link effective target/focus contrast; long labels; light/dark/custom/forced-colors contrast on actual surfaces.", "Freshness pulse under reduced motion and low bandwidth; screen-reader partial/unknown source semantics."],
+    "verification": "No browser, keyboard, screen reader or contrast measurement; source semantics only."
+  },
+  "states": {
+    "loading": "Registry initial load uses PageLayout loading. With a selected record, state-bound panels keep shells and contextual skeletons; brief preserves six slots and loading=true (GlancePage.tsx:235-254,263,308). Location has no dedicated loading body.",
+    "empty": "No vehicle shows descriptive Manage vehicles CTA. State absent produces per-panel No live data; independent location rows remain. Nullable numerical readings render dash via existing formatters/gauge.",
+    "error": "Registry fatal error passed to PageLayout. State fatal error replaces only relevant detail bodies with QueryError/refetch; location fatal error has its own retry (GlancePage.tsx:237,264,500-501).",
+    "stale": "Registry/state/location StaleRefreshWarning retains prior readings; trust status in existing brief comes from DataState.",
+    "offline": "Connection-aware state polling pauses; vehicle-state isOnline controls command availability, but is distinct from network/source freshness. Existing source descriptors are supplied to shared notice owner.",
+    "partial": "Individual null booleans show Unknown and numbers dash, but stateTrust does not explicitly mark partial or unavailable based on envelope readings.",
+    "success": "All three bands plus footer remain with selected vehicle; active charging adds power/rate/time rows; destination and positive ETA are conditional source details.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+        "line": 181,
+        "rule": "MDC-026 / MDC-045 / MDC-046 observation trust",
+        "detail": "useDataState is forced to live for the mapped query without consulting live, observedAt, freshness or verifiedFields. Successful envelope with state undefined still counts as hasData in deriveDataState. Both FreshnessIndicators use dataUpdatedAt, which can reset on polling even for old telemetry. Brief description correctly cautions about this, but live/provenance and Up to date indicators can still imply stronger trust.",
+        "fix": "Adapt the existing source trust at this page/feature boundary to actual envelope metadata; distinguish last fetch from verified observation, empty readings, partial fields and historical as_of. Keep the prior brief, descriptions, retained data and independently sourced location.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["GlancePage.tsx:198-201,306-307,360", "useVehicles.ts:148-155,226-245,259-299", "web\\src\\api\\dataState.ts:186-191,254-265", "FreshnessIndicator.tsx:104-116"]
+      },
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+        "line": 191,
+        "rule": "MDC-025 / MDC-046 live-only mutation usability",
+        "detail": "Command affordance uses retained/historical state string plus pending only, not observation freshness or live-mode metadata. It can look available for stale online/parked evidence or as_of readings. Shared request correctly requiresLiveMode, so this is not evidence that historical mutation reaches the server.",
+        "fix": "Preserve request live-mode protection and auth recovery; align visible disabled state/reason with current source trust and existing mode policy without claiming stale state is verified online.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["GlancePage.tsx:190-191,536-549,569,585", "useVehicleCommand.ts:55-62", "useVehicles.ts:264-292"]
+      },
+      {
+        "file": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+        "line": 183,
+        "rule": "MDC-026 / MDC-046 / MDC-047 source consistency",
+        "detail": "Location requests latest on a fixed 30s cadence rather than using the page's connection-aware refresh interval; unlike state it never forwards as_of. Under historical URL the two sources have different time scope while both are labelled live. Location loading/null is displayed as dash rather than a source-specific pending/unavailable explanation.",
+        "fix": "Keep sources independent; explicitly disclose latest-location versus historical-state scope, reuse refresh policy for location, and distinguish pending/unavailable in its own body. Do not invent backend historical-location support.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["useVehicles.ts:491-499", "GlancePage.tsx:172-185,497-521"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+      "line": 100,
+      "rule": "MDC-010 / MDC-012 / MDC-015 / mission 5-8",
+      "detail": "Quick-action borders/hover and three section dividers use fixed white opacity instead of semantic border variables. These are white-derived decoration, not pure-white body text; cross-theme effective contrast unmeasured.",
+      "fix": "Reuse border-subtle/border-default/control tokens and existing Button chrome, retaining target geometry and wrapLabel.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["GlancePage.tsx:421,497,523"]
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+      "line": 369,
+      "rule": "MDC-010 / MDC-012 / mission 7 visual intensity",
+      "detail": "Two section icons use fixed cyan-300 purely decorative emphasis; every quick-action icon also takes theme-primary. Several badges plus repeated battery/range/interior/exterior values and two freshness dots compete with the operational summary.",
+      "fix": "Subdue decorative icons via semantic text tokens; preserve every repeated measurement, detail and source indicator while clarifying hierarchy, not deleting sections.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["GlancePage.tsx:102,203-219,349-361,454"]
+    },
+    {
+      "file": "web\\src\\components\\data-display\\FreshnessIndicator.tsx",
+      "line": 163,
+      "rule": "MDC-042 / mission 7,31",
+      "detail": "Shared fresh datum dot has unconditional animate-pulse class at the component level; Glance renders it twice. Global CSS may suppress motion, but no OS-mode execution proves that here. There is no page-local glow or neon chart.",
+      "fix": "Shared owner should verify existing CSS/preference behavior and, only if needed, gate the pulse through existing motion policy. Preserve textual/accessible freshness meaning and thresholds.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "internal\\service\\vehicle_service.go",
+      "line": 325,
+      "rule": "MDC-045 SI contract integration",
+      "detail": "Inspected state assembler explicitly converts canonical W to charger_power kW. Glance's kW suffix therefore matches this existing wire path; it is NOT evidence of a missing page /1000 conversion. The endpoint remains an SI-wire exception. charge_rate and time_to_full_charge pass through unchanged with insufficient local unit documentation.",
+      "fix": "Integration owner must reconcile this endpoint with the canonical SI methodology across model/service/hook/callers before changing the page formatter. Preserve current displayed value meanwhile; use existing useUnits formatPower only after raw W contract is established. Confirm charge-rate dimensional truth and duration units without renaming upstream proto.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["internal\\service\\vehicle_service.go:324-340", "GlancePage.tsx:396-408", "web\\src\\api\\types.ts:637-639", "web\\src\\hooks\\useUnits.ts:56-71,87"]
+    },
+    {
+      "file": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+      "line": 72,
+      "rule": "MDC-002 / MDC-010 inherited helper preservation",
+      "detail": "Exported batteryNeon is a residual neon-named threshold helper, unused in the inspected mounted JSX but imported by existing Glance tests. It is not proof of rendered neon. Three local presentational components remain embedded in the 610-line page; no any or direct chart library import found.",
+      "fix": "Do not delete tested helper blindly. If decomposing, keep helper semantics/tests and migrate test ownership explicitly; keep DashboardSourceBrief and existing category components rather than adding a replacement summary.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["GlancePage.tsx:71-77,89-146", "web\\src\\features\\dashboard\\pages\\GlancePage.test.tsx:116,266-285"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Correct source/live/historical trust and command affordance using existing contracts.", "Resolve SI-wire exception through designated integration owner, not page-local unit guessing.", "Subdue decorative borders/icons and verify allocated-width/keyboard/theme states."],
+    "reason": "Source trust affects interpretation of live status and remote control eligibility; inherited OperationalBrief migration and full feature preservation take priority over cosmetics."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Vehicle state canonical SI endpoint reconciliation",
+      "existingOwnerFile": "internal\\service\\vehicle_service.go",
+      "propsVariantsStates": "charger_power canonical W plus coordinated VehicleStateReadings/display formatter; explicitly documented charge_rate dimensions and time_to_full_charge duration. Keep absent/zero distinct, state freshness/verified-fields envelope and current user-visible value parity.",
+      "usedBy": ["web\\src\\features\\dashboard\\pages\\GlancePage.tsx", "other vehicle-state consumers are outside this one-page audit"],
+      "dependsOn": ["Phase-48 SI methodology and integration ownership", "existing VehicleState API/types and useUnits contract"],
+      "owner": "integration",
+      "evidence": ["internal\\service\\vehicle_service.go:324-340", "web\\src\\api\\types.ts:618-648", "GlancePage.tsx:396-408"]
+    },
+    {
+      "name": "FreshnessIndicator motion-policy verification",
+      "existingOwnerFile": "web\\src\\components\\data-display\\FreshnessIndicator.tsx",
+      "propsVariantsStates": "Existing timestamp, staleThreshold/offlineThreshold, showLabel, sm/md; keep fresh/stale/offline/unknown accessible names. Verify optional fresh pulse respects reduced-motion and low bandwidth without a new animation API.",
+      "usedBy": ["GlancePage.tsx:307", "GlancePage.tsx:360"],
+      "dependsOn": ["Existing global reduced-motion CSS", "Existing useMotionPreference policy"],
+      "owner": "shared",
+      "evidence": ["FreshnessIndicator.tsx:11-23,145-167"],
+      "status": "Conditional: behavior unverified, not an instruction to patch shared code during page adoption."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": "No competing summary introduced by this page: DashboardSourceBrief delegates to the established OperationalBrief/useOperationalMetrics owners.",
+    "doNotCreate": ["Another KPI summary or QuickStats implementation", "Page-local vehicle/date picker", "New trust registry, units engine, command fetch flow or focus/overlay system"],
+    "scopeLimit": "Dashboard and QuickStats pages were not audited. Shared adapter read only for Glance composition."
+  },
+  "preservation": {
+    "sourceHash": "66B7A1C72597357DF6C05D0FB0D00F8719D8D2BE05A3C554C9011905941FF2F1",
+    "hashAlgorithm": "SHA-256",
+    "hashTarget": "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+    "currentLineCount": 610,
+    "sectionCount": 4,
+    "sectionNames": ["Vehicle overview / operating summary", "Live status: identity+battery; charging+climate; security+location+software", "Controls", "Open full app footer"],
+    "sourceStructureCounts": {"Section": 2, "GlassPanel": 5, "DashboardSourceBrief": 1, "ChartContainer": 0, "LinearGauge": 1, "QuickAction": 3, "FreshnessIndicator": 2},
+    "countExplanation": "5 literal GlassPanel mounts include alternative no-vehicle CTA plus 3 live cards and controls. Shared OperationalBrief contributes its own GlassPanel; counts are source occurrences, not simultaneous rendered count.",
+    "actions": [
+      {"name": "Refresh state", "evidence": "GlancePage.tsx:223-233", "preserve": "Selected vehicle only; refetch existing state query."},
+      {"name": "Manage vehicles", "evidence": "GlancePage.tsx:274-289", "preserve": "No-vehicle guidance links /vehicles."},
+      {"name": "Review details", "evidence": "OperationalBrief.tsx:151-160,231-266", "preserve": "Prior shared drawer, source narrative, all six raw/validated metrics, loading suppression and descriptions."},
+      {"name": "Retry failed state/location", "evidence": "GlancePage.tsx:237,500-501", "preserve": "Independent source recovery, retained-neighbor content."},
+      {"name": "Lock/unlock", "evidence": "GlancePage.tsx:542-560", "preserve": "Current toggle command, per-command spinner, pending guard."},
+      {"name": "Climate on/off", "evidence": "GlancePage.tsx:562-580", "preserve": "Current toggle command and pending guard."},
+      {"name": "Horn", "evidence": "GlancePage.tsx:582-591", "preserve": "honk_horn through existing live-only mutation."},
+      {"name": "Open full app", "evidence": "GlancePage.tsx:599-605", "preserve": "Native link destination /."}
+    ],
+    "dataBehavior": [
+      "Six operating-summary metrics: battery percent, rated-range metres, interior/exterior Celsius, odometer metres (lifetime, not selected-window travel), speed m/s. Preserve description that missing speed is not measured stop.",
+      "Prior DashboardSourceBrief/OperationalBrief migration, glance-operational-brief testId, raw StatMetric values, source scope, provenance, caution about poll-versus-observation time and review drawer must survive.",
+      "Battery raw nullable percent, actual 0-100 scale, threshold >60/>25, rated range badge, charging badge and state text; never replace unknown with zero.",
+      "Charging/climate/security null booleans remain Unknown. Active charging shows power/rate/time; climate has both temperatures; security has lock/sentry; software remains visible with dash fallback.",
+      "Location priority Home > Work > Saved > destination_name > dash; independent retry/trust. Destination and positive ETA conditional rows must survive even if redesign makes unavailable details explicit.",
+      "Current charger_power wire is kW from inspected backend exception, not W; do not change raw values/cache or formatter until integration reconciles contract. Charge-rate and duration backend unit certainty remain unresolved in this audit.",
+      "Preserve selected-vehicle URL/store/default behavior, query keys, cancellation, retained data, polling policy, as_of cache separation, existing command result/toast/invalidation/auth-recovery/live-mode protection.",
+      "No table/export/chart-legend capability is present in inspected page; do not invent one or delete the existing shared summary drawer."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only Phase 0 source audit. Only assigned JSON and heartbeat written.",
+    "runtime": "NOTRUN: no browser route, API request, production mutation, screenshot, keyboard, contrast or viewport proof.",
+    "validation": "No Git, nested agents, source edits, TypeScript, full-repo lint/build or tests run. Audit skill script inspected but not executed because its unconditional project tsc conflicts with bounded Phase 0 contract.",
+    "focusedPatternChecks": {"command": "PowerShell Select-String on only GlancePage.tsx: style=; prohibited raw HTML word-boundary tags; direct library-name presence; text-white|border-white|neon|glow|shadow|text-cyan", "exitCode": 0, "output": ["style= : 0 matching lines", "<(button|input|textarea|select|table)\\b : 2 matching lines", "recharts|react-leaflet|framer-motion : 0 matching lines", "text-white|border-white|neon|glow|shadow|text-cyan : 9 matching lines"], "interpretation": "Broad PowerShell raw-tag match is case-insensitive and includes comments; it is not 2 rendered raw-control violations. Case-sensitive rg source read found no prohibited lowercase raw control JSX. Neon helper/comment is not mounted decoration. No claim of a clean whole-page/full-repo audit."},
+    "failedProbe": "One initial PowerShell evidence command failed parsing quoted regex (exit 1); corrected command executed and heartbeat updated. No source effects.",
+    "testEvidence": "Existing GlancePage.test.tsx helper references were searched, not executed; no borrowed test acceptance.",
+    "backendLimits": "Routes and narrow state handler/service assembly inspected. Location latest implementation, full signal normalization and command handler execution not inspected. Server units for duration/ETA and complete field trust require integration evidence.",
+    "concurrency": "Root-page hash and line count apply to this inspected snapshot; shared owners can evolve independently."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-060.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\dashboard\\pages\\GlancePage.tsx",
+    "web\\src\\features\\dashboard\\pages\\GlancePage.test.tsx",
+    "web\\src\\features\\dashboard\\components\\operationalbrief-all\\DashboardSourceBrief.tsx",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useVehicleCommand.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useRefreshPolicy.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\Section.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\LinearGauge.tsx",
+    "web\\src\\components\\data-display\\FreshnessIndicator.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\vehicle\\handler.go",
+    "internal\\service\\vehicle_service.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-092.json", ".agent-status\\audit-page-092.txt"]
+}

@@ -434,7 +434,7 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
       <div
         className={cn(
           'flex w-full flex-wrap items-center gap-1.5 rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] px-2 py-1.5 text-sm transition-colors',
-          'focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-1 focus-within:ring-offset-[var(--bg)]',
+          'focus-within:ring-2 focus-within:ring-[var(--focus-ring)] focus-within:ring-offset-1 focus-within:ring-offset-[var(--bg)]',
           disabled && 'cursor-not-allowed opacity-50',
         )}
         onClick={() => {
@@ -464,7 +464,7 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
               aria-label={t('combobox.removeChip', 'Remove {{label}}', {
                 label: (getChipLabel ?? getOptionLabel)(opt),
               })}
-              className="touch-target-overlay rounded p-0.5 transition-colors hover:bg-[var(--surface-overlay)] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="touch-target-overlay rounded p-0.5 transition-colors hover:bg-[var(--surface-overlay)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)]"
             >
               <X className="h-3 w-3" aria-hidden="true" />
             </button>
@@ -528,7 +528,7 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
                   ? t('combobox.closeListAria', 'Hide options')
                   : t('combobox.openListAria', 'Show options')
               }
-              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded p-0.5 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronDown
                 className={cn(

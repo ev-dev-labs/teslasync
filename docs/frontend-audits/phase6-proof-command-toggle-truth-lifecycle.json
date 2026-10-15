@@ -1,0 +1,443 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-command-toggle-truth-lifecycle",
+  "status": "BLOCKED_EXTERNAL",
+  "completionMeaning": "Evidence report delivered; affected runtime proof remains NOTRUN. No source, native, full-suite or application approval.",
+  "boundedResumption": {
+    "firstActualClockUtc": "2026-10-14T15:23:44.8227464Z",
+    "returnBeforeUtc": "2026-10-14T15:43:44.8227464Z",
+    "historicalClockPolicy": "This is a separately requested bounded continuation after the preceding worker's released receipt at 15:23:09.422Z. Historical clocks, evidence and spent budgets below are not renewed.",
+    "alreadyDoneCheck": "Exact queue row remains pending with attempts 0; retained latestContinuation has all 35 required affected cases NOTRUN.",
+    "status": "BLOCKED_EXTERNAL",
+    "catalogPreflight": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "startUtc": "2026-10-14T15:23:59.9624735Z",
+      "endUtc": "2026-10-14T15:30:54.6731368Z",
+      "exit": 1,
+      "invalidGeneratedCount": 60,
+      "rawOutputAuthority": "CATALOG_PREFLIGHT_START/END and BOUNDED_RESUMPTION_AFTER_RECEIPT in web\\logs\\phase6-proof-command-toggle-truth-lifecycle.log preserve the actual output and all 60 exact filenames.",
+      "classification": "EXTERNAL_UNCHARGED_CATALOG_PREFLIGHT",
+      "normalClosureEstablished": false
+    },
+    "authoredAccounting": {
+      "utc": "2026-10-14T15:26:23.701Z",
+      "method": "Read-only TypeScript AST expansion of actual four fixtures using unchanged report.execution.testNamePattern.",
+      "authoredExpandedTotal": 63,
+      "plannedAffectedExpandedCases": 35,
+      "plannedUnselected": 28,
+      "files": [
+        {"file": "ToggleCommandTile.test.tsx", "authoredExpanded": 20, "plannedSelected": 17},
+        {"file": "CommandWorkspace.test.tsx", "authoredExpanded": 3, "plannedSelected": 3},
+        {"file": "CommandDialogs.test.tsx", "authoredExpanded": 11, "plannedSelected": 4},
+        {"file": "VehicleCommandCenter.test.tsx", "authoredExpanded": 29, "plannedSelected": 11}
+      ],
+      "parameters": {
+        "does not coerce %s into OFF": ["null", "undefined", "0", "'false'"],
+        "qualifies retained %s as last known": ["true", "false"],
+        "keeps pending %s distinct": ["'fetching'", "'paused'"],
+        "does not invent guest OFF or ON after %s failure": ["'soft'", "'hard'", "'empty'"]
+      },
+      "exactNamesAuthority": "Retained CONTINUATION_AFTER_AUTHORED in the log; current direct fixture reads and AST inventory preserve those names and expansion.",
+      "historicalGenuinePassesRepeated": false
+    },
+    "beforePinsUtc": "2026-10-14T15:26:23.701Z",
+    "additionalPinsUtc": "2026-10-14T15:28:55.846Z",
+    "beforePins": [
+      {"path": "src\\features\\system\\components\\ToggleCommandTile.test.tsx", "sha256": "6ee054b1780cbc1966c1757ac523fadf406a5482039d47536a7829616ceb6160"},
+      {"path": "src\\features\\system\\components\\command-center\\CommandWorkspace.test.tsx", "sha256": "139e4440d68c5b2acd1bd0deefa126e1251c67c5ef99196037775bd993a37cd4"},
+      {"path": "src\\features\\system\\components\\command-center\\CommandDialogs.test.tsx", "sha256": "b584375861fa57a161e3e4fa54e807a8199e94bae5cad9b8d378c77a34bef5cd"},
+      {"path": "src\\features\\system\\components\\VehicleCommandCenter.test.tsx", "sha256": "e8016ca810cd9dda13b4666feefca38008bd64daf0cebb536698dd7c926d12bb"},
+      {"path": "src\\features\\system\\components\\ToggleCommandTile.tsx", "sha256": "ace63df1fa100045b340d183df2582d064694daa8deb68e9be86fa7bf12b7ffb"},
+      {"path": "src\\features\\system\\components\\command-center\\CommandWorkspace.tsx", "sha256": "dafbfe5487d1ae4f3eecea187bea1bc741ff4956f2c1cb6effe5af19d01cbde4"},
+      {"path": "src\\features\\system\\components\\command-center\\CommandDialogs.tsx", "sha256": "ec618234459a02d72c0cbb932f595b8bc7af8171ab401253bd760e0cf2061077"},
+      {"path": "src\\features\\system\\components\\VehicleCommandCenter.tsx", "sha256": "08bc7a4c7a949ea6bda498a34302198699bec2bc7295309d07b71a42925a1be1"},
+      {"path": "src\\features\\system\\commands.ts", "sha256": "d71fca1c8d68aacca8910689c7206e7ab9c135c420f8706a1777aa8e388c2580"},
+      {"path": "src\\features\\system\\components\\CommandInputDialog.tsx", "sha256": "68128e3da168ae069f855723f8eda9c0aedfdb2cbaaee9242c1b41f1d9955139"},
+      {"path": "src\\api\\hooks\\useCommands.ts", "sha256": "ba78adf8ad75e41252d7639f56aeed9db3c18c5b9c69162240b85a84ec4c54e1"},
+      {"path": "src\\api\\hooks\\useVehicles.ts", "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b"},
+      {"path": "src\\api\\hooks\\useVehicleCommand.ts", "sha256": "22de3c31c59f4c2fc5af6f3e0415123b6818a6e09d327d798d52022aba736df7"},
+      {"path": "src\\api\\hooks\\useTelemetry.ts", "sha256": "e68f858361b3613f22f8fa3eaf7d4da5a28a8fb7cb11ff17d44ff087d596f515"},
+      {"path": "src\\i18n\\en.json", "sha256": "a70130fb345938a41ad87cb910c5012c372f1db720fb044e0633c61b62f7c184"},
+      {"path": "vite.config.ts", "sha256": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58"},
+      {"path": "package.json", "sha256": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a"},
+      {"path": "tsconfig.json", "sha256": "61ef8e4417de2e1f2d10a7f6c8bcac3b1d9acbd66d50685bb0e0f411452aa657"},
+      {"path": "scripts\\split-i18n-catalog.mjs", "sha256": "cda6ccfcdc442bd7524343921c18efd43ff74dc3ffd6cc61bc34a37631850598"},
+      {"path": "scripts\\audit-i18n-namespaces.mjs", "sha256": "2869fe9085c8629a0f042634f990088c2b64fb9a4b40e53bbf75bf5ff200bc96"},
+      {"path": "src\\test-setup.ts", "sha256": "fb61779479e36b97298928c7bcc0620e8ff2a509a0ea50350f9935d9f260517a"},
+      {"path": "src\\i18n\\en\\runtime-manifest.json", "sha256": "a39b86ab5ed2e6e02390c0e036fc3fba25253f82ee4c288c8c733f3855b0bef4"},
+      {"path": "src\\i18n\\en\\usage-manifest.json", "sha256": "d6b21297bea18907cd1783cf1bbb68a4b34d3b1e6e6471d84605f658750a2ee3"}
+    ],
+    "pinInvocationCorrection": "Initial read-only probe checked src\\i18n\\runtime-manifest.json and usage-manifest.json (absent) and unused src\\test\\setup.ts; corrected to actual en manifests and configured src\\test-setup.ts before runtime. No file was created or changed.",
+    "node": "v26.8.1",
+    "attemptsUsedBefore": 0,
+    "attemptsUsedAfter": 0,
+    "runtime": {
+      "commandLaunched": false,
+      "reason": "Exact assignment authorizes the retained affected selector only after real new normal catalog closure. Current normal preflight exited 1; no authorized retry precondition was established.",
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "assertionFailed": 0,
+      "runtimeSkipped": 0,
+      "proofStatus": "NOTRUN",
+      "all35AffectedCases": "NOTRUN",
+      "guardBypass": false,
+      "zeroCollectionCalledPass": false
+    },
+    "afterPins": {
+      "utc": "2026-10-14T15:31:11.020Z",
+      "protectedPaths": 23,
+      "unchangedPaths": 23,
+      "changedPaths": [],
+      "exactHashesAuthority": "BOUNDED_RESUMPTION_AFTER_RECEIPT in the owned log",
+      "allFourFixturesAndDirectProductionFilesUnchanged": true,
+      "immutableCheckoutClaimed": false,
+      "limitation": "Only these protected paths were cross-checked; no whole-checkout coherence or native acceptance."
+    },
+    "preservationPolicy": "Historical static audit, line/section counts and route matches are retained as historical evidence, not rerun or promoted to new runtime proof. No production or fixture changes by this worker.",
+    "notRun": [
+      "Retained exact Vitest selector: catalog preflight unmet; 35 selected and 28 unselected authored cases remain NOTRUN",
+      "Strict namespace startup guard: split catalog preflight failed first",
+      "Full TypeScript, lint, build, full suites and global audits: outside exclusive proof scope",
+      "Native/browser, API/network, real vehicle actions, server startup, Docker, backend and catalog repair"
+    ],
+    "remainingBlocker": "Existing serialized catalog integration owner must regenerate invalid projections from current canonical/source authority and establish normal --check closure. Resume this same pending item and unchanged affected selector afterward; do not invent retry authority, edit fixtures or repeat historical passing cases.",
+    "writtenFiles": [
+      "docs\\frontend-audits\\phase6-proof-command-toggle-truth-lifecycle.json",
+      "web\\logs\\phase6-proof-command-toggle-truth-lifecycle.log"
+    ],
+    "noOngoingOwnedCommandsAtRelease": true,
+    "gitInvoked": false,
+    "sourceFixtureCanonicalConfigEdits": false
+  },
+  "latestContinuation": {
+    "firstLifecycleCensusUtc": "2026-10-14T15:07:59.2217705Z",
+    "returnBeforeUtc": "2026-10-14T15:27:59.2217705Z",
+    "status": "BLOCKED_EXTERNAL",
+    "historicalReceiptPolicy": "All pre-existing fields below remain historical receipts from the retained delivery. This object and appended CONTINUATION log records describe the current invocation; no historical pass or budget is reset.",
+    "alreadyDoneCheck": "Existing report and exact pending queue row both require genuine unexecuted covering proof. No completion or runtime pass found.",
+    "catalogPreflight": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "startUtc": "2026-10-14T15:08:20.5183706Z",
+      "endUtc": "2026-10-14T15:13:13.3950507Z",
+      "exit": 0,
+      "rawOutput": "[i18n-split] OK \u2014 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)",
+      "meaning": "A genuine normal catalog check passed before retry authorization; not a durable closure guarantee on this shared checkout."
+    },
+    "runtimeRetry": {
+      "command": "node --import=data:text/javascript,globalThis.__dirname=process.cwd() .\\node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\ToggleCommandTile.test.tsx src\\features\\system\\components\\command-center\\CommandWorkspace.test.tsx src\\features\\system\\components\\command-center\\CommandDialogs.test.tsx src\\features\\system\\components\\VehicleCommandCenter.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --configLoader=runner --no-cache --testNamePattern \"ToggleCommandTile (?!toggles the favorite|colours a success|falls back to the default palette)|CommandWorkspace \u2014 independent outcome source|CommandDialogs \u2014 scoped PIN intent|VehicleCommandCenter \u2014 physical truth and request lifecycle|disables command execution in historical mode|shows pending progress and disables command activation until settled\"",
+      "startUtc": "2026-10-14T15:13:48.1421998Z",
+      "endUtc": "2026-10-14T15:21:45.3967004Z",
+      "exit": 1,
+      "node": "v26.8.1",
+      "classification": "EXTERNAL_UNCHARGED_CATALOG_STARTUP",
+      "stage": "Unchanged checked-in Vite buildStart split-catalog guard, before discovery",
+      "error": "scripts/split-i18n-catalog.mjs --check exited 1 and named 60 invalid generated files, including shell.json, runtime-manifest.json and usage-manifest.json.",
+      "invalidFileNamesAuthority": "CONTINUATION_AFTER_SNAPSHOT.invalidGeneratedFiles and raw startup output in the owned log retain all 60 exact names.",
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "assertionFailed": 0,
+      "runtimeSkipped": 0,
+      "proofStatus": "NOTRUN",
+      "countBasis": "No Vitest RUN banner, discovered case records, assertion results or test summary. Authored and planned counts are not runtime counts.",
+      "namespaceGuard": "NOTRUN: split guard threw first",
+      "attemptsUsedBefore": 0,
+      "attemptsUsedAfter": 0,
+      "guardBypass": false,
+      "furtherRetry": "Not run: no subsequent real catalog closure observed; do not loop or bypass the normal guard."
+    },
+    "authoredAccounting": {
+      "beforeUtc": "2026-10-14T15:13:37.822Z",
+      "afterUtc": "2026-10-14T15:22:23.712Z",
+      "beforeExpandedTotal": 63,
+      "afterExpandedTotal": 63,
+      "plannedAffectedExpandedCases": 35,
+      "plannedUnselected": 28,
+      "files": [
+        {"file": "ToggleCommandTile.test.tsx", "authoredExpanded": 20, "plannedSelected": 17},
+        {"file": "CommandWorkspace.test.tsx", "authoredExpanded": 3, "plannedSelected": 3},
+        {"file": "CommandDialogs.test.tsx", "authoredExpanded": 11, "plannedSelected": 4},
+        {"file": "VehicleCommandCenter.test.tsx", "authoredExpanded": 29, "plannedSelected": 11}
+      ],
+      "selectedNamesAndExpansionUnchanged": true,
+      "bodyIdentityClaimed": false,
+      "evidence": "TypeScript AST inventories with exact nested describe names and expanded parameters in CONTINUATION_BEFORE_SNAPSHOT and CONTINUATION_AFTER_AUTHORED.",
+      "historicalGenuinePassesRepeated": false,
+      "all35AffectedCases": "NOTRUN"
+    },
+    "readonlyPins": {
+      "beforeUtc": "2026-10-14T15:13:37.822Z",
+      "afterUtc": "2026-10-14T15:22:09.353Z",
+      "protectedPaths": 22,
+      "unchangedPaths": 20,
+      "changedPaths": [
+        "web\\src\\features\\system\\components\\command-center\\CommandDialogs.test.tsx",
+        "web\\src\\features\\system\\components\\VehicleCommandCenter.test.tsx"
+      ],
+      "allFourDirectProductionFilesUnchanged": true,
+      "configHooksSetupCatalogScriptsUnchanged": true,
+      "canonicalAndTwoManifestPinsUnchanged": true,
+      "concurrentAttribution": "Observed fixture drift only; this worker did not edit it and does not identify its author. Wider source/catalog coherence is outside these 22 pins.",
+      "immutableCheckoutClaimed": false,
+      "exactHashes": "CONTINUATION_BEFORE_SNAPSHOT and CONTINUATION_AFTER_SNAPSHOT in the owned log"
+    },
+    "scopedStaticPreservation": {
+      "sourceEditsByWorker": 0,
+      "directProductionFiles": 4,
+      "productionLines": 783,
+      "historicalOriginalLines": 610,
+      "minimum70Percent": 427,
+      "openingGlassPanelChartContainerTags": 2,
+      "historicalOpeningTags": 2,
+      "counts": {"staticInlineStyles": 0, "rawHTML": 0, "directVendorImports": 0, "legacyAPIImports": 0},
+      "exit": 0,
+      "limitation": "Read-only regex scan and static opening-tag counts, not rendered sections, behavior, visual or accessibility acceptance. Snapshot all-symbol reference counts include imports/closing tags and are not the opening-tag count."
+    },
+    "ownEvidenceInvocationError": {
+      "exit": 1,
+      "error": "EBUSY appending snapshot while catalog stdout held the owned log",
+      "correction": "Waited for catalog command release, then reran only the read-only snapshot successfully with exit 0.",
+      "chargedAsRuntimeAttempt": false
+    },
+    "remainingBlocker": "Serialized catalog integration owner must establish normal current-source catalog closure after writers settle. Then resume the same exact affected selector with fresh pins; do not edit source/fixtures/catalogs or repeat unrelated passing tests.",
+    "notRun": [
+      "All 35 affected runtime cases; all 28 planned-unselected authored cases",
+      "Full TypeScript, lint, build and test suites: explicitly outside this item",
+      "Browser/native/API/network/real command actions, dev server startup, Docker and backend tests",
+      "Fresh hook-route audit: no hook or route changes by this worker; historical route receipts are retained, not revalidated"
+    ],
+    "writtenFiles": [
+      "docs\\frontend-audits\\phase6-proof-command-toggle-truth-lifecycle.json",
+      "web\\logs\\phase6-proof-command-toggle-truth-lifecycle.log"
+    ],
+    "noSourceFixtureCanonicalConfigQueueOrHeartbeatEdits": true,
+    "gitInvoked": false,
+    "noOngoingOwnedCommandsAtRelease": true
+  },
+  "dependency": {
+    "item": "phase6-fix-command-toggle-truth-lifecycle",
+    "sourceCommitFromQueue": "5000695f1b2ccb6ddb842a1c2a73065da8a9acfc",
+    "gitInvoked": false,
+    "immutableCheckoutClaimed": false
+  },
+  "deadline": {
+    "userClockUtc": "2026-10-14T07:40:55.328Z",
+    "returnBeforeUtc": "2026-10-14T08:00:55.328Z",
+    "reset": false,
+    "releaseUtc": "2026-10-14T07:51:24.5331749Z"
+  },
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-proof-command-toggle-truth-lifecycle.json",
+    "web\\logs\\phase6-proof-command-toggle-truth-lifecycle.log"
+  ],
+  "authority": {
+    "queue": "migration-queue.md exact phase6-proof-command-toggle-truth-lifecycle row, read-only",
+    "workerContract": "docs\\frontend-worker-conventions.md",
+    "explicitScopeOverrides": "Proof-specific test authorization overrides generic no-change-worker restriction. Only two named artifacts may be written, so no heartbeat file, compiler/build/global gate, source/fixture/catalog/config changes or Git.",
+    "normalConfig": "web\\vite.config.ts and all checked-in startup guards retained",
+    "node": "v26.8.1"
+  },
+  "execution": {
+    "pool": "forks",
+    "maxWorkers": 2,
+    "runner": "Existing node_modules\\vitest\\vitest.mjs, not installed or replaced",
+    "files": [
+      "src\\features\\system\\components\\ToggleCommandTile.test.tsx",
+      "src\\features\\system\\components\\command-center\\CommandWorkspace.test.tsx",
+      "src\\features\\system\\components\\command-center\\CommandDialogs.test.tsx",
+      "src\\features\\system\\components\\VehicleCommandCenter.test.tsx"
+    ],
+    "testNamePattern": "ToggleCommandTile (?!toggles the favorite|colours a success|falls back to the default palette)|CommandWorkspace — independent outcome source|CommandDialogs — scoped PIN intent|VehicleCommandCenter — physical truth and request lifecycle|disables command execution in historical mode|shows pending progress and disables command activation until settled",
+    "options": [
+      "--pool=forks",
+      "--maxWorkers=2",
+      "--reporter=verbose",
+      "--configLoader=runner",
+      "--no-cache"
+    ],
+    "writeFreeConfigCompatibility": "The standard runner config loader avoids a bundled-config file; cache disabled. After its initial __dirname failure, a standard Node --import=data:text/javascript,globalThis.__dirname=process.cwd() preload supplies the same cwd-based dirname normally injected by bundling. No guards are disabled or changed.",
+    "environment": {
+      "VITE_GIT_SHA": "5000695f1b2ccb6ddb842a1c2a73065da8a9acfc",
+      "identityMeaning": "Config build-metadata input prevents incidental Git discovery; not a claim that concurrent source is pinned to this commit.",
+      "NO_COLOR": "1",
+      "FORCE_COLOR": "0"
+    },
+    "attempts": [
+      {
+        "startUtc": "2026-10-14T07:43:43.3959969Z",
+        "endUtc": "2026-10-14T07:43:44.7551933Z",
+        "exit": 1,
+        "classification": "OWN_INVOCATION_ERROR_CORRECTED",
+        "error": "ReferenceError: __dirname is not defined",
+        "stage": "Normal config loading before startup/discovery",
+        "preciseCorrection": "Add the Node dirname preload; keep the same checked-in config, guards, selected cases, forks and maxWorkers=2.",
+        "discovered": 0,
+        "executed": 0,
+        "passed": 0,
+        "assertionFailed": 0
+      },
+      {
+        "startUtc": "2026-10-14T07:44:18.0478265Z",
+        "endUtc": "2026-10-14T07:48:04.5724189Z",
+        "exit": 1,
+        "classification": "EXTERNAL_UNCHARGED_CATALOG_STARTUP",
+        "error": "scripts/split-i18n-catalog.mjs --check exited 1: generated locale files are invalid",
+        "stage": "Checked-in Vite buildStart catalog guard, before Vitest discovery",
+        "discovered": 0,
+        "executed": 0,
+        "passed": 0,
+        "assertionFailed": 0,
+        "runtimeSkipped": 0,
+        "proofStatus": "NOTRUN"
+      }
+    ],
+    "countBasis": "No Vitest RUN banner, discovered test records or test summary was emitted. Guard startup trace and exit are raw in the exact log. Authored counts below are AST inventory, never passes or runtime skips.",
+    "externalFailureChargedToThisFeature": false,
+    "ownAssertionFailures": [],
+    "pendingOwnedAssertionFix": null
+  },
+  "catalogBlocker": {
+    "guard": "web\\scripts\\split-i18n-catalog.mjs --check",
+    "guardExit": 1,
+    "invalidGeneratedFiles": [
+      "locale-detail-errorBoundary.json",
+      "locale-system.json",
+      "locale-notifications.json",
+      "locale-telemetry.json",
+      "locale-unreferenced.json",
+      "locale-battery.json",
+      "locale-driving.json",
+      "locale-analytics.json",
+      "locale-sharing.json",
+      "locale-vehicles.json",
+      "locale-automations.json",
+      "locale-charging.json",
+      "locale-dashboard.json",
+      "locale-settings.json",
+      "locale-admin.json",
+      "locale-vehicle-systems.json",
+      "locale-diagnostics.json",
+      "locale-maps.json",
+      "locale-trips.json",
+      "locale-exports.json",
+      "locale-power-user.json",
+      "locale-driving-route-efficiency.json",
+      "locale-driving-trip-planner.json",
+      "runtime-manifest.json",
+      "usage-manifest.json"
+    ],
+    "owner": "Existing serialized canonical/generated-catalog integration owner, not this feature-proof worker",
+    "preciseNextStep": "After active source and canonical integration settle, that owner regenerates the split catalogs and manifests from current en.json/source usage and verifies normal --check. Then execute this exact affected selector with fresh before/after hashes. No generated-file repair, override or guard bypass performed here.",
+    "namespaceGuard": "NOTRUN: first split guard threw before subsequent strict namespace guard"
+  },
+  "authoredAccounting": {
+    "historicalReportedAggregate": 50,
+    "beforeUtc": "2026-10-14T07:43:43.209Z",
+    "afterUtc": "2026-10-14T07:48:58.406Z",
+    "beforeExpandedTotal": 51,
+    "afterExpandedTotal": 63,
+    "reasonHistorical50IsNotAnImmutableSuite": "Historical CommandWorkspace estimate counted two declarations but missed that it.each expands to two cases plus a separate third case. Concurrent numeric caller then added five parent cases and seven dialog cases.",
+    "files": [
+      {"file": "ToggleCommandTile.test.tsx", "beforeExpanded": 20, "afterExpanded": 20, "plannedSelected": 17},
+      {"file": "CommandWorkspace.test.tsx", "beforeExpanded": 3, "afterExpanded": 3, "plannedSelected": 3},
+      {"file": "CommandDialogs.test.tsx", "beforeExpanded": 4, "afterExpanded": 11, "plannedSelectedOriginalPinCases": 4},
+      {"file": "VehicleCommandCenter.test.tsx", "beforeExpanded": 24, "afterExpanded": 29, "plannedSelectedOriginalLifecycleCases": 11}
+    ],
+    "plannedAffectedExpandedCases": 35,
+    "plannedUnselectedBefore": 16,
+    "plannedUnselectedAfter": 28,
+    "allRuntimeDiscovered": 0,
+    "allRuntimeExecuted": 0,
+    "allRuntimePassed": 0,
+    "allRuntimeAssertionFailed": 0,
+    "allRuntimeSkipped": 0,
+    "allCurrentAuthoredCases": "NOTRUN, including new concurrent parent/dialog cases. Planned unselected is not runtime skipped.",
+    "exactNamesAndParameters": "BEFORE_SNAPSHOT and AFTER_SNAPSHOT records in exact log retain every declaration name and expanded parameter inventory. No original log or fixture edited.",
+    "newConcurrentCasesNotSelectedOrExecuted": [
+      "passes actual initial paused query state to the Hero without inventing empty telemetry",
+      "keeps retained Hero readings with cached provenance and targeted retry after state refresh failure",
+      "keeps paused retained Hero state cached and distinguishes a resolved unavailable response",
+      "uses the actual selected-vehicle charging capability through the mounted input dialog and unchanged POST body",
+      "keeps unknown amp capability blocked without hiding other commands or defaulting to 48 amps",
+      "blocks a %s maximum, including stale child submit handlers [missing, paused, failed, stale]",
+      "rechecks a changed maximum while retaining the draft and never mutates the catalogue",
+      "rejects capability that ages after render and before submit",
+      "preserves an authoritative zero maximum and the original charging_amps wire parameter"
+    ],
+    "historicalPassingTestsRepeated": false
+  },
+  "concurrentDrift": {
+    "numericCallerQueueItem": "phase6-fix-command-numeric-input-validation",
+    "numericCallerActualActorFromQueue": "c1a855a3-95a9-42ae-949d-8ec9062096ed",
+    "attributionLimit": "Observed hash drift matches the other owner's granted paths; no Git operation, author attribution or immutable snapshot claim.",
+    "hashes": [
+      {"path": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx", "before": "ace63df1fa100045b340d183df2582d064694daa8deb68e9be86fa7bf12b7ffb", "after": "ace63df1fa100045b340d183df2582d064694daa8deb68e9be86fa7bf12b7ffb", "changed": false},
+      {"path": "web\\src\\features\\system\\components\\ToggleCommandTile.test.tsx", "before": "6ee054b1780cbc1966c1757ac523fadf406a5482039d47536a7829616ceb6160", "after": "6ee054b1780cbc1966c1757ac523fadf406a5482039d47536a7829616ceb6160", "changed": false},
+      {"path": "web\\src\\features\\system\\components\\VehicleCommandCenter.tsx", "before": "c6d2e6b78dcf993df2663879465808eda14de56f0734d2b2cce49269474800b5", "after": "08bc7a4c7a949ea6bda498a34302198699bec2bc7295309d07b71a42925a1be1", "changed": true},
+      {"path": "web\\src\\features\\system\\components\\VehicleCommandCenter.test.tsx", "before": "7586ac88c65e3dd689183d7649fa2c24c522e84038784435caaa3693f113f692", "after": "972ea0d7e2885f9cabac7e1770ba45ec0fa91926085fc3b6b98fb0a3170a3cdf", "changed": true},
+      {"path": "web\\src\\features\\system\\components\\command-center\\CommandWorkspace.tsx", "before": "dafbfe5487d1ae4f3eecea187bea1bc741ff4956f2c1cb6effe5af19d01cbde4", "after": "dafbfe5487d1ae4f3eecea187bea1bc741ff4956f2c1cb6effe5af19d01cbde4", "changed": false},
+      {"path": "web\\src\\features\\system\\components\\command-center\\CommandWorkspace.test.tsx", "before": "139e4440d68c5b2acd1bd0deefa126e1251c67c5ef99196037775bd993a37cd4", "after": "139e4440d68c5b2acd1bd0deefa126e1251c67c5ef99196037775bd993a37cd4", "changed": false},
+      {"path": "web\\src\\features\\system\\components\\command-center\\CommandDialogs.tsx", "before": "04b1f0b7efb8156f61a83630bea2a3a0e588c1b96170dce295f65cf4a417f450", "after": "ec618234459a02d72c0cbb932f595b8bc7af8171ab401253bd760e0cf2061077", "changed": true},
+      {"path": "web\\src\\features\\system\\components\\command-center\\CommandDialogs.test.tsx", "before": "602022f31476c5a8dddf7f6f9a4222a2f7b80425aad783ec77713aa29a89902f", "after": "4ed99d9a70f95e4e7596c6c626bfaf46e54c412f54dd931580736d97fca0799d", "changed": true},
+      {"path": "web\\src\\i18n\\en.json", "before": "4f3772fdb879f420e513ca411442d48d85b7ca2501f16f6113736e6dd89b8202", "after": "20b99693ea4207275a05d693ddfb1d4e7e6ea21f0dfa8891fe2d9749b5a9eb61", "changed": true}
+    ],
+    "otherObservedDrift": [
+      "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+      "web\\src\\features\\system\\commands.ts"
+    ],
+    "allProtectedDependencyHashes": "Twenty before/after records, including hooks, runner config, package, tsconfig, test setup and catalog check scripts, retained raw in log",
+    "testedConcurrentVersionClaimed": false
+  },
+  "preservation": {
+    "historicalOriginalProductionLines": 610,
+    "beforeProductionLines": 716,
+    "afterProductionLines": 783,
+    "minimum70Percent": 427,
+    "historicalGlassPanelChartContainerReferences": 2,
+    "beforeGlassPanelChartContainerReferences": 2,
+    "afterGlassPanelChartContainerReferences": 2,
+    "limitation": "Static reference counts across four directly affected production files, not rendered-section proof. Increase is concurrent source work, not this worker's implementation.",
+    "requiredBehavior": [
+      "Unknown/null/nonboolean is not OFF",
+      "Retained booleans say last known; fresh verified field currentness is required for measured aria-pressed",
+      "Request intent and accepted result never optimistically flip physical truth",
+      "Explicit legitimate OFF remains reachable, including valet OFF after PIN acceptance",
+      "PIN privacy, cancellation, selected-vehicle dialog identity and loading/readiness rechecks",
+      "Soft/hard/empty result rollback leaves truth unknown and controls usable",
+      "Independent outcome loading/error/paused/stale states retain actions and targeted retries"
+    ],
+    "behaviorRuntimeStatus": "NOTRUN for every required behavior; planned covering tests exist but startup guard prevented execution",
+    "siWireAndCacheChangesByWorker": false
+  },
+  "staticAudit": {
+    "command": "Read-only JavaScript regex scan of exactly the four affected production files, emitted in log as STATIC_AUDIT",
+    "exit": 0,
+    "counts": {"staticInlineStyles": 0, "rawHTML": 0, "directVendorImports": 0, "legacyAPIImports": 0, "anyType": 0},
+    "notClaimed": "No full frontend violations/a11y/visual audit. Loaded audit.sh not executed because it includes an unassigned global TypeScript gate."
+  },
+  "apiContracts": [
+    {"hook": "useVehicleState", "path": "GET /vehicles/{vehicleID}/state", "hookFileLine": "web\\src\\api\\hooks\\useVehicles.ts:268", "routerFileLine": "internal\\api\\router.go:3376", "matched": true},
+    {"hook": "useCommandLatest", "path": "GET /vehicles/{vehicleID}/commands/latest", "hookFileLine": "web\\src\\api\\hooks\\useCommands.ts:98", "routerFileLine": "internal\\api\\router.go:3379", "matched": true},
+    {"hook": "useVehicleCommand", "path": "POST /vehicles/{vehicleID}/command", "hookFileLine": "web\\src\\api\\hooks\\useVehicleCommand.ts:55", "routerFileLine": "internal\\api\\router.go:3378", "matched": true}
+  ],
+  "notRun": [
+    "All 35 planned affected test cases and all other authored cases",
+    "Full npx tsc --noEmit, full tests, full lint and build: outside exact proof/global-gate ownership",
+    "Native/browser/server/Docker/real commands/backend tests",
+    "Strict namespace guard after failing split guard",
+    "Catalog regeneration or repair"
+  ],
+  "evidence": {
+    "rawLog": "web\\logs\\phase6-proof-command-toggle-truth-lifecycle.log",
+    "preservedPriorEvidence": "web\\logs\\phase6-fix-command-toggle-truth-lifecycle.log read-only",
+    "noStartupErrorCalledAssertionFailure": true,
+    "noZeroDiscoveryCalledPass": true,
+    "noConcurrentChangeDiscardedOrEdited": true,
+    "noOngoingOwnedCommandsAtRelease": true,
+    "reportValidation": {
+      "exit": 0,
+      "rawOutput": "REPORT_JSON_VALID=true HASH_CROSSCHECK=9/9 AUTHORED_EXPANDED=51->63 PLANNED_SELECTED=35 RUNTIME_DISCOVERED=0 EXECUTED=0 PASSED=0 ASSERTION_FAILED=0 STATUS=NOTRUN"
+    }
+  }
+}

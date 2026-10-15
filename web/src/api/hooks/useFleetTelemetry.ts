@@ -24,13 +24,23 @@ export const fleetTelemetryKeys = {
   coverage: ['fleet-telemetry', 'coverage'] as const,
 }
 
+function normalizeDestinations(destinations: Record<string, number> | null | undefined) {
+  const entries = Object.entries(destinations ?? {})
+  const aliases = new Set(
+    entries.flatMap(([key, value]) => {
+      const alias = key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase())
+      return alias !== key && destinations?.[alias] === value ? [alias] : []
+    }),
+  )
+  return Object.fromEntries(entries.filter(([key]) => !aliases.has(key)))
+}
+
 /**
  * GET /tesla/fleet-telemetry/coverage — per-category routing destination
- * map served by `FleetTelemetryHandler.Coverage`. The response is
- * already typed snake_case (matching the Go struct's JSON tags) so the
- * hook just forwards it; the only normalization is defaulting
- * `orphan_fields` to an empty array so consumers can iterate without a
- * null guard.
+ * map served by `FleetTelemetryHandler.Coverage`. Destination keys are
+ * opaque identifiers: remove the shared client's generated camelCase
+ * aliases before consumers enumerate them, retaining the original keys.
+ * Missing collections default to empty collections.
  */
 export function useFleetTelemetryCoverage() {
   return useQuery({
@@ -41,8 +51,11 @@ export function useFleetTelemetryCoverage() {
         { signal },
       )
       return {
-        categories: raw.categories ?? [],
-        destination_totals: raw.destination_totals ?? {},
+        categories: (raw.categories ?? []).map(category => ({
+          ...category,
+          destinations: normalizeDestinations(category.destinations),
+        })),
+        destination_totals: normalizeDestinations(raw.destination_totals),
         orphan_fields: raw.orphan_fields ?? [],
       }
     },

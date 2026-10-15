@@ -1,0 +1,364 @@
+{
+  "item": "phase6-qa-automations-automation-list",
+  "status": "DONE_SOURCE_ONLY_QA_WITH_FINDINGS",
+  "taskCreationTimestamp": "2026-10-13T13:43:10.777-07:00",
+  "completionTimestamp": null,
+  "completionTimestampNote": "No shell clock command was run. The supplied task-creation timestamp is not a fabricated completion timestamp.",
+  "acceptance": {
+    "sourceOnlyReportComplete": true,
+    "fullPageQaPassed": false,
+    "nativeQaPassed": false,
+    "runtimeVerified": false,
+    "findingCount": 8,
+    "candidateCount": 4,
+    "sourceSeverityCounts": { "high": 3, "medium": 5 },
+    "meaning": "Completed bounded source inspection, not full-page, application, visual, browser, native, test, lint, build, or TypeScript acceptance."
+  },
+  "existingItemCheck": {
+    "queueEvidence": "migration-queue.md:320",
+    "queueStateAtInspection": "[ ]",
+    "dependency": "phase5-page-automations-automation-list",
+    "dependencyStateAtInspection": "[x]",
+    "dependencyEvidence": "migration-queue.md:1713",
+    "reportPreviouslyExists": false,
+    "logPreviouslyExists": false,
+    "method": "Exact queue-row source search and direct view of both assigned output paths before writing; both views returned path does not exist. No queue/status edits."
+  },
+  "identity": {
+    "acceptedPage": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx",
+    "mountedRoute": "/automations/list",
+    "routeAliasesConfirmed": [],
+    "routeMount": "web\\src\\App.tsx:574,617",
+    "lazyBinding": "web\\src\\App.tsx:190",
+    "directLoader": "web\\src\\lib\\routeLoaders.ts:75",
+    "prefetchIdentity": "web\\src\\lib\\routePrefetch.ts:51",
+    "forwarder": "The route loader directly imports the accepted feature module. No page forwarder is in this mounted chain.",
+    "distinctSibling": "/automations mounts AutomationsListPage, not AutomationListPage; it is not an alias or duplicate migration target.",
+    "navigation": {
+      "create": "/automations/new",
+      "actualEditor": "/automations/:id/edit",
+      "tableTarget": "/automations/{id}",
+      "unmatchedTargetOutcome": "App.tsx:911,915 contains NotFound catch-all routes; no inspected automation detail or automation wildcard redirect registers the table target."
+    },
+    "supportAdapters": [
+      "PageLayout forwards to PageContainer and preserves children; layout-reference\\PageLayout.tsx:9-15.",
+      "BulkActionToolbar is a re-export alias of BulkActionsToolbar, not a second implementation; BulkActionToolbar.tsx:16."
+    ],
+    "identityConfirmedBeforeSemanticQa": true
+  },
+  "inspectedFiles": [
+    { "path": "migration-queue.md", "scope": "Exact assigned Phase6 row and accepted Phase5 dependency row only" },
+    { "path": ".github\\instructions\\frontend-si-cutover.instructions.md", "scope": "Applicable instructions" },
+    { "path": ".github\\instructions\\react-frontend.instructions.md", "scope": "Applicable instructions, bounded ranges 1-620" },
+    { "path": ".github\\instructions\\observability.instructions.md", "scope": "Applicable instructions" },
+    { "path": ".github\\instructions\\unit-conversion.instructions.md", "scope": "Applicable instructions; SI cutover requirements take precedence over obsolete legacy examples" },
+    { "path": "docs\\frontend-audits\\audit-page-058.json", "scope": "Prior page identity, source concerns, preservation baseline and limitations; not a fresh execution proof" },
+    { "path": "web\\src\\App.tsx", "scope": "Actual lazy bindings, automation mounts, root layout and NotFound catch-alls" },
+    { "path": "web\\src\\lib\\routeLoaders.ts", "scope": "AutomationListPage direct import and adjacent distinct automation loaders" },
+    { "path": "web\\src\\lib\\routePrefetch.ts", "scope": "Exact automation route-loader mappings" },
+    { "path": "web\\src\\features\\automations\\pages\\AutomationListPage.tsx", "scope": "Entire 300-line accepted page" },
+    { "path": "web\\src\\features\\automations\\pages\\AutomationListTable.tsx", "scope": "Entire 309-line directly mounted table" },
+    { "path": "web\\src\\features\\automations\\pages\\AutomationStatusPanel.tsx", "scope": "Entire 137-line directly mounted status panel" },
+    { "path": "web\\src\\features\\automations\\components\\RoutineWizard.tsx", "scope": "Entire 150-line directly mounted wizard" },
+    { "path": "web\\src\\features\\automations\\components\\operationalbrief-all\\AutomationRulesBrief.tsx", "scope": "Entire 66-line directly mounted brief" },
+    { "path": "web\\src\\features\\automations\\pages\\AutomationListPage.test.tsx", "scope": "Existing 746-line test source only; no execution" },
+    { "path": "web\\src\\features\\automations\\pages\\AutomationListTable.test.tsx", "scope": "Existing 413-line test source only; no execution" },
+    { "path": "web\\src\\features\\automations\\pages\\AutomationStatusPanel.test.tsx", "scope": "Existing 169-line test source only; no execution" },
+    { "path": "web\\src\\features\\automations\\components\\RoutineWizard.test.tsx", "scope": "Existing 82-line test source only; no execution" },
+    { "path": "web\\src\\api\\hooks\\useAutomations.ts", "scope": "List, bulk mutation, routine catalogue/install hooks and immediately surrounding types" },
+    { "path": "web\\src\\api\\hooks\\useVehicles.ts", "scope": "useVehicles and adjacent withAsOf helper; list does not call withAsOf" },
+    { "path": "web\\src\\api\\hooks\\useLocations.ts", "scope": "useGeofencesFull default active-place query" },
+    { "path": "web\\src\\api\\types.ts", "scope": "Automation extension and routine/install wire types" },
+    { "path": "web\\src\\types\\automations.ts", "scope": "Base Automation interface and immediate typed-automation context" },
+    { "path": "web\\src\\api\\client.ts", "scope": "Request live-write gate, prefix normalization, JSON headers/response processing and camelCaseKeys boundary" },
+    { "path": "web\\src\\api\\offlineCache.ts", "scope": "Offline unsafe-write allowlist and rejection function" },
+    { "path": "web\\src\\api\\queryClient.ts", "scope": "Shared offlineFirst query and always/no-retry mutation defaults" },
+    { "path": "web\\src\\api\\dataState.ts", "scope": "deriveDataState, hasData, fatal/retained errors and paused-state contract" },
+    { "path": "web\\src\\hooks\\useDataState.ts", "scope": "Source adapter memo dependencies" },
+    { "path": "web\\src\\hooks\\useOperationalMode.tsx", "scope": "Live/cached/as_of context, canWrite and write reasons" },
+    { "path": "web\\src\\lib\\operationalMode.ts", "scope": "Environmental operational-mode normalization and request-boundary gate" },
+    { "path": "web\\src\\hooks\\useNumberFormatting.ts", "scope": "Locale/settings subscription and fmtInt display boundary" },
+    { "path": "web\\src\\hooks\\useOperationalMetrics.tsx", "scope": "Count metric display formatting through existing unit/currency preferences" },
+    { "path": "web\\src\\lib\\dateFormat.ts", "scope": "FormatOptions, date/time and formatRelative behavior, approximately lines 1-240" },
+    { "path": "web\\src\\lib\\safeArray.ts", "scope": "Array-only guard behavior and invalid-root coercion" },
+    { "path": "web\\src\\lib\\constants.ts", "scope": "STANDARD polling and relevant stale-time constants" },
+    { "path": "web\\src\\lib\\workspaceScope.ts", "scope": "Inventory route range ownership and automation-prefix vehicle disablement" },
+    { "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "scope": "PageContainer forwarding identity" },
+    { "path": "web\\src\\components\\layout\\PageContainer.tsx", "scope": "Query metadata versus explicitly requested loading/error/empty replacement; children rendering" },
+    { "path": "web\\src\\components\\data-display\\BulkActionToolbar.tsx", "scope": "Alias identity" },
+    { "path": "web\\src\\components\\data-display\\BulkActionsToolbar.tsx", "scope": "Selection summary, per-action pending, confirmation, Escape ownership and responsive actions" },
+    { "path": "web\\src\\components\\ui\\DataTable.tsx", "scope": "Local search/value filters, selection, pagination/export, mobile allowlist and actual table cell classes; not a whole-component audit" },
+    { "path": "web\\src\\i18n\\en\\locale-automations.json", "scope": "AutomationList namespace and directly relevant brief/routine keys only; no catalog integrity run" },
+    { "path": "web\\src\\i18n\\en.json", "scope": "Bounded key-location search only, not entire catalog" },
+    { "path": "internal\\api\\router.go", "scope": "api/v1 group and mounted vehicles/geofences/automations routes" },
+    { "path": "internal\\api\\automation\\crud.go", "scope": "List handler and newAutomationResponse, lines 1-48; source reference search" },
+    { "path": "internal\\api\\automation\\dtos.go", "scope": "automationResponse embedding and surrounding DTO declarations, lines 1-110; exact source reference search" },
+    { "path": "internal\\api\\automation\\bulk.go", "scope": "HTTP 200 partial-result semantics and allowlisted operations, lines 1-115" },
+    { "path": "internal\\api\\automation\\handler.go", "scope": "Bounded response/field lookup only; no unrelated handler audit" },
+    { "path": "internal\\models\\automation.go", "scope": "Actual root JSON fields and AutomationFull.AutoDisabled contract, lines 23-100" },
+    { "path": "internal\\api\\automation\\routines.go", "scope": "RoutineTemplate JSON tags and ListRoutineTemplates route identity" }
+  ],
+  "retainedSections": {
+    "baseline": {
+      "reference": "docs\\frontend-audits\\audit-page-058.json:310-349",
+      "pageLines": 294,
+      "composedLines": 956,
+      "semanticSectionCount": 5,
+      "sourceSha256": "9A3D74F7598CD888F465B442ECACC56EF32689EE4EECCF70D404494F4AF58456",
+      "sourceHashTimestamp": null,
+      "note": "Previously recorded preservation reference, NOT A FRESH RUN; original timestamp is absent, so this hash is not presented as a timestamped validation receipt or current-byte proof."
+    },
+    "currentSourceCounts": {
+      "method": "rg source tool, pattern ^, output_mode count; not a shell command",
+      "AutomationListPage.tsx": 300,
+      "AutomationListTable.tsx": 309,
+      "AutomationStatusPanel.tsx": 137,
+      "RoutineWizard.tsx": 150,
+      "AutomationRulesBrief.tsx": 66,
+      "composedTotal": 962,
+      "composedDeltaFromBaseline": 6,
+      "atLeast70PercentOfBaseline": true,
+      "openingSectionTags": 2,
+      "openingGlassPanelTags": 5,
+      "openingChartContainerTags": 0,
+      "currentSourceHash": null,
+      "hashNotComputed": "No command/helper/source-hash generation was authorized."
+    },
+    "sections": [
+      { "name": "Read-only and retained-source notices", "source": "AutomationListPage.tsx:175-201", "retained": true, "note": "Inventory and vehicle failures are handled independently; partial bulk reasons are now visible." },
+      { "name": "Full-loaded six-metric inventory brief", "source": "AutomationListPage.tsx:203-218; AutomationRulesBrief.tsx:24-65", "retained": true, "note": "Six metric definitions, loaded/unfiltered scope and cumulative-counter provenance survive. Actual wire counter absence is finding AL-S01." },
+      { "name": "Conditional selected-rule bulk actions and delete confirmation", "source": "AutomationListPage.tsx:221-269; BulkActionsToolbar.tsx:138-267", "retained": true, "note": "Conditional on selection is appropriate action chrome, not deletion of a data section. Internal filter scope is finding AL-S03." },
+      { "name": "Inventory table and three-status breakdown", "source": "AutomationListPage.tsx:271-292; AutomationListTable.tsx:234-309; AutomationStatusPanel.tsx:90-137", "retained": true, "note": "Seven columns, field-specific sort, value filters, multi-select, pagination and export survive; mobile reachability and unavailable wire fields do not pass." },
+      { "name": "Geofence place selection and routine catalogue/install", "source": "AutomationListPage.tsx:293-298; RoutineWizard.tsx:73-150", "retained": true, "note": "Outer GlassPanel remains mounted, but successful zero templates yields blank inner content and retained template errors replace cards: AL-S04." }
+    ],
+    "preservationConclusion": "All five accepted semantic bands remain in source composition. Counts alone do not establish runtime rendering, meaningful empty states, complete wire data, or native preservation."
+  },
+  "stateAndTrust": {
+    "inventoryInitialLoading": "No retained data plus query.isLoading drives brief loading and table/status skeletons. PageLayout receives query metadata, not replacement loading/error props, so the mounted children are not globally gated.",
+    "inventoryInitialError": "useDataState.fatalError is shown with retry in the summary and both table/status panel shells; brief hasData=false yields unknown metrics rather than loaded counters.",
+    "inventoryRefetchError": "Retained rows, selected IDs, status and summary remain; fatalError=null and StaleRefreshWarning exposes refreshError. The brief labels retained rules.",
+    "inventoryPausedCache": "deriveDataState marks retained paused data stale and isRefreshBlocked=true; page requests retained brief state and source warning. Cached/offline operational mode disables the page write controls.",
+    "inventorySuccessfulEmpty": "A genuine [] is data, so total zero is meaningful; table/status keep first-rule empty states. Filtered zero differs from empty inventory.",
+    "malformed": "safeArray turns null/object roots into successful [], does not validate array elements, and no list schema assertion exists. AL-S05; missing known wire fields are separately AL-S01.",
+    "vehicles": "Independent initial loading and fatal error/retry are visible; retained names and stale warning survive failed refresh. Unknown lookup uses Vehicle #id; missing vehicle_id means fleet-wide per Go pointer omission.",
+    "routinesAndPlaces": "Template isError replaces retained cards, zero templates returns null, and geofence hook state is ignored. AL-S04, not a claim that a real request failed.",
+    "live": "This is a polled rule inventory, not an execution stream. STANDARD is 30000ms; brief explicitly says not a live execution stream. No page SSE/EventSource construction.",
+    "replay": "Global operational mode normalizes as_of and disables actions. List, vehicle and place hooks use current inventory keys/URLs without as_of. Historic reconstruction for this inventory is not proven; AL-C03 is a separate integration candidate.",
+    "requestBoundary": "Bulk POST opts into requiresLiveMode and always network mode. Routine install lacks requiresLiveMode while central gate is opt-in: AL-S07. Shared mutation defaults already use always and retry 0; no queued/replayed routine request is asserted."
+  },
+  "scopeFiltersPaginationDenominators": {
+    "workspace": "getWorkspaceRouteScope('/automations/list') is range=false, vehicle=false by source: list is absent from RANGE_ENABLED_PATHS and /automations disables the global vehicle picker. No duplicate workspace selector is mounted.",
+    "server": "GET /automations receives no query parameters; List uses ListFull and optional enabled=true only. Source has no list pagination/date/vehicle parameter processing. Database completeness and deployed responses were not inspected.",
+    "outerFilters": "Local all/active/disabled/auto-disabled status and trimmed case-insensitive name/description search; auto_disabled has priority.",
+    "innerFilters": "DataTable default loaded-row search and seven column value filters run over outer-filtered sorted rows before local pagination.",
+    "pagination": "Client-only default page size 25; options 25/50/100; persisted by automations:bulk-list. DataTable footer total is its internally filtered count, not full server history.",
+    "summaryDenominator": "Summary/status use all loaded automations, not search results or current table page; status max=Math.max(total,1), percentages rounded/clamped to 0..100.",
+    "bulkDenominator": "Toolbar effectiveSelected and matching count know only outer filters; inner filtering can hide still-eligible selected IDs. AL-S03.",
+    "selectAll": "DataTable builds allRowKeys from complete internally filteredData, before pagination. Filtered select-all merges/removes matching IDs while retaining selections outside that inner filter.",
+    "export": "Local CSV, not a backend export mutation. Loaded export uses internally filtered rows; selected export uses selected input rows and may retain hidden selections. CSV fields/filename are technical identifiers, not automatically untranslated labels.",
+    "unknownVersusZero": "Real empty-array total zero is distinguishable from initial unavailable brief metrics. Unknown descriptions, timestamps and vehicle lookup use placeholders. Counter/status wire omissions are incorrectly turned into zero/false in AL-S01; value filter options already distinguish null counters from measured zero while display/export coalesce."
+  },
+  "apiContract": [
+    { "hook": "useAutomations", "request": "GET /automations", "parameters": [], "router": "internal\\api\\router.go:3847-3848", "pathMatches": true, "wireShape": "Array of automationResponse embedding base models.Automation only; missing frontend extension fields: AL-S01." },
+    { "hook": "useVehicles", "request": "GET /vehicles", "parameters": [], "router": "internal\\api\\router.go:3362-3363", "pathMatches": true, "wireShape": "Array supplies id/display_name/vin lookup; full vehicle handler body was not audited." },
+    { "hook": "useBulkAutomationsUpdate", "request": "POST /automations/bulk", "parameters": ["JSON ids:number[]", "JSON op:enable|disable|delete"], "router": "internal\\api\\router.go:3852-3853", "pathMatches": true, "wireShape": "updated or deleted plus failed[{id,reason}]; HTTP 200 can carry partial/all per-ID failure. Page handles failed IDs; toast still overclaims success: AL-S08." },
+    { "hook": "useRoutineTemplates", "request": "GET /automations/routine-templates", "parameters": [], "router": "internal\\api\\router.go:3876-3877", "pathMatches": true, "wireShape": "RoutineTemplate[] with id/name/description/event/actions per routines.go:24-31; row validation absent." },
+    { "hook": "useInstallRoutine", "request": "POST /automations/routine-templates/{id}/install", "parameters": ["encoded template id", "JSON place_id", "JSON name"], "router": "internal\\api\\router.go:3878", "pathMatches": true, "wireShape": "Returns created automation; no call was made. Missing opt-in request guard: AL-S07." },
+    { "hook": "useGeofencesFull(false)", "request": "GET /geofences", "parameters": [], "router": "internal\\api\\router.go:3657-3658", "pathMatches": true, "wireShape": "Enabled and unarchived places are filtered locally. Optional include_archived=true branch uses snake_case; false branch is actually mounted." }
+  ],
+  "unitsSettingsDateAndI18n": {
+    "si": "No numeric distance, speed, temperature, pressure, energy or power is displayed by this inventory page; no SI conversion was added or needed. Execution counts are unitless. Routine action parameters remain raw server configuration and are not exposed or converted here.",
+    "settings": "Table fmtInt subscribes to formatter locale/settings and explicitly formats integer counts. Brief uses existing operational metric/useUnits/useFormatting boundary. Status sublabels interpolate integer value and percentage directly, so localized grouping is not proven uniformly; no blanket settings pass.",
+    "dates": "Last-triggered sorting maps invalid timestamp to 0 for ordering only; formatRelative returns dash for invalid display, uses current clock, chosen global locale, and browser timezone for old absolute dates when no override is passed.",
+    "timezone": "This fleet-wide inventory has no selected-vehicle timezone/range. No server time bounds are invented; oldest/missing timestamps are not claimed to be actual epoch executions. Native locale/timezone rendering remains NOTRUN.",
+    "i18n": "Page controls, panel labels, accessible names, notices, empty/error copy, brief and routine action chrome use t(). Relevant AutomationList/brief/routine English keys were inspected in the existing split locale-automations.json; catalog resolution/integrity and other languages were not run.",
+    "classification": [
+      "Rule names/descriptions, place names, vehicle names/VIN fallbacks and server failure reasons are source/user data, not automatically missing frontend translation keys.",
+      "Routine template names/descriptions are server-owned catalogue copy; localization policy requires confirmation, not an automatic technical-identifier violation.",
+      "IDs, CSV snake_case fields, automations:bulk-list, export filename automations, #id and the universal dash are technical identifiers/placeholders, not automatic untranslated-English defects."
+    ]
+  },
+  "sourceAccessibilityAndMobile": {
+    "positiveEvidence": [
+      "Status and search have localized aria-labels; place picker uses shared Select label.",
+      "Table loading has role=status, aria-busy and VisuallyHidden text; error/empty panels reuse shared components.",
+      "Status uses textual badges and numeric labels, not color alone.",
+      "Partial bulk reasons are in a polite live region; toolbar provides named region and disabled-reason associations.",
+      "Current shared toolbar now has onKeyDown Escape handling guarded against active modal dialogs; the older audit's no-Escape observation is not repeated as a current defect.",
+      "Delete uses the existing confirmation system and per-action pending state; no custom focus/keyboard system was added.",
+      "Header controls wrap; table/status stack until xl; routines use responsive grids; toolbar wraps and stops sticking when taller than viewport."
+    ],
+    "sourceLimitation": "Five table columns are unconditionally hidden below md with no mobilePresentation or expansion adapter in this composition: AL-S06. Source labels do not establish actual tab order, screen-reader output, focus restoration, measured touch targets or contrast.",
+    "nativeVerification": "NOTRUN"
+  },
+  "sourceFindings": [
+    {
+      "id": "AL-S01",
+      "severity": "high",
+      "title": "Actual list wire lacks the counters, auto-disabled state and last-triggered fields required by the accepted page",
+      "evidence": ["internal\\api\\automation\\crud.go:14-15,30-38", "internal\\api\\automation\\dtos.go:17-20", "internal\\models\\automation.go:32-40,92-94", "web\\src\\api\\types.ts:2552-2566", "web\\src\\features\\automations\\pages\\AutomationListPage.tsx:65-67,87-92", "web\\src\\features\\automations\\pages\\AutomationListTable.tsx:155-175,190-225,298-302"],
+      "mechanism": "List discards AutomationFull down to its base Automation and wraps only next_fire_time/conflicts. The base JSON has no execution_count, failure_count, auto_disabled or last_triggered_at. No DTO marshaler supplying these fields was found in the bounded handler directory lookup. Page sums absent counters as 0, treats absent auto_disabled as false, and shows missing last-triggered as dash. Thus a valid current handler response makes cumulative counters appear measured zero and the auto-disabled filter/band uninformative; camelCaseKeys cannot manufacture omitted fields.",
+      "testEvidence": "Existing page/table fixtures fabricate required counter and auto-disabled fields and double-cast into Automation; mocked hooks do not test the actual List wire.",
+      "minimalBoundedFixScope": "Align the list DTO/hook/type and page-derived counters/status contract. Keep every accepted band; represent genuinely unavailable counters/status/time as unknown rather than zero/false, and restore their functional data only through an approved narrow existing-history aggregation in the automation list owner. Scope would include automation List/DTO and directly consuming Automation type/page/table/brief/status; no new telemetry storage, legacy adapters or unrelated endpoint campaign.",
+      "runtimeObservation": "None. This is a deterministic current-source wire mismatch, not a claim about deployed API data.",
+      "fixedHere": false
+    },
+    {
+      "id": "AL-S02",
+      "severity": "high",
+      "title": "Rule name links target an unmounted route instead of the registered editor",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListTable.tsx:117-118", "web\\src\\App.tsx:617-620,911,915", "web\\src\\features\\automations\\pages\\AutomationListTable.test.tsx:213-219"],
+      "mechanism": "Name Link emits /automations/{id}. Actual App registers /automations/:id/edit, not /automations/:id; unmatched routes go to NotFound. The existing table test explicitly asserts the wrong href, so its source does not contradict this defect.",
+      "minimalBoundedFixScope": "AutomationListTable name Link destination plus its existing href assertions only; use /automations/${id}/edit. Do not introduce a duplicate page or new route solely to preserve the broken link.",
+      "fixedHere": false
+    },
+    {
+      "id": "AL-S03",
+      "severity": "high",
+      "title": "Filtered bulk scope does not include the table's internal filters",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx:106-109,112-116,221-228", "web\\src\\features\\automations\\pages\\AutomationListTable.tsx:272-287", "web\\src\\components\\ui\\DataTable.tsx:525-547,775-793,828-839"],
+      "mechanism": "effectiveSelected and matching loaded rule count use only page status/name-description filtered. DataTable further searches rendered columns and filters values without notifying this page's scope derivation, and intentionally keeps nonmatching selected IDs. For example, select A/B, then table-local filter hides B: toolbar still labels both eligible IDs as filtered selection and bulk submission includes B. Its matching denominator can disagree with table/footer results. No operation was executed.",
+      "minimalBoundedFixScope": "Page/table integration must either use one controlled matching-ID pipeline for all existing filter capabilities or explicitly label and review retained hidden selections before bulk actions. Preserve full-loaded summary, pagination, value filters and select-all semantics; do not globally change DataTable selection behavior for unrelated consumers.",
+      "testEvidence": "Page tests stub the table and only exercise outer filter pruning; table tests exercise local value filters separately, not the composed bulk scope.",
+      "fixedHere": false
+    },
+    {
+      "id": "AL-S04",
+      "severity": "medium",
+      "title": "Routine band conflates place failure/loading with empty and discards retained catalogue content",
+      "evidence": ["web\\src\\features\\automations\\components\\RoutineWizard.tsx:75-84,98-108,133-144", "web\\src\\features\\automations\\pages\\AutomationListPage.tsx:293-298"],
+      "mechanism": "Geofence query is destructured for data only, so undefined on loading or initial error becomes places=[] and the create-a-geofence message, without source error/retry. Retained place refresh errors are silent. Template isError unconditionally returns QueryError even if routines are retained. A successful empty template list returns null, leaving the outer panel without heading or meaningful empty state.",
+      "minimalBoundedFixScope": "RoutineWizard only and its existing test: consume existing per-source DataState, preserve section identity/retained templates, and distinguish independent initial/refresh failure, loading, paused and genuine empty with existing shared feedback/retry components.",
+      "testEvidence": "RoutineWizard.test.tsx currently has two cases: selected-place install and successful empty places; no retained/error/empty-template source coverage.",
+      "fixedHere": false
+    },
+    {
+      "id": "AL-S05",
+      "severity": "medium",
+      "title": "Malformed list roots become authoritative empty inventories while malformed rows remain unchecked",
+      "evidence": ["web\\src\\api\\hooks\\useAutomations.ts:44-50,405-410", "web\\src\\lib\\safeArray.ts:9-13", "web\\src\\api\\dataState.ts:193-194", "web\\src\\features\\automations\\pages\\AutomationListPage.tsx:86-92", "web\\src\\features\\automations\\components\\RoutineWizard.tsx:42"],
+      "mechanism": "select:safeArray maps a successful object/null list body to [] without an error, so hasData=true and the inventory reads real zero/empty. It passes arrays unchanged: [null] crashes page stats at a.auto_disabled, and a malformed routine without actions crashes actions.length. This is a deterministic conditional malformed-input mechanism, not evidence that a server currently returns malformed values.",
+      "minimalBoundedFixScope": "Narrow automation inventory/template response assertions at their hook boundary, validating actual supported row fields without requiring nonexistent extension counters. Throw on invalid envelope/rows so existing retained DataState survives. Do not change global safeArray semantics or validate all unrelated domains.",
+      "fixedHere": false
+    },
+    {
+      "id": "AL-S06",
+      "severity": "medium",
+      "title": "Five table data columns have no source-backed mobile detail reachability",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListTable.tsx:272-304", "web\\src\\components\\ui\\DataTable.tsx:505-508,733-743,1172-1180,1517-1535"],
+      "mechanism": "The page passes mobileColumns=['name','status'] and no mobilePresentation or expandable row detail. Shared table applies hidden md:table-cell to other headers/cells regardless of column chooser layout. Thus description, vehicle, runs, failures and last-triggered disappear below md with no page-provided way to read them in situ. CSV download and a broken editor link are not a mobile detail view.",
+      "minimalBoundedFixScope": "AutomationListTable and existing test only: adopt the existing DataTable mobilePresentation/detail contract and preserve all seven values, multi-selection, filters, pagination and export. No shared primitive redesign.",
+      "nativeCaveat": "Source-defined visibility is confirmed; exact allocated width, native screenshot and practical target/focus behavior were not measured.",
+      "fixedHere": false
+    },
+    {
+      "id": "AL-S07",
+      "severity": "medium",
+      "title": "Routine install omits the request-boundary live-mode guard used by bulk actions",
+      "evidence": ["web\\src\\features\\automations\\pages\\AutomationListPage.tsx:295", "web\\src\\features\\automations\\components\\RoutineWizard.tsx:51-58", "web\\src\\api\\hooks\\useAutomations.ts:417-423", "web\\src\\api\\client.ts:353-358,372", "web\\src\\lib\\operationalMode.ts:67-74", "web\\src\\api\\offlineCache.ts:50-73", "web\\src\\api\\queryClient.ts:71-77"],
+      "mechanism": "Page disables install in cached/as_of UI, but useInstallRoutine POST never sets requiresLiveMode. Central assertOperationalWriteAllowed explicitly returns when this opt-in is false, and the secondary offline unsafe path allowlist does not cover automations. The hook therefore cannot recheck historical/offline mode at dispatch independently of potentially stale UI state or another caller. Shared mutation defaults already prevent paused/retried replay; no replay event or UI bypass was exercised.",
+      "minimalBoundedFixScope": "Existing useInstallRoutine request option requiresLiveMode:true and focused existing hook/guard regression scope only; retain current mutation defaults, endpoint and request body. No real install.",
+      "fixedHere": false
+    },
+    {
+      "id": "AL-S08",
+      "severity": "medium",
+      "title": "Bulk success toast ignores per-ID failures even when the backend confirms zero changes",
+      "evidence": ["web\\src\\api\\hooks\\useAutomations.ts:283-293", "internal\\api\\automation\\bulk.go:54-75,90-95", "web\\src\\features\\automations\\pages\\AutomationListPage.tsx:115-123,190-201"],
+      "mechanism": "HTTP 200 can return updated/deleted=0 with every requested ID in failed[]. Hook onSuccess names the response _data and always emits Automations enabled/disabled/deleted. The page now correctly keeps failed IDs and shows their reasons, but the unconditional toast can still falsely announce a successful operation alongside those failures.",
+      "minimalBoundedFixScope": "useBulkAutomationsUpdate onSuccess outcome copy/severity and existing hook tests only; inspect updated/deleted and failed while preserving list/history invalidation. Do not undo accepted failed-ID retention.",
+      "fixedHere": false
+    }
+  ],
+  "runtimeNativeCandidates": [
+    {
+      "id": "AL-C01",
+      "title": "Allocated-width, long-text, light/dark and touch-target presentation",
+      "sourceBasis": "Outer controls wrap; routine cards switch to four at lg, names truncate and descriptions clamp to two lines. Source includes fixed semantic text accents and small routine install buttons.",
+      "evidenceNeeded": "Native/browser screenshots and measurements at narrow allocated content widths, long localized labels and 200% text; actual focus/contrast/touch-target evidence.",
+      "classification": "Candidate only. No measured overflow, contrast or target violation is asserted."
+    },
+    {
+      "id": "AL-C02",
+      "title": "Keyboard, confirmation focus restoration, screen-reader and motion behavior",
+      "sourceBasis": "Shared controls, named rows/status, confirmation and current toolbar Escape handler are wired; table name Link lacks page-specific focus/target sizing.",
+      "evidenceNeeded": "Real keyboard and assistive-technology sequence including select/filter/delete/cancel, modal Escape precedence, return focus and reduced-motion preference.",
+      "classification": "Candidate only. Source support is not a native accessibility pass; older no-Escape concern is not automatically carried forward."
+    },
+    {
+      "id": "AL-C03",
+      "title": "Historical global mode versus current automation inventory provenance",
+      "sourceBasis": "OperationalModeProvider describes historical reconstruction, while these inventory hooks have no as_of key/URL and brief describes loaded rule response.",
+      "evidenceNeeded": "Actual shell mode/provider integration and product expectation for rule inventories in replay; determine whether inventory should remain explicitly current/read-only or have a supported historical contract.",
+      "classification": "Candidate only. No historical automation endpoint, reconstruction capability or incorrect live payload is invented."
+    },
+    {
+      "id": "AL-C04",
+      "title": "Online refresh failure with operational actions still enabled",
+      "sourceBasis": "canWrite derives online/as_of, not inventory or place-query freshness; main retained-source warnings are visible.",
+      "evidenceNeeded": "Controlled retained-refresh failure and product action policy evidence, including selection review and deployment behavior, without changing real automations.",
+      "classification": "Candidate only. Existing source does not mandate disabling every write on any background refresh error."
+    }
+  ],
+  "historicalEvidence": [
+    {
+      "reference": "migration-queue.md:1713",
+      "originalTimestamp": "2026-10-12T14:32:17.5466846Z",
+      "commitHash": "d529dc58e6c05ab39ff7ec76a769380b51eb1487",
+      "freshness": "NOT A FRESH RUN",
+      "kind": "Parent-recorded accepted Phase5 queue receipt, not independently replayed validation output",
+      "recordedOutcome": "Accepted SOURCE ONLY; lint0/style0, five sections and 962-vs-956 composed lines recorded. Initial 23/24 then oracle corrected; final tests had external catalog startup failure, zero cases, NOTPASS. Ten masked PNGs explicitly were not full QA.",
+      "limitations": "No original command terminal log or timestamped image hash was inspected; therefore no historical test pass, screenshot acceptance, current source hash, deployed revision or fresh verification is inferred."
+    },
+    {
+      "reference": "docs\\frontend-audits\\audit-page-058.json:310-349",
+      "sourceSha256": "9A3D74F7598CD888F465B442ECACC56EF32689EE4EECCF70D404494F4AF58456",
+      "originalTimestamp": null,
+      "freshness": "NOT A FRESH RUN",
+      "kind": "Untimestamped source-preservation baseline only, not a qualifying timestamp/hash validation proof",
+      "limitations": "Original hash is quoted exactly; it has not been recomputed and is not claimed to identify current source bytes."
+    }
+  ],
+  "checksActuallyRun": [
+    { "check": "Exact queue/dependency and existing-output inspection", "method": "rg/view/glob source tools", "result": "Pending assigned Phase6 item; accepted Phase5 dependency; both assigned outputs absent before writing" },
+    { "check": "Mounted-route, direct loader and support alias identity", "method": "rg/view source tools", "result": "/automations/list maps directly to accepted AutomationListPage; sibling /automations differs" },
+    { "check": "Preservation line/tag counts", "method": "rg pattern ^ count and opening-tag source search", "result": "300+309+137+150+66=962 versus recorded baseline 956; five semantic bands; two section tags, five GlassPanel opening tags, zero ChartContainer opening tags" },
+    { "check": "Bounded prohibited source-pattern search", "method": "rg on the five named production TSX files only", "result": "No matches found for style=, raw button/input/textarea/select/table, direct chart/map/motion imports, old ../api imports, explicit any typing/casts, text-neon-, direct EventSource or fetch; an earlier broad any-word scan matched only a comment and was refined" },
+    { "check": "Hook prefix/camelCase URL pattern search", "method": "rg on useAutomations.ts/useVehicles.ts/useLocations.ts", "result": "No matches found for /api/v1/, vehicleId=, automationId= or includeArchived=; static scoped route contract was separately inspected" },
+    { "check": "Per-source states, filters, denominators, actions and wire-shape inspection", "method": "Bounded direct source reads and exact source searches", "result": "Eight deterministic source findings and four explicitly unverified candidates; routes match but list data contract does not" },
+    { "check": "Existing test source inspection", "method": "Read only; no runner", "result": "24 page and 26 table it() declarations counted; routine has two cases, status has eight. Mocks/fixtures do not establish actual wire contract or composed internal-filter bulk scope." },
+    { "check": "Related English key and source a11y/mobile inspection", "method": "Existing source/split English catalog reads only", "result": "Relevant translated chrome exists; user/server data and technical identifiers classified separately; no runtime catalog/accessibility/mobile pass claimed" },
+    { "check": "Output persistence", "method": "apply_patch to only the two assigned artifacts, followed by source-tool readback", "result": "Report/log persisted; no source/test/catalog/shared/barrel/queue/handoff/config changes by this worker" }
+  ],
+  "notRun": [
+    "Shell commands, scripts, custom helpers, generators and extensions",
+    "audit-violations audit.sh and verify-api-hooks verify.sh (skills loaded; scripts prohibited by this source-only assignment)",
+    "npx tsc --noEmit / TypeScript checks",
+    "Tests, targeted or full suite; lint/style runner; build",
+    "Browser, Chrome DevTools, Playwright, native app, screenshots or live accessibility interactions",
+    "API requests, real data reads, automation installs/enable/disable/delete/test-run, export downloads",
+    "Docker or Discord",
+    "Git status, source hash generation, commits, queue/status/handoff changes",
+    "Orchestration, scheduled health work, agents or nested delegation"
+  ],
+  "limitations": [
+    "No current commit or source-byte hash was computed; reads are a source snapshot, not deployed build identity.",
+    "Static source findings include explicitly conditional malformed/error branches; their live occurrence is not asserted.",
+    "List repository SQL, worker effects, template installation internals, authorization and full backend behavior were outside this bounded inspection.",
+    "Relevant source pattern searches are not a full engineering, security, i18n, TypeScript or application audit.",
+    "Shared dialog focus and every primitive's internals were not exhaustively inspected.",
+    "Historical evidence is explicitly NOT A FRESH RUN, and the prior final test outcome is NOTPASS rather than a fabricated green test result.",
+    "Source-only report completion does not accept Phase6 full-page/native QA or mark the parent-owned queue complete."
+  ],
+  "ownership": {
+    "soleWrites": [
+      "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-automations-automation-list.json",
+      "D:\\repos\\teslasync\\web\\logs\\phase6-qa-automations-automation-list.log"
+    ],
+    "parentOwns": ["dispatch", "status", "queue", "commits"],
+    "commandHandlesStarted": [],
+    "commandHandlesToStop": [],
+    "allClaimsReleasedAtReturn": true,
+    "noPostReturnWrites": true
+  }
+}

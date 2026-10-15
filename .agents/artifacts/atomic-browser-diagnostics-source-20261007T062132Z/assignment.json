@@ -1,0 +1,8 @@
+{
+  "branch": "fix/dashboard-followups",
+  "testsExecuted": 0,
+  "phase": "SOURCE ONLY",
+  "targetAbsenceConfirmed": true,
+  "deadlineUtc": "2026-10-07T06:38:04.5367139Z",
+  "actualStartUtc": "2026-10-07T06:18:04.5367139Z"
+}

@@ -3,6 +3,10 @@ import { PrefetchLink } from './PrefetchLink';
 import { ChevronRight, Home } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
+import { Icon } from '../ui/Icon';
+
+const linkClasses = 'hover:text-[var(--text-secondary)] transition-colors duration-fast motion-reduce:transition-none min-h-11 md:min-h-6 rounded-shape-sm focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]';
 
 export interface BreadcrumbItem {
   label: string;
@@ -37,14 +41,14 @@ export function Breadcrumbs({
   return (
     <nav
       aria-label={t('a11y.breadcrumb', 'Breadcrumb')}
-      className={cn('flex items-center gap-1 text-sm overflow-x-auto scrollbar-none', className)}
+      className={cn('flex items-center gap-1 min-w-0 overflow-x-auto scrollbar-none', typography.size.sm, className)}
     >
       <PrefetchLink
         to={homeHref}
-        className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors shrink-0"
+        className={cn(linkClasses, typography.color.muted, 'inline-flex items-center justify-center w-11 md:w-6 shrink-0')}
         aria-label={homeAriaLabel ?? t('a11y.breadcrumbHome', 'Dashboard')}
       >
-        <Home className="h-3.5 w-3.5" />
+        <Icon icon={Home} size="sm" />
       </PrefetchLink>
 
       {items.map((item, i) => {
@@ -53,12 +57,14 @@ export function Breadcrumbs({
 
         return (
           <Fragment key={i}>
-            <ChevronRight className="h-3 w-3 text-[var(--text-muted)] shrink-0" />
+            <Icon icon={ChevronRight} size="xs" className={cn(typography.color.muted, 'rtl:rotate-180')} />
             {isLast || !item.href ? (
               <span
+                aria-current={isLast ? 'page' : undefined}
+                title={item.label}
                 className={cn(
-                  'truncate max-w-[200px]',
-                  isLast ? 'text-[var(--text-secondary)] font-medium' : 'text-[var(--text-muted)]',
+                  'truncate max-w-breadcrumb-label',
+                  isLast ? cn(typography.color.secondary, typography.weight.medium) : typography.color.muted,
                   isMiddle && 'hidden sm:inline',
                 )}
               >
@@ -67,8 +73,10 @@ export function Breadcrumbs({
             ) : (
               <PrefetchLink
                 to={item.href}
+                title={item.label}
                 className={cn(
-                  'text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors truncate max-w-[200px]',
+                  linkClasses, typography.color.muted, 'truncate max-w-breadcrumb-label',
+                  'block content-center',
                   isMiddle && 'hidden sm:inline',
                 )}
               >
@@ -77,7 +85,7 @@ export function Breadcrumbs({
             )}
             {/* Collapsed indicator on mobile for hidden middle items */}
             {isMiddle && (
-              <span className="text-[var(--text-muted)] sm:hidden" aria-hidden="true">…</span>
+              <span className={cn(typography.color.muted, 'sm:hidden')} aria-hidden="true">…</span>
             )}
           </Fragment>
         );

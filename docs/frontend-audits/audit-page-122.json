@@ -1,0 +1,373 @@
+{
+  "item": "audit-page-122",
+  "page": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+  "routes": ["/route-efficiency"],
+  "purpose": "Compare returned historical route aggregates and inspect most-driven route evidence, with optional independently gated Helix suggestions.",
+  "primaryGoal": "Understand best, unweighted average and worst route consumption, trip frequency and average distance for the selected workspace vehicle and date range.",
+  "dataSources": [
+    {
+      "hook": "useRouteEfficiency",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 298,
+      "endpoint": "GET /api/v1/analytics/route-efficiency",
+      "parameters": ["vehicle_id", "start", "end"],
+      "owner": "routeEfficiencyHandler.List; internal\\api\\router.go:1100,3888",
+      "behavior": "Vehicle-enabled TanStack Query; vehicle/start/end query identity, AbortSignal forwarded to request; no hook-specific retry/stale-time override. Page consumes routes from the returned aggregate, computes summaries before local 12-row pagination and does not request additional server pages.",
+      "evidence": ["web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx:47-59", "web\\src\\api\\hooks\\useDriving.ts:298-309", "internal\\api\\router.go:3888"],
+      "limits": "Handler/repository and actual payload not inspected. Returned completeness, ordering, units, nullability, server caps and date inclusivity are not proved."
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState / useUrlNumber",
+      "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+      "line": 39,
+      "endpoint": null,
+      "owner": "Workspace shell and existing selection/range/URL owners",
+      "behavior": "Consumes workspace vehicle and shared date preference, route-efficiency.range persistence key, from/to state and page URL state. Scope changes reset page to one; out-of-bounds/nonfinite page values are clamped. No duplicated vehicle/date picker.",
+      "evidence": ["web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx:39-70", "web\\src\\lib\\workspaceScope.ts:58", "web\\src\\hooks\\useRangeState.ts:109-125,656-682"],
+      "limits": "Page forwards calendar start/end, not available precise startInstant/endInstantExclusive; no explicit vehicle timezone."
+    },
+    {
+      "hook": "useDataState",
+      "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+      "line": 49,
+      "endpoint": null,
+      "owner": "web\\src\\hooks\\useDataState.ts and existing data-trust infrastructure",
+      "behavior": "Historical provenance; fatalError alone replaces section content; retained payload remains rendered. StaleRefreshWarning owns refresh/offline warning and independent retry.",
+      "evidence": ["web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx:49-53,136,148-149", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:59-108"]
+    },
+    {
+      "hook": "useUnits / useNumberFormatting / makeUnitDisplay",
+      "file": "web\\src\\features\\driving\\components\\route-efficiency\\helpers.ts",
+      "line": 49,
+      "endpoint": null,
+      "owner": "Existing formatting/preferences hooks and driving feature display adapter",
+      "behavior": "Helper describes Wh/km consumption and metres input toDistance; miles display multiplies consumption by 1.609344. RouteCard multiplies avgDistanceKm by 1000 before display conversion. Summary passes efficiency divided by 1000 to typed metric formatter and restores Wh/km inside custom display formatter. No hook/cache conversion.",
+      "evidence": ["web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx:78-107", "web\\src\\features\\driving\\components\\route-efficiency\\helpers.ts:26-62", "web\\src\\features\\driving\\components\\route-efficiency\\RouteCard.tsx:51-55", "web\\src\\types\\driving.ts:236-249"],
+      "limits": "These are current frontend assumptions, not backend SI certification."
+    },
+    {
+      "hook": "useAiStream / withAiFeature",
+      "file": "web\\src\\components\\ai\\AIRouteEfficiencySuggestions.tsx",
+      "line": 55,
+      "endpoint": "POST /api/v1/ai/routes/{routeID}/efficiency/suggest",
+      "parameters": ["positive safe-integer vehicle identifier used as opaque routeID anchor", "empty request body"],
+      "owner": "AIRouteEfficiencySuggestions / useAiStream / existing AI feature gate; internal\\api\\ai_routes.go:1223-1239",
+      "behavior": "Opt-in route-efficiency-suggestions gate; positive identifier enables Generate; user action starts streaming narrative. Vehicle scopeKey aborts/clears previous narrative when vehicle changes. Date range is neither supplied nor included in scope identity.",
+      "evidence": ["web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx:154", "web\\src\\components\\ai\\AIRouteEfficiencySuggestions.tsx:47-96", "web\\src\\components\\ai\\withAiFeature.tsx:46-56", "web\\src\\hooks\\useAiStream.ts:294-317,335,469", "internal\\api\\ai_routes.go:1223-1239"],
+      "limits": "No AI request, provider, retrieval completeness, date filtering or actual narrative exercised. Route comments identify anchor as opaque, not a persisted route record."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "evidence": "RouteEfficiencyPage.tsx:131-135; PageLayout.tsx:9-16", "role": "Existing PageContainer adapter; full width/min-w-0 and shell-owned header scope."},
+    {"name": "DrivingSummaryBrief / OperationalBrief", "owner": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx", "evidence": "RouteEfficiencyPage.tsx:139-150; DrivingSummaryBrief.tsx:23-51", "role": "Six typed metrics, scope/provenance/freshness/status, existing useOperationalMetrics bridge and operational summary owner. OperationalBrief implementation was not inspected; details action behavior is not certified."},
+    {"name": "ChartCard / EmbeddedChart / ChartContainer", "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx; web\\src\\components\\charts\\EmbeddedChart.tsx; ChartContainer.tsx", "evidence": "RouteEfficiencyPage.tsx:171-206; ChartCard.tsx:13-44; EmbeddedChart.tsx:19-40; ChartContainer.tsx:422-452,806-823", "role": "One host surface and canonical embedded chart pipeline; named data fallback, image export, toolbar, persisted series visibility. Fullscreen defaults false; no CSV exportData supplied."},
+    {"name": "LayoutCard / Section / GlassPanel", "owner": "Existing layout and UI category owners", "evidence": "RouteEfficiencyPage.tsx:163-168,210-255,261-300; Section.tsx:11-22; GlassPanel.tsx:50-88", "role": "Metrics surface, most-driven semantic section and card/error/empty surfaces; shared neutral elevation, print and forced-color markers."},
+    {"name": "RouteCard / RangeStat", "owner": "web\\src\\features\\driving\\components\\route-efficiency\\RouteCard.tsx", "evidence": "RouteCard.tsx:19-29,42-130", "role": "Feature-owned endpoints, trips/distance, consumption badge, decorative range track and complete best/average/worst textual readout."},
+    {"name": "MetricBar", "owner": "web\\src\\components\\data-display\\MetricBar.tsx", "evidence": "RouteEfficiencyPage.tsx:225-252; MetricBar.tsx:43-103", "role": "Four labeled progress-style tracks, null support, shared number formatting/reduced motion/forced colors. Existing fill='solid' avoids gradients; no new primitive needed."},
+    {"name": "AIRouteEfficiencySuggestions / AIFeatureCard / withAiFeature", "owner": "web\\src\\components\\ai", "evidence": "AIRouteEfficiencySuggestions.tsx:55-96; AIFeatureCard.tsx:259-352; withAiFeature.tsx:46-56", "role": "Gated shared AI action/status/output scaffold; wrapLabel, named disabled/busy Button, wrapping header and localized description."},
+    {"name": "Skeleton / EmptyState / QueryError / StaleRefreshWarning / Pagination", "owner": "Existing feedback and UI owners", "evidence": "RouteEfficiencyPage.tsx:136,149,167,214-222,265-298", "role": "Persistent section-level loading/empty/fatal recovery, retained-data trust notice, 12-card pagination."},
+    {"name": "FadeIn / StaggerContainer / StaggerItem", "owner": "web\\src\\components\\motion", "evidence": "RouteEfficiencyPage.tsx:138,157,260,284-290; FadeIn.tsx:24-36; StaggerContainer.tsx:14-30; StaggerItem.tsx:14-29", "role": "Shared finite entrance animations and preference-aware reduced motion, not feature-local animation engine."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+      "line": 93,
+      "rule": "MDC-033 / mission 0 preservation and shared owners",
+      "detail": "Best/average/worst and most-driven values occur in the summary and the four contextual MetricBars. This is an observed repeated readout, not evidence that either section can be deleted. Local range gradient has overlapping presentation intent with shared MetricBar, but encodes three ordered stops rather than one bounded value.",
+      "fix": "Retain both overview and contextual section; use existing shared formatting and solid MetricBar fill. Keep the specialist three-stop range presentation local unless a second independent consumer proves an extension need.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+      "line": 149,
+      "rule": "MDC-026 / mission 43 restrained hierarchy",
+      "detail": "One fatal route-source failure creates four QueryError surfaces: brief action, chart replacement, metrics body and route-list body.",
+      "fix": "Consider one prominent source recovery action plus lightweight section-local explanations; preserve every mounted section and keep retry reachable. Do not change fatal-versus-retained semantics.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["RouteEfficiencyPage.tsx:149,167,216,273"]
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "PageLayout.tsx:12 uses full-width container and min-w-0.",
+      "RouteEfficiencyPage.tsx:160 stacks chart/metrics until xl, then allocates two/one columns.",
+      "RouteEfficiencyPage.tsx:185-186,197 sets 340px desktop and 260px mobile chart heights; 110px category axis and up to ten route groups share this height.",
+      "RouteEfficiencyPage.tsx:266,284 uses auto-fill minmax(min(100%,20rem),1fr), preserving a single narrow card column.",
+      "RouteCard.tsx:72-97 combines truncated endpoint labels with a nonshrinking badge and three fixed stat columns.",
+      "AIFeatureCard.tsx:314-340 wraps header/button and breaks long description text."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+        "line": 186,
+        "rule": "MDC-043 / mission 15",
+        "detail": "Ten groups containing three horizontal bars must fit a 260px mobile plot, while the left axis reserves 110px. Small 9px category/10px number ticks and long units warrant density/collision review; actual clipping is not proven.",
+        "fix": "Validate narrow allocated width and all ten rows; use existing chart height/mobileHeight and full-label data fallback to retain all series rather than reducing the evidence set.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "allocated container widths", "RTL", "200% text", "long translations", "pagination reachability", "AI streaming text layout", "extreme route counts"],
+    "acceptance": "Source only; no viewport or mounted responsive acceptance."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Analysis section has localized aria-label and most-driven Section generates aria-labelledby.",
+      "Chart has localized ariaLabel, four dataColumns and all three series labels; ChartContainer owns screen-reader/forced-colors fallback table.",
+      "RouteCard endpoint heading uses Text as h3; decorative pin/arrow/range track are aria-hidden, and best/average/worst each have text.",
+      "MetricBar supplies progressbar names and bounds; reduced-motion/forced-color support exists in its shared owner.",
+      "StaleRefreshWarning has role=status/aria-live=polite and shared named retry Button.",
+      "AI action includes contextual aria-label, aria-disabled and aria-busy with wrapLabel."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+        "line": 117,
+        "rule": "MDC-034 / MDC-040 complete chart alternatives",
+        "detail": "Chart rows permanently truncate both locations to ten characters before dataColumns receive them. Routes with shared prefixes become indistinguishable in axis, tooltip and fallback-table route names; full labels elsewhere in paginated cards do not repair chart identity.",
+        "fix": "Retain full start/end location strings in chart data and data alternative; shorten only visible axis rendering with a formatter. Keep series values and ordering unchanged.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\route-efficiency\\RouteCard.tsx",
+        "line": 85,
+        "rule": "MDC-040 / mission 15 complete mobile evidence",
+        "detail": "Visible endpoint names are truncated and full strings are available only through native title on nonfocusable spans. Screen-reader text retains strings, but source does not establish a keyboard/touch full-name disclosure.",
+        "fix": "Prefer wrapping full route labels or existing accessible Tooltip/disclosure composition; retain endpoint identity and avoid making passive cards fake interactive buttons.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["keyboard navigation", "focus order/visibility", "touch target size", "screen reader announcements", "effective composed contrast", "forced colors", "reduced-motion runtime", "tooltip/disclosure interaction", "chart export menu keyboard behavior"]
+  },
+  "states": {
+    "loading": "Initial selected-vehicle query shows brief loading, chart loading, metrics skeleton and six route-card skeletons while sections remain mounted.",
+    "empty": "No vehicle and resolved empty routes have distinct messages for metrics/cards. Summary exposes routes/trips zero only when source available; efficiency/most-driven null without routes. Comparison treats fewer than two routes as empty.",
+    "error": "fatalError only triggers section replacements/retries; no retained payload deletion on transient refresh failure.",
+    "staleOffline": "StaleRefreshWarning keeps retained payload with status notice and retry; PageLayout forwards query for shell freshness. Brief marks retained only when isRefreshBlocked, not all refresh errors.",
+    "partial": "No per-field missing-evidence presentation. Helper converts null/nonfinite measurements to zero and missing efficiency badge to success.",
+    "disabled": "Analytics disabled without vehicle; AI gate can omit AI entirely and positive safe integer is required for Generate; streaming disables duplicate requests.",
+    "success": "Six summary metrics, three-series top-ten comparison, four metric tracks, complete locally paginated route-card list and independent AI narrative.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\route-efficiency\\helpers.ts",
+        "line": 49,
+        "rule": "MDC-025 / MDC-026 unknown is not zero",
+        "detail": "safeNumber converts missing/nonfinite measurements to zero. efficiencyVariant also assigns nonfinite values to success. Page reductions use ?? 0, and RouteCard tripCount/distance use zero fallbacks. Degraded readings can appear as real 0 consumption/distance and a favorable badge.",
+        "fix": "Use explicit measurement availability with existing null-capable metric/track formatting and neutral unknown badge; exclude unknown operands from min/max/mean only after documenting denominator/coverage semantics. Preserve actual measured zero and negative net-regen values.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": ["helpers.ts:18-22,55-60", "RouteCard.tsx:51-55,96", "RouteEfficiencyPage.tsx:82-87"]
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+        "line": 148,
+        "rule": "MDC-026 / MDC-025 truthful source status",
+        "detail": "Brief retained flag uses only isRefreshBlocked. A refresh error retaining data can therefore show Source available in DrivingSummaryBrief while adjacent StaleRefreshWarning describes stale evidence.",
+        "fix": "Derive brief status from the existing retained/degraded DataState semantics, including refreshError, without changing query policy or clearing usable data.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": ["DrivingSummaryBrief.tsx:27-36", "StaleRefreshWarning.tsx:59-79"]
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+        "line": 190,
+        "rule": "MDC-026 empty versus insufficient comparison",
+        "detail": "One valid returned route triggers the generic chart empty state, although that route and its measurements exist. Other sections retain the evidence.",
+        "fix": "Keep comparison threshold if intentional but supply localized insufficient-comparison explanation distinct from no route data; retain single-route measurements and named data alternative.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\route-efficiency\\RouteCard.tsx",
+      "line": 71,
+      "rule": "MDC-010 / MDC-012 / mission 43 restrained semantics",
+      "detail": "Every passive card uses cyan pin container, cyan hover-border tint, three-color gradient track and colored numerical readouts. GlassPanel glow='cyan' currently means hover:border-cyan-400/40, NOT a literal neon bloom. Emer­ald/cyan/rose -300 body values are fixed hues across themes; repeated accents compete with the badge and chart.",
+      "fix": "Use neutral surface/hover and token-aware primary numerical text; reserve semantic hues for the consumption badge/series and a restrained range cue. Preserve the specialist track and all textual values; do not reset saved chart palette/theme preferences.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["RouteCard.tsx:71-75,103-104,112-126", "GlassPanel.tsx:32-37,74-85"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+      "line": 225,
+      "rule": "MDC-010 / mission 43",
+      "detail": "Four contextual tracks use shared MetricBar's default gradient fill; chart already has three semantically distinct palette series and card tracks repeat them. This is a restrained-noise opportunity, not permission to remove metrics.",
+      "fix": "Use existing fill='solid' and reserve semantic color for necessary comparisons; keep labels, values, units and bounds.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": "MetricBar.tsx:44,95"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+      "line": 42,
+      "rule": "MDC-032 / MDC-045 shared workspace time semantics",
+      "detail": "Registered dated route consumes shared range owner but sends only start/end calendar strings. Rolling 24h precise bounds exposed by useRangeState are lost. Vehicle timezone is not passed. Actual backend interpretation remains unknown.",
+      "fix": "Consume vehicle timezone and startInstant/endInstantExclusive through current typed hook; integration owner must verify/extend actual endpoint bound semantics rather than client-filtering returned pages or adding another picker.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["RouteEfficiencyPage.tsx:42-47,61", "useRangeState.ts:86-90,656-682", "useDriving.ts:298-306"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+      "line": 154,
+      "rule": "MDC-032 / MDC-026 scope truth",
+      "detail": "AI receives vehicle only and scopeKey ignores date range. Date changes update deterministic analytics but do not invalidate prior AI narrative. UI does not explicitly distinguish its independent historical scope from selected-range analytics. This is not proof of backend filtering or data leakage.",
+      "fix": "Clearly label actual AI scope, retain existing gate/action/stream and invalidate misleading stale narrative on scope changes if appropriate. Only forward date bounds if the existing backend contract is verified to support them.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": "AIRouteEfficiencySuggestions.tsx:55-88"
+    },
+    {
+      "file": "web\\src\\types\\driving.ts",
+      "line": 246,
+      "rule": "MDC-045 source contract / SI boundary",
+      "detail": "RouteSummary declares avgDistanceKm; RouteCard assumes kilometres then multiplies by 1000, while helper comment describes SI metres input. The backend payload/JSON tags were not inspected, so current correct conversion versus a source-contract mismatch is unresolved. Do not silently rename fields or change factors.",
+      "fix": "Integration owner traces actual handler/model JSON and dimensional semantics; preserve raw wire/cache values and specialist conversion until a verified coordinated contract fix is assigned.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["RouteCard.tsx:52", "helpers.ts:33-44"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+      "line": 88,
+      "rule": "MDC-033 measured provenance",
+      "detail": "Most-driven is simply routes[0].tripCount, preserving returned order without proving server sort. Response totalRoutes/totalTrips exist in frontend type but summary intentionally computes returned-array counts, and correctly says completeness is undeclared.",
+      "fix": "Verify source ordering and totals semantics with integration owner. Preserve current unweighted mean and returned-array scope; do not replace them with weighted mean/server totals or silently resort card list.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["RouteEfficiencyPage.tsx:82-88,142-145", "web\\src\\types\\driving.ts:236-249"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": ["Resolve unknown-as-zero/success semantics", "Preserve precise workspace bounds and verify backend unit/order contract", "Keep full chart route identity"],
+    "next": ["Align retained brief status", "Clarify AI independent scope", "Validate mobile chart and full endpoint access", "Reduce repetitive accent/gradient decoration"],
+    "scope": "Audit recommendations only; no source implementation or runtime acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing analytics route-efficiency contract verification",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts; web\\src\\types\\driving.ts; routeEfficiencyHandler.List referenced by internal\\api\\router.go:1100,3888",
+      "propsVariantsStates": ["vehicle_id", "precise inclusive start/exclusive end semantics", "distance/consumption dimensions", "null versus measured zero", "returned ordering/cap/completeness", "retained/empty response"],
+      "usedBy": ["RouteEfficiencyPage", "RouteCard", "route-efficiency summary and comparison"],
+      "dependsOn": ["Actual handler/model/repository readback and payload evidence", "MDC-032/MDC-045"],
+      "detail": "Integration-owned verification, not a speculative backend rewrite. Hook already accepts both bound strings and AbortSignal; page must not duplicate workspace range ownership."
+    },
+    {
+      "name": "Existing AIRouteEfficiencySuggestions scope clarification",
+      "owner": "web\\src\\components\\ai\\AIRouteEfficiencySuggestions.tsx",
+      "propsVariantsStates": ["vehicleId positive opaque anchor", "explicit actual narrative scope", "vehicle/range changes", "gated-off", "disabled", "streaming", "retained narrative", "error"],
+      "usedBy": ["RouteEfficiencyPage"],
+      "dependsOn": ["Existing AI backend retrieval/bound contract verification", "useAiStream scopeKey lifecycle"],
+      "detail": "Use existing AIFeatureCard and stream owner; no second AI scaffold. A range prop is not authorized without backend support evidence."
+    }
+  ],
+  "competingImplementations": {
+    "observed": "No alternate query client, theme engine, date picker, table pipeline or chart controller introduced by this page. ChartCard forwards children through EmbeddedChart into canonical ChartContainer. Local UnitDisplay and three-stop range renderer are specialist adapters, not proven shared-library gaps.",
+    "reuse": ["Existing MetricBar fill='solid' and null support", "Existing typography/token colors", "Existing ChartCard ariaLabel/dataColumns/height/mobileHeight", "Existing source trust and workspace selection hooks", "Existing AI feature scaffold"],
+    "extend": "Only existing owners when a concrete unsupported capability is verified. No new shared presentation component justified by this bounded single-page evidence.",
+    "local": ["Specialist best/average/worst consumption range visualization", "Route-derived summary/chart transforms"],
+    "new": []
+  },
+  "preservation": {
+    "sourceHash": "4ACD73BBE53433401A5CA5289EDCF98C5D1B79A2108595047A2CCB92F40F7A05",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 304,
+    "sectionCount": 5,
+    "sectionNames": ["Route efficiency summary", "Optional Helix route-efficiency suggestions", "Route Efficiency Comparison", "Route Metrics", "Most-driven routes"],
+    "sectionCounting": "Five user-facing content blocks, with comparison and metrics in one analysis section. Source has one explicit analysis section, one Section, one ChartCard, one LayoutCard, one DrivingSummaryBrief, one AI child and three fallback GlassPanels. Card grid mounts one RouteCard/GlassPanel per visible route. Three FadeIn wrappers; one StaggerContainer and one StaggerItem per visible route.",
+    "metricCount": {"summary": 6, "contextualMetricBars": 4, "comparisonSeries": 3, "comparisonColumns": 4, "perRouteConsumptionReadouts": 3},
+    "actions": [
+      "Workspace header vehicle/range selection remains the sole owner, including URL state and saved preferences.",
+      "Source retry on fatal failure and retained/offline notice; preserve per-section reachability.",
+      "Chart legend visibility through hiddenSeries and chartKey='route-efficiency-comparison'; preserve persistence identity.",
+      "Chart image export/copy controls through exportable toolbar. CSV is not currently enabled because exportData is absent; fullscreen defaults false. Do not claim either as existing action.",
+      "Pagination via URL page with page size 12, scope-reset-to-one and clamping.",
+      "Optional gated Ask Helix / Generate suggestions with positive anchor validation, streaming disabled state and vehicle-scope cancellation.",
+      "Summary delegates to existing OperationalBrief owner; any owner-provided details/navigation must be retained, but its implementation was not inspected in this audit."
+    ],
+    "dataBehavior": [
+      "Raw returned route array retained, null top-level array fallback and no vehicle guard; no client-side time filtering.",
+      "Summary counts all returned routes/trips before pagination, not response totalRoutes/totalTrips; unweighted mean of route averages must not become weighted silently.",
+      "Best minimum, worst maximum, first returned route trip count and their current scope/provenance explanations.",
+      "Chart sorts a cloned array ascending avgEfficiency, caps at ten, uses best/avg/worst rounded display measurements and current semantic palette identity.",
+      "Cards preserve returned source order across all local pages; route endpoint names, trip count, average distance, efficiency badge and three textual consumption values.",
+      "Keep true zero and signed net-regen consumption; preserve 140/180/220 Wh/km source threshold meanings unless separately verified domain change.",
+      "Existing range track clamps stops to 0-100; preserve visible specialist explanation and measurements rather than replacing missing evidence with fabricated zero.",
+      "Preserve distance preferences, locale/precision, specialized unit labels and display-only conversion; no cache/wire mutation.",
+      "Independent AI off-mode gate and narrative/action lifecycle, no fake suggestions or analytics data.",
+      "Retained refresh-error payload, separate fatal retry/empty/no-vehicle/loading states, semantic sections, print markers and reduced-motion owners."
+    ],
+    "specialistExplanations": [
+      "Summary explicitly states unweighted route averages.",
+      "Summary provenance explicitly declines source completeness.",
+      "Source observation time unknown remains explicit through DrivingSummaryBrief.",
+      "AI description describes historical-data-grounded route suggestions and non-mutating ideas; it mentions kWh/100mi independently of display preferences and is not a verified SI wire contract."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "sourceRouting": "App.tsx:127 lazy-load and :831 SafeRoute mount confirm /route-efficiency source wiring only; route was not mounted.",
+    "backend": "Only route declarations/AI route comments inspected. Analytics handler/repository, actual JSON/units/cap/sort/time filter and AI retrieval not examined or exercised.",
+    "tests": "Not run: TypeScript, lint, build, tests and browser validation are outside this Phase0 audit assignment. Skill full audit script was inspected but not executed because it runs project-wide TypeScript; bounded pattern checks substituted without claiming full audit acceptance.",
+    "boundedChecks": [
+      {"command": "PowerShell Get-FileHash RouteEfficiencyPage.tsx -Algorithm SHA256; Get-Content line count", "exitCode": 0, "output": "SHA256=4ACD73BBE53433401A5CA5289EDCF98C5D1B79A2108595047A2CCB92F40F7A05; LINES=304"},
+      {"command": "PowerShell Select-String on assigned page and RouteCard.tsx: style=, raw form/table tags, direct chart/map/motion imports, text-neon|glow=, fixed-white/gray classes", "exitCode": 0, "output": "Page counts: 0,0,0,0,0. RouteCard counts: 1,0,0,1,0. Dynamic gradient style at line 104; glow prop at line 71 is current shared hover border tint, not literal glow."},
+      {"command": "Initial bounded PowerShell styling probe", "exitCode": 1, "output": "ParserError: Unexpected token ']' in expression or statement. Corrected quoted pattern and reran successfully; failed probe did not write heartbeat."}
+    ],
+    "scope": "Only owned report and heartbeat changed. Recommendations are source-backed risks/opportunities, not implementation, current mounted behavior proof or mission section44 acceptance."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-121.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx",
+    "web\\src\\features\\driving\\components\\route-efficiency\\index.ts",
+    "web\\src\\features\\driving\\components\\route-efficiency\\RouteCard.tsx",
+    "web\\src\\features\\driving\\components\\route-efficiency\\helpers.ts",
+    "web\\src\\features\\driving\\components\\route-efficiency\\constants.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\Section.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ai\\AIRouteEfficiencySuggestions.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\motion\\StaggerContainer.tsx",
+    "web\\src\\components\\motion\\StaggerItem.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\airouteeff\\handler.go",
+    "internal\\api\\airouteeff\\handler_test.go",
+    "internal\\api\\aiautotripname\\handler.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-122.json", ".agent-status\\audit-page-122.txt"]
+}

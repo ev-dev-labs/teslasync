@@ -1,0 +1,671 @@
+{
+  "schemaVersion": 2,
+  "item": "phase6-dispose-remaining-reports-06",
+  "status": "REPORT_DISPOSITION_COMPLETE_DRAIN_ONLY_PARENT_EXPORT_REQUIRED",
+  "assignmentUTC": "2026-10-14T12:28:07.136Z",
+  "returnDeadlineUTC": "2026-10-14T12:48:07.136Z",
+  "deadlineRule": "Original assignment plus twenty minutes; no reset, retry or budget renewal. Earlier actual actor deadline, if exposed to parent, wins.",
+  "completionMeaning": "Disposition of exactly twenty-one existing reports. No source corrections, queue registration, root work-items.json export, native acceptance, page approval or application approval.",
+  "authority": {
+    "writableFiles": ["docs\\frontend-audits\\phase6-dispose-remaining-reports-06.json", "web\\logs\\phase6-dispose-remaining-reports-06.log"],
+    "dispatchInput": "session files\\tick-resume-dispatch.json#batch[id=phase6-dispose-remaining-reports-06]",
+    "contractRead": "docs\\orchestrator-loop.md#Worker contract",
+    "queueReadOnly": "migration-queue.md",
+    "priorOwnerMapsReadOnly": ["docs\\frontend-audits\\phase6-confirmed-fix-owner-map.json", "docs\\frontend-audits\\phase6-confirmed-fix-owner-map-next.json"],
+    "parentAloneMergesNineChunksAndExportsRootWorkItems": true,
+    "queueRootCatalogConfigSourceTestFixtureWrites": 0,
+    "gitInstallsSubagentsServersDocker": "NOTRUN",
+    "compilerTestsLintBrowserApiProductionInvestigation": "NOTRUN",
+    "newFindings": 0,
+    "executionAuthorized": false,
+    "fileExistenceVerified": false,
+    "fileRule": "Every proposed source/test path is already named in an assigned report or exact current corrective queue row. Paths are repo-relative Windows spelling, not fresh existence checks. Unknown required tests, outputs, backend representations and permissions are explicit blockers. Shared primitives cited as read-only capabilities are not silently granted."
+  },
+  "accounting": {
+    "assignedReportCount": 21,
+    "processedReportCount": 21,
+    "proposedFixItemCount": 51,
+    "proposedItemsWithExplicitBlockers": 27,
+    "existingOwnerOnlyPrimaryFindingRecords": 7,
+    "mixedExistingAndMissingPrimaryFindingRecords": 2,
+    "missingOwnerPrimaryFindingRecords": 232,
+    "notReadAssignedRemainder": [],
+    "notReadOtherChunkReportCount": 168,
+    "originalRemainingInventoryCount": 189,
+    "originalPrimaryConfirmedFindingRecords": 241,
+    "additionalAlertStudioInheritedConfirmedRecords": 8,
+    "alertStudioResolvedPriorRecords": 2,
+    "originalCandidateArrayRecordsIncludingRejected": 138,
+    "originalRejectedCandidateRecords": 1,
+    "reportedAdditiveConfirmedNativeFailures": 1,
+    "newlyConfirmedOrPromotedCandidatesByThisWorker": 0,
+    "countRule": "Original report/finding IDs are counted once per primary field, not once per mapping, site, owner or proposed fix. Alert Studio's eight inherited records and two resolved records are separate denominators. All historical candidate arrays remain intact; Home Energy's additive, already-reported measured N01 failure has its existing corrective owner. The 189 filenames are intake inventory, never 189 fixes.",
+    "rawCountsPreservation": "The exact original summary/counts fields remain in unchanged, SHA256-pinned original records. Per-report rawCountsField names below locate them without reinterpretation. No raw site, test-declaration, passed, failed, skipped, pin or native-measurement count is rewritten as a fresh result."
+  },
+  "registrationDefaults": {
+    "fixItemsAreProposalsNotRegisteredTasks": true,
+    "runnableWithoutParentAdjudication": false,
+    "unknownRequiredFileOrPermission": "BLOCKED: parent must grant the exact missing covering-test/output/backend claim before implementation or acceptance; an empty files list is not permission to guess.",
+    "preserveOriginalAssertionsAndRecords": true,
+    "preservePrivacySafetyNativeAndFailedReceipts": true,
+    "noExhaustedBudgetRenewal": true,
+    "canonicalCopy": "Parent alone serializes canonical English and explicitly authorizes normal generated projections; no generated path/glob is granted by this report.",
+    "claims": "No production/test/runtime claim acquired. Proposed overlapping paths are serialized ownership needs, not parallel grants.",
+    "validation": "Artifact JSON shape, exact assignment/count/mapping/provenance and unchanged original hashes only."
+  },
+  "fixItems": [
+    {
+      "id": "phase6-fix-exports-caller-trust-date-sort-copy-and-table-contract",
+      "task": "Correct only the originally reported Exports mechanisms in docs\\frontend-audits\\phase6-qa-exports-exports.json#confirmedFindings: EX01 UI live-only readiness, EX03 saved-locale/timezone timestamps including KPI freshness, EX04 real controlled raw-value sorting, EX05 localized known bulk reason with raw IDs/unknown diagnostics retained, EX06 human localized table name, EX07 embedded table chrome and EX09 localized Cancel. Preserve all four sections, downloads, filters, mobile details, selections, partial-failure retention and exact original tests. The hook guard is a separate shared claim; do not redo the accepted bulk-outcome, palette or breakdown corrections. Parent must serialize exact claims and any missing copy before edits; runtime/native acceptance remains separate.",
+      "files": ["web\\src\\features\\exports\\pages\\ExportsPage.tsx", "web\\src\\features\\exports\\components\\ExportKpiBand.tsx", "web\\src\\features\\exports\\pages\\ExportsPage.test.tsx", "web\\src\\features\\exports\\components\\ExportKpiBand.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-exports-existing-bulk-live-only-hook",
+      "task": "Apply the existing request live-only policy to the original bulk export mutation, exactly EX01 in docs\\frontend-audits\\phase6-qa-exports-exports.json#confirmedFindings and proposedNarrowNeeds N01. Preserve transport/body/IDs, retry0, no offline queue, invalidation, broadcast and partial outcomes. Do not expand client.ts/offlineCache.ts or infer a backend authorization defect. Cover historical/offline rejection and live behavior only with the already-reported hook test; parent separately serializes page readiness and canonical copy.",
+      "files": ["web\\src\\api\\hooks\\useExports.ts", "web\\src\\api\\hooks\\useExports.test.ts"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-export-advisor-type-proposal-identity",
+      "task": "Correct EX02 in docs\\frontend-audits\\phase6-qa-exports-exports.json#confirmedFindings/proposedNarrowNeeds N02 by binding the catalog-type proposal/stream to the existing AI scope identity, aborting or retiring prior-type guidance when that identity changes. Preserve opt-in/catalog-only/manual export semantics, partial-output behavior and original tests; do not change the shared stream API or issue model/export requests. The cited wired route test is existing declared coverage, not a new execution or verified file existence.",
+      "files": ["web\\src\\components\\ai\\AIPiiRedactionSharedExports.tsx", "web\\src\\features\\exports\\__tests__\\TestPiiRedactionSharedExportsAIOnWiredCallsRoute.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar",
+      "task": "Address only F01-F11 in docs\\frontend-audits\\phase6-qa-fleet-ops-fleet-operations.json#confirmedFindings: independent initial/paused trust across seven sources, keep loaded cost centers despite sibling failure, unknown-cost completeness, real ISO minor-unit scaling, saved money/date preferences, all original mobile fields and localized table names, direct fieldset legend, honest undated reservation empty copy, <=8% forecast tint and calendar-day identity. Preserve source datasets, actions, forecast window and existing SI display. F12 weekday copy is parent-owned separately. BLOCKED until parent grants the exact directly covering test files; none were established by this report's proposed needs. No backend/server/native or remigration permission.",
+      "files": ["web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx", "web\\src\\features\\fleet-ops\\helpers.ts", "web\\src\\features\\fleet-ops\\components\\ReservationPanel.tsx", "web\\src\\features\\fleet-ops\\components\\DriverRoster.tsx", "web\\src\\features\\fleet-ops\\components\\AssignmentRoster.tsx", "web\\src\\features\\fleet-ops\\components\\WorkOrderBoard.tsx", "web\\src\\features\\fleet-ops\\components\\CostCenterAllocation.tsx", "web\\src\\features\\fleet-ops\\components\\ChargingPolicyMatrix.tsx", "web\\src\\features\\fleet-ops\\components\\ChargingWindowsEditor.tsx", "web\\src\\features\\fleet-ops\\components\\UtilizationForecastChart.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact covering-test claim unknown; serialize this overlapping feature scope or split only genuinely exclusive source/test pairs."]
+    },
+    {
+      "id": "phase6-fix-home-energy-workspace-vehicle-disclosure",
+      "task": "Correct only home-energy F01 in docs\\frontend-audits\\phase6-qa-home-energy-whole-home-energy.json#confirmedFindings/ownerNeeds O1: disable the misleading workspace vehicle selector for the fleet/site-backed route, without inventing vehicle query filtering or changing unrelated routes. Shared workspaceScope.ts overlaps other chunks/owners: parent must merge or serialize this exact route objective, not dispatch a competing writer. BLOCKED until an exact covering route test and shared-file permission are granted; existing workspace corrections do not themselves prove this route fixed.",
+      "files": ["web\\src\\lib\\workspaceScope.ts"],
+      "dependsOn": [],
+      "blockers": ["Shared-file owner reconciliation and exact test claim required."]
+    },
+    {
+      "id": "phase6-fix-home-energy-independent-source-and-forecast-evidence-contract",
+      "task": "Correct F02/F03/F04/F05/F12 in docs\\frontend-audits\\phase6-qa-home-energy-whole-home-energy.json#confirmedFindings/ownerNeeds O2: retain independent fleet/source trust and provenance, distinguish unresolved from measured empty, keep missing forecast facts unknown and carry the original caveat/evidence contract without invented backend mapping or fake zero. Preserve optimization signs, SI values, constraints and all sections. BLOCKED until parent grants exact domain covering tests and adjudicates any unknown source representation; existing HTTP500 evidence is external, not authorization to repair or manufacture household data.",
+      "files": ["web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts", "web\\src\\features\\home-energy\\lib\\forecastAdapters.ts", "web\\src\\features\\home-energy\\lib\\types.ts"],
+      "dependsOn": [],
+      "blockers": ["Exact domain test filenames and any unestablished backend representation remain unknown."]
+    },
+    {
+      "id": "phase6-fix-home-energy-raw-display-dates-units-and-diagnostics",
+      "task": "Adopt the corrected home-energy evidence contract for F06-F11 in docs\\frontend-audits\\phase6-qa-home-energy-whole-home-energy.json#confirmedFindings/ownerNeeds O3/O4: retain raw chart/table precision, disclose physical units, retain physical timestamps, consume saved date/number preferences and localize structured optimizer reasons while preserving machine diagnostics. Preserve every series, sign, constraint and export. Parent alone supplies the six exact missing diagnostic leaves recorded in missingCatalogKeys/F13. BLOCKED until exact presentation tests are granted. Do not redo accepted ScenarioControls mobile targets or infer that their remaining native remeasurement passed.",
+      "files": ["web\\src\\features\\home-energy\\components\\EnergyFlowChart.tsx", "web\\src\\features\\home-energy\\components\\PowerwallTrajectoryChart.tsx", "web\\src\\features\\home-energy\\components\\KpiSummary.tsx", "web\\src\\features\\home-energy\\components\\ConstraintViolationsPanel.tsx"],
+      "dependsOn": ["phase6-fix-home-energy-independent-source-and-forecast-evidence-contract", "phase6-copy-disposition-06-original-canonical-needs"],
+      "blockers": ["Exact presentation-test claims unknown."]
+    },
+    {
+      "id": "phase6-fix-marketplace-envelope-verification-identity",
+      "task": "Correct marketplace F01 in docs\\frontend-audits\\phase6-qa-intelligence-packs-intelligence-pack-marketplace.json#confirmedFindings/needs: bind verification and install confirmation to actual full content/signature/current envelope rather than a merely claimed digest or incomplete fallback identity. Preserve signed manifest bytes, crypto guarantees and cached verification semantics; prove the original one-client collision without weakening verification. This report establishes result association failure, not a demonstrated signature bypass. BLOCKED until parent grants exact verification tests and adjudicates representations; no install/network or security-policy grant.",
+      "files": ["web\\src\\features\\intelligence-packs\\hooks\\usePackVerification.ts", "web\\src\\features\\intelligence-packs\\components\\PackDetailModal.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact verification test path and independent content-identity contract require parent grant."]
+    },
+    {
+      "id": "phase6-fix-marketplace-storage-failure-corruption-and-durability",
+      "task": "Correct marketplace F07/F08/F09 in docs\\frontend-audits\\phase6-qa-intelligence-packs-intelligence-pack-marketplace.json#confirmedFindings: distinguish absent keys from failed storage and corrupt present records; never replace unreadable prior data with a fabricated empty table; expose degraded memory durability using the reported provider/backend contract. Preserve stored/signed records and normal successful repository behavior. BLOCKED until parent grants exact adapter/repository/provider tests and the UI durability consumer scope; do not invent new persistence adapters or claim successful writes when storage rejects.",
+      "files": ["web\\src\\features\\intelligence-packs\\lib\\kvStore.ts", "web\\src\\features\\intelligence-packs\\lib\\packRepository.ts", "web\\src\\features\\intelligence-packs\\hooks\\packRepositoryContext.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact storage/provider tests and durability disclosure consumer grant are unestablished."]
+    },
+    {
+      "id": "phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy",
+      "task": "Correct marketplace F02-F06/F10-F15 in docs\\frontend-audits\\phase6-qa-intelligence-packs-intelligence-pack-marketplace.json#confirmedFindings: independent install readiness/current selection; truthful unknown/absent/blocked and retained-refresh trust with retry; native Toggle.disabled; source-local action feedback and success-only settlement; unsigned versus unestablished fingerprint; neutral unchecked development compatibility; complete mobile inventory/audit fields and actions; saved sandbox palette; app-owned localized capability/verification/compatibility/parser/audit prose and three exact fallback mismatches. Preserve raw signed bytes, unknown codes, development behavior and all sections. BLOCKED until parent grants missing directly covering UI/hook tests and exact copy integration; do not redesign the shared table/Toggle.",
+      "files": ["web\\src\\features\\intelligence-packs\\hooks\\useCatalog.ts", "web\\src\\features\\intelligence-packs\\hooks\\usePackActions.ts", "web\\src\\features\\intelligence-packs\\components\\CatalogPanel.tsx", "web\\src\\features\\intelligence-packs\\components\\CatalogCard.tsx", "web\\src\\features\\intelligence-packs\\components\\ImportExportPanel.tsx", "web\\src\\features\\intelligence-packs\\components\\InstalledInventoryPanel.tsx", "web\\src\\features\\intelligence-packs\\components\\SandboxPreviewPanel.tsx", "web\\src\\features\\intelligence-packs\\components\\AuditLogPanel.tsx", "web\\src\\features\\intelligence-packs\\components\\PublisherFingerprintDisplay.tsx", "web\\src\\features\\intelligence-packs\\components\\CompatibilityBadge.tsx", "web\\src\\features\\intelligence-packs\\components\\CapabilityRequestList.tsx", "web\\src\\features\\intelligence-packs\\components\\SecurityMethodologyPanel.tsx", "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx", "web\\src\\features\\intelligence-packs\\components\\__tests__\\badges.test.tsx"],
+      "dependsOn": [],
+      "blockers": ["Missing exact directly covering tests/copy grants; overlap PackDetailModal with the verification owner must be serialized if caller wiring needs that file."]
+    },
+    {
+      "id": "phase6-fix-marketplace-sandbox-interrupted-formula-partial-rows",
+      "task": "Correct only marketplace F16 in docs\\frontend-audits\\phase6-qa-intelligence-packs-intelligence-pack-marketplace.json#confirmedFindings: retain rows completed within the interrupted formula, not merely earlier completed formulas, when hard runtime budgets stop evaluation. Preserve original hard budgets, interruption/error/truncation meaning, formula order, values and the exact existing tests. No renewed budget, runtime evaluation, manifest changes or weakened assertion is authorized by this proposal.",
+      "files": ["web\\src\\features\\intelligence-packs\\lib\\sandboxRunner.ts", "web\\src\\features\\intelligence-packs\\lib\\__tests__\\sandboxRunner.test.ts"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-navigation-route-original-trust-date-zero-and-delay",
+      "task": "Correct NAV-QA-001 through NAV-QA-004 in docs\\frontend-audits\\phase6-qa-maps-navigation-route.json#confirmed_findings/needs NAV-NEED-PAGE: unresolved/paused histories and fleet prerequisites are not authoritative empty; apply saved timestamp preferences reactively; preserve measured zero coordinates; qualify residual delay when no active route. Preserve all history panels, location identity, accessible/mobile fields, SI values and original assertions. The accepted caption-prop compiler repair is a different completed objective; no redispatch of it or shared formatter repair.",
+      "files": ["web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx", "web\\src\\features\\maps\\pages\\NavigationRoutePage.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-navigation-existing-typed-history-query-owner",
+      "task": "Resolve original NAV-QA-005 in docs\\frontend-audits\\phase6-qa-maps-navigation-route.json#confirmed_findings/needs NAV-NEED-HISTORY-HOOK: move the existing page-owned history URL/query to its reported typed useVehicles domain owner, preserving exact key, AbortSignal, enablement and snake_case semantics; serialize caller wiring with the page owner. BLOCKED until parent grants the exact hook test and approves the existing history API contract. No guessed endpoint/bounds, backend edit, API request or broad hook audit.",
+      "files": ["web\\src\\api\\hooks\\useVehicles.ts", "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact hook covering-test file and API contract/claim unknown."]
+    },
+    {
+      "id": "phase6-fix-alert-pack-callers-original-source-validation-and-date",
+      "task": "Correct AP-01/AP-02/AP-03/AP-05/AP-06 in docs\\frontend-audits\\phase6-qa-notifications-alert-packs.json#confirmedFindings/deduplicatedNeeds N1/N3/N4: distinguish initial pause/unknown, authoritative catalog empty and filtered no-match; source-label retained warnings above decisions; associate numeric validation/errors with exact fields; apply saved installed timestamps. Preserve message validation, original delivery thresholds and manual/opt-in flows. Consolidate overlapping InstallPackDialog and AlertPacksPanel tests into one exclusive owner; use existing shared trust/form/date APIs, not new primitives.",
+      "files": ["web\\src\\features\\notifications\\components\\packs\\AlertPacksPanel.tsx", "web\\src\\features\\notifications\\components\\packs\\InstallPackDialog.tsx", "web\\src\\features\\notifications\\components\\packs\\PackRuleTriggerEditor.tsx", "web\\src\\features\\notifications\\components\\packs\\PackRuleDeliveryEditor.tsx", "web\\src\\features\\notifications\\components\\packs\\PackDeliveryControls.tsx", "web\\src\\features\\notifications\\components\\packs\\InstalledPackCard.tsx", "web\\src\\features\\notifications\\components\\packs\\AlertPacksPanel.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-alert-pack-existing-live-only-mutations",
+      "task": "Correct AP-04 in docs\\frontend-audits\\phase6-qa-notifications-alert-packs.json#confirmedFindings/deduplicatedNeeds N2: apply existing live-only mutation policy to exactly install/remove POSTs, retaining request bodies, IDs, no-replay defaults and invalidation. Parent separately serializes caller readiness with the pack caller owner. Do not lease client/offlineCache, send notifications/install packs or promote conditional backend capability questions to defects.",
+      "files": ["web\\src\\api\\hooks\\useAlertPacks.ts", "web\\src\\api\\hooks\\useAlertPacks.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-shared-vehicle-multiselect-original-localized-fallbacks",
+      "task": "One shared correction for AP-07/AP-08/AP-09 in docs\\frontend-audits\\phase6-qa-notifications-alert-packs.json#confirmedFindings/N5 and AS-N08 in phase6-qa-notifications-alert-studio.json#sourceConfirmedFindings: localize all three Vehicle # fallback paths while preserving known/unknown IDs, raw vehicle names, selection and original keyboard/checkbox semantics. The completed phase3 control migration and resolved Alert Studio accessibility record are not reopened. Parent must serialize any exact canonical leaf request; no fleet/identity access.",
+      "files": ["web\\src\\components\\forms\\VehicleMultiSelect.tsx", "web\\src\\components\\forms\\__tests__\\VehicleMultiSelect.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-alert-studio-original-editor-authority-and-residual-callers",
+      "task": "Resolve AS-N01/02/04/05/06/07/09/10 and inherited AS-E01-E08 in docs\\frontend-audits\\phase6-qa-notifications-alert-studio.json#sourceConfirmedFindings/existingFindingsDeduplicated: pin save settlement to draft/revision; invalid repeat is not unlimited; retain explicit test target despite empty inventory; independent unresolved/retained preview trust; localized validation preserving field identity/focus; no interactive help nested in labels; honest AI/recipient scope, template reset, semantic decoration/typography and linked computed/repeat/escalation helpers. Preserve original empty/retained safety, manual operation, all actions and resolved prior semantics. BLOCKED until parent grants exact controller/editor/payload/field tests and adjudicates scope representation. The record's 'existing need' labels are historical responsibility, not completed canonical corrective owners.",
+      "files": ["web\\src\\features\\notifications\\hooks\\useAlertRuleEditorController.ts", "web\\src\\features\\notifications\\components\\AlertRuleEditor.tsx", "web\\src\\features\\notifications\\components\\AlertMessageEditor.tsx", "web\\src\\features\\notifications\\components\\ComputedMetricEditor.tsx", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\editorPayload.ts", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\editorValidation.ts", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\inputValues.ts", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\ConditionFields.tsx", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\DeliveryBehaviorFields.tsx", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EditorActions.tsx", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EditorNotices.tsx", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\ScopeKindFields.tsx", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TestTargetFields.tsx", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\TemplateBrowser.tsx", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\RepeatLimitFields.tsx", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\EscalationFields.tsx"],
+      "dependsOn": [],
+      "additionalExactReportedRequiredFiles": ["web\\src\\features\\notifications\\components\\alert-editor-source-closure\\MessageFields.tsx", "web\\src\\features\\notifications\\components\\alert-editor-source-closure\\SeverityFields.tsx", "web\\src\\features\\notifications\\components\\PlaceRuleFields.tsx", "web\\src\\features\\notifications\\schemas\\alertRule.ts"],
+      "blockers": ["Exact controller/editor/field test paths, the four additional exact reported source claims above, and recipient/context semantics need parent permission; no actual test-send/model/API actions. Do not execute an incomplete files claim."]
+    },
+    {
+      "id": "phase6-fix-alert-message-advisor-current-draft-identity",
+      "task": "Correct AS-N03 in docs\\frontend-audits\\phase6-qa-notifications-alert-studio.json#sourceConfirmedFindings: retire or correctly bind the existing AI message proposal when the underlying reviewed draft identity changes, using the current shared stream capability. Preserve opt-in, manual review/application, partial output and no actual rule creation. BLOCKED until parent grants its exact covering test and serializes any AlertMessageEditor/controller consumer wiring with the editor owner; no shared stream rewrite.",
+      "files": ["web\\src\\components\\ai\\AIAlertMessageTemplateSuggestion.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact AI covering-test claim and consumer wiring permission unestablished."]
+    },
+    {
+      "id": "phase6-fix-archived-catalog-authority-and-remaining-controller-sites",
+      "task": "Address remaining archived F01, F09 and list-side F02 in docs\\frontend-audits\\phase6-qa-notifications-archived.json#findings/deduplicated_owner_needs: forward independent vehicle/rule catalog trust and retries, reject fractional/unsafe URL IDs without losing valid scope and distinguish unresolved archive list from empty. Reconcile accepted phase6-fix-inbox-body-drawer-trust-and-recovery and body-owned-type-errors first; do not repeat their F03/F04/F05 or summary/drawer date objectives. BLOCKED until parent confirms exact ArchivedPage test and catalog-descriptor consumer claims; historical unqualified filenames are not guessed paths.",
+      "files": ["web\\src\\features\\notifications\\pages\\ArchivedPage.tsx", "web\\src\\features\\notifications\\components\\InboxBody.tsx", "web\\src\\features\\notifications\\components\\NotificationFilterBar.tsx", "web\\src\\features\\notifications\\components\\InboxBody.test.tsx", "web\\src\\features\\notifications\\components\\NotificationFilterBar.test.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact ArchivedPage test path and shared descriptor API/consumer claim unestablished."]
+    },
+    {
+      "id": "phase6-fix-archived-drawer-note-shell-and-timeline-dates",
+      "task": "Resolve the remaining F11 response-note shell and F06 admin-timeline saved-date adoption in docs\\frontend-audits\\phase6-qa-notifications-archived.json#findings. Retain absent versus unresolved evidence, event/actor/note identities and existing drawer lifecycle. Summary/drawer date and warn-tone mechanisms already map to accepted inbox owners; do not redo them or change shared dateFormat. BLOCKED until parent grants the exact timeline covering test; serialize drawer test overlap.",
+      "files": ["web\\src\\features\\notifications\\components\\AlertDetailDrawer.tsx", "web\\src\\features\\notifications\\components\\AlertDetailDrawer.test.tsx", "web\\src\\features\\admin\\components\\AlertDetailTimeline.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact timeline covering-test claim unknown."]
+    },
+    {
+      "id": "phase6-fix-archived-inspection-targets-and-detail-typography",
+      "task": "Correct archived F08/F12 in docs\\frontend-audits\\phase6-qa-notifications-archived.json#findings: below-md inspection targets meet the existing 44px contract and metadata consumes semantic typography roles. Preserve title/message inspection, complete metadata/mobile fields, original assertions and desktop compact intent. Native dimensions remain unmeasured here. Serialize the shared InboxBody.test.tsx claim with remaining controller work.",
+      "files": ["web\\src\\features\\notifications\\components\\NotificationInboxTable.tsx", "web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx", "web\\src\\features\\notifications\\components\\InboxBody.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-browser-notification-single-listener-reactive-preferences",
+      "task": "Resolve browser-notifications F01/F02 in docs\\frontend-audits\\phase6-qa-notifications-browser-notifications.json#confirmed_findings/needs N1/N2: retain one shell delivery listener and reactive same/cross-tab preference and permission truth, rather than duplicate page delivery ownership or independent mount snapshots. Preserve denial/default/granted, original audio/OS tags and category/severity behavior. BLOCKED until parent grants exact shell/listener coverage and any shared permission consumer claim. Do not request browser permission, play audio or deliver real notifications during source work.",
+      "files": ["web\\src\\components\\layout\\Layout.tsx", "web\\src\\features\\notifications\\pages\\BrowserNotificationsPage.tsx", "web\\src\\hooks\\useNotificationListener.ts"],
+      "dependsOn": [],
+      "blockers": ["Exact shell/listener tests and shared permission representation require parent grant."]
+    },
+    {
+      "id": "phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices",
+      "task": "One shared correction for browser-notifications F03-F07 and channels NC004/NC005/NC006/NC007/NC018 at their confirmed_findings fields in the two assigned reports: distinguish unresolved/failed browser lookup from known absence, key pause from unsupported browser, server from browser registration; preserve failed/false partial teardown and reconcile current-endpoint removal; always show named device loading/empty/trust shell. Preserve no-replay policy and raw endpoint privacy. BLOCKED until parent grants exact hook/usePush coverage and a safe synthetic permission/subscription contract. Existing G138/P261/P263 are responsibilities, not completed corrective IDs. No browser/SW/API operation.",
+      "files": ["web\\src\\hooks\\useWebPush.ts", "web\\src\\api\\hooks\\usePush.ts", "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx", "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.test.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact useWebPush/usePush tests and browser/server ownership/permission representation unestablished."]
+    },
+    {
+      "id": "phase6-fix-browser-device-policy-trust-copy-and-mobile-callers",
+      "task": "Correct browser-notifications F08-F13/F15 in docs\\frontend-audits\\phase6-qa-notifications-browser-notifications.json#confirmed_findings/needs N3-N5: truthful independent paused sources, conditional critical bypass/vehicle-only exemption wording, translated known local-test reasons, neutral decorative roles, existing 44px mobile targets and preserved weekday mask when toggling quiet hours. Preserve legal empty bypass, master/category/severity semantics and original preference values. F14's eleven exact missing catalog leaves are parent-only. BLOCKED until parent grants missing component/policy tests and canonical copy; C01/C05 remain candidates, not lost-update/snapshot defects.",
+      "files": ["web\\src\\features\\notifications\\components\\BrowserPermissionPanel.tsx", "web\\src\\features\\notifications\\components\\DeviceNotificationPrefsPanel.tsx", "web\\src\\features\\notifications\\components\\DeviceNotificationPrefsPanel.test.tsx", "web\\src\\features\\notifications\\components\\BrowserTabSignalsPanel.tsx", "web\\src\\features\\notifications\\components\\NotificationSoundChannelRow.tsx", "web\\src\\features\\notifications\\components\\NotificationSoundsPanel.tsx", "web\\src\\sw\\notificationPolicy.ts"],
+      "dependsOn": [],
+      "blockers": ["Exact remaining component/policy tests and canonical reason-label leaves require parent adjudication."]
+    },
+    {
+      "id": "phase6-fix-channels-original-source-credentials-editor-and-feedback",
+      "task": "Correct channels NC001-NC003/NC008-NC016/NC019 in docs\\frontend-audits\\phase6-qa-notifications-channels.json#confirmed_findings/deduplicated_needs: unknown statistics/count trust, paused grid, mask credential-bearing webhook URLs, pending inversion guard, provider success=false and single feedback owner, save statistics invalidation, radio arrow navigation, lossless retained provider configuration, native URL/email inputs, three exact app-owned metadata strings and feedback-barrel imports. Preserve raw credential bytes in legitimate stored payloads but never expose them in DOM/logs; preserve original fields/actions and webhook's distinct feedback path. BLOCKED until parent grants exact hook/card/modal/meta/grid/statistics covering tests and resolves representation for retained configs; do not edit global Button/Input/CopyButton.",
+      "files": ["web\\src\\features\\notifications\\pages\\ChannelsPage.tsx", "web\\src\\features\\notifications\\components\\channels\\ChannelStatsBand.tsx", "web\\src\\features\\notifications\\components\\channels\\ChannelProvidersPanel.tsx", "web\\src\\features\\notifications\\components\\channels\\ChannelsGrid.tsx", "web\\src\\features\\notifications\\components\\channels\\ChannelCard.tsx", "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.tsx", "web\\src\\features\\notifications\\components\\channels\\channelMeta.ts", "web\\src\\api\\hooks\\useNotifications.ts"],
+      "dependsOn": [],
+      "blockers": ["Exact covering-test paths and retained provider-config representation need parent grant; useNotifications overlaps other chunks."]
+    },
+    {
+      "id": "phase6-fix-webhook-signature-copy-local-failure-feedback",
+      "task": "Correct NC017 in docs\\frontend-audits\\phase6-qa-notifications-channels.json#confirmed_findings: adopt existing visible clipboard failure/recovery capability for the signature preview, retaining exact copied value/success outcome and never logging credentials. The working page CopyLinkButton is not this defect. BLOCKED until parent grants the exact signature-preview test; no clipboard/native operation or shared CopyButton rewrite.",
+      "files": ["web\\src\\features\\notifications\\components\\channels\\WebhookSignaturePreview.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact directly covering test path unknown."]
+    },
+    {
+      "id": "phase6-fix-notification-health-original-panel-trust-provenance-and-clock",
+      "task": "Correct NH-01/NH-02/NH-03/NH-04/NH-07/NH-09/NH-10/NH-11/panel NH-12/NH-13/NH-14/NH-15 in docs\\frontend-audits\\phase6-qa-notifications-notification-health.json#findingsConfirmed: independent paused trust, neutral null burn/Apdex, explicit rolling analysis clock, honest grouping/usable-attempt labels, stable grouping identity, saved numeric/date/bin timezone, stored-history provenance, neutral decorative roles and true plural count interpolation. Preserve all outcomes/series/tables and unchanged original continuation assertions. Reducer denominator semantics and shared freshness title have separate owners. Parent provides exact original O3 copy before dependent presentation; no provider/auth/API or native claims.",
+      "files": ["web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx", "web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx", "web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx", "web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx"],
+      "dependsOn": ["phase6-copy-disposition-06-original-canonical-needs"]
+    },
+    {
+      "id": "phase6-fix-fatigue-original-span-and-empty-denominators",
+      "task": "Correct NH-05/NH-06 in docs\\frontend-audits\\phase6-qa-notifications-notification-health.json#findingsConfirmed/owners O2: consistent actual fractional recorded span for rate denominators and unknown ratios when no analyzed time exists, without losing true zero counts. Preserve grouping, bursts, thresholds and all original reducer tests. Minimum span/burst alternatives remain C candidates, not authorization to reset statistical policy.",
+      "files": ["web\\src\\features\\notifications\\lib\\alertFatigue.ts", "web\\src\\features\\notifications\\lib\\alertFatigue.test.ts"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-shared-provenance-freshness-saved-date-title",
+      "task": "Correct only the shared DataProvenanceBadge freshness-title portion of NH-12 in docs\\frontend-audits\\phase6-qa-notifications-notification-health.json#findingsConfirmed/owners O4: bind displayed title to effective saved locale/timezone, preserving raw receipt/observation identities and all consumers. This is caller/shared-badge adoption, not a global dateFormat rewrite. Parent must cross-chunk deduplicate the exact shared file/objective and grant its unknown covering test before implementation.",
+      "files": ["web\\src\\components\\data-display\\DataProvenanceBadge.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact shared-badge test and conflicting shared owner require parent adjudication."]
+    },
+    {
+      "id": "phase6-fix-quiet-hours-original-editor-zone-authority-feedback-and-a11y",
+      "task": "Correct QH-001/QH-002/QH-006/QH-007/QH-008/QH-009/QH-010/QH-012/QH-013 in docs\\frontend-audits\\phase6-qa-notifications-quiet-hours.json#confirmedIssues/ownersAndNeeds: configured IANA-zone/weekday/overnight transition semantics, dirty-draft replacement guard, revision-bound successful settlement, one mutation feedback owner, localized next-change/known severity, mobile44 declarations and exposed selected weekday state. Preserve valid masks, legal empty bypass, wall-time schedule meaning and all existing tests. Timezone/DST edge candidates require the original contract rather than invented semantics. Serialize the existing useNotifications toast capability if hook edits are required; that path is not silently granted.",
+      "files": ["web\\src\\features\\settings\\components\\QuietHoursPanel.tsx", "web\\src\\features\\settings\\components\\QuietHoursPanel.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-quiet-hours-original-summary-zone-clock-and-unknown",
+      "task": "Correct QH-001/QH-003/QH-004/QH-005/QH-010 in docs\\frontend-audits\\phase6-qa-notifications-quiet-hours.json#confirmedIssues/ownersAndNeeds: zone-correct evaluation, actual time invalidation despite structurally shared windows, unresolved pause versus known empty and malformed/incomplete schedule versus known inactive, with localized known severity. Preserve mask/overnight contracts and original summary tests. Reuse the existing interpretation capability; no invented shared helper file or actual delivery.",
+      "files": ["web\\src\\features\\notifications\\components\\QuietHoursSummary.tsx", "web\\src\\features\\notifications\\components\\QuietHoursSummary.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-quiet-hours-advisor-original-labels-and-targets",
+      "task": "Correct advisor portions of QH-010/QH-012 in docs\\frontend-audits\\phase6-qa-notifications-quiet-hours.json#confirmedIssues/ownersAndNeeds: localized known severities and mobile44 Apply target using existing UI components. Preserve opt-in, propose-only/manual review/canonical Save semantics and original wired route assertions. No model requests, schedule writes, shared Button rewrite or candidate promotion.",
+      "files": ["web\\src\\components\\ai\\AIQuietHoursSuggestion.tsx", "web\\src\\features\\notifications\\__tests__\\TestQuietHoursSuggestionAIOnWiredCallsRoute.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-quiet-hours-guide-truthful-conditional-critical-copy",
+      "task": "Correct QH-011 in docs\\frontend-audits\\phase6-qa-notifications-quiet-hours.json#confirmedIssues/ownersAndNeeds: guide language must reflect configurable critical bypass and legal empty bypass, rather than promising never to miss critical alerts. Preserve severity choices and existing guide/manual behavior. Parent must separately serialize the exact authored canonical leaf; no change to actual notification policy or new delivery guarantee.",
+      "files": ["web\\src\\features\\notifications\\components\\QuietHoursGuide.tsx", "web\\src\\features\\notifications\\components\\QuietHoursGuide.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-onboarding-page-trust-feedback",
+      "task": "Resolve OB-001/OB-002/OB-007 in docs\\frontend-audits\\phase6-qa-onboarding-onboarding.json#confirmedFindings/needs N1: preserve unknown completion rather than false anchors, show truthful readable initial/retained paused refresh and truthful polling promises, wire existing initial load/outcome announcement. Preserve all seven sections, original actions/anchors and assertions. Consume a backward-compatible Stepper unknown state only if actually needed; parent serializes consumer wiring, not a speculative page gate or actual enrollment/network action.",
+      "files": ["web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "web\\src\\features\\onboarding\\pages\\OnboardingPage.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-onboarding-stepper-trust-motion-roles",
+      "task": "Resolve OB-001/OB-004/OB-005 in docs\\frontend-audits\\phase6-qa-onboarding-onboarding.json#confirmedFindings/needs N2: backward-compatible unknown progress presentation, no infinite spinner for idle manual actions and combined reduced-motion/low-bandwidth safety, existing semantic roles. Preserve IDs, CTA order, accessible status and all original tests. Do not alter global motion settings or remigrate the shared shell.",
+      "files": ["web\\src\\features\\onboarding\\components\\Stepper.tsx", "web\\src\\features\\onboarding\\components\\Stepper.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-onboarding-summary-trust-details",
+      "task": "Resolve OB-003/OB-005/OB-006 in docs\\frontend-audits\\phase6-qa-onboarding-onboarding.json#confirmedFindings/needs N3: explicit unknown telemetry must not say no signals, adopt semantic summary roles and supply truthful attention/narrative details consistent with stale telemetry/service warnings. Reuse existing OperationalBrief APIs; preserve raw evidence, all metrics and original tests. Do not infer service health from missing records or request real onboarding/auth data.",
+      "files": ["web\\src\\features\\onboarding\\components\\OnboardingSetupStatusBand.tsx", "web\\src\\features\\onboarding\\components\\OnboardingSetupStatusBand.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-ownership-existing-live-write-and-governance-key-root",
+      "task": "One exclusive useOwnership correction for charging reconciliation CR04, governance DG-01/DG-02, insurance F17 and subscription ROI-13 in the original assigned reports' findings/confirmedIssues/confirmed_findings fields: existing live-only policy for exactly three reconciliation writes, policy PUT/DELETE/recorded-plan POST, insurance policy PUT/DELETE and subscription create/delete; correct governanceRuns invalidation to the actual mounted key family. Preserve wire IDs/bodies, mutation scope, toasts, cancellation, no-replay/retry defaults and success-only invalidation. Page readiness is serialized at each existing caller, not a new global client/offlineCache policy. BLOCKED until parent grants the exact directly covering hook tests; useOwnership is also a shared range-contract claim.",
+      "files": ["web\\src\\api\\hooks\\useOwnership.ts"],
+      "dependsOn": [],
+      "blockers": ["Exact hook covering-test path and shared-file serialization unestablished."]
+    },
+    {
+      "id": "phase6-fix-ownership-shared-evidence-date-label-and-source-trust",
+      "task": "One shared ownership root for original CR11/CR12, CL002/CL003/CL004/CL005, DG-07, DA008, insurance F07/F12/F13/F14, jurisdiction F06, MT05/MT07/MT08 and ROI-07/ROI-08/ROI-10/ROI-11 at their original confirmed fields. Adopt saved date context in EvidencePanel/OwnershipBrief, reuse existing localized closed-quality labels with raw unknown diagnostics, separate initial paused from loading, and retain independent editors without masking failed/paused register notices/retry. Localize only app-owned insurance prose with approved representation; never rewrite external narrative. Preserve all evidence/bounds/caveats. Page-date sites are separate serialized callers. BLOCKED until exact EvidencePanel tests and authored-insurance representation are granted. Do not confuse the completed advanced-intelligence EvidencePanel or relative-date helper owners with this different file.",
+      "files": ["web\\src\\features\\ownership\\components\\EvidencePanel.tsx", "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx", "web\\src\\features\\ownership\\components\\OwnershipPanel.test.tsx", "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx", "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.test.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact EvidencePanel test and structured insurance copy contract unknown; shared Brief date/source changes must have one owner."]
+    },
+    {
+      "id": "phase6-fix-charging-reconciliation-original-page-authority-and-money",
+      "task": "Correct CR01/CR02/CR03/CR05/CR06/CR07/CR08/CR09/CR10/page CR11/page CR12 in docs\\frontend-audits\\phase6-qa-ownership-charging-reconciliation.json#findings/ownerNeeds: pin invoice/vehicle/dispute identity and revision through settlement; clear only after successful delete; expose complete server register paging; retain blank required money/business dates; never fabricate billed component allocation; qualify variance instead of asserting adjudicated debt; export full currency/invoice/vehicle/period/version/digest lineage; saved timestamps and localized known reasons. Preserve audit, all sections, evidence, draft edits and exact assertions. Independent business dates are not workspace range. No backend/financial/dispute/API operations or invented fee representation; parent adjudicates any actual unknown component contract.",
+      "files": ["web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.tsx", "web\\src\\features\\ownership\\pages\\ChargingReconciliationPage.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-consumables-original-editor-labels-and-date-caller",
+      "task": "Correct CL001/CL006/CL007 and page portion CL003 in docs\\frontend-audits\\phase6-qa-ownership-consumables-lifecycle.json#confirmed_findings/deduplicated_owner_needs: localized known category/binding-limit labels, revision/activation/vehicle-bound create settlement that does not close a newer editor, exposed expansion/control relationship and saved page timestamps. Preserve raw part data, physical lifetime/signs, user notes, original sections and tests. Shared source-state/evidence/date sites have one separate ownership root; CC002/NC002 remain candidates and are not repair authorization.",
+      "files": ["web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.tsx", "web\\src\\features\\ownership\\pages\\ConsumablesLifecyclePage.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-data-governance-original-page-copy-lineage-and-dates",
+      "task": "Correct DG-03/DG-04/DG-05/DG-06/DG-08 in docs\\frontend-audits\\phase6-qa-ownership-data-governance.json#confirmedIssues/ownerNeeds: distinguish non-enforcement of dataset deletion from actual policy/recorded-plan writes, attach simulation's own quality/evidence rather than overview lineage, saved timestamp preferences, localized known warning/run-mode and Cancel at the caller. Preserve dry-run semantics, original four tables/six sections, IDs and assertions. Reuse shared dialog; do not require a competing global ConfirmDialog owner or actual governance mutation. DG-01/02 and DG-07 map to the shared hook/evidence roots.",
+      "files": ["web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx", "web\\src\\features\\ownership\\pages\\DataGovernancePage.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-ghost-drives-original-prerequisite-mobile-and-sort",
+      "task": "Correct DA002/DA003/DA009 in docs\\frontend-audits\\phase6-qa-ownership-driver-attribution.json#confirmed_findings/needs N2: no selected vehicle or zero scanned samples cannot prove known-driver coverage; expose all original mobile specialist fields and Label action; wire genuine raw-value sorting for score/deviation. Preserve data/labels/identity, source failures and exact original tests. No global table change, inferred backend capability or labeling action on real data.",
+      "files": ["web\\src\\features\\ownership\\components\\GhostDrivesPanel.tsx", "web\\src\\features\\ownership\\components\\GhostDrivesPanel.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-driver-attribution-original-provenance-precision-and-labels",
+      "task": "Correct DA004/DA005/DA006/DA007 in docs\\frontend-audits\\phase6-qa-ownership-driver-attribution.json#confirmed_findings/needs N3: preserve honest unknown/new attribution source instead of calling all inferred, keep raw chart/table values before display, localize six known accent choices and use existing known separation verdict labels in brief context. Preserve wire/source values, user profile names, saved palette and all original tests. DA001 remains blocked complete-server range integration; DA008 belongs to the shared EvidencePanel root. Parent separately adjudicates exact missing accent copy.",
+      "files": ["web\\src\\features\\ownership\\pages\\DriverAttributionPage.tsx", "web\\src\\features\\ownership\\pages\\DriverAttributionPage.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-insurance-original-model-page-and-authored-copy-contract",
+      "task": "Resolve insurance F01-F06/F08-F11/F15 and page F07 in docs\\frontend-audits\\phase6-qa-ownership-insurance-telematics.json#findings/needs: no-drive defaults are unknown, peer rank must not claim a population that does not exist, scale actual confidence fractions, preserve signed risk-score point delta and factor-domain meaning, qualify exact digest coverage, match maximum-discount bounds, localize fixed model labels/narratives/lever prose and disclose the UTC trip-start night-distance proxy; consume saved dates. Preserve original model facts, policy drafts/tests and SI wire semantics. BLOCKED until parent grants backend/type claims and actual structured-copy representation/tests; no invented peer population, algorithm change or legal/insurance/API activity. Shared quality/copy/date, live writes, absolute range and decomposition have separate owners.",
+      "files": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx", "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.test.tsx", "internal\\app\\ownershipintelsvc\\insurance.go", "web\\src\\types\\ownership.ts"],
+      "dependsOn": [],
+      "blockers": ["Backend/type permission, exact backend tests and structured model-copy representation require parent grant; no unit migration out of order."]
+    },
+    {
+      "id": "phase6-fix-jurisdiction-original-register-export-validation-and-caller-copy",
+      "task": "Correct jurisdiction F01/F02/F03/F04/F05/F07/F09 in docs\\frontend-audits\\phase6-qa-ownership-jurisdiction-compliance.json#findings/deduplicated_needs: complete server register paging, actual controlled sort, detached full seal/canonical SI-money-time export, coupled bound/date validation, truthful no-vehicle prerequisite, saved locale while preserving intentionally UTC period basis and localized caller Cancel. Preserve independent filing business dates, all sections, original tests and unknown quantity semantics. Completed phase6-fix-jurisdiction-scoped-regressions owns two different failed original cases, not these entire nine findings; do not redispatch it. Shared quality F06 and blocked range F08 have separate owners; backend acceptance remains unknown.",
+      "files": ["web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx", "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.test.tsx"],
+      "dependsOn": []
+    },
+    {
+      "id": "phase6-fix-model-trust-original-scoring-ledger-and-settlement-contract",
+      "task": "Resolve MT01-MT04 and page MT05 in docs\\frontend-audits\\phase6-qa-ownership-model-trust.json#confirmed_issues/owner_needs: expose reviewed prediction/model/target/reference/SI quantity to scoring, stored ledger provenance and signed raw error, calibration coverage/selected-model quality, revision-bound success that never erases pending edits, and saved page timestamps. Preserve every original assertion/action/physical unit and raw tiny signed values. BLOCKED until parent adjudicates the same-file exhausted phase6-fix-model-trust-scoped-regressions [!] attempts2, reserves a genuinely distinct objective and grants any unknown quantity representation. Never renew that owner/budget or treat MTC03/MTC05 as defects. Shared source-state/date and absolute range remain separate.",
+      "files": ["web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx", "web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx"],
+      "dependsOn": [],
+      "blockers": ["Same-file exhausted canonical corrective owner and scoring quantity representation require parent adjudication; no automatic retry."]
+    },
+    {
+      "id": "phase6-fix-subscription-roi-original-draft-rate-units-and-evidence",
+      "task": "Correct ROI-01/ROI-02/ROI-03/ROI-04/ROI-05/ROI-06/page ROI-08/ROI-09/ROI-12 in docs\\frontend-audits\\phase6-qa-ownership-subscription-roi.json#confirmed_findings/needs N01: deliberate new draft retires vehicle binding, blank required price is unknown not zero, fractional-minor rates retain nonzero precision and disclose actual metric denominator/units, raw ROI chart/table values, localized known metrics/verdicts, saved dates with explicit existing UTC business-date basis, and per-subscription quality/population/bounds. Preserve valid zero, signed values, retained drafts, every section/action and original tests. Unknown metric representation must block that subcorrection rather than guess conversion; carried range gap stays blocked. Shared source-state/evidence and live writes have separate owners.",
+      "files": ["web\\src\\features\\ownership\\pages\\SubscriptionROIPage.tsx", "web\\src\\features\\ownership\\pages\\SubscriptionROIPage.test.tsx"],
+      "dependsOn": [],
+      "blockers": ["Any unestablished metric denominator/business-date representation requires explicit parent contract before edits."]
+    },
+    {
+      "id": "phase6-copy-disposition-06-original-canonical-needs",
+      "task": "Parent-only serialized canonical copy intake, not a translation campaign. Preserve exact provenance: exports EX08/proposedNarrowNeeds N06 has toast.export.bulkDelete.error/success; fleet F12 has fleetOps.days.sun/mon/tue/wed/thu/fri/sat, F09 corrects undated reservation empty wording; home F13/missingCatalogKeys lists exactly six homeEnergy.violation leaves; browser F14/missing_catalog_keys lists eleven device leaves; health NH-08 and owners O3 specify help.alertFatigue.detail, truthful notificationLatency.kpis.samples and count-aware alertFatigue captions; quiet QH-011 is truthful configurable-bypass guide copy. Adjudicate separately marketplace F14/F15's exact app-owned sinks/three measured fallback mismatches and the other reported known-label caller needs, without rewriting signed/provider/user prose. BLOCKED for any required leaf text/key not explicitly established in its original record; do not guess. Preserve original raw missing/site counts, use normal parent-authorized projection workflow, and merge this bundle with other chunks' exact copy owner rather than compete with the current next12/location canonical writer.",
+      "files": ["web\\src\\i18n\\en.json"],
+      "dependsOn": [],
+      "blockers": ["Parent-only canonical shared claim; current phase6-fix-next12-and-location-canonical-copy overlap must be serialized. Generated projection paths/unknown copy leaves are not granted."]
+    },
+    {
+      "id": "phase6-blocked-ownership-original-full-range-contract",
+      "task": "Keep one explicit original integration blocker for driver DA001, insurance F16, jurisdiction F08, model MT06 and subscription carried needs N06 (ROI-04/ROI-09 are unit/business-date findings, not a newly invented range finding), at their exact assigned report fields. Establish vehicle-scoped complete-server filtering/aggregation for both absolute bounds, timezone/rolling presets and route registration before replacing local windows. No loaded-row filtering, arbitrary bound support, new backend paths or dropped business dates may be inferred. Only the insurance report names backend paths below; other endpoint/repository/test claims and permission remain UNKNOWN. Parent must resolve representation/authority and cross-chunk workspace/useOwnership ownership; this is BLOCKED, not executable source work.",
+      "files": ["web\\src\\lib\\workspaceScope.ts", "web\\src\\api\\hooks\\useOwnership.ts", "internal\\handler\\v1\\ownershipintel\\handler.go", "internal\\app\\ownershipintelsvc\\insurance.go"],
+      "dependsOn": [],
+      "blockers": ["Exact other backend/query/test scopes, complete-range capability and backend/workspace permission unestablished."]
+    },
+    {
+      "id": "phase6-blocked-insurance-original-thin-page-extraction",
+      "task": "Preserve insurance F18 in docs\\frontend-audits\\phase6-qa-ownership-insurance-telematics.json#findings/needs insurance-page-decomposition as an inherited thin-page obligation, not permission to remigrate the accepted page. BLOCKED until parent reserves exact extraction files and covering tests and serializes all same-page mechanisms. Do not guess new component paths, delete sections/assertions or claim proportional line/section preservation without the eventual authorized evidence.",
+      "files": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx"],
+      "dependsOn": [],
+      "blockers": ["Exact extraction/output/test paths and exclusive permission unknown."]
+    },
+    {
+      "id": "phase6-blocked-original-acceptance-and-external-evidence-06",
+      "task": "Drain-only preservation of the real original remaining acceptance/blocked needs for exactly the twenty-one reportDisposition filenames in docs\\frontend-audits\\phase6-dispose-remaining-reports-06.json; this is NOT a new blanket QA campaign or a source fix. Consume each original candidate/native/NOTRUN/acceptance-limit pointer and keep exact original failed commands, source/test pins, privacy/safety grants and helper/browser-lock budgets. Home nativeContinuation retains 294 HTTP500 API responses/zero successful sources, original twenty unavailable-source theme/width measurements and partial drawer evidence; its three measured36px scenario targets already have phase6-fix-home-energy-scenario-mobile-targets [x], with separate native remeasurement still required, not rerun unchanged passes. Exports continuation keeps both guarded runs with HTTP500 and remaining original native limits. Other source-only reports are not native passes. Preserve ModelTrust's exhausted existing corrective owner and raw failed startup/type/audit receipts; grant no retry budget. BLOCKED until parent names exact acceptance-output/test/fixture claims, safe data and original native/provider/financial/legal/identity permissions; no guessed outputs, real operations, servers, fixtures, synthetic substitutions or source investigations.",
+      "files": [],
+      "dependsOn": [],
+      "blockers": ["Per-report exact acceptance outputs, original fixture/privacy/safety authority and runtime/backend prerequisites unestablished; parent alone adjudicates, not automatic dispatch."]
+    }
+  ],
+  "reportDisposition": [
+    {
+      "report": "phase6-qa-exports-exports.json", "sha256": "6ac4ef38c41ea9fd993cf4119af5d936b91048d7c757a29a9bec2675614c3e60", "confirmedField": "confirmedFindings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "EX01": {"fixItems": ["phase6-fix-exports-existing-bulk-live-only-hook", "phase6-fix-exports-caller-trust-date-sort-copy-and-table-contract"]},
+        "EX02": {"fixItems": ["phase6-fix-export-advisor-type-proposal-identity"]},
+        "EX03": {"fixItems": ["phase6-fix-exports-caller-trust-date-sort-copy-and-table-contract"]},
+        "EX04": {"fixItems": ["phase6-fix-exports-caller-trust-date-sort-copy-and-table-contract"]},
+        "EX05": {"fixItems": ["phase6-fix-exports-caller-trust-date-sort-copy-and-table-contract"]},
+        "EX06": {"fixItems": ["phase6-fix-exports-caller-trust-date-sort-copy-and-table-contract"]},
+        "EX07": {"fixItems": ["phase6-fix-exports-caller-trust-date-sort-copy-and-table-contract"]},
+        "EX08": {"fixItems": ["phase6-copy-disposition-06-original-canonical-needs"]},
+        "EX09": {"fixItems": ["phase6-fix-exports-caller-trust-date-sort-copy-and-table-contract"]}
+      },
+      "preservedCandidateFields": {"conditionalCandidates": ["C01", "C02", "C03"], "rejectedCandidates": ["R01"], "nativeCandidates": ["NATIVE01"]},
+      "remainingAcceptanceFields": ["nativeCandidates", "validation", "continuationNative", "continuationNativeFollowup", "continuationCompletion.remainingOriginalNativeLimits"],
+      "preservedReceiptPinSafetyFields": ["authorization", "inputsBefore", "inputsAfter", "inputPinResult", "commandFailuresAndLimits", "validation", "driftReconciliation", "continuationNative", "continuationNativeFollowup", "continuationCompletion"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-fleet-ops-fleet-operations.json", "sha256": "2088d13fff96ee2fe9524e0b62c05f91b379abeb854982c57995a55c6197f42a", "confirmedField": "confirmedFindings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "F01": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar"]}, "F02": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar"]}, "F03": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar"]}, "F04": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar"]}, "F05": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar"]}, "F06": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar"]}, "F07": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar"]}, "F08": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar"]}, "F09": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar", "phase6-copy-disposition-06-original-canonical-needs"]}, "F10": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar"]}, "F11": {"fixItems": ["phase6-fix-fleet-operations-original-trust-money-mobile-and-calendar"]}, "F12": {"fixItems": ["phase6-copy-disposition-06-original-canonical-needs"]}
+      },
+      "preservedCandidateFields": {"conditionalCandidates": ["C01", "C02", "C03"], "nativeCandidates": ["N01", "N02", "N03", "N04"]},
+      "remainingAcceptanceFields": ["nativeCandidates", "limits", "exceptions"],
+      "preservedReceiptPinSafetyFields": ["scope", "pins", "commands", "inspectionFailures", "commandLedger", "finalVerification", "limits"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-home-energy-whole-home-energy.json", "sha256": "220b8ab75101bad956474585c72ec97bbd01d228303ee101c616111e93ee301c", "confirmedField": "confirmedFindings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "F01": {"fixItems": ["phase6-fix-home-energy-workspace-vehicle-disclosure"]}, "F02": {"fixItems": ["phase6-fix-home-energy-independent-source-and-forecast-evidence-contract"]}, "F03": {"fixItems": ["phase6-fix-home-energy-independent-source-and-forecast-evidence-contract"]}, "F04": {"fixItems": ["phase6-fix-home-energy-independent-source-and-forecast-evidence-contract"]}, "F05": {"fixItems": ["phase6-fix-home-energy-independent-source-and-forecast-evidence-contract"]}, "F06": {"fixItems": ["phase6-fix-home-energy-raw-display-dates-units-and-diagnostics"]}, "F07": {"fixItems": ["phase6-fix-home-energy-raw-display-dates-units-and-diagnostics"]}, "F08": {"fixItems": ["phase6-fix-home-energy-raw-display-dates-units-and-diagnostics"]}, "F09": {"fixItems": ["phase6-fix-home-energy-raw-display-dates-units-and-diagnostics"]}, "F10": {"fixItems": ["phase6-fix-home-energy-raw-display-dates-units-and-diagnostics"]}, "F11": {"fixItems": ["phase6-fix-home-energy-raw-display-dates-units-and-diagnostics"]}, "F12": {"fixItems": ["phase6-fix-home-energy-independent-source-and-forecast-evidence-contract"]}, "F13": {"fixItems": ["phase6-copy-disposition-06-original-canonical-needs"]}
+      },
+      "preservedCandidateFields": {"conditionalCandidates": ["C01", "C02", "C03"], "nativeCandidates": ["N01", "N02", "N03"]},
+      "additiveNativeMapping": {"nativeContinuation.nativeMeasurements.nativeCandidateN01": {"existingOwners": ["phase6-fix-home-energy-scenario-mobile-targets"], "status": "[x] source-only; native remeasurement remains open", "qualifier": "Only the three measured36px scenario targets fail; measured49px export is not asserted failing."}},
+      "remainingAcceptanceFields": ["nativeCandidates", "nativeContinuation.backendBlocker", "nativeContinuation.originalChecklistsPreserved"],
+      "preservedReceiptPinSafetyFields": ["authorityLimits", "sourceTestPins", "testEvidence", "failures", "NOTRUN", "finalValidation", "nativeContinuation"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-intelligence-packs-intelligence-pack-marketplace.json", "sha256": "b63a683e1abf1d5eb4f5429bebcc158eb91849cb9b5e1d4817fc4cf27bd77c43", "confirmedField": "confirmedFindings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "F01": {"fixItems": ["phase6-fix-marketplace-envelope-verification-identity"]}, "F02": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy"]}, "F03": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy"]}, "F04": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy"]}, "F05": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy"]}, "F06": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy"]}, "F07": {"fixItems": ["phase6-fix-marketplace-storage-failure-corruption-and-durability"]}, "F08": {"fixItems": ["phase6-fix-marketplace-storage-failure-corruption-and-durability"]}, "F09": {"fixItems": ["phase6-fix-marketplace-storage-failure-corruption-and-durability"]}, "F10": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy"]}, "F11": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy"]}, "F12": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy"]}, "F13": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy"]}, "F14": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy", "phase6-copy-disposition-06-original-canonical-needs"]}, "F15": {"fixItems": ["phase6-fix-marketplace-readiness-trust-actions-mobile-and-local-copy", "phase6-copy-disposition-06-original-canonical-needs"]}, "F16": {"fixItems": ["phase6-fix-marketplace-sandbox-interrupted-formula-partial-rows"]}
+      },
+      "preservedCandidateFields": {"conditionalNativeCandidates": ["C01", "C02", "C03", "C04", "C05", "C06", "C07", "C08", "C09"]},
+      "remainingAcceptanceFields": ["conditionalNativeCandidates", "evidenceLimits"],
+      "preservedReceiptPinSafetyFields": ["authority", "scope", "pins", "evidenceLimits", "finalVerification"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-maps-navigation-route.json", "sha256": "4933ff294cc7fb5b727952936a4a5927020036912fe536d19f163536fdd600ed", "confirmedField": "confirmed_findings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "NAV-QA-001": {"fixItems": ["phase6-fix-navigation-route-original-trust-date-zero-and-delay"]}, "NAV-QA-002": {"fixItems": ["phase6-fix-navigation-route-original-trust-date-zero-and-delay"]}, "NAV-QA-003": {"fixItems": ["phase6-fix-navigation-route-original-trust-date-zero-and-delay"]}, "NAV-QA-004": {"fixItems": ["phase6-fix-navigation-route-original-trust-date-zero-and-delay"]}, "NAV-QA-005": {"fixItems": ["phase6-fix-navigation-existing-typed-history-query-owner"]}, "NAV-QA-006": {"existingOwners": ["phase6-fix-maps-shared-brief-provenance-and-receipt-date"], "status": "[x] reported source receipt only"}, "NAV-QA-007": {"existingOwners": ["phase6-fix-maps-shared-brief-provenance-and-receipt-date"], "status": "[x] same shared provenance-localization objective"}
+      },
+      "preservedCandidateFields": {"conditional_candidates": ["NAV-C01", "NAV-C02", "NAV-C03", "NAV-C04", "NAV-C05"], "native_candidates": {"count": 5, "ids": "Original records have no IDs; preserve exact native_candidates[0:5], no manufactured IDs."}},
+      "remainingAcceptanceFields": ["native_candidates", "native_acceptance", "NOTRUN"],
+      "preservedReceiptPinSafetyFields": ["scope", "source_test_pins", "check_failures", "raw_evidence", "pin_check", "final_validation"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-notifications-alert-packs.json", "sha256": "d46f777f9f610208a65f82c234c510293fdaa2b3ffc596e7e6ab1266672785e0", "confirmedField": "confirmedFindings", "rawCountsField": "counts",
+      "confirmedMapping": {
+        "AP-01": {"fixItems": ["phase6-fix-alert-pack-callers-original-source-validation-and-date"]}, "AP-02": {"fixItems": ["phase6-fix-alert-pack-callers-original-source-validation-and-date"]}, "AP-03": {"fixItems": ["phase6-fix-alert-pack-callers-original-source-validation-and-date"]}, "AP-04": {"fixItems": ["phase6-fix-alert-pack-existing-live-only-mutations"]}, "AP-05": {"fixItems": ["phase6-fix-alert-pack-callers-original-source-validation-and-date"]}, "AP-06": {"fixItems": ["phase6-fix-alert-pack-callers-original-source-validation-and-date"]}, "AP-07": {"fixItems": ["phase6-fix-shared-vehicle-multiselect-original-localized-fallbacks"]}, "AP-08": {"fixItems": ["phase6-fix-shared-vehicle-multiselect-original-localized-fallbacks"]}, "AP-09": {"fixItems": ["phase6-fix-shared-vehicle-multiselect-original-localized-fallbacks"]}
+      },
+      "preservedCandidateFields": {"conditionalNativeCandidates": ["C1", "C2", "C3", "C4", "C5", "C6"]},
+      "remainingAcceptanceFields": ["conditionalNativeCandidates", "acceptance", "deduplicatedNeeds"],
+      "preservedReceiptPinSafetyFields": ["scope", "authority", "hashes", "commandsAndFailures", "testSourceCoverage"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-notifications-alert-studio.json", "sha256": "1e1dead9446c9ec5a6d1c4e73323a239cd767e17533b38679fcc6a67838245e7", "confirmedField": "sourceConfirmedFindings", "rawCountsField": "counts",
+      "confirmedMapping": {
+        "AS-N01": {"fixItems": ["phase6-fix-alert-studio-original-editor-authority-and-residual-callers"]}, "AS-N02": {"fixItems": ["phase6-fix-alert-studio-original-editor-authority-and-residual-callers"]}, "AS-N03": {"fixItems": ["phase6-fix-alert-message-advisor-current-draft-identity"]}, "AS-N04": {"fixItems": ["phase6-fix-alert-studio-original-editor-authority-and-residual-callers"]}, "AS-N05": {"fixItems": ["phase6-fix-alert-studio-original-editor-authority-and-residual-callers"]}, "AS-N06": {"fixItems": ["phase6-fix-alert-studio-original-editor-authority-and-residual-callers"]}, "AS-N07": {"fixItems": ["phase6-fix-alert-studio-original-editor-authority-and-residual-callers"]}, "AS-N08": {"fixItems": ["phase6-fix-shared-vehicle-multiselect-original-localized-fallbacks"]}, "AS-N09": {"fixItems": ["phase6-fix-alert-studio-original-editor-authority-and-residual-callers"]}, "AS-N10": {"fixItems": ["phase6-fix-alert-studio-original-editor-authority-and-residual-callers"]}
+      },
+      "inheritedConfirmedField": "existingFindingsDeduplicated",
+      "inheritedConfirmedMapping": {"AS-E01": "phase6-fix-alert-studio-original-editor-authority-and-residual-callers", "AS-E02": "phase6-fix-alert-studio-original-editor-authority-and-residual-callers", "AS-E03": "phase6-fix-alert-studio-original-editor-authority-and-residual-callers", "AS-E04": "phase6-fix-alert-studio-original-editor-authority-and-residual-callers", "AS-E05": "phase6-fix-alert-studio-original-editor-authority-and-residual-callers", "AS-E06": "phase6-fix-alert-studio-original-editor-authority-and-residual-callers", "AS-E07": "phase6-fix-alert-studio-original-editor-authority-and-residual-callers", "AS-E08": "phase6-fix-alert-studio-original-editor-authority-and-residual-callers"},
+      "resolvedPriorRecords": {"field": "resolvedPriorFindings", "count": 2, "owners": ["phase3-vehicle-multi-select", "phase3-ainlalert-builder"], "disposition": "Preserve resolved declarations, no remigration/native pass inferred."},
+      "preservedCandidateFields": {"conditionalCandidates": ["AS-C01", "AS-C02", "AS-C03", "AS-C04"], "nativeCandidates": ["AS-V01", "AS-V02", "AS-V03", "AS-V04", "AS-V05", "AS-V06"]},
+      "remainingAcceptanceFields": ["conditionalCandidates", "nativeCandidates", "notRun", "limitations"],
+      "preservedReceiptPinSafetyFields": ["scope", "authority", "preservation", "testEvidence", "commandRegistry", "limitations"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-notifications-archived.json", "sha256": "f791d0dda7e7430e54f4888e28514fb1df95e66f592c2f1fec18ff3c339c0620", "confirmedField": "findings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "F01": {"fixItems": ["phase6-fix-archived-catalog-authority-and-remaining-controller-sites"]},
+        "F02": {"existingOwners": ["phase6-fix-inbox-page-summary-trust-and-date", "phase6-fix-inbox-body-drawer-trust-and-recovery"], "fixItems": ["phase6-fix-archived-catalog-authority-and-remaining-controller-sites"], "qualifier": "Shared summary/body objectives already owned; archive list/catalog wiring remains separate. No current source correctness inferred."},
+        "F03": {"existingOwners": ["phase6-fix-inbox-body-drawer-trust-and-recovery"], "status": "[x] count-local recovery objective"},
+        "F04": {"existingOwners": ["phase6-fix-inbox-body-drawer-trust-and-recovery"], "status": "[x] caller no-match objective; shared DataTable filtered-empty owner is not this caller"},
+        "F05": {"existingOwners": ["phase6-fix-inbox-body-drawer-trust-and-recovery"], "status": "[x] persisted warn objective"},
+        "F06": {"existingOwners": ["phase6-fix-inbox-page-summary-trust-and-date", "phase6-fix-inbox-body-drawer-trust-and-recovery"], "fixItems": ["phase6-fix-archived-drawer-note-shell-and-timeline-dates"], "qualifier": "Only admin timeline remains unowned; existing summary/drawer timestamp objectives not repeated."},
+        "F07": {"existingOwners": ["phase6-fix-relative-future-dates"], "status": "[x] same shared relative phrase/locale objective; original hardcoded receipt remains pinned"},
+        "F08": {"fixItems": ["phase6-fix-archived-inspection-targets-and-detail-typography"]}, "F09": {"fixItems": ["phase6-fix-archived-catalog-authority-and-remaining-controller-sites"]},
+        "F10": {"existingOwners": ["phase6-fix-inbox-filter-multiple-id-disclosure"], "status": "[x] full URL member disclosure; its original external startup failures remain not passes"},
+        "F11": {"fixItems": ["phase6-fix-archived-drawer-note-shell-and-timeline-dates"]}, "F12": {"fixItems": ["phase6-fix-archived-inspection-targets-and-detail-typography"]}
+      },
+      "preservedCandidateFields": {"conditional_candidates": ["C01", "C02", "C03", "C04"], "native_acceptance_candidates": ["N01", "N02", "N03"]},
+      "remainingAcceptanceFields": ["native_acceptance_candidates", "notrun_limits", "evidence_limits"],
+      "preservedReceiptPinSafetyFields": ["scope_semantics", "before_pins", "after_pins", "pin_check", "inspection_failures", "commands", "evidence_limits"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-notifications-browser-notifications.json", "sha256": "4811bbfa6fc68e29ef70af6088d92fce1dfa11eac916a77dbd0d261aad60f8f5", "confirmedField": "confirmed_findings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "F01": {"fixItems": ["phase6-fix-browser-notification-single-listener-reactive-preferences"]}, "F02": {"fixItems": ["phase6-fix-browser-notification-single-listener-reactive-preferences"]},
+        "F03": {"fixItems": ["phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices"]}, "F04": {"fixItems": ["phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices"]}, "F05": {"fixItems": ["phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices"]}, "F06": {"fixItems": ["phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices"]}, "F07": {"fixItems": ["phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices"]},
+        "F08": {"fixItems": ["phase6-fix-browser-device-policy-trust-copy-and-mobile-callers"]}, "F09": {"fixItems": ["phase6-fix-browser-device-policy-trust-copy-and-mobile-callers"]}, "F10": {"fixItems": ["phase6-fix-browser-device-policy-trust-copy-and-mobile-callers"]}, "F11": {"fixItems": ["phase6-fix-browser-device-policy-trust-copy-and-mobile-callers"]}, "F12": {"fixItems": ["phase6-fix-browser-device-policy-trust-copy-and-mobile-callers"]}, "F13": {"fixItems": ["phase6-fix-browser-device-policy-trust-copy-and-mobile-callers"]}, "F14": {"fixItems": ["phase6-copy-disposition-06-original-canonical-needs"]}, "F15": {"fixItems": ["phase6-fix-browser-device-policy-trust-copy-and-mobile-callers"]}
+      },
+      "preservedCandidateFields": {"conditional_native_candidates": ["C01", "C02", "C03", "C04", "C05", "C06"]},
+      "remainingAcceptanceFields": ["conditional_native_candidates", "needs", "notrun", "test_evidence_warnings"],
+      "preservedReceiptPinSafetyFields": ["authority", "scope", "command_failures", "raw_evidence", "hashes", "final_verification", "test_evidence_warnings"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-notifications-channels.json", "sha256": "d9b954b33fbdbcb8d930e0eb9e257940eb423d034d9e7c33a03a6265500ecc15", "confirmedField": "confirmed_findings", "rawCountsField": "counts",
+      "confirmedMapping": {
+        "NC001": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC002": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC003": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]},
+        "NC004": {"fixItems": ["phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices"]}, "NC005": {"fixItems": ["phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices"]}, "NC006": {"fixItems": ["phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices"]}, "NC007": {"fixItems": ["phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices"]},
+        "NC008": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC009": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC010": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC011": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC012": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC013": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC014": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC015": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC016": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}, "NC017": {"fixItems": ["phase6-fix-webhook-signature-copy-local-failure-feedback"]}, "NC018": {"fixItems": ["phase6-fix-shared-webpush-original-readiness-partial-teardown-and-devices"]}, "NC019": {"fixItems": ["phase6-fix-channels-original-source-credentials-editor-and-feedback"]}
+      },
+      "preservedCandidateFields": {"conditional_candidates": ["C001", "C002", "C003", "C004"], "native_candidates": ["N001", "N002", "N003", "N004", "N005"]},
+      "remainingAcceptanceFields": ["conditional_candidates", "native_candidates", "notrun", "qa_result"],
+      "preservedReceiptPinSafetyFields": ["scope", "source_test_hashes", "commands", "test_source_review", "notrun"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-notifications-notification-health.json", "sha256": "a23414fbf04bda2efcbf18bf3a52495883ef238da5c237bd9512e3e733b44b88", "confirmedField": "findingsConfirmed", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "NH-01": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock"]}, "NH-02": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock"]}, "NH-03": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock"]}, "NH-04": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock"]}, "NH-05": {"fixItems": ["phase6-fix-fatigue-original-span-and-empty-denominators"]}, "NH-06": {"fixItems": ["phase6-fix-fatigue-original-span-and-empty-denominators"]}, "NH-07": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock"]}, "NH-08": {"fixItems": ["phase6-copy-disposition-06-original-canonical-needs"]}, "NH-09": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock"]}, "NH-10": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock", "phase6-copy-disposition-06-original-canonical-needs"]}, "NH-11": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock"]}, "NH-12": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock", "phase6-fix-shared-provenance-freshness-saved-date-title"]}, "NH-13": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock"]}, "NH-14": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock"]}, "NH-15": {"fixItems": ["phase6-fix-notification-health-original-panel-trust-provenance-and-clock", "phase6-copy-disposition-06-original-canonical-needs"]}
+      },
+      "preservedCandidateFields": {"conditionalCandidates": ["C-01", "C-02", "C-03", "C-04", "C-05"], "nativeCandidates": ["N-01", "N-02", "N-03"]},
+      "remainingAcceptanceFields": ["conditionalCandidates", "nativeCandidates", "owners", "notRun", "evidenceLimits"],
+      "preservedReceiptPinSafetyFields": ["scope", "pinsBefore", "pinsAfter", "pinComparison", "failures", "commands", "evidenceLimits", "testDeclarations"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-notifications-quiet-hours.json", "sha256": "353d017ba102d8d91654c460b6d9ffafaffbf1eaa9035e13b2058db69af26d1b", "confirmedField": "confirmedIssues", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "QH-001": {"fixItems": ["phase6-fix-quiet-hours-original-editor-zone-authority-feedback-and-a11y", "phase6-fix-quiet-hours-original-summary-zone-clock-and-unknown"]}, "QH-002": {"fixItems": ["phase6-fix-quiet-hours-original-editor-zone-authority-feedback-and-a11y"]}, "QH-003": {"fixItems": ["phase6-fix-quiet-hours-original-summary-zone-clock-and-unknown"]}, "QH-004": {"fixItems": ["phase6-fix-quiet-hours-original-summary-zone-clock-and-unknown"]}, "QH-005": {"fixItems": ["phase6-fix-quiet-hours-original-summary-zone-clock-and-unknown"]}, "QH-006": {"fixItems": ["phase6-fix-quiet-hours-original-editor-zone-authority-feedback-and-a11y"]}, "QH-007": {"fixItems": ["phase6-fix-quiet-hours-original-editor-zone-authority-feedback-and-a11y"]}, "QH-008": {"fixItems": ["phase6-fix-quiet-hours-original-editor-zone-authority-feedback-and-a11y"]}, "QH-009": {"fixItems": ["phase6-fix-quiet-hours-original-editor-zone-authority-feedback-and-a11y"]}, "QH-010": {"fixItems": ["phase6-fix-quiet-hours-original-editor-zone-authority-feedback-and-a11y", "phase6-fix-quiet-hours-original-summary-zone-clock-and-unknown", "phase6-fix-quiet-hours-advisor-original-labels-and-targets"]}, "QH-011": {"fixItems": ["phase6-fix-quiet-hours-guide-truthful-conditional-critical-copy", "phase6-copy-disposition-06-original-canonical-needs"]}, "QH-012": {"fixItems": ["phase6-fix-quiet-hours-original-editor-zone-authority-feedback-and-a11y", "phase6-fix-quiet-hours-advisor-original-labels-and-targets"]}, "QH-013": {"fixItems": ["phase6-fix-quiet-hours-original-editor-zone-authority-feedback-and-a11y"]}
+      },
+      "preservedCandidateFields": {"candidates": ["C-001", "C-002", "C-003", "C-004", "C-005", "C-006"]},
+      "remainingAcceptanceFields": ["candidates", "acceptance", "notRun", "testInventory"],
+      "preservedReceiptPinSafetyFields": ["scope", "authority", "pins", "commandReceipts", "pinVerification", "artifactVerification"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-onboarding-onboarding.json", "sha256": "761c8cacf2c9660f71733bb942d9349f46d1fa97fe73e0bbf81e2dede57abdaf", "confirmedField": "confirmedFindings", "rawCountsField": "counts",
+      "confirmedMapping": {
+        "OB-001": {"fixItems": ["phase6-fix-onboarding-page-trust-feedback", "phase6-fix-onboarding-stepper-trust-motion-roles"]}, "OB-002": {"fixItems": ["phase6-fix-onboarding-page-trust-feedback"]}, "OB-003": {"fixItems": ["phase6-fix-onboarding-summary-trust-details"]}, "OB-004": {"fixItems": ["phase6-fix-onboarding-stepper-trust-motion-roles"]}, "OB-005": {"fixItems": ["phase6-fix-onboarding-stepper-trust-motion-roles", "phase6-fix-onboarding-summary-trust-details"]}, "OB-006": {"fixItems": ["phase6-fix-onboarding-summary-trust-details"]}, "OB-007": {"fixItems": ["phase6-fix-onboarding-page-trust-feedback"]}
+      },
+      "preservedCandidateFields": {"conditionalCandidates": ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"]},
+      "remainingAcceptanceFields": ["conditionalCandidates", "notRun", "historicalEvidence"],
+      "preservedReceiptPinSafetyFields": ["scope", "sourceTestHashes", "pinDrift", "commands", "commandNotes", "finalValidation", "testDeclarations"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-ownership-charging-reconciliation.json", "sha256": "80a9d93e51df7a8f8f93866ccebf65cd903bfba53b7ae50bd89eec88d7a82b25", "confirmedField": "findings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "CR01": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money"]}, "CR02": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money"]}, "CR03": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money"]}, "CR04": {"fixItems": ["phase6-fix-ownership-existing-live-write-and-governance-key-root"]}, "CR05": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money"]}, "CR06": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money"]}, "CR07": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money"]}, "CR08": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money"]}, "CR09": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money"]}, "CR10": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money"]}, "CR11": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money", "phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "CR12": {"fixItems": ["phase6-fix-charging-reconciliation-original-page-authority-and-money", "phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}
+      },
+      "preservedCandidateFields": {"conditionalCandidates": ["CRC01", "CRC02", "CRC03", "CRC04"], "nativeCandidates": ["CRN01"]},
+      "remainingAcceptanceFields": ["conditionalCandidates", "nativeCandidates", "notRun", "qaAcceptance"],
+      "preservedReceiptPinSafetyFields": ["scope", "source_test_hashes_before", "source_test_hashes_after", "source_test_hash_drift", "hashLimits", "checks", "verification"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json", "sha256": "8e14ac16eb4b09a330f80a52c0484dd2602c0a5491d8981c07d28caa12e4a657", "confirmedField": "confirmed_findings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "CL001": {"fixItems": ["phase6-fix-consumables-original-editor-labels-and-date-caller"]}, "CL002": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "CL003": {"fixItems": ["phase6-fix-consumables-original-editor-labels-and-date-caller", "phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "CL004": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "CL005": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "CL006": {"fixItems": ["phase6-fix-consumables-original-editor-labels-and-date-caller"]}, "CL007": {"fixItems": ["phase6-fix-consumables-original-editor-labels-and-date-caller"]}
+      },
+      "preservedCandidateFields": {"conditional_and_native_candidates": ["CC001", "CC002", "NC001", "NC002"]},
+      "remainingAcceptanceFields": ["conditional_and_native_candidates", "checks", "acceptable_exceptions"],
+      "preservedReceiptPinSafetyFields": ["scope", "authority", "hashes", "checks", "acceptable_exceptions"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-ownership-data-governance.json", "sha256": "e22c1236c7d2724653b6a494410c6d24ce8cf43af9205f19843687c2af186c89", "confirmedField": "confirmedIssues", "rawCountsField": "counts",
+      "confirmedMapping": {
+        "DG-01": {"fixItems": ["phase6-fix-ownership-existing-live-write-and-governance-key-root"]}, "DG-02": {"fixItems": ["phase6-fix-ownership-existing-live-write-and-governance-key-root"]}, "DG-03": {"fixItems": ["phase6-fix-data-governance-original-page-copy-lineage-and-dates"]}, "DG-04": {"fixItems": ["phase6-fix-data-governance-original-page-copy-lineage-and-dates"]}, "DG-05": {"fixItems": ["phase6-fix-data-governance-original-page-copy-lineage-and-dates"]}, "DG-06": {"fixItems": ["phase6-fix-data-governance-original-page-copy-lineage-and-dates"]}, "DG-07": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "DG-08": {"fixItems": ["phase6-fix-data-governance-original-page-copy-lineage-and-dates"]}
+      },
+      "preservedCandidateFields": {"conditionalCandidates": ["DG-C01", "DG-C02", "DG-C03", "DG-C04", "DG-C05"], "nativeCandidates": ["DG-N01"]},
+      "remainingAcceptanceFields": ["conditionalCandidates", "nativeCandidates", "notRun"],
+      "preservedReceiptPinSafetyFields": ["scope", "authority", "coverageAndSafety", "commands", "pinVerification", "tests"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-ownership-driver-attribution.json", "sha256": "7afa3e2ce47e736188c928576d1f0467cab7366f730a254147bd7ad2f9d7f473", "confirmedField": "confirmed_findings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "DA001": {"fixItems": ["phase6-blocked-ownership-original-full-range-contract"]}, "DA002": {"fixItems": ["phase6-fix-ghost-drives-original-prerequisite-mobile-and-sort"]}, "DA003": {"fixItems": ["phase6-fix-ghost-drives-original-prerequisite-mobile-and-sort"]}, "DA004": {"fixItems": ["phase6-fix-driver-attribution-original-provenance-precision-and-labels"]}, "DA005": {"fixItems": ["phase6-fix-driver-attribution-original-provenance-precision-and-labels"]}, "DA006": {"fixItems": ["phase6-fix-driver-attribution-original-provenance-precision-and-labels"]}, "DA007": {"fixItems": ["phase6-fix-driver-attribution-original-provenance-precision-and-labels"]}, "DA008": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "DA009": {"fixItems": ["phase6-fix-ghost-drives-original-prerequisite-mobile-and-sort"]}
+      },
+      "preservedCandidateFields": {"conditional_candidates": ["DAC01", "DAC02", "DAC03"], "native_candidates": ["DAN01"]},
+      "remainingAcceptanceFields": ["conditional_candidates", "native_candidates", "notrun_limits"],
+      "preservedReceiptPinSafetyFields": ["scope", "source_test_hashes", "check_receipts", "existing_tests", "final_validation"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-ownership-insurance-telematics.json", "sha256": "06cf2e17486c64144cdbd96d2283176e43286bbca6e4c749308d1c7eb8a4bc6a", "confirmedField": "findings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "F01": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F02": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F03": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F04": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F05": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F06": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F07": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract", "phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "F08": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F09": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F10": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F11": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F12": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "F13": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "F14": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "F15": {"fixItems": ["phase6-fix-insurance-original-model-page-and-authored-copy-contract"]}, "F16": {"fixItems": ["phase6-blocked-ownership-original-full-range-contract"]}, "F17": {"fixItems": ["phase6-fix-ownership-existing-live-write-and-governance-key-root"]}, "F18": {"fixItems": ["phase6-blocked-insurance-original-thin-page-extraction"]}
+      },
+      "preservedCandidateFields": {"candidates": ["C01", "C02", "C03", "C04"]},
+      "remainingAcceptanceFields": ["candidates", "acceptance_notrun", "native_followup", "evidence_limits"],
+      "preservedReceiptPinSafetyFields": ["mode", "source_pins", "evidence_limits", "commands", "final_validation", "tests"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-ownership-jurisdiction-compliance.json", "sha256": "c1cd5ce73f2b0d4d8dd49b7716cb0d75fd3c25637e683436b130d42674947d86", "confirmedField": "findings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "F01": {"fixItems": ["phase6-fix-jurisdiction-original-register-export-validation-and-caller-copy"]}, "F02": {"fixItems": ["phase6-fix-jurisdiction-original-register-export-validation-and-caller-copy"]}, "F03": {"fixItems": ["phase6-fix-jurisdiction-original-register-export-validation-and-caller-copy"]}, "F04": {"fixItems": ["phase6-fix-jurisdiction-original-register-export-validation-and-caller-copy"]}, "F05": {"fixItems": ["phase6-fix-jurisdiction-original-register-export-validation-and-caller-copy"]}, "F06": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "F07": {"fixItems": ["phase6-fix-jurisdiction-original-register-export-validation-and-caller-copy"]}, "F08": {"fixItems": ["phase6-blocked-ownership-original-full-range-contract"]}, "F09": {"fixItems": ["phase6-fix-jurisdiction-original-register-export-validation-and-caller-copy"]}
+      },
+      "preservedCandidateFields": {"candidates": ["C01", "C02", "C03", "C04", "C05", "C06"]},
+      "remainingAcceptanceFields": ["candidates", "not_run", "deduplication_limits"],
+      "preservedReceiptPinSafetyFields": ["scope", "authority", "source_pins", "inspection_failures", "command_provenance_limits", "pin_check", "final_verification"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-ownership-model-trust.json", "sha256": "c9cf1fb412c84767a14fceb732ad72d903a50ca3bc7e6f134363214d9079884f", "confirmedField": "confirmed_issues", "rawCountsField": "counts",
+      "confirmedMapping": {
+        "MT01": {"fixItems": ["phase6-fix-model-trust-original-scoring-ledger-and-settlement-contract"]}, "MT02": {"fixItems": ["phase6-fix-model-trust-original-scoring-ledger-and-settlement-contract"]}, "MT03": {"fixItems": ["phase6-fix-model-trust-original-scoring-ledger-and-settlement-contract"]}, "MT04": {"fixItems": ["phase6-fix-model-trust-original-scoring-ledger-and-settlement-contract"]}, "MT05": {"fixItems": ["phase6-fix-model-trust-original-scoring-ledger-and-settlement-contract", "phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "MT06": {"fixItems": ["phase6-blocked-ownership-original-full-range-contract"]}, "MT07": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "MT08": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}
+      },
+      "existingRemainingCanonicalOwner": {"id": "phase6-fix-model-trust-scoped-regressions", "status": "[!]", "attempts": 2, "objective": "Two original failed cases for raw tiny signed calibration values/saved palette and complete mobile fields/actions; not automatically identical to MT01-MT04.", "disposition": "Preserve raw failed/external receipts and exhausted budget; no renewal or replacement fix count. Parent alone adjudicates new distinct same-file claim."},
+      "preservedCandidateFields": {"candidates": ["MTC01", "MTC02", "MTC03", "MTC04", "MTC05"]},
+      "remainingAcceptanceFields": ["candidates", "native_needs", "notrun", "acceptance"],
+      "preservedReceiptPinSafetyFields": ["source_pins", "tool_failures", "commands", "historical_evidence", "audit_scope_limit", "final_document_validation"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    },
+    {
+      "report": "phase6-qa-ownership-subscription-roi.json", "sha256": "b0ee0fc11c88390cb0fac8b39432e194c87f62f16df3f837df5e0aedd2f2e662", "confirmedField": "confirmed_findings", "rawCountsField": "summary",
+      "confirmedMapping": {
+        "ROI-01": {"fixItems": ["phase6-fix-subscription-roi-original-draft-rate-units-and-evidence"]}, "ROI-02": {"fixItems": ["phase6-fix-subscription-roi-original-draft-rate-units-and-evidence"]}, "ROI-03": {"fixItems": ["phase6-fix-subscription-roi-original-draft-rate-units-and-evidence"]}, "ROI-04": {"fixItems": ["phase6-fix-subscription-roi-original-draft-rate-units-and-evidence"]}, "ROI-05": {"fixItems": ["phase6-fix-subscription-roi-original-draft-rate-units-and-evidence"]}, "ROI-06": {"fixItems": ["phase6-fix-subscription-roi-original-draft-rate-units-and-evidence"]}, "ROI-07": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "ROI-08": {"fixItems": ["phase6-fix-subscription-roi-original-draft-rate-units-and-evidence", "phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "ROI-09": {"fixItems": ["phase6-fix-subscription-roi-original-draft-rate-units-and-evidence"]}, "ROI-10": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "ROI-11": {"fixItems": ["phase6-fix-ownership-shared-evidence-date-label-and-source-trust"]}, "ROI-12": {"fixItems": ["phase6-fix-subscription-roi-original-draft-rate-units-and-evidence"]}, "ROI-13": {"fixItems": ["phase6-fix-ownership-existing-live-write-and-governance-key-root"]}
+      },
+      "carriedGap": {"field": "needs[id=N06]", "fixItem": "phase6-blocked-ownership-original-full-range-contract", "qualifier": "Original carried G152/P291 gap; not an additional confirmed source finding or new loaded-row range repair."},
+      "preservedCandidateFields": {"conditional_native_candidates": ["ROI-C01", "ROI-C02", "ROI-C03", "ROI-C04", "ROI-C05", "ROI-C06", "ROI-C07"]},
+      "remainingAcceptanceFields": ["conditional_native_candidates", "acceptance_limits", "notrun"],
+      "preservedReceiptPinSafetyFields": ["scope", "queue_authority", "source_test_hashes", "command_failures", "absent_probes", "commands", "final_verification", "acceptance_limits"],
+      "acceptanceFixItem": "phase6-blocked-original-acceptance-and-external-evidence-06"
+    }
+  ],
+  "crossChunkSharedRoots": [
+    {"root": "web\\src\\lib\\workspaceScope.ts", "objective": "Distinct route scopes must be merged/serialized with existing workspace owners; home vehicle disclosure and ownership complete-range integration are different mechanisms. No blanket selector rewrite."},
+    {"root": "web\\src\\api\\hooks\\useOwnership.ts", "objective": "One exact live-write/cache root across CR04/DG01-02/insuranceF17/ROI13; separate blocked absolute-range contract; one exclusive file/test owner."},
+    {"root": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx", "objective": "One ownership quality-label/date/known app-owned copy root across seven reports; not advanced-intelligence EvidencePanel."},
+    {"root": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx", "objective": "One saved-date/initial-paused trust root, serialized with independent editor/source feedback in OwnershipPanel; callers retain their own date sites."},
+    {"root": "web\\src\\hooks\\useWebPush.ts", "objective": "Browser F03-06 and channels NC004-006/018 are the same readiness/teardown/current-device root; no duplicate page migration."},
+    {"root": "web\\src\\components\\forms\\VehicleMultiSelect.tsx", "objective": "AP07-09 and AS-N08 are three original sites plus one sibling observation of the same fallback localization root."},
+    {"root": "web\\src\\api\\hooks\\useNotifications.ts", "objective": "Channels feedback/cache and quiet-hours callback feedback require serialized exact function objectives; accepted inbox member query/retention does not close them."},
+    {"root": "web\\src\\components\\data-display\\DataProvenanceBadge.tsx", "objective": "NH12 freshness saved-date title is a shared-root correction; parent must deduplicate any sibling reports before granting tests."},
+    {"root": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx", "objective": "NAV006/007 map to existing accepted phase6-fix-maps-shared-brief-provenance-and-receipt-date, not a new fix."},
+    {"root": "web\\src\\lib\\dateFormat.ts", "objective": "Archived F07 maps to accepted phase6-fix-relative-future-dates; saved date-context caller adoption elsewhere is a different objective, no helper redispatch."},
+    {"root": "web\\src\\components\\ui\\ConfirmDialog.tsx", "objective": "ExportsEX09/governanceDG08/jurisdictionF09 can supply localized Cancel at existing callers; do not propose a competing shared dialog rewrite."},
+    {"root": "web\\src\\i18n\\en.json", "objective": "One parent serialized canonical bundle; merge exact original key/text provenance with all nine chunks and current next12/location owner before root export. No broadened projection/file claim."}
+  ],
+  "provenance": {
+    "dispatchSHA256": "343a7cdda3abefc4ddd5b0fb36e6789479cf15a89f12b09b83aa2cefb80008d8",
+    "queueSnapshotSHA256": "d7228ca62be3847a27085945a12439b2ba8bd6efcd355f24799aaa8796ff389e",
+    "priorOwnerMapSHA256": "9f0a3438efb9f7aa38d54fe22a923616d86312e9eb7e7aff5eca9574e4ba4e77",
+    "nextOwnerMapSHA256": "f8ba24d2a7eb48bef45740c0550b59036f7da40a5d764c969d235985cf4d5950",
+    "queueSnapshotIsNotLiveActorCensus": true,
+    "originalRecordsPreservedInPlace": true,
+    "originalLogAndReceiptReferencesPreservedInOriginals": true,
+    "rawRecordRule": "A report's confirmedField[id], candidate arrays, named rawCountsField and receipt/pin/safety fields refer to the exact SHA256-pinned original filename. No original record was rewritten, normalized, hidden or substituted. Nested native measurements/failures supersede only their explicitly qualified historical source candidate, never unrelated acceptance."
+  },
+  "verification": {
+    "kind": "ARTIFACT_SHAPE_COUNT_PROVENANCE_ONLY",
+    "result": "PASS_ARTIFACT_ONLY",
+    "checkedUTC": "2026-10-14T12:47:39.834969Z",
+    "actualOutput": "PASS artifact-only: processed21/21 primaryConfirmed241 inherited8 candidates138 rejected1 fixItems51 explicitBlockerItems27 existingOnly7 mixed2 missing232 unchangedOriginalHashes21/21 notReadAssigned0 otherChunkReports168",
+    "earlierCheck": "Initial shape check retained three escaped-JSON path-extraction false negatives and one copied dispatch hash mismatch. Corrected path normalization and exact dispatch hash; final original-artifact path/provenance check passed. No application receipt was rerun or replaced.",
+    "sourceCompilerTestsViolationsRoutesNative": "NOTRUN by explicit assignment; not applicable to report-only disposition",
+    "originalSourceLineSectionCounts": "NOTRUN; no source files read or edited"
+  },
+  "release": {
+    "claimReleaseUTC": "2026-10-14T12:47:39.834969Z",
+    "sourceTestRuntimeClaimsAcquired": 0,
+    "allOwnedReportAndLogClaimsReleased": true,
+    "processesAgentsServersBrowserLocksRetained": 0,
+    "parentNextAction": "Drain returned artifact, merge all nine disposition chunks against canonical queue/owners, export root work-items.json, then stop. This worker creates no root/queue item and launches nothing."
+  }
+}

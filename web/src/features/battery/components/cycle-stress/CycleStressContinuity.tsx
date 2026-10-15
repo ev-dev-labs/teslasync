@@ -17,6 +17,7 @@ import type { CycleStressResult } from '../../lib/cycleStress';
 import { cycleStressNumber } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressContinuityProps {
   result: CycleStressResult;
@@ -29,6 +30,7 @@ export function CycleStressContinuity({
   state,
   locale,
 }: CycleStressContinuityProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const continuity = result.continuity;
 
@@ -37,7 +39,7 @@ export function CycleStressContinuity({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <GitBranch
-            className="h-4 w-4 text-cyan-300"
+            className="h-4 w-4 text-[var(--text-secondary)]"
             aria-hidden="true"
           />
           {t(
@@ -58,6 +60,7 @@ export function CycleStressContinuity({
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <MetricCard
+              compact
               label={t(
                 'cycleStress.continuity.intervals',
                 'Accepted intervals',
@@ -65,16 +68,16 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.acceptedIntervals,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.afterAccounting',
                 'after row and overlap accounting',
               )}
               icon={<Layers3 className="h-5 w-5" />}
-              color="cyan"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.continuity.rawBoundaries',
                 'Raw endpoint boundaries',
@@ -82,16 +85,16 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.rawBoundaryPoints,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.twoPerInterval',
                 'two per accepted interval',
               )}
               icon={<Rows3 className="h-5 w-5" />}
-              color="blue"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.continuity.retained',
                 'Retained observations',
@@ -99,16 +102,16 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.retainedObservations,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.afterCoincident',
                 'after coincident/tiny-point handling',
               )}
               icon={<Combine className="h-5 w-5" />}
-              color="green"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.continuity.turningPoints',
                 'Turning points',
@@ -116,16 +119,16 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.turningPoints,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.extrema',
                 'segment endpoints plus local extrema',
               )}
               icon={<Activity className="h-5 w-5" />}
-              color="purple"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.continuity.segments',
                 'Continuity segments',
@@ -140,9 +143,10 @@ export function CycleStressContinuity({
                 'rainflow never crosses segments',
               )}
               icon={<GitBranch className="h-5 w-5" />}
-              color="amber"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.continuity.timeGaps',
                 'Long-gap breaks',
@@ -150,7 +154,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.timeGapBoundaries,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.gapThreshold',
@@ -159,14 +162,14 @@ export function CycleStressContinuity({
                   days: cycleStressNumber(
                     result.config.maxContinuityGapS / 86_400,
                     locale,
-                    1,
                   ),
                 },
               )}
               icon={<TimerOff className="h-5 w-5" />}
-              color="red"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.continuity.socJumps',
                 'SoC-jump breaks',
@@ -174,7 +177,6 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.socJumpBoundaries,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.jumpThreshold',
@@ -183,14 +185,14 @@ export function CycleStressContinuity({
                   value: cycleStressNumber(
                     result.config.maxBoundaryJumpPct,
                     locale,
-                    1,
                   ),
                 },
               )}
               icon={<Scissors className="h-5 w-5" />}
-              color="red"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.continuity.overlaps',
                 'Rejected overlaps',
@@ -198,16 +200,16 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.overlappingIntervals,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.conflictingIntervals',
                 'conflicting interval chronology',
               )}
               icon={<CircleSlash2 className="h-5 w-5" />}
-              color="amber"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.continuity.compacted',
                 'Monotone points compacted',
@@ -215,16 +217,16 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.compactedPoints,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.notExtrema',
                 'not local extrema',
               )}
               icon={<Scissors className="h-5 w-5" />}
-              color="blue"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.continuity.coincident',
                 'Coincident collapses',
@@ -232,14 +234,13 @@ export function CycleStressContinuity({
               value={cycleStressNumber(
                 continuity.coincidentBoundaryCollapses,
                 locale,
-                0,
               )}
               subtitle={t(
                 'cycleStress.continuity.laterObservation',
                 'later observation retained at same instant',
               )}
               icon={<Combine className="h-5 w-5" />}
-              color="cyan"
+              color="neutral"
             />
           </div>
           <AlertBanner className="mt-4" variant="info">

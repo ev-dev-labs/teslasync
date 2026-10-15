@@ -1,0 +1,333 @@
+{
+  "item": "audit-page-121",
+  "page": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx",
+  "routes": ["/regen-efficiency"],
+  "purpose": "Describe regenerative-energy recovery using independently scoped complete aggregate and capped detailed drive evidence, without causal, savings, benchmark, or composite-score claims.",
+  "primaryGoal": "Understand measured recovery share, monthly trends, per-drive distribution, temperature/starting-SoC associations, and coverage limitations for the workspace vehicle and date window.",
+  "dataSources": [
+    {
+      "hook": "useRegenEfficiency",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 284,
+      "endpoint": "/api/v1/analytics/regen",
+      "parameters": ["vehicle_id", "start", "end"],
+      "owner": "internal\\api\\regen (handler referenced by internal\\api\\router.go:1032,3875)",
+      "routeEvidence": "internal\\api\\router.go:3875",
+      "behavior": "Vehicle-enabled query; vehicle/start/end participate in key; request receives AbortSignal. Aggregate supplies totalRegenWh, totalDriveWh, regenRatio, freeCharges, batteryCapacityWh and capacitySource. Frontend describes complete-window totals; backend aggregation and completeness were not inspected or exercised.",
+      "pageEvidence": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx:44-48"
+    },
+    {
+      "hook": "useDrives",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 104,
+      "endpoint": "/api/v1/drives",
+      "parameters": ["vehicle_id", "start", "end", "limit=1000"],
+      "owner": "driveHandler.ListByVehicle, internal\\api\\router.go:3463-3464",
+      "behavior": "Vehicle-enabled query; bounded window key; safeArray select; FAST staleTime; inherited retry policy; AbortSignal forwarded. Exact returned rows feed the pure SI model. No pagination beyond the 1000-row sample is requested.",
+      "pageEvidence": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx:49-62"
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState / useTimezone",
+      "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx",
+      "line": 35,
+      "endpoint": null,
+      "owner": "Existing workspace header and hooks; dated route registered at web\\src\\lib\\workspaceScope.ts:57",
+      "behavior": "Vehicle ID converted to string only for query interface. Vehicle timezone, all-time default, regen-efficiency.range persistence key and inclusive start/exclusive end are retained. No second page-local picker.",
+      "limits": "Hook internals and header controls were not exercised."
+    },
+    {
+      "hook": "useDataState / toRegenSectionState",
+      "file": "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\presentation.ts",
+      "line": 13,
+      "endpoint": null,
+      "owner": "Existing data-trust infrastructure and page-specific presentation adapter",
+      "behavior": "Independent historical source trust; hasData admits retained payload, fatalError alone replaces content, refresh retry remains source-specific; disabled/unresolved queries are not success. StaleRefreshWarning also represents retained offline/blocked refresh."
+    },
+    {
+      "hook": "buildRegenEfficiencyModel",
+      "file": "web\\src\\features\\driving\\lib\\regenEfficiency.ts",
+      "line": 328,
+      "endpoint": null,
+      "owner": "Driving domain pure derivation",
+      "behavior": "Finite non-negative recovered Wh and finite positive drive Wh define eligibility; real zero regen is valid. Weighted ratios use summed operands, quartiles use interpolation, dates use selected timezone, 24 observed months display, six ratio buckets, five temperature and five SoC buckets, stable top-ten recovered-energy ranking. Input order and objects are not mutated."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / CardGrid", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx; CardGrid.tsx", "usage": "Page query freshness/busy and container-derived half-card context placement", "evidence": "RegenEfficiencyPage.tsx:72-80,121-143; CardGrid.tsx:25-45"},
+    {"name": "DrivingSummaryBrief / OperationalBrief / useOperationalMetrics", "owner": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx; web\\src\\components\\data-display\\OperationalBrief.tsx", "usage": "Three compact typed-metric summaries; source context, provenance, unknown freshness, review-details drawers", "evidence": "DrivingSummaryBrief.tsx:23-51; OperationalBrief.tsx:151-168,234-300"},
+    {"name": "ChartContainer / EmbeddedChart", "owner": "web\\src\\components\\charts\\ChartContainer.tsx; EmbeddedChart.tsx", "usage": "Monthly outer frame and embedded plot, distribution frame; accessible data tables, export menus, existing legend state", "evidence": "MonthlyRecoveryTrend.tsx:66-97; MonthlyRecoveryChart.tsx:39-84; RecoveryRatioDistribution.tsx:48-95"},
+    {"name": "ChartCard", "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx", "usage": "Existing candidate, NOT currently mounted here; now forwards canonical opt-in export/fullscreen/toolbar capabilities", "evidence": "ChartCard.tsx:7-44; EmbeddedChart.tsx:19-40"},
+    {"name": "RecoveryContext / RegenCardSlot / MetricBar", "owner": "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\RecoveryContext.tsx; RegenCardSlot.tsx", "usage": "One reusable temperature/SoC presentation with finite-value guards and layout placement", "evidence": "RecoveryContext.tsx:24-131; RegenCardSlot.tsx:5-9"},
+    {"name": "RankedDriveEvidence / DataTable", "owner": "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\RankedDriveTable.tsx; web\\src\\components\\ui\\DataTable.tsx", "usage": "Ten columns, stable persistence identity, mobile cards with full-detail display accessors; existing table controls rather than a feature-owned table", "evidence": "RankedDriveTable.tsx:20-104; DataTable.tsx:335-379"},
+    {"name": "RegenSectionBody / DetailScopeNotice / RegenMethodologyList", "owner": "web\\src\\features\\driving\\components\\regen-efficiency", "usage": "Reusable source-state body, capped-detail warning and six specialist methodology explanations", "evidence": "RegenSectionBody.tsx:30-55; DetailScopeNotice.tsx:22-39; RegenMethodologyList.tsx:24-82"},
+    {"name": "StaleRefreshWarning / QueryError / EmptyState / Skeleton / AlertBanner / typography / Badge", "owner": "Existing feedback and UI category owners", "usage": "Independent recoverable source states and localized semantic content", "evidence": "RegenEfficiencyPage.tsx:81-88; RegenOverviewBrief.tsx:92-138; StaleRefreshWarning.tsx:64-136"},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "usage": "Seven entry wrappers, shared motion preference and finite-delay policy", "evidence": "RegenEfficiencyPage.tsx:89-158; FadeIn.tsx:24-36"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx",
+      "line": 89,
+      "rule": "MDC-031 / mission 43 hierarchy",
+      "detail": "Eight section-level occurrences of the same capped-history alert can render: summary, overview, monthly, distribution, two contexts, ranked table, coverage. Three briefs also repeat scope, provenance and the same evidence-scopes description.",
+      "fix": "Use one clearly visible page-wide cap explanation plus concise section-local scope references, preserving every limitation and all three sets of metrics/actions. Do not remove sections.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": ["RegenSummaryBrief.tsx:94-102,119-120", "RegenOverviewBrief.tsx:82-85,136-137", "MonthlyRecoveryTrend.tsx:103-107", "RecoveryRatioDistribution.tsx:96-100", "RecoveryContext.tsx:89-92 (mounted twice)", "RankedDriveEvidence.tsx:17-20", "RegenCoverageBrief.tsx:57-59,74"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\MonthlyRecoveryTrend.tsx",
+      "line": 66,
+      "rule": "MDC-034 shared chart pipeline",
+      "detail": "Two chart controllers/data-table definitions serve one monthly plot, with distinct legend IDs and a three-column inner alternative versus six-column outer alternative.",
+      "fix": "Assess composition through the current ChartCard/EmbeddedChart API, retaining both saved legend identities and complete six-column export/data alternative; do not flatten until equivalence is proven.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "PageLayout:12 uses w-full/min-w-0 and inherited shell gutters.",
+      "CardGrid:25-45 derives columns, spans and gutter from allocated container width; RegenCardSlot consumes placement.",
+      "RegenOverviewBrief.tsx:92 stacks until xl two-column overview.",
+      "OperationalBrief.tsx:167-168 compact metrics reflow 1/2/3/6 columns.",
+      "RankedDriveTable.tsx:92-101 uses cards with four summary columns and six detail-only fields, with formatter parity.",
+      "MonthlyRecoveryTrend.tsx:72 fixes 340px plot height; distribution:55 fixes 300px; charts use ResponsiveContainer."
+    ],
+    "issues": [],
+    "unverified": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "allocated narrow container", "RTL", "200% text", "long translations", "drawer open state", "chart axis collisions"],
+    "acceptance": "Source strategies observed only; no viewport acceptance claimed."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Seven semantic sections have localized aria-labels; context component contributes two sections.",
+      "Monthly and distribution frames declare ariaLabel/ariaDescription and dataColumns.",
+      "RankedDriveTable.tsx:90-91 supplies table caption and row label.",
+      "OperationalBrief.tsx:151-160 has localized Review details Button and Drawer:234-241.",
+      "StaleRefreshWarning.tsx:113-120 uses role=status and aria-live=polite.",
+      "RegenMethodologyList.tsx:26-64 hides decorative icons from assistive technology.",
+      "FadeIn.tsx:24-36 reads shared reduced-motion preference."
+    ],
+    "issues": [],
+    "unverified": ["keyboard sequence", "visible focus", "drawer focus trap/restore/Escape", "screen reader announcements", "effective contrast in all themes", "44px touch reachability", "forced colors", "OS/low-bandwidth reduced motion"]
+  },
+  "states": {
+    "loading": "Sections always mount. Independent source loading uses skeletons and null metric values. Brief loading uses BOTH queries loading for summary/overview, detail loading for coverage; per-source values are still guarded.",
+    "empty": "Explicit no-evidence, missing response, no denominator, ineligible sample, pending detail, empty charts and empty ranked/context bodies. Unknown is not coerced into zero.",
+    "error": "Fatal errors use independent QueryError and source retries; healthy neighbors survive. Summary supports retrying both sources when resolved empty.",
+    "staleOffline": "Two StaleRefreshWarning instances are mounted outside brief/chart sections. Existing owner detects blocked refresh and retains payload; page briefs currently flag retained from refreshError only.",
+    "partial": "Three briefs retain independent aggregate/detail availability and missing metrics; sourceStatus partly-available labels used by summary/overview.",
+    "success": "SI raw operands remain in model; useUnits/useNumberFormatting/useDateFormat apply display preferences at presentation boundary.",
+    "disabledUnresolved": "No vehicle leaves queries disabled; adapter does not promote them to success. Pending-detail explanations render.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx",
+        "line": 69,
+        "rule": "MDC-026 source trust / MDC-025 status",
+        "detail": "Brief retained flag checks refreshError only, whereas StaleRefreshWarning recognizes other degraded retained statuses including offline blocked refresh. A brief may label source available while its adjacent shared notice says stale/offline.",
+        "fix": "Map existing DataState retained/degraded and refresh-blocked semantics into brief status without changing query policy or replacing retained data; preserve independent source distinctions.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": "DrivingSummaryBrief.tsx:29-36; StaleRefreshWarning.tsx:64-84"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\RegenOverviewBrief.tsx",
+        "line": 34,
+        "rule": "MDC-026 distinguish resolved from available",
+        "detail": "aggregateReady checks resolution/error but not payload existence or the totalsUnavailable contradiction used by the adjacent aggregate body. With a valid detail source, overview status can report both sources available while aggregate body reports unavailable.",
+        "fix": "Derive readiness with payload and contradiction guards consistent with RegenSummaryBrief, preserving independently usable capacity provenance and detailed metrics.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": "RegenOverviewBrief.tsx:34-37,86-101; RegenSummaryBrief.tsx:25-30"
+      }
+    ],
+    "runtime": "unverified"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\regen-efficiency\\RegenMethodologyList.tsx",
+      "line": 75,
+      "rule": "MDC-010 / MDC-012 / mission 43 theme-safe surfaces",
+      "detail": "Methodology tiles use fixed-white border/background opacity instead of neutral semantic variables; all six icons share cyan regardless of semantic need.",
+      "fix": "Use current border/surface/muted-icon tokens without altering the six explanations, localized text or two-column layout.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\RecoveryContext.tsx",
+      "line": 61,
+      "rule": "MDC-010 / MDC-034 / mission 43 restrained semantic color",
+      "detail": "Ordinal bucket position rotates through five CHART_COLORS for each context panel; hue has no documented status meaning. Ten bars can create avoidable multicolor competition.",
+      "fix": "Reuse a restrained existing palette emphasis for descriptive bucket bars, retaining labels, all bins, numeric ratios and saved chart/theme preferences. Never change the global palette from this page.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": "RecoveryContext.tsx:58-65,97-113",
+      "runtimeLimit": "Actual saturation/contrast not measured."
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\RecoveryContext.tsx",
+      "line": 4,
+      "rule": "MDC-002 feature category-barrel imports",
+      "detail": "Feature components import LayoutCard and useCardPlacement from layout/layout-reference rather than the canonical layout category surface.",
+      "fix": "Use category LayoutCard export; verify whether placement hook is already public before changing its import, or request centralized export from layout owner.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": "RankedDriveEvidence.tsx:2; RegenCardSlot.tsx:2",
+      "limits": "Layout barrel was not inspected; a missing placement export is not asserted."
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\MonthlyRecoveryTrend.tsx",
+      "line": 64,
+      "rule": "MDC-002 inspect current shared API",
+      "detail": "Comments claim ChartCard/EmbeddedChart cannot support actions/fullscreen, but current shared sources now forward opt-in capabilities. Neither mounted outer chart passes fullscreen=true; comments are not proof of an existing fullscreen action.",
+      "fix": "Refresh API-equivalence assessment and remove obsolete rationale during implementation, preserving actual export/data/legend behavior; do not invent or claim existing fullscreen support on this page.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": "RecoveryRatioDistribution.tsx:46-47; ChartCard.tsx:7-44; EmbeddedChart.tsx:23-39; ChartContainer.tsx:637"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Mounted page already uses shared layout, source trust, SI formatting, responsive table cards and operational briefs. Prioritize truthful brief source labels and remove repeated/rainbow decoration without losing extensive specialist evidence.",
+    "sequence": ["Align brief data-trust labels", "Consolidate cap-context presentation", "Neutralize methodology surfaces and ordinal bar colors", "Reconcile current chart API and category imports", "Centralized runtime/responsive/accessibility acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse current chart capability contract; no confirmed new shared chart implementation needed",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "props": ["chartKey", "exportable", "exportFilename", "exportData", "data", "dataColumns", "toolbar", "fullscreen", "height", "mobileHeight", "fluid", "children render-prop hiddenSeries"],
+      "variants": ["EmbeddedChart canonical embedded presentation", "ChartCard LayoutCard host"],
+      "states": ["loading", "fatal error/retry", "empty", "retained populated data", "legend-hidden series", "export busy"],
+      "usedBy": ["MonthlyRecoveryTrend", "RecoveryRatioDistribution"],
+      "dependsOn": ["ChartContainer", "EmbeddedChart", "existing hidden-series persistence", "existing chart exports/data alternative"],
+      "requirement": "Integration verification rather than a shared API rewrite. Preserve monthly IDs regen-monthly-recovery and monthly-recovery and six-column export before adopting; current fullscreen remains opt-in and not currently enabled here.",
+      "confidence": "high"
+    },
+    {
+      "name": "Confirm public card-placement hook exposure",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\CardPlacementContext.tsx (referenced, not inspected)",
+      "props": ["useCardPlacement result className; CardGrid item id/size/content"],
+      "variants": ["half context cards"],
+      "states": ["container-width responsive packing", "stacked narrow cards"],
+      "usedBy": ["RegenCardSlot", "RecoveryContext"],
+      "dependsOn": ["layout category barrel owner", "CardGrid placement provider"],
+      "requirement": "Only request an export if category exposure is actually missing; no page-created observer/width engine.",
+      "confidence": "medium"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\regen-efficiency\\index.ts",
+      "line": 1,
+      "rule": "MDC-002 avoid competing renderers",
+      "detail": "Original barrel exports overview/KPI/monthly/distribution/context/ranked implementations while modernization barrel exports overlapping owners. Mounted page now uses operationalbrief-n-z and modernization renderers, retaining original notice/body/methodology/types.",
+      "fix": "Preserve current mounted composition; perform caller verification before any future consolidation or deletion. Do not resurrect original renderers or assume unused exports are dead.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": "RegenEfficiencyPage.tsx:15-25; regen-efficiency-modernization\\index.ts:1-9",
+      "limits": "Other pages/callers and original renderer bodies were not audited."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "95C2BDB7D2C687B66821190588AC85C28D5E961AEFCDD51B0EB4A408AD17C142",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 161,
+    "mountedPresentationLineCount": 1333,
+    "lineCountScope": "Page plus 15 inspected mounted feature presentation/helper files; excludes pure model, barrels and shared primitives. Read-only audit has no before/after source modification.",
+    "sectionCount": 8,
+    "sections": [
+      {"name": "Selected-window evidence", "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx", "line": 90, "count": 1, "content": "Six metrics: aggregate recovered Wh, aggregate recovery share, equivalent pack cycles, aggregate drive Wh, detailed returned rows, eligible/observed count; scope, provenance, cap, errors/empty and review drawer."},
+      {"name": "Recovery overview", "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx", "line": 101, "count": 1, "content": "Five metrics: estimated pack basis, capacity source, sample recovered Wh, sample drive Wh, weighted sample share with quartiles; complete aggregate gauge/operands and independent detailed sample, zero-aggregate contradiction notice."},
+      {"name": "Monthly recovery trend", "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx", "line": 112, "count": 1, "content": "Latest 24 observed months; energy bars and weighted-ratio line, dual axes, tooltip, legend; recovered/drive energy, ratio and eligible/returned counts in full alternative/export; truncation explanation."},
+      {"name": "Recovery-ratio distribution", "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx", "line": 116, "count": 1, "content": "Six ratio bins with counts and shares; median/IQR accessible description, tooltip, export frame and table alternative."},
+      {"name": "Ambient-temperature context", "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx", "line": 128, "count": 1, "content": "Five Celsius-defined buckets with display conversion, weighted ratio, eligible/returned and unavailable/invalid accounting."},
+      {"name": "Starting-SoC context", "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx", "line": 137, "count": 1, "content": "Five percentage-defined buckets with weighted ratio, eligible/returned and unavailable/invalid accounting."},
+      {"name": "Most recovered energy by drive", "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx", "line": 147, "count": 1, "content": "Top ten eligible drives; rank, drive date/ID, recovered energy, share, drive energy, distance, duration, speed, starting SoC and temperature; mobile summary retains full detail."},
+      {"name": "Coverage and methodology", "file": "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx", "line": 151, "count": 1, "content": "Four accounting metrics: returned, eligible, excluded, unavailable energy fields; independent status badges, capacity provenance and six explanations: scopes, weighting, eligibility, months, descriptive associations, estimated capacity."}
+    ],
+    "actions": [
+      "Workspace-owned vehicle/date/timezone changes refetch scoped sources; no duplicate local selectors.",
+      "Source-specific Retry in QueryError and aggregate/detail empty states; selected-window resolved empty can retry both.",
+      "Source-specific retained-data Refresh via StaleRefreshWarning; disabled during refresh.",
+      "Three Review details buttons open the existing OperationalBrief Drawer; close behavior delegated to shared owner.",
+      "Monthly chart legend toggles retain both hidden-series keys.",
+      "Monthly export menu uses canonical chart image/copy and explicit six-column CSV payload when populated.",
+      "Distribution uses canonical image/copy export menu when populated; no explicit exportData CSV supplied.",
+      "Chart accessible data tables expose declared source columns.",
+      "Ranked DataTable retains column visibility/order/width persistence, local-table export/search defaults and mobile detail affordance from its shared owner; no row navigation callback is provided.",
+      "No source mutations, page-specific forms or enabled fullscreen prop in this mounted page."
+    ],
+    "dataBehavior": [
+      "Independent aggregate and capped sample are never conflated into guaranteed lifetime detail.",
+      "History limit 1000, display-month limit 24 and ranking limit 10 remain explicit.",
+      "SI Wh/m/s/m/s/Celsius source operands unchanged; useUnits and specialist formatters only at display boundary.",
+      "Missing/invalid measurements differ from measured zero; positive energy denominator required.",
+      "Weighted totals, percentile interpolation, bucket edges, stable tie order and timezone monthly assignment preserved.",
+      "Raw query keys, AbortSignal, enablement, FAST detail staleTime and existing inherited retry policies preserved.",
+      "Retained data survives refresh failure; neighbor source failures remain independent.",
+      "Capacity estimate provenance and non-causal/non-savings methodology remain visible.",
+      "Stable identities: regen-efficiency.range, regen-selected-window-summary, regen-overview-brief, regen-coverage-brief, regen-monthly-recovery, monthly-recovery, driving:regen-ranked-evidence."
+    ]
+  },
+  "evidenceLimits": {
+    "phase": "Phase0 read-only source audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Only route bindings inspected. SQL/filtering/completeness, payload shape in live responses, authentication and server date semantics were not exercised.",
+    "shared": "Selected shared owners inspected; DataTable/PageContainer/ChartContainer searches are bounded excerpts, not comprehensive shared audits. No whole-application inventory.",
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx -Algorithm SHA256; (Get-Content page).Count", "exitCode": 0, "output": "95C2BDB7D2C687B66821190588AC85C28D5E961AEFCDD51B0EB4A408AD17C142; 161"},
+      {"command": "Select-String scoped 16 mounted presentation files for style=, raw controls, direct chart/map/motion imports, fixed/neon text and white surfaces; Get-Content line counts", "exitCode": 0, "output": "Mounted presentation total=1333; style=0; raw controls=0; direct chart/map/motion imports=0; text-neon|text-white|text-gray=0; border-white|bg-white=1 (RegenMethodologyList.tsx:75)"},
+      {"command": "Scoped rg route/hook bindings", "exitCode": 0, "output": "App.tsx:126,832 mounted route; workspaceScope.ts:57 date registration; useDriving.ts:104-129,284-295; router.go:3463-3464,3875"}
+    ],
+    "notRun": [
+      "Skill audit.sh inspected, not executed: it unconditionally runs project TypeScript, conflicting with bounded Phase0 no full validation instructions.",
+      "TypeScript, lint, tests, full build, Git, browser/runtime and production mutations not run.",
+      "No historical receipts upgraded to current acceptance."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-121.json", ".agent-status\\audit-page-121.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md (sections 0,1,15,33,43,44)",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\RegenEfficiencyPage.tsx",
+    "web\\src\\features\\driving\\lib\\regenEfficiency.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\RegenSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\RegenOverviewBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\RegenCoverageBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\index.ts",
+    "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\MonthlyRecoveryTrend.tsx",
+    "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\MonthlyRecoveryChart.tsx",
+    "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\RecoveryRatioDistribution.tsx",
+    "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\RecoveryContext.tsx",
+    "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\RankedDriveEvidence.tsx",
+    "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\RankedDriveTable.tsx",
+    "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\RegenCardSlot.tsx",
+    "web\\src\\features\\driving\\components\\regen-efficiency-modernization\\presentation.ts",
+    "web\\src\\features\\driving\\components\\regen-efficiency\\index.ts",
+    "web\\src\\features\\driving\\components\\regen-efficiency\\DetailScopeNotice.tsx",
+    "web\\src\\features\\driving\\components\\regen-efficiency\\RegenSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\regen-efficiency\\RegenMethodologyList.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts (scoped query excerpts)",
+    "internal\\api\\router.go (scoped route excerpts)",
+    "web\\src\\App.tsx (route/lazy excerpts)",
+    "web\\src\\lib\\workspaceScope.ts (dated-route excerpt)",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx (scoped API/control excerpts)",
+    "web\\src\\components\\layout\\PageContainer.tsx (scoped query/state excerpts)",
+    "web\\src\\components\\ui\\DataTable.tsx (scoped API excerpts)",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx"
+  ]
+}

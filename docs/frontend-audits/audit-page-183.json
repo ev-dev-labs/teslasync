@@ -1,0 +1,370 @@
+{
+  "item": "audit-page-183",
+  "page": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+  "routes": ["/command-reliability"],
+  "purpose": "Historical reliability analysis of remote commands for the workspace-selected vehicle and date range.",
+  "primaryGoal": "Compare confidence-weighted success by command, identify unreliable operations and retry effort, and inspect recorded outcomes without mistaking a small sample for proven reliability.",
+  "dataSources": [
+    {
+      "hook": "useCommandReliabilityHistory",
+      "file": "web\\src\\api\\hooks\\useCommands.ts",
+      "line": 57,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/commands/history",
+      "requestPath": "/vehicles/${encodeURIComponent(String(vehicleId))}/commands/history?${params}",
+      "routeEvidence": "internal\\api\\router.go:3319,3327,3337-3338",
+      "sourceOwner": "commandHandler.CommandHistory; backend handler/repository internals not inspected",
+      "scope": "Selected vehicle; from=startInstant and to=endInstantExclusive; limit=1000; before_created_at/before_id cursor.",
+      "queryContract": "commandKeys.reliability normalizes vehicle identity to string; key includes vehicle, reliability, from and to. enabled requires vehicle/from/to; staleTime=STALE_TIMES.QUICK. Query signal is forwarded to every request. All cursor pages are collected before success; invalid arrays/nonadvancing cursors throw.",
+      "payload": "CommandLogEntry[]: id, vehicle_id, command, params, status, error, created_at.",
+      "backendLimits": "Router comment specifies RFC3339 [from,to) or legacy inclusive calendar dates. Actual SQL filtering, cursor ordering, permissions and completeness were not exercised or inspected.",
+      "confidence": "high for source wiring; runtime unverified"
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "Indirect fleet source via useVehicles; its endpoint implementation was not inspected.",
+      "sourceOwner": "Existing workspace vehicle store, URL synchronization and fleet query.",
+      "scope": "URL vehicle_id/path identity, then persisted valid selection, then first known vehicle; no page-local picker.",
+      "preserve": "Do not replace workspace selection or mutate its persistence/URL precedence."
+    },
+    {
+      "hook": "useRangeState, useProductPreferences, useTimezone('vehicle')",
+      "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+      "line": 59,
+      "endpoint": null,
+      "sourceOwner": "Header-owned workspace range/preferences/timezone contracts.",
+      "scope": "defaultAnalysisRange, vehicle timezone and RFC3339 instant bounds; route is in RANGE_ENABLED_PATHS at web\\src\\lib\\workspaceScope.ts:36.",
+      "preserve": "Rolling/custom range, URL from/to, shared preferences and timezone/DST semantics. Do not add a second date or vehicle selector."
+    },
+    {
+      "hook": "analyzeCommandReliability",
+      "file": "web\\src\\features\\system\\lib\\commandReliability.ts",
+      "line": 159,
+      "endpoint": null,
+      "sourceOwner": "Existing pure command reliability domain analysis.",
+      "behavior": "Skip invalid timestamps/empty commands; classify success/pending/failure; exclude pending from success/Wilson denominators; collapse consecutive attempts separated by at most five minutes; normalize error signatures; calculate Wilson 95% intervals, minimum-five-resolved grading and lower-bound ordering. No new measurements or server calculations.",
+      "confidence": "high, source-only"
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "category": "layout",
+      "contract": "ComponentProps<typeof PageContainer>; forwards title/subtitle/query and children; min-w-0, full-width container. Query supplies freshness metadata, not automatic body error/loading gating.",
+      "dependsOn": ["web\\src\\components\\layout\\PageContainer.tsx"],
+      "usedBy": ["/command-reliability"],
+      "decision": "reuse"
+    },
+    {
+      "name": "OperationalBrief with useOperationalMetrics",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "line": 43,
+      "category": "composite",
+      "contract": "eyebrow/title/description/statusLabel/metrics; compact/loading/scope/freshness/provenance/statusTone; metric rawValue and valueState retain source measurements. Review details opens the existing drawer. Current useOperationalMetrics uses useUnits/useFormatting and formatOperationalMetrics.",
+      "dependsOn": [
+        "web\\src\\hooks\\useOperationalMetrics.tsx",
+        "web\\src\\features\\system\\components\\statstrip-command-summaries\\commandSummaryMetrics.tsx"
+      ],
+      "usedBy": ["/command-reliability"],
+      "decision": "reuse; do not recreate KPI cards or another summary drawer"
+    },
+    {
+      "name": "ChartContainer",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "line": 79,
+      "category": "composite",
+      "contract": "title/subtitle/ariaLabel, loading/error/onRetry/empty, size/height/mobileHeight, data/dataColumns fallback table, separate exportData CSV scope, default PNG/SVG/copy-image menu. Fullscreen and persisted interactive legend are opt-in and not enabled here.",
+      "dependsOn": ["existing category-exported chart primitives and ChartTooltip"],
+      "usedBy": ["/command-reliability"],
+      "decision": "reuse existing error, accessible table, export and responsive APIs; no replacement chart/export library"
+    },
+    {
+      "name": "useDataState and StaleRefreshWarning",
+      "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "line": 47,
+      "category": "trust/feedback",
+      "contract": "state with hasData/fatalError/refreshError/isRefreshBlocked/retry. Historical retained data survives refresh errors/offline pauses; warning is a polite status and retry is disabled while refreshing. No retained payload means warning renders nothing.",
+      "dependsOn": ["web\\src\\hooks\\useDataState.ts", "web\\src\\api\\dataState.ts"],
+      "usedBy": ["/command-reliability"],
+      "decision": "reuse; apply fatal versus empty distinction consistently in every section"
+    },
+    {
+      "name": "GlassPanel, PanelTitle, Text, Badge, HelpTooltip",
+      "owner": "Existing @/components/ui category",
+      "line": 6,
+      "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+      "category": "primitives",
+      "contract": "Shared surface, semantic headings/text, localized explanation triggers and success/info/warning/danger/neutral grade labels; implementations other than consumers were not inspected.",
+      "usedBy": ["/command-reliability"],
+      "dependsOn": ["existing semantic tokens and UI category"],
+      "decision": "reuse; replace fixed feature accent classes with existing theme-aware semantic presentation"
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "line": 23,
+      "category": "motion",
+      "contract": "children, optional delay/className; useMotionPreference supplies reduce and durationMs, reduced mode uses initial=false and delay=0.",
+      "usedBy": ["/command-reliability"],
+      "dependsOn": ["existing useMotionPreference; hook implementation not inspected"],
+      "decision": "reuse; source support is not exercised reduced-motion acceptance"
+    },
+    {
+      "name": "NoVehicleSelected",
+      "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "line": 43,
+      "category": "domain guidance",
+      "contract": "pageTitle, optional title/description; shared vehicles.list guidance and setup action fallback /onboarding.",
+      "usedBy": ["/command-reliability"],
+      "dependsOn": ["existing EmptyState and empty-state guidance"],
+      "decision": "preserve domain prerequisite guidance"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+      "line": 150,
+      "rule": "MDC-026 / MDC-034",
+      "detail": "Confidence-empty rendering bypasses ChartContainer into a separate GlassPanel; command detail has another separately gated empty surface. The same history trust decision is scattered across summary/chart/detail.",
+      "fix": "Reuse ChartContainer empty/error props and derive section state once from shared DataState; preserve both explanations and all three section identities.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceObservations": [
+      "PageLayout supplies min-w-0 and a full-width @container.",
+      "Details stack in one column until lg, then two; label/value cells use two columns until sm then four; headings wrap.",
+      "Chart uses ResponsiveContainer but fixed height=380 and YAxis width=150 with 10px ticks."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+        "line": 200,
+        "rule": "MDC-043 / mission 15-16",
+        "detail": "A fixed 150px label rail plus chart margins consumes much of a 320px allocated canvas; 10px category ticks and a fixed-height many-command chart have no page-specific dense/long-label strategy. Actual clipping was not observed.",
+        "fix": "Use existing responsive frame size/mobileHeight and container-aware axis layout; preserve full names in tooltip/fallback table and every command. Test many commands and long labels rather than dropping rows.",
+        "owner": "page",
+        "confidence": "medium; source risk, not measured overflow"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+        "line": 295,
+        "rule": "MDC-043 / extreme data preservation",
+        "detail": "Source error text is placed in a grid cell without explicit wrapping for long unbroken signatures. Analyzer caps signatures at 120 characters but they can still be unbroken.",
+        "fix": "Add existing wrapping/min-width utilities to value cells and test long identifiers/errors at narrow widths and 200% text; retain the entire source signature and count.",
+        "owner": "page",
+        "confidence": "medium; runtime unverified"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": [
+      "Named metric section, shared PanelTitle and Text, explicit chart ariaLabel and dataColumns, text grade labels alongside color.",
+      "Detail heading icon is aria-hidden and both HelpTooltip calls have localized accessible names.",
+      "Shared stale warning provides role=status/aria-live=polite and existing retry; FadeIn delegates reduced motion."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+        "line": 259,
+        "rule": "MDC-040 / mission 30",
+        "detail": "Command facts are sibling Text label/value nodes in a visual grid rather than explicitly associated definition pairs. Heading/list identify the command, but label/value relationships are not encoded as dt/dd.",
+        "fix": "Keep the command list and use semantic dl/dt/dd through Text.as for each existing field; retain keyboard-accessible shared help and chart alternatives.",
+        "owner": "page",
+        "confidence": "high for markup; assistive-technology impact unverified"
+      }
+    ],
+    "unverified": ["keyboard/focus", "screen reader", "contrast", "forced colors", "touch targets", "reduced motion in browser", "drawer and export-menu open states"]
+  },
+  "states": {
+    "initialLoading": "OperationalBrief loading, chart loading and detail Skeleton are wired to historyQuery.isLoading.",
+    "success": "Four summary metrics, confidence/raw-rate chart and all command detail rows.",
+    "empty": "Summary says No attempts recorded, chart area becomes explanatory EmptyState, detail says No commands recorded.",
+    "fatalFailure": "Summary has QueryError/refetch; chart/detail currently look empty because their fatal branches are incomplete.",
+    "staleOrOfflineWithRetainedData": "Shared historical DataState and StaleRefreshWarning preserve query payload; summary statusTone=warning for stale.",
+    "initialOfflineWithoutData": "Source risk: isLoading can be false for a pending paused query; summary says unavailable but chart/detail can claim empty. No paused query was exercised.",
+    "noSelectedVehicle": "Existing NoVehicleSelected onboarding guidance replaces the analysis.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+        "line": 171,
+        "rule": "MDC-026 / mission 24-25",
+        "detail": "On initial history failure, summary renders retry but ChartContainer receives no error/onRetry and empty=true. Detail line 241 also tests only command count. An unavailable source therefore produces empty/no-records messaging beside a fatal error.",
+        "fix": "Pass state.fatalError and state.retry to ChartContainer; give detail a fatal failure branch before resolved-empty. Derive initial/paused/available state from DataState instead of treating data??[] as evidence of no records. Keep retained content on refresh failure.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\statstrip-command-summaries\\commandSummaryMetrics.tsx",
+        "line": 72,
+        "rule": "MDC-026 / MDC-033 / unknown is not zero",
+        "detail": "A successfully loaded empty or pending-only history gets summary.overallSuccessRate=0 (analyzer lines 276 and 316-317), so the overall metric presents 0% without resolved evidence. A null worstCommand also uses Nothing failing at line 92 even for empty/unproven records.",
+        "fix": "Keep cached payload and analytical calculations unchanged; supply a missing/no-resolved-evidence presentation value when there are no success+failure attempts and an evidence-qualified context for empty/unproven worstCommand. Preserve measured zero when resolved failures actually exist.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+      "line": 47,
+      "rule": "MDC-010 / MDC-025 / MDC-034 / mission 5,7,27",
+      "detail": "Numeric grade-to-palette indexing disagrees with Badge semantics: excellent uses series[2] amber, flaky series[3] red, unreliable series[5] cyan, unproven series[7] lime; the raw marker is also lime and the 95% reference is amber. tokens.ts:401 confirms these concrete hues. This creates mixed semantic cues and more color than needed, not a claim that chartTokens itself is forbidden.",
+      "fix": "Prefer one restrained neutral lower-bound fill and a distinct subdued raw marker, retaining grade meaning in existing semantic Badges and the fallback grade column; alternatively reuse current semantic fills aligned with Badge meanings. Make the reference line neutral/dashed with an explanation. Do not change saved theme palettes or invent feature hex colors.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+      "line": 230,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Heading decoration uses fixed text-cyan-300 and failure body uses fixed text-rose-300 at line 295, unlike the theme-aware primary/muted surrounding text. Light/custom-theme composed contrast was not measured.",
+      "fix": "Use existing muted typography color for the decorative heading icon and a theme-aware semantic danger treatment for actual failure text. Preserve textual failure meaning/count and verify contrast on composed backgrounds.",
+      "owner": "page",
+      "confidence": "high for fixed classes; contrast unverified"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+      "line": 80,
+      "rule": "MDC-034 / preservation / stable identity",
+      "detail": "Display labels are truncated before becoming chartData.command, fallback table identity and Cell key (line 212). Distinct long commands can share a truncated key; assistive table text loses the full name even though the detail list retains it.",
+      "fix": "Carry raw command as stable identity and full humanized label in data/export rows; truncate only the axis formatter. Retain all existing fields, ordering and chart/detail consistency.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+      "line": 174,
+      "rule": "MDC-034 / export preservation",
+      "detail": "The variable named exportData is only passed as ChartContainer.data. Shared ChartContainer:145-146,417-422 requires its separate exportData prop to enable CSV; this page currently has image-export menu source wiring but not CSV wiring. Existing CSV availability must not be claimed.",
+      "fix": "Preserve current PNG/SVG/copy-image capabilities and fallback table. If exposing the already-prepared tabular rows as CSV is intended, explicitly pass complete full-label exportData to the existing API; this is a page integration improvement, not proof CSV already worked.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+      "line": 288,
+      "rule": "MDC-032 / MDC-044 / mission 26",
+      "detail": "Range caption uses vehicle timezone at line 133, but Last used and freshness line 142 omit tz; inspected dateFormat.ts:8-13 explicitly defaults omitted options to browser timezone. The display can disagree at a timezone boundary.",
+      "fix": "Pass the same vehicle timezone to command dates/freshness via existing formatters; retain RFC3339 source instants and selected [from,to) bounds without changing saved timezone/range preferences.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "Prioritize truthful fatal/empty/paused and no-resolved-evidence presentation, stable full-name chart identity and semantic palette alignment. Responsive/contrast observations remain source risks pending QA.",
+    "order": ["fatal and initial paused trust", "unknown versus measured zero", "full command identities and fallback evidence", "restrained semantic palette", "responsive semantics and timezone consistency", "explicit CSV intent"]
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "confirmed": [],
+    "notes": [
+      "Existing OperationalBrief/stat formatting, PageLayout, ChartContainer, DataState and workspace hooks already cover the concrete needs inspected here.",
+      "No new shared component or palette contract is justified by this single-page audit. Reuse contracts above; proposed changes are caller/domain-adapter fixes.",
+      "No unrelated consumer survey was performed and no global duplication count is claimed."
+    ]
+  },
+  "preservation": {
+    "sourceHash": "899aa565c3d1dd3e21e0083569a2d23e8e87bd4356c87e4e7986bf64e0f60745",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceFile": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+    "lineCount": 312,
+    "sections": [
+      {"name": "KPI band / Command reliability summary", "line": 115, "count": 1, "metrics": ["Overall success and attempts explanation", "Unreliable commands and worst command context", "Distinct intents", "Retry storms"]},
+      {"name": "Confidence-weighted success chart", "line": 148, "count": 1, "data": ["Wilson lower bound", "raw success-rate marker", "95% reference line", "upper-bound fallback column", "attempt count", "grade"]},
+      {"name": "Command breakdown", "line": 226, "count": 1, "data": ["full humanized label", "grade", "success/failure outcomes", "95% interval", "attempts per intent and retried intents", "last used", "optional normalized usual failure/count"]}
+    ],
+    "sectionCount": 3,
+    "sourceComponentCounts": {"GlassPanel": 3, "ChartContainer": 1, "OperationalBrief": 1, "FadeIn": 3},
+    "countNote": "JSX source counts include mutually exclusive branches, not mounted panel counts.",
+    "actions": [
+      {"name": "Retry initial history failure", "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx", "line": 122},
+      {"name": "Retry retained-history refresh", "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "line": 103},
+      {"name": "Review summary details in existing drawer", "file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 154},
+      {"name": "Chart PNG/SVG/copy image via default export menu", "file": "web\\src\\components\\charts\\ChartContainer.tsx", "line": 129, "limit": "Source wiring only; not exercised. CSV not enabled by this page's current props."},
+      {"name": "Overall-confidence and retry-intent explanations", "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx", "line": 232, "additional": "commandSummaryMetrics.tsx:76"},
+      {"name": "No-vehicle setup navigation", "file": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx", "line": 65, "destination": "guidance action or /onboarding"},
+      {"name": "Workspace vehicle/date selection", "file": "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx", "line": 59, "limit": "Header-owned, no local selectors or command mutations."}
+    ],
+    "data": [
+      "Full-range cursor history, abort signal, normalized query identity, existing enablement/stale/retry policy and selected vehicle bounds.",
+      "All raw CommandLogEntry fields remain unchanged on wire/cache; historical provenance and retained-data refresh semantics survive.",
+      "Success and pending classifications, Wilson 95% formula, thresholds/minimum evidence, consecutive five-minute retry grouping, error-signature normalization and least-trustworthy-first ordering remain domain-owned.",
+      "Keep zero resolved success distinct from no resolved evidence at presentation boundary, without rewriting status semantics or inventing measurements.",
+      "Preserve four metrics, every command row, interval/raw/upper/attempt/grade fallback columns and every specialist help explanation.",
+      "Dimensionless rates/counts and UTC timestamps remain source values; no new legacy physical-unit conversions. Do not change existing retry-window option units in a presentation migration.",
+      "No enabled fullscreen, annotation, chart zoom or persisted legend-toggle capability is evidenced at this page call; do not invent preservation claims for absent props."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 read-only source audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "tests": "not run",
+    "typeScript": "not run; no acceptance claim",
+    "buildLint": "not run, prohibited for this scoped audit",
+    "skillScript": "Inspected audit.sh but did not execute: it unconditionally invokes project-wide TypeScript. Narrow source regex counts were used instead.",
+    "sourcePatternReceipt": {
+      "command": "PowerShell Get-Content -Raw assigned page and [regex]::Matches for inline styles, raw controls, direct recharts/react-leaflet/framer-motion imports, old API imports, fixed neon/white/gray text and frame counts",
+      "exitCode": 0,
+      "output": [
+        "style=\\{\\{ = 0",
+        "<(button|input|textarea|select|table)\\b = 0",
+        "direct recharts/react-leaflet/framer-motion imports = 0",
+        "old ../api or ../../api imports = 0",
+        "text-(neon|white|gray) = 0",
+        "<GlassPanel\\b = 3",
+        "<ChartContainer\\b = 1",
+        "<OperationalBrief\\b = 1",
+        "<FadeIn\\b = 3"
+      ],
+      "limit": "Zero matches in those categories is not zero design issues, typecheck success or runtime acceptance."
+    },
+    "backend": "Only router registration/comment read; handler filtering, pagination SQL and authentication not exercised.",
+    "scope": "Assigned mounted page and direct page-specific domain/data/presentation contracts only; shared files inspected read-only for actual consumed APIs, not audited application-wide.",
+    "writes": ["docs\\frontend-audits\\audit-page-183.json", ".agent-status\\audit-page-183.txt"],
+    "prohibitedOperations": "No Git, source/shared/queue/config/catalog edits, application mutations, build or lint."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+    "web\\src\\features\\system\\lib\\commandReliability.ts",
+    "web\\src\\features\\system\\components\\statstrip-command-summaries\\commandSummaryMetrics.tsx",
+    "web\\src\\api\\hooks\\useCommands.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\hooks\\useOperationalMetrics.tsx"
+  ]
+}

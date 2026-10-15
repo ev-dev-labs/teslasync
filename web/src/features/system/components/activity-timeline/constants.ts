@@ -12,13 +12,13 @@ export const KIND_ICON: Record<ActivityKind, ComponentType<{ className?: string 
   annotation: Icons.flag,
 };
 
-/** Hex accent fed to `TimelineItem`'s `color` prop — one per domain. */
-export const KIND_ACCENT: Record<ActivityKind, string> = {
-  drive: '#22d3ee',
-  charging: '#34d399',
-  alert: '#f59e0b',
-  software_update: '#818cf8',
-  annotation: '#c084fc',
+/** Omit paint so TimelineItem uses its theme-aware neutral swatch. */
+export const KIND_ACCENT: Record<ActivityKind, undefined> = {
+  drive: undefined,
+  charging: undefined,
+  alert: undefined,
+  software_update: undefined,
+  annotation: undefined,
 };
 
 /** Maps an alert's `severity` to a `Badge` variant. */

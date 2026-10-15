@@ -16,8 +16,10 @@
  *   6. Seeds the currency default from the rate active now, if any.
  *   7. Explains that today's rate estimates eligible legacy sessions without
  *      replacing actual costs.
+ *   8. Uses saved-zone independent business instants, including DST gaps,
+ *      folds, skipped midnight/date, and exact half-open wire bounds.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
@@ -46,11 +48,22 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+const preferences = vi.hoisted(() => ({
+  currency_symbol: '$',
+  tz_display_default: 'user',
+  timezone_user: 'America/Los_Angeles',
+}));
+const selectedVehicle = vi.hoisted(() => ({ timezone: 'Asia/Tokyo' }));
+
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
     locale: 'en-US',
-    settings: { currency_symbol: '$' },
+    settings: preferences,
   }),
+}));
+
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: selectedVehicle }),
 }));
 
 vi.mock('@/api/hooks/useLocations', () => ({
@@ -80,8 +93,19 @@ function makeRate(overrides: Partial<GeofenceRate> = {}): GeofenceRate {
 beforeEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-14T07:00:00Z'));
+  preferences.tz_display_default = 'user';
+  preferences.timezone_user = 'America/Los_Angeles';
+  selectedVehicle.timezone = 'Asia/Tokyo';
   createMutate = vi.fn();
   mockedCreate.mockReturnValue({ mutate: createMutate, isPending: false });
+});
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  window.history.replaceState(null, '', '/');
 });
 
 function rateInput(): HTMLInputElement {
@@ -95,23 +119,23 @@ function typeRate(value: string) {
 }
 
 describe('RateForm — structure', () => {
-  it('defaults the first rate to local midnight the day before the earliest charge', () => {
-    render(<RateForm geofenceId={7} firstSessionAt="2026-09-01T18:30:00Z" />);
-    const session = new Date('2026-09-01T18:30:00Z');
-    session.setHours(0, 0, 0, 0);
-    session.setDate(session.getDate() - 1);
-    const expected = `${session.getFullYear()}-${String(session.getMonth() + 1).padStart(2, '0')}-${String(session.getDate()).padStart(2, '0')}T00:00`;
-    expect((screen.getByLabelText('Effective from') as HTMLInputElement).value).toBe(expected);
+  it('defaults the first rate to saved-zone midnight the day before the earliest charge', () => {
+    render(<RateForm geofenceId={7} firstSessionAt="2026-09-01T01:30:00Z" />);
+    expect(screen.getByLabelText('Effective from')).toHaveValue('2026-08-30T00:00');
   });
   it('renders the currency select, rate field, and both effective-date fields', () => {
     render(<RateForm geofenceId={7} />);
 
-    expect(screen.getByText('Add a Rate')).toBeInTheDocument();
+    expect(screen.getByText('Add a rate')).toBeInTheDocument();
     expect(screen.getByLabelText('Currency')).toBeInTheDocument();
     expect(rateInput()).toBeInTheDocument();
     expect(screen.getByLabelText('Effective from')).toBeInTheDocument();
     expect(screen.getByLabelText('Effective to (optional)')).toBeInTheDocument();
-    expect(screen.getByText('Leave blank for an open-ended rate.')).toBeInTheDocument();
+    expect(screen.getByText('Leave blank for an open-ended rate. · America/Los_Angeles')).toBeInTheDocument();
+    expect(screen.getByLabelText('Effective from')).toHaveAccessibleDescription('America/Los_Angeles');
+    expect(screen.getByLabelText('Effective to (optional)')).toHaveAccessibleDescription(
+      'Leave blank for an open-ended rate. · America/Los_Angeles',
+    );
     expect(
       screen.getByText(
         'Starting before the first charge makes that session eligible. Preview and apply to price past sessions; existing actual costs stay unchanged.',
@@ -125,6 +149,7 @@ describe('RateForm — structure', () => {
     expect(input.value).not.toBe('');
     // datetime-local shape: YYYY-MM-DDTHH:mm
     expect(input.value).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(input.value).toBe('2026-10-14T00:00');
   });
 
   it('seeds the currency default from the active rate when provided', () => {
@@ -147,7 +172,7 @@ describe('RateForm — the SI conversion boundary', () => {
     render(<RateForm geofenceId={7} />);
 
     typeRate('0.12');
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     expect(createMutate).toHaveBeenCalledTimes(1);
     const [payload] = createMutate.mock.calls[0];
@@ -161,7 +186,7 @@ describe('RateForm — the SI conversion boundary', () => {
   it('omits effective_to from the payload when left blank (open-ended rate)', () => {
     render(<RateForm geofenceId={7} />);
     typeRate('0.1');
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     const [payload] = createMutate.mock.calls[0];
     expect(payload).not.toHaveProperty('effective_to');
@@ -172,27 +197,138 @@ describe('RateForm — the SI conversion boundary', () => {
     typeRate('0.1');
     fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-01-01T00:00' } });
     fireEvent.change(screen.getByLabelText('Effective to (optional)'), { target: { value: '2026-08-27T00:00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     const [payload] = createMutate.mock.calls[0];
-    expect(payload.effective_from).toBe(new Date('2026-01-01T00:00').toISOString());
-    expect(payload.effective_to).toBe(new Date('2026-08-27T00:00').toISOString());
+    expect(payload).toEqual({
+      geofenceId: 7,
+      rate_per_wh: 0.0001,
+      currency: 'USD',
+      effective_from: '2026-01-01T08:00:00.000Z',
+      effective_to: '2026-08-27T07:00:00.000Z',
+    });
+  });
+});
+
+describe('RateForm — independent saved-zone business instants', () => {
+  it.each([
+    ['utc', 'America/Los_Angeles', 'Asia/Tokyo', '2026-01-01T00:00:00.000Z'],
+    ['user', 'Asia/Kolkata', 'Asia/Tokyo', '2025-12-31T18:30:00.000Z'],
+    ['vehicle', 'America/Los_Angeles', 'Asia/Tokyo', '2025-12-31T15:00:00.000Z'],
+  ])('honors saved %s mode with user zone %s and vehicle zone %s', (mode, userZone, vehicleZone, expected) => {
+    preferences.tz_display_default = mode;
+    preferences.timezone_user = userZone;
+    selectedVehicle.timezone = vehicleZone;
+    render(<RateForm geofenceId={7} />);
+    typeRate('0.1');
+    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-01-01T00:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate.mock.calls[0][0].effective_from).toBe(expected);
+  });
+
+  it.each([
+    ['2026-03-08T00:00', '2026-03-09T00:00', '2026-03-08T08:00:00.000Z', '2026-03-09T07:00:00.000Z', 23],
+    ['2026-11-01T00:00', '2026-11-02T00:00', '2026-11-01T07:00:00.000Z', '2026-11-02T08:00:00.000Z', 25],
+    ['2026-03-08T01:30', '2026-03-08T03:30', '2026-03-08T09:30:00.000Z', '2026-03-08T10:30:00.000Z', 1],
+  ])('preserves the half-open DST interval %s to %s', (from, to, expectedFrom, expectedTo, hours) => {
+    render(<RateForm geofenceId={7} />);
+    typeRate('0.15');
+    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: from } });
+    fireEvent.change(screen.getByLabelText('Effective to (optional)'), { target: { value: to } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate.mock.calls[0][0]).toEqual({
+      geofenceId: 7,
+      rate_per_wh: 0.00015,
+      currency: 'USD',
+      effective_from: expectedFrom,
+      effective_to: expectedTo,
+    });
+    expect((Date.parse(expectedTo) - Date.parse(expectedFrom)) / 3_600_000).toBe(hours);
+  });
+
+  it('keeps the earlier occurrence of a repeated DST wall time', () => {
+    render(<RateForm geofenceId={7} />);
+    typeRate('0.1');
+    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-11-01T01:30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate.mock.calls[0][0].effective_from).toBe('2026-11-01T08:30:00.000Z');
+  });
+
+  it.each(['Effective from', 'Effective to (optional)'])('rejects a nonexistent DST wall time in %s', (label) => {
+    render(<RateForm geofenceId={7} />);
+    typeRate('0.1');
+    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-03-08T01:00' } });
+    fireEvent.change(screen.getByLabelText(label), { target: { value: '2026-03-08T02:30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate).not.toHaveBeenCalled();
+    expect(screen.getByText(label === 'Effective from'
+      ? 'Enter a valid effective-from date/time.'
+      : 'Effective-to date/time is invalid.')).toBeInTheDocument();
+  });
+
+  it('seeds the first representable prior-day boundary when the zone skips midnight', () => {
+    preferences.timezone_user = 'America/Santiago';
+    render(<RateForm geofenceId={7} firstSessionAt="2025-09-08T12:00:00Z" />);
+    expect(screen.getByLabelText('Effective from')).toHaveValue('2025-09-07T01:00');
+    typeRate('0.1');
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate.mock.calls[0][0].effective_from).toBe('2025-09-07T04:00:00.000Z');
+  });
+
+  it('rejects a skipped calendar date rather than silently moving the interval', () => {
+    preferences.timezone_user = 'Pacific/Apia';
+    render(<RateForm geofenceId={7} />);
+    typeRate('0.1');
+    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2011-12-30T12:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate).not.toHaveBeenCalled();
+    expect(screen.getByText('Enter a valid effective-from date/time.')).toBeInTheDocument();
+  });
+
+  it('does not guess a fallback zone for invalid saved settings', () => {
+    preferences.timezone_user = 'Invalid/Zone';
+    render(<RateForm geofenceId={7} />);
+    typeRate('0.1');
+    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-01-01T00:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate).not.toHaveBeenCalled();
+    expect(screen.getByText('Enter a valid effective-from date/time.')).toBeInTheDocument();
+  });
+
+  it('retains drafts and raw signed SI source data when the unrelated workspace URL range changes', () => {
+    const currentRate = Object.freeze(makeRate({ rate_per_wh: -0.00012 }));
+    const { rerender } = render(<RateForm geofenceId={7} currentRate={currentRate} />);
+    typeRate('0');
+    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2020-01-01T00:00' } });
+    fireEvent.change(screen.getByLabelText('Effective to (optional)'), { target: { value: '2020-02-01T00:00' } });
+    window.history.replaceState(null, '', '/geofences?from=2026-09-01&to=2026-10-01');
+    rerender(<RateForm geofenceId={7} currentRate={currentRate} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate.mock.calls[0][0]).toEqual({
+      geofenceId: 7,
+      rate_per_wh: 0,
+      currency: 'USD',
+      effective_from: '2020-01-01T08:00:00.000Z',
+      effective_to: '2020-02-01T08:00:00.000Z',
+    });
+    expect(currentRate).toEqual(makeRate({ rate_per_wh: -0.00012 }));
+    expect(screen.queryByRole('button', { name: /view settings|date range|vehicle/i })).not.toBeInTheDocument();
   });
 });
 
 describe('RateForm — validation', () => {
   it('blocks submit and shows an inline error when no rate has been entered', () => {
     render(<RateForm geofenceId={7} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     expect(createMutate).not.toHaveBeenCalled();
   });
 
   it('the Save button stays disabled until a rate value is entered', () => {
     render(<RateForm geofenceId={7} />);
-    expect(screen.getByRole('button', { name: 'Save Rate' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save rate' })).toBeDisabled();
     typeRate('0.1');
-    expect(screen.getByRole('button', { name: 'Save Rate' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save rate' })).not.toBeDisabled();
   });
 
   it('blocks submit and shows an error when effective_to is not after effective_from', () => {
@@ -200,10 +336,39 @@ describe('RateForm — validation', () => {
     typeRate('0.1');
     fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-08-27T00:00' } });
     fireEvent.change(screen.getByLabelText('Effective to (optional)'), { target: { value: '2026-01-01T00:00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     expect(screen.getByText('Effective-to must be after effective-from.')).toBeInTheDocument();
     expect(createMutate).not.toHaveBeenCalled();
+  });
+
+  it('rejects an equal exclusive bound rather than expanding it to end-of-day', () => {
+    render(<RateForm geofenceId={7} />);
+    typeRate('0.1');
+    for (const label of ['Effective from', 'Effective to (optional)']) {
+      fireEvent.change(screen.getByLabelText(label), { target: { value: '2026-01-01T00:00' } });
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate).not.toHaveBeenCalled();
+    expect(screen.getByText('Effective-to must be after effective-from.')).toBeInTheDocument();
+  });
+
+  it('rejects a cleared required start date', () => {
+    render(<RateForm geofenceId={7} />);
+    typeRate('0.1');
+    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate).not.toHaveBeenCalled();
+    expect(screen.getByText('Enter a valid effective-from date/time.')).toBeInTheDocument();
+  });
+
+  it('rejects a malformed calendar date instead of normalizing it', () => {
+    render(<RateForm geofenceId={7} />);
+    typeRate('0.1');
+    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-02-30T00:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
+    expect(createMutate).not.toHaveBeenCalled();
+    expect(screen.getByText('Enter a valid effective-from date/time.')).toBeInTheDocument();
   });
 });
 
@@ -213,12 +378,16 @@ describe('RateForm — after a successful save', () => {
 
     render(<RateForm geofenceId={7} />);
     typeRate('0.15');
+    fireEvent.change(screen.getByLabelText('Currency'), { target: { value: 'EUR' } });
+    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-01-01T00:00' } });
     fireEvent.change(screen.getByLabelText('Effective to (optional)'), { target: { value: '2027-01-01T00:00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     expect((screen.getByLabelText('Effective to (optional)') as HTMLInputElement).value).toBe('');
     // The rate field re-renders back to empty ("") once valueMicro resets to null.
     expect(rateInput().value).toBe('');
+    expect(screen.getByLabelText('Currency')).toHaveValue('EUR');
+    expect(screen.getByLabelText('Effective from')).toHaveValue('2026-01-01T00:00');
   });
 });
 
@@ -227,7 +396,7 @@ describe('RateForm — loading state', () => {
     mockedCreate.mockReturnValue({ mutate: createMutate, isPending: true });
     render(<RateForm geofenceId={7} />);
 
-    const button = screen.getByRole('button', { name: 'Save Rate' });
+    const button = screen.getByRole('button', { name: 'Save rate' });
     expect(button).toHaveAttribute('aria-busy', 'true');
   });
 });

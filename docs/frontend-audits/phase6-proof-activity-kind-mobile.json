@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-activity-kind-mobile",
+  "phase": 6,
+  "status": "BLOCKED_EXTERNAL_CATALOG",
+  "result": "Latest bounded continuation observed the same 60-file catalog drift, preflight exit 1. No fixture invocation was permitted without actual new catalog closure. All 12 authored cases remain NOTRUN; no owned assertion failed or chargeable attempt was consumed. Earlier receipts below are preserved unchanged.",
+  "currentContinuation": {
+    "assignmentReceivedUtc": "2026-10-14T15:22:06.461Z",
+    "firstObservedUtc": "2026-10-14T15:22:33.7495011Z",
+    "deadlineUtc": "2026-10-14T15:42:06.461Z",
+    "status": "BLOCKED_EXTERNAL_CATALOG",
+    "alreadyDoneCheck": "Retained normal runner receipts have zero discovery and execution; covering runtime proof is not complete.",
+    "catalogPreflight": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "startedUtc": "2026-10-14T15:22:33.7495011Z",
+      "endedUtc": "2026-10-14T15:27:59.3518404Z",
+      "nodeVersion": "v26.8.1",
+      "exit": 1,
+      "invalidFileCount": 60,
+      "rawEvidence": "web\\logs\\phase6-proof-activity-kind-mobile.log, BOUNDED_CONTINUATION_2026_10_14T1522 block",
+      "classification": "EXTERNAL_CATALOG_STARTUP_ONLY_UNCHARGED",
+      "meaning": "Actual new catalog closure was not observed. The same unresolved drift is not authority to repeat the exact fixture or modify catalog inputs."
+    },
+    "coveringProof": {
+      "fixture": "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.test.tsx",
+      "runnerInvocations": 0,
+      "authored": 12,
+      "originalAuthored": 6,
+      "additionalAuthored": 6,
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedTests": 0,
+      "pendingNotRun": 12,
+      "status": "NOTRUN",
+      "countsBasis": "No runner invocation in this continuation. All 12 retained original/additional cases still require their first actual normal runtime proof, not a repeated historical pass."
+    },
+    "preservation": {
+      "verifiedUtc": "2026-10-14T15:28:15.9618060Z",
+      "protectedFileCount": 10,
+      "protectedHashMismatches": 0,
+      "hashAuthority": "All ten current files matched the retained preservation.protectedHashes beforeSha256 values.",
+      "sourceEdits": 0,
+      "fixtureEdits": 0,
+      "canonicalCatalogEdits": 0,
+      "historicalGenuinePassesRepeated": 0,
+      "guardBypasses": 0,
+      "fullChecks": "NOTRUN: scoped proof assignment prohibits full TypeScript, lint, build and test suites; no source changes or full-gate claim.",
+      "violationsAudit": "NOTRUN: no code edits or zero-violations claim.",
+      "pageSectionsAndLineCounts": "No page/source edits; protected source bytes unchanged, no sections removed.",
+      "apiHooks": "No API hook or public contract changed; route verification not applicable.",
+      "browserAndNative": "NOTRUN; no browser, server, Docker, downloads or native/global acceptance."
+    },
+    "attempts": {
+      "queueAttemptCount": 0,
+      "chargeableOwnedFailures": 0,
+      "externalCatalogFailures": 1,
+      "queueWritten": false,
+      "budgetsRenewed": false
+    },
+    "metadataFailedTrial": "kind-mobile-pins calculated zero hash mismatches but 11 Add-Content calls failed because the preflight held the log open. Its shell exit 0 did not prove logging success. After preflight exit, metadata-only preservation logging succeeded; no command/test retry or source change.",
+    "nextMissingProof": "Same 12 existing cases, only after actual catalog integration closure; no automatic retry while drift remains unresolved. Native geometry and global gates remain separate, unexecuted and unauthorized.",
+    "scope": "Only assigned report and log changed; earlier latestContinuation, historical clocks, case inventory and receipts retain their original meaning.",
+    "release": "Catalog preflight exited 1; no owned process remains. Proof incomplete, not PASS."
+  },
+  "latestContinuation": {
+    "assignmentObservedUtc": "2026-10-14T15:07:42.213Z",
+    "deadlineUtc": "2026-10-14T15:27:42.213Z",
+    "status": "BLOCKED_EXTERNAL_CATALOG",
+    "alreadyDoneCheck": "Existing receipt has discovery 0 and execution 0, not completed proof.",
+    "catalogPreflight": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "startedUtc": "2026-10-14T15:07:59.7331492Z",
+      "exit": 0,
+      "rawOutput": "[i18n-split] OK — 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)",
+      "meaning": "Actual new catalog closure observed before the single authorized exact-fixture invocation; it did not remain closed at normal runner startup."
+    },
+    "normalVitest": {
+      "command": "npm test -- src\\features\\system\\components\\activity-timeline\\KindFilterBar.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+      "startedUtc": "2026-10-14T15:12:55.3485443Z",
+      "endedUtc": "2026-10-14T15:20:27.7129061Z",
+      "environment": "VITE_GIT_SHA=dev only, to prevent the build-identity Git lookup; no test configuration or catalog guard bypass.",
+      "exit": 1,
+      "startupErrors": 1,
+      "authored": 12,
+      "originalAuthored": 6,
+      "additionalAuthored": 6,
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedTests": 0,
+      "skippedTests": 0,
+      "pendingNotRun": 12,
+      "runnerInvocationsThisContinuation": 1,
+      "runnerReruns": 0,
+      "rawEvidence": "web\\logs\\phase6-proof-activity-kind-mobile.log, appended RESUMED_PROOF_2026_10_14 block"
+    },
+    "externalFailure": {
+      "guard": "verify-english-catalog-split buildStart",
+      "failedCommand": "C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+      "exit": 1,
+      "invalidFileCount": 60,
+      "exactInvalidFileList": "Preserved verbatim in the appended normal startup error in the owned log.",
+      "classification": "EXTERNAL_CATALOG_STARTUP_ONLY_UNCHARGED",
+      "chargeableOwnedFailures": 0,
+      "queueAttemptCount": 0,
+      "queueWritten": false,
+      "nextMissingProof": "Same 12 existing cases, only after actual catalog integration closure. No retry while the observed drift remains unresolved."
+    },
+    "preservation": {
+      "verifiedUtc": "2026-10-14T15:20:48.3078131Z",
+      "protectedFileCount": 10,
+      "protectedHashMismatches": 0,
+      "hashAuthority": "All ten current files matched the retained preservation.protectedHashes beforeSha256 values.",
+      "sourceEdits": 0,
+      "fixtureEdits": 0,
+      "canonicalCatalogEdits": 0,
+      "historicalGenuinePassesRepeated": 0,
+      "fullChecks": "NOTRUN: task explicitly limits checks to the exact fixture; no TypeScript, full lint, build or full suite.",
+      "browserAndNative": "NOTRUN; no server/browser/Docker/download activity and no native or global-gate claim.",
+      "apiHooks": "No hook or API contract changed; route verification not applicable.",
+      "pageSectionsAndLineCounts": "No page/source edit; all protected source bytes unchanged. No sections removed."
+    },
+    "scope": "Only the assigned report and log changed. Historical clock, runner, case inventory, counts and failure below describe the retained earlier run, not this continuation.",
+    "release": "Runner exited; no owned process remains. Runtime proof is incomplete, not PASS."
+  },
+  "assignmentSourceCommit": "f956a1a78d5762056493a98220e5e9cd63739391",
+  "commitProvenance": "Provided assignment and root queue; no Git command run by this worker, no commit comparison claimed.",
+  "attempts": {
+    "queueAttemptAtDispatch": 0,
+    "chargeableOwnedFailures": 0,
+    "externalCatalogFailures": 1,
+    "disposition": "EXTERNAL_UNCHARGED; queue attempt count unchanged; no queue write."
+  },
+  "clock": {
+    "assignmentReceivedUtc": "2026-10-14T07:40:55.348Z",
+    "firstObservedUtc": "2026-10-14T07:41:03.3024959Z",
+    "returnDeadlineUtc": "2026-10-14T08:00:55.348Z",
+    "runnerStartedUtc": "2026-10-14T07:42:30.8783827Z",
+    "runnerEndedUtc": "2026-10-14T07:46:07.5537182Z",
+    "releaseUtc": "2026-10-14T07:49:42.1209664Z"
+  },
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-proof-activity-kind-mobile.json",
+    "web\\logs\\phase6-proof-activity-kind-mobile.log"
+  ],
+  "instructionsRead": [
+    "migration-queue.md: exact proof item and phase6-fix-activity-kind-mobile dependency",
+    "docs\\frontend-worker-conventions.md: full worker contract",
+    "agent-loop-playbook.md",
+    "shared-library-loop.md",
+    ".agents\\state.md: current authority",
+    ".github\\instructions\\react-frontend.instructions.md: relevant frontend scope",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md: relevant scope",
+    "docs\\CONTRIBUTING.md: relevant commands and evidence limits"
+  ],
+  "scopeDecision": {
+    "fixture": "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.test.tsx",
+    "selection": "Explicit single affected fixture, not an unselected suite. Its six original public-filter cases and six additions were all previously normal-runtime NOTRUN per assignment/queue; no unchanged genuine pass was repeated.",
+    "readOnlySourceAndFixtures": true,
+    "sourceEdits": 0,
+    "fixtureEdits": 0,
+    "fixtureRepairsOrWeakening": 0,
+    "runnerInvocations": 1,
+    "runnerReruns": 0,
+    "guardBypasses": 0,
+    "freshTestsAuthored": 0,
+    "historicalGenuinePassesRepeated": 0,
+    "unrequestedFullValidation": "NOTRUN: no TypeScript/lint/build/full suite/browser/native/server/Docker/installation/delegation.",
+    "writePolicy": "Only the exact report and web log; historical heartbeat/root-log conventions overridden by this assignment."
+  },
+  "normalVitest": {
+    "cwd": "D:\\repos\\teslasync\\web",
+    "command": "npm test -- src\\features\\system\\components\\activity-timeline\\KindFilterBar.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+    "expandedCommand": "vitest run src\\features\\system\\components\\activity-timeline\\KindFilterBar.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+    "nodeVersion": "v26.8.1",
+    "npmVersion": "11.19.0",
+    "configuration": "Unmodified web\\vite.config.ts, normal jsdom/setupFiles and verify-english-catalog-split startup guard.",
+    "exit": 1,
+    "startupErrors": 1,
+    "authored": 12,
+    "originalAuthored": 6,
+    "additionalAuthored": 6,
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failedTests": 0,
+    "skippedTests": 0,
+    "unselectedReportedByRunner": null,
+    "pendingNotRun": 12,
+    "allCaseStatus": "NOTRUN",
+    "countsBasis": "Startup guard failed before a Vitest test collection/result table; zero discovery/execution are not pass or skip. Authored identities counted separately by a read-only TypeScript AST inventory.",
+    "rawEvidence": "web\\logs\\phase6-proof-activity-kind-mobile.log"
+  },
+  "cases": [
+    {
+      "name": "marks \"All\" pressed when no kinds are active",
+      "line": 28,
+      "group": "original",
+      "bodySha256": "6BFAD37CEA37F3E15787D4F92BE1CFE1C829B6CB1D5EAE9CEA24DD13E6FA4AC5",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "marks a kind chip pressed when it is in activeKinds",
+      "line": 33,
+      "group": "original",
+      "bodySha256": "F546EFD7EB0E622F86A79F21E4E509215585A84077706E63387E48785DA881F2",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "adds a kind to the active set when an inactive chip is clicked",
+      "line": 39,
+      "group": "original",
+      "bodySha256": "89414DFA957DE62FEF62F5302FFFAEA2B485F65E4FEC68F85EDC01C96234A32F",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "removes a kind from the active set when an active chip is clicked again",
+      "line": 46,
+      "group": "original",
+      "bodySha256": "A22E509932BDA47C2E6806A74E68B0790579E06544A1AA81066E3BF5E69A3C82",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "clears the filter back to \"all\" when the All chip is clicked",
+      "line": 53,
+      "group": "original",
+      "bodySha256": "39B3192F1C0295EA9A1A2870FCF159BE6711B4FAB0B846F7EA903139DAD1212B",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "renders one chip per known activity kind plus the All chip",
+      "line": 60,
+      "group": "original",
+      "bodySha256": "164E7E48BBADF2FAD7896BEE4427CEF17E04C30B7F8343DF881A2B19914F5D8F",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "adopts wrapping and mobile minimum classes on all six buttons with compact desktop minimums",
+      "line": 67,
+      "group": "addition",
+      "bodySha256": "AAE9E36049F0025F311A82B5784A86E8F7A650747E980B4C5AB4AC1C6AEBAB90",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "keeps decorative kind icons hidden and shrink-free inside wrapping labels",
+      "line": 85,
+      "group": "addition",
+      "bodySha256": "13257C3B9D18D04434DBAA71210C0C4742C6386E5AEAD089D68D5846DF4FA6B0",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "returns to the unscoped All state when the last active kind is removed without mutating input",
+      "line": 97,
+      "group": "addition",
+      "bodySha256": "AA0C2911256E8409C657232A64B211551F148138C3348CFC40C8DDCEDD23CE03",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "does not collapse an explicit five-kind selection into the empty All filter",
+      "line": 109,
+      "group": "addition",
+      "bodySha256": "89BA6AD5A7B1FB54984B3981CFD1256DE2DFD45095E95CFA8AC33BC0B3507142",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves Tab order, Enter and Space multi-select, All reset and focus after controlled updates",
+      "line": 125,
+      "group": "addition",
+      "bodySha256": "B70FDB99FB222159FC274C353FB43D6D5B9942DDD57FB9A9B88B58EFE5DC28C6",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "retains localized long RTL labels, stable kind identity, caller classes and focused buttons on rerender",
+      "line": 158,
+      "group": "addition",
+      "bodySha256": "B02E4C55F39F2F1E28EFED0FF79D81C0D1DDFBB096CBC7E3CBB96765BD63F141",
+      "status": "NOTRUN"
+    }
+  ],
+  "affectedCoverageAndLimits": [
+    {
+      "surface": "All six buttons, label wrapping, below-md target minimums and desktop compact intent",
+      "source": "KindFilterBar.tsx:39-43,58-62; Button.tsx:44-49,71-72,87-88",
+      "intendedProof": "Existing class assertions for h-auto/min-h-11/min-w-11/md:min-h-9/md:min-w-0/max-w-full/whitespace-normal and label break-words; group flex-wrap.",
+      "status": "NOTRUN",
+      "nativeGeometry": "NOTRUN; tokens/classes would not prove measured 44px target rectangles, actual wrapping, desktop dimensions, RTL layout or overflow even if the jsdom case passed."
+    },
+    {
+      "surface": "Public filter actions, All reset, independent multiselect, last removal, explicit five-kind selection and immutable inputs",
+      "intendedProof": "Six original cases plus the last-removal and explicit-five-selection additions.",
+      "status": "NOTRUN"
+    },
+    {
+      "surface": "Tab order, Enter/Space, controlled updates and focused-button identity",
+      "intendedProof": "Existing userEvent/jsdom fixture and localized rerender case.",
+      "status": "NOTRUN",
+      "nativeKeyboardAndFocusCapture": "NOTRUN; no native/browser keyboard session, focus capture or screenshot."
+    },
+    {
+      "surface": "Long localized RTL labels, stable kind identity, caller classes and decorative icons",
+      "intendedProof": "Existing RTL and icon fixture cases.",
+      "status": "NOTRUN",
+      "visualAcceptance": "NOTRUN; label text and DOM assertions are not native RTL/wrapping acceptance."
+    }
+  ],
+  "externalFailure": {
+    "classification": "EXTERNAL_CATALOG_STARTUP_ONLY_UNCHARGED",
+    "guard": "verify-english-catalog-split buildStart",
+    "failedChildCommand": "C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+    "childExit": 1,
+    "childPidFromRawStartupError": 33964,
+    "invalidFileCount": 25,
+    "invalidFilesFromRawError": [
+      "locale-detail-errorBoundary.json",
+      "locale-system.json",
+      "locale-notifications.json",
+      "locale-telemetry.json",
+      "locale-unreferenced.json",
+      "locale-battery.json",
+      "locale-driving.json",
+      "locale-analytics.json",
+      "locale-sharing.json",
+      "locale-vehicles.json",
+      "locale-automations.json",
+      "locale-charging.json",
+      "locale-dashboard.json",
+      "locale-settings.json",
+      "locale-admin.json",
+      "locale-vehicle-systems.json",
+      "locale-diagnostics.json",
+      "locale-maps.json",
+      "locale-trips.json",
+      "locale-exports.json",
+      "locale-power-user.json",
+      "locale-driving-route-efficiency.json",
+      "locale-driving-trip-planner.json",
+      "runtime-manifest.json",
+      "usage-manifest.json"
+    ],
+    "fixNeeded": "Designated parent-owned canonical/generated catalog integration must close the exact startup drift using its authorized scope. This worker did not regenerate, edit, install, reconfigure or bypass. Only after actual changed/released guard inputs should the missing affected fixture execute normally.",
+    "ownedFailureFixNeeded": "None observed: no test discovery or assertion reached. No source/fixture edit made or authorized.",
+    "nextMissingProof": "The same original six and six additions, once normally discoverable; native geometry/keyboard/focus capture remains separately unexecuted.",
+    "notAClaim": "No component, page, native, whole-app or phase-gate acceptance."
+  },
+  "preservation": {
+    "originalIdentityEvidence": "Prior phase6-qa-system-activity-timeline.json explicitly lists the six original KindFilterBar declarations; AST inventory matched all six, missing 0.",
+    "originalIdentitiesRetained": 6,
+    "missingOriginalIdentities": 0,
+    "originalBodies": "Retained input per assignment; complete current original bodies SHA-256 pinned above and entire fixture unchanged during this worker. No historical body-byte comparison claimed without authorized Git/history access.",
+    "protectedFileCount": 10,
+    "protectedHashMismatches": 0,
+    "sourceLineCount": 70,
+    "fixtureLineCount": 202,
+    "inventoryLogicalSplitCount": 203,
+    "lineCountExplanation": "Get-Content counts 202 fixture lines; AST inventory split includes the final empty segment after trailing newline (203), not an added test or body.",
+    "historicalSourceLineCount": 66,
+    "historicalFixtureLineCount": 45,
+    "sectionComparison": "Not a page edit; no sections removed. No source/fixture changes by this worker.",
+    "protectedHashes": [
+      {"file": "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.tsx", "beforeSha256": "10A9D8387DAF309DEA6D0037E9B8A1EFFC9624849A7F8074909119310AD1207D", "afterSha256": "10A9D8387DAF309DEA6D0037E9B8A1EFFC9624849A7F8074909119310AD1207D", "unchanged": true},
+      {"file": "web\\src\\features\\system\\components\\activity-timeline\\KindFilterBar.test.tsx", "beforeSha256": "F036BBF5A2FD83C3E53017F6F65826613EC305C3710B75256085905A75F2AAA8", "afterSha256": "F036BBF5A2FD83C3E53017F6F65826613EC305C3710B75256085905A75F2AAA8", "unchanged": true},
+      {"file": "web\\src\\features\\system\\components\\activity-timeline\\constants.ts", "beforeSha256": "7E33311D8B0D1FDBED949B9817B3524FAFF4C0905DB7EF83E921679545A4DDAD", "afterSha256": "7E33311D8B0D1FDBED949B9817B3524FAFF4C0905DB7EF83E921679545A4DDAD", "unchanged": true},
+      {"file": "web\\src\\types\\activity.ts", "beforeSha256": "FFAAB7CF9B1481C71C502FC2D5C7195D3301026EF58AAE084155D2C7E9EB4A70", "afterSha256": "FFAAB7CF9B1481C71C502FC2D5C7195D3301026EF58AAE084155D2C7E9EB4A70", "unchanged": true},
+      {"file": "web\\src\\components\\ui\\Button.tsx", "beforeSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C", "afterSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C", "unchanged": true},
+      {"file": "web\\vite.config.ts", "beforeSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58", "afterSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58", "unchanged": true},
+      {"file": "web\\src\\test-setup.ts", "beforeSha256": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A", "afterSha256": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A", "unchanged": true},
+      {"file": "web\\package.json", "beforeSha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A", "afterSha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A", "unchanged": true},
+      {"file": "web\\package-lock.json", "beforeSha256": "626F096DFDD962204BC6D88931F60469A57DD07F2A8F6B045744BD90F29910DF", "afterSha256": "626F096DFDD962204BC6D88931F60469A57DD07F2A8F6B045744BD90F29910DF", "unchanged": true},
+      {"file": "web\\tailwind.config.js", "beforeSha256": "89663C0A141F6D08D9C0F7F3A2724A3F592DBF7D6328AEF96A88B5B8D79E6A29", "afterSha256": "89663C0A141F6D08D9C0F7F3A2724A3F592DBF7D6328AEF96A88B5B8D79E6A29", "unchanged": true}
+    ]
+  },
+  "auxiliaryEvidence": {
+    "astInventory": "Read-only inline TypeScript parser; raw command/script, per-body SHA-256, names/counts/UTC and inventory exit 0 retained in exact log. No helper file created.",
+    "failedTrialRetained": "First inventory/log append collided with runner's open redirected log: shell 5826 exit 1, Add-Content/Out-File sharing violation. No runtime test rerun; metadata-only retry after runner exit succeeded.",
+    "finalMetadataFailedTrial": "Shell 5921 ConvertFrom-Json release-string equality check threw Final report mismatch before writing a final log entry. Replaced only artifact validation with Python JSON parsing to avoid PowerShell timestamp coercion; no runner, source or fixture rerun/change.",
+    "hashVerificationExit": 0,
+    "artifactValidationExit": 0,
+    "artifactValidationUtc": "2026-10-14T07:49:42.1209664Z",
+    "artifactValidation": "JSON parsed; 12/12 case names/body hashes/lines matched raw AST inventory; original identities 6/6; raw invalid-file list 25/25; protected file hashes 10/10.",
+    "invalidCatalogListParseExit": 0,
+    "correctionRetained": "Earlier manual log mention of 26 invalid files was corrected append-only to authoritative parsed 25; original raw startup error remains intact.",
+    "apiHooks": "No hook modified or invoked by KindFilterBar; API route revalidation not performed or claimed.",
+    "violationsAudit": "NOTRUN; read-only scoped proof worker, no code change or zero-violations claim."
+  },
+  "release": {
+    "sourceAndFixtureOwnership": "Read-only throughout; no source/fixture ownership to transfer.",
+    "runner": "Exited 1 at 2026-10-14T07:46:07.5537182Z; no owned server/browser or continuing test runner.",
+    "artifactWrites": "Released at the recorded finalization UTC; only final release metadata/log receipt completed afterward. No continued implementation or test work.",
+    "globalOrNativeApproval": false
+  }
+}

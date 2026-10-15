@@ -1,0 +1,951 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-science-science-lab",
+  "attempt": 1,
+  "status": "SOURCE_QA_COMPLETE_NEEDS_FIXES_NOT_RUNTIME_ACCEPTED",
+  "route": "/science",
+  "started_at": "2026-10-14T01:55:09.1546562Z",
+  "prepared_at": "2026-10-14T02:06:06.095926+00:00",
+  "release_by": "2026-10-14T02:07:59.989Z",
+  "hard_by": "2026-10-14T02:12:59.989Z",
+  "scope": {
+    "primary": "web/src/features/science/pages/ScienceLabPage.tsx",
+    "mode": "READONLY source/directsupports/tests",
+    "writable": [
+      "docs/frontend-audits/phase6-qa-science-science-lab.json",
+      "web/logs/phase6-qa-science-science-lab.log"
+    ],
+    "source_test_catalog_git_writes": false,
+    "subagents_installs_servers": false
+  },
+  "confirmed_issues": [
+    {
+      "id": "SCI-001",
+      "title": "Science range does not consume the shared workspace range",
+      "classification": "source-confirmed",
+      "rule": "MDC-032",
+      "severity": "high",
+      "locations": [
+        {
+          "file": "web/src/features/science/pages/ScienceLabPage.tsx",
+          "line": 28
+        },
+        {
+          "file": "web/src/features/science/pages/ScienceLabPage.tsx",
+          "line": 52,
+          "end_line": 64
+        },
+        {
+          "file": "web/src/hooks/useAnalysisWindow.ts",
+          "line": 7,
+          "end_line": 19
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 23,
+          "end_line": 77
+        }
+      ],
+      "mechanism": "Local days/start/end and7/30Buttons own scope; /science is absent from RANGE_ENABLED_PATHS. Carried from/to/time_scope do not drive the five science sources. This is an uncoordinated range owner,not two simultaneously visible pickers.",
+      "repro": {
+        "status": "SOURCE-DERIVED; NOT EXECUTED",
+        "scenario": "Open a hypothetical /science?from=2026-09-01&to=2026-09-30&time_scope=30d without legacy start/end: useAnalysisWindow ignores workspace fields and computes mount-anchor7days."
+      },
+      "fix": "Coordinate route/range adoption with max30day and endpoint boundary proof; preserve legacy days/start/end and7/30behavior.",
+      "deduplicated_need": "NEED-01",
+      "test_source_evidence": "Page297-305 only clicks local preset; window test9-24 only legacy bounds.",
+      "runtime_confirmed": false
+    },
+    {
+      "id": "SCI-002",
+      "title": "Pending/failed fleet without selection looks like setup prerequisite",
+      "classification": "source-confirmed",
+      "rule": "MDC-026",
+      "severity": "high",
+      "locations": [
+        {
+          "file": "web/src/features/science/pages/ScienceLabPage.tsx",
+          "line": 32,
+          "end_line": 36
+        },
+        {
+          "file": "web/src/hooks/useSelectedVehicle.ts",
+          "line": 50
+        },
+        {
+          "file": "web/src/hooks/useSelectedVehicle.ts",
+          "line": 65,
+          "end_line": 74
+        },
+        {
+          "file": "web/src/hooks/useSelectedVehicle.ts",
+          "line": 168,
+          "end_line": 172
+        },
+        {
+          "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+          "line": 57,
+          "end_line": 68
+        }
+      ],
+      "mechanism": "Selection hook reads only fleet data; undefined fleet with no URL/store selection yields null. Page replaces science scaffold with Add vehicle/Set up TeslaSync for pending,initial-paused or fatal fleet failure,not just confirmed-empty.",
+      "repro": {
+        "status": "SOURCE-DERIVED; NOT EXECUTED",
+        "scenario": "No URL/store id and vehicles undefined produces effectiveId=null regardless of fleet query status; page returns setup guidance."
+      },
+      "fix": "Compose existing fleet trust state without changing selection precedence/store semantics; reserve setup for confirmed absence.",
+      "deduplicated_need": "NEED-02",
+      "test_source_evidence": "Page85-87 mocks selection;213-230 resolved fleet. Hook test46-48 always FLEET; unresolved/fatal case absent.",
+      "runtime_confirmed": false
+    },
+    {
+      "id": "SCI-003",
+      "title": "Mobile allow-lists hide scientific diagnostics in five tables",
+      "classification": "source-confirmed",
+      "rule": "MDC-023/MDC-043",
+      "severity": "high",
+      "locations": [
+        {
+          "file": "web/src/features/science/components/ThermalPanel.tsx",
+          "line": 77
+        },
+        {
+          "file": "web/src/features/science/components/WeatherPanel.tsx",
+          "line": 128
+        },
+        {
+          "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+          "line": 215
+        },
+        {
+          "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+          "line": 237
+        },
+        {
+          "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+          "line": 252
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 732,
+          "end_line": 743
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1404,
+          "end_line": 1415
+        }
+      ],
+      "mechanism": "mobileColumns creates hidden md:table-cell independently of column-menu visibility. No named consumer supplies mobilePresentation or expandable details. Thermal hides start/CI/R2/residual/ambient/solar; weather hides start/wind/density/rain/session energy; rest hides dwell/temp/direction; IR and pulse hide temp/context. Adapter exists but is opt-in.",
+      "repro": {
+        "status": "SOURCE-DERIVED; NOT EXECUTED",
+        "scenario": "Below768px with populated thermal,only kind/tau/samples remain visible and no full detail action exists. Repeat for rest,IR,pulse,weather. Count one repeated mechanism affecting5tables."
+      },
+      "fix": "Adopt existing DataTable full mobile details or labeled contained all-column scroll; preserve tableIDs,links,settings,pagination and loaded export scope.",
+      "deduplicated_need": "NEED-03",
+      "test_source_evidence": "Page102-113 matchMedia alwaysfalse;275-295 desktop assertions are not mobile QA.",
+      "runtime_confirmed": false
+    },
+    {
+      "id": "SCI-004",
+      "title": "Copy link does not pin initial effective vehicle/window",
+      "classification": "source-confirmed",
+      "rule": "MDC-032/MDC-046",
+      "severity": "high",
+      "locations": [
+        {
+          "file": "web/src/features/science/pages/ScienceLabPage.tsx",
+          "line": 28,
+          "end_line": 33
+        },
+        {
+          "file": "web/src/features/science/pages/ScienceLabPage.tsx",
+          "line": 45
+        },
+        {
+          "file": "web/src/hooks/useAnalysisWindow.ts",
+          "line": 6,
+          "end_line": 18
+        },
+        {
+          "file": "web/src/hooks/useAnalysisWindow.ts",
+          "line": 20,
+          "end_line": 27
+        },
+        {
+          "file": "web/src/hooks/useSelectedVehicle.ts",
+          "line": 81,
+          "end_line": 85
+        },
+        {
+          "file": "web/src/components/layout/CopyLinkButton.tsx",
+          "line": 39,
+          "end_line": 44
+        }
+      ],
+      "mechanism": "Default absolute bounds live only in mount anchor until preset click; fallback vehicle writes store,not absent URL param. CopyLinkButton copies window.location.href unchanged. Initial plain/scarcely-scoped URL does not identify displayed vehicle and absolute interval.",
+      "repro": {
+        "status": "SOURCE-DERIVED; NOT EXECUTED",
+        "scenario": "Initial /science,no vehicle_id/start/end,effective stored vehicleA: copying without preset selection preserves plain URL. Recipient vehicleB/later mount gets another scope. No clipboard/browser action performed."
+      },
+      "fix": "One coordinated NEED-01 scope/deep-link fix; safely materialize effective vehicle/absolute window and retain unrelated params/preferences,not generic clipboard scope invention.",
+      "deduplicated_need": "NEED-01",
+      "test_source_evidence": "No copied/remounted initial-scope page assertion. Window test17-24 writes bounds only on pickWindow; valid legacy bookmarks remain supported.",
+      "runtime_confirmed": false
+    },
+    {
+      "id": "SCI-005",
+      "title": "Initial-paused sources are shown only as loading",
+      "classification": "source-confirmed",
+      "rule": "MDC-026",
+      "severity": "medium",
+      "locations": [
+        {
+          "file": "web/src/features/science/components/operationalbrief-all/ScienceSummaryBrief.tsx",
+          "line": 27,
+          "end_line": 43
+        },
+        {
+          "file": "web/src/features/science/components/ScienceEvidenceOverview.tsx",
+          "line": 103,
+          "end_line": 111
+        },
+        {
+          "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+          "line": 180
+        },
+        {
+          "file": "web/src/features/science/components/ThermalPanel.tsx",
+          "line": 55
+        },
+        {
+          "file": "web/src/features/science/components/WeatherPanel.tsx",
+          "line": 105
+        },
+        {
+          "file": "web/src/features/science/components/TiresPanel.tsx",
+          "line": 77
+        },
+        {
+          "file": "web/src/features/science/components/NotebookPanel.tsx",
+          "line": 30
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 204,
+          "end_line": 219
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 57,
+          "end_line": 60
+        }
+      ],
+      "mechanism": "No retained data+fetchStatus paused yields initial,isRefreshBlocked=true. Summary/card prioritize Loading; each SourceContent maps initial to skeleton; retained-warning returns null without data. No initial-blocked explanation/source recovery control; retained-paused remains supported.",
+      "repro": {
+        "status": "SOURCE-DERIVED; NOT EXECUTED",
+        "scenario": "Any hook:data undefined,isPending true,fetchStatus paused. Trace initial+blocked to Loading/skeleton and no warning. Successful peers remain visible."
+      },
+      "fix": "Compose existing feedback for first-report paused,distinct from cached refresh paused; do not infer server error/device offline solely from paused.",
+      "deduplicated_need": "NEED-04",
+      "test_source_evidence": "Page544-555 tests retained-paused only;558-576 initiallyfetching,not initial-paused.",
+      "runtime_confirmed": false
+    },
+    {
+      "id": "SCI-006",
+      "title": "Displayed timestamps bypass saved locale/timezone",
+      "classification": "source-confirmed",
+      "rule": "MDC-044/MDC-045",
+      "severity": "medium",
+      "locations": [
+        {
+          "file": "web/src/features/science/pages/ScienceLabPage.tsx",
+          "line": 19
+        },
+        {
+          "file": "web/src/features/science/pages/ScienceLabPage.tsx",
+          "line": 67
+        },
+        {
+          "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+          "line": 134
+        },
+        {
+          "file": "web/src/features/science/components/ThermalPanel.tsx",
+          "line": 33
+        },
+        {
+          "file": "web/src/features/science/components/WeatherPanel.tsx",
+          "line": 80
+        },
+        {
+          "file": "web/src/features/science/components/EntryDetail.tsx",
+          "line": 71
+        },
+        {
+          "file": "web/src/features/science/components/ScienceEvidenceOverview.tsx",
+          "line": 130,
+          "end_line": 132
+        },
+        {
+          "file": "web/src/features/science/components/operationalbrief-all/ScienceSummaryBrief.tsx",
+          "line": 54,
+          "end_line": 58
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 44,
+          "end_line": 61
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 73,
+          "end_line": 93
+        }
+      ],
+      "mechanism": "Bare formatDateTime calls pass no opts and fall back to browser locale/timezone. Existing useDateFormat binds saved locale/effective timezone but is not consumed here. Numeric/unit preferences are otherwise source-backed.",
+      "repro": {
+        "status": "SOURCE-DERIVED; NOT EXECUTED",
+        "scenario": "Saved de-DE/UTC versus browser en-US/LosAngeles: all named science date calls pass undefined opts;toLocaleString uses browser rather than saved choices. No settings changed."
+      },
+      "fix": "Adopt useDateFormat in science date/chart/table callbacks; keep raw query/cache ISO values. No shared dateFormat edit authorized.",
+      "deduplicated_need": "NEED-05",
+      "test_source_evidence": "Page42-50 settings locale en-US,timezone empty and18-40 i18n mock cannot prove preference behavior.",
+      "runtime_confirmed": false
+    },
+    {
+      "id": "SCI-007",
+      "title": "Fixed chart accent bypasses saved palette",
+      "classification": "source-confirmed",
+      "rule": "MDC-010/MDC-034",
+      "severity": "medium",
+      "locations": [
+        {
+          "file": "web/src/features/science/components/helpers.ts",
+          "line": 3
+        },
+        {
+          "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+          "line": 201
+        },
+        {
+          "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+          "line": 223
+        },
+        {
+          "file": "web/src/components/charts/AreaChartWrapper.tsx",
+          "line": 20,
+          "end_line": 24
+        },
+        {
+          "file": "web/src/components/charts/AreaChartWrapper.tsx",
+          "line": 102,
+          "end_line": 112
+        }
+      ],
+      "mechanism": "SCIENCE_ACCENT literal#0891b2 supplies both series;wrapper consumes callercolor. Science resolves no active saved palette. Preference bypass confirmed,not neon/contrast/inline-style failure.",
+      "repro": {
+        "status": "SOURCE-DERIVED; NOT EXECUTED",
+        "scenario": "Consider two saved palettes: both science series still use literal#0891b2."
+      },
+      "fix": "Use existing palette owner/hook at consumer;preserve identities/raw data/saved choices.",
+      "deduplicated_need": "NEED-06",
+      "test_source_evidence": "Page463-468 SVG assertion only,no palette case.",
+      "runtime_confirmed": false
+    },
+    {
+      "id": "SCI-008",
+      "title": "Outer card and inner brief duplicate chrome",
+      "classification": "source-confirmed",
+      "rule": "MDC-031/MDC-013",
+      "severity": "low",
+      "locations": [
+        {
+          "file": "web/src/features/science/components/ScienceEvidenceOverview.tsx",
+          "line": 152,
+          "end_line": 158
+        },
+        {
+          "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+          "line": 170,
+          "end_line": 174
+        },
+        {
+          "file": "web/src/features/science/components/WeatherPanel.tsx",
+          "line": 95,
+          "end_line": 99
+        },
+        {
+          "file": "web/src/features/science/components/TiresPanel.tsx",
+          "line": 67,
+          "end_line": 71
+        },
+        {
+          "file": "web/src/components/layout/layout-reference/LayoutCard.tsx",
+          "line": 26,
+          "end_line": 41
+        },
+        {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "line": 126,
+          "end_line": 153
+        }
+      ],
+      "mechanism": "Four section titles rendered in outerCard and innerBrief;compact OperationalBrief still owns GlassPanel/title/description. Overview subtitle duplicated. Source redundant chrome,not measured clipping.",
+      "repro": {
+        "status": "SOURCE-DERIVED; NOT EXECUTED",
+        "scenario": "Trace overview title/description supplied twice,then LayoutCard heading and OperationalBrief heading/surface. Same outer/innertitle pattern in electrochem/weather/tires."
+      },
+      "fix": "Reconcile existing G021 composition owner;preserve sections,metrics,scope/provenance/freshness and Review details,no newwrapper.",
+      "deduplicated_need": "NEED-07",
+      "test_source_evidence": "Page234-250 shells and471-478 briefs/review actions are preservation obligations.",
+      "runtime_confirmed": false
+    },
+    {
+      "id": "SCI-009",
+      "title": "Proxy trend does not display its supplied confidence interval",
+      "classification": "source-confirmed",
+      "rule": "MDC-033/MDC-045 scientific uncertainty",
+      "severity": "medium",
+      "locations": [
+        {
+          "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+          "line": 104,
+          "end_line": 110
+        },
+        {
+          "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+          "line": 279,
+          "end_line": 293
+        },
+        {
+          "file": "web/src/api/types.ts",
+          "line": 4017,
+          "end_line": 4021
+        },
+        {
+          "file": "web/src/features/science/pages/ScienceLabPage.test.tsx",
+          "line": 517,
+          "end_line": 528
+        }
+      ],
+      "mechanism": "Aging source supplies proxy_ci95_low/high,but slope metric/captions/brief only consume slope+n. Optional independent notebook ci is not populated from aging by frontend and is not guaranteed alternateaccess.",
+      "repro": {
+        "status": "SOURCE-DERIVED; NOT EXECUTED",
+        "scenario": "aging unknownfalse,slope-125.75,n8,finite low/high and empty notebook: slope+n render but no component accesses supplied interval. Review details gets same metrics."
+      },
+      "fix": "Show reported interval in sourceunits/sign with unknownfallback;retain numeric slope,n,reference/holdout,no invented confidencegrade.",
+      "deduplicated_need": "NEED-08",
+      "test_source_evidence": "Signed slope test517-528 leaves intervalnull and asserts only slope/n. Logged coveragegrep shows no production interval consumption.",
+      "runtime_confirmed": false
+    }
+  ],
+  "release": {
+    "status": "RELEASED",
+    "at": "2026-10-14T02:09:35.840032+00:00",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-science-science-lab.json",
+      "web/logs/phase6-qa-science-science-lab.log"
+    ],
+    "commands": "RELEASED after this bounded correction;no background commands/services",
+    "source": "never writable/no source writes"
+  },
+  "source_test_hashes": [
+    {
+      "file": "web/src/api/dataState.ts",
+      "before_sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "after_sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "match": true
+    },
+    {
+      "file": "web/src/api/hooks/useScience.test.ts",
+      "before_sha256": "29bf420b40fad54ce005c8267188249c1a59b31abc06a55a7f92257574d76f7a",
+      "after_sha256": "29bf420b40fad54ce005c8267188249c1a59b31abc06a55a7f92257574d76f7a",
+      "match": true
+    },
+    {
+      "file": "web/src/api/scope.ts",
+      "before_sha256": "135f29c962a5e0c647c9d3a5724af2a77fe8795c82ed45ed87d7f0f26a103cc1",
+      "after_sha256": "135f29c962a5e0c647c9d3a5724af2a77fe8795c82ed45ed87d7f0f26a103cc1",
+      "match": true
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "before_sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "after_sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "match": true
+    },
+    {
+      "file": "web/src/components/charts/AreaChartWrapper.tsx",
+      "before_sha256": "bd736465f0eaa49d61a3ee7a75695ff03903405ca8cc62f14bfc8428ae26793d",
+      "after_sha256": "bd736465f0eaa49d61a3ee7a75695ff03903405ca8cc62f14bfc8428ae26793d",
+      "match": true
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "before_sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "after_sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "match": true
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "before_sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "after_sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "match": true
+    },
+    {
+      "file": "web/src/components/layout/CopyLinkButton.tsx",
+      "before_sha256": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "after_sha256": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "match": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "before_sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "after_sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "match": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/LayoutCard.tsx",
+      "before_sha256": "409641019732349e44d45adf5e2c13dd93c5b38a0f037564ae43b93fc4099a1e",
+      "after_sha256": "409641019732349e44d45adf5e2c13dd93c5b38a0f037564ae43b93fc4099a1e",
+      "match": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "before_sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "after_sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "match": true
+    },
+    {
+      "file": "web/src/components/ui/Accordion.tsx",
+      "before_sha256": "131ed6c4eeea787cab62417c293919f1e97b47cbcd27bb9e27a00d46d0eb7658",
+      "after_sha256": "131ed6c4eeea787cab62417c293919f1e97b47cbcd27bb9e27a00d46d0eb7658",
+      "match": true
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "before_sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "after_sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "match": true
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "before_sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "after_sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "match": true
+    },
+    {
+      "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+      "before_sha256": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+      "after_sha256": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+      "before_sha256": "9373a01c39b972a80546a8477a06a9926e5e080f726028ea927afd18ec4a83fa",
+      "after_sha256": "9373a01c39b972a80546a8477a06a9926e5e080f726028ea927afd18ec4a83fa",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/components/MissingBadges.tsx",
+      "before_sha256": "96e9a201058b635117dd1296bad5058acefd0005c3c702c3f87f9451b5b8e122",
+      "after_sha256": "96e9a201058b635117dd1296bad5058acefd0005c3c702c3f87f9451b5b8e122",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/components/NotebookPanel.tsx",
+      "before_sha256": "3f1e2342a31006baffac9a45beef70569cb2b8ab1b7b8ad26ab64953114808d7",
+      "after_sha256": "3f1e2342a31006baffac9a45beef70569cb2b8ab1b7b8ad26ab64953114808d7",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/components/ScienceEvidenceOverview.tsx",
+      "before_sha256": "911c5803b54093e9af387eca366394a4d7e9c342e28b513352d77a210fca1da3",
+      "after_sha256": "911c5803b54093e9af387eca366394a4d7e9c342e28b513352d77a210fca1da3",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/components/SciencePanels.ts",
+      "before_sha256": "c800059a578ba0b3df7d1f99d0434f7b06902131e09cc7d2950bfa925fbb3024",
+      "after_sha256": "c800059a578ba0b3df7d1f99d0434f7b06902131e09cc7d2950bfa925fbb3024",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/components/ThermalPanel.tsx",
+      "before_sha256": "87ffb30b812d28521c0ad20054a14a417e999548d8b2b53ca46389b454499218",
+      "after_sha256": "87ffb30b812d28521c0ad20054a14a417e999548d8b2b53ca46389b454499218",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/components/TiresPanel.tsx",
+      "before_sha256": "501ce7283f8f4a760fa26b2715d3fce2e9b372456e0773715fe605f143a6024d",
+      "after_sha256": "501ce7283f8f4a760fa26b2715d3fce2e9b372456e0773715fe605f143a6024d",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/components/WeatherPanel.tsx",
+      "before_sha256": "cec2e99baa6b67d1081f69f4a2516922a5b98dcf6c39f1c0f5ac497db39102b4",
+      "after_sha256": "cec2e99baa6b67d1081f69f4a2516922a5b98dcf6c39f1c0f5ac497db39102b4",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/components/helpers.ts",
+      "before_sha256": "3dd01fc9ecbb70c3651aafadf6729637f6d52a85935a03254ad769e127d225ac",
+      "after_sha256": "3dd01fc9ecbb70c3651aafadf6729637f6d52a85935a03254ad769e127d225ac",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/components/operationalbrief-all/ScienceSummaryBrief.tsx",
+      "before_sha256": "f7fc61d37b20314ae42b6f9ebde775571a511b1b4449d56494ae1eae7c3e3312",
+      "after_sha256": "f7fc61d37b20314ae42b6f9ebde775571a511b1b4449d56494ae1eae7c3e3312",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/pages/ScienceLabPage.test.tsx",
+      "before_sha256": "264ed89e275a2f660fbf978c6448670a9da3eafbf7ed67aeb225fc405c2a183f",
+      "after_sha256": "264ed89e275a2f660fbf978c6448670a9da3eafbf7ed67aeb225fc405c2a183f",
+      "match": true
+    },
+    {
+      "file": "web/src/features/science/pages/ScienceLabPage.tsx",
+      "before_sha256": "dcd7d23730814fb3621ce796dca0ef5a7a23ef247c7080abda0d8362c025dab6",
+      "after_sha256": "dcd7d23730814fb3621ce796dca0ef5a7a23ef247c7080abda0d8362c025dab6",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/__tests__/useSelectedVehicle.test.tsx",
+      "before_sha256": "622f23bbd4ed9a77a9ea9d8e7445d20d959d015b4fa3787edc251c87ea105f39",
+      "after_sha256": "622f23bbd4ed9a77a9ea9d8e7445d20d959d015b4fa3787edc251c87ea105f39",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useAnalysisWindow.test.tsx",
+      "before_sha256": "faa02c4f6058fdef015153075e574afc86dfb939a79abea53780a5a4c4339eb6",
+      "after_sha256": "faa02c4f6058fdef015153075e574afc86dfb939a79abea53780a5a4c4339eb6",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useAnalysisWindow.ts",
+      "before_sha256": "7f5e299097e4b88d41d52b7f653d80a230f7a3e32d63f858e0a2b92845abffa2",
+      "after_sha256": "7f5e299097e4b88d41d52b7f653d80a230f7a3e32d63f858e0a2b92845abffa2",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "before_sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "after_sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "before_sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "after_sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "before_sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "after_sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "before_sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "after_sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "before_sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "after_sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "before_sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "after_sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "match": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "before_sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "after_sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "before_sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "after_sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "before_sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "after_sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "before_sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "after_sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "match": true
+    },
+    {
+      "file": "web/src/api/hooks/useScience.ts",
+      "before_sha256": "56b34fe02c0f756412c614ce14f3fdcc3668768925c46bb74cc0a5e852a5829a",
+      "after_sha256": "56b34fe02c0f756412c614ce14f3fdcc3668768925c46bb74cc0a5e852a5829a",
+      "match": true,
+      "before_evidence": "original raw tool BEFORE/inventory receipt; omitted by log regex extraction"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "before_sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "after_sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "match": true,
+      "before_evidence": "original raw tool BEFORE/inventory receipt; omitted by log regex extraction"
+    },
+    {
+      "file": "web/src/features/science/components/EntryDetail.tsx",
+      "before_sha256": "bade9b7f8d778c02beacc12a1b5393ac2917e42912ba9f6b5127a7e043b776dc",
+      "after_sha256": "bade9b7f8d778c02beacc12a1b5393ac2917e42912ba9f6b5127a7e043b776dc",
+      "match": true,
+      "before_evidence": "original raw tool BEFORE/inventory receipt; omitted by log regex extraction"
+    }
+  ],
+  "conditional_candidates": [
+    {
+      "id": "COND-01",
+      "file": "web/src/api/scope.ts",
+      "line": 37,
+      "condition_mechanism": "Inclusive-end comment versus exclusive workspaceend: backend/cap semantics unknown,no confirmed backend offbyone",
+      "owner": "NEED-01",
+      "confirmed": false,
+      "repro": "NOTRUN"
+    },
+    {
+      "id": "COND-02",
+      "file": "web/src/features/science/components/helpers.ts",
+      "line": 20,
+      "condition_mechanism": ">400uniform chart sampling may omit endpoints/extrema;fulltables retain rows;profile/visual effect NOTRUN",
+      "owner": "NEED-06",
+      "confirmed": false,
+      "repro": "NOTRUN"
+    },
+    {
+      "id": "COND-03",
+      "file": "web/src/features/science/components/ElectrochemPanel.tsx",
+      "line": 65,
+      "condition_mechanism": "unknown=true with nonnull estimates requires approved backend semantics;null unknown/validzero preserved",
+      "owner": "NEED-08",
+      "confirmed": false,
+      "repro": "NOTRUN"
+    },
+    {
+      "id": "COND-04",
+      "file": "web/src/features/science/components/ThermalPanel.tsx",
+      "line": 66,
+      "condition_mechanism": "pooled_epochs/thermaltruncated not directly rendered;ifhonesty lacks coveragewarning;backendhonesty unknown",
+      "owner": "NEED-08",
+      "confirmed": false,
+      "repro": "NOTRUN"
+    },
+    {
+      "id": "COND-05",
+      "file": "web/src/features/science/components/ScienceEvidenceOverview.tsx",
+      "line": 37,
+      "condition_mechanism": "nonfinite corner counts reported by!=null;clarify reported versus usable evidence before defect",
+      "owner": "NEED-08",
+      "confirmed": false,
+      "repro": "NOTRUN"
+    }
+  ],
+  "native_candidates": [
+    {
+      "id": "NATIVE-01",
+      "file": "web/src/features/science/components/EntryDetail.tsx",
+      "line": 23,
+      "candidate": "long notebook keys/values at320px/200%text/RTL;overflow NOTCONFIRMED",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "NATIVE-02",
+      "file": "web/src/features/science/pages/ScienceLabPage.tsx",
+      "line": 52,
+      "candidate": "all required viewports/narrowcards,light/dark/custom/forcedcolors/reducedmotion,longlabels;keyboard/focus/SR/open drawers/disclosures/action reachability",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "NATIVE-03",
+      "file": "web/src/features/science/pages/ScienceLabPage.test.tsx",
+      "line": 18,
+      "candidate": "cold real namespace/nonEnglish interpolation/RTL;146canonicalEnglish keys present is not runtime acceptance",
+      "status": "NOTRUN"
+    }
+  ],
+  "deduplicated_needs": [
+    {
+      "id": "NEED-01",
+      "owner": "science scope/deep-link integration G164/P308",
+      "confirmed_issues": [
+        "SCI-001",
+        "SCI-004"
+      ],
+      "existing_exact_fix_queue_match": null,
+      "disposition": "parent must assign one narrow exclusive owner,deduplicate across reports;no queue writes/reopen completed objective"
+    },
+    {
+      "id": "NEED-02",
+      "owner": "shared fleet trust G165/P310",
+      "confirmed_issues": [
+        "SCI-002"
+      ],
+      "existing_exact_fix_queue_match": null,
+      "disposition": "parent must assign one narrow exclusive owner,deduplicate across reports;no queue writes/reopen completed objective"
+    },
+    {
+      "id": "NEED-03",
+      "owner": "science5table mobile adoption;existing shared adapter[x]",
+      "confirmed_issues": [
+        "SCI-003"
+      ],
+      "existing_exact_fix_queue_match": null,
+      "disposition": "parent must assign one narrow exclusive owner,deduplicate across reports;no queue writes/reopen completed objective"
+    },
+    {
+      "id": "NEED-04",
+      "owner": "science initial-paused adapter",
+      "confirmed_issues": [
+        "SCI-005"
+      ],
+      "existing_exact_fix_queue_match": null,
+      "disposition": "parent must assign one narrow exclusive owner,deduplicate across reports;no queue writes/reopen completed objective"
+    },
+    {
+      "id": "NEED-05",
+      "owner": "science useDateFormat adoption;active relative-future-dates root not same defect",
+      "confirmed_issues": [
+        "SCI-006"
+      ],
+      "existing_exact_fix_queue_match": null,
+      "disposition": "parent must assign one narrow exclusive owner,deduplicate across reports;no queue writes/reopen completed objective"
+    },
+    {
+      "id": "NEED-06",
+      "owner": "science palette adoption;existing chart-palette-policy[x]",
+      "confirmed_issues": [
+        "SCI-007"
+      ],
+      "existing_exact_fix_queue_match": null,
+      "disposition": "parent must assign one narrow exclusive owner,deduplicate across reports;no queue writes/reopen completed objective"
+    },
+    {
+      "id": "NEED-07",
+      "owner": "G021/P309 existing card/brief composition",
+      "confirmed_issues": [
+        "SCI-008"
+      ],
+      "existing_exact_fix_queue_match": null,
+      "disposition": "parent must assign one narrow exclusive owner,deduplicate across reports;no queue writes/reopen completed objective"
+    },
+    {
+      "id": "NEED-08",
+      "owner": "science supplied proxy CI disclosure",
+      "confirmed_issues": [
+        "SCI-009"
+      ],
+      "existing_exact_fix_queue_match": null,
+      "disposition": "parent must assign one narrow exclusive owner,deduplicate across reports;no queue writes/reopen completed objective"
+    }
+  ],
+  "counts": {
+    "confirmed": 9,
+    "conditional": 5,
+    "native": 3,
+    "candidates": 8,
+    "deduplicated_needs": 8,
+    "affected_mobile_tables": 5,
+    "page_authored_tests": 24,
+    "source_expanded_direct_test_cases": 48,
+    "executed_tests": 0,
+    "runner_passed_failed_skipped": null,
+    "literal_i18n_keys_checked": 146,
+    "canonicalEnglish_missing": 0,
+    "pinned_files": 43,
+    "pin_mismatches": 0,
+    "by_rule": {
+      "MDC-032": 1,
+      "MDC-026": 2,
+      "MDC-023/MDC-043": 1,
+      "MDC-032/MDC-046": 1,
+      "MDC-044/MDC-045": 1,
+      "MDC-010/MDC-034": 1,
+      "MDC-031/MDC-013": 1,
+      "MDC-033/MDC-045 scientific uncertainty": 1
+    },
+    "by_primary_file": {
+      "web/src/features/science/pages/ScienceLabPage.tsx": 4,
+      "web/src/features/science/components/ThermalPanel.tsx": 1,
+      "web/src/features/science/components/operationalbrief-all/ScienceSummaryBrief.tsx": 1,
+      "web/src/features/science/components/helpers.ts": 1,
+      "web/src/features/science/components/ScienceEvidenceOverview.tsx": 1,
+      "web/src/features/science/components/ElectrochemPanel.tsx": 1
+    }
+  },
+  "governing_reads": {
+    "orchestrator": "docs/orchestrator-loop.md FULL1-296",
+    "contract": "applicable core1-72,80-284,419-654",
+    "mission": "relevant1-270,507-598,704-871,921-941,981-1081,1416-1518",
+    "inventory": "ScienceLab row/G021/G164/G165;historical audit167 dispositions",
+    "handoff": "current recovery/evidence1-125",
+    "queue": "exact row62 then126 read;phase5[x]e0b96e58e90e939565112d696203b25260a1222b;no exact current fix owner found. Last reread UTF8failure logged,not hidden.",
+    "instructions": "copilot/react applicable excerpts;SIcutover/unitconversion full;session specific instruction NOTFOUND"
+  },
+  "section_action_coverage": {
+    "header": "Page25-79:7/30/copy/setup,aria-pressed,44px/wrap;PageLayout=>PageContainer",
+    "overview": "Overview19-164:five hooks/same scope/counts/5anchors/Reviewdetails/source trust",
+    "electrochem": "Electrochem38-295:rest/IRcharts+tables/pulse/ArrheniusEaCI+tempcoverage/OCVbins/hysteresis/aging/reference/throughput/rest/slope/capacity/holdout/missing;retry/refresh/pagination/columncontrols/Reviewdetails",
+    "thermal": "Thermal32-79:tau/n/CI/R2/RMSEdelta/ambient/solar/missing;retry/refresh/tablecontrols",
+    "weather": "Weather35-133:signed nullable correlation,min5variation/associationnotcause,rain/dry,density/precip/temp/wind/session/residual,drive links/retry/table/Reviewdetails",
+    "tires": "Tires30-98:corners/imbalance/fractionpercent/energy modelbandexplicitlynotCI/notmeasuredloss/distance/placard/unknown;retry/Reviewdetails",
+    "notebook": "Notebook25-63/Entry15-72:generatedrecords notjobs,n/method/CI/holdout/firmware/signals/residual/ID/sourceparameterkeys/CI/bounds/honesty;Accordion/retry"
+  },
+  "acceptable_exceptions": [
+    "PageLayout/NoVehicleSelected compose PageContainer;data&& bodies inside unconditional shells+SourceContent fallbacks,not hidden sections.",
+    "Vendor type/mock import in tests and rawHTML/vendor in shared buildingblocks expected. refetch not fetch;selection useEffects not loading.",
+    "Scientific/source notation n/R2/CI/SOC/IR/RMSE/units/rawIDs not untranslated English. Generic notebook dimensions KEEPraw.",
+    "RawSI hooks/cancellation untouched;display unit/number bridges preserve validzero/signedslope/correlation/residual/tempdelta;model versus observed caveats explicit.",
+    "Preset44px/wrapsource resolves historical36px issue;native NOTRUN."
+  ],
+  "checks": {
+    "grep": "10scopedrulecandidate+3supplementalcommands/rawstdout/stderr/nativeexits in log;grep1=no matches not testpass;manual exceptions adjudicated",
+    "canonicalEnglish": "JSONparse146literalkeys0missing;no catalogneed",
+    "source_test_hashes": "MATCH",
+    "final_json_parse": "OK after final write;raw verification receipt in log",
+    "tests": "24page+8API+2window+14selection=48authored sourcecases;NOTRUN,not runnerdiscovery",
+    "backend_rules": "NOTAPPLICABLE scoped frontend only"
+  },
+  "command_failures": [
+    "initialPowerShell probe1 missing artifacts/tableformatting",
+    "firstdocumentreader1 cp1252 UnicodeEncodeError",
+    "firstpagereader1 cp1252 UnicodeEncodeError;UTF8readrecovery",
+    "shell2146 os206 oversized command1 beforeexecution",
+    "shell2199 UTF8 queue decode1;no supplementalreportwrite",
+    "Final log-based pin extraction omitted3before records; original raw receipts used in final supplemental pin check,not passing tests rerun.",
+    "shell2237 final assertion1: expected42pins but actual43;numeric count expectation corrected,hash evidence unchanged"
+  ],
+  "NOTRUN": [
+    "npx tsc --noEmit",
+    "tests/lint/build/global gates/fresh or passingreruns/helpers",
+    "experiment/job/model/realdata/network/API/browser/actions/native/screenshot/deployedQA",
+    "source/test/catalog/queue/Git writes/subagents/installs/servers"
+  ],
+  "limits": "Source-derived repro descriptions only;no compiler/test/native acceptance. Backend bounds/caps/otherlocale semantics unknown;concurrent sharedchanges not ours. Only2requested artifacts written.",
+  "deadline_failure": {
+    "requested_release_by": "2026-10-14T02:07:59.989Z",
+    "first_verified_release": "2026-10-14T02:08:26.364744Z",
+    "late_seconds": 26.375744,
+    "hard_deadline": "2026-10-14T02:12:59.989Z",
+    "met_requested_release": false
+  }
+}

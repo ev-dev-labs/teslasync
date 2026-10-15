@@ -1,17 +1,21 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BarChart3, TrendingUp, Zap, DollarSign, Gauge } from 'lucide-react';
-import { AnimatedNumber } from '@/components/data-display';
+import { BarChart3 } from 'lucide-react';
+import { useDataState } from '@/hooks/useDataState';
 import { Sparkline } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useAnalyticsSummary } from '@/api/hooks/useAnalytics';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtNumber } from '@/lib/numberFormat';
-import { WidgetStatGrid, type StatGridItem } from './shared';
+
+import { WidgetBigNumber } from './shared';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 const MI_TO_KM = 1.60934;
 
@@ -30,12 +34,14 @@ function toNumberArray(value: unknown): number[] {
 }
 
 export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   const { formatCurrency } = useFormatting();
 
+  const query = useAnalyticsSummary();
   const {
     data,
     isLoading,
@@ -45,7 +51,8 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useAnalyticsSummary();
+  } = query;
+  const dataState = useDataState(query, { provenance: 'historical' });
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 4;
@@ -53,15 +60,13 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
   const distKm = data?.totalDistanceKm ?? 0;
   const displayDist = toDistanceDisplay(distKm * 1000);
 
-  const effWhKm = data?.avgEfficiencyWhKm ?? 0;
-  const displayEff = distanceUnit === 'mi' ? effWhKm * MI_TO_KM : effWhKm;
   const effUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
-  const energyKwh = data?.totalEnergyKwh ?? 0;
   const totalCost = data?.totalCost ?? 0;
-  const costPerDist = displayDist > 0 ? totalCost / displayDist : 0;
+  const costPerM = isFiniteNumber(data?.totalDistanceKm) && distKm > 0 && isFiniteNumber(data?.totalCost)
+    ? totalCost / (distKm * 1000) : null;
 
-  const hasData = distKm > 0 || energyKwh > 0;
+  const hasData = data != null;
 
   // Trend arrays — API may provide these in the future. Coerce defensively so
   // a non-array/NaN-poisoned payload can never crash the sparkline row.
@@ -76,36 +81,43 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
   }, [data]);
   const hasSparklines = sparklines.some((s) => s.length > 0);
 
-  const stats = useMemo((): StatGridItem[] => [
+  const stats = useMemo((): StatMetric[] => [
     {
-      label: t('widget.analyticsSummary.totalDistance', 'Total Distance'),
-      value: fmtNumber(displayDist, 0),
-      unit: distanceUnit,
-      icon: <TrendingUp className="h-3.5 w-3.5 text-cyan-400" />,
+      metricId: 'distance',
+      label: t('widget.analyticsSummary.totalDistance', 'Total distance'),
+      rawValue: data?.totalDistanceKm == null ? null : data.totalDistanceKm * 1000,
+      description: t('widget.analyticsSummary.summary.distanceHelp', 'Fleet distance from the analytics source; kilometres normalized to metres.'),
+      display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
     },
     {
-      label: t('widget.analyticsSummary.avgEfficiency', 'Avg Efficiency'),
-      value: fmtNumber(displayEff, 0),
-      unit: effUnit,
-      icon: <Gauge className="h-3.5 w-3.5 text-emerald-400" />,
+      metricId: 'efficiency',
+      label: t('widget.analyticsSummary.avgEfficiency', 'Avg efficiency'),
+      rawValue: data?.avgEfficiencyWhKm == null ? null : data.avgEfficiencyWhKm / 1000,
+      description: t('widget.analyticsSummary.summary.efficiencyHelp', 'Source consumption in Wh/km normalized to Wh/m; the original distance conversion factor is retained.'),
+      display: { formatter: raw => ({ value: fmtNumber(distanceUnit === 'mi' ? raw * 1000 * MI_TO_KM : raw * 1000), unit: effUnit }) },
     },
     {
-      label: t('widget.analyticsSummary.energyConsumed', 'Energy Consumed'),
-      value: fmtNumber(energyKwh, 1),
-      unit: 'kWh',
-      icon: <Zap className="h-3.5 w-3.5 text-amber-400" />,
+      metricId: 'energy',
+      label: t('widget.analyticsSummary.energyConsumed', 'Energy consumed'),
+      rawValue: data?.totalEnergyKwh == null ? null : data.totalEnergyKwh * 1000,
+      description: t('widget.analyticsSummary.summary.energyHelp', 'Source energy normalized from kWh to Wh; the existing kWh display is retained.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) },
     },
     {
+      metricId: 'rate',
       label: t('widget.analyticsSummary.costPerDist', 'Cost / {{unit}}', { unit: distanceUnit }),
-      value: costPerDist > 0 ? formatCurrency(costPerDist, 3) : '—',
-      icon: <DollarSign className="h-3.5 w-3.5 text-purple-400" />,
+      rawValue: costPerM,
+      description: t('widget.analyticsSummary.summary.costHelp', 'Recorded cost divided by positive measured distance, retained as source currency per metre; missing operands or zero distance cannot define a rate.'),
+      display: { formatter: raw => ({ value: formatCurrency(raw * distKm * 1000 / displayDist), unit: '' }) },
     },
-  ], [displayDist, displayEff, effUnit, energyKwh, costPerDist, distanceUnit, formatCurrency, t]);
+  ], [data, displayDist, distKm, effUnit, costPerM, distanceUnit, formatCurrency, t, fmtNumber]);
 
   // Compact (1×2): large animated distance number
   if (isCompact) {
     return (
       <WidgetShell
+        title={t('widget.analyticsSummary.title', 'Analytics summary')}
+        dataState={data || isLoading || isError ? dataState : undefined}
         loading={isLoading}
         error={error ? String(error) : null}
         updatedAt={dataUpdatedAt}
@@ -115,16 +127,12 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
         onRefresh={() => refetch()}
       >
         {hasData ? (
-          <div className="flex flex-col items-center justify-center h-full gap-1 min-h-[44px]">
-            <AnimatedNumber
-              value={Math.round(displayDist)}
-              suffix={` ${distanceUnit}`}
-              className="text-3xl font-bold text-cyan-400"
-            />
-            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
-              {t('widget.analyticsSummary.totalDistance', 'Total Distance')}
-            </span>
-          </div>
+          <WidgetBigNumber
+            value={isFiniteNumber(data?.totalDistanceKm) ? fmtNumber(displayDist) : null}
+            unit={distanceUnit}
+            label={t('widget.analyticsSummary.totalDistance', 'Total distance')}
+            align="center"
+          />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<BarChart3 className="h-5 w-5" />}
@@ -139,7 +147,8 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
   // Standard (2×2) and Wide (4×2)
   return (
     <WidgetShell
-      title={t('widget.analyticsSummary.title', 'Analytics Summary')}
+      dataState={data || isLoading || isError ? dataState : undefined}
+      title={t('widget.analyticsSummary.title', 'Analytics summary')}
       icon={<BarChart3 className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       error={error ? String(error) : null}
@@ -151,7 +160,15 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
     >
       {hasData ? (
         <div className="flex flex-col gap-2">
-          <WidgetStatGrid stats={stats} compact={false} cols={isWide ? 4 : 2} />
+          <DashboardSourceBrief
+            metrics={stats}
+            state={dataState}
+            eyebrow={t('widget.analyticsSummary.summary.eyebrow', 'Fleet analytics')}
+            title={t('widget.analyticsSummary.summary.title', 'Analytics operating summary')}
+            description={t('widget.analyticsSummary.summary.description', 'Fleet-wide analytics using the hook’s default source window. Exact bounds and completeness are not supplied; optional trend arrays retain their own source coverage.')}
+            scope={t('widget.analyticsSummary.summary.scope', 'Fleet-wide · default analytics window')}
+            testId="analytics-summary-operational-brief"
+          />
           {isWide && hasSparklines && (
             <div className="grid grid-cols-4 gap-3">
               {sparklines.map((trend, i) => (

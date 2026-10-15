@@ -203,6 +203,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
 
@@ -285,6 +286,10 @@ describe('AITripPlannerLLMAgent — AI-off visibility gate (ADR-015)', () => {
     expect(
       screen.getByText(/grounded in your past charging history along the corridor/i),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText(/This advisory draft does not change the form, compute a route, or save a plan/),
+    ).toHaveTextContent('use Plan to compute the route separately.')
+    expect(screen.queryByText(/click Plan.*save it/i)).not.toBeInTheDocument()
 
     // The action button is enabled (idle stream, all inputs present) and
     // exposes the per-feature verb through its accessible name. Disabled
@@ -601,6 +606,104 @@ describe('AITripPlannerLLMAgent — streaming lifecycle', () => {
       expect(panel).toHaveTextContent(/Helix error:/)
       expect(panel).toHaveTextContent(/provider_unavailable/)
     })
+  })
+})
+
+describe('AITripPlannerLLMAgent — draft scope ownership', () => {
+  const initialInputs = {
+    vehicleId: 42,
+    origin: ORIGIN,
+    destination: DESTINATION,
+    currentSoc: 80,
+    minArrivalSoc: 20,
+    chargeLimitSoc: 90,
+    speedFactor: 1,
+  }
+
+  it.each([
+    ['vehicle', { vehicleId: 7 }],
+    ['origin', { origin: { ...ORIGIN, lat: 38 } }],
+    ['origin name', { origin: { ...ORIGIN, name: 'Office' } }],
+    ['destination', { destination: { ...DESTINATION, lng: -119 } }],
+    ['destination name', { destination: { ...DESTINATION, name: 'Hotel' } }],
+    ['current charge', { currentSoc: 65 }],
+    ['arrival charge', { minArrivalSoc: 15 }],
+    ['charge limit', { chargeLimitSoc: 85 }],
+    ['speed', { speedFactor: 1.1 }],
+    ['missing vehicle', { vehicleId: undefined }],
+    ['missing origin', { origin: null }],
+    ['missing destination', { destination: null }],
+  ])('clears pending output on a %s change and ignores stale completion', async (_label, changedInputs) => {
+    enableFeature()
+    const controllers: ReadableStreamDefaultController<Uint8Array>[] = []
+    const signals: (AbortSignal | null | undefined)[] = []
+    vi.stubGlobal('fetch', vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      signals.push(init?.signal)
+      return new Response(new ReadableStream<Uint8Array>({
+        start(controller) { controllers.push(controller) },
+      }), { headers: { 'Content-Type': 'text/event-stream' } })
+    }))
+    const encoder = new TextEncoder()
+    const { rerender } = render(<AITripPlannerLLMAgent {...initialInputs} />)
+    await clickDraft()
+    await act(async () => {
+      controllers[0].enqueue(encoder.encode(sseFrame('delta', { text: 'Old scope draft.' })))
+    })
+    expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Old scope draft.')
+
+    rerender(<AITripPlannerLLMAgent {...initialInputs} {...changedInputs} />)
+    expect(signals[0]?.aborted).toBe(true)
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument()
+    const canDraft = draftButton().getAttribute('aria-disabled') === 'false'
+    if (canDraft) await clickDraft()
+
+    // The transport deliberately ignores abort, as a late server response can.
+    await act(async () => {
+      controllers[0].enqueue(encoder.encode(
+        sseFrame('delta', { text: 'Stale completion.' }) +
+        sseFrame('done', { finish_reason: 'stop', usage: { in: 1, out: 1 } }),
+      ))
+      controllers[0].close()
+    })
+    expect(screen.queryByText(/Stale completion/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Old scope draft/)).not.toBeInTheDocument()
+
+    if (canDraft) {
+      expect(draftButton()).toBeDisabled()
+      await act(async () => {
+        controllers[1].enqueue(encoder.encode(
+          sseFrame('delta', { text: 'Matching scope draft.' }) +
+          sseFrame('done', { finish_reason: 'stop', usage: { in: 2, out: 2 } }),
+        ))
+        controllers[1].close()
+      })
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Matching scope draft.')
+      expect(draftButton()).toBeEnabled()
+    } else {
+      expect(draftButton()).toBeDisabled()
+      expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument()
+    }
+  })
+
+  it('ignores a stale fetch rejection without releasing the matching request, then surfaces its own rejection', async () => {
+    enableFeature()
+    const rejectors: ((reason: Error) => void)[] = []
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((_resolve, reject) => {
+      rejectors.push(reject)
+    })))
+    const { rerender } = render(<AITripPlannerLLMAgent {...initialInputs} />)
+    await clickDraft()
+    rerender(<AITripPlannerLLMAgent {...initialInputs} currentSoc={65} />)
+    await clickDraft()
+    await act(async () => { rejectors[0](new Error('Stale failure')) })
+    expect(screen.queryByText(/Stale failure/)).not.toBeInTheDocument()
+    expect(draftButton()).toBeDisabled()
+    expect(screen.getByTestId('ai-thinking-indicator')).toBeInTheDocument()
+
+    await act(async () => { rejectors[1](new Error('Current draft failed')) })
+    expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Current draft failed')
+    expect(draftButton()).toBeEnabled()
+    expect(screen.queryByRole('button', { name: /apply|save/i })).not.toBeInTheDocument()
   })
 })
 

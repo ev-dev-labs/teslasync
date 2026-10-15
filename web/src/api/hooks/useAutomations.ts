@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
-import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useOptimisticMutation } from './useOptimisticMutation';
+import { pinnedKeys } from './usePinned';
 import type {
   Automation,
   AutomationFull,
@@ -18,6 +18,7 @@ import type {
   AutomationTriggerInput,
   RoutineTemplate,
   InstallRoutineRequest,
+  PinnedItem,
 } from '@/api/types';
 
 export type AutomationStepInput =
@@ -44,9 +45,114 @@ export const automationKeys = {
 export function useAutomations() {
   return useQuery({
     queryKey: automationKeys.all,
-    queryFn: ({ signal }) => request<Automation[]>('/automations', { signal }),
+    queryFn: ({ signal }) => request<Automation[]>('/automations', { signal }).then((value) => assertAutomationInventory(value)),
     refetchInterval: INTERVALS.STANDARD,
-    select: safeArray,
+  });
+}
+
+/** List-only derived fields; no stored auto-disable authority exists. */
+export type AutomationListItem = Pick<Automation,
+  'id' | 'name' | 'description' | 'vehicle_id' | 'created_at' | 'updated_at'
+> & Partial<Omit<Automation,
+  'enabled' | 'auto_disabled' | 'execution_count' | 'failure_count' | 'last_triggered_at'
+>> & {
+  enabled?: boolean | null;
+  auto_disabled?: boolean | null;
+  execution_count?: number | null;
+  failure_count?: number | null;
+  last_triggered_at?: string | null;
+};
+
+export function automationNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+export function automationStatus(a: AutomationListItem): 'active' | 'disabled' | 'auto-disabled' | null {
+  if (a.auto_disabled === true) return 'auto-disabled';
+  if (a.auto_disabled !== false || typeof a.enabled !== 'boolean') return null;
+  return a.enabled ? 'active' : 'disabled';
+}
+
+export function automationTimestamp(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== '' && Number.isFinite(Date.parse(value))
+    ? value : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Validate the supported base row; derived history/status fields may be unknown. */
+export function assertAutomationInventory<T extends AutomationListItem>(value: T[]): T[];
+export function assertAutomationInventory(value: unknown): AutomationListItem[];
+export function assertAutomationInventory(value: unknown): AutomationListItem[] {
+  if (!Array.isArray(value) || !value.every((row: unknown) =>
+    isRecord(row)
+    && Number.isSafeInteger(row.id) && Number(row.id) > 0
+    && typeof row.name === 'string'
+    && (row.enabled == null || typeof row.enabled === 'boolean')
+    && (row.description == null || typeof row.description === 'string')
+    && (row.vehicle_id == null || (Number.isSafeInteger(row.vehicle_id) && Number(row.vehicle_id) > 0))
+    && automationTimestamp(row.created_at) != null
+    && automationTimestamp(row.updated_at) != null
+    && (row.auto_disabled == null || typeof row.auto_disabled === 'boolean')
+    && ['execution_count', 'failure_count'].every((key) =>
+      row[key] == null || automationNumber(row[key]) != null)
+    && (row.last_triggered_at == null || automationTimestamp(row.last_triggered_at) != null)
+  )) {
+    throw new Error('Invalid automation inventory response');
+  }
+  return value;
+}
+
+export function assertRoutineTemplates(value: unknown): RoutineTemplate[] {
+  if (!Array.isArray(value) || !value.every((row: unknown) =>
+    isRecord(row)
+    && typeof row.id === 'string' && row.id.trim() !== ''
+    && typeof row.name === 'string'
+    && typeof row.description === 'string'
+    && (row.event === 'enter' || row.event === 'exit')
+    && Array.isArray(row.actions)
+    && row.actions.every((action: unknown) =>
+      isRecord(action) && typeof action.command === 'string' && action.command.trim() !== ''
+      && (action.params == null || isRecord(action.params)))
+  )) {
+    throw new Error('Invalid automation routine templates response');
+  }
+  return value;
+}
+
+export function useAutomationList() {
+  return useQuery({
+    queryKey: automationKeys.all,
+    queryFn: ({ signal }) => request<unknown>('/automations', { signal }).then(assertAutomationInventory),
+    refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+/** Validate before caching so a failed refresh retains the last valid pin order. */
+export function assertPinnedAutomations(value: unknown): PinnedItem[] {
+  if (!Array.isArray(value) || !value.every((row: unknown) =>
+    isRecord(row)
+    && Number.isSafeInteger(row.id) && Number(row.id) > 0
+    && row.item_type === 'automation'
+    && typeof row.item_id === 'string' && /^[1-9]\d*$/.test(row.item_id)
+    && Number.isSafeInteger(Number(row.item_id))
+    && Number.isSafeInteger(row.position) && Number(row.position) >= 0
+    && automationTimestamp(row.pinned_at) != null
+    && (row.user_id == null || (Number.isSafeInteger(row.user_id) && Number(row.user_id) > 0))
+    && (row.context == null || typeof row.context === 'string')
+  )) {
+    throw new Error('Invalid pinned automation response');
+  }
+  return value;
+}
+
+export function usePinnedAutomations() {
+  return useQuery({
+    queryKey: pinnedKeys.list('automation'),
+    queryFn: ({ signal }) => request<unknown>('/pinned?type=automation', { signal }).then(assertPinnedAutomations),
+    staleTime: STALE_TIMES.SLOW,
   });
 }
 
@@ -143,8 +249,24 @@ export interface AutomationImportEnvelope {
 }
 
 export interface AutomationImportResult {
-  imported?: number;
-  skipped?: number;
+  imported: { id: number; name: string; webhook_token?: string }[];
+  errors: { index: number; name: string; error: string }[];
+}
+
+export function assertAutomationImportResult(value: unknown): AutomationImportResult {
+  if (!isRecord(value)
+    || !Array.isArray(value.imported)
+    || !value.imported.every((row: unknown): row is AutomationImportResult['imported'][number] => isRecord(row)
+      && Number.isSafeInteger(row.id) && Number(row.id) > 0
+      && typeof row.name === 'string'
+      && (row.webhook_token === undefined || typeof row.webhook_token === 'string'))
+    || !Array.isArray(value.errors)
+    || !value.errors.every((row: unknown): row is AutomationImportResult['errors'][number] => isRecord(row)
+      && Number.isSafeInteger(row.index) && Number(row.index) >= 0
+      && typeof row.name === 'string' && typeof row.error === 'string')) {
+    throw new Error('Invalid automation import response');
+  }
+  return { imported: value.imported, errors: value.errors };
 }
 
 /**
@@ -155,19 +277,31 @@ export interface AutomationImportResult {
  */
 export function useImportAutomations() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  const { success, warning, error } = useMutationToast();
   return useMutation({
     mutationFn: (envelope: AutomationImportEnvelope) =>
       request<AutomationImportResult>('/automations/import', {
         method: 'POST',
         requiresLiveMode: true,
+        // A fully rejected batch still contains actionable per-entry errors.
+        acceptedStatuses: [422],
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(envelope),
-      }),
+      }).then(assertAutomationImportResult),
     networkMode: 'always',
-    onSuccess: () => {
+    onSuccess: (data) => {
       invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       invalidateAndBroadcast(qc, { queryKey: ['automation-history'] });
+      if (data.errors.length > 0) {
+        if (data.imported.length === 0) {
+          error(null, 'toast.automation.import.error', 'Failed to import automations');
+          return;
+        }
+        warning('bulk.result.partial', '{{ok}} succeeded, {{failed}} failed', {
+          ok: data.imported.length, failed: data.errors.length,
+        });
+        return;
+      }
       success('toast.automation.import.success', 'Automations imported');
     },
     onError: (err) =>
@@ -270,7 +404,7 @@ export interface AutomationBulkResult {
  */
 export function useBulkAutomationsUpdate() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  const { success, warning, error } = useMutationToast();
   return useMutation({
     mutationFn: (vars: { ids: number[]; op: AutomationBulkOp }) =>
       request<AutomationBulkResult>('/automations/bulk', {
@@ -280,9 +414,19 @@ export function useBulkAutomationsUpdate() {
         body: JSON.stringify({ ids: vars.ids, op: vars.op }),
       }),
     networkMode: 'always',
-    onSuccess: (_data, vars) => {
+    onSuccess: (data, vars) => {
       invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       invalidateAndBroadcast(qc, { queryKey: ['automation-history'] });
+      const completed = (vars.op === 'delete' ? data.deleted : data.updated) ?? 0;
+      const failed = data.failed.length;
+      if (completed === 0) {
+        error(null, 'toast.automation.bulk.error', 'Bulk automation update failed');
+        return;
+      }
+      if (failed > 0) {
+        warning('bulk.result.partial', '{{ok}} succeeded, {{failed}} failed', { ok: completed, failed });
+        return;
+      }
       const key = `toast.automation.bulk.${vars.op}.success`;
       const fallback = vars.op === 'delete'
         ? 'Automations deleted'
@@ -405,9 +549,8 @@ export const routineKeys = {
 export function useRoutineTemplates() {
   return useQuery({
     queryKey: routineKeys.all,
-    queryFn: ({ signal }) => request<RoutineTemplate[]>('/automations/routine-templates', { signal }),
+    queryFn: ({ signal }) => request<RoutineTemplate[]>('/automations/routine-templates', { signal }).then(assertRoutineTemplates),
     staleTime: STALE_TIMES.STATIC,
-    select: safeArray,
   });
 }
 
@@ -419,6 +562,7 @@ export function useInstallRoutine() {
     mutationFn: ({ id, ...params }: InstallRoutineRequest & { id: string }) =>
       request<Automation>(`/automations/routine-templates/${encodeURIComponent(id)}/install`, {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(params),
       }),
     onSuccess: () => {

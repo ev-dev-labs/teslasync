@@ -227,6 +227,7 @@ describe('RecentDrivesWidget vehicle resolution', () => {
 
     // Empty state renders (never a blank panel) and no drives read fires.
     expect(await screen.findByText('No recent drives')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(drivesCalls()).toHaveLength(0);
   });
 });
@@ -238,8 +239,8 @@ describe('RecentDrivesWidget states', () => {
     mockRequest.mockImplementation(() => new Promise(() => {})); // hang
     const { container } = renderWidget(1);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Recent Drives')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByText('Recent drives')).toBeInTheDocument();
     expect(screen.queryByText('No recent drives')).toBeNull();
   });
 
@@ -248,6 +249,7 @@ describe('RecentDrivesWidget states', () => {
     renderWidget(1);
 
     const empty = await screen.findByText('No recent drives');
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(empty).toBeInTheDocument();
     expect(empty.closest('[role="status"]')).not.toBeNull();
   });
@@ -262,15 +264,37 @@ describe('RecentDrivesWidget states', () => {
 
     // Regression: a failed request must NOT masquerade as "no drives".
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('No recent drives')).toBeNull();
-    expect(screen.queryByText('Recent Drives')).toBeNull();
+    expect(screen.queryByText('Recent drives')).toBeInTheDocument();
   });
 });
 
 // ── Populated list ──────────────────────────────────────────────────────────
 
 describe('RecentDrivesWidget populated list', () => {
+  it('keeps unmeasured distance and duration distinct from a real zero', async () => {
+    routeDrives([Object.assign(makeDrive(), { distance_m: null, duration_s: null })]);
+    renderWidget(1);
+    expect(await screen.findByText('—')).toBeInTheDocument();
+    expect(screen.getByText(/— min/)).toBeInTheDocument();
+    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
+  });
+
+  it('preserves cached rows after a failed background refresh', async () => {
+    routeDrives([makeDrive({ id: 99 })]);
+    renderWidget(1);
+    expect(await screen.findByText('5.00 km')).toBeInTheDocument();
+    mockRequest.mockRejectedValue(new Error('background outage'));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    await waitFor(() => expect(screen.getByRole('link', {
+      name: '5.00 km 30.00 min · 80.00% → 60.00% · May 1 2024-05-01T10:00:00Z',
+    })).toHaveAttribute('href', '/drives/99'));
+    await waitFor(() => expect(document.querySelector('[data-data-state="stale"]')).not.toBeNull());
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+  });
+
   it('renders the title, distance, duration/SOC line, date and link targets', async () => {
     routeDrives([
       makeDrive({
@@ -285,16 +309,17 @@ describe('RecentDrivesWidget populated list', () => {
     renderWidget(1);
 
     // Header title.
-    expect(await screen.findByText('Recent Drives')).toBeInTheDocument();
+    expect(await screen.findByText('Recent drives')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Distance: 5000 m → 5.0 km (default unit), rendered with its unit.
-    expect(screen.getByText('5.0 km')).toBeInTheDocument();
+    expect(screen.getByText('5.00 km')).toBeInTheDocument();
 
     // Duration (1800 s → 30 min) + SOC transition on one line.
-    expect(screen.getByText('30 min · 80% → 60%')).toBeInTheDocument();
+    expect(screen.getByText('30.00 min · 80.00% → 60.00% · May 1')).toBeInTheDocument();
 
     // Date cell is produced by the formatter, fed the drive's start_ts.
-    expect(screen.getByText('May 1')).toBeInTheDocument();
+    expect(screen.getByText(/May 1/)).toBeInTheDocument();
     expect(formatDateShortSpy).toHaveBeenCalledWith('2024-05-01T10:00:00Z');
 
     // "View all" affordance points at the drives index…
@@ -314,7 +339,8 @@ describe('RecentDrivesWidget populated list', () => {
     ]);
     renderWidget(1);
 
-    await screen.findByText('Recent Drives');
+    await screen.findByText('Recent drives');
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Three drive rows + the "View all" link = four links total.
     const driveLinks = screen
@@ -330,8 +356,9 @@ describe('RecentDrivesWidget populated list', () => {
     routeDrives([makeDrive({ distance_m: 1609.344 })]); // exactly 1 mile
     renderWidget(1);
 
-    expect(await screen.findByText('1.0 mi')).toBeInTheDocument();
-    expect(screen.queryByText('1.0 km')).toBeNull();
+    expect(await screen.findByText('1.00 mi')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(screen.queryByText('1.00 km')).toBeNull();
   });
 
   it('is null-safe: 0 distance / 0 duration / null SOC render placeholders, not NaN', async () => {
@@ -345,8 +372,9 @@ describe('RecentDrivesWidget populated list', () => {
     ]);
     renderWidget(1);
 
-    expect(await screen.findByText('0.0 km')).toBeInTheDocument();
-    expect(screen.getByText('0 min · ?% → ?%')).toBeInTheDocument();
+    expect(await screen.findByText('0.00 km')).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(screen.getByText('0.00 min · ?% → ?% · May 1')).toBeInTheDocument();
     expect(screen.queryByText(/NaN|undefined/)).toBeNull();
   });
 });
@@ -359,6 +387,7 @@ describe('RecentDrivesWidget refresh', () => {
     renderWidget(1);
 
     const refresh = await screen.findByRole('button', { name: /^Refresh/i });
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     const before = drivesCalls().length;
     expect(before).toBeGreaterThanOrEqual(1);
 

@@ -2,9 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { ReceiptText } from 'lucide-react';
 import { Text, Badge } from '@/components/ui';
 import { useFormatting } from '@/hooks/useFormatting';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { useBillVariance } from '@/api/hooks/useCharging';
 import { CostSection } from './CostSection';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BillVarianceCardProps {
   vehicleId?: number | null;
@@ -38,6 +39,7 @@ function verdictVariant(verdict: string): 'success' | 'warning' | 'neutral' {
  * so it reads as part of Cost Analysis, not a bolt-on.
  */
 export function BillVarianceCard({ vehicleId }: BillVarianceCardProps) {
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { data, isLoading, error, refetch } = useBillVariance(vehicleId ?? undefined);
@@ -74,15 +76,15 @@ export function BillVarianceCard({ vehicleId }: BillVarianceCardProps) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <VarianceMetric
               label={t('costAnalysis.billVariance.energyDelta', 'Energy Δ')}
-              value={`${fmtNumber(data.energy_delta_wh / 1000, 1)} kWh (${fmtPercent(data.energy_delta_pct, 1)})`}
+              value={`${fmtNumber(data.energy_delta_wh / 1000)} kWh (${fmtPercent(data.energy_delta_pct)})`}
             />
             <VarianceMetric
               label={t('costAnalysis.billVariance.costDelta', 'Cost Δ')}
-              value={`${formatCurrency(data.cost_delta)} (${fmtPercent(data.cost_delta_pct, 1)})`}
+              value={`${formatCurrency(data.cost_delta)} (${fmtPercent(data.cost_delta_pct)})`}
             />
             <VarianceMetric
               label={t('costAnalysis.billVariance.cabinetLoss', 'Cabinet loss')}
-              value={fmtPercent(data.cabinet_loss_pct, 1)}
+              value={fmtPercent(data.cabinet_loss_pct)}
             />
             <VarianceMetric
               label={t('costAnalysis.billVariance.invoiced', 'Invoiced total')}

@@ -4,19 +4,137 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"time"
 )
 
+func chargingHabitsFromSummary(summary batterySummaryStats) chargingHabits {
+	return chargingHabits{
+		FastChargeCount:       summary.fastChargeCount,
+		SlowChargeCount:       summary.slowChargeCount,
+		DeepDischargeCount:    summary.deepDischargeCount,
+		ChargeToFullCount:     summary.fullChargeCount,
+		HighSocCount:          summary.highSocCount,
+		AvgEnergyPerSessionWh: summary.avgEnergyWh,
+		TotalCount:            summary.totalCount,
+	}
+}
+
+// Recorded charging throughput estimates charge equivalents, not observed
+// discharge/recharge cycles or lifetime pack throughput.
+func chargeEquivalentCycles(energyWh, nominalCapacityWh float64, samples int) (float64, bool) {
+	if samples <= 0 || !isFinite(energyWh) || energyWh < 0 ||
+		!isFinite(nominalCapacityWh) || nominalCapacityWh <= 0 {
+		return 0, false
+	}
+	cycles := energyWh / nominalCapacityWh
+	if !isFinite(cycles) {
+		return 0, false
+	}
+	return cycles, true
+}
+
+func isFinite(value float64) bool {
+	return !math.IsNaN(value) && !math.IsInf(value, 0)
+}
+
+func numericEvidence(value float64, available bool, min, max float64) *float64 {
+	if !available || !isFinite(value) || value < min || value > max {
+		return nil
+	}
+	return &value
+}
+
+func distanceEvidence(value *float64) *float64 {
+	if value == nil || !isFinite(*value) || *value < 0 {
+		return nil
+	}
+	rounded := roundTo(*value, 1)
+	if !isFinite(rounded) {
+		rounded = *value
+	}
+	return &rounded
+}
+
+// Earliest retained evidence bounds observation, not manufacture or installation.
+func batteryObservation(now time.Time, history []batteryHealthHistoryPoint, firstCharging, firstDrive *time.Time) (*int, *time.Time, string) {
+	var first *time.Time
+	source := "unavailable"
+	consider := func(candidate time.Time, provenance string) {
+		if candidate.IsZero() || candidate.After(now) {
+			return
+		}
+		if first == nil || candidate.Before(*first) {
+			value := candidate.UTC()
+			first = &value
+			source = provenance
+		}
+	}
+	for _, point := range history {
+		if date, err := time.Parse("2006-01-02", point.Date); err == nil {
+			consider(date, "battery_health_history")
+		}
+	}
+	if firstCharging != nil {
+		consider(*firstCharging, "charging_session")
+	}
+	if firstDrive != nil {
+		consider(*firstDrive, "drive_session")
+	}
+	if first == nil {
+		return nil, nil, source
+	}
+	months := int(now.Sub(*first).Hours() / (24 * 30.44))
+	return &months, first, source
+}
+
+// The median estimates current capacity from telemetry; it does not calibrate
+// the nominal original-capacity denominator (candidate BD-C01).
+func recentCapacityEvidence(history []batteryHealthHistoryPoint, sampleCount int) (float64, bool) {
+	valid := make([]batteryHealthHistoryPoint, 0, len(history))
+	for _, point := range history {
+		if !math.IsNaN(point.CapacityWh) && !math.IsInf(point.CapacityWh, 0) && point.CapacityWh >= 0 {
+			valid = append(valid, point)
+		}
+	}
+	if len(valid) == 0 || sampleCount <= 0 {
+		return 0, false
+	}
+	start := max(0, len(valid)-sampleCount)
+	values := make([]float64, 0, len(valid)-start)
+	for _, point := range valid[start:] {
+		values = append(values, point.CapacityWh)
+	}
+	sort.Float64s(values)
+	mid := len(values) / 2
+	if len(values)%2 == 0 {
+		return values[mid-1]/2 + values[mid]/2, true
+	}
+	return values[mid], true
+}
+
 func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regressionResult {
-	res := regressionResult{}
+	return h.predictDegradationAt(snapshots, h.currentTime())
+}
+
+func (h *Handler) predictDegradationAt(snapshots []batterySnapshotData, now time.Time) regressionResult {
+	res := regressionResult{Projections: []predictiveProjection{}}
 	pred := &res.Prediction
+	pred.CrossingStatus = "insufficient_fit"
 	res.Horizon.Points = []horizonPoint{}
+	valid := make([]batterySnapshotData, 0, len(snapshots))
+	for _, s := range snapshots {
+		if !s.CreatedAt.IsZero() && !math.IsNaN(s.HealthScore) && !math.IsInf(s.HealthScore, 0) &&
+			s.HealthScore >= 0 && s.HealthScore <= 100 {
+			valid = append(valid, s)
+		}
+	}
+	sort.Slice(valid, func(i, j int) bool { return valid[i].CreatedAt.Before(valid[j].CreatedAt) })
+	snapshots = valid
 
 	if len(snapshots) < 3 {
 		res.Projections = []predictiveProjection{}
 		return res
 	}
-
-	pred.HasEnoughData = true
 
 	firstTime := snapshots[0].CreatedAt
 	n := float64(len(snapshots))
@@ -42,9 +160,14 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 
 	slope := (sumXY - n*xBar*yBar) / ssx
 	intercept := yBar - slope*xBar
+	if math.IsNaN(slope) || math.IsInf(slope, 0) || math.IsNaN(intercept) || math.IsInf(intercept, 0) {
+		return res
+	}
 
-	pred.SlopePerYear = math.Round(slope*100) / 100
-	res.RatePerMonth = math.Abs(slope) / 12
+	pred.HasEnoughData = true
+	pred.FitValid = true
+	pred.SlopePerYear = slope
+	res.RatePerMonth = -slope / 12
 
 	var sse float64
 	for _, s := range snapshots {
@@ -57,23 +180,34 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 		se = math.Sqrt(sse / (n - 2))
 	}
 
+	// Fixed normal-like multipliers, not Student-t quantiles or calibrated 95% coverage.
 	tValue := 2.0
 	if n > 30 {
 		tValue = 1.96
 	}
+	pred.Interval = &predictionInterval{
+		Method:            "approximate_ols_future_observation",
+		SampleCount:       len(snapshots),
+		ResidualDF:        len(snapshots) - 2,
+		Multiplier:        tValue,
+		EmpiricalCoverage: "unmeasured",
+	}
 
-	if slope < 0 {
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	currentYears := now.Sub(firstTime).Hours() / (24 * 365.25)
+	pred.CrossingStatus = "no_future_crossing"
+	if intercept+slope*currentYears <= 80 {
+		pred.CrossingStatus = "below_threshold"
+	} else if slope < 0 {
 		yearsTo80 := (80 - intercept) / slope
-		currentYears := h.currentTime().Sub(firstTime).Hours() / (24 * 365.25)
 		remainingYears := yearsTo80 - currentYears
-		if remainingYears > 0 {
-			pred.YearsTo80Pct = math.Round(remainingYears*10) / 10
-			predictedTime := h.currentTime().AddDate(0, int(remainingYears*12), 0)
+		if remainingYears > 0 && !math.IsInf(remainingYears, 0) && !math.IsNaN(remainingYears) {
+			pred.CrossingStatus = "future_crossing"
+			pred.YearsTo80Pct = remainingYears
+			predictedTime := monthStart.AddDate(0, int(remainingYears*12), 0)
 			pred.PredictedDate = predictedTime.Format("2006-01")
 		}
 	}
-
-	currentYears := h.currentTime().Sub(firstTime).Hours() / (24 * 365.25)
 
 	type projPoint struct {
 		Month  string  `json:"month"`
@@ -91,7 +225,7 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 		if health > 100 {
 			health = 100
 		}
-		month := h.currentTime().AddDate(0, i, 0).Format("2006-01")
+		month := monthStart.AddDate(0, i, 0).Format("2006-01")
 
 		oldProjections = append(oldProjections, projPoint{
 			Month:  month,
@@ -157,7 +291,7 @@ func horizonPoints(currentYears, xBar, intercept, slope, se, ssx, n, tValue floa
 }
 
 // computeRiskFactors scores 5 battery risk categories (0-100, higher = more risk).
-func computeRiskFactors(fastChargePct, highSocPct, avgCellTemp, cyclesPerMonth, deepDischargePct float64) []riskFactor {
+func computeRiskFactors(fastChargePct, highSocPct float64, avgCellTemp *float64, cyclesPerMonth, deepDischargePct float64, tempSamples int) []riskFactor {
 	factors := make([]riskFactor, 0, 5)
 
 	fastScore := int(math.Min(100, fastChargePct*1.4))
@@ -176,23 +310,19 @@ func computeRiskFactors(fastChargePct, highSocPct, avgCellTemp, cyclesPerMonth, 
 		Detail: fmt.Sprintf("%.0f%% of sessions charge above 90%%", highSocPct),
 	})
 
-	tempScore := 10
-	switch {
-	case avgCellTemp > 45:
-		tempScore = 90
-	case avgCellTemp > 40:
-		tempScore = 70
-	case avgCellTemp > 35:
-		tempScore = 50
-	case avgCellTemp > 30:
-		tempScore = 25
+	tempScore, _ := temperatureExposure(avgCellTemp, tempSamples)
+	tempAvailable := tempScore != nil
+	thermal := riskFactor{
+		Name:      "temperature_exposure",
+		Available: &tempAvailable,
+		Label:     "Unknown",
 	}
-	factors = append(factors, riskFactor{
-		Name:   "temperature_exposure",
-		Score:  tempScore,
-		Label:  riskLabel(tempScore),
-		Detail: fmt.Sprintf("Average cell temperature: %.1f°C", avgCellTemp),
-	})
+	if tempAvailable {
+		thermal.Score = *tempScore
+		thermal.Label = riskLabel(*tempScore)
+		thermal.Detail = fmt.Sprintf("Average cell temperature: %.1f°C", *avgCellTemp)
+	}
+	factors = append(factors, thermal)
 
 	// Baseline is roughly 25 cycles/month.
 	cycleScore := 15
@@ -235,28 +365,102 @@ func riskLabel(score int) string {
 	}
 }
 
+// Keep risk shells while explicitly distinguishing absent evidence from low risk.
+func healthRiskEvidence(factors []riskFactor, available ...bool) []riskFactor {
+	for i := range factors {
+		valid := i < len(available) && available[i]
+		factors[i].Available = &valid
+		if !valid {
+			factors[i].Score = 0
+			factors[i].Label = "Unknown"
+			factors[i].Detail = ""
+			factors[i].DetailCode = ""
+			factors[i].Operands = nil
+		}
+		switch factors[i].Label {
+		case "Low":
+			factors[i].LabelCode = "low"
+		case "Moderate":
+			factors[i].LabelCode = "moderate"
+		case "Elevated":
+			factors[i].LabelCode = "elevated"
+		case "High":
+			factors[i].LabelCode = "high"
+		default:
+			factors[i].LabelCode = "unknown"
+		}
+	}
+	return factors
+}
+
+func healthRiskMessages(factors []riskFactor, fastPct, highSocPct float64, tempC *float64, cyclesPerMonth, deepPct float64) []riskFactor {
+	typical, highThreshold, deepThreshold := 25.0, 90.0, 10.0
+	for i := range factors {
+		f := &factors[i]
+		if f.Available == nil || !*f.Available {
+			continue
+		}
+		f.DetailCode = f.Name
+		switch f.Name {
+		case "fast_charge_ratio":
+			f.Operands = &healthMessageOperands{Percent: &fastPct}
+		case "high_soc_charging":
+			f.Operands = &healthMessageOperands{Percent: &highSocPct, ThresholdSocPct: &highThreshold}
+		case "temperature_exposure":
+			f.Operands = &healthMessageOperands{AvgCellTempC: tempC}
+		case "cycle_count_rate":
+			f.Operands = &healthMessageOperands{CyclesPerMonth: &cyclesPerMonth, TypicalCyclesPerMonth: &typical}
+		case "deep_discharge_frequency":
+			f.Operands = &healthMessageOperands{Percent: &deepPct, ThresholdSocPct: &deepThreshold}
+		}
+	}
+	return factors
+}
+
 // generateRecommendations produces actionable tips based on elevated risk factors.
 func generateRecommendations(factors []riskFactor) []string {
-	recs := make([]string, 0)
+	messages := generateRecommendationMessages(factors)
+	recs := make([]string, 0, len(messages))
+	for _, message := range messages {
+		recs = append(recs, message.Fallback)
+	}
+	return recs
+}
+
+func generateRecommendationMessages(factors []riskFactor) []healthMessage {
+	recs := make([]healthMessage, 0)
 	for _, f := range factors {
+		if f.Available != nil && !*f.Available {
+			continue
+		}
 		if f.Score <= 40 {
 			continue
 		}
 		switch f.Name {
 		case "fast_charge_ratio":
-			recs = append(recs, "Reduce Supercharging frequency — prefer Level 2 home or destination charging")
+			recs = append(recs, healthMessage{Code: f.Name, Fallback: "Reduce Supercharging frequency — prefer Level 2 home or destination charging"})
 		case "high_soc_charging":
-			recs = append(recs, "Reduce daily charge limit to 80% for everyday driving")
+			threshold := 80.0
+			recs = append(recs, healthMessage{Code: f.Name, Fallback: "Reduce daily charge limit to 80% for everyday driving", Operands: &healthMessageOperands{ThresholdSocPct: &threshold}})
 		case "temperature_exposure":
-			recs = append(recs, "Park in shade or climate-controlled garage to reduce heat exposure")
+			recs = append(recs, healthMessage{Code: f.Name, Fallback: "Park in shade or climate-controlled garage to reduce heat exposure"})
 		case "cycle_count_rate":
-			recs = append(recs, "Combine short trips when possible to reduce charge cycle frequency")
+			recs = append(recs, healthMessage{Code: f.Name, Fallback: "Combine short trips when possible to reduce charge cycle frequency"})
 		case "deep_discharge_frequency":
-			recs = append(recs, "Avoid letting battery drop below 20% regularly — plug in nightly")
+			threshold := 20.0
+			recs = append(recs, healthMessage{Code: f.Name, Fallback: "Avoid letting battery drop below 20% regularly — plug in nightly", Operands: &healthMessageOperands{ThresholdSocPct: &threshold}})
 		}
 	}
 	if len(recs) == 0 {
-		recs = append(recs, "Your battery habits are excellent — keep it up!")
+		complete := len(factors) > 0
+		for _, f := range factors {
+			if f.Available != nil && !*f.Available {
+				complete = false
+			}
+		}
+		if complete {
+			recs = append(recs, healthMessage{Code: "excellent_habits", Fallback: "Your battery habits are excellent — keep it up!"})
+		}
 	}
 	return recs
 }

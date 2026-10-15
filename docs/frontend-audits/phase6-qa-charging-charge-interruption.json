@@ -1,0 +1,558 @@
+{
+  "item": "phase6-qa-charging-charge-interruption",
+  "status": "DONE",
+  "acceptance": "Read-only source QA completed WITH FINDINGS; runtime/tests/native/TypeScript NOTRUN",
+  "startedUtc": "2026-10-13T22:27:27.1484967Z",
+  "page": "web/src/features/charging/pages/ChargeInterruptionPage.tsx",
+  "routes": [
+    "/charge-interruption"
+  ],
+  "authority": {
+    "playbook": "docs/orchestrator-loop.md (entire sole playbook read)",
+    "inventory": "docs/frontend-inventory.md:133 existing route section",
+    "queue": "migration-queue.md:334 registered phase6 item; :1761 phase5 [x] accepted commit 0e67e7f9750285c6c295e653f02a6ad24aedbcb3 (receipt only, no Git)",
+    "baseline": "272 versus 257 lines, 3 sections, semantic facts/chart helpers; accepted original tests/adjacent fixture retained",
+    "historicalGuard": "Vitest exit 1, zero discovery/execution in accepted receipt = NOTPASS; not rerun"
+  },
+  "writeScope": {
+    "exclusiveFiles": [
+      "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-charging-charge-interruption.json",
+      "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charge-interruption.log"
+    ],
+    "otherWrites": false,
+    "logIgnore": "User-designated ignored log; Git ignore checks prohibited/NOTRUN",
+    "parentOwnsQueueAndGit": true,
+    "remigration": false
+  },
+  "summary": {
+    "findings": 4,
+    "candidates": 5,
+    "byRule": {
+      "unknown-energy-is-zero": 1,
+      "baseline-contract-mismatch": 1,
+      "inferred-provenance-mislabeled": 1,
+      "load-announcement-input-missing": 1
+    },
+    "mostIssues": {
+      "file": "web/src/features/charging/lib/chargeInterruption.ts",
+      "count": 2
+    },
+    "priorities": "P1 F1/F2 model semantics; P2 F3/F4 provenance/announcement integration. Parent triage; no invented fix tasks."
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "priority": "P1",
+      "rule": "unknown-energy-is-zero",
+      "file": "web/src/features/charging/lib/chargeInterruption.ts",
+      "line": 289,
+      "citations": [
+        "same file:342-349",
+        "internal/models/charging/charging.go:23",
+        "web/src/types/charging.ts:22"
+      ],
+      "mechanism": "num(missing/nonfinite) returns null, then ??0 fabricates energy zero; early-abort predicate treats unknown exactly like measured zero. Backend energy is pointer/omitempty while frontend declares required number.",
+      "sourceRepro": "Locatable session, known SoC 30/31, known start/end 120 seconds apart, avg/peak 2000 W, omitted total_energy_added_wh: energy becomes 0; 120<180, 0<300 and 2000>1000 add aborted_early. Known zero is evidence; missing energy is not. Source trace only, not execution.",
+      "fix": "Existing model/integration owner should preserve unknown energy, require known energy for energy-based scoring, and reconcile optional typing. No guessed unit conversion or page re-migration.",
+      "confidence": "confirmed source mechanism",
+      "dedup": "Already in audit-page-078 architectureIssues; no exact active model repair scope in bounded queue scan. Existing unresolved need, no new task."
+    },
+    {
+      "id": "F2",
+      "priority": "P1",
+      "rule": "baseline-contract-mismatch",
+      "file": "web/src/features/charging/lib/chargeInterruption.ts",
+      "line": 457,
+      "citations": [
+        "same file:96-97,118,277-280,370-387,459-461"
+      ],
+      "mechanism": "minBaselineSessions defaults to four but is not consulted; group.raw baseline includes the scored session and all rate-eligible rows, contradicting OTHER clean sessions/no self-scoring documentation.",
+      "sourceRepro": "A single 30-to-50% session over 600 seconds gives its own 2 pct/min baseline despite minBaselineSessions=4 or 999. Rows with other suspect causes are not excluded if rate fields qualify. Proven contract mismatch, not proof of the correct statistical policy.",
+      "fix": "Existing model owner must choose documentation/options alignment or approved independent minimum-clean-history scoring with regressions. Preserve accepted calculations until authorized.",
+      "confidence": "confirmed source contract mismatch",
+      "dedup": "Same baseline issue already in audit-page-078; no exact active chargeInterruption.ts repair scope found. No new task."
+    },
+    {
+      "id": "F3",
+      "priority": "P2",
+      "rule": "inferred-provenance-mislabeled",
+      "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "line": 45,
+      "citations": [
+        "same file:21-29,45-46",
+        "web/src/features/charging/components/charge-interruption-modernization/ChargeInterruptionStats.tsx:130-161"
+      ],
+      "mechanism": "Interruption adapter supplies neither description nor sourceStatus; default primary copy says Recorded measurements and generic status says source measurements, though risk/ranking are modeled inference. Accurate secondary caveats do not remove misleading primary description.",
+      "sourceRepro": "Successful locatable history computes posterior estimates; ChargingSummaryBrief receives no override and selects its Recorded measurements default. Six available values choose Source measurements available. Runtime catalog lookup NOTRUN.",
+      "fix": "Use existing description/sourceStatus props with localized model-specific copy at the interruption adapter. Parent owns canonical catalog integration; shared API already exists.",
+      "confidence": "confirmed source-rendered fallback selection",
+      "dedup": "Description already in audit-page-078 states; phase5-current-source-catalog-closure is [x], not permission to redispatch it."
+    },
+    {
+      "id": "F4",
+      "priority": "P2",
+      "rule": "load-announcement-input-missing",
+      "file": "web/src/features/charging/pages/ChargeInterruptionPage.tsx",
+      "line": 94,
+      "citations": [
+        "same file:94-103",
+        "web/src/components/layout/PageContainer.tsx:136-142,245-260",
+        "web/src/hooks/useStatusAnnouncer.ts:290-307"
+      ],
+      "mechanism": "Page passes query/busy but no loading/error to PageLayout. Shared announcer reads Boolean(loading)/Boolean(error), not query/busy, so its initial loading-to-settled edge never occurs through this path.",
+      "sourceRepro": "Change source from isLoading=true/no retained data to success: section loading changes, but PageContainer announcer isLoading is false on both renders; wasLoading && !isLoading never fires. Does not claim all other announcements are silent.",
+      "fix": "Integrate nonblocking source announcements or separate announcer inputs from page replacement props. Blindly passing PageLayout.loading would replace all children and violate independent section states.",
+      "confidence": "confirmed wiring omission; audible behavior NOTRUN",
+      "dedup": "Already in audit-page-078 accessibility. Shared phase3-page-container [x] is owner history, not a new fix assignment."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C1",
+      "file": "web/src/features/charging/pages/ChargeInterruptionPage.tsx",
+      "line": 158,
+      "kind": "responsive/native",
+      "mechanism": "All sites in 340-high dual-axis chart; labels truncate after 20 chars and rotate -30deg. Dense/long-label 320px readability at risk; full rows/names retained in data/table/CSV/cards.",
+      "unpromoted": "No rendered layout/overflow measurement. Existing prior-audit candidate, not confirmed viewport defect."
+    },
+    {
+      "id": "C2",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "line": 168,
+      "kind": "allocated-width/native",
+      "mechanism": "Compact KPIs use viewport sm/md/3xl 2/3/6 columns, not allocated container width.",
+      "unpromoted": "Narrow shell, long labels and 200% text unrendered. Already a shared prior-audit candidate."
+    },
+    {
+      "id": "C3",
+      "file": "web/src/features/charging/components/charge-interruption-modernization/ChargeInterruptionStats.tsx",
+      "line": 47,
+      "kind": "zero-evidence/runtime",
+      "mechanism": "Successful [] shows zero counts and Jeffreys prior 50% with explicit no-evaluable/prior-only caveat. Missing history supplies undefined inputs/reason.",
+      "unpromoted": "Disclosed intentional prior is not measured zero or automatically a bug; comprehension/details runtime NOTRUN."
+    },
+    {
+      "id": "C4",
+      "file": "web/src/features/charging/lib/chargeInterruption.ts",
+      "line": 463,
+      "kind": "model-policy",
+      "mechanism": "Every locatable row counts as a trial. Latest missing end fields suppressed at 301-303 still contribute evidence and might be in progress; locationless rows count loaded but not evaluable.",
+      "unpromoted": "Existing admission policy; missing end fields do not prove live/incomplete status. Model decision needed, no guessed bug/task."
+    },
+    {
+      "id": "C5",
+      "file": "web/src/features/charging/pages/ChargeInterruptionPage.tsx",
+      "line": 127,
+      "kind": "runtime/native",
+      "mechanism": "Chart/actions/help/details, recovery, contrast/forced colors/RTL, settings and reduced motion have source contracts only.",
+      "unpromoted": "Browser/native/keyboard/SR/export execution NOTRUN. Existing QA matrix 320/375/390/430/768/1024/1280/1440/1920/2560, narrow containers, long labels, 200% text/saved themes/retained and paused states require separately authorized QA; no new helper/task."
+    }
+  ],
+  "sourceReview": {
+    "vehicle": "Page:58 consumes useSelectedVehicle; :62 passes effective string ID. Hook:62-74 resolves URL > valid persisted > fleet first vehicle. Header VehiclePicker remains enabled for route.",
+    "bothDateBounds": "Neither startInstant nor endInstantExclusive is consumed/sent. Actual route scope range=false, vehicle=true (workspaceScope.ts:23-168): /charge-interruption absent from RANGE_ENABLED_PATHS and vehicle-disabled sets. Layout.tsx:833,1311 provides scope; WorkspaceHeader.tsx:34-35,59-65 hides range/shows vehicle; mobile range control gated Layout.tsx:1416-1423. Therefore no active header date window silently ignored and no guessed date/route defect. Stats:143 explicitly discloses no coverage/time bounds and no workspace range.",
+    "endpoint": "useCharging.ts:71-84 GET /charging?vehicle_id=<encoded>&limit=1000, signal forwarded, enabled ID, MODERATE stale, vehicle/limit history key, clamped 1..1000. client.ts:93 prefixes /api/v1. Current router.go:3545-3546 mounts /charging GET / => ListByVehicle. handler.go:123-159 reads vehicle_id/pagination/date range, forwards context and returns [] rather than nil. No real response, ordering, pagination or unit/boundary inference.",
+    "independentSources": "ONE history query backs all 3 sections, not fabricated independent APIs. Vehicle query is existing prerequisite. Fatal without retained data affects section content; retained refresh error/paused keeps payload and warning/retry. No all-page history truthiness gate.",
+    "states": "No vehicle => existing NoVehicleSelected PageContainer/onboarding CTA. Initial load => all 3 section shells/skeletons. Fatal => missing KPI inputs+retry footer/chart error/Sites QueryError. Retained fail/paused => data retained, warning and same-source retry. Initial paused => explicit paused notice/manual retry/missing reason, not successful empty. Success [] or no locatable rows => empty chart/sites, zero counts/prior caveat/highest-risk missing.",
+    "accounting": "Loaded all returned rows; evaluable locatable rows admitted by model; suspected any circumstantial cause; sites groups. No-location loaded>0/evidence=0 possible. Not a lifetime total. Highest-risk conservative lower bound; trend chronological halves; latest missing fields suppressed.",
+    "SI_sign_preferences": "Model uses Wh/W, seconds from positive timestamp difference, existing duration_min fallback*60; no hook/cache conversion or mutation. No km/mile/currency display needed. F1 covers null/invalid energy and existing clamp; validity of negative energy not guessed. Percent/count display uses reactive locale/precision, count precision0. TimeStamp delegates date/time/timezone preferences, invalid/missing dash. Hidden-series chartKey/risk/evidence stable. Axes/table/native formatting acceptance unverified.",
+    "actions": "All retry affordances refetch same GET source; no mutation/fake completion. Stale retry disabled during refresh. Chart retains risk bars/evidence line, separate axes, persistent toggles, complete 5-column data+exportData. Shared exports hidden loading/error/empty. Fullscreen/annotations not enabled. Shared Review details/help, all site facts/causes retained.",
+    "localization": "Labels/help/errors/actions and dynamic trend/cause defaults pass t/HelpTooltip. Site names/coords are data, dash/percent symbols/IDs not English copy violations. No catalog guard/extract/lookup executed; fallback presence not canonical translation acceptance.",
+    "responsive_a11y": "PageLayout @container/min-w-0; Card/KVList semantic responsive facts, Sites 1/@3xl2/@6xl3 and wrapping. Chart aria description and 5-column fallback source. Current ChartLegend:120 declares min-h-11/min-w-11 mobile, md9 and aria-pressed; historical tiny-target issue NOT repeated. Shared route focus/busy present. FadeIn:24-36 reduced-motion/invalid-delay clamp; shared direct framer-motion expected. Actual viewport/focus/SR/contrast/forced-color/RTL/native NOTRUN."
+  },
+  "preservation": {
+    "pageLines": 272,
+    "acceptedOriginalLines": 257,
+    "ratio": 1.0583657587548638,
+    "minimum70Percent": "Page alone exceeds accepted original70%; receipt comparison, not regenerated baseline or behavioral proof",
+    "sections": [
+      {
+        "name": "KPI band",
+        "line": 113,
+        "metrics": 6
+      },
+      {
+        "name": "Risk by site/evidence",
+        "line": 125,
+        "series": 2,
+        "columns": 5
+      },
+      {
+        "name": "Per-site detail",
+        "line": 188,
+        "facts": "label/trend/risk/bounds/suspect-evidence/timestamp/all causes"
+      }
+    ],
+    "tests": "Original tests/adjacent fixture read-only and current hashes pinned. No historical Git comparison/new tests/execution."
+  },
+  "dedup": "F1-F4 reconfirm existing audit-page-078 needs. Bounded queue exact scopes found no active model repair; shared phase3-chart-legend/page-container and phase5 page/catalog closure stay [x]. No queue edits, no invented tasks.",
+  "limitations": {
+    "tests": "NOTRUN; discovered/executed/passed/failed=null, never 0 as pass",
+    "TypeScript": "npx tsc --noEmit NOTRUN expressly prohibited",
+    "runtime_native_browser_Playwright_lint_build_realAPI_vehicle_Git_servers_dependencies_helpers_extensions_health_dispatch_catalog_Discord_heartbeat": "NOTRUN",
+    "readFailures": "useWorkspaceScope.ts missing -> actual .tsx read; useLoadAnnouncement.ts missing -> actual useStatusAnnouncer.ts snippet read. Tool-truncated exploratory outputs subsequently narrowed; no whole-repository source searches.",
+    "failedCommand": "shell6140 exit1 OS206 filename/extension too long while launching oversized artifact command; no write accepted. Retried with bounded shorter built-in commands, no helper file.",
+    "release": "Finalized in subsequent bounded log/validation command"
+  },
+  "instructionReads": [
+    "docs/frontend-mission.md relevant principles/responsive/states/charts/a11y",
+    "docs/frontend-design-contract.md relevant architecture/trust/SI/localization/a11y/evidence",
+    "docs/frontend-worker-conventions.md",
+    ".github/copilot-instructions.md frontend sections",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md (stale examples do not override SI contract)",
+    "docs/I18N_GUIDELINES.md"
+  ],
+  "scanResults": [
+    {
+      "scope": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+      ],
+      "caseSensitive": true,
+      "exitCode": 0,
+      "rule": "static-inline-style",
+      "matchedLines": 0,
+      "regex": "style\\s*=\\s*\\{\\{"
+    },
+    {
+      "scope": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+      ],
+      "caseSensitive": true,
+      "exitCode": 0,
+      "rule": "raw-html",
+      "matchedLines": 0,
+      "regex": "<(button|input|textarea|select|table)\\b"
+    },
+    {
+      "scope": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+      ],
+      "caseSensitive": true,
+      "exitCode": 0,
+      "rule": "direct-library-import",
+      "matchedLines": 0,
+      "regex": "from\\s+['\\\"](recharts|react-leaflet|framer-motion)['\\\"]"
+    },
+    {
+      "scope": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+      ],
+      "caseSensitive": true,
+      "exitCode": 0,
+      "rule": "old-api-import",
+      "matchedLines": 0,
+      "regex": "from\\s+['\\\"](\\.\\./api|\\.\\./\\.\\./api)['\\\"]"
+    },
+    {
+      "scope": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+      ],
+      "caseSensitive": true,
+      "exitCode": 0,
+      "rule": "double-prefix",
+      "matchedLines": 0,
+      "regex": "/api/v1/"
+    },
+    {
+      "scope": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+      ],
+      "caseSensitive": true,
+      "exitCode": 0,
+      "rule": "camelcase-param",
+      "matchedLines": 0,
+      "regex": "[?&][a-z_]*[A-Z][A-Za-z_]*="
+    },
+    {
+      "scope": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+      ],
+      "caseSensitive": true,
+      "exitCode": 0,
+      "rule": "hidden-section-candidates",
+      "matchedLines": 6,
+      "regex": "&&\\s*[(<]"
+    },
+    {
+      "scope": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+      ],
+      "caseSensitive": true,
+      "exitCode": 0,
+      "rule": "hardcoded-string-candidates",
+      "matchedLines": 0,
+      "regex": ">\\s*[A-Za-z][^<{]*<"
+    },
+    {
+      "scope": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+      ],
+      "caseSensitive": true,
+      "exitCode": 0,
+      "rule": "page-wrapper-evidence",
+      "matchedLines": 4,
+      "regex": "PageLayout|PageContainer|return <NoVehicleSelected"
+    },
+    {
+      "scope": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+        "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+      ],
+      "caseSensitive": true,
+      "exitCode": 0,
+      "rule": "fetch-useeffect",
+      "matchedLines": 0,
+      "regex": "\\bfetch\\s*\\(|\\buseEffect\\s*\\("
+    }
+  ],
+  "engineeringAdjudication": "No static style, lowercase raw controls/tables, direct vendor imports, old API imports, prefix/camelcase URL candidates, raw JSX English or fetch/useEffect matches in this bounded feature scope. Optional cause/paused notice/metadata composition and prerequisite are not hidden sections. PageLayout delegates PageContainer. Earlier broad var-class and case-insensitive Button matches corrected. Shared dynamic styles/vendor building blocks/Recharts API props acceptable. Scans are candidate checks, not complete parser/global acceptance. Backend broad rules NOTRUN.",
+  "pins": [
+    {
+      "lines": 272,
+      "sha256": "f62e54fa791336e0462513b39892199f7dd24a65afa8f8e9960211d07ca4c178",
+      "inspectedPinStable": true,
+      "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx"
+    },
+    {
+      "lines": 170,
+      "sha256": "42cd6e4ed7f34f4c872c0af6a3da4701aafc7c4f0422484e6256f22acb149f8d",
+      "inspectedPinStable": true,
+      "file": "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx"
+    },
+    {
+      "lines": 73,
+      "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+      "inspectedPinStable": true,
+      "file": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx"
+    },
+    {
+      "lines": 509,
+      "sha256": "b621a3c86b52891f2210214451f77ddd78adc025a3f8512f0a6e5af73c9ded7f",
+      "inspectedPinStable": true,
+      "file": "web\\src\\features\\charging\\lib\\chargeInterruption.ts"
+    },
+    {
+      "lines": 351,
+      "sha256": "0f8db5c8094278f08233f7f9e73a3dd7b5d043cdaac084c0f1d6d0e02e6ad9a1",
+      "inspectedPinStable": true,
+      "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.test.tsx"
+    },
+    {
+      "lines": 299,
+      "sha256": "84f6cc402427586426382ac5c520a408f41f5ea667ecc00b99f503181bc24a1d",
+      "inspectedPinStable": true,
+      "file": "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionPage.runtime.test.tsx"
+    }
+  ],
+  "existingQueueScopes": [
+    {
+      "status": "[~]",
+      "item": "phase6-qa-charging-charge-interruption",
+      "scope": "docs\\frontend-audits\\phase6-qa-charging-charge-interruption.json"
+    },
+    {
+      "status": "[x]",
+      "item": "phase5-current-source-catalog-closure",
+      "scope": "web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-action-center.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\locale-analytics.json; web\\src\\i18n\\en\\locale-automations.json; web\\src\\i18n\\en\\locale-battery.json; web\\src\\i18n\\en\\locale-benchmarks.json; web\\src\\i18n\\en\\locale-charging.json; web\\src\\i18n\\en\\locale-dashboard.json; web\\src\\i18n\\en\\locale-dashcam.json; web\\src\\i18n\\en\\locale-detail-achievements.json; web\\src\\i18n\\en\\locale-detail-activity.json; web\\src\\i18n\\en\\locale-detail-addressInput.json; web\\src\\i18n\\en\\locale-detail-alerts.json; web\\src\\i18n\\en\\locale-detail-annotation.json; web\\src\\i18n\\en\\locale-detail-anomalies.json; web\\src\\i18n\\en\\locale-detail-apiLogs.json; web\\src\\i18n\\en\\locale-detail-app.json; web\\src\\i18n\\en\\locale-detail-arrivalReliability.json; web\\src\\i18n\\en\\locale-detail-battery.json; web\\src\\i18n\\en\\locale-detail-browserNotifications.json; web\\src\\i18n\\en\\locale-detail-bulk.json; web\\src\\i18n\\en\\locale-detail-calculationDetails.json; web\\src\\i18n\\en\\locale-detail-carbon.json; web\\src\\i18n\\en\\locale-detail-chart.json; web\\src\\i18n\\en\\locale-detail-chatbot.json; web\\src\\i18n\\en\\locale-detail-coldStart.json; web\\src\\i18n\\en\\locale-detail-combobox.json; web\\src\\i18n\\en\\locale-detail-commands.json; web\\src\\i18n\\en\\locale-detail-consent.json; web\\src\\i18n\\en\\locale-detail-dashboard.json; web\\src\\i18n\\en\\locale-detail-dataState.json; web\\src\\i18n\\en\\locale-detail-date.json; web\\src\\i18n\\en\\locale-detail-dayLog.json; web\\src\\i18n\\en\\locale-detail-delta.json; web\\src\\i18n\\en\\locale-detail-departure.json; web\\src\\i18n\\en\\locale-detail-departureForecast.json; web\\src\\i18n\\en\\locale-detail-destinationTransitions.json; web\\src\\i18n\\en\\locale-detail-developerReference.json; web\\src\\i18n\\en\\locale-detail-diagnostic.json; web\\src\\i18n\\en\\locale-detail-digitalTwin.json; web\\src\\i18n\\en\\locale-detail-draft.json; web\\src\\i18n\\en\\locale-detail-driveCompare.json; web\\src\\i18n\\en\\locale-detail-driveDetail.json; web\\src\\i18n\\en\\locale-detail-driveDna.json; web\\src\\i18n\\en\\locale-detail-drives.json; web\\src\\i18n\\en\\locale-detail-driveScore.json; web\\src\\i18n\\en\\locale-detail-drivetrain.json; web\\src\\i18n\\en\\locale-detail-driving.json; web\\src\\i18n\\en\\locale-detail-drivingSecondary.json; web\\src\\i18n\\en\\locale-detail-dynamics.json; web\\src\\i18n\\en\\locale-detail-editConflict.json; web\\src\\i18n\\en\\locale-detail-efficiency.json; web\\src\\i18n\\en\\locale-detail-effTarget.json; web\\src\\i18n\\en\\locale-detail-emptyState.json; web\\src\\i18n\\en\\locale-detail-energyAnatomy.json; web\\src\\i18n\\en\\locale-detail-entityContext.json; web\\src\\i18n\\en\\locale-detail-error.json; web\\src\\i18n\\en\\locale-detail-explorer.json; web\\src\\i18n\\en\\locale-detail-export.json; web\\src\\i18n\\en\\locale-detail-exports.json; web\\src\\i18n\\en\\locale-detail-feedback.json; web\\src\\i18n\\en\\locale-detail-feedbackTriage.json; web\\src\\i18n\\en\\locale-detail-filters.json; web\\src\\i18n\\en\\locale-detail-forms.json; web\\src\\i18n\\en\\locale-detail-freshness.json; web\\src\\i18n\\en\\locale-detail-fsd.json; web\\src\\i18n\\en\\locale-detail-fsm.json; web\\src\\i18n\\en\\locale-detail-glossary.json; web\\src\\i18n\\en\\locale-detail-guard.json; web\\src\\i18n\\en\\locale-detail-helix.json; web\\src\\i18n\\en\\locale-detail-help.json; web\\src\\i18n\\en\\locale-detail-impersonation.json; web\\src\\i18n\\en\\locale-detail-journeyFragmentation.json; web\\src\\i18n\\en\\locale-detail-kiosk.json; web\\src\\i18n\\en\\locale-detail-landscape.json; web\\src\\i18n\\en\\locale-detail-live.json; web\\src\\i18n\\en\\locale-detail-liveLogs.json; web\\src\\i18n\\en\\locale-detail-logbook.json; web\\src\\i18n\\en\\locale-detail-maps.json; web\\src\\i18n\\en\\locale-detail-mqttSseInspector.json; web\\src\\i18n\\en\\locale-detail-notifications.json; web\\src\\i18n\\en\\locale-detail-onboarding.json; web\\src\\i18n\\en\\locale-detail-operationalMode.json; web\\src\\i18n\\en\\locale-detail-operations.json; web\\src\\i18n\\en\\locale-detail-originConcentration.json; web\\src\\i18n\\en\\locale-detail-pagination.json; web\\src\\i18n\\en\\locale-detail-paint.json; web\\src\\i18n\\en\\locale-detail-palette.json; web\\src\\i18n\\en\\locale-detail-polling.json; web\\src\\i18n\\en\\locale-detail-presentation.json; web\\src\\i18n\\en\\locale-detail-problemReport.json; web\\src\\i18n\\en\\locale-detail-productPreferences.json; web\\src\\i18n\\en\\locale-detail-pwa.json; web\\src\\i18n\\en\\locale-detail-rangeBuffer.json; web\\src\\i18n\\en\\locale-detail-rbac.json; web\\src\\i18n\\en\\locale-detail-recentPages.json; web\\src\\i18n\\en\\locale-detail-regen.json; web\\src\\i18n\\en\\locale-detail-replay.json; web\\src\\i18n\\en\\locale-detail-requiresAuth.json; web\\src\\i18n\\en\\locale-detail-rhythm.json; web\\src\\i18n\\en\\locale-detail-routeEfficiency.json; web\\src\\i18n\\en\\locale-detail-savedViews.json; web\\src\\i18n\\en\\locale-detail-search.json; web\\src\\i18n\\en\\locale-detail-seasonalEfficiency.json; web\\src\\i18n\\en\\locale-detail-segments.json; web\\src\\i18n\\en\\locale-detail-serviceMode.json; web\\src\\i18n\\en\\locale-detail-session.json; web\\src\\i18n\\en\\locale-detail-settings.json; web\\src\\i18n\\en\\locale-detail-shortcuts.json; web\\src\\i18n\\en\\locale-detail-signalConfig.json; web\\src\\i18n\\en\\locale-detail-signalQuery.json; web\\src\\i18n\\en\\locale-detail-sourceLayer.json; web\\src\\i18n\\en\\locale-detail-speedProfile.json; web\\src\\i18n\\en\\locale-detail-speedSweetSpot.json; web\\src\\i18n\\en\\locale-detail-stateMachineDebugger.json; web\\src\\i18n\\en\\locale-detail-statusBar.json; web\\src\\i18n\\en\\locale-detail-sudo.json; web\\src\\i18n\\en\\locale-detail-sweetSpot.json; web\\src\\i18n\\en\\locale-detail-systemStatus.json; web\\src\\i18n\\en\\locale-detail-table.json; web\\src\\i18n\\en\\locale-detail-tagInput.json; web\\src\\i18n\\en\\locale-detail-tesla.json; web\\src\\i18n\\en\\locale-detail-teslaOnly.json; web\\src\\i18n\\en\\locale-detail-theme.json; web\\src\\i18n\\en\\locale-detail-timeline.json; web\\src\\i18n\\en\\locale-detail-timeMachine.json; web\\src\\i18n\\en\\locale-detail-toast.json; web\\src\\i18n\\en\\locale-detail-tour.json; web\\src\\i18n\\en\\locale-detail-tripPlanner.json; web\\src\\i18n\\en\\locale-detail-vehicleHero.json; web\\src\\i18n\\en\\locale-detail-voiceMode.json; web\\src\\i18n\\en\\locale-detail-watch.json; web\\src\\i18n\\en\\locale-detail-watchFaceNL.json; web\\src\\i18n\\en\\locale-detail-whatIf.json; web\\src\\i18n\\en\\locale-diagnostics.json; web\\src\\i18n\\en\\locale-driving-arrival-reliability.json; web\\src\\i18n\\en\\locale-driving-cold-start.json; web\\src\\i18n\\en\\locale-driving-departure-forecast.json; web\\src\\i18n\\en\\locale-driving-destination-transitions.json; web\\src\\i18n\\en\\locale-driving-drive-compare.json; web\\src\\i18n\\en\\locale-driving-drive-dna.json; web\\src\\i18n\\en\\locale-driving-drive-score.json; web\\src\\i18n\\en\\locale-driving-drivetrain-health.json; web\\src\\i18n\\en\\locale-driving-driving-dynamics.json; web\\src\\i18n\\en\\locale-driving-driving-rhythm.json; web\\src\\i18n\\en\\locale-driving-efficiency-target.json; web\\src\\i18n\\en\\locale-driving-efficiency.json; web\\src\\i18n\\en\\locale-driving-explorer.json; web\\src\\i18n\\en\\locale-driving-fsdinsights.json; web\\src\\i18n\\en\\locale-driving-journey-fragmentation.json; web\\src\\i18n\\en\\locale-driving-range-buffer.json; web\\src\\i18n\\en\\locale-driving-regen-efficiency.json; web\\src\\i18n\\en\\locale-driving-route-efficiency.json; web\\src\\i18n\\en\\locale-driving-seasonal-efficiency.json; web\\src\\i18n\\en\\locale-driving-segments.json; web\\src\\i18n\\en\\locale-driving-speed-profile.json; web\\src\\i18n\\en\\locale-driving-speed-sweet-spot.json; web\\src\\i18n\\en\\locale-driving-trip-logbook.json; web\\src\\i18n\\en\\locale-driving-trip-planner.json; web\\src\\i18n\\en\\locale-driving-what-if.json; web\\src\\i18n\\en\\locale-driving.json; web\\src\\i18n\\en\\locale-explore.json; web\\src\\i18n\\en\\locale-exports.json; web\\src\\i18n\\en\\locale-fleet-ops.json; web\\src\\i18n\\en\\locale-home-energy.json; web\\src\\i18n\\en\\locale-intelligence-packs.json; web\\src\\i18n\\en\\locale-maps.json; web\\src\\i18n\\en\\locale-notifications.json; web\\src\\i18n\\en\\locale-ownership.json; web\\src\\i18n\\en\\locale-power-user.json; web\\src\\i18n\\en\\locale-resale-vault.json; web\\src\\i18n\\en\\locale-science.json; web\\src\\i18n\\en\\locale-service-intelligence.json; web\\src\\i18n\\en\\locale-settings.json; web\\src\\i18n\\en\\locale-sharing.json; web\\src\\i18n\\en\\locale-system.json; web\\src\\i18n\\en\\locale-telemetry.json; web\\src\\i18n\\en\\locale-trips.json; web\\src\\i18n\\en\\locale-unreferenced.json; web\\src\\i18n\\en\\locale-vehicle-systems.json; web\\src\\i18n\\en\\locale-vehicles.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\shell.json; web\\src\\i18n\\en\\usage-manifest.json"
+    },
+    {
+      "status": "[x]",
+      "item": "health-typecheck-triage",
+      "scope": "docs\\frontend-audits\\health-typecheck-triage.json"
+    },
+    {
+      "status": "[x]",
+      "item": "catalog-generated-freshness",
+      "scope": "-"
+    },
+    {
+      "status": "[x]",
+      "item": "phase3-chart-legend",
+      "scope": "web\\src\\components\\charts\\ChartLegend.tsx; web\\src\\components\\charts\\ChartLegend.test.tsx"
+    },
+    {
+      "status": "[x]",
+      "item": "phase3-page-container",
+      "scope": "web\\src\\components\\layout\\PageContainer.tsx; web\\src\\components\\layout\\__tests__\\PageContainer.test.tsx"
+    },
+    {
+      "status": "[x]",
+      "item": "phase5-page-charging-charge-interruption",
+      "scope": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx; web\\src\\features\\charging\\pages\\ChargeInterruptionPage.test.tsx"
+    }
+  ],
+  "filesRead": [
+    "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+    "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\features\\charging\\lib\\chargeInterruption.ts",
+    "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.test.tsx",
+    "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionPage.runtime.test.tsx",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-mission.md relevant sections",
+    "docs/frontend-design-contract.md relevant sections",
+    "docs/frontend-worker-conventions.md",
+    "docs/I18N_GUIDELINES.md",
+    ".github/copilot-instructions.md frontend sections",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-inventory.md route section",
+    "docs/session-handoff.md relevant scan",
+    "docs/frontend-audits/audit-page-078.json relevant prior findings",
+    "migration-queue.md bounded rows",
+    "web/src/api/hooks/useCharging.ts history portion",
+    "web/src/api/dataState.ts trust portion",
+    "web/src/api/client.ts prefix snippets",
+    "web/src/types/charging.ts field snippets",
+    "internal/api/router.go charging route",
+    "internal/api/charging/handler.go:123-159",
+    "internal/models/charging/charging.go optional fields",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/LayoutCard.tsx",
+    "web/src/components/layout/PageContainer.tsx relevant rendering",
+    "web/src/components/layout/WorkspaceHeader.tsx",
+    "web/src/components/layout/WorkspaceContextControl.tsx range portion",
+    "web/src/components/layout/Layout.tsx scope snippets",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/hooks/useWorkspaceScope.tsx",
+    "web/src/hooks/useSelectedVehicle.ts selection portion",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useHiddenSeries.ts state portion",
+    "web/src/hooks/useStatusAnnouncer.ts load snippet",
+    "web/src/components/data-display/TimeStamp.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx summary portion",
+    "web/src/components/charts/ChartContainer.tsx data/export/state portions",
+    "web/src/components/charts/ChartLegend.tsx interactive label portion",
+    "web/src/components/charts/ChartTooltip.tsx formatter portion",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+    "web/src/components/motion/FadeIn.tsx"
+  ],
+  "commandReceipts": [
+    {
+      "shellId": "6069",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6077",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6085",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6086",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6097",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6106",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6107",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6113",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6114",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6123",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6125",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6130",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6143",
+      "rawOutput": "Caller tool transcript; exploratory or bounded source read/scan",
+      "exitCode": 0
+    },
+    {
+      "shellId": "6140",
+      "exitCode": 1,
+      "error": "OS206 filename/extension too long launching oversized command; no artifact writes completed"
+    },
+    {
+      "shellId": "6146",
+      "exitCode": 1,
+      "error": "Final on-disk UTC string equality failed because ConvertFrom-Json parsed ISO UTC as DateTime; report/log existed. Structural counts were valid. Failure not hidden."
+    }
+  ],
+  "validation": {
+    "tests": "NOTRUN",
+    "commandBound": "All calls sync initial_wait30, no helper/background/external command",
+    "browser": "NOTRUN",
+    "lintBuild": "NOTRUN",
+    "pins": "RUN 6/6",
+    "json": "RUN serialize-reparse and on-disk count/path checks",
+    "sourceScans": "RUN exact raw output in log",
+    "historicalZeroExecution": "NOTPASS",
+    "runtime": "NOTRUN",
+    "typescript": "NOTRUN",
+    "native": "NOTRUN",
+    "onDiskJson": "RUN verified counts and raw immutable release UTC; earlier date auto-parsing assertion failure corrected without source writes",
+    "earlierFinalizerExit": 1,
+    "finalArtifactValidation": "PASS bounded structure/raw UTC plus all six source/test pin checks"
+  },
+  "originalReleaseUtc": "2026-10-13T22:37:33.7255705Z",
+  "releaseDeclaration": "ALL source/report/log/JSON/browser/commands CLAIMS RELEASED / NO POST-RETURN WRITES"
+}

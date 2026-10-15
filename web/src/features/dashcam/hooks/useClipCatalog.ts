@@ -75,7 +75,10 @@ async function buildClipRecord(file: File, sidecarRaw: unknown, vehicleId: numbe
   };
 }
 
-/** Imports one or more clip files (+ optional shared event.json) into the local catalog. */
+/**
+ * Imports files sequentially. A rejected batch retains any already committed clips
+ * and reconciles them into a previously loaded catalog while requesting a full read.
+ */
 export function useImportClips() {
   const { db } = useDashcamDb();
   const qc = useQueryClient();
@@ -85,10 +88,24 @@ export function useImportClips() {
     mutationFn: async (input: ImportClipsInput): Promise<ClipRecord[]> => {
       const sidecarRaw = input.sidecarFile ? await readJsonFile(input.sidecarFile) : null;
       const records: ClipRecord[] = [];
-      for (const file of input.files) {
-        const record = await buildClipRecord(file, sidecarRaw, input.vehicleId, input.settings);
-        await db.putClip(record);
-        records.push(record);
+      try {
+        for (const file of input.files) {
+          const record = await buildClipRecord(file, sidecarRaw, input.vehicleId, input.settings);
+          await db.putClip(record);
+          records.push(record);
+        }
+      } catch (e) {
+        if (records.length > 0) {
+          qc.setQueryData<ClipRecord[]>(dashcamKeys.clips, (cached) => {
+            // A committed prefix is not a complete catalog when no prior read exists.
+            if (!cached) return undefined;
+            const merged = new Map(cached.map((clip) => [clip.id, clip]));
+            for (const record of records) merged.set(record.id, record);
+            return [...merged.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          });
+          void qc.invalidateQueries({ queryKey: dashcamKeys.clips });
+        }
+        throw e;
       }
       return records;
     },

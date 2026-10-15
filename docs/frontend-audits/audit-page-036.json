@@ -1,0 +1,786 @@
+{
+  "item": "audit-page-036",
+  "phase": 0,
+  "mode": "read-only-source-audit",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+  "routes": [
+    "/intelligence/journey-assurance"
+  ],
+  "purpose": "Assess modeled departure readiness and arrival battery reserve using selected-vehicle evidence and a user-submitted journey scenario.",
+  "primaryGoal": "Submit canonical-SI journey inputs, understand readiness and arrival bounds, and inspect supporting factors, provenance, quality and unsupported capabilities without implying vehicle control or charger availability.",
+  "identity": {
+    "component": "JourneyAssurancePage",
+    "repositoryRoot": "F:\\github\\TeslaSync",
+    "routeEvidence": [
+      {
+        "file": "web\\src\\App.tsx",
+        "line": 235,
+        "detail": "Lazy import resolves to the assigned page."
+      },
+      {
+        "file": "web\\src\\App.tsx",
+        "line": 769,
+        "detail": "intelligence/journey-assurance mounts JourneyAssurance inside SafeRoute."
+      }
+    ],
+    "mountStatus": "source-confirmed; browser mount unverified"
+  },
+  "dataSources": [
+    {
+      "hook": "useRunJourneyAssurance",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 180,
+      "method": "POST",
+      "endpoint": "/api/v1/advanced-intelligence/journey-assurance/scenarios",
+      "requestPath": "/advanced-intelligence/journey-assurance/scenarios",
+      "sourceOwnership": "advanced-intelligence typed simulation hook and backend advancedintelligence handler/domain",
+      "routeEvidence": [
+        {
+          "file": "internal\\api\\router.go",
+          "line": 3917,
+          "detail": "advancedIntelligenceHandler.MountRoutes(r) registration."
+        },
+        {
+          "file": "internal\\handler\\v1\\advancedintelligence\\handler.go",
+          "line": 71,
+          "detail": "Route prefix /advanced-intelligence."
+        },
+        {
+          "file": "internal\\handler\\v1\\advancedintelligence\\handler.go",
+          "line": 78,
+          "detail": "POST /journey-assurance/scenarios registered with write rate limit."
+        }
+      ],
+      "contract": "Request and response snake_case match inspected Go planning structs. Distance m, speed m/s, temperature Celsius, power W and energy Wh; nullable modeled scores/bounds stay unknown rather than zero.",
+      "limits": "Endpoint registration is verified in source only. Backend calculation, persistence, transport, authentication and live response behavior were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 59,
+      "sourceOwnership": "Shared workspace hook, URL vehicle_id, persisted selected-vehicle store and useVehicles fleet query.",
+      "endpoint": "Underlying useVehicles request body not inspected; no independent endpoint acceptance claimed.",
+      "behavior": "URL/store/fleet fallback selection; the page has no competing local vehicle picker. Route scope enables vehicle and disables analysis range."
+    },
+    {
+      "hook": "useRetainedMutation",
+      "file": "web\\src\\hooks\\useRetainedMutation.ts",
+      "line": 29,
+      "sourceOwnership": "Shared mutation publication lifecycle",
+      "endpoint": null,
+      "behavior": "Retains successful raw response and a structuredClone of its submitted inputs; guards both request/response vehicle IDs and resets the observer after scope change."
+    },
+    {
+      "hook": "useUnits / useNumberFormatting / useOperationalMetrics",
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "line": 121,
+      "sourceOwnership": "Existing saved settings and shared display formatters",
+      "endpoint": "useSettings imports getSettings; downstream request not inspected.",
+      "behavior": "SI stays in form/request/results; preferred units appear only in display hints and operational metrics. Number formatting uses the existing locale bridge."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "kind": "shared layout",
+      "contract": "Forwards PageContainer props; full-width min-w-0 container; shell owns navigation and workspace controls."
+    },
+    {
+      "name": "InsightPanel",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "kind": "feature composite",
+      "contract": "LayoutCard plus SourceContent; accepts title, description, query/sourceState, error, retry and empty content."
+    },
+    {
+      "name": "AnalysisBrief",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "kind": "feature adapter",
+      "contract": "Typed StatMetric to shared OperationalBrief, independent quality, evidence, limitations, generated time and retained-state narrative."
+    },
+    {
+      "name": "OperationalBrief",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "kind": "shared composite",
+      "contract": "Metrics, source scope/freshness/status, missing-value state, loading and Review details drawer."
+    },
+    {
+      "name": "EvidencePanel",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "kind": "feature composite",
+      "contract": "Three evidence subsections: quality, sources and limitations/explicitly unsupported capabilities."
+    },
+    {
+      "name": "SiNumberInput",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "kind": "feature form adapter",
+      "contract": "Nullable finite numeric SI input, bounds/step/required, SI suffix and preferred-unit hint."
+    },
+    {
+      "name": "Input / Button / Badge / Text",
+      "owner": "web\\src\\components\\ui",
+      "kind": "existing primitives",
+      "contract": "Category barrel imports. Input source verifies unique identity, native labels, validation attributes and associated hints; other primitive implementations were not independently exercised."
+    },
+    {
+      "name": "AlertBanner / MutationError",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+      "kind": "existing feedback",
+      "contract": "Planning disclaimer and inline mutation failure; recovery currently means resubmitting the form."
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "kind": "shared motion",
+      "contract": "Existing reduced-motion hook, initial=false when reduced and sanitized stagger delay; actual OS behavior unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "pattern": "Evidence and limitations appear in both summary narrative drawer and persistent EvidencePanel.",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "line": 199,
+      "detail": "Both locations serve existing interactions and must remain; reuse existing adapters, not a new evidence engine.",
+      "recommendation": "Align their publication states and semantic tokens without deleting either view."
+    },
+    {
+      "pattern": "Readiness factor articles repeat status, title, explanation and score rendering.",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "line": 217,
+      "detail": "One mapped local pattern is appropriate; independent cross-page consumers were not inspected.",
+      "recommendation": "Keep local or reuse existing LayoutCard/Badge/Text; no evidence justifies a new global factor-card component."
+    }
+  ],
+  "responsive": {
+    "verified": "source only",
+    "strategy": "Form stacks then uses md two columns and xl three; factors stack then md two; evidence stacks then lg three; PageLayout preserves w-full/min-w-0.",
+    "viewports": {
+      "320": "unverified",
+      "375": "unverified",
+      "390": "unverified",
+      "430": "unverified",
+      "768": "unverified",
+      "1024": "unverified",
+      "1280": "unverified",
+      "1440": "unverified",
+      "1920": "unverified",
+      "2560": "unverified"
+    },
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+        "line": 219,
+        "rule": "MDC-043 / mission 15-16",
+        "detail": "Factor label and status share a non-wrapping flex row without explicit shrink/min-width/wrapping guidance; long source identities or translated status labels need overflow review at narrow allocated widths. This is a source risk, not a demonstrated overflow.",
+        "fix": "Use existing flexible wrapping/min-w-0 patterns while preserving full text; validate all ten widths, long labels and 200% text.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "verified": "source only",
+    "positiveEvidence": [
+      "Native form submission and shared labeled required Input controls; Input associates hints with generated unique IDs.",
+      "Decorative Route icon aria-hidden; factor text explains status rather than color alone.",
+      "EvidencePanel has named semantic sections; shared OperationalBrief uses a labeled section and aria-busy.",
+      "FadeIn uses the existing reduced-motion preference rather than a feature motion implementation."
+    ],
+    "issues": [],
+    "unverified": [
+      "Keyboard sequence and focus",
+      "Screen reader announcements",
+      "Native datetime-local behavior",
+      "Effective contrast in all themes",
+      "44px reachability and spacing exceptions",
+      "Drawer focus/restoration",
+      "Forced colors",
+      "Reduced-motion OS execution",
+      "RTL and zoom"
+    ],
+    "targetSizeNote": "Inspected Input defaults to md/min-h-10; this alone does not prove a WCAG failure because target width and spacing exceptions require browser measurement."
+  },
+  "states": {
+    "initial": "Form and all result/evidence sections remain mounted; summary says Not calculated and asks for a submission.",
+    "loading": "Submit button uses publication.pending and brief shows loading; factors and evidence currently lack publication-state context.",
+    "success": "Four metrics, readiness factors, quality, observation window, evidence, limitations and generated time.",
+    "empty": "Factor shell stays visible; missing result values stay undefined; EvidencePanel has empty fallbacks.",
+    "error": "MutationError shows request failure; AnalysisBrief shows fatal failure without result or retained warning with result.",
+    "retained": "Successful raw response persists through a subsequent request/error; workspace vehicle switch hides old-scoped publication.",
+    "offline": "Paused source exists in useRetainedMutation but is omitted from AnalysisBrief before a first result.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+        "line": 197,
+        "rule": "MDC-026 / mission 25",
+        "detail": "query is supplied only when result exists. Before a first result, a paused mutation falls back to pending-based loading in AnalysisBrief:42-43 rather than its paused/unresolved branch at 75-79. Offline pause therefore cannot be distinguished by this adapter.",
+        "fix": "Pass publication.source without dropping paused fetchStatus, and preserve an explicit not-submitted state so idle initial state is not confused with an unresolved request.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+        "line": 213,
+        "rule": "MDC-026 / mission 22-25",
+        "detail": "Factors use only !result/length; EvidencePanel receives no pending/error/publication state at 233-237. During initial or pending calculation it claims No supporting evidence was returned (EvidencePanel:97) and No additional limitations were returned (:113) even though no response has resolved. Retained factors/evidence also lack their own stale/refresh context.",
+        "fix": "Feed existing SourceContent/InsightPanel publication state into these persistent sections. Distinguish not calculated, loading, paused, failed, resolved empty and retained, while keeping unsupported-capability disclosures visible.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+        "line": 213,
+        "rule": "Null safety / MDC-026",
+        "detail": "result.factors.length is unguarded despite the adjacent map using (result?.factors ?? []). Go exposes a slice and TypeScript assumes an array; null serialization by the live service was not verified.",
+        "fix": "Normalize factors with result?.factors ?? [] for both count and iteration without interpreting absent factors as zero readiness.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "line": 218,
+      "rule": "MDC-010 / MDC-011 / MDC-015",
+      "detail": "Factor cards use fixed border-white/[0.07]. EvidencePanel:81 uses both fixed-white border and background. These bypass semantic surfaces/borders across light/custom themes. No neon/glow was found in the root.",
+      "fix": "Use existing --border-default/--border-subtle and --surface-* tokens; retain all factor and evidence content and avoid new palette/geometry engines.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "line": 39,
+      "rule": "MDC-013",
+      "detail": "SI suffix uses an ad-hoc text-xs span although Text/Caption primitives already exist.",
+      "fix": "Reuse existing typography wrapper for the suffix while retaining the exact SI unit, Input suffix contract and accessible hint.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "line": 63,
+      "rule": "MDC-026 / MDC-033 / MDC-045",
+      "detail": "Results are retained independently of edits to the live form, but the page never consumes publication.published.inputs. Editing distance, departure or reserve after success leaves old results next to new inputs without an explicit last-submitted scenario identity; generated time and vehicle alone do not identify which scenario produced the bounds.",
+      "fix": "Render a localized last-submitted scenario summary from the existing captured inputs, or an edited-scenario notice, without recomputing results or converting stored SI.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "line": 221,
+      "rule": "MDC-025 / MDC-044",
+      "detail": "Raw factor.status is visible UI and every non-supported value maps to warning; EvidencePanel:55 similarly displays raw quality.status. These source identifiers are not localized, and unknown status semantics are not explicitly preserved.",
+      "fix": "Map known presentation statuses to existing localized labels/semantic Badge variants with a neutral explicit unknown fallback. Retain raw identifiers in source/detail metadata; do not translate server explanations as catalog keys or invent domain meanings.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Preserve calculation trust first: last-submitted scenario identity and first-request/retained/paused section states. Then neutral surfaces and status localization; browser acceptance remains pending.",
+    "order": [
+      "Published scenario identity",
+      "Publication-aware persistent sections",
+      "Paused first-request state",
+      "Null-safe factors",
+      "Semantic surfaces/status labels",
+      "Typography and responsive verification"
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Publication-aware feature evidence presentation",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Extend existing quality/evidence/limitations/unsupported props with explicit sourceState or publication context; reuse InsightPanel and SourceContent ready/loading/error/empty/retained and caller-provided not-calculated/paused copy. Unknown quality remains neutral; limitations stay available alongside retained data.",
+      "usedBy": [
+        "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx"
+      ],
+      "dependsOn": [
+        "Existing useRetainedMutation.source",
+        "Existing InsightPanel",
+        "Existing SourceContent",
+        "Existing DataState semantics"
+      ],
+      "acceptance": "Not submitted does not assert returned-empty evidence; pending/paused/failure never imply absent limitations; successful-empty differs from unresolved; retained evidence remains visible on failure.",
+      "scope": "Feature-shared change requested only; audit edits no component. Additional consumers must be inventoried by the assigned owner before changing the public contract."
+    },
+    {
+      "name": "Existing AnalysisBrief initial-publication distinctions",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "propsVariantsStates": "Keep query DataStateSource, pending, error, hasResult; accept explicit submission state if needed to distinguish never-submitted idle from paused/unresolved initial work. Reuse existing OperationalBrief status, loading and attention APIs.",
+      "usedBy": [
+        "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx"
+      ],
+      "dependsOn": [
+        "Existing useRetainedMutation",
+        "Existing useDataState",
+        "Existing OperationalBrief"
+      ],
+      "acceptance": "First paused assessment identifies pause rather than perpetual loading, idle page still requests a submission, retained failure preserves metrics.",
+      "scope": "Reuse/extend existing feature adapter, not a second operational summary."
+    },
+    {
+      "name": "SI numeric suffix typography alignment",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "propsVariantsStates": "Public numeric/min/max/step/required/null and displayHint contracts unchanged; render suffix with existing Text/Caption.",
+      "usedBy": [
+        "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx"
+      ],
+      "dependsOn": [
+        "Existing Input.suffix",
+        "Existing typography category barrel"
+      ],
+      "acceptance": "Exact SI value and suffix survive; nullable optional fields, hints and keyboard/native validation behavior remain unchanged."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "assessment": "Existing PageLayout, SourceContent, OperationalBrief, formatting, workspace and motion owners are reused. Factor articles are local presentation, not evidence of a second global card system. No new shared component is proposed.",
+    "limits": "Whole-app duplicate inventory is outside this single-page assignment."
+  },
+  "preservation": {
+    "sourceSha256": "daeca5bb5be38f5a1a80450ef4897dc5a3e0f60999d89bc99121b9980a39566f",
+    "currentLineCount": 246,
+    "sections": [
+      {
+        "name": "Planning estimate disclaimer",
+        "count": 1
+      },
+      {
+        "name": "Journey scenario form",
+        "count": 1,
+        "fields": [
+          "route_distance_m",
+          "departure_at",
+          "reserve_target_pct",
+          "outside_temp_c",
+          "average_speed_mps",
+          "auxiliary_load_w"
+        ]
+      },
+      {
+        "name": "Readiness and arrival range operational brief",
+        "count": 1,
+        "metrics": [
+          "readiness_score_pct",
+          "arrival_soc_low_pct",
+          "arrival_soc_high_pct",
+          "energy_required_wh"
+        ]
+      },
+      {
+        "name": "Readiness factors",
+        "count": 1
+      },
+      {
+        "name": "Evidence, quality, and limitations",
+        "count": 1,
+        "subsections": [
+          "Data quality",
+          "Evidence sources",
+          "Limitations and explicitly unsupported capabilities"
+        ]
+      }
+    ],
+    "topLevelSectionCount": 5,
+    "structuralCounts": {
+      "InsightPanel": 2,
+      "AnalysisBrief": 1,
+      "EvidencePanel": 1,
+      "GlassPanel": 0,
+      "ChartContainer": 0,
+      "FadeIn": 4,
+      "formFields": 6,
+      "summaryMetrics": 4
+    },
+    "actions": [
+      "Edit all six scenario fields",
+      "Submit confirmed readiness assessment",
+      "Resubmit after request failure",
+      "Review details via shared operational summary"
+    ],
+    "dataBehavior": [
+      "Default distance 250000m; reserve 15%; departure local wall-clock tomorrow; optional inputs null.",
+      "Departure is an independent business date, not the global historical analysis range; no new date picker or RANGE_ENABLED_PATHS enrollment is justified by this audit.",
+      "Required distance bounds 100..5000000m; reserve 0..80%; temperature -80..80 C; speed 0.1..70m/s; auxiliary 0..50000W.",
+      "Submit uses selected vehicle, canonical-SI payload, departure ISO instant and confirmed=true; no automatic submit, command or charger reservation.",
+      "Vehicle scope resets old publication; a successful result survives a later request failure.",
+      "Missing scores/bounds/energy remain unknown, with no fake zero or health/confidence claim.",
+      "Keep readiness factors, all explanations, evidence source/sample/date, quality window/coverage/reasons, generation timestamp and all limitations.",
+      "Preserve unsupported live traffic/charger availability and navigation/charging/climate commands.",
+      "Maintain saved unit/locale/theme/motion/workspace behavior and shared request/query policy."
+    ],
+    "sourceInventory": [
+      {
+        "path": "docs\\frontend-design-contract.md",
+        "sha256": "17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255",
+        "lineCount": 394,
+        "inspectedScope": "Full document via ranges 1-240, 165-195 and 190-end (overlapping reads resolve initial tool truncation).",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "docs\\frontend-worker-conventions.md",
+        "sha256": "6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3",
+        "lineCount": 80,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "docs\\frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "lineCount": 1593,
+        "inspectedScope": "1-1100; relevant sections 0,1,3-10,14-16,20-25,30-37",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": ".github\\skills\\audit-violations\\audit.sh",
+        "sha256": "3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46",
+        "lineCount": 141,
+        "inspectedScope": "full; not executed",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+        "sha256": "daeca5bb5be38f5a1a80450ef4897dc5a3e0f60999d89bc99121b9980a39566f",
+        "lineCount": 246,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+        "sha256": "59128ff5c6963dd4e04b1a5370f8634197986893d79ad74fc3ba67fe48dacfc1",
+        "lineCount": 6,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "sha256": "7b774ae98c6bfed41d47605b36045a61a7c4ab0c6e41bf2d6770feb59b52d8dd",
+        "lineCount": 72,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "sha256": "667bce14e068b5c386e2e3f524295532e62f8d3033218808db6e60d213e3898e",
+        "lineCount": 130,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "sha256": "3846836c6ab28cec6164a8c09539c97030167b14ce7ecc232ff2fb4fcb9014c5",
+        "lineCount": 21,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+        "sha256": "dcf18264e4554065e077786f16441f3d24fc6ef923eaa1cf2d29c4198fb67f24",
+        "lineCount": 46,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+        "sha256": "37dfced4700600eaac3f094a7c56103c572392c8167f97e8a5ce04ae73544af6",
+        "lineCount": 159,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+        "sha256": "dac2b5a3c62f8e0b7d366a11ba11115818895d3a751b482c9361d6647d967067",
+        "lineCount": 251,
+        "inspectedScope": "1-205 and Journey matches",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\types\\advancedIntelligence.ts",
+        "sha256": "cc6e80b16f9119e2d322d662a2ebe2718a195ffda67738a1b0c59402caee8f13",
+        "lineCount": 431,
+        "inspectedScope": "1-70 and 180-225",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\hooks\\useRetainedMutation.ts",
+        "sha256": "97583a103b7be4430178b1e541bc8384d1d96eb3f0314e7d5f30a034154689a9",
+        "lineCount": 96,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\hooks\\useSelectedVehicle.ts",
+        "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "lineCount": 174,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\hooks\\useUnits.ts",
+        "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+        "lineCount": 194,
+        "inspectedScope": "1-150",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\hooks\\useSettings.ts",
+        "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+        "lineCount": 146,
+        "inspectedScope": "1-75",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "sha256": "8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6",
+        "lineCount": 17,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+        "sha256": "283583e259342620cb0e24429e3f66fb6385f16498d869192f36cffcff9eec43",
+        "lineCount": 72,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "sha256": "b24b19024effebb6d8457171be61e6899672cd8f668b41bb3814aeb29ada42e5",
+        "lineCount": 303,
+        "inspectedScope": "1-170; drawer implementation not inspected",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\components\\motion\\FadeIn.tsx",
+        "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "lineCount": 39,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\components\\ui\\Input.tsx",
+        "sha256": "41379b18c42cc2845a342b0ebc9cb8b32f0e50004893faa818e15688ba24bb41",
+        "lineCount": 112,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\lib\\workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "lineCount": 168,
+        "inspectedScope": "full",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\api\\client.ts",
+        "sha256": "a9732175455ed2dc207cc59cb42dcf7e66065453303e68593efe317a8c233428",
+        "lineCount": 478,
+        "inspectedScope": "1-75",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useVehicles.ts",
+        "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+        "lineCount": 1898,
+        "inspectedScope": "1-65",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "web\\src\\App.tsx",
+        "sha256": "23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3",
+        "lineCount": 918,
+        "inspectedScope": "JourneyAssurance exact route/import search matches only",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "internal\\api\\router.go",
+        "sha256": "98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750",
+        "lineCount": 5366,
+        "inspectedScope": "advancedIntelligence wiring and route search matches only",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "internal\\handler\\v1\\advancedintelligence\\handler.go",
+        "sha256": "5717254a401f668dbb29f6b1a7826aea19888c7789e2c20d9ebb6cd850be4f66",
+        "lineCount": 460,
+        "inspectedScope": "65-85 and route search matches only",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      },
+      {
+        "path": "internal\\domain\\advancedintelligence\\planning.go",
+        "sha256": "87df1e30ed337e37dfeebe2877db76eda417a2f418496ded0955a273de2f8925",
+        "lineCount": 121,
+        "inspectedScope": "1-85",
+        "hashScope": "whole-file fingerprint; inspection scope stated separately"
+      }
+    ],
+    "baselineStatus": "Current read-only source snapshot; no Git/historical comparison, implementation or runtime parity claim."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendBehavior": "Only route wiring and wire structs inspected; no service/query execution or capability inference.",
+    "tests": "Not run. No browser, TypeScript, lint, build or full gates authorized for this read-only Phase0 audit.",
+    "skillScript": "Read audit.sh but did not execute because it always invokes project TypeScript; targeted source scans used instead.",
+    "commands": [
+      {
+        "command": "Get-FileHash -LiteralPath web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx -Algorithm SHA256; (Get-Content -LiteralPath same-page).Count",
+        "exitCode": 0,
+        "output": "ROOT SHA256: daeca5bb5be38f5a1a80450ef4897dc5a3e0f60999d89bc99121b9980a39566f; ROOT LINES: 246"
+      },
+      {
+        "command": "PowerShell attempted batched regex/citation scan",
+        "exitCode": 1,
+        "output": "ParserError: Unexpected token ']' in expression or statement. No file writes; replaced with Python read-only source scan."
+      },
+      {
+        "command": "Inline Python read-only regex/citation scan of root and three inspected presentation dependencies",
+        "exitCode": 0,
+        "output": "root counts: inline-style 0; raw-control 0; direct-library 0; fixed-white 1; GlassPanel 0; ChartContainer 0; InsightPanel 2; AnalysisBrief 1; EvidencePanel 1"
+      }
+    ],
+    "inventoryBoundary": "filesRead records full files or explicit inspected ranges/search matches only. No claim of exhaustive transitive imports, global foundations, catalog resolution or all backend calculations.",
+    "writes": [
+      "docs\\frontend-audits\\audit-page-036.json",
+      ".agent-status\\audit-page-036.txt"
+    ],
+    "prohibitedActionsNotPerformed": [
+      "Source/shared edits",
+      "Queue edits",
+      "Git commands",
+      "Full gates",
+      "Production or browser mutations"
+    ],
+    "incidentalSearchMatches": "Route/name searches returned other navigation/catalog/test and advanced-intelligence backend files; only assigned-page/dependency matches were used as evidence. Those incidental hits were not semantically inspected or audited.",
+    "reportValidation": {
+      "command": "Inline Python JSON parse, required-field/issue/shared-contract validation, citation bounds, source inventory fingerprints and root SHA-256 recheck",
+      "exitCode": 0,
+      "output": "VALID JSON; 20 required fields present; 8 issue records validated; 3 shared contracts validated; 29 source fingerprints captured; root SHA256 unchanged; 246 root lines."
+    }
+  },
+  "filesRead": [
+    {
+      "path": "docs\\frontend-design-contract.md",
+      "scope": "Full document via ranges 1-240, 165-195 and 190-end (overlapping reads resolve initial tool truncation)."
+    },
+    {
+      "path": "docs\\frontend-worker-conventions.md",
+      "scope": "full"
+    },
+    {
+      "path": "docs\\frontend-mission.md",
+      "scope": "1-1100; relevant sections 0,1,3-10,14-16,20-25,30-37"
+    },
+    {
+      "path": ".github\\skills\\audit-violations\\audit.sh",
+      "scope": "full; not executed"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\pages\\JourneyAssurancePage.tsx",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "scope": "1-205 and Journey matches"
+    },
+    {
+      "path": "web\\src\\types\\advancedIntelligence.ts",
+      "scope": "1-70 and 180-225"
+    },
+    {
+      "path": "web\\src\\hooks\\useRetainedMutation.ts",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\hooks\\useUnits.ts",
+      "scope": "1-150"
+    },
+    {
+      "path": "web\\src\\hooks\\useSettings.ts",
+      "scope": "1-75"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "scope": "1-170; drawer implementation not inspected"
+    },
+    {
+      "path": "web\\src\\components\\motion\\FadeIn.tsx",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\components\\ui\\Input.tsx",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\lib\\workspaceScope.ts",
+      "scope": "full"
+    },
+    {
+      "path": "web\\src\\api\\client.ts",
+      "scope": "1-75"
+    },
+    {
+      "path": "web\\src\\api\\hooks\\useVehicles.ts",
+      "scope": "1-65"
+    },
+    {
+      "path": "web\\src\\App.tsx",
+      "scope": "JourneyAssurance exact route/import search matches only"
+    },
+    {
+      "path": "internal\\api\\router.go",
+      "scope": "advancedIntelligence wiring and route search matches only"
+    },
+    {
+      "path": "internal\\handler\\v1\\advancedintelligence\\handler.go",
+      "scope": "65-85 and route search matches only"
+    },
+    {
+      "path": "internal\\domain\\advancedintelligence\\planning.go",
+      "scope": "1-85"
+    }
+  ]
+}

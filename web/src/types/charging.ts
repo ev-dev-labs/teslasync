@@ -117,6 +117,7 @@ export interface OptimizerSchedule {
   most_common_start_hour: number;
   most_common_day: string;
   avg_sessions_per_week: number;
+  /** Historical wire name: busiest recorded coordinate-cluster share, not confirmed home charging; zero means no location evidence. */
   home_charging_pct: number;
   avg_charge_to_pct: number;
 }

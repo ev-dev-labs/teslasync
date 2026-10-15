@@ -13,6 +13,7 @@ import (
 	"net/http"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
@@ -72,8 +73,7 @@ func NewHandler(
 // POST /api/v1/ai/digests/weekly/narrate.
 //
 // VehicleID is required and must be > 0. WeekOffsetWeeks defaults to
-// 0 (the current ISO week) when omitted; the tool's own validator
-// enforces the [-12, 0] range.
+// 0 (the current UTC ISO week) when omitted; only [-12, 0] is supported.
 type narrationRequest struct {
 	VehicleID       int64 `json:"vehicle_id"`
 	WeekOffsetWeeks int   `json:"week_offset_weeks"`
@@ -85,6 +85,11 @@ type narrationRequest struct {
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "ai.digest.narrate")
+	defer span.End()
+	r = r.WithContext(ctx)
+	traceID := span.SpanContext().TraceID().String()
+
 	// 1) Decode + validate request body.
 	var body narrationRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -95,13 +100,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
 		return
 	}
+	if body.WeekOffsetWeeks < -12 || body.WeekOffsetWeeks > 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "week_offset_weeks must be between -12 and 0 (UTC ISO weeks)")
+		return
+	}
 
 	// 2) Resolve provider via the registry. Per-request resolution
 	// honours mid-flight settings changes (model swap, mode flip)
 	// without restart. A resolve failure must NOT open the SSE
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), digestnarration.FeatureID); err != nil {
-		log.Error().Err(err).Msg("ai digest: provider.For failed")
+		log.Error().Err(err).Str("trace_id", traceID).Msg("ai digest: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
@@ -110,7 +119,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// SubjectFromRequest returns "" if the header is absent; that's
 	// the open-mode value the audit log treats as "anonymous".
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
-	ctx := provider.WithSubject(r.Context(), subject)
+	ctx = provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, digestnarration.FeatureID)
 
 	// 4) Open the SSE writer. Stream.New writes the SSE response
@@ -121,7 +130,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Non-flushable response writer (test recorder, etc.).
 		// Emit a plain JSON 500 — the SSE headers were not sent.
-		log.Error().Err(err).Msg("ai digest: stream.New failed (non-flushable writer)")
+		log.Error().Err(err).Str("trace_id", traceID).Msg("ai digest: stream.New failed (non-flushable writer)")
 		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
@@ -131,7 +140,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// off the ctx for audit + rate limit accounting.
 	prov, err := h.registry.For(ctx, digestnarration.FeatureID)
 	if err != nil {
-		log.Error().Err(err).Msg("ai digest: provider.For (post-stream) failed")
+		log.Error().Err(err).Str("trace_id", traceID).Msg("ai digest: provider.For (post-stream) failed")
 		_ = sseW.WriteError(err)
 		return
 	}
@@ -142,7 +151,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// future strategy edit adds a mutating tool by mistake, the
 	// dispatcher will REJECT it instead of silently mutating fleet
 	// state.
-	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
+	scopedTools := tools.NewRegistry()
+	for _, tool := range h.tools.All() {
+		if tool.Name() == "query_weekly_digest_context" {
+			scopedTools.Register(scopedDigestTool{Tool: tool, scope: body})
+		} else {
+			scopedTools.Register(tool)
+		}
+	}
+	d := dispatch.New(scopedTools, prov, denyAllConfirm, h.maxIters)
 
 	// 7) Synthesise the user message. Digest narration is NOT
 	// conversational — there is no chat history. We hand the LLM a
@@ -164,11 +181,28 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Errors are also surfaced on the SSE wire by the
 		// dispatcher's terminal frame (WriteError or
 		// EmitLimitError on the underlying writer); we just log.
-		log.Error().Err(err).Int64("vehicle_id", body.VehicleID).Msg("ai digest: dispatcher returned error")
+		log.Error().Err(err).Str("trace_id", traceID).Int64("vehicle_id", body.VehicleID).Msg("ai digest: dispatcher returned error")
 	}
 }
 
 var _ http.Handler = (*Handler)(nil)
+
+// Do not let model-selected arguments substitute another vehicle or week.
+type scopedDigestTool struct {
+	tools.Tool
+	scope narrationRequest
+}
+
+func (t scopedDigestTool) Validate(raw json.RawMessage) (any, error) {
+	var requested narrationRequest
+	if err := json.Unmarshal(raw, &requested); err != nil {
+		return nil, fmt.Errorf("decode digest scope: %w", err)
+	}
+	if requested != t.scope {
+		return nil, fmt.Errorf("digest tool must use vehicle_id=%d and week_offset_weeks=%d", t.scope.VehicleID, t.scope.WeekOffsetWeeks)
+	}
+	return t.Tool.Validate(raw)
+}
 
 // denyAllConfirm is the dispatcher's user-confirm hook. Digest narration
 // declares only a read-only tool, so this is defence-in-depth against future

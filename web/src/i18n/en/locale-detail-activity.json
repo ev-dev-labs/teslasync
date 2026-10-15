@@ -2,17 +2,17 @@
   "activity": {
     "drive": "drive",
     "charged": "charged",
-    "title": "Recent Activity",
+    "title": "Recent activity",
     "viewAll": "Open full inbox",
     "viewAllSeverity": "See all {{severity}} unread",
     "empty": "No activity yet. Start driving!",
     "myActivity": {
-      "title": "My Activity",
+      "title": "My activity",
       "subtitle": "Recent actions you have taken in TeslaSync.",
       "empty": "No recent activity in this window.",
       "disabled": {
         "title": "Activity feed disabled",
-        "description": "Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER."
+        "description": "Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure FORWARD_AUTH_HEADER."
       },
       "unauthorized": {
         "title": "Identity required",
@@ -33,7 +33,8 @@
         "title": "Activity over time",
         "series": "Actions",
         "empty": "No activity recorded in this window.",
-        "colDay": "Day"
+        "colDay": "Day",
+        "aria": "{{total}} actions across {{days}} days"
       },
       "topActions": {
         "title": "Top actions",
@@ -48,14 +49,24 @@
         "title": "By hour of day",
         "series": "Actions",
         "empty": "No activity to chart by hour yet.",
-        "colHour": "Hour"
+        "colHour": "Hour",
+        "chartAria": "Activity counts by hour of day"
       },
       "breakdowns": {
         "aria": "Activity breakdowns"
       },
       "feed": {
-        "title": "Activity feed"
-      }
+        "title": "Activity feed",
+        "error": "Failed to load activity feed",
+        "loading": "Loading activity feed"
+      },
+      "brief": {
+        "range": "Loaded activity for {{start}} – {{end}}; at most {{limit}} actions.",
+        "description": "Actions, active days, action types, and entities derived from the loaded personal activity feed.",
+        "scope": "Loaded recent activity only; not a complete account lifetime total.",
+        "lastContext": "Most recent timestamp in the loaded feed."
+      },
+      "pendingHelp": "This panel fills after the activity feed returns data for the selected period."
     },
     "action": {
       "unknown": "Activity",
@@ -103,13 +114,13 @@
       "automationAutoDisabled": "Automation auto-disabled"
     },
     "timeline": {
-      "title": "Activity Timeline",
+      "title": "Activity timeline",
       "subtitle": "A unified timeline of drives, charging, alerts, software updates, and your annotations.",
       "empty": "No activity in this window.",
       "loadMore": "Older",
       "loadNewer": "Newer",
       "pagePosition": "Showing {{start}}–{{end}} of {{total}} events in the selected range",
-      "exportScope": "Exports include only the loaded page. Use Older or Newer to browse and export other pages.",
+      "exportScope": "Exports include only the loaded page. Use older or newer to browse and export other pages.",
       "overview": {
         "aria": "Activity overview",
         "total": "Events in selected range",
@@ -183,8 +194,14 @@
         "drive": "Drive",
         "charging": "Charging",
         "alert": "Alert",
-        "software_update": "Software Update",
+        "software_update": "Software update",
         "annotation": "Annotation"
+      },
+      "brief": {
+        "countTitle": "Range and page counts",
+        "description": "The server total covers the selected range; loaded events, days, and critical alerts describe this page only.",
+        "scope": "Selected range and current loaded page have different coverage.",
+        "mixDescription": "Counts by event type describe only the loaded page, not the entire selected range."
       }
     }
   }

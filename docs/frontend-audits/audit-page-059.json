@@ -1,0 +1,381 @@
+{
+  "item": "audit-page-059",
+  "page": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx",
+  "routes": ["/automations"],
+  "purpose": "Fleet-wide automation command center with rule inventory, status/search filtering, pinned cards, typed import, quick-start presets and vehicle-specific cabin comfort.",
+  "primaryGoal": "Inspect and manage existing automation rules and start typed configuration workflows without losing operational controls or data trust.",
+  "dataSources": [
+    {
+      "hooks": ["useAutomations"],
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 43,
+      "endpoints": ["GET /api/v1/automations"],
+      "routeEvidence": "internal\\api\\router.go:3804-3806",
+      "ownership": "Automation API/query owner; page derives counts and local filters from the loaded array.",
+      "behavior": "AbortSignal forwarded; ['automations'] key; STANDARD polling; safeArray selection. No vehicle or date filter is sent."
+    },
+    {
+      "hooks": ["useToggleAutomation", "useReEnableAutomation", "useDeleteAutomation", "useTestRunAutomation", "useImportAutomations"],
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 153,
+      "endpoints": ["PATCH /api/v1/automations/{id}/toggle", "PATCH /api/v1/automations/{id}/re-enable", "DELETE /api/v1/automations/{id}", "POST /api/v1/automations/{id}/test-run", "POST /api/v1/automations/import"],
+      "routeEvidence": "internal\\api\\router.go:3818,3841-3848",
+      "ownership": "Existing typed mutation hooks and toast/query broadcast owners.",
+      "behavior": "requiresLiveMode; toggle optimistic array update with rollback owned by its helper; import/delete invalidate inventory and history; re-enable invalidates inventory; test run invalidates history. No mutation executed in audit."
+    },
+    {
+      "hooks": ["useVehicles"],
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 74,
+      "endpoints": ["GET /api/v1/vehicles"],
+      "routeEvidence": "internal\\api\\router.go:3319 (route group inspected by scoped search; child GET not inspected)",
+      "ownership": "Vehicle hook owner; display-name lookup only.",
+      "behavior": "AbortSignal, FAST stale time, safeArray. Page currently discards query status."
+    },
+    {
+      "hooks": ["usePinned", "useTogglePin"],
+      "file": "web\\src\\api\\hooks\\usePinned.ts",
+      "line": 62,
+      "endpoints": ["GET /api/v1/pinned?type=automation", "POST /api/v1/pinned", "DELETE /api/v1/pinned/{id}"],
+      "routeEvidence": "internal\\api\\router.go:3718-3723",
+      "ownership": "Unified per-user pin API; PinButton consumes same cache bucket.",
+      "behavior": "['pinned','automation',null] key; SLOW stale time; pinned positions sort before unpinned source order. Pin mutations invalidate and broadcast."
+    },
+    {
+      "hooks": ["useAutomationPresets"],
+      "file": "web\\src\\api\\hooks\\useAutomations.ts",
+      "line": 378,
+      "endpoints": ["GET /api/v1/automations/presets"],
+      "routeEvidence": "internal\\api\\router.go:3827-3830",
+      "ownership": "PresetGallery owns category/search filtering and SourceContent state presentation.",
+      "behavior": "STATIC stale time and AbortSignal; navigation installs through builder prefill, not a direct install mutation."
+    },
+    {
+      "hooks": ["useAutomationEvents"],
+      "file": "web\\src\\hooks\\useAutomationEvents.ts",
+      "line": 61,
+      "endpoints": ["SSE /api/v1/automations/events"],
+      "routeEvidence": "internal\\api\\router.go:3814; web\\src\\lib\\automationSSE.ts:92",
+      "ownership": "Existing automationSSE transport and hook.",
+      "behavior": "50 events retained in hook, but only firingNow rendered by this page. Trigger indicator expires after five seconds or terminal event; subscription cleanup clears timers. Direct SSE version prefix is correct, not a request() double-prefix finding."
+    },
+    {
+      "hooks": ["useComfortNext", "useComfortRuns", "useSaveComfortConfig", "usePreconditionNow"],
+      "file": "web\\src\\api\\hooks\\useComfort.ts",
+      "line": 69,
+      "endpoints": ["GET /api/v1/comfort/next?vehicle_id={id}", "GET /api/v1/comfort/runs?vehicle_id={id}&limit=10", "PUT /api/v1/comfort/config", "POST /api/v1/comfort/now"],
+      "routeEvidence": "internal\\api\\router.go:3974-3978",
+      "ownership": "ComfortPanel and comfort hook owner; selected-vehicle hook supplies context.",
+      "behavior": "Reads enabled only with vehicle; operational queryPolicy and AbortSignal; scopedPath normalizes snake_case params. Save invalidates next config, now invalidates runs. Celsius display uses useUnits. Existing lead_minutes contract is preserved, not silently reinterpreted or renamed."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout", "usage": "Root page composition with primary, secondary and overflow actions; category import at page:12; internal layout not audited."},
+    {"name": "GlassPanel, Button, Input, Select, Badge, typography roles", "owner": "web\\src\\components\\ui", "usage": "Existing surface/control/semantic type pipeline. GlassPanel.tsx:46-79 is neutral by default; Button.tsx:28-80 provides focus/loading/disabled and wrapLabel."},
+    {"name": "AutomationRulesBrief / OperationalBrief", "owner": "web\\src\\features\\automations\\components\\operationalbrief-all\\AutomationRulesBrief.tsx", "usage": "Four count metrics adapted with useOperationalMetrics; missing raw values stay null; loaded, loading, unavailable and retained captions at lines 38-66. Keep current stats owner, not another KPI system."},
+    {"name": "AutomationCard", "owner": "web\\src\\features\\automations\\pages\\AutomationCard.tsx", "usage": "Status precedence, pin, toggle/re-enable, firing text, details and delete confirmation; extracted Actions/Statistics/Notices preserve menu/counters/conflicts."},
+    {"name": "PresetGallery", "owner": "web\\src\\features\\automations\\pages\\PresetGallery.tsx", "usage": "SourceContent, SearchInput, PillFilterBar, four-width card grid, details Tooltip and builder navigation."},
+    {"name": "ComfortPanel", "owner": "web\\src\\features\\automations\\components\\ComfortPanel.tsx", "usage": "Calendar config editor, target Celsius display, lead time, save, precondition now, next event and recent runs."},
+    {"name": "SourceContent / StaleRefreshWarning / useDataState", "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "usage": "Reuse actual existing source-isolation contract: fatal-only replacement, retained children and retry. StaleRefreshWarning.tsx:48-116 supplies offline/refresh distinction; api\\dataState.ts:125-177 supplies retained data, age and independent retry."},
+    {"name": "OperationalWriteNotice / useOperationalMode", "owner": "web\\src\\hooks\\useOperationalMode.tsx", "usage": "Page renders existing notice and disables inventory controls. as_of and cached mode canWrite=false at lines 52-88. request() asserts operational write permission at client.ts:378; notice implementation not inspected."},
+    {"name": "FadeIn, StaggerContainer, StaggerItem", "owner": "web\\src\\components\\motion", "usage": "Existing motion owner; imported rather than direct framer-motion. Shared implementation and effective OS/low-bandwidth behavior not inspected."},
+    {"name": "ConfirmDialog / Popover / PinButton / EmptyStateGuidanceDetails", "owner": "web\\src\\components\\ui and web\\src\\components\\feedback", "usage": "Reuse existing overlay, pin persistence and guidance owners. PinButton implementation inspected; overlay focus behavior not exercised."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx",
+      "line": 54,
+      "rule": "MDC-002 / mission 33-34",
+      "detail": "Local AutomationImportEnvelope duplicates the exported hook contract at useAutomations.ts:136-140; runtime predicate remains page-specific and intentionally shallow.",
+      "fix": "Reuse the hook-owned envelope type while retaining explicit validation and rejection behavior; do not infer server acceptance from the predicate.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": ["Filter row stacks below sm and uses min-w-0 (page:359-375).", "Rule grid is one column until 2xl, then two (page:445-452).", "Preset grid is 1/sm:2/lg:3/xl:4 (PresetGallery:215,267).", "Card header/actions and comfort buttons flex-wrap; preset descriptions break words."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\components\\ComfortPanel.tsx",
+        "line": 121,
+        "rule": "MDC-031 / MDC-043 preservation",
+        "detail": "Next-event title/time/location and recent run title (line 198) use truncate without a page-provided complete-detail disclosure. Long event content can be visually inaccessible at narrow widths.",
+        "fix": "Allow wrapping or expose full content through existing accessible disclosure; retain event location/time and run metadata.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "NOT EXERCISED at any required width; source reflow is not rendered overflow/long-label proof."
+  },
+  "accessibility": {
+    "verified": false,
+    "sourcePositives": ["Localized filter/search/file input names; decorative action icons aria-hidden.", "Native details/summary retains browser disclosure semantics; page summary has explicit focus styling.", "Statuses and firing indicators have visible text, not color only.", "Action menu exposes expanded state, Escape handling and min-h-11 buttons; delete uses existing ConfirmDialog."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationCard.tsx",
+        "line": 105,
+        "rule": "MDC-040 action identity",
+        "detail": "Every card switch is named 'Toggle automation'; menu trigger similarly uses generic 'Actions menu' in AutomationCardActions.tsx:45. Individual rules are not included in the accessible action name.",
+        "fix": "Include the source rule name in localized toggle/menu labels; preserve checked state and native focus behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\ui\\PinButton.tsx",
+        "line": 37,
+        "rule": "MDC-040 touch targets",
+        "detail": "The page uses size=sm (AutomationCard:99); shared sm pin target is h-7 w-7 (28px). It is below the contract's 44px default, though an actual spacing exception cannot be evaluated from source.",
+        "fix": "First use supported className to provide min-h-11/min-w-11 for this consumer; any global default change belongs to shared owner and must preserve density/layout/pin semantics.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\automations\\pages\\PresetGallery.tsx",
+        "line": 109,
+        "rule": "MDC-040 touch targets",
+        "detail": "Details trigger explicitly sets h-8 w-8. Main page sm action buttons also resolve to 36px in Button.tsx:39; spacing and composed target adequacy are unmeasured.",
+        "fix": "Use existing button sizing/wrapLabel and 44px minimum where appropriate; measure actual mobile targets and spacing before claiming conformance.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Keyboard traversal and menu focus restoration", "Screen-reader grouping and announcements", "Contrast in light/dark/custom themes", "Forced colors", "200% text and RTL", "Reduced-motion/low-bandwidth rendered behavior"]
+  },
+  "states": {
+    "inventory": "Initial skeletons; fatal QueryError with refetch; empty guidance + live create link; no-match reset; retained data remains with StaleRefreshWarning. Brief intentionally uses null metrics before successful response.",
+    "presets": "Independent loading/error/empty/ready/retained SourceContent; refresh action for empty/fatal; category/search no-match state; gallery collapsed by default.",
+    "writeMode": "Inventory and preset actuation disabled by canWrite; read-only notice remains. Comfort differs as finding below; client guard remains in place.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardStatistics.tsx",
+        "line": 21,
+        "rule": "MDC-025 / MDC-026 / MDC-032",
+        "detail": "Falsy vehicleName is rendered as 'All vehicles', even when rule.vehicle_id is non-null and the vehicle lookup is pending, failed, missing or blank. Page:132 discards vehicle query state; page:457 passes undefined for unresolved scoped identities.",
+        "fix": "Pass vehicle_id and lookup state separately; show unresolved scoped vehicle identity instead of fleet-wide scope, retain source rule and offer source-specific recovery.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\automations\\components\\ComfortPanel.tsx",
+        "line": 43,
+        "rule": "MDC-026 source isolation",
+        "detail": "runsQuery contributes only data??[] (line 70); no runs loading, error, retained/offline or empty surface exists, and section is omitted when length=0 (line 190). nextState fatal is handled but its refreshError/isRefreshBlocked is not displayed.",
+        "fix": "Give next-event/config and runs independent DataState surfaces with retained notices/retry; keep recent-runs section with truthful empty/loading/error content and current five-of-ten display behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\automations\\components\\ComfortPanel.tsx",
+        "line": 170,
+        "rule": "MDC-046 operational boundaries",
+        "detail": "Comfort save/now disable only on pending, while adjacent automation controls use canWrite. Comfort editor does not consume operational mode, so controls look actionable in historical/offline mode. client.ts:378 still asserts permission; no bypass or production mutation is established.",
+        "fix": "Consume existing operational mode to disable editor/actuation appropriately and expose writeBlockReason; retain request-layer guard and pending feedback.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx",
+        "line": 224,
+        "rule": "MDC-026 independent source trust",
+        "detail": "Pin query loading/error/retained state is discarded and missing result defaults to no pins. SSE connectionState is also discarded at line 133. Inventory remains readable but pin ordering and lack of firing indicators have no source-specific uncertainty context.",
+        "fix": "Expose non-blocking pin/source recovery and stream connection context using existing source/status contracts, without replacing rules or fabricating activity.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx",
+      "line": 393,
+      "rule": "MDC-010 / MDC-012 / mission 5-8",
+      "detail": "Preset disclosure hardcodes white hover background and cyan focus ring; fixed cyan decorative Sparkles at line 400 competes with neutral hierarchy.",
+      "fix": "Reuse current surface-hover/focus-ring/text tokens, reserving semantic hue for status and primary action; keep native summary and visible focus.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\automations\\pages\\PresetGallery.tsx",
+      "line": 80,
+      "rule": "MDC-010 / MDC-015 / mission 7-8",
+      "detail": "All templates request cyan hover accent and cyan icon tile styling (lines 82-83), independent of category meaning/theme. GlassPanel.tsx:31 proves glow='cyan' is a tinted hover border, NOT an actual glowing shadow.",
+      "fix": "Use neutral panel hover and muted tokenized icon surfaces, preserving meaningful icon differentiation and saved themes. No shared palette reset or new surface component.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardActions.tsx",
+      "line": 91,
+      "rule": "mission 2 / MDC-070 preservation",
+      "detail": "Duplicate and Export handlers only close the menu (lines 91 and 101); no duplicate request, builder navigation or download is invoked. They are visible existing affordances, not working features in this inspected snapshot.",
+      "fix": "Integration owner must establish intended duplicate/export behavior using existing typed contracts; preserve labels/reachability and do not claim modernization added functionality or silently delete these controls. Router exposes per-rule export at router.go:3841.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\automations\\components\\ComfortPanel.tsx",
+      "line": 39,
+      "rule": "MDC-032 workspace ownership",
+      "detail": "Comfort requires useSelectedVehicle, but /automations disables header vehicle scope (workspaceScope.ts:95-98,156-168). This page supplies no required local vehicle selector. The panel can depend on a selection inherited from another route and otherwise only says to select a vehicle.",
+      "fix": "Keep the fleet-wide rule workspace unfiltered; provide explicit comfort-local vehicle selection/context on this intentionally header-disabled route using existing selection ownership, or coordinate a deliberate integration policy. Do not enable duplicate global selectors or drop comfort.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\automations\\components\\ComfortPanel.tsx",
+      "line": 66,
+      "rule": "MDC-032 / MDC-046 scoped editor identity",
+      "detail": "Changing vehicle only resets hydrated; previous draft fields are retained until a stored config is available. An empty new config response can leave old vehicle values in the editor. Identity-scoped edit hydration and unsaved-change policy are not explicit.",
+      "fix": "Key/reset editor drafts by vehicle identity and distinguish unavailable config from valid defaults; preserve dirty values within the same vehicle and prevent old drafts being saved under a different vehicle.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx",
+      "line": 166,
+      "rule": "MDC-024 / mission 24",
+      "detail": "Local parse/envelope failures use blocking window.alert, unlike mutation errors handled by existing toasts. The page maintains a second error presentation path without persistent inline recovery context.",
+      "fix": "Reuse an existing feedback/dialog contract for parse validation, retaining translated reason, strict legacy rejection and file-input reset; do not replace validation with optimistic import success.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Resolve comfort vehicle context and operational-mode alignment", "Prevent scoped-vehicle unknowns being labeled fleet-wide", "Restore independent comfort data trust surfaces", "Define no-op duplicate/export ownership", "Reduce decorative palette and improve named actions/mobile targets"],
+    "rationale": "Functional context/trust gaps outrank cosmetic work. Existing inventory/preset retained-data and brief mechanisms should be preserved rather than rebuilt."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Comfort-local vehicle context integration",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "requestedOwner": "integration",
+      "propsVariantsStates": "Keep /automations fleet-wide and header-disabled; comfort must expose required selection and selected identity plus loading/unavailable states using existing vehicle-selection mechanisms. No speculative new global selector API is prescribed.",
+      "usedBy": ["web\\src\\features\\automations\\components\\ComfortPanel.tsx"],
+      "dependsOn": ["Existing useSelectedVehicle ownership", "Current workspace route policy"],
+      "note": "Policy coordination, not authorization to edit shared source in this audit."
+    },
+    {
+      "name": "Reuse retained source and recovery presentation",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "requestedOwner": "page",
+      "propsVariantsStates": "Existing state ready/loading/error/empty/retained, label, error, errorRecovery.onRetry, loadingContent, emptyContent and retainedMessage suffice for comfort runs; StaleRefreshWarning supplies paused/offline distinction. No new shared component required by current evidence.",
+      "usedBy": ["PresetGallery", "ComfortPanel", "AutomationsListPage auxiliary sources"],
+      "dependsOn": ["web\\src\\hooks\\useDataState.ts", "web\\src\\api\\dataState.ts"],
+      "note": "Adopt existing contracts, do not extend shared source speculatively."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx", "line": 166, "detail": "Native alert for local import errors versus existing mutation-toast/feedback owner; candidate consolidation, not a new dialog system."},
+    {"file": "web\\src\\features\\automations\\components\\ComfortPanel.tsx", "line": 110, "detail": "Comfort manually branches one source and omits runs states while sibling PresetGallery uses canonical SourceContent; reuse current state renderer."},
+    {"detail": "No competing theme/token/chart/table/query engine found in inspected page-specific source. This is scoped source evidence, not repository-wide certification."}
+  ],
+  "preservation": {
+    "sourceHash": "11F871A8F876B8CA473B409697215C9B947588C0B627DEE6B3CEDC0CFF8CF03E",
+    "hashAlgorithm": "SHA-256",
+    "sourceFile": "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx",
+    "currentLineCount": 509,
+    "sectionCount": 8,
+    "sections": [
+      {"name": "Page header and action slots", "line": 270, "count": 1},
+      {"name": "Operational read-only and retained-data notices", "line": 319, "count": 1},
+      {"name": "Full loaded rule inventory brief", "line": 326, "count": 1},
+      {"name": "Conditional auto-disabled warning", "line": 340, "count": 1},
+      {"name": "Status/search filter toolbar", "line": 357, "count": 1},
+      {"name": "Collapsible quick-start preset gallery", "line": 388, "count": 1},
+      {"name": "Cabin comfort autopilot", "line": 425, "count": 1},
+      {"name": "Your automations workspace with all source states", "line": 430, "count": 1}
+    ],
+    "sourceElementCounts": {"GlassPanel": 5, "ChartContainer": 0, "SectionTitle": 1, "explicitSectionElements": 2},
+    "sectionCountMethod": "Logical visible regions, with header/notices included; conditional and mutually exclusive state panels counted once as their logical section, not as mounted runtime totals.",
+    "dependencySections": [
+      "Rule card identity, active/disabled/auto-disabled status, description and firing indicator",
+      "Rule vehicle scope, last/never run, execution/failure counts and next fire",
+      "Auto-disable reason and each conflict name/reason/severity",
+      "Actions popover and destructive confirmation",
+      "Preset search, category pills/counts, showing count, template icon/name/trigger/action count/description/details/install",
+      "Comfort selected vehicle prerequisite, armed status, next calendar event or no-feed/no-upcoming explanation",
+      "Comfort enabled toggle, ICS URL, target Celsius slider 15-28, lead-minutes slider 5-120 step 5, save/now errors",
+      "Comfort five recent run titles and formatted acted-at timestamps from ten loaded runs"
+    ],
+    "actions": [
+      "Navigate Manage rules to /automations/list",
+      "Navigate Create and empty-state CTA to /automations/new when writes allowed",
+      "Choose .json file, parse strict version/automations envelope, reject legacy shape, import typed payload and reset input",
+      "Select all/active/disabled/auto-disabled and search names/descriptions case-insensitively; reset both on no match",
+      "Expand/collapse presets; search/filter categories; inspect details; install navigates /automations/new?preset={id}",
+      "Pin/unpin rule with existing user persistence and pinned position ordering",
+      "Toggle enabled; auto-disabled enable uses re-enable instead of toggle",
+      "Test run; explicit re-enable; request delete/cancel/confirm delete",
+      "Duplicate and Export menu affordances currently only close menu; documented defect, not functioning export/duplicate acceptance",
+      "Retry fatal inventory query; retained inventory refresh; independent preset retry",
+      "Edit/save comfort enabled/temp/lead/calendar URL; precondition now; view recent runs"
+    ],
+    "dataBehavior": [
+      "Auto-disabled takes precedence over enabled in count/filter/status; total count is loaded inventory before filters.",
+      "Search trims/lowercases without altering persisted automation names/descriptions; pins affect ordering only.",
+      "Do not gate presets, comfort or other independent sections behind inventory success.",
+      "Retain last-success rule/preset payload on refresh failure; never turn unavailable brief counts into measured zeros.",
+      "Preserve cache keys, polling/stale policy, cancellation, optimistic toggle rollback and invalidation/broadcast ownership.",
+      "Preserve five-second transient firing semantics; no activity-feed sidebar is currently rendered despite stale opening comment.",
+      "Inventory is fleet-wide and not date-windowed; do not add a header range request/filter without actual source support.",
+      "Preserve actual Celsius wire input and display-only useUnits conversion. Existing comfort lead_minutes is an observed contract, not permission for new non-SI fields or an audit-only conversion.",
+      "Keep typed import rejection, operational request guard, navigation destinations, pin identity and empty guidanceId automations.list.",
+      "Unknown scope/name/source failures must not be relabeled as all vehicles, empty history, offline or measured zero."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only static source inspection of assigned mounted page and direct page-specific dependencies plus narrow shared contract/route excerpts.",
+    "runtime": "UNVERIFIED; no mounted page, server requests, SSE connection or mutations exercised.",
+    "visual": "UNVERIFIED; no screenshots/themes/viewport comparisons exercised.",
+    "accessibility": "UNVERIFIED; keyboard, screen reader, focus, contrast, touch spacing and OS modes not exercised.",
+    "backend": "Route registration inspected, not implementation/storage/authorization acceptance. No units or response defaults invented.",
+    "validation": "No TypeScript, builds, tests or lint run per Phase0 assignment. Skill audit.sh inspected but not executed because it unconditionally runs project TypeScript; substituted scoped read-only source counts.",
+    "sourceChecks": {
+      "command": "PowerShell Get-FileHash -Algorithm SHA256; Get-Content root line count; scoped regex counts and line-numbered dependency matches",
+      "exitCode": 0,
+      "output": "SHA256 11F871A8F876B8CA473B409697215C9B947588C0B627DEE6B3CEDC0CFF8CF03E; 509 lines; root raw-control count: 0; root inline-style count: 0; root GlassPanel opening count: 5; root ChartContainer opening count: 0",
+      "scope": "Counts apply only to assigned root, not the dependency tree or all guideline categories."
+    },
+    "toolErrors": ["One combined PowerShell citation/count probe failed before execution with ParserError exit 1; corrected narrower probe succeeded. useOperationalMode.ts lookup failed; actual .tsx file then inspected."],
+    "drift": "Root hash captured and checked at release. Other writers can change dependencies; source findings are a snapshot.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-059.json", ".agent-status\\audit-page-059.txt"],
+    "sourceWrites": "None; no Git, source/shared/queue/config/catalog modifications."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\automations\\pages\\AutomationsListPage.tsx",
+    "web\\src\\features\\automations\\pages\\AutomationCard.tsx",
+    "web\\src\\features\\automations\\pages\\PresetGallery.tsx",
+    "web\\src\\features\\automations\\components\\ComfortPanel.tsx",
+    "web\\src\\features\\automations\\components\\operationalbrief-all\\AutomationRulesBrief.tsx",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardActions.tsx",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardStatistics.tsx",
+    "web\\src\\features\\automations\\components\\automation-helper-source-closure\\AutomationCardNotices.tsx",
+    "web\\src\\api\\hooks\\useAutomations.ts",
+    "web\\src\\api\\hooks\\useComfort.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\usePinned.ts",
+    "web\\src\\api\\scope.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\hooks\\useAutomationEvents.ts",
+    "web\\src\\hooks\\useOperationalMode.tsx",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\automationSSE.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\PinButton.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

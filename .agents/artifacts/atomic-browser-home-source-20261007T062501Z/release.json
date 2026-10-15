@@ -1,0 +1,19 @@
+{
+  "releasedUtc": "2026-10-07T06:25:01.2738779Z",
+  "release": "Explicit atomic source-write release of BOTH owned files; no further source writes by this actor.",
+  "ownedPaths": [
+    "web\\e2e\\operationalbrief-contracts\\specialized-home-energy.supported.spec.ts",
+    "web\\e2e\\operationalbrief-contracts\\specialized-home-energy.supported.fixtures.ts"
+  ],
+  "filesAbsentAtStart": true,
+  "authoredTemplateCount": 2,
+  "authoredScenarioCount": 8,
+  "executedScenarioCount": 0,
+  "sourceOnly": true,
+  "accepted": false,
+  "branch": "fix/dashboard-followups",
+  "nestedAgents": 0,
+  "runningOwnedServers": 0,
+  "hashMismatchCount": 0,
+  "notes": "Inherited dirty branch preserved; no product/shared/catalog/old-fixture edits. Preservation artifact is current source evidence only, not technical/browser acceptance."
+}

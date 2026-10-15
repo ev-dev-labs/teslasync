@@ -2,9 +2,12 @@
 //
 // Covers:
 //
-//   - Renders the placeholder while the auth-mode contract is loading
+//   - Renders a loading state while the auth-mode contract is loading
 //     (NOT the children — flashing children would tear down their
 //     in-flight queries).
+//   - Distinguishes initial failure from confirmed configuration denial.
+//   - Retains allowed content on transient refresh failure, but never
+//     overrides a fresh authentication or permission denial.
 //   - Renders the placeholder in open mode with the documented
 //     vendor-neutral copy.
 //   - Renders the children in forward-auth mode when the relevant
@@ -24,8 +27,9 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -52,7 +56,8 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-import { request } from '@/api/client';
+import { ApiError, request } from '@/api/client';
+import { authModeKeys } from '@/api/hooks/useAuthMode';
 import { RequiresAuth, requiresAuthEmptyTestId } from './RequiresAuth';
 import type { AuthModeResponse } from '@/api/types';
 
@@ -65,7 +70,7 @@ function wrapper({ children }: { children: ReactNode }) {
       mutations: { retry: false },
     },
   });
-  return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+  return <MemoryRouter><QueryClientProvider client={qc}>{children}</QueryClientProvider></MemoryRouter>;
 }
 
 const openMode: AuthModeResponse = {
@@ -120,7 +125,7 @@ describe('requiresAuthEmptyTestId', () => {
 });
 
 describe('<RequiresAuth>', () => {
-  it('renders the placeholder (NOT the children) while the contract is loading', () => {
+  it('renders loading without claiming auth denial or mounting children', () => {
     // Never resolve the mock — query stays in loading state.
     mockedRequest.mockReturnValue(new Promise(() => {}));
 
@@ -131,10 +136,76 @@ describe('<RequiresAuth>', () => {
       { wrapper },
     );
 
-    expect(
-      screen.getByTestId('requires-auth-empty-totp_enrollment'),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.queryByTestId('requires-auth-empty-totp_enrollment')).not.toBeInTheDocument();
     expect(screen.queryByTestId('protected-children')).not.toBeInTheDocument();
+  });
+
+  it('shows a recoverable initial failure rather than a configuration denial', async () => {
+    mockedRequest
+      .mockRejectedValueOnce(new ApiError('Unavailable', 503))
+      .mockResolvedValueOnce(forwardAuthAllOn);
+    render(
+      <RequiresAuth capability="rbac" feature="RBAC">
+        <div data-testid="protected-children">RBAC editor</div>
+      </RequiresAuth>,
+      { wrapper },
+    );
+    const retry = await screen.findByRole('button', { name: 'error.retry' });
+    expect(screen.queryByTestId('requires-auth-empty-rbac')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('protected-children')).not.toBeInTheDocument();
+    fireEvent.click(retry);
+    expect(await screen.findByTestId('protected-children')).toBeInTheDocument();
+  });
+
+  it.each([503, 401, 403])('handles a %s refresh without bypassing the auth boundary', async (status) => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    qc.setQueryData(authModeKeys.all, forwardAuthAllOn);
+    mockedRequest.mockRejectedValueOnce(new ApiError('Refresh failed', status));
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <RequiresAuth capability="rbac" feature="RBAC">
+            <div data-testid="protected-children">RBAC editor</div>
+          </RequiresAuth>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId('protected-children')).toBeInTheDocument();
+    await act(async () => {
+      await qc.invalidateQueries({ queryKey: authModeKeys.all });
+    });
+    if (status === 503) {
+      expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.getByTestId('protected-children')).toBeInTheDocument();
+    } else {
+      await waitFor(() => expect(screen.queryByTestId('protected-children')).not.toBeInTheDocument());
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+    }
+    expect(screen.queryByTestId('requires-auth-empty-rbac')).not.toBeInTheDocument();
+    qc.clear();
+  });
+
+  it.each([openMode, forwardAuthAllOff])('unmounts retained content after a confirmed capability denial in $mode mode', async (denial) => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    qc.setQueryData(authModeKeys.all, forwardAuthAllOn);
+    mockedRequest.mockResolvedValueOnce(denial);
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={qc}>
+          <RequiresAuth capability="rbac" feature="RBAC">
+            <div data-testid="protected-children">RBAC editor</div>
+          </RequiresAuth>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId('protected-children')).toBeInTheDocument();
+    await act(async () => {
+      await qc.invalidateQueries({ queryKey: authModeKeys.all });
+    });
+    expect(await screen.findByTestId('requires-auth-empty-rbac')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-children')).not.toBeInTheDocument();
+    qc.clear();
   });
 
   it('renders the placeholder in open mode with vendor-neutral copy', async () => {

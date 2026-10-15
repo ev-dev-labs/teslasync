@@ -155,6 +155,7 @@ func TestEnergyHandler_Stats_Success(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
+
 	if ct := rec.Header().Get("Content-Type"); ct != "application/json; charset=utf-8" {
 		t.Fatalf("Content-Type = %q, want application/json; charset=utf-8", ct)
 	}
@@ -189,6 +190,29 @@ func TestEnergyHandler_Stats_Success(t *testing.T) {
 	}
 	if _, present := first["efficiency_wh_per_m"]; !present {
 		t.Fatalf("daily_breakdown[0] missing efficiency_wh_per_m; got=%v", first)
+	}
+}
+
+func TestEnergyHandler_EmptyDailyHistory(t *testing.T) {
+	for _, analytics := range []bool{false, true} {
+		t.Run(map[bool]string{false: "vehicle", true: "analytics"}[analytics], func(t *testing.T) {
+			stats := sampleStats()
+			stats.DailyBreakdown = nil
+			h := &EnergyHandler{energySvc: &fakeStatsCalculator{stats: stats}}
+			rec := httptest.NewRecorder()
+			if analytics {
+				h.AnalyticsStats(rec, newAnalyticsRequest("vehicle_id=42"))
+			} else {
+				h.Stats(rec, newStatsRequest(t, "42", ""))
+			}
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+			}
+			assertEnergyResponse(t, decodeBody(t, rec), stats)
+			if stats.DailyBreakdown != nil {
+				t.Fatal("response projection mutated source history")
+			}
+		})
 	}
 }
 

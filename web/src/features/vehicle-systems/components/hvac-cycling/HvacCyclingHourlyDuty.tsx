@@ -1,24 +1,25 @@
-import { Clock3 } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
+  EmbeddedChart,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { GlassPanel, MetricLabel, PanelTitle, Text } from '@/components/ui';
+import { MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtPercent } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingHourlyDutyProps {
   summary: HvacCyclingSummary;
@@ -31,6 +32,7 @@ export function HvacCyclingHourlyDuty({
   state,
   formatDuration,
 }: HvacCyclingHourlyDutyProps) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const data = summary.hourlyProfile.map((bucket) => ({
     hourIndex: bucket.hour,
@@ -44,11 +46,7 @@ export function HvacCyclingHourlyDuty({
 
   return (
     <section data-testid="hvac-cycling-hourly-duty">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Clock3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.hourly.title', 'Hourly HVAC Duty')}
-        </PanelTitle>
+      <LayoutCard title={t('hvacCycling.hourly.title', 'Hourly HVAC duty')}>
         <Text as="p" variant="caption" className="mb-3">
           {t(
             'hvacCycling.hourly.subtitle',
@@ -61,7 +59,7 @@ export function HvacCyclingHourlyDuty({
           requirement="intervals"
           skeletonHeight={230}
         >
-          <ChartContainer
+          <EmbeddedChart toolbar exportable size="standard"
             className="border-0 bg-transparent p-0 shadow-none"
             title={t('hvacCycling.hourly.plotTitle', 'Duty by local hour')}
             ariaLabel={t(
@@ -76,7 +74,7 @@ export function HvacCyclingHourlyDuty({
                 key: 'duty',
                 label: t('hvacCycling.hourly.duty', 'Duty cycle'),
                 format: (value) =>
-                  typeof value === 'number' ? fmtPercent(value, 1) : '—',
+                  typeof value === 'number' ? fmtPercent(value) : '—',
               },
               {
                 key: 'observedS',
@@ -84,7 +82,6 @@ export function HvacCyclingHourlyDuty({
                 format: (value) =>
                   formatDuration(
                     typeof value === 'number' ? value : null,
-                    { precision: 1 },
                   ),
               },
               { key: 'starts', label: t('hvacCycling.hourly.starts', 'Observed on transitions') },
@@ -112,7 +109,7 @@ export function HvacCyclingHourlyDuty({
                 />
               </BarChart>
             </ResponsiveContainer>
-          </ChartContainer>
+          </EmbeddedChart>
           <Text as="h4" variant="label" className="mb-2 mt-3">
             {t('hvacCycling.hourly.supportGrid', 'Per-hour observed support')}
           </Text>
@@ -124,7 +121,7 @@ export function HvacCyclingHourlyDuty({
               >
                 <MetricLabel>{bucket.hour}</MetricLabel>
                 <Text as="p" variant="caption" className="mt-1">
-                  {formatDuration(bucket.observedS, { precision: 1 })}
+                  {formatDuration(bucket.observedS)}
                 </Text>
                 <Text as="p" variant="caption">
                   {t('hvacCycling.hourly.transitionCount', '{{count}} starts', {
@@ -135,7 +132,7 @@ export function HvacCyclingHourlyDuty({
             ))}
           </div>
         </HvacCyclingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

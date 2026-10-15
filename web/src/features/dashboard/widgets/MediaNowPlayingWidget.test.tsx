@@ -33,7 +33,8 @@
  * components it composes may reach for router context.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { getGlobalLocale, getGlobalPrecision, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { MediaSnapshot } from '@/api/types';
@@ -90,6 +91,7 @@ function makeMedia(over: Partial<MediaSnapshot> = {}): MediaSnapshot {
 }
 
 interface MediaResult {
+  error?: Error;
   data: MediaSnapshot | null | undefined;
   isLoading: boolean;
   isFetching: boolean;
@@ -199,7 +201,7 @@ describe('MediaNowPlayingWidget — states', () => {
   it('renders a loading skeleton while the media query is pending', () => {
     useMediaLatestMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Nothing playing')).toBeNull();
   });
 
@@ -210,13 +212,75 @@ describe('MediaNowPlayingWidget — states', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
-  it('surfaces a red freshness dot on error but still paints an empty panel', () => {
+  it('surfaces a fatal error instead of claiming nothing is playing on initial failure', () => {
     useMediaLatestMock.mockReturnValue(
       makeResult({ isError: true, dataUpdatedAt: 0, data: null }),
     );
     const { container } = renderWidget();
-    expect(container.querySelector('.bg-red-400')).not.toBeNull();
-    expect(screen.getByText('Nothing playing')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--semantic-danger"]')).not.toBeNull();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText('Nothing playing')).toBeNull();
+  });
+
+  describe('MediaNowPlayingWidget — prerequisite trust and preferences', () => {
+    it('retains the title, album and transport indicators with real refresh recovery', () => {
+      const refetch = vi.fn();
+      useMediaLatestMock.mockReturnValue(makeResult({ isError: true, error: new Error('refresh failed'), refetch }));
+      renderWidget();
+      expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+      expect(screen.getByText('A Night at the Opera')).toBeInTheDocument();
+      expect(screen.getByRole('progressbar', { name: 'Playback progress' })).toBeInTheDocument();
+      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries failed vehicle resolution before the disabled media query', () => {
+      const refetch = vi.fn();
+      const mediaRefetch = vi.fn();
+      useVehiclesMock.mockReturnValue({ data: undefined, isError: true, error: new Error('discovery failed'), refetch });
+      useMediaLatestMock.mockReturnValue(makeResult({ data: undefined, refetch: mediaRefetch }));
+      renderWidget();
+      fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(mediaRefetch).not.toHaveBeenCalled();
+    });
+
+    it('does not invent zero elapsed time when only the duration is known', () => {
+      useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ now_playing_elapsed: undefined }) }));
+      renderWidget();
+      expect(screen.queryByRole('progressbar', { name: 'Playback progress' })).toBeNull();
+      expect(screen.queryByText('0:00')).toBeNull();
+      expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+    });
+
+    it('keeps a real zero volume reading without inventing an unknown scale maximum', () => {
+      useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: 0, audio_volume_max: undefined }) }));
+      renderWidget();
+      expect(screen.queryByRole('progressbar', { name: 'Volume' })).toBeNull();
+      expect(screen.getByText('0.00')).toBeInTheDocument();
+    });
+
+    it('bounds the accessible volume reading to the known scale', () => {
+      useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: 15, audio_volume_max: 10 }) }));
+      renderWidget();
+      expect(screen.getByRole('progressbar', { name: 'Volume' })).toHaveAttribute('aria-valuenow', '10');
+    });
+
+    it('reacts to locale and precision without changing media identities or refetching', () => {
+      const locale = getGlobalLocale();
+      const precision = getGlobalPrecision();
+      const refetch = vi.fn();
+      try {
+        useMediaLatestMock.mockReturnValue(makeResult({ data: makeMedia({ audio_volume: 5.125 }), refetch }));
+        renderWidget();
+        act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(3); });
+        expect(screen.getByText('5,125')).toBeInTheDocument();
+        expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
+        expect(refetch).not.toHaveBeenCalled();
+      } finally {
+        act(() => { setGlobalLocale(locale); setGlobalPrecision(precision); });
+      }
+    });
   });
 });
 
@@ -230,7 +294,7 @@ describe('MediaNowPlayingWidget — standard (non-tall)', () => {
       makeResult({ data: makeMedia({ now_playing_title: 'Song A', now_playing_artist: 'Artist B' }) }),
     );
     renderWidget(STD);
-    expect(screen.getByText('Now Playing')).toBeInTheDocument();
+    expect(screen.getByText('Now playing')).toBeInTheDocument();
     expect(screen.getByText('Song A')).toBeInTheDocument();
     expect(screen.getByText('Artist B')).toBeInTheDocument();
   });
@@ -258,7 +322,7 @@ describe('MediaNowPlayingWidget — standard (non-tall)', () => {
     );
     renderWidget(STD);
     const bar = screen.getByRole('progressbar', { name: 'Playback progress' });
-    expect(bar).toHaveAttribute('aria-valuenow', '35'); // 65s / 185s ≈ 35%
+    expect(bar).toHaveAttribute('aria-valuenow', String(progressPercent(65_000, 185_000)));
     expect(screen.getByText('1:05')).toBeInTheDocument();
     expect(screen.getByText('3:05')).toBeInTheDocument();
   });
@@ -308,9 +372,10 @@ describe('MediaNowPlayingWidget — tall', () => {
     expect(vol).toHaveAttribute('aria-valuenow', '5');
     expect(vol).toHaveAttribute('aria-valuemax', '10');
     // Regression pin: the fill must NOT reuse the track colour (it was invisible).
-    const fill = vol.querySelector('div');
-    expect(fill?.className).toContain('bg-[var(--text-secondary)]');
-    expect(fill?.className).not.toContain('bg-[var(--surface-2)]');
+    const fill = vol.querySelector('[data-metric-fill]');
+    expect(fill).toHaveStyle({ background: 'var(--text-secondary)' });
+    expect(fill).not.toHaveClass('bg-[var(--surface-2)]');
+    expect(vol.querySelector('[data-metric-track]')).toHaveClass('h-1');
   });
 
   it('hides the volume bar when no volume reading is present', () => {
@@ -326,6 +391,21 @@ describe('MediaNowPlayingWidget — tall', () => {
     renderWidget(TALL);
     const vol = screen.getByRole('progressbar', { name: 'Volume' });
     expect(vol).toHaveAttribute('aria-valuenow', '0');
+  });
+
+  it('keeps both passive tracks non-seeking and retains media metadata', () => {
+    renderWidget(TALL);
+    const volume = screen.getByRole('progressbar', { name: 'Volume' });
+    const progress = screen.getByRole('progressbar', { name: 'Playback progress' });
+    expect(volume).not.toHaveAttribute('tabindex');
+    expect(progress).not.toHaveAttribute('tabindex');
+    expect(screen.queryByRole('slider')).toBeNull();
+    expect(screen.getByText('Queen')).toBeInTheDocument();
+    expect(screen.getByText('A Night at the Opera')).toBeInTheDocument();
+    expect(screen.getByText('Spotify')).toBeInTheDocument();
+    expect(screen.getByText('Spotify')).not.toHaveClass('truncate');
+    expect(volume.querySelector('[data-metric-track]')).toHaveClass('forced-colors:!bg-[Canvas]');
+    expect(progress.querySelector('[data-metric-fill]')).toHaveClass('forced-colors:!bg-[Highlight]');
   });
 });
 
@@ -348,7 +428,7 @@ describe('MediaNowPlayingWidget — compact', () => {
     renderWidget(CMP);
     expect(screen.getByText('Compact Song')).toBeInTheDocument();
     expect(screen.getByText('CA')).toBeInTheDocument();
-    expect(screen.queryByText('Now Playing')).toBeNull(); // title-less shell
+    expect(screen.queryByText('Now playing')).toBeNull(); // title-less shell
     expect(screen.queryByRole('progressbar')).toBeNull(); // no bars
     expect(screen.queryByText('Playing')).toBeNull(); // no chip
   });

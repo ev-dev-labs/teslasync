@@ -88,7 +88,7 @@ describe('ByteSizeConverterTool', () => {
     render(<ByteSizeConverterTool />)
 
     expect(
-      screen.getByRole('heading', { name: 'Byte Size' }),
+      screen.getByRole('heading', { name: 'Byte size' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText('Convert a value between B, KB, MB, GB, and TB.'),

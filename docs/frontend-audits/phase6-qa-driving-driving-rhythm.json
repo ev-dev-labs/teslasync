@@ -1,0 +1,1224 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-driving-rhythm",
+  "attempt": 1,
+  "type": "read-only-finished-page-QA",
+  "page": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+  "routes": [
+    "/driving-rhythm"
+  ],
+  "purpose": "Source-only QA of accepted departure/circadian analysis; no remigration or application acceptance.",
+  "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+  "reportUTC": "2026-10-14T01:22:11.7048564Z",
+  "reservation": {
+    "returnByUTC": "2026-10-14T01:24:13.296Z",
+    "earlierActualDeadlineWins": true,
+    "firstObservedUTC": "2026-10-14T01:06:16.5664064Z",
+    "returnMinutes": 20,
+    "commandLimitMinutes": 15,
+    "targetMinutes": 10,
+    "reservedUTC": "2026-10-14T01:04:13.296Z",
+    "hardUTC": "2026-10-14T01:29:13.296Z"
+  },
+  "authority": {
+    "orchestratorRead": "docs\\orchestrator-loop.md full",
+    "queue": "migration-queue.md",
+    "missionRead": "docs\\frontend-mission.md:1180-1593; §§43-45 fully read",
+    "firstExistingReportCheck": {
+      "existingLogExisted": false,
+      "existed": false,
+      "sourceChanged": false
+    },
+    "dependencyStatus": "[x]",
+    "dependency": "phase5-page-driving-driving-rhythm",
+    "dependencyLineAtInitialRead": 1858,
+    "reservationLineAtFirstRead": 394,
+    "lineDrift": "Queue changed concurrently; line references include observation context. No queue edits.",
+    "historicalContext": "audit-page-114.json:1-190 read only; old audit is not a current pass",
+    "dependencyLineAtDedupRead": 1860,
+    "designContractRead": "docs\\frontend-design-contract.md full1-2539, including continuations after tool range truncations",
+    "instructionsRead": [
+      ".github\\copilot-instructions.md full:1-270,271-465,466-EOF",
+      ".github\\instructions\\frontend-si-cutover.instructions.md full",
+      ".github\\instructions\\react-frontend.instructions.md full:1-450,451-EOF",
+      ".github\\instructions\\observability.instructions.md full",
+      ".github\\instructions\\unit-conversion.instructions.md full",
+      "docs\\frontend-worker-conventions.md full",
+      "docs\\I18N_GUIDELINES.md full",
+      "docs\\MOBILE_GUIDELINES.md:1-220"
+    ],
+    "handoffRead": "docs\\session-handoff.md latest recovery1-200;conventions2000-2147,2186-2250,2270-2342,2419-2460",
+    "closedPhases": "0-5 preserved; no restart",
+    "dependencyCommit": "a88d6101344f2b555f85c416a43df37226a7578c"
+  },
+  "sourceSnapshot": {
+    "pageLines": 144,
+    "productionPresentationPartLines": 1603,
+    "files": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+        "sha256": "b64f18e3274adf7bbe401e90fbf7b1a0a1085802565f042adcf2f247373a7e2f",
+        "lines": 144,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "page"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx",
+        "sha256": "0c679f7445541c9ecbf0adaad3ce25188d456bb446859c70b7910c938c6da3c7",
+        "lines": 146,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistribution.tsx",
+        "sha256": "30d809e76c52af14033935a0cc7113689bd3105a6ea28527212374ef23091b9d",
+        "lines": 129,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistributionPlot.tsx",
+        "sha256": "676cd479ad7df52fc8ca054f3a64acc8f689c20c45b7d461e85ccf6133264a51",
+        "lines": 154,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\WeekdayWeekendComparison.tsx",
+        "sha256": "dba4a84e3f032fb3ca4cfa712f988eb690b24412792cabdad1a597bfa536cd1f",
+        "lines": 165,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\MonthlyRhythmTrend.tsx",
+        "sha256": "cde0322d0084b20a6b4da22b046fdd90a916efff140fe1cce797f53aacabb29c",
+        "lines": 144,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\MonthlyRhythmPlot.tsx",
+        "sha256": "67a87115756c5110316880e0b0652db3e135b0d41e7078a062ac59e4f4efec1b",
+        "lines": 152,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\DepartureConsistency.tsx",
+        "sha256": "0c4e3d486da3f7872e4285fb4e0609a829a2f89b5c404e3d142ebbebe66b60a7",
+        "lines": 127,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\StrongestSlots.tsx",
+        "sha256": "630c603ee39225464e36525a7026b21394755018f67179f771617cb14da186b9",
+        "lines": 132,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmMethodology.tsx",
+        "sha256": "10ce36818d7ddb06302e0b601d1be5e9198be2e41867529e6e309c324a5af7d1",
+        "lines": 152,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\RhythmCoverageSummary.tsx",
+        "sha256": "70a82b588c3fa8a844ada3a31f86e40b394e5129d4ca6f9df284ba116ca979a0",
+        "lines": 88,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmSectionBody.tsx",
+        "sha256": "74cf878038059364fa71d226582ec7aa4d560cc5ce7e8cc43044704c1913eea8",
+        "lines": 48,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingRhythmBrief.tsx",
+        "sha256": "050f6e59f5d43bb8bf2d7fdc326fd6ad3ae761bdad8a23f2606a4993d68f5c4e",
+        "lines": 50,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+        "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+        "lines": 53,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+        "sha256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba",
+        "lines": 63,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "presentation"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\useRhythmDayLabel.ts",
+        "sha256": "ff23023a8a5499b2de21dd9f58066572945716f192798f895dab3854fa7c7922",
+        "lines": 27,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "model-or-domain-support"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\types.ts",
+        "sha256": "56191417f3ec2d4ae3cf2b8da1c072d3a26d898b209101cd570fe4b24d7f9ba5",
+        "lines": 5,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "model-or-domain-support"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\index.ts",
+        "sha256": "21bcbfefca0a56dc91ff2097f4e5e1a4c4fef903d330bb24d8ed89ea800e5d96",
+        "lines": 9,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "model-or-domain-support"
+      },
+      {
+        "file": "web\\src\\features\\driving\\lib\\drivingRhythm.ts",
+        "sha256": "9a04a7d58197584b6550920166681bf08e23c2f9ac186e5bca0e69abf8b6fa86",
+        "lines": 731,
+        "snapshotUTC": "2026-10-14T01:10:28.7175578Z",
+        "role": "model-or-domain-support"
+      }
+    ],
+    "supportFiles": [
+      {
+        "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+        "file": "web\\src\\api\\hooks\\useDriving.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2688178Z",
+        "lines": 454,
+        "readRanges": "1-202;161-195 used-hook scan"
+      },
+      {
+        "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "file": "web\\src\\api\\client.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2730427Z",
+        "lines": 458,
+        "readRanges": "prefix/request/camelCase/signal targeted matches"
+      },
+      {
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "file": "web\\src\\api\\dataState.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2750113Z",
+        "lines": 434,
+        "readRanges": "1-280"
+      },
+      {
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "file": "web\\src\\hooks\\useDataState.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2757351Z",
+        "lines": 65,
+        "readRanges": "full"
+      },
+      {
+        "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+        "file": "web\\src\\hooks\\useRangeState.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2789804Z",
+        "lines": 694,
+        "readRanges": "280-390;615-704;targeted matches"
+      },
+      {
+        "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2899257Z",
+        "lines": 174,
+        "readRanges": "1-178"
+      },
+      {
+        "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+        "file": "web\\src\\hooks\\useUnits.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2911353Z",
+        "lines": 194,
+        "readRanges": "1-250"
+      },
+      {
+        "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "file": "web\\src\\hooks\\useDateFormat.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2920447Z",
+        "lines": 148,
+        "readRanges": "1-220"
+      },
+      {
+        "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+        "file": "web\\src\\hooks\\useSettings.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2929281Z",
+        "lines": 146,
+        "readRanges": "targeted preference declarations"
+      },
+      {
+        "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "file": "web\\src\\lib\\dateFormat.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2944692Z",
+        "lines": 462,
+        "readRanges": "1-240"
+      },
+      {
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "file": "web\\src\\lib\\workspaceScope.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2952545Z",
+        "lines": 168,
+        "readRanges": "1-250"
+      },
+      {
+        "sha256": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+        "file": "web\\src\\types\\driving.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.2968005Z",
+        "lines": 411,
+        "readRanges": "1-110"
+      },
+      {
+        "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "file": "web\\src\\App.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.2995533Z",
+        "lines": 919,
+        "readRanges": "134,838 targeted mount matches"
+      },
+      {
+        "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3001516Z",
+        "lines": 17,
+        "readRanges": "full"
+      },
+      {
+        "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "file": "web\\src\\components\\layout\\PageContainer.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3010814Z",
+        "lines": 259,
+        "readRanges": "1-300"
+      },
+      {
+        "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3017509Z",
+        "lines": 115,
+        "readRanges": "full"
+      },
+      {
+        "sha256": "673637e9d08331a3589785b5848a388c1c9619de019451634bbce0e3bb9a3acf",
+        "file": "web\\src\\components\\feedback\\SectionErrorBoundary.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3024268Z",
+        "lines": 79,
+        "readRanges": "1-215"
+      },
+      {
+        "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+        "file": "web\\src\\components\\data-display\\DataFreshness.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3034951Z",
+        "lines": 342,
+        "readRanges": "278-340;targeted matches"
+      },
+      {
+        "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+        "file": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3045312Z",
+        "lines": 321,
+        "readRanges": "85-180;220-269;targeted action matches"
+      },
+      {
+        "sha256": "f8495446c7eb521756f6071b4fb021fc71cec90218f2f204db7ad65d841158d9",
+        "file": "web\\src\\components\\data-display\\index.ts",
+        "snapshotUTC": "2026-10-14T01:19:42.3052609Z",
+        "lines": 178,
+        "readRanges": "targeted type exports"
+      },
+      {
+        "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+        "file": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3056985Z",
+        "lines": 42,
+        "readRanges": "full"
+      },
+      {
+        "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+        "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3092425Z",
+        "lines": 1006,
+        "readRanges": "455-525;555-607;710-741;841-945;targeted action matches"
+      },
+      {
+        "sha256": "84d0aa6fd871b3d0374ee6f929f0d67a7080c11d2f0e1048086288a0a116184b",
+        "file": "web\\src\\components\\charts\\ChartExportMenu.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3108833Z",
+        "lines": 263,
+        "readRanges": "180-267;targeted action matches"
+      },
+      {
+        "sha256": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61",
+        "file": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3116534Z",
+        "lines": 77,
+        "readRanges": "full"
+      },
+      {
+        "sha256": "5a30a642dd6eb9d48ab65d8d1967ba92b9843a534e707cfbabb372370851fa8c",
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmKpis.tsx",
+        "snapshotUTC": "2026-10-14T01:19:42.3126552Z",
+        "lines": 149,
+        "readRanges": "full;unmounted legacy;excluded from production counts"
+      },
+      {
+        "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+        "file": "internal\\api\\router.go",
+        "snapshotUTC": "2026-10-14T01:19:42.3347087Z",
+        "lines": 5363,
+        "readRanges": "3500-3525;drive route matches"
+      },
+      {
+        "sha256": "da0d6486c0f98e9f911825ce2e7bcaee8e9ac4a6993ea77eda90f0a789cd53c1",
+        "file": "internal\\api\\drives\\listing.go",
+        "snapshotUTC": "2026-10-14T01:19:42.3368269Z",
+        "lines": 606,
+        "readRanges": "1-240;only ListByVehicle scope relevant"
+      },
+      {
+        "sha256": "035d0b01c24bde0480d8e6e3942a83865777a195d78fd6fa2aeab4a8e195aa70",
+        "file": "internal\\api\\drives\\handler.go",
+        "snapshotUTC": "2026-10-14T01:19:42.3375262Z",
+        "lines": 108,
+        "readRanges": "1-185"
+      },
+      {
+        "sha256": "5526c81eaff016243772398b88b003112f3d0c0921b484c0de3008b7d2656add",
+        "file": "internal\\api\\apiparams\\params.go",
+        "snapshotUTC": "2026-10-14T01:19:42.3381972Z",
+        "lines": 142,
+        "readRanges": "1-210"
+      },
+      {
+        "sha256": "dfd02f1856f1d22dd943f1d25ce4fe25787257da3edcbb31eb716deb99f70050",
+        "file": "internal\\platform\\httputil\\date_range.go",
+        "snapshotUTC": "2026-10-14T01:19:42.3386584Z",
+        "lines": 56,
+        "readRanges": "full"
+      },
+      {
+        "sha256": "259ab3223e7ec7e74a4f6ebb1f6b1147340ba97e682fb85586a67d7cc1aa5426",
+        "file": "internal\\database\\drive\\repo.go",
+        "snapshotUTC": "2026-10-14T01:19:42.3404974Z",
+        "lines": 710,
+        "readRanges": "165-205;targeted matches"
+      }
+    ],
+    "domainSupportLines": 41,
+    "productionClosureFiles": 19,
+    "unmountedLegacyKpisLines": 149,
+    "originalPageLinesHistorical": 137,
+    "productionPresentationPartFiles": 14,
+    "pinVerification": {
+      "filesChecked": 50,
+      "exitCode": 0,
+      "drift": [],
+      "matched": 50,
+      "verifiedUTC": "2026-10-14T01:22:11.4450402Z"
+    },
+    "productionClosureLines": 2519,
+    "pagePlusPresentationLines": 1747,
+    "domainModelLines": 731,
+    "atomic": false,
+    "originalEvidence": "Accepted dependency note only; original baseline not regenerated/reexecuted"
+  },
+  "dataSources": [
+    {
+      "owner": "web\\src\\api\\hooks\\useDriving.ts:161-194",
+      "cancellation": "every page request receives same query AbortSignal",
+      "name": "calendar drive history",
+      "population": "Unique returned API pages until short page; only valid non-future starts feed timing; measured-distance eligibility independently tracked.",
+      "key": "drivingKeys.calendar(vehicleId,start,end)",
+      "bounds": "Date-only UTC start and end through last whole second; RFC3339 exclusive end shifted1microsecond for inclusive SQL.",
+      "endpoint": "GET /api/v1/drives",
+      "pageSize": 1000,
+      "enabled": "vehicle and both bounds",
+      "scope": "one selected vehicle; current date-only page range",
+      "params": [
+        "vehicle_id",
+        "start",
+        "end",
+        "limit",
+        "offset"
+      ],
+      "router": "internal\\api\\router.go:3506-3507",
+      "path": "/drives"
+    },
+    {
+      "preferences": "Header-owned useRangeState overrides old all/persistKey/inheritSharedPreference=false options at312-318; those declarations do not establish a competing local scope.",
+      "name": "workspace scope",
+      "scope": "Actual route enables header range/vehicle; no second page picker",
+      "owner": "web\\src\\lib\\workspaceScope.ts:43,151-168"
+    }
+  ],
+  "preservation": {
+    "sectionCount": 8,
+    "businessDay": "Weekday=Monday-Friday; weekend=Saturday/Sunday. No holiday/employment/custom business-day capability inspected. No home/work or identity inference.",
+    "directGlassPanelSites": 5,
+    "provenance": "Returned durable history; descriptive derived timings, not causes or future trip prediction. Fetch time is not observation/device status.",
+    "rawSI": "Meters and consistency seconds remain raw in hook/model; conversion is presentation-only. No physical signed power/energy quantity is rendered here; no abs/sign clamp added.",
+    "embeddedChartSites": 2,
+    "unknownZero": "Valid zero distance counts as measured. Invalid/nonfinite/negative distance is not measured; internal zero accumulator guarded by measured flags. Score below5overall/month starts and deviation below3weekday starts stay null. No eligible starts means no favorite. Confirmed empty[] may count0; unresolved/fatal source does not.",
+    "circadian": "One IANA-zone Gregorian weekday/hour/day/month derivation; invalid zone falls back UTC and flags it. Circular median minimizes circular absolute minute distance with earlier-candidate tie. Circular median deviation is seconds. Entropy over24hours, not168slots. Slot support floor3; top limit6. Descriptive, not forecast.",
+    "sectionErrorBoundaryCount": 8,
+    "denominators": "Timing shares/entropy use eligible starts; mean distance uses measured-distance starts; per-day frequency uses every selected day of each day type including zero-drive days. No denominator clamp. F01 identifies request/local-calendar mismatch.",
+    "briefPresentationInstances": 11,
+    "sections": [
+      {
+        "values": "4metrics:eligible count,favorite slot,weekday share/weekend count,entropy score/floor",
+        "pageLine": 82,
+        "name": "DrivingRhythmBrief",
+        "actions": "details;fatal retry;empty Browse drives"
+      },
+      {
+        "values": "168local count cells,strongest slot,hour labels,timezone,help",
+        "pageLine": 88,
+        "name": "WeeklyPunchcard",
+        "actions": "help;local horizontal scroll;fatal retry;empty Browse drives"
+      },
+      {
+        "values": "24hours;count,measured-distance line,share;4outer accessible/export columns",
+        "pageLine": 94,
+        "name": "HourlyDistribution",
+        "actions": "2series toggles;CSV/PNG/SVG/copy menu;fatal retry"
+      },
+      {
+        "values": "2cohorts x4metrics;shares,active/selected-day denominators,measured average/distance coverage",
+        "pageLine": 102,
+        "name": "WeekdayWeekendComparison",
+        "actions": "2details drawers;fatal retry"
+      },
+      {
+        "values": "Observed months;counts,predictability null gaps,active days/slots,measured distance;6outer columns",
+        "pageLine": 111,
+        "name": "MonthlyRhythmTrend",
+        "actions": "2series toggles;CSV/PNG/SVG/copy menu;fatal retry"
+      },
+      {
+        "values": "7weekdays x2metrics;circular median,SI-second deviation,samples/floors,timezone",
+        "pageLine": 117,
+        "name": "DepartureConsistency",
+        "actions": "7details drawers;fatal retry"
+      },
+      {
+        "values": "Up to6occupied slots;rank/count/share/measured distance/qualification;Monday-first/hour tie-break",
+        "pageLine": 125,
+        "name": "StrongestSlots",
+        "actions": "fatal retry"
+      },
+      {
+        "values": "4row accounting counters,included span,measured coverage,6methodology statements",
+        "pageLine": 134,
+        "name": "DrivingRhythmMethodology",
+        "actions": "coverage details drawer;fatal retry"
+      }
+    ],
+    "directChartContainerSites": 2,
+    "actions": {
+      "browseDrives": "2empty navigation sites -> /drives",
+      "help": "page subtitle and punchcard help",
+      "chartSeries": "4legend toggles total;persisted keys retained",
+      "fullscreen": "Not connected by page;embedded defaultfalse",
+      "sourceRetry": "1refetch mechanism;8fatal-section presentations;generic header and retained-warning refresh same source",
+      "onboarding": "Existing governed setup CTA from NoVehicleSelected -> guidance or /onboarding",
+      "mutations": "No page command/annotation/mutation connected or executed",
+      "details": "11OperationalBrief drawers with Review details and shared close lifecycle",
+      "sectionCrashReset": "8existing inline ErrorBoundary reset surfaces,not query retry",
+      "export": "2menus xCSV/PNG/SVG/copy image;gated loading/fatal/empty"
+    }
+  },
+  "states": {
+    "noVehicle": "Existing NoVehicleSelected PageContainer/CTA;selected hook exposes no fleet query error/loading. Mounted selection/onboarding readiness NOTRUN.",
+    "empty": "All sections explain empty;coverage distinguishes zero returned from all excluded.2Browse drives links.",
+    "fatal": "Only fatalError propagates;8section retry presentations; shells remain. PageContainer query prop is metadata, not automatic all-page error/loading gate.",
+    "retained": "Rows/charts survive refresh error/paused; page warning and summary mark retained;10nested instances omit trust F02.",
+    "initial": "All8shells mounted; summary values null;5section-body skeleton gates plus2chart loading and1summary loading.",
+    "retry": "drivesQuery.refetch owns source recovery;render-boundary reset separate;no mutation executed.",
+    "initialPaused": "F03; header generic refresh exists but no paused-specific initial source explanation."
+  },
+  "responsive": {
+    "safeArea": "Inherited shell ownership;no measured offset/device claim",
+    "missionWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "declarations": [
+      "page base1col/xl5track3:2 split with min-w-0",
+      "punchcard local overflow-x-auto around560px full168cell grid",
+      "comparison sm2cohorts",
+      "consistency base2/sm4/xl7cards",
+      "methodology lg2fr/min20rem columns",
+      "charts ResponsiveContainer100%;outer heights360/370"
+    ],
+    "acceptance": "NOTRUN"
+  },
+  "accessibility": {
+    "mobileTargets": "Shared export h-11/w-11 and brief min-h-11 belowmd are declarations, not measured44px acceptance.",
+    "punchcardGap": "F04",
+    "declared": "Localized regions/headings, hidden decorative icons, loading status, canonical chart fallback tables, independent render boundaries/retry, shared drawers/buttons.",
+    "keyboardFocusTouchContrastScreenReaderForcedColorsRTLReducedMotion": "NOTRUN"
+  },
+  "i18n": {
+    "notCovered": "dynamic/plural namespace loading/generated coherence",
+    "canonicalLookup": "Read-only en.json dictionary lookup exit0",
+    "meaning": "Regex0 is not a whole i18n pass; defensive key gap C06 retained.",
+    "missingLiteralKeys": [
+      "rhythm.day.unknown"
+    ],
+    "missingCount": 1,
+    "literalOccurrences": 153,
+    "hardcodedJSXRegexMatches": 0,
+    "uniqueLiteralKeys": 126
+  },
+  "findings": [
+    {
+      "priority": "P1",
+      "mechanism": "Actual /driving-rhythm enables header range and vehicle, but page sends date-only start/end, not startInstant/endInstantExclusive. Server parses dates in UTC including through23:59:59, while rollups and selected-calendar-day denominator are local. Rolling24h/live precise bounds are discarded; query key has only date strings. Local-day edge departures can be omitted or land in neighboring local days; numerator and denominator need not describe one population.",
+      "queueDedup": "Accepted audit/page note already identifies bounds need;no exact fix row found;do not remigrate accepted page.",
+      "line": 42,
+      "file": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+      "rule": "workspace-exact-bounds",
+      "related": [
+        "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx:35,47-53,84",
+        "web\\src\\hooks\\useRangeState.ts:656-683",
+        "web\\src\\api\\hooks\\useDriving.ts:161-193",
+        "web\\src\\lib\\workspaceScope.ts:43,165-168",
+        "internal\\platform\\httputil\\date_range.go:29-43",
+        "internal\\database\\drive\\repo.go:165-185",
+        "web\\src\\features\\driving\\lib\\drivingRhythm.ts:356-398,621-636"
+      ],
+      "owner": "page and typed-hook integration;no backend edit shown necessary",
+      "id": "F01",
+      "fix": "Pass both existing precise instants through separately leased page/typed calendar-hook key/request integration; keep local dates separately for declared calendar denominator. Preserve pagination/cancellation/selection/date-compatible other consumers. Reconcile methodology UTC-date copy through narrow canonical-copy ownership.",
+      "confidence": "high"
+    },
+    {
+      "priority": "P1",
+      "mechanism": "Section state has only loading/error/retry. Top brief receives retained, but7weekday+2cohort+1coverage nested briefs omit it. NestedDrivingBrief defaults retained=false, labeling these10retained instances Returned evidence with neutral tone during refresh error/paused retention. Page warning does not repair each nested trust claim.",
+      "queueDedup": "Same child-trust need in historical audit and accepted source note;one objective,not accepted-phase restart.",
+      "line": 1,
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\types.ts",
+      "rule": "retained-source-trust",
+      "related": [
+        "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx:64-85",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\DepartureConsistency.tsx:101-105",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\WeekdayWeekendComparison.tsx:106-110",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\RhythmCoverageSummary.tsx:36-40",
+        "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:26-27,57-62"
+      ],
+      "owner": "domain state and page/section consumers",
+      "id": "F02",
+      "fix": "Thread existing source trust through domain state and three nested consumers including coverage. Preserve rows and distinguish retained freshness from pagination completeness;reuse existing retained prop/feedback.",
+      "confidence": "high"
+    },
+    {
+      "priority": "P1",
+      "mechanism": "No-data paused query derives initial with isRefreshBlocked=true. Page reduces it to loading;StaleRefreshWarning returns null without retained data. Section bodies remain loading with no deferred-initial explanation. Header has generic refresh, but structural freshness API omits fetchStatus and cannot supply paused-specific meaning. This is not proof of device offline.",
+      "queueDedup": "No exact initial-paused rhythm repair found.",
+      "line": 65,
+      "file": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+      "rule": "initial-paused-explanation",
+      "related": [
+        "web\\src\\api\\dataState.ts:202-225",
+        "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:64-65",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmSectionBody.tsx:32-43",
+        "web\\src\\components\\data-display\\DataFreshness.tsx:282-284,323-340"
+      ],
+      "owner": "page/domain state propagation",
+      "id": "F03",
+      "fix": "Reuse source-local initial-paused/deferred feedback with source retry,keep shells and distinguish pending fetch from paused without inventing failure/connectivity cause. Preserve generic header refresh.",
+      "confidence": "high"
+    },
+    {
+      "priority": "P1",
+      "mechanism": "168cells live in role=img named only by strongest slot. Count information is native title on unfocusable divs;no full matrix table/text alternative or focusable cell mechanism. Local scroll wrapper lacks a keyboard tab stop. Counts are not exposed without hover by this source structure;no native/screen-reader incident exercised.",
+      "queueDedup": "Same punchcard-accessibility need retained in audit-page-114 and accepted phase5 note;deduplicate.",
+      "line": 94,
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx",
+      "rule": "chart-accessible-alternative",
+      "related": [
+        "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx:92-137"
+      ],
+      "owner": "WeeklyPunchcard",
+      "id": "F04",
+      "fix": "Reuse chart/Table alternative for all7x24counts and named keyboard-reachable contained scroll. Preserve strongest-slot summary,every cell,localized day/hour/count and touch access.",
+      "confidence": "high"
+    },
+    {
+      "priority": "P2",
+      "mechanism": "5fixed cyan heatmap levels plus cyan/indigo/emerald/amber section icons bypass semantic/theme roles. Successful paging statement repeats in a fixed amber callout without established warning outcome. Color groups sections rather than confirmed semantic state. Source-token violation,not measured fluorescent appearance or contrast failure.",
+      "queueDedup": "Historical audit/accepted source note already retain color need;one bounded adoption.",
+      "line": 16,
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx",
+      "rule": "semantic-token-chrome",
+      "related": [
+        "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx:16-20,58",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\WeekdayWeekendComparison.tsx:63,150",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\DepartureConsistency.tsx:51",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\StrongestSlots.tsx:52",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmMethodology.tsx:110,139",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\RhythmCoverageSummary.tsx:77"
+      ],
+      "owner": "listed rhythm presentations",
+      "id": "F05",
+      "fix": "Reuse neutral typography/icon roles and ordered restrained chart roles for heatmap,keeping5level count scaling/raw matrix. Preserve legitimate warnings and saved palette choices. No global token/scanner rewrite.",
+      "confidence": "high"
+    },
+    {
+      "priority": "P2",
+      "mechanism": "Chart/export rows pre-round converted distance and share to1decimal;memo omits precision. Later preference-aware formatters and reverse conversion of rounded display distance cannot restore precision. Hook/model SI stays intact;presentation/export precision loss,not cache corruption.",
+      "queueDedup": "No exact hourly precision repair found.",
+      "line": 39,
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistribution.tsx",
+      "rule": "display-precision-preservation",
+      "related": [
+        "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistribution.tsx:32-48,90-101",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistributionPlot.tsx:54-61,122-126",
+        "web\\src\\hooks\\useUnits.ts:108-143"
+      ],
+      "owner": "HourlyDistribution and HourlyDistributionPlot",
+      "id": "F06",
+      "fix": "Keep unrounded SI/derived numerics through chart/table/export adapters;round only in existing preference-aware formatters. Preserve unit labels/axes/tooltip and unknown null gaps;avoid rounded display-to-SI roundtrip.",
+      "confidence": "high"
+    },
+    {
+      "priority": "P2",
+      "mechanism": "Slot count renders raw JS number;both embedded accessible count columns use String(v ?? 0),bypassing existing reactive locale formatter unlike outer tables/briefs. Required model counts make this fallback no proof of missing DTO coercion. Valid0is preserved.",
+      "queueDedup": "No exact rhythm count-format repair found.",
+      "line": 114,
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\StrongestSlots.tsx",
+      "rule": "locale-numeric-formatting",
+      "related": [
+        "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistributionPlot.tsx:50",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\MonthlyRhythmPlot.tsx:54"
+      ],
+      "owner": "StrongestSlots and2plots",
+      "id": "F07",
+      "fix": "Use existing useNumberFormatting fmtInt at count display/accessible columns,retaining raw operands/export policy.",
+      "confidence": "high"
+    },
+    {
+      "priority": "P3",
+      "mechanism": "4feature type-import sites use data-display/stat-reference instead of category barrel. Category already exports StatMetric and StatPeriod;no barrel expansion needed. Erased type imports are architecture policy issues,not observed runtime cycle/bundle incident.",
+      "queueDedup": "No exact type-import cleanup objective found.",
+      "line": 6,
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\RhythmCoverageSummary.tsx",
+      "rule": "category-barrel-import",
+      "related": [
+        "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingRhythmBrief.tsx:3",
+        "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:4",
+        "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:4",
+        "web\\src\\components\\data-display\\index.ts:5-6"
+      ],
+      "owner": "4listed feature files",
+      "id": "F08",
+      "fix": "Use @/components/data-display type exports in separately owned consumers. No shared barrel/types edit.",
+      "confidence": "high"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "confidence": "high source mechanism;policy pending",
+      "rule": "frozen-analysis-clock-policy",
+      "related": [
+        "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx:48,53,67-68",
+        "web\\src\\features\\driving\\lib\\drivingRhythm.ts:401,457-460",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmMethodology.tsx:62-65"
+      ],
+      "file": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+      "detail": "Mount clock is not advanced by range/vehicle/refetch;new valid starts after mount are intentionally classified future relative to freeze. Existing methodology documents freeze. No data incident/approved alternative as-of policy exercised.",
+      "needs": "Decide whether expose frozen as-of snapshot or advance one consistent clock at acquisition/context changes;no guessed DTO field.",
+      "line": 40
+    },
+    {
+      "id": "C02",
+      "confidence": "medium",
+      "rule": "allocated-container-mobile-risk",
+      "related": [
+        "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx:115-132",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\StrongestSlots.tsx:79,113",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmMethodology.tsx:131"
+      ],
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\DepartureConsistency.tsx",
+      "detail": "7xlcards in3/5track,auto/minmax/auto slot rows in2/5track and minimum20rem methodology column can constrain long metadata. Declarations only;actual clipping/overflow/targets NOTRUN.",
+      "needs": "Authorized mission-width/narrow-container/RTL/200%text evidence;no fields/actions removed.",
+      "line": 73
+    },
+    {
+      "id": "C03",
+      "confidence": "high mechanism;behavior NOTRUN",
+      "rule": "nested-chart-controller-review",
+      "related": [
+        "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistribution.tsx:75",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\MonthlyRhythmTrend.tsx:86",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\MonthlyRhythmPlot.tsx:67",
+        "web\\src\\components\\charts\\EmbeddedChart.tsx:18-41"
+      ],
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistributionPlot.tsx",
+      "detail": "Outer/embedded canonical controllers have distinct persisted keys;plot hide OR-combines states;inner alternative has fewer columns. Embedded removes duplicate visible chrome/export/fullscreen defaults. No contradictory toggle or missing outer field observed.",
+      "needs": "Review saved keys/legends/duplicate accessible figure-table navigation later;no competing chart library.",
+      "line": 69
+    },
+    {
+      "id": "C04",
+      "confidence": "high evidence limit",
+      "rule": "population-completeness-limit",
+      "related": [
+        "web\\src\\features\\driving\\components\\driving-rhythm\\RhythmCoverageSummary.tsx:38,79-84",
+        "web\\src\\api\\hooks\\useDriving.ts:169-190",
+        "internal\\database\\drive\\repo.go:181-185"
+      ],
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmMethodology.tsx",
+      "detail": "Unique-ID short-page loop removes1000cap and deterministic sort exists,but no transaction/snapshot total proves no omissions during concurrent offset changes. Complete selected history denotes successful paging,not real-world telemetry coverage. No missing/corrupt actual row observed.",
+      "needs": "Qualify paging versus telemetry coverage;transactional API capability unknown,not a guessed required backend change.",
+      "line": 115
+    },
+    {
+      "id": "C05",
+      "confidence": "high declarations;design pending",
+      "rule": "timezone-wallclock-display-preference-review",
+      "related": [
+        "web\\src\\hooks\\useRangeState.ts:324-331",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\DepartureConsistency.tsx:110",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx:45-47,122-126",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistribution.tsx:35",
+        "web\\src\\hooks\\useDateFormat.ts:74-89",
+        "web\\src\\hooks\\useSettings.ts:48-53"
+      ],
+      "file": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+      "detail": "Shared-range browser zone and explicit ASCII24h labels are consistent/documented. Saved timezone display mode exists elsewhere;whether analytical zone/clock labels follow display preferences requires scope decision. Circular minute-of-day is not elapsed duration.",
+      "needs": "Clarify analysis-zone versus saved-display-timezone/12-24h policy;preserve DST/circular semantics/visible timezone;no user location/device read.",
+      "line": 35
+    },
+    {
+      "confidence": "high key absence;reachability unknown",
+      "detail": "Canonical lookup found rhythm.day.unknown absent. Normal indices0..6 use7existing keys;valid-route reachability not proved. English fallback Unknown exists;no required DTO corruption assumed.",
+      "line": 20,
+      "id": "C06",
+      "needs": "If defensive fallback retained,propose exactly rhythm.day.unknown=Unknown to canonical owner in narrow lease;no regeneration here.",
+      "rule": "canonical-key-gap-outside-valid-domain",
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\useRhythmDayLabel.ts"
+    },
+    {
+      "id": "C07",
+      "confidence": "high literals;mapping unknown",
+      "rule": "geometry-token-disposition",
+      "related": [
+        "web\\src\\features\\driving\\components\\driving-rhythm\\StrongestSlots.tsx:79",
+        "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmMethodology.tsx:131"
+      ],
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx",
+      "detail": "4arbitrary geometry literals:min-w-[560px],grid-cols-[2.5rem_repeat(24,1fr)],grid-cols-[auto_minmax(0,1fr)_auto],lg:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]. Exact named equivalents not resolved. CSS-var class references and Recharts numeric props separate acceptable cases.",
+      "needs": "Separate design/token disposition before adoption;keep geometry/content,no guessed equivalent or scanner waiver.",
+      "line": 101
+    }
+  ],
+  "summary": {
+    "confirmedCountsByRule": [
+      {
+        "count": 1,
+        "rule": "category-barrel-import"
+      },
+      {
+        "count": 1,
+        "rule": "chart-accessible-alternative"
+      },
+      {
+        "count": 1,
+        "rule": "display-precision-preservation"
+      },
+      {
+        "count": 1,
+        "rule": "initial-paused-explanation"
+      },
+      {
+        "count": 1,
+        "rule": "locale-numeric-formatting"
+      },
+      {
+        "count": 1,
+        "rule": "retained-source-trust"
+      },
+      {
+        "count": 1,
+        "rule": "semantic-token-chrome"
+      },
+      {
+        "count": 1,
+        "rule": "workspace-exact-bounds"
+      }
+    ],
+    "confirmedFindingCount": 8,
+    "countsByPriority": [
+      {
+        "priority": "P1",
+        "count": 4
+      },
+      {
+        "priority": "P2",
+        "count": 3
+      },
+      {
+        "priority": "P3",
+        "count": 1
+      }
+    ],
+    "candidateCount": 7,
+    "counting": "Each distinct mechanism once;repeated instance/line sites are related evidence,not extra findings.",
+    "mostPrimaryIssueFiles": [
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistribution.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\RhythmCoverageSummary.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\StrongestSlots.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\types.ts",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx",
+        "count": 2
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+        "count": 2
+      }
+    ]
+  },
+  "queueDedup": {
+    "observedUTC": "2026-10-14T01:11:30.9870712Z",
+    "command": "Select-String queue patterns DrivingRhythmPage.tsx|WeeklyPunchcard.tsx|DepartureConsistency.tsx|HourlyDistribution.tsx|rhythm.day.unknown|rhythm.*(retained|paused|bounds|accessib); extract queue columns",
+    "matchingRows": 3,
+    "items": [
+      "phase5-current-source-catalog-closure [x]",
+      "audit-page-114 [x]",
+      "phase5-page-driving-driving-rhythm [x]"
+    ],
+    "note": "No narrow rhythm fix objective found. QA row reserved separately. Old audit/dependency already identify bounds, child trust, punchcard and color; keep one objective each, no accepted-phase restart. Queue readonly."
+  },
+  "preciseNeeds": [
+    "Separately lease page/existing useDriving calendar hook bounds F01; preserve other consumers, keys/cancellation/raw SI. Supported RFC3339 bounds need no backend edit.",
+    "Existing domain-state/page/three nested consumers for F02/F03; reuse retained APIs and source feedback.",
+    "One punchcard full-matrix accessibility F04 and domain-role F05 adoption; C07geometry naming separate.",
+    "Hourly precision F06 and existing count formatter F07; no new formatter/settings mutation/hook conversion.",
+    "Four feature type-import sites F08;category already exports types, no barrel edit.",
+    "Conditional exactly rhythm.day.unknown=Unknown C06 to canonical owner; methodology/window copy only after bounds decision;no catalogs regenerated here.",
+    "Mounted mission43/44 proof later requires explicit browser grant, parent5173, installed Edge channel msedge;no downloads/data injection/production mutation."
+  ],
+  "checks": {
+    "failedCommandCount": 3,
+    "typescript": "NOTRUN;npx tsc --noEmit not executed",
+    "build": "NOTRUN",
+    "rawOutputLog": "web\\logs\\phase6-qa-driving-driving-rhythm.log",
+    "exactInlineStyleMatches": 0,
+    "hookSlice": {
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "fetchMatches": 0,
+      "camelcaseUrlMatches": 0,
+      "doublePrefixMatches": 0,
+      "lines": "161-195",
+      "useEffectMatches": 0,
+      "exitCode": 0
+    },
+    "commands": [
+      {
+        "result": "Initially absent;reservedattempt1/accepted dependency found",
+        "command": "Initial report/log Test-Path;exact queue/dependency Select-String",
+        "exitCode": 0
+      },
+      {
+        "result": "ParserError unexpected ];not executed;corrected command subsequently0",
+        "command": "First exact-production regex command",
+        "exitCode": 1
+      },
+      {
+        "result": "Directory list succeeded;missing paths not success;actual owners subsequently read",
+        "command": "Owner lookup using2nonexistent suppressed read paths",
+        "exitCode": 1
+      },
+      {
+        "result": "Rawmatches/counts/SHA256pins;candidate lines adjudicated separately",
+        "command": "Corrected Select-String over19explicit production files with printed patterns",
+        "exitCode": 0
+      },
+      {
+        "result": "Rawcounts;1missing defensive key;optional helpers.go read suppressed and not successful",
+        "command": "Exact inline/action/import scan;literal key canonical dictionary lookup",
+        "exitCode": 0
+      },
+      {
+        "result": "3overlap rows;root logs/ignore;existing type exports",
+        "command": "Queue exact-overlap/ignore/type-barrel scan",
+        "exitCode": 0
+      },
+      {
+        "result": "4patterns0matchinglines;header API no paused field",
+        "command": "Used hook161-195 URL/effect scans and freshness declarations",
+        "exitCode": 0
+      },
+      {
+        "result": "OS206filename or extension too long;process not started,no report created;split data writes thereafter",
+        "command": "Initial combined JSON construction",
+        "exitCode": 1
+      },
+      {
+        "result": "Only named report/log written",
+        "command": "Split base/findings/candidates/support pin/section check JSON data writes",
+        "exitCode": 0
+      },
+      {
+        "result": "JSON count/citation checks valid; 50/50source SHA256+line pins match; raw output in owned log.",
+        "command": "Final source-pin/count verification;JSON reparse",
+        "exitCode": 0
+      }
+    ],
+    "browser": "NOTRUN",
+    "regexScans": [
+      {
+        "pattern": "style=\\{\\{|var\\(--",
+        "exitCode": 0,
+        "rule": "static-inline-style",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 5,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern style=\\{\\{|var\\(--"
+      },
+      {
+        "pattern": "<(button|input|textarea|select|table)(\\s|>)",
+        "exitCode": 0,
+        "rule": "raw-html",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 0,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern <(button|input|textarea|select|table)(\\s|>)"
+      },
+      {
+        "pattern": "from ['\"](recharts|react-leaflet|framer-motion)['\"]",
+        "exitCode": 0,
+        "rule": "direct-library-import",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 0,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern from ['\"](recharts|react-leaflet|framer-motion)['\"]"
+      },
+      {
+        "pattern": "from ['\"]\\.\\./(?:\\.\\./)?api['\"]",
+        "exitCode": 0,
+        "rule": "old-api-import",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 0,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern from ['\"]\\.\\./(?:\\.\\./)?api['\"]"
+      },
+      {
+        "pattern": "/api/v1/",
+        "exitCode": 0,
+        "rule": "double-prefix",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 0,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern /api/v1/"
+      },
+      {
+        "pattern": "[?&][a-z_]*[A-Z][A-Za-z]*=|params\\.set\\(['\"][^'\"]*[A-Z]",
+        "exitCode": 0,
+        "rule": "camelcase-param",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 0,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern [?&][a-z_]*[A-Z][A-Za-z]*=|params\\.set\\(['\"][^'\"]*[A-Z]"
+      },
+      {
+        "pattern": "&&\\s*<(GlassPanel|ChartContainer|section|[A-Z][A-Za-z]+)",
+        "exitCode": 0,
+        "rule": "hidden-section",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 2,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern &&\\s*<(GlassPanel|ChartContainer|section|[A-Z][A-Za-z]+)"
+      },
+      {
+        "pattern": ">\\s*[A-Za-z][^<{]*<",
+        "exitCode": 0,
+        "rule": "hardcoded-string-candidate",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 0,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern >\\s*[A-Za-z][^<{]*<"
+      },
+      {
+        "pattern": "PageLayout|PageContainer|NoVehicleSelected",
+        "exitCode": 0,
+        "rule": "missing-page-container",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 5,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern PageLayout|PageContainer|NoVehicleSelected"
+      },
+      {
+        "pattern": "\\bfetch\\s*\\(|\\buseEffect\\s*\\(",
+        "exitCode": 0,
+        "rule": "fetch-useeffect",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 0,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern \\bfetch\\s*\\(|\\buseEffect\\s*\\("
+      },
+      {
+        "pattern": "(bg|text|border)-(cyan|emerald|amber|indigo|purple|white|neon)[^\\s'\"]*|\\[[^\\]]+\\]",
+        "exitCode": 0,
+        "rule": "token-candidate",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 74,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern (bg|text|border)-(cyan|emerald|amber|indigo|purple|white|neon)[^\\s'\"]*|\\[[^\\]]+\\]"
+      },
+      {
+        "pattern": "console\\.|init.*[Rr][Uu][Mm]|opentelemetry",
+        "exitCode": 0,
+        "rule": "rum-or-logging",
+        "meaning": "Lexical candidates,not semantic violation count;rawmatches in owned log",
+        "matchingLines": 0,
+        "command": "Select-String -LiteralPath sourceSnapshot.files[*].file -Pattern console\\.|init.*[Rr][Uu][Mm]|opentelemetry"
+      }
+    ],
+    "runtime": "NOTRUN",
+    "sectionBoundaryMatches": 8,
+    "panelBriefOpeningSiteMatches": 13,
+    "acceptableExceptions": [
+      "5CSS-var matches are Tailwind class references,not style inline;exact style regex0.",
+      "2conditional matches are optional empty/recovery feedback,not hidden data sections.",
+      "PageLayout wraps existing PageContainer;NoVehicleSelected also PageContainer.",
+      "Raw HTML/library internals in shared components are intentional boundaries;not counted as feature violations.",
+      "CHART_COLORS indexed/Recharts numeric API props are acceptable,not static-inline violations.",
+      "Backend GetByVehicle fmt.Sprintf substitutes placeholder indexes only,not values;ctx propagated and query args parameterized. No backend DTO/value-interpolation incident alleged."
+    ],
+    "tests": "NOTRUN",
+    "native": "NOTRUN",
+    "pagePASS": "NOTRUN",
+    "actionKeyRetryMatchingLines": 18,
+    "categoryImportMatchingLines": 29,
+    "lint": "NOTRUN",
+    "testCounts": {
+      "status": "NOTRUN",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "discovered": null,
+      "executed": 0
+    },
+    "finalJsonParse": {
+      "command": "Get-Content -LiteralPath docs\\frontend-audits\\phase6-qa-driving-driving-rhythm.json -Raw | ConvertFrom-Json",
+      "exitCode": 0
+    }
+  },
+  "limits": [
+    "Source-only QA; findings/candidates do not establish visual/native/application acceptance.",
+    "No real identity/location/drive payload/API request/device/mutation/browser/screenshots/tests/lint/build/globalTSC/Git/subagents/installs/servers/Docker/helpers/extensions/heartbeats used.",
+    "Parent preview5173 is handoff context, not probed. No browser grant/lock;Edge/msedge if later authorized;no downloads.",
+    "Bounded regex checks are lexical candidates, not AST/compiler/runtime gates. Whole production closure19files;supporting owners read only in stated ranges.",
+    "Some directory/long stdout tool displays truncated;full check output is in owned rawlog. Parser/missing-path/command-length failures retained.",
+    "Non-atomic snapshots; final pins cover inspected behavioral sources, not whole working tree. Queue line drift observed;no Git/global attribution claim.",
+    "No required DTO corruption, native incident, holiday/business-day policy or transactional pagination capability guessed."
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-qa-driving-driving-rhythm.json",
+    "web\\logs\\phase6-qa-driving-driving-rhythm.log"
+  ],
+  "sourceWrites": [],
+  "release": {
+    "noLaterWrites": true,
+    "pagePASS": "NOTRUN",
+    "releaseEffective": "At successful completion of this final bounded command; all report/log writes end here.",
+    "sourceWriteClaim": "NONE",
+    "reportWriteReleased": true,
+    "ownedFiles": [
+      "docs\\frontend-audits\\phase6-qa-driving-driving-rhythm.json",
+      "web\\logs\\phase6-qa-driving-driving-rhythm.log"
+    ],
+    "recordedUTC": "2026-10-14T01:22:11.7055580Z",
+    "state": "RELEASED_REPORT_DELIVERY_COMPLETE",
+    "runtime": "NOTRUN",
+    "logWriteReleased": true,
+    "commandReleased": true,
+    "native": "NOTRUN"
+  },
+  "filesRead": [
+    "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistribution.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistributionPlot.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\WeekdayWeekendComparison.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\MonthlyRhythmTrend.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\MonthlyRhythmPlot.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\DepartureConsistency.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\StrongestSlots.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmMethodology.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\RhythmCoverageSummary.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingRhythmBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\useRhythmDayLabel.ts",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\types.ts",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\index.ts",
+    "web\\src\\features\\driving\\lib\\drivingRhythm.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\feedback\\SectionErrorBoundary.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\ChartExportMenu.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmKpis.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\drives\\listing.go",
+    "internal\\api\\drives\\handler.go",
+    "internal\\api\\apiparams\\params.go",
+    "internal\\platform\\httputil\\date_range.go",
+    "internal\\database\\drive\\repo.go",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\session-handoff.md",
+    "migration-queue.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\I18N_GUIDELINES.md",
+    "docs\\MOBILE_GUIDELINES.md",
+    "docs\\frontend-audits\\audit-page-114.json",
+    ".github\\copilot-instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    "web\\src\\i18n\\en.json",
+    ".gitignore",
+    "web\\.gitignore"
+  ]
+}

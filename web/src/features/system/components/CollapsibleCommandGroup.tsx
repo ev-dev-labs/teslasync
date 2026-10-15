@@ -60,7 +60,7 @@ export function CollapsibleCommandGroup({
         className="group h-auto min-h-11 w-full justify-start py-2 text-left font-normal hover:bg-transparent"
       >
         <Icon aria-hidden="true" className="h-4 w-4 text-[var(--text-muted)]" />
-        <Text size="xs" weight="medium" className="uppercase tracking-wider text-[var(--text-secondary)]">
+        <Text size="xs" weight="medium" className="tracking-wider text-[var(--text-secondary)]">
           {t(meta.labelKey, meta.fallback)}
         </Text>
         <Text size="2xs" color="muted" className="ml-1">({count ?? 0})</Text>

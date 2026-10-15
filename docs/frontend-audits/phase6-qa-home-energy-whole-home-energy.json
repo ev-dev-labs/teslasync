@@ -1,0 +1,1042 @@
+{
+  "returnDeadlineUtc": "2026-10-14T02:17:57.687Z",
+  "status": "DONE_NATIVE_LIMITED_BACKEND_BLOCKED_NOT_PAGE_APPROVAL",
+  "historicalStatus": "DONE_SOURCE_AUDIT_WITH_FINDINGS_AND_EVIDENCE_LIMITS",
+  "nativeContinuation": {
+    "authority": "User-authorized continuation of the existing pending attempt; no completed source audit, tests or catalog lookup repeated. All original receipt fields below remain historical, including NOTRUN, findings, pins, timing and release.",
+    "exactQueueRow": "| [ ] | 6 | phase6-qa-home-energy-whole-home-energy | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-home-energy-whole-home-energy.json; web\\logs\\phase6-qa-home-energy-whole-home-energy.log | phase5-page-home-energy-whole-home-energy | 1 | reserved01:57:57.687Z; actor pending | - | WholeHomeEnergyPage/direct supports; source-only, no real household/energy/device/API/browser access. | Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot. |",
+    "authorityReads": [
+      "docs\\orchestrator-loop.md fully",
+      "Existing exact receipt fully and exact queue identity/attempt/artifact row",
+      "Applicable react-frontend, frontend-si-cutover, observability and unit-conversion instructions",
+      "docs\\frontend-design-contract.md core and MDC-040/041/060/070 QA matrix",
+      "docs\\frontend-mission.md sections 15 and 43-45",
+      "Current docs\\session-handoff.md governing installed msedge/shared 5173 conventions",
+      "Existing specialized-home-energy.supported.spec.ts native declarations read only"
+    ],
+    "nativeRuns": [
+      {
+        "command": "PowerShell here-string piped to installed node/playwright, full literal Node stdin script retained between NATIVE_CONTINUATION_COMMAND_BEGIN/END in the exact raw log",
+        "shellId": "3893",
+        "startedAtUtc": "2026-10-14T04:42:44.385Z",
+        "finishedAtUtc": "2026-10-14T04:43:01.642Z",
+        "exit": 0,
+        "resultMarker": "NATIVE_CONTINUATION_RESULT",
+        "meaning": "Browser probe completed, not an acceptance test pass. Production route mounted; API unavailable."
+      },
+      {
+        "command": "PowerShell here-string piped to installed node/playwright, full literal Node stdin script retained between NATIVE_MATRIX_COMMAND_BEGIN/END in the exact raw log",
+        "shellId": "3928",
+        "startedAtUtc": "2026-10-14T04:44:44.344Z",
+        "finishedAtUtc": "2026-10-14T04:45:04.743Z",
+        "exit": 0,
+        "resultMarker": "NATIVE_MATRIX_RESULT",
+        "meaning": "Twenty failure-state width/theme measurements and six native captures completed. No authored Vitest/Playwright test suite executed; no discovered/passed test count claimed."
+      }
+    ],
+    "browser": {
+      "channel": "msedge",
+      "version": "155.0.4283.45",
+      "headless": true,
+      "baseURL": "http://localhost:5173",
+      "route": "/energy-orchestrator",
+      "sharedPreviewProbe": "HTTP 200; no new server",
+      "fixtures": "NONE; no route fulfill, backend data, synthetic household or installed package introduced",
+      "guard": "Only localhost/127.0.0.1 GET/HEAD/OPTIONS permitted. All non-read methods and external hosts aborted. Service workers blocked; downloads disabled.",
+      "preferences": "Only isolated browser localStorage onboarding dismissal and existing dark/light mode choices seeded. No production source, saved backend settings, shared browser profile or persistent scenario edited.",
+      "privacy": "No request/response bodies retained. Capture function stops on any successful API response. All API responses in captured matrix were HTTP 500, with zero successful source reads.",
+      "resourceLock": "Explicit named Windows semaphore TeslaSyncPhase6NativeScreenshots, capacity four, acquired and released around each synchronous run. No repository/session lock authority found; this is not evidence of unknown workers' occupancy or a parent-granted global lock.",
+      "limitations": "Headless installed Edge is native browser rendering, not a manual headed review, OS forced-colors check, real household acceptance or visual approval."
+    },
+    "backendBlocker": {
+      "status": "EXTERNAL_BLOCKED",
+      "probe": "Initial probe observed HTTP 500 for /api/v1/vehicles and /api/v1/tesla/energy-sites, eight responses each; /api/v1/settings sixteen responses. Auth/session, system and shell reads also HTTP 500.",
+      "matrix": "294 API responses; zero HTTP 2xx source responses. Exact path/status records retained in NATIVE_MATRIX_RESULT.",
+      "mounted": "One main, one home-energy-outcomes, one home-energy-forecast-quality; all ten original section headings present.",
+      "actualState": "Server error notices and Essential source unavailable. Outcome metrics display em dashes and No measurement supplied; no defensible real-source planning outcome established.",
+      "notResolved": "No backend repair, server restart, Docker operation, manufactured successful response or catalog/source write attempted.",
+      "remainingNeed": "Existing backend/external owner restores read endpoints and authorizes safe household/synthetic scope; then original populated/history/retained/partial/paused/empty trust and physical-data native checks can proceed."
+    },
+    "nativeMeasurements": {
+      "scope": "Unavailable-source production composition only, not populated household or independent optimizer oracle",
+      "widths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+      "themes": ["dark", "light"],
+      "measurementCount": 20,
+      "appliedThemes": "Actual root class dark and light-mode respectively",
+      "documentHorizontalOverflow": "Zero measured documents exceeded viewport width across the twenty combinations. This does not prove individual chart/scroll-region content, clipping or visual quality.",
+      "drawer": "At 390px in both themes, Planning outcomes Review details focused and opened with Enter; one dialog bounded x0/y0/390x900; Escape removed dialog and focus returned to trigger.",
+      "pageErrors": 0,
+      "networkConsole": "HTTP 500 resource errors and intentional external-host guard failures retained; not a clean runtime/network pass",
+      "nativeCandidateN01": {
+        "status": "CONFIRMED_NATIVE_FAILURE_OF_44PX_MOBILE_TARGET_REQUIREMENT",
+        "mode": "dark and light unavailable-source composition",
+        "at390": [
+          {"action": "Recompute from now", "widthPx": 185.609375, "heightPx": 36},
+          {"action": "Save as stability baseline", "widthPx": 204.21875, "heightPx": 36},
+          {"action": "Reset to defaults", "widthPx": 154.28125, "heightPx": 36},
+          {"action": "Download canonical JSON plan", "widthPx": 332, "heightPx": 49}
+        ],
+        "ownerNeed": "Existing feature action-control owner fixes the three 36px mobile scenario targets; no source fix in this report. Export button is not asserted failing at 390px.",
+        "historical": "Original N01 remains unchanged as historical source-only evidence; this additive measurement resolves its previously unmeasured mobile scenario targets."
+      },
+      "nativeCandidateN02": "NOTRUN 72-hour/five-row keyboard/performance acceptance; failure-state measurements do not establish populated maximal-slot usability",
+      "nativeCandidateN03": "PARTIAL native theme/width/failure-state/drawer evidence only; populated chart, custom/CVD/RTL/200percent/forced-colors/focus/reduced-motion acceptance remains open"
+    },
+    "screenshots": {
+      "storage": "Six JPEG screenshot buffers embedded as base64 in NATIVE_MATRIX_RESULT.screenshots in the exact ignored raw log; no third file created. These are viewport captures, not full-page or reviewed visual approval.",
+      "captures": [
+        {"label": "dark-390-failed-source-top", "bytes": 27780, "sha256": "fdb29ca40a3bf8eb8b6fa1e8b9abeb8b5d05b00588b6e6d69a1ab914dd8f2cdf"},
+        {"label": "dark-1440-failed-source-top", "bytes": 80667, "sha256": "4f037f3caadd7164d32610951d48761fe1ab5451aa16474da5f5edcd29965f56"},
+        {"label": "dark-390-planning-details-open", "bytes": 38197, "sha256": "e3ad6a8b37fb018d428aa4b8b6d491eed2c1234d04f3f714ae82a667366d5ed9"},
+        {"label": "light-390-failed-source-top", "bytes": 37760, "sha256": "b0750cc02d8e5a06a7e0030856bb4bca0cb5401e1bd8a5d60f5d8f79b2ab4ba0"},
+        {"label": "light-1440-failed-source-top", "bytes": 65937, "sha256": "c9fe82f2e095b1e0d0e285dd65c5d828039a3620ac61850678b454d1c7220022"},
+        {"label": "light-390-planning-details-open", "bytes": 36674, "sha256": "9586b17db7a542bdfc62718dac65f10d954d7b3c50c9b8380f2feec68765c753"}
+      ]
+    },
+    "originalChecklistsPreserved": {
+      "mission43": {
+        "COLOR": ["no unnecessary neon", "no fluorescent UI", "no glowing text", "no glowing borders", "no rainbow charts", "restrained accent colors", "semantic colors consistent"],
+        "TYPOGRAPHY": ["clear hierarchy", "readable primary text", "readable secondary text", "no excessive bold", "no arbitrary font sizes"],
+        "LAYOUT": ["alignment", "spacing", "hierarchy", "density", "no accidental whitespace", "no clipping"],
+        "RESPONSIVE": ["320px", "375px", "430px", "768px", "1024px", "1440px", "1920px", "2560px"],
+        "STATES": ["loading", "empty", "error", "offline", "stale", "success", "disabled"],
+        "ACCESSIBILITY": ["keyboard", "focus", "contrast", "screen reader", "touch targets", "reduced motion"]
+      },
+      "mission44": ["Uses global design system", "Uses shared components", "No unnecessary duplicated UI", "Clear information hierarchy", "Responsive", "Mobile reviewed", "Desktop reviewed", "Loading state", "Empty state", "Error state", "Offline/stale state where relevant", "Accessibility reviewed", "Theme reviewed", "Extreme data reviewed", "TypeScript passes", "Lint passes", "Tests pass", "Build passes", "Visual QA passes"],
+      "designContractMatrix": ["ten mission widths", "narrow allocated containers", "dark/light/saved custom modes", "RTL", "200% text", "long labels/addresses", "zero/negative-valid/huge/null data", "large tables", "open/nested overlays", "forced colors", "reduced motion/low bandwidth", "retained/offline sources", "individual retry"],
+      "disposition": "All checklists remain required, not silently satisfied. Native error-state widths/themes, one drawer keyboard route and measured mobile targets have partial evidence above. Colors/typography/composed contrast/manual screenshot review, every other state, custom/CVD/RTL/scaling/OS accessibility, large-data physical exports and all implementation gates remain NOTRUN or backend-blocked. No application definition-of-done or Phase6 closure claimed.",
+      "historical": "All thirteen original findings, three conditional candidates, source declarations, ten section/action records, authored tests, deduplication and historical verification limitations retained verbatim below."
+    },
+    "noRerunsOrWrites": [
+      "No audit.sh, broad grep/audit, TypeScript, lint, build, test suites, catalog generators or guards rerun",
+      "No production/shared/catalog/test/queue/handoff edits, Git operations, new server, downloads, Docker, installs or nested agents",
+      "Only exact report and ignored exact log written; screenshot buffers stayed in memory before embedding in that log"
+    ],
+    "finalValidation": {
+      "shellId": "3963",
+      "command": "Full literal bounded PowerShell validation retained between CONTINUATION_VALIDATION_COMMAND_BEGIN/END in the exact log",
+      "exit": 0,
+      "rawOutput": [
+        "JSON_PARSE=PASS HISTORICAL_FINDINGS=13 HISTORICAL_NATIVE_CANDIDATES=3 HISTORICAL_PINS=56 HISTORICAL_SECTIONS=10",
+        "MEASUREMENTS=20 DOCUMENT_OVERFLOW_COUNT=0 API_RESPONSES=294 API_SUCCESS_COUNT=0 PAGE_ERRORS=0",
+        "ACTUAL_THEME_CLASS=dark COUNT=10",
+        "ACTUAL_THEME_CLASS=light-mode COUNT=10",
+        "DRAWER_MODE=dark OPEN_COUNT=1 ESCAPE_CLOSED=True FOCUS_RESTORED=True",
+        "DRAWER_MODE=light OPEN_COUNT=1 ESCAPE_CLOSED=True FOCUS_RESTORED=True",
+        "MOBILE_44PX_REQUIREMENT_FAILED dark Recompute from now 36px",
+        "MOBILE_44PX_REQUIREMENT_FAILED dark Save as stability baseline 36px",
+        "MOBILE_44PX_REQUIREMENT_FAILED dark Reset to defaults 36px",
+        "MOBILE_44PX_REQUIREMENT_FAILED light Recompute from now 36px",
+        "MOBILE_44PX_REQUIREMENT_FAILED light Save as stability baseline 36px",
+        "MOBILE_44PX_REQUIREMENT_FAILED light Reset to defaults 36px",
+        "BROWSER_CONTEXT_CLOSED=True BROWSER_CLOSED=True PAGE_ACCEPTANCE=BLOCKED_NOT_PASS",
+        "CONTINUATION_VALIDATION_EXIT=0"
+      ],
+      "screenshots": "All six base64 buffers decoded in memory; JPEG signature, byte count and SHA256 matched report metadata.",
+      "limits": "Historical pin count verified structurally, not source hash rerun. No TypeScript/lint/build/tests or production changes attributed to this continuation."
+    },
+    "release": {
+      "status": "RELEASED_BACKEND_BLOCKED_NATIVE_ACCEPTANCE_OPEN",
+      "lastBrowserFinishedAtUtc": "2026-10-14T04:45:04.743Z",
+      "resources": "Both Edge browsers and contexts closed; both screenshot semaphores released; synchronous commands completed; no running browser/helper/server retained.",
+      "needs": "Backend read availability and safe native data scope; feature owner fixes measured scenario target heights; remaining original native checklist and visual review remain required.",
+      "notAcceptance": "Report delivery only. Browser command exit0 is not all checks pass, page approval or Phase6 acceptance."
+    }
+  },
+  "attempt": 1,
+  "reservedAtUtc": "2026-10-14T01:57:57.687Z",
+  "actualFirstCommandAtUtc": "2026-10-14T02:00:20.1065719Z",
+  "hardDeadlineUtc": "2026-10-14T02:22:57.687Z",
+  "page": "web/src/features/home-energy/pages/WholeHomeEnergyPage.tsx",
+  "rawLog": "web/logs/phase6-qa-home-energy-whole-home-energy.log",
+  "confirmedFindings": [
+    {
+      "owner": "O1",
+      "runtime": "NOTRUN",
+      "rule": "workspace-scope",
+      "file": "web/src/lib/workspaceScope.ts",
+      "line": 109,
+      "severity": "medium",
+      "id": "F01",
+      "mechanismReproFix": "156-167 enables vehicle picker for /energy-orchestrator; composition110-155 consumes fleet, no selected vehicle. Trace selection -> unchanged all-vehicle inputs. Disable misleading picker, retain fleet."
+    },
+    {
+      "owner": "O2",
+      "runtime": "NOTRUN",
+      "rule": "fleet-trust",
+      "file": "web/src/features/home-energy/hooks/useHomeEnergyOrchestration.ts",
+      "line": 212,
+      "severity": "high",
+      "id": "F02",
+      "mechanismReproFix": "Partial uses failedCount only; useVehicles927-962 missing/unverified can be partial without failures. Fixture one missing,0failed -> wrapper data =>ok. Propagate member trust,retain payload."
+    },
+    {
+      "owner": "O2",
+      "runtime": "NOTRUN",
+      "rule": "source-provenance",
+      "file": "web/src/features/home-energy/hooks/useHomeEnergyOrchestration.ts",
+      "line": 40,
+      "severity": "medium",
+      "id": "F03",
+      "mechanismReproFix": "40-44/64 and160-175 discard fleet/list/default/battery SoC origin. Real50% and assumed50% identical at vehicle52. Global fallback disclosure quality97 exists but no member identity. Carry provenance/age."
+    },
+    {
+      "owner": "O2",
+      "runtime": "NOTRUN",
+      "rule": "async-empty",
+      "file": "web/src/features/home-energy/hooks/useHomeEnergyOrchestration.ts",
+      "line": 111,
+      "severity": "high",
+      "id": "F04",
+      "mechanismReproFix": "111/115 undefined=>[];234 uses isLoading. Initial-paused undefined,falseLoading,nullError yields numeric KPI and false account empty vehicle29-34; pending site falsely absent quality90-94. Pass source state,retain shells."
+    },
+    {
+      "owner": "O2",
+      "runtime": "NOTRUN",
+      "rule": "unknown-zero",
+      "file": "web/src/features/home-energy/lib/forecastAdapters.ts",
+      "line": 115,
+      "severity": "high",
+      "id": "F05",
+      "mechanismReproFix": "122/174-183 no samples=>zero arrays; composition184-195 models zero household demand,optimizer599 self-consumption100 if solar0. Quality none/0confidence lacks explicit zero-load assumption. Distinguish missing evidence from assumed/measured zero."
+    },
+    {
+      "owner": "O3",
+      "runtime": "NOTRUN",
+      "rule": "raw-precision",
+      "file": "web/src/features/home-energy/components/EnergyFlowChart.tsx",
+      "line": 39,
+      "severity": "medium",
+      "id": "F06",
+      "mechanismReproFix": "39-44 round6 power operands before table/CSV55-56; battery46 roundsSoC.0.4W=>0,37.26%=>37.3. Canonical JSON exact. Keep raw rows,format labels; authored tests intentionally expect rounded values."
+    },
+    {
+      "owner": "O3",
+      "runtime": "NOTRUN",
+      "rule": "physical-units",
+      "file": "web/src/features/home-energy/components/EnergyFlowChart.tsx",
+      "line": 75,
+      "severity": "medium",
+      "id": "F07",
+      "mechanismReproFix": "No tooltip formatter/unit at75/77-90,columns59-66 no format; battery59-69 same.4000W rendered unitless4000 next to kW axis. Use existing tooltip/column format APIs. Shared defaults ChartTooltip84-103/ChartContainer925-933."
+    },
+    {
+      "owner": "O3",
+      "runtime": "NOTRUN",
+      "rule": "physical-timestamp",
+      "file": "web/src/features/home-energy/components/PowerwallTrajectoryChart.tsx",
+      "line": 46,
+      "severity": "medium",
+      "id": "F08",
+      "mechanismReproFix": "Post-slotSoC plotted atstartIso,optimizer473-499/types155-156;heatmap85-86/110-111 same.15min1000W into10000Wh at50%,eff1=>52.5%at00:15 plotted00:00. Label interval end/initial anchor,retain start flow times."
+    },
+    {
+      "owner": "O3",
+      "runtime": "NOTRUN",
+      "rule": "date-preferences",
+      "file": "web/src/features/home-energy/components/KpiSummary.tsx",
+      "line": 32,
+      "severity": "medium",
+      "id": "F09",
+      "mechanismReproFix": "Raw ISO period;quality55 latest;chart73/battery67/heatmap110-111,133 bare browser formatTime. SavedUTC/browserLA mixes timezones. Adopt useDateFormat73-96,keep UTC business semantics/ISO exports."
+    },
+    {
+      "owner": "O3",
+      "runtime": "NOTRUN",
+      "rule": "number-preferences",
+      "file": "web/src/features/home-energy/components/KpiSummary.tsx",
+      "line": 41,
+      "severity": "medium",
+      "id": "F10",
+      "mechanismReproFix": "Raw String/rounded/% atquality44-47,vehicle52/68/103,readiness42-43/72,scenario70/119/128/182,battery68,heatmap86 bypass locale digits/preferences. Use fmtInt/Percent/Number. No nonexistent configurable Wh/MWh preference claimed."
+    },
+    {
+      "owner": "O4",
+      "runtime": "NOTRUN",
+      "rule": "hardcoded-string",
+      "file": "web/src/features/home-energy/components/ConstraintViolationsPanel.tsx",
+      "line": 45,
+      "severity": "low",
+      "id": "F11",
+      "mechanismReproFix": "Template29 injects raw English invalid_input detail;optimizer194,200,218,224,281 five producers. Prop repro slotMinutes must be positive; defaulted to 15 stays English. Live sanitized branch reachability unverified. Localize structured UI reason,retain machine detail."
+    },
+    {
+      "owner": "O2",
+      "runtime": "NOTRUN",
+      "rule": "source-contract-caveat",
+      "file": "web/src/features/home-energy/lib/types.ts",
+      "line": 95,
+      "severity": "medium",
+      "id": "F12",
+      "mechanismReproFix": "Claims base load excludescharging;adapter29-32 says consumer history may includecharging,cannot decompose;quality89-103 omits caveat. Confirmed source contradiction only, actual doublecount conditional. Reconcile/disclose,no invented subtraction."
+    },
+    {
+      "owner": "O5",
+      "runtime": "NOTRUN",
+      "rule": "missing-catalog-key",
+      "file": "web/src/features/home-energy/components/ConstraintViolationsPanel.tsx",
+      "line": 14,
+      "severity": "medium",
+      "id": "F13",
+      "mechanismReproFix": "Six dynamic keys15-20 absent canonicalEnglish;split violation onlyunknownVehicle.153-key read-only lookup found6. Existing EnglishFALLBACKS23-29 work. Serialized catalog owner adds exact existing leaves/projections, no audit catalog write."
+    }
+  ],
+  "item": "phase6-qa-home-energy-whole-home-energy",
+  "sourceTestPins": [
+    {
+      "file": "web/src/features/home-energy/pages/WholeHomeEnergyPage.tsx",
+      "beforeSha256": "9B0BCB5317F5BD54D5476BDF02B63F5F211C9C6FD58AD387E8C33F3A8AD570D3",
+      "afterSha256": "9B0BCB5317F5BD54D5476BDF02B63F5F211C9C6FD58AD387E8C33F3A8AD570D3",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/AssumptionsQualityPanel.tsx",
+      "beforeSha256": "4BBFACA7609210B721956069DD41564D0EB634C4DA263644FB22A9FB54BB0B57",
+      "afterSha256": "4BBFACA7609210B721956069DD41564D0EB634C4DA263644FB22A9FB54BB0B57",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/ConstraintViolationsPanel.test.tsx",
+      "beforeSha256": "97C8B0EA53BBF9F79411E37E0AED85BC5FBB467CA1CB882667EADDC0D1E47545",
+      "afterSha256": "97C8B0EA53BBF9F79411E37E0AED85BC5FBB467CA1CB882667EADDC0D1E47545",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/ConstraintViolationsPanel.tsx",
+      "beforeSha256": "7B8089182F527839336DCA0129E48FEE4A5AAA603E0E0A9BD44304D11BD580F8",
+      "afterSha256": "7B8089182F527839336DCA0129E48FEE4A5AAA603E0E0A9BD44304D11BD580F8",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/EnergyFlowChart.test.tsx",
+      "beforeSha256": "6FA3B5C61A34929E69D7F43AB9C0F41E7D615E02EC27B6911AF3FDC718BDBBAF",
+      "afterSha256": "6FA3B5C61A34929E69D7F43AB9C0F41E7D615E02EC27B6911AF3FDC718BDBBAF",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/EnergyFlowChart.tsx",
+      "beforeSha256": "C1F828E2DAB498A2AE65DB2FBF8461DD4EA39DE382BB9D7A441D9EF27B461297",
+      "afterSha256": "C1F828E2DAB498A2AE65DB2FBF8461DD4EA39DE382BB9D7A441D9EF27B461297",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/index.ts",
+      "beforeSha256": "6D5D56B688252A7FBB0592487E5E2511280B8A146D93CA55C940DD01F1D586F5",
+      "afterSha256": "6D5D56B688252A7FBB0592487E5E2511280B8A146D93CA55C940DD01F1D586F5",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/KpiSummary.tsx",
+      "beforeSha256": "518055399E38C8B78CD184763896DECB0CD8DA2F2E7A9C0078905DBCEAFCF099",
+      "afterSha256": "518055399E38C8B78CD184763896DECB0CD8DA2F2E7A9C0078905DBCEAFCF099",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/PlanExportPanel.tsx",
+      "beforeSha256": "FE3BAA02FEBD53194B6EF245B7A3FB0C5479405AA748E1790E8768C762DB9328",
+      "afterSha256": "FE3BAA02FEBD53194B6EF245B7A3FB0C5479405AA748E1790E8768C762DB9328",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/PowerwallTrajectoryChart.test.tsx",
+      "beforeSha256": "0F2E0376889313807AF03DA599AA7400F2125041737DAE7EE326DC218C7904DE",
+      "afterSha256": "0F2E0376889313807AF03DA599AA7400F2125041737DAE7EE326DC218C7904DE",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/PowerwallTrajectoryChart.tsx",
+      "beforeSha256": "975F5AE264EEFEA80DCB5EF013026A114190236BCCBD56A8015E521DC9308583",
+      "afterSha256": "975F5AE264EEFEA80DCB5EF013026A114190236BCCBD56A8015E521DC9308583",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/ScenarioControls.tsx",
+      "beforeSha256": "45BDC36F088F72C8108364042F57115820F572CE9390E85543C5D8C8AB6509C0",
+      "afterSha256": "45BDC36F088F72C8108364042F57115820F572CE9390E85543C5D8C8AB6509C0",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/TariffConstraintHeatmap.test.tsx",
+      "beforeSha256": "08BF6BFE6E3FC82B0EA8DAB8AA88A8E60994FA6C92BD0AA1C3F5634C01A4C87D",
+      "afterSha256": "08BF6BFE6E3FC82B0EA8DAB8AA88A8E60994FA6C92BD0AA1C3F5634C01A4C87D",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/TariffConstraintHeatmap.tsx",
+      "beforeSha256": "9A41083F6912229C263E3CB0FDC2C981CF4FEB53293D73F1C29A0FCC02734D12",
+      "afterSha256": "9A41083F6912229C263E3CB0FDC2C981CF4FEB53293D73F1C29A0FCC02734D12",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/VehicleAssumptionsPanel.tsx",
+      "beforeSha256": "CD9ED321F21AA068B912025378529B977A06784D14CAA655AB4A66BE2F8A7A9F",
+      "afterSha256": "CD9ED321F21AA068B912025378529B977A06784D14CAA655AB4A66BE2F8A7A9F",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/VehicleReadinessPanel.test.tsx",
+      "beforeSha256": "18B374397A6B15A936D540904406B1F0159F3C5A455EB1118D6C3CBE1F4C6CF6",
+      "afterSha256": "18B374397A6B15A936D540904406B1F0159F3C5A455EB1118D6C3CBE1F4C6CF6",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/components/VehicleReadinessPanel.tsx",
+      "beforeSha256": "4A0333D327AB7A35C1F229E86299075758B82AC9F02EA95C9455E7A0D2D8FE75",
+      "afterSha256": "4A0333D327AB7A35C1F229E86299075758B82AC9F02EA95C9455E7A0D2D8FE75",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/hooks/useHomeEnergyOrchestration.source-contract.test.ts",
+      "beforeSha256": "218319ABC8A3568D8F07768BFEDE1A3CC6A7CAC919C3CD64AEF85D1B55DFF042",
+      "afterSha256": "218319ABC8A3568D8F07768BFEDE1A3CC6A7CAC919C3CD64AEF85D1B55DFF042",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/hooks/useHomeEnergyOrchestration.ts",
+      "beforeSha256": "B4D59D2AFDE38099BB556E5EDD34C3CAAFDD6B7234D41F3BF7DF430A361BE151",
+      "afterSha256": "B4D59D2AFDE38099BB556E5EDD34C3CAAFDD6B7234D41F3BF7DF430A361BE151",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/hooks/useOrchestrationScenario.test.tsx",
+      "beforeSha256": "893DB83426C251706FA0FE227655989138679A84C45EE8AFDBAE5B0C9EBFFF6A",
+      "afterSha256": "893DB83426C251706FA0FE227655989138679A84C45EE8AFDBAE5B0C9EBFFF6A",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/hooks/useOrchestrationScenario.ts",
+      "beforeSha256": "82D0B6B458943E81A7F02A1D0D2FFFB8980888E16077A70A98F8AB2DEF4FB8F1",
+      "afterSha256": "82D0B6B458943E81A7F02A1D0D2FFFB8980888E16077A70A98F8AB2DEF4FB8F1",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/lib/forecastAdapters.test.ts",
+      "beforeSha256": "DAD250550C9393B6BEAA6EEC8E6AB30A064F4F4682233EF05DCC6D298FA00977",
+      "afterSha256": "DAD250550C9393B6BEAA6EEC8E6AB30A064F4F4682233EF05DCC6D298FA00977",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/lib/forecastAdapters.ts",
+      "beforeSha256": "3ACA51DD62C2AFA1EF300F17E6DDF4BCB12FD9C2CABB2AA546AD06282D9E65E8",
+      "afterSha256": "3ACA51DD62C2AFA1EF300F17E6DDF4BCB12FD9C2CABB2AA546AD06282D9E65E8",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/lib/optimizer.test.ts",
+      "beforeSha256": "C13D15482FB693C2E4D5B791A2E887982836742B0DB62FFA50412F5C89EBBF59",
+      "afterSha256": "C13D15482FB693C2E4D5B791A2E887982836742B0DB62FFA50412F5C89EBBF59",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/lib/optimizer.ts",
+      "beforeSha256": "29829726EDC8EA05001D691673AB81271BF319BD102426D92CC1B23C8C6CFE1A",
+      "afterSha256": "29829726EDC8EA05001D691673AB81271BF319BD102426D92CC1B23C8C6CFE1A",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/lib/planExport.test.ts",
+      "beforeSha256": "EF27EF0BACABF40DB0324FCE898095FA168B8B8D2723EE33D9E17700BEBFD7D1",
+      "afterSha256": "EF27EF0BACABF40DB0324FCE898095FA168B8B8D2723EE33D9E17700BEBFD7D1",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/lib/planExport.ts",
+      "beforeSha256": "672E09FAB49DD12EAD6FB7690D80488D4BC2F42DDFC27B39305012DCB6FB7006",
+      "afterSha256": "672E09FAB49DD12EAD6FB7690D80488D4BC2F42DDFC27B39305012DCB6FB7006",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/lib/scenarioDefaults.test.ts",
+      "beforeSha256": "F126B55F5817C165CFDBBB00571B0276D81B37F7D50304A9CFA6ADFB24A854E7",
+      "afterSha256": "F126B55F5817C165CFDBBB00571B0276D81B37F7D50304A9CFA6ADFB24A854E7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/lib/scenarioDefaults.ts",
+      "beforeSha256": "BA4E7311F51A7F50044074FE5049AD1F7972C40391EB533E5FDC0C1C5F93EECE",
+      "afterSha256": "BA4E7311F51A7F50044074FE5049AD1F7972C40391EB533E5FDC0C1C5F93EECE",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/lib/types.ts",
+      "beforeSha256": "B80282CDC7204A3BD196A77B78E302FB04DAC6813FCD5A58B66F41135047CF3D",
+      "afterSha256": "B80282CDC7204A3BD196A77B78E302FB04DAC6813FCD5A58B66F41135047CF3D",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/home-energy/pages/WholeHomeEnergyPage.migration.test.tsx",
+      "beforeSha256": "1161F1A2699FBEE2D390EBBE6A46770B2B53F64D44BA72C44BE70980BC8D2DA4",
+      "afterSha256": "1161F1A2699FBEE2D390EBBE6A46770B2B53F64D44BA72C44BE70980BC8D2DA4",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useEnergy.ts",
+      "beforeSha256": "3F688E068CBEC48FAFC1BA1A32E5F63090622C0232CE565B3BE5D39CDBA10A01",
+      "afterSha256": "3F688E068CBEC48FAFC1BA1A32E5F63090622C0232CE565B3BE5D39CDBA10A01",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "beforeSha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "afterSha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "beforeSha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+      "afterSha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/ChartTooltip.tsx",
+      "beforeSha256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2",
+      "afterSha256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "beforeSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "afterSha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "beforeSha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "afterSha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "beforeSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "afterSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "beforeSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "afterSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "beforeSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "afterSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useTimeFormatPreference.ts",
+      "beforeSha256": "720DB3C19E020A343F8C3DF9A28D869D3A6C119AE5DDC7345DC86F7E4A5C1132",
+      "afterSha256": "720DB3C19E020A343F8C3DF9A28D869D3A6C119AE5DDC7345DC86F7E4A5C1132",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "beforeSha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "afterSha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "unchanged": true
+    },
+    {
+      "file": "web/e2e/operationalbrief-contracts/specialized-home-energy.supported.spec.ts",
+      "beforeSha256": "62CED8BB02277AA477F1B257B07155648857CADF5EC296E4910B7D510D002F38",
+      "afterSha256": "62CED8BB02277AA477F1B257B07155648857CADF5EC296E4910B7D510D002F38",
+      "unchanged": true
+    },
+    {
+      "file": "web/e2e/operationalbrief-contracts/specialized-home-energy.supported.fixtures.ts",
+      "beforeSha256": "68213C7599512BF398AF942E993BFA0A4EC49C8B735589C58CD82BD36172D918",
+      "afterSha256": "68213C7599512BF398AF942E993BFA0A4EC49C8B735589C58CD82BD36172D918",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/App.tsx",
+      "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "beforeSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "afterSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "beforeSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "afterSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/i18n/en/locale-home-energy.json",
+      "beforeSha256": "7DD6C09946404C817CC84CA2DCE0CF9B7E864DA585A7F106FD4D411849999D25",
+      "afterSha256": "7DD6C09946404C817CC84CA2DCE0CF9B7E864DA585A7F106FD4D411849999D25",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "beforeSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "afterSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "beforeSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "afterSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "beforeSha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "afterSha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/chartUtils.tsx",
+      "beforeSha256": "A9EC06AA5E321797194B9FB278AAD015272B5D7809A01F01C655508F114303D2",
+      "afterSha256": "A9EC06AA5E321797194B9FB278AAD015272B5D7809A01F01C655508F114303D2",
+      "unchanged": true
+    }
+  ],
+  "hashCheckedAtUtc": "2026-10-14T02:19:29.8175061Z",
+  "summary": {
+    "featureFiles": 31,
+    "countMeaning": "Distinct source mechanisms, not estimated lexical occurrences. Five explicit English producers F11 and six exact catalog leaves F13.",
+    "byRule": [
+      {
+        "rule": "async-empty",
+        "count": 1
+      },
+      {
+        "rule": "date-preferences",
+        "count": 1
+      },
+      {
+        "rule": "fleet-trust",
+        "count": 1
+      },
+      {
+        "rule": "hardcoded-string",
+        "count": 1
+      },
+      {
+        "rule": "missing-catalog-key",
+        "count": 1
+      },
+      {
+        "rule": "number-preferences",
+        "count": 1
+      },
+      {
+        "rule": "physical-timestamp",
+        "count": 1
+      },
+      {
+        "rule": "physical-units",
+        "count": 1
+      },
+      {
+        "rule": "raw-precision",
+        "count": 1
+      },
+      {
+        "rule": "source-contract-caveat",
+        "count": 1
+      },
+      {
+        "rule": "source-provenance",
+        "count": 1
+      },
+      {
+        "rule": "unknown-zero",
+        "count": 1
+      },
+      {
+        "rule": "workspace-scope",
+        "count": 1
+      }
+    ],
+    "conditionalCandidates": 3,
+    "featureProductionFiles": 19,
+    "deduplicatedOwnerNeeds": 5,
+    "changedPins": 0,
+    "nativeCandidates": 3,
+    "featureTestFiles": 12,
+    "bySeverity": [
+      {
+        "count": 3,
+        "severity": "high"
+      },
+      {
+        "count": 1,
+        "severity": "low"
+      },
+      {
+        "count": 9,
+        "severity": "medium"
+      }
+    ],
+    "pinCount": 56,
+    "confirmedMechanisms": 13,
+    "priority": [
+      "F02 fleet trust",
+      "F04 unresolved vs empty",
+      "F05 unknown-zero"
+    ]
+  },
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/home-energy/lib/forecastAdapters.ts",
+      "line": 29,
+      "mechanism": "Consumer history may include prior EV load; potential double counting only if actual circuit/history includes charging. Real household/API/backend NOTRUN."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/home-energy/lib/forecastAdapters.ts",
+      "line": 103,
+      "mechanism": "Wh described as previous interval but divided by next gap105-109. If endpoint is interval-end,100Wh at00:05 with prior00:00/next00:20 implies1200W not400W. Actual API anchoring unknown; uniform five-minute fixtures cannot decide."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/home-energy/hooks/useHomeEnergyOrchestration.ts",
+      "line": 117,
+      "mechanism": "First eligible site plus all account vehicles; multiple households/site mapping condition unverified. Preserve existing policy absent authorized contract."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "N01",
+      "file": "web/src/features/home-energy/components/ScenarioControls.tsx",
+      "line": 49,
+      "related": "52,55;PlanExportPanel30;sharedButton36,45",
+      "mechanism": "Four small wrapped action buttons declare36px minimum, not mobile44px. Actual targets may grow with text; measurement NOTRUN."
+    },
+    {
+      "id": "N02",
+      "file": "web/src/features/home-energy/components/TariffConstraintHeatmap.tsx",
+      "line": 105,
+      "mechanism": "72h/15min/five rows gives1440 independent tab stops; usability/performance NOTRUN. Existing44px mobile/24px desktop focus/click details and wrap declarations preserved."
+    },
+    {
+      "id": "N03",
+      "file": "web/src/features/home-energy/components/EnergyFlowChart.tsx",
+      "line": 30,
+      "mechanism": "320px six-series chart,battery260px,token heatmap require narrow-container/theme/custom/forced-colors/CVD/RTL/200percent and focus/reduced-motion native acceptance. No composed failure/pass asserted."
+    }
+  ],
+  "ownerNeeds": [
+    {
+      "id": "O1",
+      "need": "Disable misleading selected-vehicle scope only.",
+      "findings": [
+        "F01"
+      ],
+      "owner": "route/workspace integration"
+    },
+    {
+      "id": "O2",
+      "need": "Consolidate trust,provenance,missing-evidence/caveat contract; no invented backend mapping.",
+      "findings": [
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F12"
+      ],
+      "owner": "existing composition/domain integration"
+    },
+    {
+      "id": "O3",
+      "need": "Existing tooltip/table/date/number APIs suffice; consume O2 props. Parent must split disjoint exact claims and serialize overlapping files; no new shared API.",
+      "findings": [
+        "F06",
+        "F07",
+        "F08",
+        "F09",
+        "F10"
+      ],
+      "owner": "existing page/presentation integration"
+    },
+    {
+      "id": "O4",
+      "need": "Structured localized UI reason with machine detail preserved; coordinate types/catalog serially.",
+      "findings": [
+        "F11"
+      ],
+      "owner": "optimizer diagnostic/UI mapping"
+    },
+    {
+      "id": "O5",
+      "need": "Six exact existing fallbacks,normal projections/guards under fresh authorization,not broad catalog redispatch.",
+      "findings": [
+        "F13"
+      ],
+      "owner": "serialized canonical-English integration"
+    }
+  ],
+  "missingCatalogKeys": [
+    "homeEnergy.violation.deadlineInfeasible",
+    "homeEnergy.violation.vehicleShortfall",
+    "homeEnergy.violation.panelImportExceeded",
+    "homeEnergy.violation.panelExportExceeded",
+    "homeEnergy.violation.powerwallReserveBreach",
+    "homeEnergy.violation.invalidInput"
+  ],
+  "deduplication": {
+    "completedNotRedispatched": [
+      "phase6-home-tariff-heatmap-access",
+      "phase6-home-readiness-paint",
+      "phase6-home-constraint-icons",
+      "phase6-home-energy-chart-paint",
+      "phase6-home-powerwall-chart-paint"
+    ],
+    "meaning": "New needs are mechanism-specific recommendations,not queue claims. Preserve completed paint/access/icon work.",
+    "historicalRetained": [
+      "audit-page-133 provenance -> F03",
+      "audit-page-133 load caveat -> F12"
+    ]
+  },
+  "authorityReads": [
+    "docs/orchestrator-loop.md entire296lines",
+    "design contract core1-654 plus full heading map; relevant addenda",
+    "relevant mission, inventory target row184, current handoff, exact queue attempt1 and assigned artifacts",
+    "frontend-worker conventions and applicable frontend/SI/unit/i18n/mobile/a11y repository instructions",
+    "historical audit-page-133 and completed home-energy exact leaf claims"
+  ],
+  "authorityLimits": [
+    "Historical phase5-page-worker-instructions.txt referenced by queue not found in scoped instruction listings; current governing orchestrator/conventions used",
+    "No historical Git extraction or baseline parity proof; current pinned preservation evidence only",
+    "Queue claim line shifted63->84; identity/attempt/artifact scope reread, no queue edits"
+  ],
+  "preservation": {
+    "a11y": "Controls have labels; wrapping,grid/min-w-0 declarations; heatmap mobile44px/desktop24px persistent named details; reduced-motion FadeIn hook. Actual native behavior NOTRUN.",
+    "host": "Page63-71 PageLayout -> PageContainer at shared PageLayout9-15; mounted sections retained",
+    "forecast": "History(day) hook accepts since/until but composition supplies neither; unknown historical coverage explicitly retained. Actual interval and backend source provenance/permissions unverified.",
+    "state": "All ten shells mounted under initial/fatal/retained/paused notices. Essential fatal-only KPI suppression; source-local retries and retained payload preserved. F02/F03/F04/F05 record residual trust/empty/default distinctions.",
+    "physical": "Declared W/Wh/%0-100; price currency/kWh deliberate. Battery power+charge/-discharge; grid export displayed negative but magnitude positive in ledger/export. Signed costs preserved. Conservation source tests authored,not executed.",
+    "locale": "Existing money/power/energy/shared formatter adoption preserved. Date/number bypasses F09/F10; no independent energy-unit or relative-time/hour-cycle preference invented.",
+    "scope": "Fleet-wide intentionally independent future planning horizon; /energy-orchestrator not workspace range-enabled. UTC tariff/departure controls are business assumptions,not duplicate workspace date filters.",
+    "sections": [
+      {
+        "pageLine": 90,
+        "actions": "Six outcome metrics; shared Review details drawer; planning start/end",
+        "name": "KpiSummary"
+      },
+      {
+        "pageLine": 96,
+        "actions": "12 sliders; priority select; battery toggle; recompute-now, save stability baseline, reset defaults; local only",
+        "name": "ScenarioControls"
+      },
+      {
+        "pageLine": 101,
+        "actions": "All vehicles; accordion, target/capacity/charging/deadline/priority/local edits and Add vehicle navigation",
+        "name": "VehicleAssumptionsPanel"
+      },
+      {
+        "pageLine": 106,
+        "actions": "Every slot; six series/legend; fullscreen, accessible data table and shared chart exports",
+        "name": "EnergyFlowChart"
+      },
+      {
+        "pageLine": 111,
+        "actions": "All projected readiness, delivered/needed/unmetWh and deadline slots; Add vehicle navigation",
+        "name": "VehicleReadinessPanel"
+      },
+      {
+        "pageLine": 116,
+        "actions": "Every SoC point,reserve line,disabled-battery shell; fullscreen,table,exports",
+        "name": "PowerwallTrajectoryChart"
+      },
+      {
+        "pageLine": 121,
+        "actions": "All slots and five conditional rows; keyboard focus/Enter/Space/click/hover persistent detail; contained scroll",
+        "name": "TariffConstraintHeatmap"
+      },
+      {
+        "pageLine": 126,
+        "actions": "All errors before warnings; semantic icons/text; clean modeled-constraint state",
+        "name": "ConstraintViolationsPanel"
+      },
+      {
+        "pageLine": 131,
+        "actions": "Separate solar/load quality/confidence/samples/latest/unknown coverage;50percent missing-SoC disclosure; second Review details drawer",
+        "name": "AssumptionsQualityPanel"
+      },
+      {
+        "pageLine": 142,
+        "actions": "Local Blob canonical JSON download; schemaVersion1,input/result/generatedAtIso/invariant non-autonomy disclaimer",
+        "name": "PlanExportPanel"
+      }
+    ]
+  },
+  "ruleChecks": {
+    "catalogLookup": {
+      "normalGuards": "NOTRUN",
+      "absent": 6,
+      "distinctKeys": 153
+    },
+    "limits": "Lexical patterns not global lint/AST proof. F11 indirect English remains despite literal JSX heuristic0. BackendGo rules NOTAPPLICABLE.",
+    "scope": "19 production TS/TSX feature files",
+    "exceptions": [
+      "Static style4:comment35,computed104,bucket121,loop-color139; no static literal CSS-var style violation",
+      "Case-insensitive raw-control scan initially7 uppercase shared Button/Select false matches; corrected CaseSensitive grep0",
+      "PageLayout wraps PageContainer,not missing-page-container",
+      "Shared component raw HTML/vendor imports expected; optional battery/deadline controls not hidden data sections",
+      "Canonical fixed English export disclaimer technical contract,not untranslated page label"
+    ],
+    "rawMatchLines": {
+      "old-api-import": 0,
+      "page-wrapper-found": 1,
+      "direct-library-import": 0,
+      "hidden-section": 0,
+      "static-inline-style": 4,
+      "double-prefix": 0,
+      "fetch-useeffect": 0,
+      "raw-html": 0,
+      "camelcase-param": 0,
+      "hardcoded-string-JSX-heuristic": 0
+    }
+  },
+  "testEvidence": {
+    "nativeSources": [
+      "web/e2e/operationalbrief-contracts/specialized-home-energy.supported.spec.ts",
+      "web/e2e/operationalbrief-contracts/specialized-home-energy.supported.fixtures.ts"
+    ],
+    "passed": null,
+    "declarations": [
+      "Migration124-345:10sections/6+2metrics,SIslots,invalid-vs-zero,local actions,canonical JSON,stale/partial/paused/fatal/initial-paused and both drawers;route directly/home-energy not production/energy-orchestrator",
+      "Source-contract13-69:text/AST operands and fatal-only gates,not mounted query evidence",
+      "forecastAdapters35-42:no-history zero solar is intentional expectation",
+      "Chart tests preserve current rounded export/tooltip operands; future authorized fixes must retain scenarios",
+      "optimizer tests conservation,contention,reserve,unmet energy,tariff shifting,determinism,invalid inputs;NOTRUN"
+    ],
+    "skipped": null,
+    "executed": 0,
+    "nativeExpansion": "Authored2scenarios x2themes x2widths=8 declarations only,not discovered/executed/passed; strict synthetic GET mocks320/1440,en-US/UTC,single vehicle; not real household or ten-width acceptance; expectedHomePlan uses same adapters/optimizer,not independent oracle",
+    "featureFiles": 12,
+    "failed": null,
+    "execution": "NOTRUN",
+    "discovered": null
+  },
+  "failures": [
+    {
+      "correction": "AsHashtable preserves case; exit0,153 keys/6missing. Checker limitation,not asserted invalid appJSON.",
+      "exit": 1,
+      "kind": "read-only catalog lookup",
+      "raw": "ConvertFrom-Json existing subFSMs/subFsms differently-cased keys rejected"
+    },
+    {
+      "exit": 1,
+      "kind": "report assembly launch",
+      "shellId": "2430",
+      "limit": "Full submitted unstarted command retained in tool transcript,not copied entirely to log; launch failure raw output logged.",
+      "raw": "The filename or extension is too long. (os error 206)"
+    },
+    {
+      "correction": "Nested PowerShell here-string assembly corrected using direct script; source/tests untouched.",
+      "exit": 1,
+      "kind": "first bounded assembly",
+      "shellId": "2459",
+      "raw": "Tool returned no diagnostic output, only completed exit1"
+    },
+    {
+      "raw": "recent raw command missing",
+      "kind": "final raw-command logging verification",
+      "exit": 1,
+      "shellId": "2504",
+      "disposition": "JSON parse,count,primary-line,all56hash checks passed before logging completeness assertion. Evidence logging remains incomplete; not represented as full compliance."
+    }
+  ],
+  "probeLimits": [
+    "AccessibleChartTable.tsx probe NOTFOUND; real table traced ChartContainer920-939",
+    "Large tool displays truncated; underlying raw successful check output preserved in authorized log"
+  ],
+  "NOTRUN": [
+    "all fresh tests/reruns/lint/build/TSC/helpers",
+    "all browser/native/Playwright/screenshots/ten-width/focus/contrast/RTL/200percent/reduced-motion acceptance",
+    "all household/energy/device/API/network/mutation requests",
+    "servers/installs/subagents",
+    "Git commands and code/test/catalog/queue/handoff writes",
+    "catalog generators/guards",
+    "backend interval/source/coverage/multi-household semantics"
+  ],
+  "writes": [
+    "docs/frontend-audits/phase6-qa-home-energy-whole-home-energy.json",
+    "web/logs/phase6-qa-home-energy-whole-home-energy.log"
+  ],
+  "timing": {
+    "hardDeadlineUtc": "2026-10-14T02:22:57.687Z",
+    "softDeadlineMet": false,
+    "reason": "Report launcher command-length failure and first bounded assembly exit1 delayed artifact completion; no clock reset or concealed failure."
+  },
+  "rawLogValidation": {
+    "status": "INCOMPLETE",
+    "detail": "MyInvocation.MyCommand.Definition was empty in recent direct-script calls. Their raw outputs/exits were logged, but full literal commands remain only in tool transcript. Earlier wrapped source reads/greps/hashes contain full raw commands. Integrity failure acknowledged,not concealed."
+  },
+  "catalogFallbackSource": [
+    "23: const FALLBACKS: Record<ViolationCode, string> = {",
+    "24:   deadline_infeasible: '{{vehicleName}} cannot reach its target state of charge before its departure deadline.',",
+    "25:   vehicle_shortfall: '{{vehicleName}} is projected to fall short of its target by {{unmet}}.',",
+    "26:   panel_import_exceeded: 'Grid import limit exceeded in slot #{{slot}}.',",
+    "27:   panel_export_exceeded: 'Grid export limit exceeded in slot #{{slot}}.',",
+    "28:   powerwall_reserve_breach: 'Powerwall dropped below its reserve floor in slot #{{slot}}.',",
+    "29:   invalid_input: 'Some plan inputs were invalid and were adjusted or dropped: {{detail}}',",
+    "30: };"
+  ],
+  "dataSourceDeclarations": [
+    "useVehicles() and batched useFleetStates(vehicles), all-account read-only input",
+    "first battery/solar site else first; siteInfo/liveStatus/history(day) GET hooks and AbortSignal from typed hooks",
+    "useOrchestrationScenario localStorage key teslasync:home-energy-orchestrator:scenario:v1; local edit/recompute/stability baseline/reset and local JSON Blob download only; none invoked by audit"
+  ],
+  "finalValidation": {
+    "jsonParse": "PASS PowerShell ConvertFrom-Json -AsHashtable",
+    "unchangedPinCount": 56,
+    "driftFiles": [],
+    "checkCommandExit": 1,
+    "referencesAndPrimaryLines": "PASS",
+    "beforeAfterPinCount": 56,
+    "problems": [
+      "Recent full literal command logging incomplete"
+    ],
+    "expectedPagePin": "PASS",
+    "findingCounts": "13 source mechanisms,3 conditional,3 native,5 owners",
+    "checkedAtUtc": "2026-10-14T02:21:35.601937Z",
+    "structureAndPins": "PASS; raw-command completeness separately FAIL"
+  },
+  "release": {
+    "atUtc": "2026-10-14T02:22:36.7292281+00:00",
+    "hardDeadlineMet": true,
+    "notAcceptance": "No native/TypeScript/test pass or Phase6 closure",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-home-energy-whole-home-energy.json",
+      "web/logs/phase6-qa-home-energy-whole-home-energy.log"
+    ],
+    "softDeadlineMet": false,
+    "status": "RELEASED",
+    "commands": "All commands completed synchronous; no servers/watchers/tests/helpers started. RELEASE both artifacts and commands after this final correction/reparse.",
+    "timingCorrection": "Previous hard-deadline flag compared UTC DateTime with parsed local DateTime wall clock; corrected to DateTimeOffset instants. Prior false flag was checker error."
+  }
+}

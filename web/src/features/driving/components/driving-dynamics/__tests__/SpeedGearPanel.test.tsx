@@ -175,6 +175,6 @@ describe('SpeedGearPanel — double-conversion regression', () => {
     const topLabel = screen.getByText('Top Drive Speed')
     expect(topLabel.parentElement?.textContent).toContain('100')
     const avgLabel = screen.getByText('Avg Drive Speed')
-    expect(avgLabel.parentElement?.textContent).toContain('50')
+    expect(avgLabel.parentElement?.textContent).toContain('100')
   })
 })

@@ -62,6 +62,14 @@ function renderToolbar(overrides: Partial<Props> = {}) {
 const REFRESH_NAME = /refresh vehicle cost data/i;
 
 describe('VehicleCostToolbar — structure', () => {
+  it('allocates a 44px mobile refresh target without enlarging desktop controls', () => {
+    renderToolbar();
+
+    expect(screen.getByRole('button', { name: REFRESH_NAME })).toHaveClass(
+      'min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0',
+    );
+  });
+
   it('renders the Window label, a single combobox, and the refresh button', () => {
     renderToolbar();
 
@@ -148,6 +156,20 @@ describe('VehicleCostToolbar — window change', () => {
 });
 
 describe('VehicleCostToolbar — refresh', () => {
+  it('retains native keyboard focus and the shared visible focus outline', () => {
+    renderToolbar();
+
+    const btn = screen.getByRole('button', { name: REFRESH_NAME });
+    btn.focus();
+
+    expect(btn).toHaveFocus();
+    expect(btn).toHaveClass(
+      'focus-visible:outline-2',
+      'focus-visible:outline-offset-2',
+      'focus-visible:outline-[var(--focus-ring)]',
+    );
+  });
+
   it('calls onRefresh when the enabled refresh button is clicked', () => {
     const { onRefresh } = renderToolbar({ refreshing: false });
 

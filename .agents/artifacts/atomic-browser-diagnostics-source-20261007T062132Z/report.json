@@ -1,0 +1,163 @@
+{
+  "protectedHashMismatches": 0,
+  "templatesExecuted": 0,
+  "sourceWriteRelease": {
+    "scope": "Only this new pair; no inherited dirty paths claimed or released",
+    "released": true,
+    "paths": [
+      "web\\e2e\\operationalbrief-contracts\\specialized-diagnostics.supported.spec.ts",
+      "web\\e2e\\operationalbrief-contracts\\specialized-diagnostics.supported.fixtures.ts"
+    ],
+    "releasedUtc": "2026-10-07T06:26:37.8180278Z"
+  },
+  "testDeclarationSites": 2,
+  "id": "atomic-browser-diagnostics-source-20261007T062132Z",
+  "branch": "fix/dashboard-followups",
+  "mapping": "browser-source-gap-reconciliation-20261007T061301Z\\mapping.json#diagnostic-actual-signal-evidence",
+  "remainingRecommendedTemplates": 0,
+  "actualStartUtc": "2026-10-07T06:18:04.5367139Z",
+  "phase": "Phase4 SOURCE ONLY",
+  "copyHashMismatches": 0,
+  "notRun": [
+    "TypeScript",
+    "tests",
+    "validators",
+    "official audits",
+    "browser",
+    "preview",
+    "install",
+    "build",
+    "lint"
+  ],
+  "workspaceInstantiations": 2,
+  "preservedUtc": "2026-10-07T06:26:37.7474159Z",
+  "targetsAbsentBeforeAuthoring": true,
+  "templatesAuthored": 4,
+  "notPerformed": [
+    "existing or product source edits",
+    "core/catalog edits",
+    "nested delegation",
+    "commit",
+    "push",
+    "deploy"
+  ],
+  "producerCaveat": "DiagnosticEvidenceBrief narrative props already repaired; no producer edits. Service corroborating text reflects existing graph hasEvidence flags including focal node, even for empty focal, not source success.",
+  "deadlineUtc": "2026-10-07T06:38:04.5367139Z",
+  "runnerCaveat": "Current playwright.config.ts projects match smoke/quality/a11y/performance/cross-browser/harness suffixes, not supported.spec.ts. Source pair needs parent-owned future runner inclusion or a suitable dedicated config; no existing runner edited or execution claimed.",
+  "ownedPaths": [
+    "web\\e2e\\operationalbrief-contracts\\specialized-diagnostics.supported.spec.ts",
+    "web\\e2e\\operationalbrief-contracts\\specialized-diagnostics.supported.fixtures.ts"
+  ],
+  "cases": [
+    {
+      "executed": 0,
+      "mode": "positive",
+      "actions": [
+        "Analysis window: verify real 24/72/168/720 options and select72",
+        "Focal signal: select BatteryLevel from supported available catalog",
+        "Review details: keyboard Enter then Escape; restore focus and unchanged metrics"
+      ],
+      "rawAssertions": [
+        "All three related sources: 90 native ts/kind/value rows; no timestamp/valueNum padding",
+        "Positive: focal90, candidates3, hypotheses2, quality moderate, score0.4287847222222222 displayed0.43, effect clamp50",
+        "Actual narrative summary2 hypotheses, common limitations, Not scored confidence, cause not established, no action recommended, retrieved-history provenance, never causal proof"
+      ],
+      "route": "/diagnostics/root-cause",
+      "status": "AUTHORED SOURCE ONLY",
+      "endpoints": [
+        "GET /api/v1/signals/7/available",
+        "GET /api/v1/signals/7/BatteryLevel/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/EstBatteryRange/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/IdealBatteryRange/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/PackVoltage/history?hours=72&limit=10000"
+      ]
+    },
+    {
+      "executed": 0,
+      "mode": "missing-focal-held-retry-resolved-related",
+      "actions": [
+        "Analysis window: verify real 24/72/168/720 options and select72",
+        "Focal signal: select BatteryLevel from supported available catalog",
+        "Review details: keyboard Enter then Escape; restore focus and unchanged metrics",
+        "Focal-source Retry: hold response while all three related histories remain resolved; keep missing effect/hypotheses/samples and service generation disabled",
+        "Release held empty response; second focal-only Retry returns supported positive history; related histories are not re-requested"
+      ],
+      "rawAssertions": [
+        "All three related sources: 90 native ts/kind/value rows; no timestamp/valueNum padding",
+        "Positive: focal90, candidates3, hypotheses2, quality moderate, score0.4287847222222222 displayed0.43, effect clamp50",
+        "Actual narrative summary2 hypotheses, common limitations, Not scored confidence, cause not established, no action recommended, retrieved-history provenance, never causal proof",
+        "Missing focal: empty200 history => unavailable source; hypotheses/effect/focal samples are missing rather than measured zero; related 90-point evidence retained",
+        "Missing quality insufficient score0; withheld-hypothesis and low-evidence limitations; no fabricated no-shift conclusion in actual drawer"
+      ],
+      "route": "/diagnostics/root-cause",
+      "status": "AUTHORED SOURCE ONLY",
+      "endpoints": [
+        "GET /api/v1/signals/7/available",
+        "GET /api/v1/signals/7/BatteryLevel/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/EstBatteryRange/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/IdealBatteryRange/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/PackVoltage/history?hours=72&limit=10000"
+      ]
+    },
+    {
+      "executed": 0,
+      "mode": "positive",
+      "actions": [
+        "Analysis window: verify real 24/72/168/720 options and select72",
+        "Focal signal: select BatteryLevel from supported available catalog",
+        "Review details: keyboard Enter then Escape; restore focus and unchanged metrics",
+        "Generate pack only after actual workspace analysis enables the control; read actual client-generated JSON preview and verify raw score/effect/samples/units/leadlag/limitations/privacy/software update context/integrity; do not mock analysis, digest or generation"
+      ],
+      "rawAssertions": [
+        "All three related sources: 90 native ts/kind/value rows; no timestamp/valueNum padding",
+        "Positive: focal90, candidates3, hypotheses2, quality moderate, score0.4287847222222222 displayed0.43, effect clamp50",
+        "Actual narrative summary2 hypotheses, common limitations, Not scored confidence, cause not established, no action recommended, retrieved-history provenance, never causal proof",
+        "Actual brief signal count4; current graph-flag corroborating count3 positive/1 missing (includes focal node), not successful-source count",
+        "Generation Not ready while focal absent; Ready on actual recovery; Generated only after real Generate click",
+        "Generated raw JSON: focal effect50; count90; three related sample90; PackVoltage leads and source-scale medians near380/350; EstBatteryRange lags and medians near300000/270000m; IdealBatteryRange constant hasEvidencefalse; two hypotheses; softwareupdates actualendpoint; SHA-256 digest64hex and isSignaturefalse"
+      ],
+      "route": "/diagnostics/service-evidence",
+      "status": "AUTHORED SOURCE ONLY",
+      "endpoints": [
+        "GET /api/v1/signals/7/available",
+        "GET /api/v1/signals/7/BatteryLevel/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/EstBatteryRange/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/IdealBatteryRange/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/PackVoltage/history?hours=72&limit=10000",
+        "GET /api/v1/software-updates?vehicle_id=7"
+      ]
+    },
+    {
+      "executed": 0,
+      "mode": "missing-focal-held-retry-resolved-related",
+      "actions": [
+        "Analysis window: verify real 24/72/168/720 options and select72",
+        "Focal signal: select BatteryLevel from supported available catalog",
+        "Review details: keyboard Enter then Escape; restore focus and unchanged metrics",
+        "Focal-source Retry: hold response while all three related histories remain resolved; keep missing effect/hypotheses/samples and service generation disabled",
+        "Release held empty response; second focal-only Retry returns supported positive history; related histories are not re-requested",
+        "Generate pack only after actual workspace analysis enables the control; read actual client-generated JSON preview and verify raw score/effect/samples/units/leadlag/limitations/privacy/software update context/integrity; do not mock analysis, digest or generation"
+      ],
+      "rawAssertions": [
+        "All three related sources: 90 native ts/kind/value rows; no timestamp/valueNum padding",
+        "Positive: focal90, candidates3, hypotheses2, quality moderate, score0.4287847222222222 displayed0.43, effect clamp50",
+        "Actual narrative summary2 hypotheses, common limitations, Not scored confidence, cause not established, no action recommended, retrieved-history provenance, never causal proof",
+        "Missing focal: empty200 history => unavailable source; hypotheses/effect/focal samples are missing rather than measured zero; related 90-point evidence retained",
+        "Missing quality insufficient score0; withheld-hypothesis and low-evidence limitations; no fabricated no-shift conclusion in actual drawer",
+        "Actual brief signal count4; current graph-flag corroborating count3 positive/1 missing (includes focal node), not successful-source count",
+        "Generation Not ready while focal absent; Ready on actual recovery; Generated only after real Generate click",
+        "Generated raw JSON: focal effect50; count90; three related sample90; PackVoltage leads and source-scale medians near380/350; EstBatteryRange lags and medians near300000/270000m; IdealBatteryRange constant hasEvidencefalse; two hypotheses; softwareupdates actualendpoint; SHA-256 digest64hex and isSignaturefalse"
+      ],
+      "route": "/diagnostics/service-evidence",
+      "status": "AUTHORED SOURCE ONLY",
+      "endpoints": [
+        "GET /api/v1/signals/7/available",
+        "GET /api/v1/signals/7/BatteryLevel/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/EstBatteryRange/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/IdealBatteryRange/history?hours=72&limit=10000",
+        "GET /api/v1/signals/7/PackVoltage/history?hours=72&limit=10000",
+        "GET /api/v1/software-updates?vehicle_id=7"
+      ]
+    }
+  ]
+}

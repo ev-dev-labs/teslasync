@@ -1,0 +1,82 @@
+{
+  "checkpoint": "2026-10-04 progress/evidence follow-up",
+  "artifactRoot": "F:\\github\\TeslaSync\\files\\parallel-statistics-page-live",
+  "status": "LIVE_SOURCE_UNCHANGED; EVIDENCE_ROOT_CORRECTED; SOURCE_QUIESCENT_RELEASE",
+  "artifactCorrection": {
+    "previousLocation": "C:\\Users\\AtulM\\AppData\\Local\\Temp\\session files\\parallel-statistics-page-live",
+    "archiveFilesCopiedByteForByte": [
+      "StatisticsPage.baseline.tsx",
+      "StatisticsPage.test.baseline.tsx",
+      "preservation-map.json",
+      "english-additions.json",
+      "release.json"
+    ],
+    "originalBaselineOverwritten": false,
+    "currentBaseline": "current-live/web/src/features/analytics/",
+    "currentOwnedSnapshotFiles": 9,
+    "currentSnapshotMatchesLiveAndArchivedReleaseHashes": true,
+    "protection": "Copied baseline/receipts/current source snapshots have read-only file attributes; SHA-256 pins are in release.json. This is filesystem protection and hash evidence, not hardware write-once storage."
+  },
+  "baselineHashes": {
+    "originalPage": "a0ee427cefdfabf55ae3159fcb62059ee37e853d440c72f68a7308271b9d0dfc",
+    "currentLivePage": "bf92879fcaf3ded36f5dd22236f0988de4299e99430b7ccbf70c60f41eb4d57d",
+    "originalTest": "b1b4c96b387d2e1658494613d8706d110b1167ae0de9d4eda83031597b6f66fb"
+  },
+  "actualReceipts": [
+    "CURRENT/IMMUTABLE/RELEASE MATCH: all 9 exact owned files true",
+    "METRIC/GAUGE EXPRESSIONS 17/17 exact=true",
+    "CHART SUBTREES exact=true",
+    "MISSING ORIGINAL TRANSLATION CONTRACTS []",
+    "COMMENT-FREE AST INITIALIZER stateData: exact=true",
+    "COMMENT-FREE AST INITIALIZER compData: exact=true",
+    "COMMENT-FREE AST INITIALIZER fromKm: exact=true",
+    "COMMENT-FREE AST INITIALIZER whPerKmToDisplay: exact=true",
+    "COMMENT-FREE AST INITIALIZER statsQuery: exact=true",
+    "COMMENT-FREE AST INITIALIZER avgDriveDistance: exact=true",
+    "COMMENT-FREE AST INITIALIZER STATE_COLORS: exact=true",
+    "CHART CAPABILITY/IDENTITY PROPS exact=true",
+    "SOURCE TABLE/BRUSH SUBTREES baseline=0 current=0",
+    "PARSE DIAGNOSTICS 0",
+    "SHIPPING LINES original=391 current=530",
+    "ORIGINAL PAGE TEST UNCHANGED true",
+    "OWNED SHIPPING AUDIT inline styles=0",
+    "OWNED SHIPPING AUDIT raw controls/tables=0",
+    "OWNED SHIPPING AUDIT direct chart/map/motion imports=0",
+    "OWNED SHIPPING AUDIT camelCase vehicle query=0",
+    "owned diff-check exit=0"
+  ],
+  "receiptCorrection": "Whitespace-only raw initializer comparison initially reported stateData false because its explanatory comment was updated. Comment-free TypeScript AST printer comparison proves the initializer code unchanged. The archived release is preserved unmodified; this append-only receipt qualifies its raw normalized-text wording.",
+  "preservationMapping": {
+    "fullMetricFormulaSourceActionInventory": "preservation-map.json",
+    "totalsAndAverages": "PeriodStatistics.tsx; all 8 MetricCards and avgDriveDistance initializer retained",
+    "battery": "BatteryStatistics.tsx; all 4 MetricCards and LinearGauge retained",
+    "mileage": "MileageStatistics.tsx; all 4 MetricCards retained",
+    "stateAndFleetCharts": "StatisticsPage.tsx; exact PieChart/BarChart subtrees and capability props except presentation-only grid className retained",
+    "queryInputsPeriodsPreferences": "Existing activeId/enabled/key, battery/mileage/state hook inputs, fleet start/end, range key/default, saved-view URL, chart palette and hidden-series identity preserved",
+    "actions": "DataFreshnessAuto query, period refetch, SavedViewMenu /statistics currentQuery/apply, /drives and /vehicles destinations retained; per-source retry added",
+    "tablesSelectionPaging": "No explicit source DataTable/Table/mobile adapter/Brush subtree existed in this page baseline. No table/selection/paging feature removed or invented. Existing ChartContainer capability owner and shared header vehicle selection remain; shared implementations not re-inspected at this checkpoint.",
+    "exportIdentities": "state-distribution, vehicle-comparison and fleet-vehicle-comparison unchanged",
+    "sectionAvailability": "Three top-level sections and six content groups retained; independent source cards remain; retained-data refresh errors are nonfatal",
+    "genericStatsDecision": "Specialist renderers retained where generic equivalence is unproved; no guessed lifetime/completeness provenance."
+  },
+  "milestones": [
+    "LIVE patch already applied within Statistics source lease",
+    "Shared layout and placement pipeline adopted",
+    "Cohesive metric/source/placement extracts implemented",
+    "Two meaningful new regression files authored; original test unchanged",
+    "Exact requested artifact root now created",
+    "Original evidence migrated without overwriting baseline",
+    "Current-live immutable hash-matched snapshots added",
+    "Owned-source preservation/diff/parse checks rerun"
+  ],
+  "remaining": [
+    "Parent integrates three exact English key/text requests in english-additions.json; no catalog edits here",
+    "NOTRUN TypeScript semantic verification",
+    "NOTRUN existing/new tests, lint/build and whole-app preservation checks",
+    "NOTRUN browser/runtime/responsive/accessibility/native acceptance",
+    "Inherited inline period query preserved; equivalent shared hook unavailable within lease",
+    "Parent owns final application acceptance"
+  ],
+  "checkpointScope": "Owned Statistics source/evidence only. No parent reinspection, catalog startup, heavy commands, new source changes, mutation/vehicle command, install, commit, push or deploy.",
+  "release": "Source remains quiescent. No running commands; ownership unchanged."
+}

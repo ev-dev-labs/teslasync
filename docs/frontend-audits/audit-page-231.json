@@ -1,0 +1,347 @@
+{
+  "item": "audit-page-231",
+  "page": "web\\src\\features\\vehicles\\pages\\ParkingAnalyticsPage.tsx",
+  "routes": ["/parking"],
+  "purpose": "Describe observed parking reconstructed from gaps between usable drives, with explicit location quality, observation limits and censoring.",
+  "primaryGoal": "Understand where, when and how long the selected vehicle parks within the workspace window without confusing inferred dwell with continuously observed occupancy.",
+  "dataSources": [
+    {
+      "hook": "useDrives",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 104,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected>&start=<date>&end=<date>&limit=1000",
+      "sourceOwner": "useDriving.ts / driveHandler.ListByVehicle",
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "behavior": "Query key includes selected vehicle, start, end and bounded limit; request receives AbortSignal, select uses safeArray, query is disabled without vehicle and uses STALE_TIMES.FAST.",
+      "limitations": "Router registration verified from source only. Backend handler/query implementation, ordering, exact filter behavior and network responses were not exercised. Newest-first/UTC semantics are stated by the parking model and caveats, not independently certified here."
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState / useDateFormat",
+      "file": "web\\src\\features\\vehicles\\pages\\ParkingAnalyticsPage.tsx",
+      "line": 43,
+      "endpoint": null,
+      "sourceOwner": "Existing workspace selection, range preferences and date-format hooks",
+      "behavior": "Uses vehicleId, display timezone tz and start/end dates. /parking is range-enabled at workspaceScope.ts:54; getWorkspaceRouteScope at lines 154-167 also enables the vehicle control. No duplicate page selector.",
+      "limitations": "The page does not consume the range hook's precise instant bounds; see scope finding."
+    },
+    {
+      "hook": "summarizeParking",
+      "file": "web\\src\\features\\vehicles\\lib\\parkingDwell.ts",
+      "line": 460,
+      "endpoint": null,
+      "sourceOwner": "Pure parkingDwell domain model",
+      "behavior": "Frozen injected page clock; UTC-date validation; display-timezone local hour/weekday/month/night split; invalid/open/overlapping/zero gaps counted; deterministic location and stint rankings; final tail right-censored; possible 1000-row truncation disclosed.",
+      "siContract": "Drive.durationS remains seconds. Internal timestamp/dwell arithmetic uses milliseconds; renderers divide by 1000 before formatDuration/convertDurationFromSI. No wire/cache conversion proposed."
+    },
+    {
+      "hook": "useDataState / useUnits / useNumberFormatting / useOperationalMetrics",
+      "file": "web\\src\\features\\vehicles\\pages\\ParkingAnalyticsPage.tsx",
+      "line": 57,
+      "endpoint": null,
+      "sourceOwner": "Existing data-trust and display-formatting contracts",
+      "behavior": "Historical provenance, fatal-only error gate, retained refresh warning and source-backed numeric operational metrics. Units and numbers are formatted at the display boundary."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout and Grid", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "evidence": "Page:92-99,145-146,164-166; PageLayout:5-15", "contract": "PageContainer-compatible query/title/subtitle props; full-width min-w-0 container; one-column grids switching to two at xl."},
+    {"name": "VehicleEvidenceBrief / OperationalBrief", "owner": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx", "evidence": "VehicleEvidenceBrief:7-16,23-47; page:104-137", "contract": "id,title,description,readonly StatMetric[],DataStatus,scope,provenance,optional freshness/loading; shared numeric metric bridge and localized review drawer."},
+    {"name": "ParkingSectionBody", "owner": "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingSectionBody.tsx", "evidence": "ParkingSectionBody:16-45", "contract": "ParkingSectionState {isLoading,error,onRetry}; fatal error and loading placeholders inside persistent section shells."},
+    {"name": "ChartContainer / EmbeddedChart", "owner": "web\\src\\components\\charts\\ChartContainer.tsx", "evidence": "ChartContainer:109-116,666-710; EmbeddedChart:18-40", "contract": "Existing chart frame, accessible dataColumns/data, exportFilename/exportable, chartKey legend persistence, height/mobileHeight/fluid; embedded variant reuses controller without second surface."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "evidence": "DataTable:184-200,239-265,714-725,1161-1175", "contract": "Stable tableId, typed columns/data/keyExtractor, same filtering/paging/export pipeline; mobilePresentation is existing opt-in full-detail adapter."},
+    {"name": "GlassPanel, PanelTitle, Text, Subhead, Badge, HelpTooltip", "owner": "Existing @/components/ui category", "evidence": "TopParkingLocations:6-14,111-126; LongestParkingStints:6-13,123-138; ParkingCoverageMethodology:5-9,58-72", "contract": "Existing surface, typography, semantic status and contextual-help owners; no replacement component required."},
+    {"name": "StaleRefreshWarning, QueryError, EmptyState, Skeleton", "owner": "Existing @/components/feedback category", "evidence": "Page:100-103,138-140; StaleRefreshWarning:54-112; ParkingSectionBody:24-40", "contract": "Retained-data warning above content, fatal-only retry, actionable empty navigation and loading geometry."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "evidence": "FadeIn:24-37; page:101,144,155,159,163,171", "contract": "Shared useMotionPreference; initial=false and safeDelay=0 under reduced motion; keep no ambient animation."},
+    {"name": "NoVehicleSelected", "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected", "evidence": "Page:85-89", "contract": "Existing no-vehicle branch retained; component internals not inspected."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingKpiBand.tsx",
+      "line": 22,
+      "rule": "MDC-002 / mission 4: avoid competing summary renderers",
+      "detail": "Barrel exports ParkingKpiBand (index.ts:6), but the mounted page uses VehicleEvidenceBrief. The alternate component duplicates all four headline metrics and parking-kpis/parking-summary identities, formats percentages/duration as text metrics and gates the entire band on loading/error.",
+      "fix": "Keep the mounted numeric VehicleEvidenceBrief as canonical. Before retiring the alternate export, perform a bounded caller check; do not re-adopt the text-metric implementation or remove sections.",
+      "owner": "page",
+      "confidence": "high for duplication; alternate callers unverified"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingCoverageMethodology.tsx",
+      "line": 58,
+      "rule": "MDC-031 / mission 7: hierarchy rather than repeated chrome",
+      "detail": "Coverage title appears in PanelTitle and again in the nested evidence brief at line 75, whose description repeats the headline brief description. Existing information is useful, but repeated titles/chrome add emphasis.",
+      "fix": "Use one visible section heading while retaining the brief's accessible title, all coverage metrics, review action, provenance and complete caveats. Reuse existing surface/embedded contracts, not a new card.",
+      "owner": "page",
+      "confidence": "high source; rendered visual impact unverified"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": "Top-level duration/overnight and location/longest pairs stack until xl. Temporal pair stacks below lg. Tables explicitly hide non-primary columns below md. No viewport exercised.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingTemporalProfile.tsx",
+        "line": 95,
+        "rule": "MDC-043 / MDC-034: allocated-height responsive containment",
+        "detail": "One fixed 420px outer viewport contains a one-column, two-row grid until lg (line 126). Each child becomes 256px tall at sm (ParkingStartBarChart.tsx:68), before headings/gap/embedded-frame overhead; the two plots alone exceed 420px at 640-1023px. ChartContainer clips its viewport (ChartContainer.tsx:668).",
+        "fix": "Give the stacked temporal composition sufficient owned height or use the existing fluid chart contract with an explicitly sized responsive host; keep both charts, headings and combined accessible/export data. Verify 640-1023px and allocated narrow containers, not just viewport labels.",
+        "owner": "page",
+        "confidence": "high source geometry risk; actual clipping unverified"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\LongestParkingStints.tsx",
+        "line": 164,
+        "rule": "MDC-023 / MDC-043: mobile must retain specialist details",
+        "detail": "mobileColumns includes rank/location/durationMs only: parked-at and censoring status are hidden below md. TopParkingLocations.tsx:160 similarly hides stint count and share. DataTable.tsx:724-725 enforces hidden md:table-cell; neither caller supplies mobilePresentation or expanded detail rendering.",
+        "fix": "Adopt existing DataTable mobilePresentation with typed displayValue, roles and allDetails for all columns, or an existing expansion contract. Preserve ongoing/range-edge status and complete location labels on touch, while retaining table IDs, filters, pagination and export ownership.",
+        "owner": "page",
+        "confidence": "high source; mobile interaction unverified"
+      }
+    ],
+    "requiredValidation": "320/375/390/430/768/1024/1280/1440/1920/2560 plus 640-1023px, narrow allocated grids, RTL, long destination names and 200% text."
+  },
+  "accessibility": {
+    "sourceStrengths": "Localized section labels, hidden decorative icons, aria-labeled chart frames, accessible chart dataColumns, semantic shared typography, help accessible name and reduced-motion-aware FadeIn are present.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingTemporalProfile.tsx",
+        "line": 132,
+        "rule": "MDC-040: distinct accessible chart identities",
+        "detail": "Hourly and weekday ParkingStartBarChart calls omit ariaLabel. Both default to the same generic 'Bar chart of Parking starts patterns' (ParkingStartBarChart.tsx:44-49), despite distinct visible subheadings.",
+        "fix": "Pass distinct localized hourly and weekday ariaLabel values through the existing prop, preserving each embedded data table and combined fallback table.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\TopParkingLocations.tsx",
+        "line": 51,
+        "rule": "MDC-040 / mission 16: avoid hover-only full information",
+        "detail": "Destination labels truncate and rely on native title for the full value; LongestParkingStints.tsx:71-73 does the same. Neither table supplies an accessible/touch details presentation.",
+        "fix": "Expose full destinations in the existing mobile/detail presentation; preserve the visible compact summary and source string without recasing or shortening source data.",
+        "owner": "page",
+        "confidence": "high source; assistive technology behavior unverified"
+      }
+    ],
+    "unverified": ["Keyboard traversal", "Focus restoration from review drawer/help/chart menus", "Screen-reader output", "Effective contrast", "Forced colors", "44px touch reachability", "Actual reduced-motion behavior"]
+  },
+  "states": {
+    "loading": "drivesQuery.isLoading drives brief and all seven section shells; shared charts and ParkingSectionBody own placeholders.",
+    "empty": "All eight section identities remain mounted for a selected vehicle. Chart-specific explanations, table empty navigation and method caveats remain. Browse drives links target /drives.",
+    "fatalError": "sectionState.error uses drivesState.fatalError; shared retry callback refetches the one source. Source metrics use null when drivesState.data is absent.",
+    "retainedRefreshFailure": "StaleRefreshWarning remains above retained content; fatal-only section gates keep data mounted. Test source asserts this; tests were not executed.",
+    "noVehicle": "Existing NoVehicleSelected branch; useDrives enabled=false without a selected ID.",
+    "partial": "Potential cap is derived from returned count; coverage brief maps ok+capped to partial, but headline does not.",
+    "offline": "Existing StaleRefreshWarning inspects isRefreshBlocked and preserves retained data; offline route behavior not exercised.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingCoverageMethodology.tsx",
+        "line": 65,
+        "rule": "MDC-025 / MDC-026: unknown is not success",
+        "detail": "Badge is calculated before the loading/fatal body gate. Empty fallback summary yields possiblyCapped=false, so initial loading or failed initial fetch shows success 'Within request cap' even when hasSource=false.",
+        "fix": "Derive badge text/tone from actual hasSource/loading/fatal state before interpreting row-cap evidence. Use existing neutral/warning Badge variants; retain measured within-cap and potentially-capped meanings once source is known.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\ParkingAnalyticsPage.tsx",
+        "line": 107,
+        "rule": "MDC-026: incomplete sample must stay explicit",
+        "detail": "Headline status passes drivesState.status unchanged while coverage maps ok+capped to partial (ParkingCoverageMethodology.tsx:77). A capped successful source can therefore read 'Source returned' at the top and partial only at the final section.",
+        "fix": "Carry a presentation-only partial sample status/context into the headline for capped successful data without changing query DataState, counts, cache, or inferred measurements; keep the specific cap caveat.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingMethodCaveats.tsx",
+      "line": 39,
+      "rule": "MDC-010 / MDC-016 / mission 7: meaningful rather than decorative color",
+      "detail": "Method paragraphs use emerald/cyan/amber/rose icon accents at lines 39,52,65,89; coverage title adds purple and table titles cyan/amber. Toned-down colors are not neon violations, but rainbow decoration competes with actual capped/censoring warnings.",
+      "fix": "Use existing muted foreground for informational/title icons and reserve existing semantic warning color for actionable coverage/censoring states. Preserve all explanatory paragraphs and user-selected chart palettes.",
+      "owner": "page",
+      "confidence": "high source styling; composed contrast/appearance unverified"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\TopParkingLocations.tsx",
+      "line": 151,
+      "rule": "MDC-015 / MDC-023: one surface owner",
+      "detail": "DataTable sits inside GlassPanel with no explicit embedded variant; LongestParkingStints.tsx:153 does the same. Existing DataTable supports variant='embedded' (DataTable.tsx:187-188).",
+      "fix": "Use the existing embedded table variant if mounted review confirms repeated framing, preserving toolbar/column/paging/export capabilities and stable IDs.",
+      "owner": "page",
+      "confidence": "medium; extra visible chrome not exercised"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\ParkingAnalyticsPage.tsx",
+      "line": 47,
+      "rule": "MDC-032 / MDC-045: precise shared workspace scope",
+      "detail": "Page sends start/end calendar strings to the server and UTC-date-only parking model rather than startInstant/endInstantExclusive. useRangeState.ts:656-668 computes rolling 24h/live instants and local calendar bounds; workspaceScope.ts:80 exposes 24h. Therefore the page cannot represent the header's precise rolling or timezone-aware calendar interval, even though it consumes the shared selector.",
+      "fix": "Integration change: consume authoritative shared timezone and instant bounds for both useDrives and parking reconstruction; extend the pure model's range contract coherently, preserve UTC-date compatibility where intentionally required, and update misleading UTC-only descriptions/tests. Do not merely pass RFC3339 into parseParkingUtcRange, which accepts only date strings.",
+      "owner": "integration",
+      "confidence": "high source mismatch; server instant execution unverified"
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "order": [
+      "Align server and reconstruction interval with precise workspace scope.",
+      "Make mobile censoring/status/secondary details reachable and fix stacked temporal height.",
+      "Prevent unknown cap evidence from appearing successful and disclose capped headline sample.",
+      "Add distinct embedded chart names; reduce duplicate chrome and decorative icon color.",
+      "Reconcile alternate unmounted KPI renderer without losing capabilities."
+    ],
+    "newComponentNeeded": false
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Precise workspace parking interval integration",
+      "existingOwnerFile": "web\\src\\hooks\\useRangeState.ts",
+      "propsVariantsStates": "Reuse startInstant/endInstantExclusive/timezone and useDrives DriveWindow RFC3339 bounds. Parking model needs explicit numeric/exclusive bounds rather than UTC-date-only parsing; retain frozen-clock and censoring rules.",
+      "usedBy": ["ParkingAnalyticsPage", "parkingDwell", "ParkingMethodCaveats"],
+      "dependsOn": ["Backend ListByVehicle instant-bound behavior verification", "Existing workspace calendar/DST and rolling presets", "Updated focused parking range/model tests"],
+      "changeNeeded": "Integration-owned model/caller coordination, not a new range component or hook API."
+    },
+    {
+      "name": "Full mobile parking table presentation",
+      "existingOwnerFile": "web\\src\\components\\ui\\MobileDataTableAdapter.types.ts",
+      "propsVariantsStates": "Reuse DataTable.mobilePresentation: roles, displayValue(row,columnKey), allDetails(row), optional state/onRetry; existing details preserve hidden layout columns. Keep same table pipeline, IDs and loaded-row export/filter semantics.",
+      "usedBy": ["TopParkingLocations", "LongestParkingStints"],
+      "dependsOn": ["Existing DataTable mobile adapter", "Typed location/stint display mapping", "Touch/keyboard/long-label acceptance"],
+      "changeNeeded": "Page adoption only; no shared extension demonstrated."
+    },
+    {
+      "name": "Responsive composed temporal chart sizing",
+      "existingOwnerFile": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "propsVariantsStates": "Reuse height/mobileHeight/fluid and EmbeddedChart's existing fluid contract; explicitly sized host must accommodate both charts and headings when stacked. Preserve loading/error/empty, named charts and accessible combined export table.",
+      "usedBy": ["ParkingTemporalProfile", "ParkingStartBarChart"],
+      "dependsOn": ["Allocated-width and 640-1023px mounted geometry check", "Existing ChartContainer containment"],
+      "changeNeeded": "Page layout correction; do not globally loosen chart overflow or add another frame."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "ParkingKpiBand versus mounted VehicleEvidenceBrief",
+      "evidence": ["parking-analytics\\index.ts:6", "ParkingKpiBand.tsx:22-99", "ParkingAnalyticsPage.tsx:104-137"],
+      "decision": "Prefer mounted numeric evidence bridge. Alternate exported KPI band is not a ninth mounted section; caller retirement requires follow-up."
+    },
+    {
+      "name": "No new shell, chart, stats, table or range system",
+      "evidence": ["PageLayout.tsx:5-15", "EmbeddedChart.tsx:18-40", "DataTable.tsx:184-200", "VehicleEvidenceBrief.tsx:23-47"],
+      "decision": "Reuse existing owners; do not create a parking-specific design system."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "6D3E1E2BDE09127C712E2080BCBF3AF916AC1E48BC796AF03893CBDA2AD84120",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashPath": "web\\src\\features\\vehicles\\pages\\ParkingAnalyticsPage.tsx",
+    "currentLineCount": 182,
+    "sectionCount": 8,
+    "sections": [
+      {"name": "Parking summary metrics", "testId": "parking-kpis", "file": "web\\src\\features\\vehicles\\pages\\ParkingAnalyticsPage.tsx", "line": 102, "metricCount": 4},
+      {"name": "Parking duration distribution", "testId": "parking-duration", "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\DurationDistributionChart.tsx", "line": 77, "series": ["Stint count", "Observed dwell"]},
+      {"name": "Overnight and daytime parking context", "testId": "parking-overnight", "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\OvernightParkingContext.tsx", "line": 101, "series": ["Local 22:00-06:00", "Local 06:00-22:00"]},
+      {"name": "Time-of-day and weekday parking profile", "testId": "parking-temporal", "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingTemporalProfile.tsx", "line": 78, "subchartCount": 2},
+      {"name": "Monthly parking trend", "testId": "parking-monthly", "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\MonthlyDwellTrend.tsx", "line": 76, "series": ["Observed dwell", "Stint count"], "accessibleAndExportOnly": ["Average stint"]},
+      {"name": "Top parking locations", "testId": "parking-locations", "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\TopParkingLocations.tsx", "line": 109, "columns": ["Location", "Stints", "Time parked", "Share"]},
+      {"name": "Longest parking stints", "testId": "parking-longest", "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\LongestParkingStints.tsx", "line": 121, "columns": ["Rank", "Location", "Parked at", "Observed duration", "Status"], "rowLimit": 10},
+      {"name": "Parking coverage and methodology", "testId": "parking-coverage", "file": "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingCoverageMethodology.tsx", "line": 56, "metricCount": 4, "methodNotes": ["Requested server window", "Local rollup timezone", "Frozen-clock ongoing/right-censored tail", "Excluded records/nonpositive gaps/missing locations", "Returned-row cap caveat"]}
+    ],
+    "frameCounts": {"mountedChartContainer": 4, "mountedEmbeddedChartInstances": 2, "mountedGlassPanel": 3, "mountedDataTable": 2, "mountedVehicleEvidenceBrief": 2},
+    "lineCounts": {
+      "ParkingAnalyticsPage.tsx": 182,
+      "DurationDistributionChart.tsx": 198,
+      "LongestParkingStints.tsx": 171,
+      "MonthlyDwellTrend.tsx": 202,
+      "OvernightParkingContext.tsx": 186,
+      "ParkingCoverageMethodology.tsx": 114,
+      "ParkingKpiBand.tsx": 99,
+      "ParkingMethodCaveats.tsx": 125,
+      "ParkingSectionBody.tsx": 45,
+      "ParkingStartBarChart.tsx": 111,
+      "ParkingTemporalProfile.tsx": 155,
+      "TopParkingLocations.tsx": 168
+    },
+    "lineCountContext": "Source-only counts, no modernization delta. Alternate unmounted ParkingKpiBand adds one textual section/GlassPanel but not mounted coverage. Preserve decomposed domain sections rather than shrinking the page.",
+    "actions": [
+      "Retry failed drive source from section QueryError surfaces.",
+      "Refresh retained stale/offline source through StaleRefreshWarning.",
+      "Review details in both operational briefs, including sample, source and missing reasons.",
+      "Browse drives from applicable empty states.",
+      "Existing chart data/export/fullscreen controls where enabled; export filenames parking-duration-distribution, parking-overnight-context, parking-temporal-profile and parking-monthly-dwell.",
+      "Toggle duration and monthly series with chartKey persistence parking-duration-distribution and parking-monthly-dwell.",
+      "Parking methodology contextual help.",
+      "DataTable loaded-row export, column/filter controls and location pagination as supplied by existing defaults.",
+      "Header-owned vehicle and workspace range controls."
+    ],
+    "data": [
+      "Numeric SI drive duration and timestamp data remain raw through query/cache; physical conversion only at display boundary.",
+      "Frozen page clock persists across range-driven rerenders; do not silently turn observed tails into live continuously measured occupancy.",
+      "Invalid/future/open/overlapping/zero gaps and missing locations remain explicit; null unknowns do not become measured zero.",
+      "Parked share denominator is reconstructed parked plus tracked driving time, not total calendar-window occupancy.",
+      "Local night overlap and parking-start hour/weekday/month grouping, deterministic ranks, all duration bands, average monthly dwell export and location aggregation remain.",
+      "Retained successful data survives refresh failure; initial failure cannot fabricate metrics.",
+      "Possible row truncation remains disclosed; do not claim guaranteed complete/lifetime coverage.",
+      "Stable table IDs vehicles:parking-locations and vehicles:parking-longest, query identity, theme/unit/locale/motion preferences and source destination strings survive."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source audit; only assigned JSON report and heartbeat written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified beyond source contracts",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "ParkingAnalyticsPage.test.tsx inspected, not executed; mocked section assertions are not mounted chart acceptance.",
+    "backend": "GET drives router registration inspected; handler/database semantics and real responses unverified.",
+    "checks": [
+      {"command": "Get-FileHash -LiteralPath web\\src\\features\\vehicles\\pages\\ParkingAnalyticsPage.tsx -Algorithm SHA256; Get-Content line count", "exitCode": 0, "output": "SHA256 6D3E1E2BDE09127C712E2080BCBF3AF916AC1E48BC796AF03893CBDA2AD84120; LINES 182"},
+      {"command": "Scoped PowerShell regex counts over ParkingAnalyticsPage.tsx and non-test parking-analytics *.tsx", "exitCode": 0, "output": "inlineStyles=0; rawControls=0; directLibraries=0; neon=0; fixedWhiteGray=0; glassPanels=4; chartFrames=4; sections=9", "meaning": "Textual pattern counts include alternate unmounted ParkingKpiBand; not a full violations certificate or runtime section count."},
+      {"command": "Initial scoped PowerShell regex-count attempt", "exitCode": 1, "output": "ParserError: Unexpected token ']' in expression or statement.", "resolution": "Corrected single-quoted regex and reran successfully; no file writes from either counting command."},
+      {"command": "audit.sh / npx tsc --noEmit / full lint / full build", "exitCode": null, "output": "NOT RUN: audit script reviewed but includes project TypeScript gate; excluded by scoped Phase 0 source-only assignment and concurrent-validation contract."}
+    ],
+    "noClaims": "No implementation, global acceptance, runtime parity, exact contrast, test pass, full API audit or completeness of backend filtering claimed."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicles\\pages\\ParkingAnalyticsPage.tsx",
+    "web\\src\\features\\vehicles\\pages\\ParkingAnalyticsPage.test.tsx",
+    "web\\src\\features\\vehicles\\lib\\parkingDwell.ts",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\DurationDistributionChart.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\OvernightParkingContext.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingTemporalProfile.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\MonthlyDwellTrend.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingStartBarChart.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\TopParkingLocations.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\LongestParkingStints.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingCoverageMethodology.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingMethodCaveats.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingSectionBody.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\ParkingKpiBand.tsx",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\index.ts",
+    "web\\src\\features\\vehicles\\components\\parking-analytics\\types.ts",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\MobileDataTableAdapter.types.ts",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\components\\layout\\sidebar\\collections.ts",
+    "web\\src\\features\\explore\\featureCatalog.ts",
+    "web\\src\\__tests__\\lazyRoutes.list.ts",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-231.json", ".agent-status\\audit-page-231.txt"]
+}

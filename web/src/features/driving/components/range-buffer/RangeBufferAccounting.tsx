@@ -13,10 +13,11 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { RangeBufferResult } from '../../lib/rangeBuffer';
 import { RangeBufferSectionBody } from './RangeBufferSectionBody';
 import type { RangeBufferQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RangeBufferAccountingProps {
   result: RangeBufferResult;
@@ -27,6 +28,7 @@ export function RangeBufferAccounting({
   result,
   state,
 }: RangeBufferAccountingProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const accounting = result.accounting;
 

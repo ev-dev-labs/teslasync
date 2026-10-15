@@ -1,0 +1,1422 @@
+{
+  "item": "phase6-qa-sharing-share-card",
+  "attempt": 1,
+  "status": "SOURCE_QA_COMPLETE_WITH_FINDINGS",
+  "sourcePinsBefore": [
+    {
+      "file": "web/src/features/sharing/pages/ShareCardPage.tsx",
+      "sha256": "1987b4964943c1c1f231e0f605108d3adcf1983c02d47e4e2ccd54a91c028da8",
+      "lines": 108
+    },
+    {
+      "file": "web/src/features/sharing/pages/ShareCardPage.test.tsx",
+      "sha256": "7b70cedd40172b9370e3dccd7cc98f6ffe03a1b644b3fd9d7bde449e26e5cc52",
+      "lines": 743
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/index.ts",
+      "sha256": "cb4afe64a63693e5d72140f54e119437adf9cd2fe4c96508411e047ca9190032",
+      "lines": 23
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/queryState.ts",
+      "sha256": "dba021cab2529853e6b03441c58f8314bab7916a60dd57fc3319e2970a90decd",
+      "lines": 39
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardAccountingIdentities.tsx",
+      "sha256": "d885b7dd4d13efcc737cff811871d83df44cadfea7b026ec3268f3d921efccb4",
+      "lines": 90
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardCoverageDisclosure.tsx",
+      "sha256": "5b7845e486436985598190dd05d53eb4110bd250c656e65272b651939bc37af8",
+      "lines": 73
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardDistanceDistribution.tsx",
+      "sha256": "eba141639fa98acdd7244c277c222afca0aab4de50ab943b82082f4c43ffa2ed",
+      "lines": 150
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardDurationDistribution.tsx",
+      "sha256": "17321aee1e590346e4ed3b0654cb8ed18509522c7fcf52166b30c70890ba1f54",
+      "lines": 150
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardEfficiencyEvidence.tsx",
+      "sha256": "c486a6b3a3447c4a6d45c59aecc138784ad5f36b9fd9c62501abff046cf3fee7",
+      "lines": 93
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardEvidenceLedger.tsx",
+      "sha256": "59f7998a70c80ed1a159a178dba6c6c6d130568f0772b5815981ba6da09dd277",
+      "lines": 80
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardLineInventory.tsx",
+      "sha256": "28521ce2e125fca9513fe21afe0d85950de25225a740fc2951e0c2f57b195f5c",
+      "lines": 79
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardMethodology.tsx",
+      "sha256": "ed5e9d61a58799c93f8ad615bcb685af53dd178333e8e43b866363a19edc2aca",
+      "lines": 72
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardMonthlyTrend.tsx",
+      "sha256": "8735de96f53a2e23ae1a478943632c0aa01143d2a6e6e8bd658102878ee45406",
+      "lines": 203
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardPreviewExport.tsx",
+      "sha256": "7447bb9a76b484045361dbb2a8ffaec5ac1a6fa9567f96abca4d9edb96593455",
+      "lines": 81
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardRepresentativeDirectory.tsx",
+      "sha256": "89837e2a6b2755e711168bc505fb1d1a857c521cb418ed5a2a195e9994d33dc3",
+      "lines": 108
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardSectionBody.test.tsx",
+      "sha256": "991b2c337699e1235e4204ecb7993c721d422e1a6326a19bae751991285c0f93",
+      "lines": 76
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardSectionBody.tsx",
+      "sha256": "b2d85d0ce63e651faedbc6c1caafa97d488d8b1a6edefc1adfda446df0f1fe6c",
+      "lines": 124
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardSourceScopeLedger.tsx",
+      "sha256": "7aed46dee6e557afb331d14030fdef623c6a3ab8ee0077a0d3f37e5df383f267",
+      "lines": 113
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardStyleControls.tsx",
+      "sha256": "1baded312d851da61d15aa58045111b62d3cbc902c035772dff8821a03f7e8fa",
+      "lines": 80
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardWeekdayProfile.tsx",
+      "sha256": "ae28bc455897efb250bce336f4a811a96961a40f7596e85e24553c2635d04aef",
+      "lines": 176
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/types.ts",
+      "sha256": "09c821bb9bd636d1ac7536a607271c4dbd9b78fb10c34362dcfa66c78e9eff11",
+      "lines": 65
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/useShareCardComposition.ts",
+      "sha256": "80c47530193f807eb8c16d3db107152502e6ff2105cb1912c0519ac6079a0ba7",
+      "lines": 147
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/useShareCardDisplay.ts",
+      "sha256": "2634b06f185963f567b84e75e380389bf96b31261188fbcdbe0f863313d3419e",
+      "lines": 122
+    },
+    {
+      "file": "web/src/features/sharing/lib/shareCard.ts",
+      "sha256": "b61c4fc1c96df52ea10263b37126c4f2c4a7b70ccb8eae4053e88ba4223809ff",
+      "lines": 1033
+    },
+    {
+      "file": "web/src/features/sharing/lib/shareCard.test.ts",
+      "sha256": "2b51cd76705e2f59cd3a515c2e3dab69fe846e72c3923a191a9ebd1c39a7df5d",
+      "lines": 447
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "lines": 454
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines": 74
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines": 1707
+    },
+    {
+      "file": "web/src/features/sharing/components/operationalbrief-all/ShareCardBrief.tsx",
+      "sha256": "6a9c9609f152f0a44038a3d69b8e8eca3031af773bffc5020fccb502c7cd4918",
+      "lines": 52
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168
+    },
+    {
+      "file": "web/src/hooks/useRangeState.ts",
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "lines": 694
+    },
+    {
+      "file": "web/src/lib/timezone.ts",
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "lines": 51
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines": 194
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines": 47
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "sha256": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "lines": 48
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lines": 39
+    },
+    {
+      "file": "web/src/components/layout/PageActions.tsx",
+      "sha256": "d587f5d963b8adf60829c0feab4d1ee0c42e7caee4e50c93ca23546ea75c8dcd",
+      "lines": 172
+    },
+    {
+      "file": "web/src/components/layout/CopyLinkButton.tsx",
+      "sha256": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "lines": 91
+    },
+    {
+      "file": "web/src/lib/safeArray.ts",
+      "sha256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14",
+      "lines": 28
+    },
+    {
+      "file": "web/src/lib/safeArray.test.ts",
+      "sha256": "0d258426cbaa0c15ab9129fd5e9317e545c36540a4b96ef5e9242b9de6d4eaa5",
+      "lines": 152
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.test.ts",
+      "sha256": "262328f5fce699a08c3a75080db95a7170a18e511afd2dd6d1dc896789025357",
+      "lines": 109
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines": 174
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "lines": 500
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "lines": 172
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "lines": 42
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lines": 1006
+    },
+    {
+      "file": "web/src/components/layout/__tests__/CopyLinkButton.test.tsx",
+      "sha256": "b8dd0b37c82d5866b9735a6f177bfb77f65a3c69b1739306c2f4cb302a70736c",
+      "lines": 264,
+      "baselineStage": "support_review_not_initial_page_baseline"
+    },
+    {
+      "file": "web/src/components/charts/__tests__/ChartExportMenu.test.tsx",
+      "sha256": "f515f5110420aef137516156c4858c13dfdcd2dbc51284932b67e81a8b378939",
+      "lines": 387,
+      "baselineStage": "support_review_not_initial_page_baseline"
+    },
+    {
+      "file": "web/src/lib/csvExport.ts",
+      "sha256": "4dbb7ec4728f6e34365db08cb64c3c3855f4e17ea19dc2c6eb98bc4705f56396",
+      "lines": 165,
+      "baselineStage": "support_review_not_initial_page_baseline"
+    },
+    {
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "lines": 342,
+      "baselineStage": "support_review_not_initial_page_baseline"
+    },
+    {
+      "file": "web/src/components/ui/Table.tsx",
+      "sha256": "b61e99f1aedd878bc422456906b3c04071c3416c53e2b9a517d67a0204310026",
+      "lines": 41,
+      "baselineStage": "support_review_not_initial_page_baseline"
+    },
+    {
+      "file": "web/src/components/ui/Label.tsx",
+      "sha256": "7bbfe56155987d2b3e3ede284adc5f4a5fa8a2ec3241b61a1642568c00f83fe6",
+      "lines": 66,
+      "baselineStage": "support_review_not_initial_page_baseline"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lines": 148,
+      "baselineStage": "support_review_not_initial_page_baseline"
+    },
+    {
+      "file": "web/src/hooks/useChartExport.ts",
+      "sha256": "77dce8553101f62e45ca47bbf72e70914ba3db54955a026473a54b06d0bd56ef",
+      "lines": 237,
+      "baselineStage": "support_review_not_initial_page_baseline"
+    },
+    {
+      "file": "web/src/components/charts/ChartExportMenu.tsx",
+      "sha256": "84d0aa6fd871b3d0374ee6f929f0d67a7080c11d2f0e1048086288a0a116184b",
+      "lines": 263,
+      "baselineStage": "support_review_not_initial_page_baseline"
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "sha256": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+      "lines": 115,
+      "baselineStage": "reference_pin_after_initial_read_not_first_read_baseline"
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lines": 119,
+      "baselineStage": "reference_pin_after_initial_read_not_first_read_baseline"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "lines": 39002,
+      "baselineStage": "reference_pin_after_initial_read_not_first_read_baseline"
+    }
+  ],
+  "acceptance": "SOURCE ONLY; native/page/application acceptance NOTRUN",
+  "page": "web/src/features/sharing/pages/ShareCardPage.tsx",
+  "route": "/share-card (inventory-declared, not visited)",
+  "ownedWritableFiles": [
+    "docs/frontend-audits/phase6-qa-sharing-share-card.json",
+    "web/logs/phase6-qa-sharing-share-card.log"
+  ],
+  "privacy": "No real shares, tokens, identities, locations, public links, API/browser/network or runtime mutations accessed. Synthetic repros below are reasoning ONLY, NOT EXECUTED.",
+  "clocks": {
+    "reservationUTC": "2026-10-14T02:22:14.747Z",
+    "firstObservedUTC": "2026-10-14T02:27:01.1004412Z",
+    "returnDeadlineUTC": "2026-10-14T02:42:14.747Z",
+    "hardDeadlineUTC": "2026-10-14T02:47:14.747Z"
+  },
+  "authorityRead": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "coverage": "FULL"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "coverage": "Applicable foundation/layout/state/SI/privacy/mobile/a11y/evidence lines 1-654, explicit return-focus 2481-2539; full heading inventory, unrelated addenda not claimed fully reviewed."
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "coverage": "Applicable principles/sections 0-1,12-37,39-45 read in ranges."
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "coverage": "Exact ShareCard row 228 and original audit-page-177 as historical context, not current proof."
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "coverage": "Current recovery/conventions 1-53 and relevant historical NOTRUN/source receipts."
+    },
+    {
+      "file": "migration-queue.md",
+      "coverage": "Current lifecycle and exact attempt1 row137; completed phase5 row2158; existing same-root owner dedup."
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "coverage": "FULL; user lease controls artifact paths and forbids tests."
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "coverage": "FULL 1-629"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "coverage": "FULL"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "coverage": "FULL; canonical SI contract takes precedence over historical legacy examples."
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "coverage": "Applicable SI83-127/frontend218-397/security and testing559-629"
+    }
+  ],
+  "filesRead": [
+    "web/src/features/sharing/pages/ShareCardPage.tsx",
+    "web/src/features/sharing/pages/ShareCardPage.test.tsx",
+    "web/src/features/sharing/components/share-card/index.ts",
+    "web/src/features/sharing/components/share-card/queryState.ts",
+    "web/src/features/sharing/components/share-card/ShareCardAccountingIdentities.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardCoverageDisclosure.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardDistanceDistribution.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardDurationDistribution.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardEfficiencyEvidence.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardEvidenceLedger.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardLineInventory.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardMethodology.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardMonthlyTrend.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardPreviewExport.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardRepresentativeDirectory.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardSectionBody.test.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardSectionBody.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardSourceScopeLedger.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardStyleControls.tsx",
+    "web/src/features/sharing/components/share-card/ShareCardWeekdayProfile.tsx",
+    "web/src/features/sharing/components/share-card/types.ts",
+    "web/src/features/sharing/components/share-card/useShareCardComposition.ts",
+    "web/src/features/sharing/components/share-card/useShareCardDisplay.ts",
+    "web/src/features/sharing/lib/shareCard.ts",
+    "web/src/features/sharing/lib/shareCard.test.ts",
+    "web/src/api/hooks/useDriving.ts",
+    "web/src/api/dataState.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/SourceContent.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/features/sharing/components/operationalbrief-all/ShareCardBrief.tsx",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/lib/timezone.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/components/layout/layout-reference/ChartCard.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/layout/PageActions.tsx",
+    "web/src/components/layout/CopyLinkButton.tsx",
+    "web/src/lib/safeArray.ts",
+    "web/src/lib/safeArray.test.ts",
+    "web/src/api/hooks/useDriving.test.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/lib/numberFormat.ts",
+    "web/src/components/charts/EmbeddedChart.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/layout/__tests__/CopyLinkButton.test.tsx",
+    "web/src/components/charts/__tests__/ChartExportMenu.test.tsx",
+    "web/src/lib/csvExport.ts",
+    "web/src/components/data-display/DataFreshness.tsx",
+    "web/src/components/ui/Table.tsx",
+    "web/src/components/ui/Label.tsx",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useChartExport.ts",
+    "web/src/components/charts/ChartExportMenu.tsx",
+    "web/src/components/ui/Typography.tsx",
+    "web/src/components/ui/Select.tsx",
+    "web/src/i18n/en.json"
+  ],
+  "preservation": {
+    "pageLines": 108,
+    "pageSHA256": "1987b4964943c1c1f231e0f605108d3adcf1983c02d47e4e2ccd54a91c028da8",
+    "sections": 14,
+    "cardSlots": 6,
+    "evidenceKpis": 6,
+    "efficiencyKpis": 4,
+    "coverageFields": 8,
+    "calendarRows": 4,
+    "accountingIdentities": 16,
+    "methodSteps": 6,
+    "themeIds": [
+      "midnight",
+      "aurora",
+      "ember"
+    ],
+    "limit": 1000,
+    "svgDimensions": [
+      800,
+      418
+    ],
+    "rawSI": "Meters/seconds/Wh/mps/Celsius retained; conversions at display/export only. Signed temperatures valid; nonnegative domain measurements permit measured zero; null/invalid remain unknown.",
+    "identity": "Model positive integer IDs, deduplication and half-open start timestamp checks. Selected-vehicle request and both bounds/limit included in query key; signal forwarded. No backend authorization/filter fidelity claimed.",
+    "sharing": "Local SVG Blob/object URL only, XML escaped, sanitized filename and 1500ms delayed revoke. Representatives exclude route text/coordinates/VIN. Copy navigation is distinct from public sharing.",
+    "confirmation": "No public-share/token mutation declared; local copy/download/navigation do not require destructive confirmation."
+  },
+  "ruleScan": {
+    "productionFiles": 23,
+    "rawMatchingLines": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section-candidate": 0,
+      "hardcoded-string-candidate": 0,
+      "missing-page-container-candidate": 0,
+      "fetch-useeffect-candidate": 0,
+      "static-chart-palette": 7,
+      "dynamic-inline-exception": 2,
+      "viewport-geometry-candidate": 1
+    },
+    "limits": "Actual Python regex grep ran; raw lines in log. Lexical zeros are not complete semantic acceptance; manual i18n interpolation finding remains. PageLayout forwards PageContainer. Computed theme swatches allowed; shared motion/UI native/vendor imports are building-block exceptions. Backend Go rules outside scope."
+  },
+  "i18n": {
+    "literalShareCardKeysChecked": 216,
+    "absent": 0,
+    "catalog": "web/src/i18n/en.json",
+    "status": "Key presence only, no catalog writes or real-i18n execution."
+  },
+  "testEvidence": {
+    "status": "NOTRUN",
+    "discovered": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "authoredPrimaryCases": 55,
+    "byFile": {
+      "ShareCardPage.test.tsx": 26,
+      "shareCard.test.ts": 20,
+      "ShareCardSectionBody.test.tsx": 9
+    },
+    "limits": "Primary three tests fully read. SectionBody 5 declarations expand to9 explicit cases. Direct hook/safeArray/copy/export test excerpts read. Page mocks i18n/PageLayout/motion/charts; no native proof. Existing 26-pass queue receipt is historical, never rerun."
+  },
+  "operationalFailures": [
+    {
+      "shell": "2568",
+      "exit": 1,
+      "raw": "rg: The term rg is not recognized as a name of a cmdlet, function, script file, or executable program."
+    },
+    {
+      "shell": "2569",
+      "exit": 1,
+      "raw": "rg unavailable after successful page hash/numbered read."
+    },
+    {
+      "shell": "2584",
+      "exit": 1,
+      "raw": "UnicodeEncodeError: charmap codec cannot encode characters in position6-7; cp1252 stdout. Actual traceback tail logged; bounded UTF-8 reads used thereafter."
+    },
+    {
+      "tool": "view",
+      "exit": null,
+      "raw": "Invalid view_range: start line (0) must be greater than or equal to 1."
+    },
+    {
+      "shell": "2845",
+      "exit": 1,
+      "raw": "The filename or extension is too long. (os error 206)",
+      "disposition": "Large report construction never executed; bounded artifact-only writes used instead."
+    }
+  ],
+  "commands": {
+    "rawLog": "web/logs/phase6-qa-sharing-share-card.log",
+    "startup": "Get-Date -AsUTC -Format o; Get-ChildItem; Get-FileHash; Get-Content numbered source. git --no-pager -C D:\\repos\\teslasync status --short was READ ONLY; no further Git/no Git writes.",
+    "checks": "Python inline UTF-8 source/protocol reads, SHA256 baseline; source-only regex grep of23 files;216-key catalog presence; test declaration inventory; exact queue owner dedup. All raw output/exits returned and logged. No helper files created.",
+    "notInvoked": [
+      "fresh tests",
+      "passing reruns",
+      "lint",
+      "build",
+      "global TSC",
+      "servers",
+      "installs",
+      "subagents",
+      "browser",
+      "network",
+      "API",
+      "real shares",
+      "source/test/catalog/Git writes"
+    ]
+  },
+  "pinEvidenceLimit": "Initial page/direct source/tests bundle pinned before content review. Shared reference pins recorded during dependency review; Typography/Select/catalog pins explicitly after first read, not first-read baselines. Final comparison will not reset drift.",
+  "release": {
+    "sourceWriteClaim": "NONE (READONLY)",
+    "writableArtifactClaimsReleased": true,
+    "releasedUTC": "2026-10-14T02:42:26.102411+00:00",
+    "sourceOrTestChanges": false,
+    "catalogOrGitWrites": false
+  },
+  "confirmedFindings": [
+    {
+      "id": "SC01",
+      "priority": "P1",
+      "rule": "mobile-data-preservation",
+      "file": "web/src/features/sharing/components/share-card/ShareCardRepresentativeDirectory.tsx",
+      "line": 94,
+      "owner": "RepresentativeDirectory",
+      "mechanism": "mobileColumns keeps rank/day/distance only. Four fields duration/energy/efficiency/route get hidden md:table-cell; no mobilePresentation or expanded details.",
+      "evidence": "DataTable.tsx:733-743,1172-1180,1404-1415,1517-1535; directory:44-68,87-95",
+      "repro": "Synthetic eligible row below768px: four declared fields have display:none with no detail path; compare >=768px.",
+      "fix": "Adopt existing complete mobile details or reachable contained all-column table; preserve IDs/privacy/actions.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC02",
+      "priority": "P1",
+      "rule": "accessible-export-payload",
+      "file": "web/src/features/sharing/lib/shareCard.ts",
+      "line": 982,
+      "owner": "shareCardSvg",
+      "mechanism": "role=img accessible targets title/desc omit all six metric label/value pairs; downloaded SVG cannot depend on app line inventory.",
+      "evidence": "shareCard.ts:953-960,980-982; PreviewExport:63-73",
+      "repro": "Resolve aria-labelledby in standalone six-line SVG: neither target includes the six numeric metric pairs.",
+      "fix": "Append all six escaped label/value pairs and missing context to SVG description, no private identifiers.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC03",
+      "priority": "P2",
+      "rule": "specialist-precision",
+      "file": "web/src/features/sharing/components/share-card/ShareCardAccountingIdentities.tsx",
+      "line": 77,
+      "owner": "AccountingIdentities",
+      "mechanism": "Residual/tolerance formatNumber defaults to global maximumFractionDigits; actual0.000001 tolerance becomes displayed0 at saved precision0-5. Raw comparison stays nonzero.",
+      "evidence": "Accounting:66-78; useShareCardDisplay.ts:31-38; shareCard.ts:416-425,748-760",
+      "repro": "Saved precision2 and SI distribution tolerance0.000001: denominator displays0.",
+      "fix": "Use existing specialist/source-preserving formatter with adequate tolerance/residual precision; preserve raw calculations/preferences.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC04",
+      "priority": "P2",
+      "rule": "retained-status-trust",
+      "file": "web/src/features/sharing/components/share-card/ShareCardSourceScopeLedger.tsx",
+      "line": 32,
+      "owner": "SourceScopeLedger",
+      "mechanism": "Badge considers only cachedRefreshError. Paused/refreshing retained data receives success/Resolved beside explicit paused/refreshing notices.",
+      "evidence": "queryState.ts:33-36; SectionBody:104-117; ShareCardBrief.tsx:24-31",
+      "repro": "hasData=true,error=null,paused=true or refreshing=true: badge selects success/Resolved.",
+      "fix": "Derive explicit localized cached/paused/refreshing/resolved status; retain data and local exports.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC05",
+      "priority": "P2",
+      "rule": "palette-preference-bypass",
+      "file": "web/src/features/sharing/components/share-card/ShareCardMonthlyTrend.tsx",
+      "line": 22,
+      "owner": "AnalyticalCharts",
+      "mechanism": "Four analytical callers bind7 fixed hex declarations; saved palette cannot affect fill/stroke. Fixed local export artwork is not part of this finding.",
+      "evidence": "Monthly:22-24,167-185; Weekday:21-22,149-164; DistanceDistribution:20,133-136; DurationDistribution:20,133-136",
+      "repro": "Change saved analytical palette: fixed module constants still supplied to each series.",
+      "fix": "Adopt existing preference-aware palette, preserving series IDs/order/null gaps/exports.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC06",
+      "priority": "P2",
+      "rule": "locale-preference-bypass",
+      "file": "web/src/features/sharing/components/share-card/ShareCardCoverageDisclosure.tsx",
+      "line": 16,
+      "owner": "CoverageDisclosure",
+      "mechanism": "Timestamp options include tz only. Pure dateFormat intlLocale returns undefined, therefore browser locale rather than saved application locale.",
+      "evidence": "Coverage:43,49; web/src/lib/dateFormat.ts:44-64; useDateFormat.ts:73-91",
+      "repro": "Browser en-US, application de-DE: earliest/latest use browser formatting while numeric/month displays follow application preference.",
+      "fix": "Use existing preference-bound date hook with explicit analysis timezone override; preserve calendar labels and UTC instants.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC07",
+      "priority": "P2",
+      "rule": "form-association",
+      "file": "web/src/features/sharing/components/share-card/ShareCardStyleControls.tsx",
+      "line": 31,
+      "owner": "StyleControls",
+      "mechanism": "UI-barrel Label is Typography span, not form label. Select has aria-label but no label prop/aria-labelledby linking visible Theme text. Accessible name exists; visible association missing.",
+      "evidence": "Typography.tsx:112; Label.tsx:21-23; Select.tsx:59,68-75,89-91; StyleControls:31-39",
+      "repro": "Visible Theme is sibling span, not label[for=share-card-theme]; no click-to-control label mechanism.",
+      "fix": "Use Select.label with existing translation and stable id; preserve accessible name.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC08",
+      "priority": "P2",
+      "rule": "hardcoded-string",
+      "file": "web/src/features/sharing/components/share-card/ShareCardStyleControls.tsx",
+      "line": 54,
+      "owner": "StyleControls",
+      "mechanism": "Swatch accessible name interpolates untranslated English theme ID key; neighboring option uses translated theme label.",
+      "evidence": "StyleControls:41-43,53-55",
+      "repro": "Non-English Midnight option translation: swatch still interpolates midnight.",
+      "fix": "Share translated label map between options/swatches; keep persisted IDs, no new catalog keys.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC09",
+      "priority": "P2",
+      "rule": "copy-view-scope",
+      "file": "web/src/features/sharing/pages/ShareCardPage.tsx",
+      "line": 84,
+      "owner": "integration:workspace-copy-link",
+      "mechanism": "Copy link to this view copies href only. Bare route can inherit different stored vehicle/range; chosen theme is local state, so identical copied navigation may yield different evidence/card. Authenticated navigation, not public sharing.",
+      "evidence": "CopyLinkButton.tsx:39-44; useSelectedVehicle.ts:70-78; useRangeState.ts:366-399; composition:28",
+      "repro": "Two synthetic clients with different saved scopes open bare /share-card: same copied path, different evidence. Theme change never changes href.",
+      "fix": "Existing workspace/copy integration must serialize safe effective scope or clearly disclose navigation-only copying; preserve action, no public-link creation.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC10",
+      "priority": "P2",
+      "rule": "false-valid-empty",
+      "file": "web/src/features/sharing/components/share-card/ShareCardEvidenceLedger.tsx",
+      "line": 66,
+      "owner": "integration:drives-response-shape",
+      "mechanism": "useDrives.select safeArray coerces successful malformed non-array payload to[]. Ledger then asserts endpoint returned valid empty array; original shape provenance lost. Intentional nil-slice normalization is distinct.",
+      "evidence": "useDriving.ts:116-129; safeArray.ts:9-13; ledger:61-67",
+      "repro": "Synthetic successful{} becomes[] then resolved valid-empty copy. No actual malformed backend response claimed.",
+      "fix": "Retain/validate response shape at integration owner; malformed success must not establish authoritative emptiness; preserve intentional null compatibility.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC11",
+      "priority": "P2",
+      "rule": "export-window-provenance",
+      "file": "web/src/features/sharing/components/share-card/useShareCardComposition.ts",
+      "line": 79,
+      "owner": "Composition",
+      "mechanism": "Standalone SVG uses calendar from/to only; metadata omits timezone and exact half-open query instants. Rolling24h and calendar scopes can have same labels with different actual instants.",
+      "evidence": "composition:79-124; SourceScope:55-80; useRangeState.ts:651-663; shareCard.ts:861-864,980-1007",
+      "repro": "Same labels/counts/metrics but different valid instant bounds or timezone produce identical SVG metadata.",
+      "fix": "Include localized exact window semantics/timezone in existing escaped metadata; preserve business dates and privacy.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    },
+    {
+      "id": "SC12",
+      "priority": "P2",
+      "rule": "raw-si-export-loss",
+      "file": "web/src/features/sharing/components/share-card/ShareCardRepresentativeDirectory.tsx",
+      "line": 38,
+      "owner": "RepresentativeDirectory",
+      "mechanism": "Default DataTable local JSON export uses column keys distance/duration/energy/efficiency, absent on raw representative fields distanceM/durationS/energyWh/efficiencyWhPerKm. No exportValue/exportRow: fallback is rounded display strings, not numeric SI/null. No hidden IDs/addresses serialized.",
+      "evidence": "directory:38-60,87-95; shareCard.ts:696-711; DataTable.tsx:890-934",
+      "repro": "Synthetic distanceM1609.344,mi precision1: JSON distance is1.0 mi string rather than raw1609.344; unknown becomes dash.",
+      "fix": "Supply caller-owned explicit SI export values/keys and nulls; retain readable CSV and matchingLoaded scope, no shared serializer global change.",
+      "confidence": "high_source_mechanism",
+      "runtimeReproduction": "NOTRUN"
+    }
+  ],
+  "needs": [
+    {
+      "owner": "RepresentativeDirectory",
+      "findings": [
+        "SC01",
+        "SC12"
+      ],
+      "action": "Parent-only exact claim and authorized covering synthetic tests; no source fix made.",
+      "queueDedup": "No existing matching ShareCard fix claim found. Existing DataTable filtered-empty/shared FleetEndpoint export claims have different objectives; do not redispatch completed objectives."
+    },
+    {
+      "owner": "shareCardSvg",
+      "findings": [
+        "SC02"
+      ],
+      "action": "Parent-only exact claim and authorized covering synthetic tests; no source fix made.",
+      "queueDedup": "No existing matching ShareCard fix claim found. Existing DataTable filtered-empty/shared FleetEndpoint export claims have different objectives; do not redispatch completed objectives."
+    },
+    {
+      "owner": "AccountingIdentities",
+      "findings": [
+        "SC03"
+      ],
+      "action": "Parent-only exact claim and authorized covering synthetic tests; no source fix made.",
+      "queueDedup": "No existing matching ShareCard fix claim found. Existing DataTable filtered-empty/shared FleetEndpoint export claims have different objectives; do not redispatch completed objectives."
+    },
+    {
+      "owner": "SourceScopeLedger",
+      "findings": [
+        "SC04"
+      ],
+      "action": "Parent-only exact claim and authorized covering synthetic tests; no source fix made.",
+      "queueDedup": "No existing matching ShareCard fix claim found. Existing DataTable filtered-empty/shared FleetEndpoint export claims have different objectives; do not redispatch completed objectives."
+    },
+    {
+      "owner": "AnalyticalCharts",
+      "findings": [
+        "SC05"
+      ],
+      "action": "Parent-only exact claim and authorized covering synthetic tests; no source fix made.",
+      "queueDedup": "No existing matching ShareCard fix claim found. Existing DataTable filtered-empty/shared FleetEndpoint export claims have different objectives; do not redispatch completed objectives."
+    },
+    {
+      "owner": "CoverageDisclosure",
+      "findings": [
+        "SC06"
+      ],
+      "action": "Parent-only exact claim and authorized covering synthetic tests; no source fix made.",
+      "queueDedup": "No existing matching ShareCard fix claim found. Existing DataTable filtered-empty/shared FleetEndpoint export claims have different objectives; do not redispatch completed objectives."
+    },
+    {
+      "owner": "StyleControls",
+      "findings": [
+        "SC07",
+        "SC08"
+      ],
+      "action": "Parent-only exact claim and authorized covering synthetic tests; no source fix made.",
+      "queueDedup": "No existing matching ShareCard fix claim found. Existing DataTable filtered-empty/shared FleetEndpoint export claims have different objectives; do not redispatch completed objectives."
+    },
+    {
+      "owner": "integration:workspace-copy-link",
+      "findings": [
+        "SC09"
+      ],
+      "action": "Parent-only exact claim and authorized covering synthetic tests; no source fix made.",
+      "queueDedup": "No existing matching ShareCard fix claim found. Existing DataTable filtered-empty/shared FleetEndpoint export claims have different objectives; do not redispatch completed objectives."
+    },
+    {
+      "owner": "integration:drives-response-shape",
+      "findings": [
+        "SC10"
+      ],
+      "action": "Parent-only exact claim and authorized covering synthetic tests; no source fix made.",
+      "queueDedup": "No existing matching ShareCard fix claim found. Existing DataTable filtered-empty/shared FleetEndpoint export claims have different objectives; do not redispatch completed objectives."
+    },
+    {
+      "owner": "Composition",
+      "findings": [
+        "SC11"
+      ],
+      "action": "Parent-only exact claim and authorized covering synthetic tests; no source fix made.",
+      "queueDedup": "No existing matching ShareCard fix claim found. Existing DataTable filtered-empty/shared FleetEndpoint export claims have different objectives; do not redispatch completed objectives."
+    }
+  ],
+  "summary": {
+    "confirmedRootFindings": 12,
+    "candidates": 7,
+    "deduplicatedOwners": 10,
+    "byRule": {
+      "mobile-data-preservation": 1,
+      "accessible-export-payload": 1,
+      "specialist-precision": 1,
+      "retained-status-trust": 1,
+      "palette-preference-bypass": 1,
+      "locale-preference-bypass": 1,
+      "form-association": 1,
+      "hardcoded-string": 1,
+      "copy-view-scope": 1,
+      "false-valid-empty": 1,
+      "export-window-provenance": 1,
+      "raw-si-export-loss": 1
+    },
+    "primaryFileCounts": {
+      "web/src/features/sharing/components/share-card/ShareCardRepresentativeDirectory.tsx": 2,
+      "web/src/features/sharing/lib/shareCard.ts": 1,
+      "web/src/features/sharing/components/share-card/ShareCardAccountingIdentities.tsx": 1,
+      "web/src/features/sharing/components/share-card/ShareCardSourceScopeLedger.tsx": 1,
+      "web/src/features/sharing/components/share-card/ShareCardMonthlyTrend.tsx": 1,
+      "web/src/features/sharing/components/share-card/ShareCardCoverageDisclosure.tsx": 1,
+      "web/src/features/sharing/components/share-card/ShareCardStyleControls.tsx": 2,
+      "web/src/features/sharing/pages/ShareCardPage.tsx": 1,
+      "web/src/features/sharing/components/share-card/ShareCardEvidenceLedger.tsx": 1,
+      "web/src/features/sharing/components/share-card/useShareCardComposition.ts": 1
+    },
+    "countingUnit": "One root mechanism, not field/declaration instances; palette includes4 caller files/7 hex declarations.",
+    "nativeNotRunGroups": 10
+  },
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/sharing/lib/shareCard.ts",
+      "line": 560,
+      "detail": "Invalid bounds disable both boundary checks, fallback timezone flag is not gated, and ready uses eligible count only (531-532,560-567,800-801,835; composition120-124). Normal mounted range canonicalization makes reachability/policy unresolved.",
+      "needed": "Authorized synthetic invalid-input path proof, not current mounted failure."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/sharing/components/share-card/ShareCardSectionBody.tsx",
+      "line": 81,
+      "detail": "Unsized intermediate div below bounded chart viewport; four ResponsiveContainer height100% plots may collapse/clip. ChartContainer760-780 defines viewport but wrapper has no fill geometry.",
+      "needed": "Actual authorized synthetic native measurement; no zero-height failure claimed."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/components/layout/CopyLinkButton.tsx",
+      "line": 41,
+      "detail": "Full href including arbitrary query/hash copied without allow-list. Conditional private-parameter exposure only, no actual leak or real URL inspected.",
+      "needed": "Define safe params at existing integration owner; synthetic markers only."
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/sharing/components/share-card/useShareCardComposition.ts",
+      "line": 128,
+      "detail": "SVG download boolean ignored, no local catch/outcome UI; helper1014-1033 may throw on browser download facilities.",
+      "needed": "Synthetic failure coverage and initiation-only feedback; native actual-save NOTRUN."
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/sharing/lib/shareCard.ts",
+      "line": 344,
+      "detail": "Finite individual measurements can overflow aggregate sums toInfinity; display suppresses while availability stays non-null. Physical backend bounds unknown.",
+      "needed": "Authorized extreme synthetic source tests."
+    },
+    {
+      "id": "C06",
+      "file": "web/src/features/sharing/components/share-card/ShareCardPreviewExport.tsx",
+      "line": 66,
+      "detail": "max-w800px is geometry candidate not overflow proof. Fixed artwork953-1009 may truncate long translated fields/disclosures; color contrast/RTL/scaling need native review. Dynamic swatch styles allowed.",
+      "needed": "Native long-label/RTL200%/theme/forced-colors review without dropping metrics or resetting themes."
+    },
+    {
+      "id": "C07",
+      "file": "web/src/features/sharing/components/share-card/ShareCardAccountingIdentities.tsx",
+      "line": 60,
+      "detail": "Standalone Table frames nested in cards/accounting tiles; Table15-23. Repeated chrome candidate, not measured visual failure.",
+      "needed": "Caller-owned embedded-variant review, preserve rows/overflow; no global Table change."
+    }
+  ],
+  "sections": [
+    {
+      "name": "ShareCardEvidenceLedger",
+      "pageLine": 86,
+      "content": "6 raw source KPIs, support counts, valid-empty versus rejected rows",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardSourceScopeLedger",
+      "pageLine": 87,
+      "content": "endpoint/cap, timezone/business labels, exact instants, returned/eligible/rejected counts",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardCoverageDisclosure",
+      "pageLine": 88,
+      "content": "cap limits, earliest/latest, span, active/requested days",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardStyleControls",
+      "pageLine": 90,
+      "content": "3 fixed theme IDs, Select/swatches/help, local state survives failures",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardPreviewExport",
+      "pageLine": 92,
+      "content": "SVG preview/download, no evidence fallback Browse drives, scope summary",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardLineInventory",
+      "pageLine": 95,
+      "content": "6 slots measured/missing badges and supporting rows",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardMonthlyTrend",
+      "pageLine": 96,
+      "content": "count/distance/energy month trend, capped unknown months, null gaps, raw SI exports",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardWeekdayProfile",
+      "pageLine": 97,
+      "content": "7 local weekdays counts/distance, null gaps, legend/export alternatives",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardDistanceDistribution",
+      "pageLine": 99,
+      "content": "4 fixed SI distance bands/counts, converted thresholds, distance_m CSV",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardDurationDistribution",
+      "pageLine": 100,
+      "content": "4 fixed second bands/counts, converted thresholds, duration_s CSV",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardEfficiencyEvidence",
+      "pageLine": 102,
+      "content": "4 paired efficiency/regen KPIs, independent8 field coverage counts",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardRepresentativeDirectory",
+      "pageLine": 103,
+      "content": "top12 distance-ranked representatives,7 columns, withheld route status, local table export",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardAccountingIdentities",
+      "pageLine": 104,
+      "content": "16 exact row/field/bucket/distribution checks and0.000001 SI tolerance",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    },
+    {
+      "name": "ShareCardMethodology",
+      "pageLine": 105,
+      "content": "6 explicit methods identity/metrics/efficiency/timezone/privacy/local export and cap limits",
+      "sourceReview": "FULL direct component reviewed; persistent localized section shell. Native acceptance NOTRUN."
+    }
+  ],
+  "actions": [
+    {
+      "name": "Header copy navigation",
+      "evidence": "ShareCardPage84; CopyLinkButton39-69",
+      "review": "Local clipboard, current href, shared success/error/fallback cleanup; SC09/C03. Never invoked."
+    },
+    {
+      "name": "Header refresh and fatal Retry evidence query",
+      "evidence": "PageContainer222; DataFreshness328-336; SectionBody65-75",
+      "review": "Read-only refetch, header has actual dataUpdatedAt/manual retained refresh, fetching disabled. No missing last-success/retry defect asserted. Never invoked."
+    },
+    {
+      "name": "Review details on both briefs",
+      "evidence": "ShareCardBrief34-50; page test286-302,353-362",
+      "review": "Existing metric drawers, source/scope/provenance labels, loading suppression/retained values. Native focus/restoration NOTRUN."
+    },
+    {
+      "name": "Theme Select,3 swatches,help",
+      "evidence": "StyleControls23-68",
+      "review": "Local style only, no mutation; SC07/SC08. Stable IDs/pressed state/44px swatches declared."
+    },
+    {
+      "name": "Download safe SVG",
+      "evidence": "PreviewExport31-40; composition120-130; shareCard1014-1033",
+      "review": "Disabled withoutSVG; missing metric dashes/capped/retained usable data preserved. XML escape/Blob/sanitized filename/anchor cleanup/revoke declared. SC02/SC11/C04."
+    },
+    {
+      "name": "Browse drives",
+      "evidence": "PreviewExport56-59",
+      "review": "Navigation fallback to/drives; not followed."
+    },
+    {
+      "name": "4 chart export menus and monthly/weekday legend toggles",
+      "evidence": "4 chart callers; ChartContainer472-483,715-732; ChartExportMenu110-178",
+      "review": "Measured-support gates; local CSV/PNG/SVG/copy image, raw SI CSV retained; series keys/nulls/tables. No fullscreen prop or annotation-create capability supplied. Native capture/feedback NOTRUN."
+    },
+    {
+      "name": "Directory toolbar CSV/JSON",
+      "evidence": "RepresentativeDirectory87-95; DataTable890-934,1363-1397",
+      "review": "Matching loaded representatives only, not full-result/lifetime. No row navigation/selection/expansion supplied; SC12 numeric SI fallback. Never invoked."
+    }
+  ],
+  "states": {
+    "prerequisite": "SectionBody48-64 passive no-vehicle/unresolved,14 shells retained.",
+    "initialLoading": "queryState25-30/SectionBody82-94 skeletons; null brief measurements, no chart export payload, style controls remain.",
+    "initialPaused": "queryState31/SectionBody55-61 explicit paused, no inferred empty.",
+    "fatal": "SectionBody65-78 source-local error/retry, no panel deletion.",
+    "retained": "queryState33-36/SectionBody96-118 retains evidence and warns; header query freshness/refetch exists; SC04 badge inconsistency.",
+    "empty": "Ledger61-75 distinguishes resolved empty versus returned ineligible; Preview44-59 noSVG. SC10 shape normalization prevents authoritative original-shape claim.",
+    "unknownZeroSigns": "shareCard259-262,342-369,570-585,629-670: null/invalid not zero; true zero valid; temperature negatives valid; efficiency positive distance/paired nonnegative energy; regen paired share.",
+    "rangeIdentity": "Page38-58/useDriving107-129/shareCard535-606: selected vehicle,bounds,limit and signal preserved,half-open timestamp/id checks; capped sample not completeness; sub-cap disclaimer remains."
+  },
+  "notRunLimits": [
+    {
+      "check": "Fresh tests and Vitest discovery",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only user prohibition; no native/runtime acceptance inferred."
+    },
+    {
+      "check": "Lint/build/global npx tsc --noEmit",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only user prohibition; no native/runtime acceptance inferred."
+    },
+    {
+      "check": "API/backend/browser/network/actual shares/tokens/public links",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only user prohibition; no native/runtime acceptance inferred."
+    },
+    {
+      "check": "Widths320/375/390/430/768/1024/1280/1440/1920/2560 and narrow containers",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only user prohibition; no native/runtime acceptance inferred."
+    },
+    {
+      "check": "Light/dark/saved-custom contrast and visual review",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only user prohibition; no native/runtime acceptance inferred."
+    },
+    {
+      "check": "Keyboard/open Select/help/menu/drawer/focus/restoration",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only user prohibition; no native/runtime acceptance inferred."
+    },
+    {
+      "check": "Screen readers/OS forced colors",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only user prohibition; no native/runtime acceptance inferred."
+    },
+    {
+      "check": "RTL/200% text/long labels/huge data native layout",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only user prohibition; no native/runtime acceptance inferred."
+    },
+    {
+      "check": "Reduced-motion/low-bandwidth/offline retained rendering",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only user prohibition; no native/runtime acceptance inferred."
+    },
+    {
+      "check": "Clipboard permissions/actual download/mobile touch reachability",
+      "status": "NOTRUN",
+      "reason": "Explicit source-only user prohibition; no native/runtime acceptance inferred."
+    }
+  ],
+  "sourcePinsAfter": [
+    {
+      "file": "web/src/features/sharing/pages/ShareCardPage.tsx",
+      "sha256": "1987b4964943c1c1f231e0f605108d3adcf1983c02d47e4e2ccd54a91c028da8",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/pages/ShareCardPage.test.tsx",
+      "sha256": "7b70cedd40172b9370e3dccd7cc98f6ffe03a1b644b3fd9d7bde449e26e5cc52",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/index.ts",
+      "sha256": "cb4afe64a63693e5d72140f54e119437adf9cd2fe4c96508411e047ca9190032",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/queryState.ts",
+      "sha256": "dba021cab2529853e6b03441c58f8314bab7916a60dd57fc3319e2970a90decd",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardAccountingIdentities.tsx",
+      "sha256": "d885b7dd4d13efcc737cff811871d83df44cadfea7b026ec3268f3d921efccb4",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardCoverageDisclosure.tsx",
+      "sha256": "5b7845e486436985598190dd05d53eb4110bd250c656e65272b651939bc37af8",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardDistanceDistribution.tsx",
+      "sha256": "eba141639fa98acdd7244c277c222afca0aab4de50ab943b82082f4c43ffa2ed",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardDurationDistribution.tsx",
+      "sha256": "17321aee1e590346e4ed3b0654cb8ed18509522c7fcf52166b30c70890ba1f54",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardEfficiencyEvidence.tsx",
+      "sha256": "c486a6b3a3447c4a6d45c59aecc138784ad5f36b9fd9c62501abff046cf3fee7",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardEvidenceLedger.tsx",
+      "sha256": "59f7998a70c80ed1a159a178dba6c6c6d130568f0772b5815981ba6da09dd277",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardLineInventory.tsx",
+      "sha256": "28521ce2e125fca9513fe21afe0d85950de25225a740fc2951e0c2f57b195f5c",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardMethodology.tsx",
+      "sha256": "ed5e9d61a58799c93f8ad615bcb685af53dd178333e8e43b866363a19edc2aca",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardMonthlyTrend.tsx",
+      "sha256": "8735de96f53a2e23ae1a478943632c0aa01143d2a6e6e8bd658102878ee45406",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardPreviewExport.tsx",
+      "sha256": "7447bb9a76b484045361dbb2a8ffaec5ac1a6fa9567f96abca4d9edb96593455",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardRepresentativeDirectory.tsx",
+      "sha256": "89837e2a6b2755e711168bc505fb1d1a857c521cb418ed5a2a195e9994d33dc3",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardSectionBody.test.tsx",
+      "sha256": "991b2c337699e1235e4204ecb7993c721d422e1a6326a19bae751991285c0f93",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardSectionBody.tsx",
+      "sha256": "b2d85d0ce63e651faedbc6c1caafa97d488d8b1a6edefc1adfda446df0f1fe6c",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardSourceScopeLedger.tsx",
+      "sha256": "7aed46dee6e557afb331d14030fdef623c6a3ab8ee0077a0d3f37e5df383f267",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardStyleControls.tsx",
+      "sha256": "1baded312d851da61d15aa58045111b62d3cbc902c035772dff8821a03f7e8fa",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/ShareCardWeekdayProfile.tsx",
+      "sha256": "ae28bc455897efb250bce336f4a811a96961a40f7596e85e24553c2635d04aef",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/types.ts",
+      "sha256": "09c821bb9bd636d1ac7536a607271c4dbd9b78fb10c34362dcfa66c78e9eff11",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/useShareCardComposition.ts",
+      "sha256": "80c47530193f807eb8c16d3db107152502e6ff2105cb1912c0519ac6079a0ba7",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/share-card/useShareCardDisplay.ts",
+      "sha256": "2634b06f185963f567b84e75e380389bf96b31261188fbcdbe0f863313d3419e",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/lib/shareCard.ts",
+      "sha256": "b61c4fc1c96df52ea10263b37126c4f2c4a7b70ccb8eae4053e88ba4223809ff",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/lib/shareCard.test.ts",
+      "sha256": "2b51cd76705e2f59cd3a515c2e3dab69fe846e72c3923a191a9ebd1c39a7df5d",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/features/sharing/components/operationalbrief-all/ShareCardBrief.tsx",
+      "sha256": "6a9c9609f152f0a44038a3d69b8e8eca3031af773bffc5020fccb502c7cd4918",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useRangeState.ts",
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/timezone.ts",
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "sha256": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/layout/PageActions.tsx",
+      "sha256": "d587f5d963b8adf60829c0feab4d1ee0c42e7caee4e50c93ca23546ea75c8dcd",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/layout/CopyLinkButton.tsx",
+      "sha256": "38adc5377a3808526cbcb578e66f30c9108fff2ac8dd41174a33199e5bd5de2b",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/safeArray.ts",
+      "sha256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/safeArray.test.ts",
+      "sha256": "0d258426cbaa0c15ab9129fd5e9317e545c36540a4b96ef5e9242b9de6d4eaa5",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.test.ts",
+      "sha256": "262328f5fce699a08c3a75080db95a7170a18e511afd2dd6d1dc896789025357",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/layout/__tests__/CopyLinkButton.test.tsx",
+      "sha256": "b8dd0b37c82d5866b9735a6f177bfb77f65a3c69b1739306c2f4cb302a70736c",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/charts/__tests__/ChartExportMenu.test.tsx",
+      "sha256": "f515f5110420aef137516156c4858c13dfdcd2dbc51284932b67e81a8b378939",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/lib/csvExport.ts",
+      "sha256": "4dbb7ec4728f6e34365db08cb64c3c3855f4e17ea19dc2c6eb98bc4705f56396",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/Table.tsx",
+      "sha256": "b61e99f1aedd878bc422456906b3c04071c3416c53e2b9a517d67a0204310026",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/Label.tsx",
+      "sha256": "7bbfe56155987d2b3e3ede284adc5f4a5fa8a2ec3241b61a1642568c00f83fe6",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/hooks/useChartExport.ts",
+      "sha256": "77dce8553101f62e45ca47bbf72e70914ba3db54955a026473a54b06d0bd56ef",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/charts/ChartExportMenu.tsx",
+      "sha256": "84d0aa6fd871b3d0374ee6f929f0d67a7080c11d2f0e1048086288a0a116184b",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "sha256": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "matchesBefore": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "matchesBefore": true
+    }
+  ],
+  "finalValidation": {
+    "sourceTestPinComparison": "PASS",
+    "filesChecked": 62,
+    "drift": [],
+    "jsonParse": "PASS (separate final re-read below)",
+    "checkedUTC": "2026-10-14T02:42:26.102411+00:00"
+  }
+}

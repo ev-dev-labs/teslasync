@@ -1,11 +1,11 @@
 /**
  * What-If — a physics-lite counterfactual engine for a single real drive.
  *
- * It decomposes the drive's ACTUAL observed energy into first-principles
+ * It estimates the drive's energy using first-principles
  * components (aerodynamic drag, rolling resistance, elevation work, climate
- * load) plus a measured residual ("other": electronics, battery conditioning,
- * drivetrain losses). Anchoring to the real energy means the baseline always
- * reconciles with what the car actually used; only the knobs move things.
+ * load) plus a signed, unexplained residual ("other"). The measured total is
+ * authoritative, but this is not an exact measured decomposition. A negative
+ * residual flags model excess, not measured negative auxiliary consumption.
  *
  * Then it recomputes those components under user "what-if" knobs:
  *   - speedFactor : scale average speed (aero ∝ v², climate time ∝ 1/v)
@@ -13,7 +13,7 @@
  *   - hvac        : climate load on/off
  *   - ambientC    : ambient temperature (colder ⇒ more heating + less regen)
  *
- * All outputs are null-safe and clamped; a drive missing energy just yields a
+ * All energy outputs retain raw signed Wh; a drive missing energy yields a
  * neutral, clearly-flagged result rather than NaN.
  */
 import type { Drive } from '@/types/driving';
@@ -29,6 +29,8 @@ const DRIVETRAIN_EFF = 0.9;
 const CLIMATE_BASE_W = 1500; // steady HVAC draw when on at ~20°C
 const J_TO_WH = 1 / 3600;
 const DEFAULT_PACK_WH = 75000;
+// Fixed baseline assumption when telemetry has no finite ambient reading.
+const ASSUMED_BASELINE_AMBIENT_C = 18;
 
 export type TirePreset = 'low' | 'nominal' | 'high';
 
@@ -39,19 +41,24 @@ export interface WhatIfKnobs {
   ambientC: number; // effective ambient temperature °C
 }
 
-export const DEFAULT_KNOBS: WhatIfKnobs = { speedFactor: 1, tires: 'nominal', hvac: true, ambientC: 18 };
+export const DEFAULT_KNOBS: WhatIfKnobs = {
+  speedFactor: 1, tires: 'nominal', hvac: true, ambientC: ASSUMED_BASELINE_AMBIENT_C,
+};
 
 export interface EnergyBreakdown {
   aero: number;
   rolling: number;
   elevation: number;
   climate: number;
+  /** Unexplained signed residual, not a measured physical component (Wh). */
   other: number;
   total: number;
 }
 
 export interface WhatIfResult {
   ok: boolean;
+  /** Components are estimates even when their sum matches measured energy. */
+  reconciliation: 'unavailable' | 'estimated' | 'model-exceeds-observed';
   baseline: EnergyBreakdown;
   scenario: EnergyBreakdown;
   packWh: number;
@@ -62,13 +69,14 @@ export interface WhatIfResult {
   energyDeltaWh: number;
   /** duration under the scenario (s). */
   scenarioDurationS: number;
+  /** Recorded mean ambient, or the fixed baseline assumption, in Celsius. */
   ambientNativeC: number;
 }
 
 const TIRE_CRR: Record<TirePreset, number> = { low: 0.0138, nominal: 0.011, high: 0.0099 };
 
-function num(v: number | null | undefined, fallback = 0): number {
-  return typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+function finite(v: number | null | undefined): v is number {
+  return typeof v === 'number' && Number.isFinite(v);
 }
 function clamp(v: number, lo: number, hi: number): number {
   return v < lo ? lo : v > hi ? hi : v;
@@ -122,70 +130,76 @@ export function simulateWhatIf(
   knobs: WhatIfKnobs,
 ): WhatIfResult {
   const points = (telemetry ?? []).filter(Boolean);
-  const distance = num(drive?.distanceM);
-  const duration = Math.max(1, num(drive?.durationS, 1));
-  const observed = num(drive?.energyUsedWh);
-  const avgSpeed = num(drive?.avgSpeedMps, distance / duration);
+  const distance = drive?.distanceM;
+  const duration = drive?.durationS;
+  const observed = drive?.energyUsedWh;
+  const startSoc = finite(drive?.startBatteryPct) ? drive.startBatteryPct : null;
 
   const neutral: WhatIfResult = {
     ok: false,
+    reconciliation: 'unavailable',
     baseline: { aero: 0, rolling: 0, elevation: 0, climate: 0, other: 0, total: 0 },
     scenario: { aero: 0, rolling: 0, elevation: 0, climate: 0, other: 0, total: 0 },
     packWh: DEFAULT_PACK_WH,
-    startSocPct: drive?.startBatteryPct ?? null,
+    startSocPct: startSoc,
     baselineArrivalSoc: null,
     scenarioArrivalSoc: null,
     energyDeltaWh: 0,
-    scenarioDurationS: duration,
-    ambientNativeC: knobs.ambientC,
+    scenarioDurationS: finite(duration) && duration > 0 ? duration : 0,
+    ambientNativeC: ASSUMED_BASELINE_AMBIENT_C,
   };
-  if (!drive || distance < 10 || observed <= 0 || avgSpeed <= 0) return neutral;
+  if (!drive || !finite(distance) || distance <= 0 || !finite(duration) ||
+      duration <= 0 || !finite(observed) || !finite(knobs.speedFactor) ||
+      !finite(knobs.ambientC) || !Object.prototype.hasOwnProperty.call(TIRE_CRR, knobs.tires)) return neutral;
+  const avgSpeed = drive.avgSpeedMps == null ? distance / duration : drive.avgSpeedMps;
+  if (!finite(avgSpeed) || avgSpeed <= 0) return neutral;
 
   const { climb, climateOn, ambientC } = analyzeTelemetry(points);
-  const nativeAmbient = ambientC ?? knobs.ambientC;
+  const nativeAmbient = ambientC ?? ASSUMED_BASELINE_AMBIENT_C;
 
   // ---- Baseline decomposition (anchored to observed energy) -------------
   const aero0 = (0.5 * RHO * CDA * avgSpeed * avgSpeed * distance) * J_TO_WH / DRIVETRAIN_EFF;
   const roll0 = (TIRE_CRR.nominal * MASS_KG * G * distance) * J_TO_WH / DRIVETRAIN_EFF;
   const elev0 = (MASS_KG * G * climb) * J_TO_WH / DRIVETRAIN_EFF;
-  const climate0 = (climatePowerFor(nativeAmbient, climateOn) * duration) * J_TO_WH * 3600 / 3600; // W·s→Wh
+  const climate0 = (climatePowerFor(nativeAmbient, climateOn) * duration) * J_TO_WH;
   const modeled0 = aero0 + roll0 + elev0 + climate0;
-  // Residual attributed to "other" (auxiliaries, conditioning); never negative.
-  const other = Math.max(0, observed - modeled0);
+  if (!finite(modeled0)) return neutral;
+  // Keep model excess visible rather than silently rescaling physical estimates.
+  const other = observed - modeled0;
   const baseline: EnergyBreakdown = {
     aero: aero0,
     rolling: roll0,
     elevation: elev0,
     climate: climate0,
     other,
-    total: aero0 + roll0 + elev0 + climate0 + other,
+    total: observed,
   };
 
   // ---- Scenario recompute -----------------------------------------------
   const k = clamp(knobs.speedFactor, 0.5, 1.6);
-  const scenSpeed = avgSpeed * k;
-  const scenDuration = distance / scenSpeed;
+  const scenDuration = duration / k;
   const aero1 = aero0 * k * k; // ∝ v²
   const roll1 = roll0 * (TIRE_CRR[knobs.tires] / TIRE_CRR.nominal);
   const elev1 = elev0; // gravity work is route-fixed
   const climate1 = (climatePowerFor(knobs.ambientC, knobs.hvac) * scenDuration) * J_TO_WH;
   // Cold ambient also reduces battery/regen efficiency a touch.
-  const coldPenalty = 1 + Math.max(0, 10 - knobs.ambientC) * 0.008;
+  const coldPenalty = (1 + Math.max(0, 10 - knobs.ambientC) * 0.008) /
+    (1 + Math.max(0, 10 - nativeAmbient) * 0.008);
   const scenario: EnergyBreakdown = {
     aero: aero1 * coldPenalty,
     rolling: roll1 * coldPenalty,
     elevation: elev1,
     climate: climate1,
-    other: other * coldPenalty,
+    other,
     total: 0,
   };
   scenario.total = scenario.aero + scenario.rolling + scenario.elevation + scenario.climate + scenario.other;
+  if (!Object.values(scenario).every(Number.isFinite)) return neutral;
 
   // ---- SoC / pack -------------------------------------------------------
-  const startSoc = drive.startBatteryPct;
   const endSoc = drive.endBatteryPct;
   let packWh = DEFAULT_PACK_WH;
-  if (startSoc != null && endSoc != null && startSoc > endSoc) {
+  if (startSoc != null && finite(endSoc) && startSoc > endSoc) {
     const inferred = observed / ((startSoc - endSoc) / 100);
     if (Number.isFinite(inferred) && inferred > 30000 && inferred < 130000) packWh = inferred;
   }
@@ -194,6 +208,7 @@ export function simulateWhatIf(
 
   return {
     ok: true,
+    reconciliation: other < 0 ? 'model-exceeds-observed' : 'estimated',
     baseline,
     scenario,
     packWh,

@@ -18,10 +18,24 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, renderHook, act, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import type { FeedbackEntry } from '@/api/types'
+import type { FeedbackListParams } from '@/api/hooks/useFeedback'
+import * as apiClient from '@/api/client'
+import type { OperationalModeContextValue } from '@/hooks/useOperationalMode'
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => operationalMode,
+}))
+
+vi.mock('@/api/hooks/_toastHelpers', () => ({
+  useMutationToast: () => ({ success: vi.fn(), error: vi.fn() }),
+}))
+
+let operationalMode: OperationalModeContextValue
 
 // ── Deterministic i18n: return the English fallback, interpolate {{vars}}. ─────
 vi.mock('react-i18next', async () => {
@@ -107,17 +121,23 @@ const baseSettings = {
 type FacetKey = 'new' | 'triaged' | 'closed' | 'bug' | 'feature' | 'other'
 const FACET_KEYS: FacetKey[] = ['new', 'triaged', 'closed', 'bug', 'feature', 'other']
 
- 
-type AnyRow = any
- 
-interface Scenario { main: any; counts: Record<FacetKey, any> }
+type FeedbackFixture = Omit<FeedbackEntry, 'user_email' | 'console_tail' | 'submitter_ip'> & {
+  user_email: string | null
+  console_tail: string | null
+  submitter_ip: string | null
+}
+
+interface Scenario {
+  main: Record<string, unknown>
+  counts: Record<FacetKey, Record<string, unknown>>
+}
 
 let refetches: Record<string, ReturnType<typeof vi.fn>>
 let mockMutate: ReturnType<typeof vi.fn>
 let mockBulkMutateAsync: ReturnType<typeof vi.fn>
 let scenario: Scenario
 
-function rowA(): AnyRow {
+function rowA(): FeedbackFixture {
   return {
     id: 101,
     created_at: '2024-01-15T12:00:00Z',
@@ -139,7 +159,7 @@ function rowA(): AnyRow {
   }
 }
 
-function rowB(): AnyRow {
+function rowB(): FeedbackFixture {
   return {
     id: 102,
     created_at: '2024-02-01T09:30:00Z',
@@ -192,7 +212,7 @@ function configure(
   over: { main?: Record<string, unknown>; counts?: Partial<Record<FacetKey, Record<string, unknown>>> } = {},
 ) {
   const d = defaults()
-  const counts = {} as Record<FacetKey, AnyRow>
+  const counts = {} as Scenario['counts']
   for (const k of FACET_KEYS) counts[k] = { ...d.counts[k], ...(over.counts?.[k] ?? {}) }
   scenario = { main: { ...d.main, ...(over.main ?? {}) }, counts }
 }
@@ -220,20 +240,26 @@ function mainResult() {
     isError: Boolean(m.isError),
     error: m.error ?? null,
     isFetching: Boolean(m.isFetching),
+    isPending: Boolean(m.isPending),
+    fetchStatus: m.fetchStatus,
+    isPlaceholderData: Boolean(m.isPlaceholderData),
     refetch: refetches.main,
   }
 }
 
- 
-function feedbackListImpl(params: any = {}) {
+function feedbackListImpl(params: FeedbackListParams = {}) {
   if (params?.limit === 1) {
-    const facet: FacetKey | undefined = params.status ?? params.category
+    const facet = params.status || params.category
     if (facet) return countResult(facet)
   }
   return mainResult()
 }
 
 beforeEach(() => {
+  operationalMode = {
+    mode: 'live', asOf: null, online: true, isReadOnly: false,
+    label: 'Live', description: '', canWrite: true, writeBlockReason: null,
+  }
   refetches = {
     main: vi.fn(),
     new: vi.fn(),
@@ -265,13 +291,15 @@ beforeEach(() => {
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  const tree = () => (
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/admin/feedback']}>
         <FeedbackQueuePage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
+  const result = render(tree())
+  return { ...result, rerenderPage: () => result.rerender(tree()) }
 }
 
 function rowTr(title: string): HTMLElement {
@@ -294,6 +322,148 @@ function drawerFor(title: string): HTMLElement {
 }
 
 describe('FeedbackQueuePage', () => {
+  it.each(['cached', 'as_of'] as const)(
+    'blocks manual writes in %s mode without losing retained feedback, selection or drafts, then recovers',
+    async (mode) => {
+      const { rerenderPage } = renderPage()
+      fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+      expandRow('Timeline cuts off early')
+      fireEvent.change(within(drawerFor('Timeline cuts off early')).getByRole('textbox'), {
+        target: { value: 'https://github.com/acme/repo/issues/7' },
+      })
+      const reason = mode === 'cached'
+        ? 'Reconnect before making operational changes.'
+        : 'Return to live mode before making operational changes.'
+      operationalMode = { ...operationalMode, mode, canWrite: false, isReadOnly: true, writeBlockReason: reason }
+      configure({ main: { isError: true, error: new Error('refresh failed') } })
+      rerenderPage()
+
+      expect(screen.getByText(reason)).toHaveAttribute('role', 'status')
+      expect(screen.getByText('Add dark map tiles')).toBeInTheDocument()
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+      for (const name of ['Mark triaged', 'Close selected', 'Reopen selected']) {
+        const button = screen.getByRole('button', { name })
+        expect(button).toBeDisabled()
+        expect(button).toHaveAttribute('title', reason)
+        fireEvent.click(button)
+      }
+      const region = drawerFor('Timeline cuts off early')
+      expect(within(region).getByRole('combobox')).toBeDisabled()
+      expect(within(region).getByRole('textbox')).toBeDisabled()
+      expect(within(region).getByRole('button', { name: 'Save URL' })).toBeDisabled()
+      fireEvent.change(within(region).getByRole('combobox'), { target: { value: 'closed' } })
+      expect(mockMutate).not.toHaveBeenCalled()
+      expect(mockBulkMutateAsync).not.toHaveBeenCalled()
+      expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+      expect(refetches.main).toHaveBeenCalledTimes(1)
+      operationalMode = { ...operationalMode, mode: 'live', canWrite: true, isReadOnly: false, writeBlockReason: null }
+      configure()
+      rerenderPage()
+      expect(screen.queryByText(reason)).toBeNull()
+      expect(screen.queryByTestId('stale-refresh-warning')).toBeNull()
+      expect(within(drawerFor('Timeline cuts off early')).getByRole('textbox')).toHaveValue('https://github.com/acme/repo/issues/7')
+      fireEvent.change(within(drawerFor('Timeline cuts off early')).getByRole('combobox'), { target: { value: 'closed' } })
+      expect(mockMutate).toHaveBeenCalledWith({ id: 101, update: { status: 'closed' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Close selected' }))
+      await waitFor(() => expect(mockBulkMutateAsync).toHaveBeenCalledWith({ ids: [101], update: { status: 'closed' } }))
+    },
+  )
+
+  it('uses restrained issue-link roles and retains every column in the contained mobile table', () => {
+    renderPage()
+    const link = screen.getByRole('link', { name: /Open issue/i })
+    expect(link).toHaveClass('text-[var(--semantic-info)]', 'min-h-11')
+    expect(link).not.toHaveClass('text-cyan-300', 'text-xs')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noreferrer noopener')
+    for (const title of ['Category', 'Page', 'Reporter', 'GitHub']) {
+      const header = screen.getByRole('columnheader', { name: title })
+      expect(header).not.toHaveClass('hidden')
+      expect(header).not.toHaveClass('md:table-cell')
+    }
+    expect(screen.getByText('/drives')).toBeInTheDocument()
+  })
+
+  describe('manual feedback request protection', () => {
+    it.each(['single', 'bulk'] as const)('opts every %s PATCH into live-mode protection', async (kind) => {
+      const actual = await vi.importActual<typeof import('@/api/hooks/useFeedback')>('@/api/hooks/useFeedback')
+      const request = vi.spyOn(apiClient, 'request').mockResolvedValue(rowA())
+      const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+      )
+      const { result, unmount } = renderHook(() => ({
+        single: actual.useUpdateFeedback(),
+        bulk: actual.useBulkUpdateFeedback(),
+      }), { wrapper })
+      try {
+        await act(async () => {
+          if (kind === 'single') await result.current.single.mutateAsync({ id: 101, update: { status: 'closed' } })
+          else await result.current.bulk.mutateAsync({ ids: [101, 102], update: { status: 'closed' } })
+        })
+        expect(request).toHaveBeenCalledTimes(kind === 'single' ? 1 : 2)
+        for (const [path, options] of request.mock.calls) {
+          expect(path).toMatch(/^\/admin\/feedback\/10[12]$/)
+          expect(options).toMatchObject({
+            method: 'PATCH', requiresLiveMode: true, body: JSON.stringify({ status: 'closed' }),
+          })
+        }
+      } finally {
+        unmount()
+        qc.clear()
+        request.mockRestore()
+      }
+    })
+  })
+
+  it('distinguishes filtered no-results from an empty queue and clears both filters', () => {
+    renderPage()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'closed' } })
+    configure({ main: { data: { items: [], total: 0, limit: 25, offset: 0, github_bridge_enabled: false } } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'bug' } })
+    expect(screen.getByText('No results')).toBeInTheDocument()
+    expect(screen.queryByText('No feedback yet')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Triage progress' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('')
+    expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('')
+    expect(mockUseFeedbackList).toHaveBeenCalledWith({
+      status: undefined, category: undefined, limit: 25, offset: 0,
+    })
+  })
+
+  it('retains placeholder evidence and selected IDs while disabling prior-scope mutations', () => {
+    configure({ main: { isPlaceholderData: true, isFetching: true } })
+    renderPage()
+    expect(screen.getByText('Timeline cuts off early')).toBeInTheDocument()
+    expect(screen.getByText('Loading...')).toHaveAttribute('role', 'status')
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+    for (const name of ['Mark triaged', 'Close selected', 'Reopen selected']) {
+      expect(screen.getByRole('button', { name })).toBeDisabled()
+    }
+    expandRow('Timeline cuts off early')
+    const region = drawerFor('Timeline cuts off early')
+    expect(within(region).getByRole('combobox')).toBeDisabled()
+    expect(within(region).getByRole('textbox')).toBeDisabled()
+    expect(within(region).getByRole('button', { name: 'Save URL' })).toBeDisabled()
+    expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+    expect(mockMutate).not.toHaveBeenCalled()
+    expect(mockBulkMutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('keeps whole-queue scope and all six facet measurements in the actual reviewable brief', () => {
+    renderPage()
+    const summary = screen.getByTestId('feedback-queue-summary')
+    expect(summary).toHaveAttribute('data-operational-brief')
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6)
+    expect(summary).toHaveTextContent('unaffected by the table filters')
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('independent status and category queries')
+    expect(screen.getByText('Queue')).toBeInTheDocument()
+  })
+
   it('renders the KPI band, status distribution, category mix, bridge status, rows, and GitHub link for a populated queue', () => {
     renderPage()
 
@@ -308,7 +478,7 @@ describe('FeedbackQueuePage', () => {
     ).toBeInTheDocument()
 
     // Category-mix bar for "bug": 6 of 10 → 60%.
-    expect(screen.getByText('6 · 60%')).toBeInTheDocument()
+    expect(screen.getByText('6 · 60.00%')).toBeInTheDocument()
 
     // Bridge is disabled by default → "Not configured".
     expect(screen.getByText('Not configured')).toBeInTheDocument()
@@ -328,7 +498,7 @@ describe('FeedbackQueuePage', () => {
 
   it('shows the loading skeleton (and no rows or empty state) while the table query is loading', () => {
     configure({
-      main: { isLoading: true, data: undefined },
+      main: { isLoading: true, isFetching: true, data: undefined },
       counts: Object.fromEntries(
         FACET_KEYS.map((k) => [k, { total: undefined, isLoading: true }]),
       ) as Partial<Record<FacetKey, Record<string, unknown>>>,
@@ -340,8 +510,8 @@ describe('FeedbackQueuePage', () => {
     expect(screen.getByRole('heading', { name: 'Feedback queue' })).toBeInTheDocument()
     expect(screen.queryByText('Timeline cuts off early')).toBeNull()
     expect(screen.queryByText('No feedback yet')).toBeNull()
-    // Skeletons render as `.animate-pulse` blocks.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+    // The table's multi-line Skeleton contains static source-shaped blocks.
+    expect(container.querySelectorAll('[aria-hidden="true"] > [class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0)
   })
 
   it('renders the QueryError banner when the table query fails and retries the LIST on click', () => {
@@ -354,6 +524,65 @@ describe('FeedbackQueuePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Retry$/i }))
     expect(refetches.main).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['paused', 'idle'] as const)(
+    'does not infer an empty queue from an unresolved %s request and preserves neighboring sections',
+    (fetchStatus) => {
+      configure({
+        main: { data: undefined, isPending: true, isLoading: false, fetchStatus },
+      })
+      const { container, rerenderPage } = renderPage()
+
+      const unresolvedNotice = screen.getByText('No requested source has returned usable data yet.').closest('[role="status"]')
+      expect(unresolvedNotice).toHaveTextContent(
+        fetchStatus === 'paused' ? 'Refresh paused' : 'Unknown',
+      )
+      expect(unresolvedNotice).toHaveTextContent('No requested source has returned usable data yet.')
+      expect(screen.queryByText('No feedback yet')).toBeNull()
+      expect(screen.queryByText("Can't reach server")).toBeNull()
+      expect(container.querySelector('[class~="bg-[var(--skeleton-bg)]"]')).toBeNull()
+      expect(screen.getByTestId('feedback-queue-summary')).toBeInTheDocument()
+      expect(screen.getByRole('img', { name: 'Status distribution: 5 new, 3 triaged, 2 closed' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Category mix' })).toBeInTheDocument()
+      expect(screen.getByRole('combobox', { name: 'Status' })).toBeEnabled()
+      expect(screen.getByRole('combobox', { name: 'Category' })).toBeEnabled()
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+      expect(refetches.main).toHaveBeenCalledTimes(1)
+
+      configure({
+        main: { data: { items: [], total: 0, limit: 25, offset: 0 } },
+      })
+      rerenderPage()
+      expect(screen.getByText('No feedback yet')).toBeInTheDocument()
+      expect(screen.queryByText('No requested source has returned usable data yet.')).toBeNull()
+    },
+  )
+
+  it('uses the unresolved DataState for active fetching even when isLoading is false', () => {
+    configure({
+      main: { data: undefined, isLoading: false, isPending: true, isFetching: true, fetchStatus: 'fetching' },
+    })
+    const { container } = renderPage()
+    expect(container.querySelector('[class~="bg-[var(--skeleton-bg)]"]')).not.toBeNull()
+    expect(screen.queryByText('No feedback yet')).toBeNull()
+    expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('feedback-queue-summary')).toBeInTheDocument()
+  })
+
+  it('retains populated rows, expansion and selection when refreshing is paused', () => {
+    const { rerenderPage } = renderPage()
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+    expandRow('Timeline cuts off early')
+    configure({ main: { fetchStatus: 'paused' } })
+    rerenderPage()
+
+    expect(screen.getByText('Timeline cuts off early')).toBeInTheDocument()
+    expect(drawerFor('Timeline cuts off early')).toHaveTextContent('Body A')
+    expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true')
+    expect(screen.queryByText('No feedback yet')).toBeNull()
+    expect(screen.queryByText("Can't reach server")).toBeNull()
   })
 
   it('shows empty states for the table, triage progress, and category mix when the whole queue is empty', () => {
@@ -393,7 +622,7 @@ describe('FeedbackQueuePage', () => {
     )
 
     // Now change the status filter → param applied AND page reset to 0.
-    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'closed' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'closed' } })
     expect(mockUseFeedbackList).toHaveBeenCalledWith(
       expect.objectContaining({ status: 'closed', limit: 25, offset: 0 }),
     )
@@ -424,6 +653,91 @@ describe('FeedbackQueuePage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Next$/i }))
     expect(screen.getByText('Page 3 of 3 (60 entries)')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Next$/i })).toBeDisabled()
+  })
+
+  it('clamps to the last remaining page after a settled shrink without clearing filters, selection or expansion', () => {
+    configure({
+      main: { data: { items: [rowA()], total: 60, limit: 25, offset: 0 } },
+    })
+    const { rerenderPage } = renderPage()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'new' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'bug' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+    expandRow('Timeline cuts off early')
+
+    configure({ main: { data: { items: [], total: 26, limit: 25, offset: 50 } } })
+    rerenderPage()
+
+    expect(mockUseFeedbackList).toHaveBeenCalledWith({
+      status: 'new', category: 'bug', limit: 25, offset: 25,
+    })
+    expect(screen.getByText('Page 2 of 2 (26 entries)')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('new')
+    expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('bug')
+
+    configure({ main: { data: { items: [rowA()], total: 26, limit: 25, offset: 25 } } })
+    rerenderPage()
+    expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+    expect(drawerFor('Timeline cuts off early')).toHaveTextContent('Body A')
+  })
+
+  it.each([25, 0])('clamps an empty later page to offset zero when the settled total becomes %i', (total) => {
+    configure({ main: { data: { items: [rowA()], total: 60, limit: 25, offset: 0 } } })
+    const { rerenderPage } = renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    mockUseFeedbackList.mockClear()
+
+    configure({ main: { data: { items: [], total, limit: 25, offset: 50 } } })
+    rerenderPage()
+
+    expect(mockUseFeedbackList).toHaveBeenLastCalledWith({ category: 'other', limit: 1 })
+    expect(mockUseFeedbackList).toHaveBeenCalledWith({
+      status: undefined, category: undefined, limit: 25, offset: 0,
+    })
+    expect(screen.getByText('No feedback yet')).toBeInTheDocument()
+  })
+
+  it.each([
+    { isFetching: true },
+    { isPlaceholderData: true },
+    { isLoading: true },
+    { isError: true, error: new Error('refresh failed') },
+  ])('does not clamp from an unsettled or failed total: %j', (queryState) => {
+    configure({ main: { data: { items: [rowA()], total: 60, limit: 25, offset: 0 } } })
+    const { rerenderPage } = renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    mockUseFeedbackList.mockClear()
+
+    configure({
+      main: { ...queryState, data: { items: [], total: 0, limit: 25, offset: 50 } },
+    })
+    rerenderPage()
+    expect(mockUseFeedbackList).not.toHaveBeenCalledWith(expect.objectContaining({ limit: 25, offset: 0 }))
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeInTheDocument()
+
+    configure({ main: { data: { items: [], total: 0, limit: 25, offset: 50 } } })
+    rerenderPage()
+    expect(mockUseFeedbackList).toHaveBeenCalledWith(expect.objectContaining({ limit: 25, offset: 0 }))
+  })
+
+  it('keeps Previous usable when a settled empty page still has a valid offset', () => {
+    configure({ main: { data: { items: [rowA()], total: 60, limit: 25, offset: 0 } } })
+    const { rerenderPage } = renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    configure({ main: { data: { items: [], total: 60, limit: 25, offset: 25 } } })
+    rerenderPage()
+    expect(screen.getByText('No feedback yet')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled()
+    mockUseFeedbackList.mockClear()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }))
+    expect(mockUseFeedbackList).toHaveBeenCalledWith(expect.objectContaining({ limit: 25, offset: 0 }))
   })
 
   it('refresh refetches the table AND all six count queries so KPIs stay consistent', () => {
@@ -470,6 +784,79 @@ describe('FeedbackQueuePage', () => {
       id: 101,
       update: { github_issue_url: 'https://github.com/acme/repo/issues/7' },
     })
+  })
+
+  it.each(['single', 'bulk'] as const)(
+    'blocks all manual actions while a %s update is pending and restores them without losing selection or drafts',
+    (pendingMutation) => {
+      configure({
+        main: {
+          data: {
+            items: [rowA(), rowB()], total: 2, limit: 25, offset: 0,
+            github_bridge_enabled: true, github_repo: 'ev-dev-labs/teslasync',
+          },
+        },
+      })
+      const { rerenderPage } = renderPage()
+      fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+      expandRow('Timeline cuts off early')
+      const region = drawerFor('Timeline cuts off early')
+      fireEvent.change(within(region).getByRole('textbox'), {
+        target: { value: 'https://github.com/acme/repo/issues/7' },
+      })
+
+      mockUseUpdateFeedback.mockReturnValue({
+        mutate: mockMutate, isPending: pendingMutation === 'single',
+      })
+      mockUseBulkUpdateFeedback.mockReturnValue({
+        mutateAsync: mockBulkMutateAsync, isPending: pendingMutation === 'bulk',
+      })
+      rerenderPage()
+
+      for (const name of ['Mark triaged', 'Close selected', 'Reopen selected']) {
+        expect(screen.getByRole('button', { name })).toBeDisabled()
+        fireEvent.click(screen.getByRole('button', { name }))
+      }
+      expect(within(region).getByRole('combobox')).toBeDisabled()
+      expect(within(region).getByRole('textbox')).toBeDisabled()
+      for (const name of ['Save URL', 'Forward to GitHub']) {
+        expect(within(region).getByRole('button', { name })).toBeDisabled()
+        fireEvent.click(within(region).getByRole('button', { name }))
+      }
+      // Synthetic change events bypass native disabled-select behavior; the
+      // page's handler must still reject the mutation.
+      fireEvent.change(within(region).getByRole('combobox'), { target: { value: 'closed' } })
+      expect(mockMutate).not.toHaveBeenCalled()
+      expect(mockBulkMutateAsync).not.toHaveBeenCalled()
+      expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+
+      mockUseUpdateFeedback.mockReturnValue({ mutate: mockMutate, isPending: false })
+      mockUseBulkUpdateFeedback.mockReturnValue({ mutateAsync: mockBulkMutateAsync, isPending: false })
+      rerenderPage()
+      expect(screen.getByRole('button', { name: 'Mark triaged' })).toBeEnabled()
+      expect(screen.getByRole('button', { name: 'Close selected' })).toBeEnabled()
+      expect(within(region).getByRole('combobox')).toBeEnabled()
+      expect(within(region).getByRole('textbox')).toHaveValue('https://github.com/acme/repo/issues/7')
+      expect(within(region).getByRole('button', { name: 'Save URL' })).toBeEnabled()
+      expect(within(region).getByRole('button', { name: 'Forward to GitHub' })).toBeEnabled()
+      fireEvent.click(within(region).getByRole('button', { name: 'Save URL' }))
+      expect(mockMutate).toHaveBeenCalledWith({
+        id: 101, update: { github_issue_url: 'https://github.com/acme/repo/issues/7' },
+      })
+    },
+  )
+
+  it('retains selected feedback after a failed bulk update so the same rows can be retried', async () => {
+    mockBulkMutateAsync.mockRejectedValueOnce(new Error('bulk update failed'))
+    renderPage()
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Close selected' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Close selected' })).toBeEnabled())
+    expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+    expect(mockBulkMutateAsync).toHaveBeenCalledWith({ ids: [101], update: { status: 'closed' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Close selected' }))
+    await waitFor(() => expect(mockBulkMutateAsync).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Close selected' })).toBeNull())
   })
 
   it('bulk-updates selected feedback and clears the selection after success', async () => {
@@ -549,5 +936,42 @@ describe('FeedbackQueuePage', () => {
     expect(refetches.feature).toHaveBeenCalledTimes(1)
     expect(refetches.other).toHaveBeenCalledTimes(1)
     expect(refetches.main).not.toHaveBeenCalled()
+  })
+
+  it('keeps retained queue rows, whole-queue proportions and selected IDs during failed refreshes', async () => {
+    configure({
+      main: { isError: true, error: new Error('list refresh failed') },
+      counts: { new: { error: new Error('status refresh failed') }, bug: { error: new Error('category refresh failed') } },
+    })
+    renderPage()
+    expect(screen.getByText('Timeline cuts off early')).toBeInTheDocument()
+    expect(screen.getByText('Add dark map tiles')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Status distribution: 5 new, 3 triaged, 2 closed' })).toBeInTheDocument()
+    expect(screen.getByText('6 · 60.00%')).toBeInTheDocument()
+    expect(screen.queryByText("Can't reach server")).toBeNull()
+    expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.').length).toBeGreaterThanOrEqual(3)
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Close selected' }))
+    await waitFor(() => expect(mockBulkMutateAsync).toHaveBeenCalledWith({
+      ids: [101], update: { status: 'closed' },
+    }))
+  })
+
+  it('retains known status counts without inventing an unknown total or denominator after a partial first load', () => {
+    configure({ counts: { new: { total: undefined, error: new Error('counts down') } } })
+    renderPage()
+    const totalTile = screen.getByText('Total feedback').closest('[data-operational-metric]')
+    if (!totalTile) throw new Error('Missing total feedback identity')
+    expect(within(totalTile).getByText('—')).toBeInTheDocument()
+    expect(within(totalTile).queryByText('5')).toBeNull()
+    expect(screen.queryByRole('img', { name: /Status distribution:/ })).toBeNull()
+    const triageCard = screen.getByRole('heading', { name: 'Triage progress' }).closest('[data-card]')
+    if (!triageCard) throw new Error('Missing triage panel')
+    expect(within(triageCard).getByText('New').closest('div')).toHaveTextContent('—')
+    expect(within(triageCard).getByText('Triaged').closest('div')).toHaveTextContent('3')
+    expect(within(triageCard).getByText('Closed').closest('div')).toHaveTextContent('2')
+    expect(within(triageCard).getByText('Partial data')).toBeInTheDocument()
+    expect(screen.getByText('6 · 60.00%')).toBeInTheDocument()
+    expect(screen.getByText('Timeline cuts off early')).toBeInTheDocument()
   })
 })

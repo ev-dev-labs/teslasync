@@ -46,9 +46,9 @@ describe('getStatusColor', () => {
   })
 
   it('is case-insensitive', () => {
-    expect(getStatusColor('HEALTHY')).toBe('#22c55e')
+    expect(getStatusColor('Healthy')).toBe('#22c55e')
     expect(getStatusColor('Warning')).toBe('#f59e0b')
-    expect(getStatusColor('ERROR')).toBe('#ef4444')
+    expect(getStatusColor('Error')).toBe('#ef4444')
   })
 
   it('falls back to grey for unknown, empty, and nullish input', () => {
@@ -63,8 +63,8 @@ describe('getStatusColor', () => {
 describe('statusTextClass', () => {
   it('returns the matching tone class per severity bucket', () => {
     expect(statusTextClass('online')).toBe('text-green-400')
-    expect(statusTextClass('pending')).toBe('text-amber-400')
-    expect(statusTextClass('failed')).toBe('text-red-400')
+    expect(statusTextClass('Pending')).toBe('text-amber-400')
+    expect(statusTextClass('Failed')).toBe('text-red-400')
   })
 
   it('uses the theme muted var (not a raw text-white/gray) for the default', () => {
@@ -81,14 +81,14 @@ describe('getStatusIcon', () => {
   })
 
   it('defaults unknown/nullish status to the warning triangle', () => {
-    expect(getStatusIcon('unknown').type).toBe(AlertTriangle)
+    expect(getStatusIcon('Unknown').type).toBe(AlertTriangle)
     expect(getStatusIcon(null as unknown as string).type).toBe(AlertTriangle)
   })
 
   it('threads the status tone class through to the icon', () => {
-    expect(getStatusIcon('healthy').props.className).toContain('text-green-400')
-    expect(getStatusIcon('healthy').props.className).toContain('h-4 w-4')
-    expect(getStatusIcon('error').props.className).toContain('text-red-400')
+    expect(getStatusIcon('Healthy').props.className).toContain('text-green-400')
+    expect(getStatusIcon('Healthy').props.className).toContain('h-4 w-4')
+    expect(getStatusIcon('Error').props.className).toContain('text-red-400')
   })
 
   it('marks the decorative icon aria-hidden and renders an actual <svg>', () => {
@@ -120,26 +120,36 @@ describe('formatUptime', () => {
     expect(formatUptime(90.9)).toBe('1m')
   })
 
-  it('clamps negative and non-finite input to 0m (no "NaNm" / "-1d")', () => {
-    expect(formatUptime(-500)).toBe('0m')
-    expect(formatUptime(Number.NaN)).toBe('0m')
-    expect(formatUptime(Infinity)).toBe('0m')
-    expect(formatUptime(undefined as unknown as number)).toBe('0m')
+  it.each([null, undefined, -500, -0.1, Number.NaN, Infinity, -Infinity])(
+    'renders unknown rather than measured zero for invalid uptime %s',
+    (seconds) => {
+      expect(formatUptime(seconds)).toBe('—')
+    },
+  )
+
+  it('retains raw-second semantics at minute, hour, and day boundaries', () => {
+    expect(formatUptime(0.9)).toBe('0m')
+    expect(formatUptime(59.9)).toBe('0m')
+    expect(formatUptime(60)).toBe('1m')
+    expect(formatUptime(3599.9)).toBe('59m')
+    expect(formatUptime(3600)).toBe('1h 0m')
+    expect(formatUptime(86399.9)).toBe('23h 59m')
+    expect(formatUptime(86400)).toBe('1d 0h 0m')
   })
 })
 
 describe('formatBytes', () => {
   it('formats within each binary unit at one decimal place', () => {
-    expect(formatBytes(512)).toBe('512.0 B')
-    expect(formatBytes(1024)).toBe('1.0 KB')
-    expect(formatBytes(1536)).toBe('1.5 KB')
-    expect(formatBytes(1024 * 1024)).toBe('1.0 MB')
-    expect(formatBytes(1024 * 1024 * 1024)).toBe('1.0 GB')
-    expect(formatBytes(1024 ** 4)).toBe('1.0 TB')
+    expect(formatBytes(512)).toBe('512.00 B')
+    expect(formatBytes(1024)).toBe('1.00 KB')
+    expect(formatBytes(1536)).toBe('1.50 KB')
+    expect(formatBytes(1024 * 1024)).toBe('1.00 MB')
+    expect(formatBytes(1024 * 1024 * 1024)).toBe('1.00 GB')
+    expect(formatBytes(1024 ** 4)).toBe('1.00 TB')
   })
 
   it('extends into PB and never overflows the unit table (no "undefined")', () => {
-    expect(formatBytes(3 * 1024 ** 5)).toBe('3.0 PB')
+    expect(formatBytes(3 * 1024 ** 5)).toBe('3.00 PB')
     // Beyond an exabyte the index is clamped to PB rather than reading past
     // the array — the pre-fix bug rendered "… undefined" here.
     const huge = formatBytes(1024 ** 7)
@@ -148,16 +158,16 @@ describe('formatBytes', () => {
   })
 
   it('treats zero, negative and non-finite byte counts as 0 B', () => {
-    expect(formatBytes(0)).toBe('0 B')
-    expect(formatBytes(-1024)).toBe('0 B')
-    expect(formatBytes(Number.NaN)).toBe('0 B')
-    expect(formatBytes(Infinity)).toBe('0 B')
-    expect(formatBytes(undefined as unknown as number)).toBe('0 B')
+    expect(formatBytes(0)).toBe('0.00 B')
+    expect(formatBytes(-1024)).toBe('0.00 B')
+    expect(formatBytes(Number.NaN)).toBe('0.00 B')
+    expect(formatBytes(Infinity)).toBe('0.00 B')
+    expect(formatBytes(undefined as unknown as number)).toBe('0.00 B')
   })
 
   it('keeps sub-1-byte fractional values in the B bucket', () => {
     // Pre-fix this floored the index to -1 and read sizes[-1] === undefined.
-    expect(formatBytes(0.5)).toBe('0.5 B')
+    expect(formatBytes(0.5)).toBe('0.50 B')
   })
 })
 
@@ -170,7 +180,7 @@ describe('statusToBadgeVariant', () => {
   it('treats "connected" as success alongside the other healthy statuses', () => {
     // Regression: 'connected' (a real DB/MQTT status) used to fall through to
     // 'neutral' while the sibling helpers all treated it as success.
-    expect(statusToBadgeVariant('connected')).toBe('success')
+    expect(statusToBadgeVariant('Connected')).toBe('success')
     for (const s of SUCCESS) expect(statusToBadgeVariant(s)).toBe('success')
   })
 

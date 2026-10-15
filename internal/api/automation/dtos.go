@@ -13,9 +13,14 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// automationResponse wraps an Automation with computed fields.
+// automationResponse wraps an Automation with computed fields. Nil metadata
+// stays null: unavailable history is not zero runs or a known disable reason.
 type automationResponse struct {
 	*models.Automation
+	ExecutionCount  *int64     `json:"execution_count"`
+	FailureCount    *int64     `json:"failure_count"`
+	LastTriggeredAt *time.Time `json:"last_triggered_at"`
+	AutoDisabled    *bool      `json:"auto_disabled"`
 	NextFireTime *string              `json:"next_fire_time,omitempty"`
 	Conflicts    []condition.Conflict `json:"conflicts,omitempty"`
 }
@@ -152,6 +157,12 @@ type automationActionCallAutomationDTO struct {
 	TargetAutomationID int64  `json:"target_automation_id"`
 }
 
+type automationActionWaitDTO struct {
+	Kind      string `json:"kind"`
+	StepOrder *int   `json:"step_order,omitempty"`
+	DurationS int    `json:"duration_s"`
+}
+
 // historyListResponse wraps paginated history items with summary statistics.
 type historyListResponse struct {
 	Items   []*automationmodel.AutomationHistory `json:"items"`
@@ -275,5 +286,17 @@ type importError struct {
 // importResult is the response body for the import endpoint.
 type importResult struct {
 	Imported []importedAutomation `json:"imported"`
-	Errors   []importError        `json:"errors,omitempty"`
+	Errors   []importError        `json:"errors"`
+}
+
+// MarshalJSON keeps both per-item outcomes array-shaped, including empty batches.
+func (r importResult) MarshalJSON() ([]byte, error) {
+	type wireResult importResult
+	if r.Imported == nil {
+		r.Imported = []importedAutomation{}
+	}
+	if r.Errors == nil {
+		r.Errors = []importError{}
+	}
+	return json.Marshal(wireResult(r))
 }

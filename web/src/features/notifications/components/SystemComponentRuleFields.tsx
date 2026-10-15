@@ -13,9 +13,17 @@ interface Props {
 
 export function SystemComponentRuleFields({ component, transition, onChange }: Props) {
   const { t } = useTranslation()
+  const componentLabels: Record<Component, string> = {
+    telemetry: 'Telemetry',
+    mqtt: 'MQTT',
+    database: 'Database',
+    redis: 'Redis',
+    tesla_api: 'Tesla API',
+    worker: 'Worker',
+  }
   const componentOptions = SYSTEM_COMPONENTS.map(name => ({
     value: name,
-    label: t(`notifications.alertStudio.system.${name}`, name.replace('_', ' ').toUpperCase()),
+    label: t(`notifications.alertStudio.system.${name}`, componentLabels[name]),
   }))
   const transitionOptions = SYSTEM_TRANSITIONS.map(value => ({
     value,

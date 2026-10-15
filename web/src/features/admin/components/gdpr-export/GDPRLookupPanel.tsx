@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Search, Info } from 'lucide-react';
 
-import { GlassPanel, Button, Input } from '@/components/ui';
-import { PanelTitle, Caption, Text } from '@/components/ui/Typography';
+import { GlassPanel, Button, Input, PanelTitle, Caption, Text } from '@/components/ui';
 
 interface GDPRLookupPanelProps {
   idInput: string;
@@ -56,17 +55,17 @@ export function GDPRLookupPanel({ idInput, onIdChange, onLookup }: GDPRLookupPan
           <Caption className="mt-2">
             {t(
               'admin.gdprExport.lookupHint',
-              'IDs come from the GDPR export queue email or the request response. The artifact polls while queued/running.',
+              'Enter an artifact ID to look up its saved metadata. Use Refresh to request an updated snapshot; this page does not poll automatically.',
             )}
           </Caption>
         </div>
 
-        <div className="flex items-start gap-2 rounded-xl border border-[var(--glass-border)] bg-white/[0.02] p-3">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+        <div className="flex items-start gap-2 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
           <Text variant="bodySm">
             {t(
               'admin.gdprExport.lookupBlurb',
-              'Bundles are streamed straight from the backend and expire after the configured retention window. Look one up to track its status live.',
+              'Lookup and Refresh only read artifact metadata; they do not create exports or download bundles. Bundles expire after the configured retention window. A saved manifest does not confirm current download availability or storage support.',
             )}
           </Text>
         </div>

@@ -4,6 +4,7 @@ import {
   formatDate,
   formatDateShort,
   formatTime,
+  formatDayKey,
   tzAbbreviation,
   type FormatOptions,
 } from '@/lib/dateFormat';
@@ -11,13 +12,15 @@ import { resolveLocale } from '@/lib/locale';
 import { useSettings } from '@/hooks/useSettings';
 import { useTimezone, type TzMode } from '@/lib/timezone';
 
-export type DateTimeVariant = 'full' | 'date' | 'time' | 'relative' | 'short';
+export type DateTimeVariant = 'full' | 'date' | 'time' | 'relative' | 'short' | 'day';
 
 interface DateTimeProps {
   value: string | Date | null | undefined;
+  /** `day` formats a YYYY-MM-DD business date; other variants format instants. */
   variant?: DateTimeVariant;
   /**
-   * Override which timezone the timestamp is rendered in. When unset
+   * Override which timezone the timestamp is rendered in. Ignored for `day`.
+   * When unset
    * the component preserves its prior pure behavior (uses the browser's
    * locale + timezone) — this is the back-compat path used by hundreds
    * of call sites and unit tests that render outside Router/Query
@@ -28,24 +31,38 @@ interface DateTimeProps {
    * `web/src/lib/timezone.ts` for the resolution rules.
    */
   in?: TzMode;
-  /** When true, append the short tz abbreviation (e.g. "PST") after the rendered value. */
+  /** Append the short tz abbreviation (e.g. "PST") for instants, never business days. */
   showTz?: boolean;
+  /** Explicit clock precision uses the selected locale and default timezone mode. */
+  clock?: FormatOptions['clock'];
   className?: string;
 }
 
 /**
- * Locale-aware datetime renderer that hovers the canonical ISO string for
- * unambiguous timestamps. Wraps the pure helpers in `@/lib/dateFormat`.
+ * Locale-aware datetime renderer that hovers the canonical ISO for instants
+ * or the original calendar key for business days. The `day` variant reads
+ * the selected locale but never resolves a timezone or displays a clock.
+ * Wraps the pure helpers in `@/lib/dateFormat`.
  *
- * When `in` or `showTz` is set, renders via the
+ * When `in`, `showTz`, or explicit `clock` options are set, renders via the
  * provider-aware variant `<DateTimeWithTz>`. The default no-prop path
  * stays pure to keep render cost low across table-heavy pages.
  */
 export function DateTime(props: DateTimeProps) {
-  if (props.in !== undefined || props.showTz) {
+  if (props.variant === 'day') {
+    return <BusinessDay {...props} />;
+  }
+  if (props.in !== undefined || props.showTz || props.clock !== undefined) {
     return <DateTimeWithTz {...props} />;
   }
   return <PureDateTime {...props} />;
+}
+
+function BusinessDay({ value, className }: DateTimeProps) {
+  const { settings } = useSettings();
+  const key = typeof value === 'string' ? value : undefined;
+  const display = formatDayKey(key, { locale: resolveLocale(settings.locale) });
+  return <span className={className} title={display === '—' ? undefined : key}>{display}</span>;
 }
 
 function PureDateTime({ value, variant = 'full', className }: DateTimeProps) {
@@ -79,10 +96,10 @@ function isValidTimeZone(tz: string): boolean {
  * settings + the active vehicle. Always calls `useTimezone` and
  * `useSettings` so React's hook rules are honored regardless of which
  * branch was taken on the previous render — this component is mounted
- * only when `in` / `showTz` is set, so the render path is consistent
+ * only when `in` / `showTz` / `clock` is set, so the render path is consistent
  * for the lifetime of any given DateTime instance.
  */
-function DateTimeWithTz({ value, variant = 'full', in: mode, showTz, className }: DateTimeProps) {
+function DateTimeWithTz({ value, variant = 'full', in: mode, showTz, clock, className }: DateTimeProps) {
   const { settings } = useSettings();
   const effectiveMode = (mode ?? settings.tz_display_default ?? 'vehicle') as TzMode;
   const resolvedTz = useTimezone(effectiveMode);
@@ -92,7 +109,7 @@ function DateTimeWithTz({ value, variant = 'full', in: mode, showTz, className }
   // timestamp still renders. Validity is cached, so this stays cheap per row.
   const tz = isValidTimeZone(resolvedTz) ? resolvedTz : 'UTC';
   const locale = resolveLocale(settings.locale);
-  return renderSpan({ value, variant, className, opts: { tz, locale }, showTz, tz });
+  return renderSpan({ value, variant, className, opts: { tz, locale, clock }, showTz, tz });
 }
 
 interface RenderArgs {

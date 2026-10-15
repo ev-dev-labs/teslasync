@@ -7,6 +7,7 @@ import { useVehiclePositions, useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
+import { useDataState } from '@/hooks/useDataState';
 
 export interface ClusterPoint {
   lat: number;
@@ -27,6 +28,8 @@ export function clusterPositions(
   const buckets = new Map<string, { lat: number; lon: number; count: number }>();
 
   for (const p of positions) {
+    if (!p || !Number.isFinite(p.latitude) || !Number.isFinite(p.longitude) ||
+      Math.abs(p.latitude) > 90 || Math.abs(p.longitude) > 180) continue;
     if (p.latitude === 0 && p.longitude === 0) continue;
     const key = `${(p.latitude * precision | 0)}:${(p.longitude * precision | 0)}`;
     const existing = buckets.get(key);
@@ -83,6 +86,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
+  const query = useVehiclePositions(id);
   const {
     data: positions,
     isLoading,
@@ -92,9 +96,13 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
     error,
     dataUpdatedAt,
     refetch,
-  } = useVehiclePositions(id);
+  } = query;
 
-  const safePositions = positions ?? [];
+  const safePositions = useMemo(() => Array.isArray(positions) ? positions : [], [positions]);
+  const dataState = useDataState({
+    ...query,
+    data: (error || isError) && safePositions.length === 0 ? undefined : !isLoading && !query.isPending ? query.data ?? null : query.data,
+  }, { provenance: 'historical' });
 
   // Higher precision = finer grid; use coarser grid for compact
   const isCompact = size.cols <= 1;
@@ -108,14 +116,16 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
 
   const center = useMemo(() => centroid(clusters), [clusters]);
 
-  const totalPositions = safePositions.length;
+  const totalPositions = clusters.reduce((total, cluster) => total + cluster.count, 0);
   const isEmpty = clusters.length === 0;
 
   const shellProps = {
+    title: t('widget.positionHeatmap.title', 'Position heatmap'),
     loading: isLoading,
+    dataState,
     // Forward the fetch error so a failure surfaces the shared QueryError
     // panel instead of masquerading as the "No position data" empty state.
-    error: error ? String(error) : null,
+    error: dataState.fatalError ? String(dataState.fatalError) : null,
     updatedAt: dataUpdatedAt,
     isFetching,
     isStale,
@@ -155,8 +165,7 @@ export default function PositionHeatmapWidget({ vehicleId, size }: WidgetProps) 
   // ─── Standard / Wide layout ───
   return (
     <WidgetShell
-      title={t('widget.positionHeatmap.title', 'Position Heatmap')}
-      icon={<MapIcon className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<MapIcon className="h-3.5 w-3.5 text-cyan-300" />}
       noPadding
       actions={
         isWide && totalPositions > 0 ? (

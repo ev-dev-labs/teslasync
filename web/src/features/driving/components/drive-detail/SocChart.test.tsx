@@ -71,16 +71,18 @@ vi.mock('@/components/charts', () => ({
     title,
     ariaLabel,
     height,
+    empty,
     className,
     children,
   }: {
     title?: string;
     ariaLabel?: string;
     height?: number;
+    empty?: boolean;
     className?: string;
     children?: ReactNode;
   }) => (
-    <section data-testid="chart-container" data-height={String(height ?? '')} className={className}>
+    <section data-testid="chart-container" data-height={String(height ?? '')} data-empty={String(empty)} className={className}>
       <h3>{title}</h3>
       {/* Mirror the real container: a labelled img region wrapping the body. */}
       <div role="img" aria-label={ariaLabel}>
@@ -183,6 +185,11 @@ if (!window.matchMedia) {
 
 import { SocChart } from './SocChart';
 
+vi.mock('@/components/layout', async () => {
+  const charts = await import('@/components/charts');
+  return { ChartCard: charts.ChartContainer };
+});
+
 // Minimal per-sample fixture — SocChart only reads `time` (X) and `battery`
 // (the SOC series); the remaining ChartDataPoint fields are irrelevant here.
 function point(overrides: Partial<ChartDataPoint> = {}): ChartDataPoint {
@@ -225,16 +232,24 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('SocChart — ready state', () => {
+  it('requires two SOC readings for the shared ready state, including real zeroes', () => {
+    const { rerender } = render(<SocChart chartData={[point({ battery: null }), point({ battery: 0 })]} />);
+    expect(screen.getByTestId('chart-container')).toHaveAttribute('data-empty', 'true');
+    rerender(<SocChart chartData={[point({ battery: 0 }), point({ battery: 0 })]} />);
+    expect(screen.getByTestId('chart-container')).toHaveAttribute('data-empty', 'false');
+    expect(screen.queryByText('No telemetry data available')).not.toBeInTheDocument();
+  });
+
   it('renders the titled, labelled chart figure at the fixed 220px drive-detail height', () => {
     render(<SocChart chartData={twoSamples()} />);
 
-    expect(screen.getByRole('heading', { name: 'SOC % Over Time' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'SOC % over time' })).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'State of charge percent over time area chart' }),
     ).toBeInTheDocument();
     const container = screen.getByTestId('chart-container');
     expect(container).toHaveAttribute('data-height', '220');
-    expect(container).toHaveClass('h-full');
+    expect(container.parentElement).toHaveClass('h-full');
   });
 
   it('feeds every sample to the area chart and wires the SOC series to the battery field', () => {
@@ -252,7 +267,7 @@ describe('SocChart — ready state', () => {
 
     const area = screen.getByTestId('area');
     expect(area).toHaveAttribute('data-key', 'battery');
-    expect(area).toHaveAttribute('data-stroke', '#10b981');
+    expect(area).toHaveAttribute('data-stroke', chartTokens.series[1]);
     expect(area).toHaveAttribute('data-fill', 'url(#socGrad)');
     expect(area).toHaveAttribute('data-name', 'SOC %');
   });
@@ -267,7 +282,7 @@ describe('SocChart — ready state', () => {
 
     const gradient = screen.getByTestId('area-gradient');
     expect(gradient).toHaveAttribute('data-id', 'socGrad');
-    expect(gradient).toHaveAttribute('data-color', '#10b981');
+    expect(gradient).toHaveAttribute('data-color', chartTokens.series[1]);
 
     expect(screen.getByTestId('tooltip')).toBeInTheDocument();
     expect(screen.getByTestId('cartesian-grid')).toBeInTheDocument();

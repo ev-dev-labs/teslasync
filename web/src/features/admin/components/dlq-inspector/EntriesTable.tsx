@@ -23,8 +23,10 @@ import {
   type Column,
 } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { DLQEntrySummary } from '@/types/admin-diagnostics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 interface EntriesTableProps {
   rows: DLQEntrySummary[];
@@ -35,11 +37,12 @@ interface EntriesTableProps {
 function formatBytes(n: number): string {
   if (!Number.isFinite(n) || n < 0) return '—';
   if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  if (n < 1024 * 1024) return `${fmtNumber((n / 1024))} KB`;
+  return `${fmtNumber((n / (1024 * 1024)))} MB`;
 }
 
 export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
+  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { sortKey, sortDir, onSort } = useSortToggle('arrived_at', 'desc');
 
@@ -79,6 +82,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
     () => [
       {
         key: 'arrived_at',
+        filterValue: (row) => row.arrived_at ?? null,
         header: t('admin.dlq.cols.arrived', 'Arrived'),
         sortable: true,
         visibleOnMobile: true,
@@ -86,6 +90,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'parsed_reason',
+        filterValue: (row) => row.parsed_reason || null,
         header: t('admin.dlq.cols.reason', 'Reason'),
         sortable: true,
         visibleOnMobile: true,
@@ -93,6 +98,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'parsed_vin',
+        filterValue: (row) => row.parsed_vin ?? null,
         header: t('admin.dlq.cols.vin', 'VIN'),
         sortable: true,
         render: (row) => (
@@ -103,6 +109,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'parsed_source_topic',
+        filterValue: (row) => row.parsed_source_topic ?? null,
         header: t('admin.dlq.cols.topic', 'Source topic'),
         render: (row) => (
           <Text mono size="xs" color="muted">
@@ -112,6 +119,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'parsed_redeliveries',
+        filterValue: (row) => row.parsed_redeliveries ?? null,
         header: t('admin.dlq.cols.redeliveries', 'Redel.'),
         align: 'right',
         render: (row) =>
@@ -121,6 +129,8 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'raw_payload_size',
+        filterValue: (row) => row.raw_payload_size ?? null,
+        filterValueLabel: (_value, row) => formatBytes(row.raw_payload_size),
         header: t('admin.dlq.cols.size', 'Payload'),
         align: 'right',
         sortable: true,
@@ -128,6 +138,8 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       },
       {
         key: 'replayable',
+        filterValue: (row) => row.replayable ?? null,
+        filterValueLabel: (_value, row) => row.replayable == null ? '—' : row.replayable ? t('common.yes', 'Yes') : t('common.no', 'No'),
         header: t('admin.dlq.cols.replayable', 'Replayable'),
         render: (row) =>
           row.replayable ? (
@@ -156,7 +168,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
         ),
       },
     ],
-    [t, onInspect],
+    [t, onInspect, fmtInt, displayPrecision, displayLocale],
   );
 
   return (
@@ -165,6 +177,7 @@ export function EntriesTable({ rows, loading, onInspect }: EntriesTableProps) {
       name="dlq-entries"
       columns={columns}
       data={sorted}
+      enableValueFilters
       keyExtractor={(row) => row.id}
       sortKey={sortKey}
       sortDir={sortDir}

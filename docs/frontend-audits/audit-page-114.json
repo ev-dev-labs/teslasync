@@ -1,0 +1,382 @@
+{
+  "item": "audit-page-114",
+  "page": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+  "routes": ["/driving-rhythm"],
+  "purpose": "Explain historical departure patterns for the selected vehicle and date window, with timestamp eligibility, measured-distance coverage and sample floors.",
+  "primaryGoal": "Understand when driving happens, compare weekday/weekend frequency, and evaluate departure consistency without mistaking descriptive evidence for prediction.",
+  "dataSources": [
+    {
+      "name": "useDriveCalendarHistory",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 158,
+      "endpoint": "GET /api/v1/drives",
+      "requestPath": "/drives?vehicle_id=<id>&start=<date>&end=<date>&limit=1000&offset=<offset>",
+      "routeEvidence": "internal\\api\\router.go:3463-3464 registers /drives and GET / through driveHandler.ListByVehicle.",
+      "behavior": "Query key includes vehicle/start/end. Enabled only with all three. Fetches consecutive 1000-row pages, forwards AbortSignal, rejects non-array/oversize pages and invalid or duplicate IDs, returns only when a short page completes. Uses MODERATE stale time.",
+      "evidence": ["web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx:43-54", "web\\src\\api\\hooks\\useDriving.ts:155-191"],
+      "unknowns": "Server ordering, stable snapshot pagination, actual parameter interpretation and timezone-bound filtering were not inspected or exercised. Methodology's UTC date-only description is UI source, not backend proof."
+    },
+    {
+      "name": "Workspace vehicle and range",
+      "owner": "web\\src\\hooks\\useRangeState.ts",
+      "file": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+      "line": 34,
+      "endpoint": null,
+      "behavior": "Selected vehicle comes from useSelectedVehicle; no local picker. Page uses start/end/timezone with all-time/page-preference options. Header-owned route override is important: useRangeState ignores those page preferences for this route.",
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:43,165-166", "web\\src\\hooks\\useRangeState.ts:312-318,656-683"],
+      "unknowns": "useSelectedVehicle implementation and mounted shell behavior were not inspected."
+    },
+    {
+      "name": "buildDrivingRhythm",
+      "owner": "web\\src\\features\\driving\\lib\\drivingRhythm.ts",
+      "file": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+      "line": 46,
+      "endpoint": null,
+      "behavior": "Memoized pure derivation using a page-mount frozen clock and one IANA timezone. Excludes malformed/future starts, preserves exclusions, groups weekday/hour/day/month, measures finite nonnegative SI distances separately, computes entropy scores, circular medians/deviations and ranked slots with sample floors.",
+      "evidence": ["web\\src\\features\\driving\\lib\\drivingRhythm.ts:12-15,399-755", "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx:41-54"],
+      "unknowns": "No algorithm execution or fixture validation in this audit."
+    }
+  ],
+  "components": [
+    {
+      "name": "Page orchestration",
+      "kind": "layout",
+      "owners": ["web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx", "web\\src\\components\\layout"],
+      "existing": ["PageLayout", "Grid", "FadeIn", "StaleRefreshWarning"],
+      "props": ["PageLayout title/subtitle/query", "Grid cols={default:1,xl:5}, gap=4", "FadeIn delays 0 through 0.25", "StaleRefreshWarning state/label"],
+      "evidence": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx:73-135",
+      "inspectionLimit": "Category implementations other than the directly inspected chart adapter were not reviewed."
+    },
+    {
+      "name": "Summary",
+      "kind": "domain composite",
+      "owners": ["web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingRhythmBrief.tsx", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx"],
+      "existing": ["OperationalBrief", "useOperationalMetrics", "EmptyState", "QueryError"],
+      "props": ["summary", "isLoading", "error", "onRetry", "scope", "retained"],
+      "evidence": "DrivingRhythmBrief.tsx:11-53; DrivingSummaryBrief.tsx:25-50",
+      "preserve": "Four metrics, inclusion coverage, favorite slot, weekday share/weekend count, predictability floor, scope/provenance, retry and browse-drives empty action."
+    },
+    {
+      "name": "Domain sections",
+      "kind": "domain presentation",
+      "owners": ["web\\src\\features\\driving\\components\\driving-rhythm"],
+      "existing": ["WeeklyPunchcard", "HourlyDistribution", "WeekdayWeekendComparison", "MonthlyRhythmTrend", "DepartureConsistency", "StrongestSlots", "DrivingRhythmMethodology", "RhythmCoverageSummary", "DrivingRhythmSectionBody", "useRhythmDayLabel"],
+      "props": ["summary", "state={isLoading,error,onRetry}", "optional className", "methodology start/end"],
+      "evidence": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx:89-133",
+      "primitives": ["GlassPanel", "PanelTitle", "Text", "Badge", "MetricValue", "MetricLabel", "HelpTooltip", "Skeleton", "EmptyState", "QueryError"]
+    },
+    {
+      "name": "Chart pipeline",
+      "kind": "shared chart",
+      "owners": ["web\\src\\components\\charts\\ChartContainer.tsx", "web\\src\\components\\charts\\EmbeddedChart.tsx"],
+      "existing": ["ChartContainer", "EmbeddedChart", "ChartLegend", "ChartTooltip", "CHART_COLORS", "axisTick", "chartGrid"],
+      "props": ["title", "ariaLabel", "loading", "height", "chartKey", "exportable", "exportFilename", "exportData", "data", "dataColumns", "hiddenSeries"],
+      "evidence": "HourlyDistribution.tsx:61-127; MonthlyRhythmTrend.tsx:72-158; EmbeddedChart.tsx:18-41",
+      "inspectionLimit": "ChartContainer inspected through targeted matches only; export/fullscreen/accessibility internals and palette implementation not fully reviewed."
+    },
+    {
+      "name": "Nested metric pipeline",
+      "kind": "domain adapter",
+      "owners": ["web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx"],
+      "existing": ["OperationalBrief", "useOperationalMetrics"],
+      "props": ["metrics", "title", "description", "period", "preferences", "loading", "retained", "unavailable"],
+      "evidence": "NestedDrivingBrief.tsx:13-59",
+      "preserve": "Specialist duration, circular-clock and distance formatters, raw operands, calendar denominator explanations and missing-value semantics."
+    },
+    {
+      "name": "No selected vehicle",
+      "kind": "shared domain fallback",
+      "owners": ["web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx"],
+      "existing": ["PageContainer", "GlassPanel", "EmptyState", "EmptyStateGuidanceDetails"],
+      "props": ["pageTitle"],
+      "evidence": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx:57-63; NoVehicleSelected.tsx:42-79",
+      "preserve": "Setup CTA uses governed vehicles.list action, falling back to /onboarding; keep explanatory guidance."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistributionPlot.tsx",
+      "line": 66,
+      "rule": "MDC-002/MDC-034 one presentation/controller owner",
+      "detail": "Both hourly and monthly sections mount a panel ChartContainer plus an EmbeddedChart adapter with a different chartKey and reduced data columns. These reuse the canonical renderer, so they are not competing libraries, but two hidden-series controllers and overlapping accessible-data contracts deserve reconciliation.",
+      "fix": "Keep the existing outer export/data-table owner and reuse one legend state; retain existing persisted key semantics during any migration rather than silently resetting them.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["HourlyDistribution.tsx:75-111", "HourlyDistributionPlot.tsx:66-76", "MonthlyRhythmTrend.tsx:85-129", "MonthlyRhythmPlot.tsx:65-75", "EmbeddedChart.tsx:30-41"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\RhythmCoverageSummary.tsx",
+      "line": 38,
+      "rule": "Mission 0 hierarchy and duplication",
+      "detail": "The same complete-history coverage statement appears in the nested brief description and again in an amber-tinted callout.",
+      "fix": "Give the existing methodology/coverage owner one canonical explanation location, preserving the exact claim and all row counters while reducing repeated chrome.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["RhythmCoverageSummary.tsx:38,77-88"]
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "Page stacks both five-column splits until xl, then assigns 3/2 spans (DrivingRhythmPage.tsx:28,94-104,113-123).",
+      "Punchcard has local overflow-x-auto around a 560px minimum grid (WeeklyPunchcard.tsx:92-101); full matrix is retained.",
+      "Comparison reflows into two cards at sm (WeekdayWeekendComparison.tsx:89).",
+      "Consistency uses 2/4/7 columns at default/sm/xl (DepartureConsistency.tsx:73).",
+      "Methodology becomes a 2fr plus minimum-20rem column grid at lg (DrivingRhythmMethodology.tsx:131)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\DepartureConsistency.tsx",
+        "line": 73,
+        "rule": "MDC-043 allocated-container responsiveness",
+        "detail": "Seven cards are forced into the xl consistency section, which itself receives only three fifths of the page. Each includes a compact OperationalBrief with rich description/scope and two metrics. Container-width compression is a source risk, not observed clipping.",
+        "fix": "Use existing Grid/container-responsive strategy and wrap metric/metadata content without removing any weekday, sample count or explanation; verify long translations and 200% text.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\StrongestSlots.tsx",
+        "line": 79,
+        "rule": "MDC-043 mobile content preservation",
+        "detail": "Auto/minmax/auto row contains rank, contextual text and a nontrivial right-hand sample-floor label. Narrow containers and long translations can squeeze its center column.",
+        "fix": "Review at 320px and in the xl two-fifths allocation; reflow the existing count/floor block below contextual text if needed, preserving all content.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "UNVERIFIED at 320/375/390/430/768/1024/1280/1440/1920/2560; no browser or screenshot run."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Localized section names, heading wrappers and hidden decorative icons.",
+      "Chart ariaLabel/dataColumns are supplied; query errors expose retry.",
+      "Section loading gate has role=status and a localized name.",
+      "Punchcard strongest-slot summary and per-cell native title strings exist."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx",
+        "line": 94,
+        "rule": "MDC-040 chart alternatives and non-hover access",
+        "detail": "The 168-cell matrix is inside role=img, whose accessible name describes only the strongest slot. Counts are carried by native title on nonfocusable divs; no full table/text alternative or keyboard/touch cell interaction is present in this component.",
+        "fix": "Reuse the existing chart/data-table pipeline for a complete weekday/hour/count alternative, or add equivalent semantic text using current primitives; retain all 168 counts and strongest-slot summary. Do not create a second tooltip/focus system.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["WeeklyPunchcard.tsx:92-139"]
+      }
+    ],
+    "acceptance": "Keyboard, touch, screen reader, focus visibility, reduced motion, effective contrast, forced colors and RTL are UNVERIFIED. FadeIn is shared; its implementation was not inspected."
+  },
+  "states": {
+    "initialLoading": "Page derives isLoading only from sourceState.status === initial; each shell stays mounted. Shared section body renders a named status/skeleton; charts receive loading; brief suppresses unavailable raw metrics.",
+    "empty": "Each domain section has an EmptyState. Summary and punchcard link to /drives; hourly/monthly/comparison/consistency/slots are read-only empty states. Coverage distinguishes no returned rows from all rows excluded.",
+    "fatalError": "Page passes fatalError rather than query.error to section gates. Retry calls drivesQuery.refetch. Shared summary adapter also renders QueryError.",
+    "retainedStale": "StaleRefreshWarning remains beside all sections. Top brief receives stale/refresh-error retained flag. Existing summary computation uses retained drives, preserving charts on refresh failure.",
+    "offline": "No local navigator/offline engine; uses existing query/data-trust pipeline. Actual paused/offline mounted rendering is unverified.",
+    "unknownPartial": "Distance display uses measuredDistanceDrives and null instead of fabricated distance; predictability/consistency floors produce null. Invalid/future starts and distance coverage remain explicit.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+        "line": 65,
+        "rule": "MDC-026 source trust propagation",
+        "detail": "Section state contains only isLoading/error/onRetry. NestedDrivingBrief supports retained but its rhythm consumers omit that prop. They therefore say Returned evidence while the top brief and page warning may correctly say Retained evidence. Methodology also shows Complete selected history whenever not loading/fatal, including refresh failure.",
+        "fix": "Extend the existing domain state with retained/source trust and pass it to existing nested briefs and coverage badge. Keep useful retained data and clarify freshness separately from pagination completeness.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\driving\\components\\driving-rhythm\\types.ts:1-5", "NestedDrivingBrief.tsx:19,26,53-59", "DrivingRhythmMethodology.tsx:113-117", "DrivingRhythmPage.tsx:82-86"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx",
+      "line": 15,
+      "rule": "MDC-010/MDC-034 restrained semantic color",
+      "detail": "Five hardcoded cyan heatmap levels rise to 85% opacity. This is a real data encoding, not permission to delete color meaning; its saturated fixed hue bypasses current chart/theme palette ownership.",
+      "fix": "Reuse existing palette/token ownership for a restrained sequential scale while preserving five levels, zero background, global normalization and native/current accessible labels. Validate composed contrast across themes.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmMethodology.tsx",
+      "line": 139,
+      "rule": "MDC-010/MDC-016 decorative color restraint",
+      "detail": "Methodology repeats cyan decorative icons; section headers additionally use cyan, indigo, emerald and amber. These fixed hues are presentation decoration rather than measured source semantics.",
+      "fix": "Use existing muted icon/text tokens for structural decoration; retain meaningful supported/floor/rank Badge semantics and user-selected chart colors.",
+      "owner": "page",
+      "confidence": "medium",
+      "relatedEvidence": ["WeeklyPunchcard.tsx:58", "WeekdayWeekendComparison.tsx:63,150", "DepartureConsistency.tsx:51", "StrongestSlots.tsx:52", "DrivingRhythmMethodology.tsx:110,139"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\RhythmCoverageSummary.tsx",
+      "line": 77,
+      "rule": "MDC-010 semantic warning color",
+      "detail": "Amber border/background frames an unconditional successful complete-pagination statement, suggesting a warning without a source warning condition.",
+      "fix": "Use existing neutral surface/border presentation for informational coverage, reserving warning tone for actual retained/error/partial evidence.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+      "line": 43,
+      "rule": "MDC-032/MDC-045 precise workspace bounds",
+      "detail": "Header owns /driving-rhythm, but page sends date-only start/end rather than useRangeState startInstant/endInstantExclusive. The hook accepts only calendar strings. Rolling presets and timezone-specific midnight boundaries cannot be represented by this call contract.",
+      "fix": "Extend the existing calendar-history hook with typed precise bounds using the backend's verified supported parameters, preserving calendar start/end for normalization and UI labels. Inspect backend semantics before changing requests; no client-only current-page filtering.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\lib\\workspaceScope.ts:43", "web\\src\\hooks\\useRangeState.ts:117-124,656-683", "web\\src\\api\\hooks\\useDriving.ts:158-175", "DrivingRhythmMethodology.tsx:54-57"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingRhythmBrief.tsx",
+      "line": 8,
+      "rule": "MDC-002 concrete presentation contracts",
+      "detail": "Current mounted brief derives its public prop contract from ComponentProps of the alternate DrivingRhythmKpis renderer, despite mounting DrivingSummaryBrief instead.",
+      "fix": "Reuse a concrete domain summary/state interface rather than coupling the active brief API to an alternate presentation implementation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Source-confirmed precise-range contract gap and incomplete accessible punchcard evidence precede decorative cleanup. Preserve all existing analyses and exports.",
+    "order": ["Precise full-history workspace filtering with verified server semantics", "Complete accessible punchcard data", "Retained trust propagation", "Allocated-container/long-label QA", "Reconcile chart state owners and subdue fixed decorative colors"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Precise-bound full-history query contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useDriving.ts",
+      "owner": "integration",
+      "props": ["Existing vehicleId/start/end calendar contract remains available to existing callers", "Typed startInstant/endInstantExclusive bounds for header-owned precise scopes", "Include effective bounds in existing calendar query key"],
+      "variants": ["calendar scope", "rolling scope"],
+      "states": ["initial", "success empty/nonempty", "retained refresh failure", "abort", "pagination validation failure"],
+      "usedBy": ["web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx:/driving-rhythm"],
+      "dependsOn": ["Verify driveHandler.ListByVehicle lower/exclusive-upper bound parameters and server filtering semantics", "Reuse useRangeState precise timezone/rolling instants", "Preserve 1000-row pagination, duplicate-ID rejection, AbortSignal, enabled and stale policy"],
+      "evidence": "DrivingRhythmPage.tsx:36-43; useDriving.ts:158-191; useRangeState.ts:656-683; internal\\api\\router.go:3463-3464",
+      "confidence": "high",
+      "scopeLimit": "No backend mutation or capability assertion in this audit. Existing hook extension, not a competing query implementation. Other consumers were not inventoried."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmKpis.tsx",
+      "line": 26,
+      "rule": "MDC-002 one summary owner",
+      "detail": "Alternate four-MetricCard summary remains exported from the rhythm barrel; assigned page mounts DrivingRhythmBrief. Its type is still used by the active brief. No proof that it is dead elsewhere.",
+      "fix": "Keep OperationalBrief as this page's active summary, decouple prop typing, and let owner resolve alternate adoption only with bounded caller evidence.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\driving-rhythm\\MonthlyRhythmPlot.tsx",
+      "line": 66,
+      "rule": "MDC-034 single legend state",
+      "detail": "monthly-rhythm inner key and driving-rhythm-monthly outer key, like hourly-distribution and driving-rhythm-hourly, create independently persisted hidden-state scopes that are ORed. Both reuse shared ChartContainer through EmbeddedChart; not a new engine.",
+      "fix": "Reconcile within existing canonical frame contracts; preserve series persistence, full outer data columns and exports.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "5895DCEE3568C6AD2582EF3923ADBD7375AC4AC9DA635F45FBF68359AD0E2F3D",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 137,
+    "sourceEdits": false,
+    "sectionCount": 8,
+    "sections": [
+      {"name": "Driving rhythm summary", "count": 1, "evidence": "DrivingRhythmPage.tsx:83-86", "contents": ["Drive count and returned/included coverage", "Favorite weekday-hour slot and count", "Weekday share and weekend count", "Predictability and five-drive sample floor"]},
+      {"name": "Weekly punchcard", "count": 1, "evidence": "DrivingRhythmPage.tsx:90", "contents": ["168 Monday-first weekday/hour cells", "Five-level intensity normalized to max count", "Timezone", "Help explanation", "Strongest-slot accessible summary", "Cell counts"]},
+      {"name": "Hourly departure distribution", "count": 1, "evidence": "DrivingRhythmPage.tsx:95-99", "contents": ["All 24 hours", "Drive starts bars", "Measured distance line", "Share data column", "Dual axes", "Unit-aware display", "Null distance gaps"]},
+      {"name": "Weekday versus weekend", "count": 1, "evidence": "DrivingRhythmPage.tsx:100-104", "contents": ["Both cohorts", "Valid count", "Share", "Per-selected-calendar-day rate", "Active days", "Average measured distance", "Calendar denominator", "Total measured distance", "Interpretation"]},
+      {"name": "Monthly rhythm and predictability", "count": 1, "evidence": "DrivingRhythmPage.tsx:109", "contents": ["Chronological local months", "Counts", "Nullable score", "Active days", "Active slots", "Measured distance", "Locale labels", "Score floor"]},
+      {"name": "Departure consistency", "count": 1, "evidence": "DrivingRhythmPage.tsx:114-118", "contents": ["All seven Monday-first days", "Sample badge", "Circular median local clock", "Median deviation in SI seconds displayed via formatter", "Three-drive support floor"]},
+      {"name": "Strongest time slots", "count": 1, "evidence": "DrivingRhythmPage.tsx:119-123", "contents": ["Top six occupied slots", "Rank", "Monday-first/hour tie breaks", "Share", "Measured distance and measurement coverage", "Count", "Three-drive support floor"]},
+      {"name": "Coverage and methodology", "count": 1, "evidence": "DrivingRhythmPage.tsx:128-133", "contents": ["Selected bounds", "Complete-history badge", "Returned/included/invalid/future counters", "Observed span", "Measured-distance coverage", "Empty versus all-excluded distinction", "Six methodology explanations: timezone, timestamp eligibility, entropy, circular consistency, SI distance, descriptive-not-predictive scope"]}
+    ],
+    "shellCounts": {
+      "pageLayout": 1,
+      "pageFadeIn": 6,
+      "pageGrid": 2,
+      "mountedDomainGlassPanel": 5,
+      "mountedOuterChartContainer": 2,
+      "mountedInnerEmbeddedChart": 2,
+      "alternateKpisGlassPanelNotMountedByPage": 1,
+      "note": "Source JSX counts, not runtime mounts. Coverage summary is nested in methodology, not a ninth top-level section. No-vehicle branch has an additional fallback panel."
+    },
+    "actions": [
+      {"name": "Retry history", "evidence": "DrivingRhythmPage.tsx:68-70; DrivingRhythmSectionBody.tsx:27; DrivingSummaryBrief.tsx:49", "behavior": "Refetch same full-history query; keep recoverable source state."},
+      {"name": "Browse drives", "evidence": "DrivingRhythmBrief.tsx:50-52; WeeklyPunchcard.tsx:86-89", "destination": "/drives"},
+      {"name": "Setup vehicle", "evidence": "NoVehicleSelected.tsx:66-71", "destination": "Existing governed guidance CTA or /onboarding"},
+      {"name": "Punchcard help and cell details", "evidence": "WeeklyPunchcard.tsx:62-71,122-130", "behavior": "Keep existing help preference owner and full count details; improve non-hover access."},
+      {"name": "Hourly/monthly chart export", "evidence": "HourlyDistribution.tsx:75-79; MonthlyRhythmTrend.tsx:85-89", "behavior": "Preserve export filenames, raw displayed rows, full data columns and shared image/CSV capability contract; actual menus unverified."},
+      {"name": "Chart series visibility and accessible data controls", "evidence": "HourlyDistributionPlot.tsx:73-76,134-155; MonthlyRhythmPlot.tsx:72-75,140-161; ChartContainer.tsx:203-207", "behavior": "Retain drive/distance and drive/score series, persistent identities and data alternatives; reconcile duplicate controllers without dropping state."},
+      {"name": "Workspace vehicle/range selection", "evidence": "DrivingRhythmPage.tsx:34-40; workspaceScope.ts:43,165-166", "behavior": "Continue consuming shared header selection; do not add a page selector."}
+    ],
+    "dataBehavior": [
+      "Raw Drive distance remains SI meters; display preference conversion occurs in presentation, never wire/cache mutation.",
+      "Page freezes analysisNowMs at mount, excluding future starts relative to that clock; changing this is a business-behavior change.",
+      "One resolved IANA timezone groups all departures; invalid zone fallback is explicitly explained.",
+      "Do not discard malformed/future rows silently: retain observed/excluded counters and coverage.",
+      "Missing distance is not measured zero; measuredDistanceDrives controls distance availability.",
+      "Predictability floor 5, consistency floor 3, qualified-slot floor 3 and top-slot limit 6 remain.",
+      "Preserve all-history pagination, ID integrity validation, query key/enablement/cancellation/stale policy and retained refresh data.",
+      "Preserve date-only labels/denominator meaning while resolving precise API-bound mismatch; do not silently reinterpret normalized rates.",
+      "Retain locale/number/unit preferences, translated labels, existing chart keys/test IDs, all section shells and nonempty methodology in zero-drive success."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 source-only audit",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "routeMount": "Assigned route accepted as scope; router/UI runtime not exercised.",
+    "backend": "Only matching /drives route registration inspected; no handler/query semantics or live API response proof.",
+    "checks": [
+      {"command": "Get-FileHash 'web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx' -Algorithm SHA256; (Get-Content 'web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx').Count", "exitCode": 0, "output": "5895DCEE3568C6AD2582EF3923ADBD7375AC4AC9DA635F45FBF68359AD0E2F3D; 137"},
+      {"command": "Page-only Select-String counts for style=\\{\\{; <(button|input|textarea|select|table)\\b; direct recharts/react-leaflet/framer-motion imports; old relative API imports; text-white|neon|glow|shadow-", "exitCode": 0, "output": "style=\\{\\{ : 0; raw controls : 0; direct libraries : 0; old API : 0; text-white|neon|glow|shadow- : 0", "limit": "Literal source patterns only, not visual acceptance or comprehensive compliance."},
+      {"command": "Earlier PowerShell source-count expression", "exitCode": 1, "output": "ParserError: Unexpected token ']' in expression or statement.", "resolution": "Corrected scoped Select-String command succeeded; failure did not write source."},
+      {"command": "Scoped rg across rhythm presentation dependencies", "exitCode": 0, "output": "Hardcoded cyan heatmap, colored icons and amber coverage callout found; no matching neon/glow/pure-white literals in the inspected rhythm presentation files.", "limit": "No palette/global CSS/theme resolution inspected; CHART_COLORS remains shared and user-owned."}
+    ],
+    "notRun": ["npx tsc --noEmit", "audit-violations/audit.sh (includes full TypeScript)", "full lint", "build", "tests", "Git", "browser", "screenshots", "API mutations", "full hook-file verifier"],
+    "reason": "Assignment explicitly limits this worker to source inspection and two owned documentation/status outputs. Full gates and runtime acceptance are parent-owned.",
+    "sourceScope": "Only assigned page, its directly used rhythm/brief/onboarding dependencies and narrow shared query/range/chart/route ownership excerpts. No other page audited.",
+    "sharedOwnersNotFullyRead": ["PageLayout", "Grid", "FadeIn", "OperationalBrief", "useOperationalMetrics", "useUnits", "useNumberFormatting", "StaleRefreshWarning", "useSelectedVehicle", "request", "DataTable", "theme/palette"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\DrivingRhythmPage.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\index.ts",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\types.ts",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\useRhythmDayLabel.ts",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\WeeklyPunchcard.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistribution.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\HourlyDistributionPlot.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\WeekdayWeekendComparison.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\MonthlyRhythmTrend.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\MonthlyRhythmPlot.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\DepartureConsistency.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\StrongestSlots.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmMethodology.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\RhythmCoverageSummary.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\driving-rhythm\\DrivingRhythmKpis.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingRhythmBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\features\\driving\\lib\\drivingRhythm.ts",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "internal\\api\\router.go"
+  ]
+}

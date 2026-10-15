@@ -1,0 +1,222 @@
+{
+  "drives": {
+    "analysis": "Trends and highlights",
+    "overTime": {
+      "title": "Drives over time",
+      "aria": "Drives over time chart with metric switcher",
+      "empty": "No data for this metric in the selected range"
+    },
+    "highlights": "Highlights",
+    "noHighlights": "No highlights in this range",
+    "exportScope": "Exports include every drive in the selected vehicle and date range, without list filters or selection.",
+    "score": "score",
+    "date": "Drive",
+    "speed": "Speed",
+    "grid": {
+      "minFilter": "Minimum {{label}} ({{unit}})",
+      "min": "Min",
+      "minutes": "minutes",
+      "search": "Search drive or route",
+      "searchPlaceholder": "Search route or grade",
+      "gradeFilter": "Filter by efficiency grade",
+      "allGrades": "All grades",
+      "endBattery": "End battery",
+      "dateTime": "Date / time",
+      "start": "Start",
+      "destination": "Destination",
+      "locationFilter": "Filter {{location}}",
+      "contains": "Contains",
+      "avgSpeed": "Avg speed",
+      "maxSpeed": "Max speed",
+      "efficiency": "Efficiency",
+      "grade": "Grade",
+      "startBattery": "Battery start (%)",
+      "endBatteryColumn": "Battery end (%)",
+      "batteryUsed": "Battery used (pp)",
+      "percentagePoints": "percentage points",
+      "batteryScale": "Battery level out of 100%",
+      "batteryUsedScale": "Battery used in percentage points; negative values indicate a gain",
+      "avgPower": "Avg power",
+      "outsideTemp": "Outside temp",
+      "insideTemp": "Cabin temp",
+      "regen": "Regen",
+      "energy": "Energy",
+      "fsd": "FSD",
+      "noFlags": "No flags",
+      "usedValue": "{{value}} pp",
+      "score": "Drive score",
+      "points": "points",
+      "scoreScale": "Drive score out of 100",
+      "efficiencyScale": "Segments represent the efficiency grade thresholds in Wh/km",
+      "bandGood": "Good range",
+      "bandInfo": "Typical range",
+      "bandWarning": "Caution range",
+      "bandCritical": "Outside preferred range",
+      "estimatedCost": "Est. cost",
+      "status": "Status",
+      "preview": "Preview",
+      "empty": "No drives match these filters"
+    },
+    "efficiencyGrade": "Efficiency grade",
+    "efficiencyGradeAria": "Efficiency grade {{grade}}",
+    "highEnergyUse": "High energy use",
+    "noTelemetry": "No telemetry",
+    "inProgress": "In progress",
+    "highSpeed": "High speed",
+    "avg": "Avg",
+    "max": "Max",
+    "title": "Drive history",
+    "subtitle": "Measured energy intensity, route evidence, and comparable drive history",
+    "duration": "Duration",
+    "energyUsed": "Energy used",
+    "batteryChange": "Battery change",
+    "unknownStart": "Unknown start",
+    "unknownEnd": "Unknown destination",
+    "quickView": "Quick view drive",
+    "preview": {
+      "eyebrow": "Drive preview",
+      "title": "Drive details",
+      "completed": "Completed",
+      "openDetails": "Open drive details"
+    },
+    "searchPlaceholder": "Search drives — try \"grade:D\", \"Office\", \"29.1\"",
+    "aiSearch": {
+      "title": "Find a drive in natural language",
+      "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
+      "badge": "Helix",
+      "searchButton": "Search with Helix",
+      "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\"",
+      "inputLabel": "Describe the drive to find"
+    },
+    "noPriorData": "No drives in prior period: {{start}} – {{end}}",
+    "priorPeriod": "prior period: {{start}} – {{end}}",
+    "totalDrives": "Total drives",
+    "total": "Total",
+    "best": "Best",
+    "topSpeed": "Top speed",
+    "noStats": "No driving statistics available yet",
+    "totalDriveTime": "Total drive time",
+    "avgTripDistance": "Avg trip distance",
+    "longestDrive": "Longest drive",
+    "avgDuration": "Avg duration",
+    "recentDrives": "Recent drives",
+    "driveEvidence": "Drive evidence",
+    "distance": "Distance",
+    "distanceDistribution": "Trip distance distribution",
+    "drives": "Drives",
+    "speedVsEfficiency": "Speed vs efficiency",
+    "lower": "Lower",
+    "better": "better",
+    "avgSpeed": "Avg speed",
+    "efficiency": "Energy intensity",
+    "avgGrade": "Efficiency grade",
+    "energyAndCost": "Measured energy / cost",
+    "compareSelected": "Compare selected",
+    "openCompare": "Compare drives",
+    "partialEnergy": {
+      "title": "Efficiency evidence is partial",
+      "message": "{{measured}} of {{total}} drives include measured energy and at least 1 km of distance. Activity, route, and timing evidence remain complete."
+    },
+    "decision": {
+      "noBaseline": "No baseline",
+      "stable": "Stable",
+      "improved": "{{value}}% lower",
+      "regressed": "{{value}}% higher",
+      "movement": "Efficiency movement",
+      "exceptions": "Efficiency exceptions",
+      "routeCoverage": "Route context"
+    },
+    "metric": {
+      "drives": "Drives",
+      "distance": "Distance",
+      "grade": "Efficiency grade",
+      "efficiency": "Energy intensity",
+      "cost": "Cost"
+    },
+    "allDrives": "All drives",
+    "truncated": "Showing the {{limit}} most recent drives in this range — the range holds more than one request can return. Narrow the dates, or use the CSV/JSON export for the full set.",
+    "sortRecent": "Recent",
+    "sortDistance": "Distance",
+    "sortEfficiency": "Efficiency",
+    "emptyTitle": "No drives recorded yet",
+    "emptyMessage": "Drive data will appear here once your vehicle records trips.",
+    "selectDrive": "Select drive on {{date}}",
+    "filterLabel": {
+      "search": "Search",
+      "from": "From",
+      "to": "To",
+      "collection": "View",
+      "fsd": "FSD evidence"
+    },
+    "col": {
+      "date": "Date",
+      "range": "Distance range",
+      "drives": "Drives"
+    },
+    "empty": {
+      "cta": "Reset filters"
+    },
+    "sourceError": "Drive history could not be loaded",
+    "sourceUnavailable": "Drive history is unavailable",
+    "fsdMissing": {
+      "title": "Per-drive FSD evidence is unavailable",
+      "message": "This response has no per-drive FSD attribution. Drive history remains available; FSD filters and sorting stay disabled."
+    },
+    "brief": {
+      "overviewScope": "Aggregated returned drives in the selected window; comparison uses the independent prior window. These are not server-wide totals.",
+      "measuredEnergyScope": "{{measured}} of {{total}} returned drives supply energy; cost uses the configured rate, not invoices."
+    },
+    "driveTime": "Drive time",
+    "overview": "Overview",
+    "noStatsRange": "No drives in this range",
+    "fsdAmbiguous": "ambiguous",
+    "emptyForCollection": {
+      "msg": "Try switching to a different collection or clearing your filters.",
+      "title": "No drives in this view"
+    },
+    "sortFsd": "FSD share",
+    "results": "results",
+    "viewAnomalies": "View anomalies",
+    "anomalyCount": "{{count}} {{noun}} in this range",
+    "anomaly_one": "anomaly",
+    "anomaly_other": "anomalies",
+    "coll": {
+      "anomalies": "Anomalies",
+      "notable": "Notable",
+      "tagged": "Tagged",
+      "allOption": "All drives",
+      "allPill": "All",
+      "commutes": "Commutes"
+    },
+    "fsdFilter": {
+      "reported": "FSD",
+      "high": "High confidence",
+      "estimated": "Estimated",
+      "ambiguous": "Ambiguous",
+      "unknown": "Unknown",
+      "aria": "Filter drives by FSD evidence",
+      "all": "All FSD data"
+    },
+    "fsdResetAffected": "A counter reset lowered confidence for this drive.",
+    "fsdReportedHelp": "Reported supervised-driving distance derived from cumulative counters.",
+    "collections": {
+      "aria": "Filter drives by collection"
+    },
+    "sortByAria": "Sort by {{field}}",
+    "list": "Drive list",
+    "longest": "Longest",
+    "avgTrip": "Avg trip",
+    "fsdRangeUnsupported": {
+      "title": "FSD evidence is unavailable for this range",
+      "message": "FSD attribution supports up to 366 days at a time. Drive history remains available, but FSD filters and sorting are disabled."
+    },
+    "fsdUnavailable": {
+      "title": "FSD evidence could not be loaded",
+      "message": "Drive history remains available, but FSD badges, filters, and sorting are disabled until this data loads successfully."
+    },
+    "fsdEvidence": "FSD evidence",
+    "stickyBar": {
+      "aria": "Drive history summary"
+    }
+  }
+}

@@ -47,6 +47,24 @@ afterEach(() => {
 });
 
 describe('FSMSubFSMPanel', () => {
+  it('shows a visible static semantic Live cue only for a non-terminal session', () => {
+    const { container, rerender } = render(
+      <FSMSubFSMPanel fsmType="vehicle" activeSubs={[makeSub()]} />,
+    );
+    const live = screen.getByText('Live');
+    expect(live).not.toHaveClass('sr-only');
+    expect(live).toHaveClass('text-[var(--semantic-success)]');
+    expect(container.querySelector('.bg-\\[var\\(--semantic-success\\)\\]')).not.toBeNull();
+    expect(container.querySelector('[class*="animate-"]')).toBeNull();
+
+    rerender(
+      <FSMSubFSMPanel fsmType="vehicle" activeSubs={[makeSub({ state: 'completed' })]} />,
+    );
+    expect(screen.queryByText('Live')).toBeNull();
+    expect(screen.getByTestId('state-badge')).toHaveAttribute('data-state', 'completed');
+    expect(screen.getByTestId('timestamp')).toHaveTextContent('2025-01-15T12:00:00Z');
+  });
+
   it('renders nothing unless viewing vehicle-level FSMs (vehicle | all)', () => {
     const { container, rerender } = render(
       <FSMSubFSMPanel fsmType="telemetry_connection" activeSubs={[makeSub()]} />,
@@ -61,7 +79,7 @@ describe('FSMSubFSMPanel', () => {
   it('shows the empty state (heading + status message) when there are no active subs', () => {
     render(<FSMSubFSMPanel fsmType="vehicle" activeSubs={[]} />);
 
-    expect(screen.getByText('Active Sub-FSMs')).toBeInTheDocument();
+    expect(screen.getByText('Active sub-FSMs')).toBeInTheDocument();
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('No active drive or charge sessions');
     // No session rows render in the empty branch.
@@ -87,7 +105,7 @@ describe('FSMSubFSMPanel', () => {
       />,
     );
 
-    expect(screen.getByText('Drive Session')).toBeInTheDocument();
+    expect(screen.getByText('Drive session')).toBeInTheDocument();
 
     const badge = screen.getByTestId('state-badge');
     expect(badge).toHaveAttribute('data-fsm-type', 'drive_session');
@@ -121,7 +139,7 @@ describe('FSMSubFSMPanel', () => {
       />,
     );
 
-    expect(screen.getByText('Charge Session')).toBeInTheDocument();
+    expect(screen.getByText('Charge session')).toBeInTheDocument();
     expect(screen.getByTestId('state-badge')).toHaveAttribute(
       'data-fsm-type',
       'charge_session',
@@ -177,8 +195,8 @@ describe('FSMSubFSMPanel', () => {
       />,
     );
 
-    expect(screen.getByText('Drive Session')).toBeInTheDocument();
-    expect(screen.getByText('Charge Session')).toBeInTheDocument();
+    expect(screen.getByText('Drive session')).toBeInTheDocument();
+    expect(screen.getByText('Charge session')).toBeInTheDocument();
 
     const badges = screen.getAllByTestId('state-badge');
     expect(badges).toHaveLength(2);

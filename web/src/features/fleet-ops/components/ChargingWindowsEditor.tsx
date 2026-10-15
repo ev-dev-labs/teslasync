@@ -34,10 +34,10 @@ export function ChargingWindowsEditor({ value, onChange, error }: ChargingWindow
       aria-invalid={error ? true : undefined}
       aria-describedby={error ? errorId : undefined}
     >
-      <div className="flex items-center justify-between gap-3">
-        <legend className="text-sm font-semibold text-[var(--text-primary)]">
-          {t('fleetOps.policyDialog.windows', 'Allowed charging windows')}
-        </legend>
+      <legend className="text-sm font-semibold text-[var(--text-primary)]">
+        {t('fleetOps.policyDialog.windows', 'Allowed charging windows')}
+      </legend>
+      <div className="flex justify-end">
         <Button type="button" size="sm" variant="outline" icon={<Plus className="h-4 w-4" />} onClick={add}>
           {t('fleetOps.policyDialog.addWindow', 'Add window')}
         </Button>
@@ -54,7 +54,7 @@ export function ChargingWindowsEditor({ value, onChange, error }: ChargingWindow
             onChange={(event) => update(window.key, { day_of_week: Number(event.target.value) })}
             options={dayKeys.map((key, index) => ({
               value: index.toString(),
-              label: t(`fleetOps.days.${key}`, key.toUpperCase()),
+              label: t(`fleetOps.days.${key}`, key.charAt(0).toUpperCase() + key.slice(1)),
             }))}
           />
           <Input
@@ -74,7 +74,7 @@ export function ChargingWindowsEditor({ value, onChange, error }: ChargingWindow
           <Button
             type="button"
             variant="ghost"
-            className="min-h-11 min-w-11 px-0 text-rose-300"
+            className="min-h-11 min-w-11 px-0 text-[var(--semantic-danger)]"
             aria-label={t('fleetOps.policyDialog.removeWindow', 'Remove charging window')}
             onClick={() => onChange(value.filter((candidate) => candidate.key !== window.key))}
           >

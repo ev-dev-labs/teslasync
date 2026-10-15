@@ -33,8 +33,8 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -286,7 +286,7 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const result = render(
     <MemoryRouter initialEntries={['/admin/backup']}>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -295,11 +295,27 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return { ...result, client };
 }
 
-// Wait until both queries have resolved and the KPI band replaced its skeleton.
-async function waitForLoaded() {
-  await screen.findByText('Total Configs');
+// Wait for each source's expected metric state and settled cold-error recovery.
+async function waitForLoaded({
+  configs = 'value',
+  backups = 'value',
+}: {
+  configs?: 'value' | 'missing';
+  backups?: 'value' | 'missing';
+} = {}) {
+  await waitFor(() => {
+    const summary = screen.getByTestId('backup-restore-summary');
+    expect(summary.querySelector('[data-operational-metric="configs"]')).toHaveAttribute('data-value-state', configs);
+    expect(summary.querySelector('[data-operational-metric="backups"]')).toHaveAttribute('data-value-state', backups);
+    if (configs === 'missing' || backups === 'missing') {
+      expect(screen.getByRole('button', { name: 'Retry unavailable sources' })).toBeInTheDocument();
+    }
+  });
+  expect(screen.getByText('Total configs')).toBeInTheDocument();
+  expect(screen.getByText('Total backups')).toBeInTheDocument();
 }
 
 beforeEach(() => {
@@ -312,6 +328,21 @@ afterEach(() => {
 });
 
 describe('BackupRestorePage — data rendering', () => {
+  it('preserves returned-list scope and all six measurements in the real brief and drawer', async () => {
+    renderPage();
+    await waitForLoaded();
+    const summary = screen.getByTestId('backup-restore-summary');
+    expect(summary).toHaveAttribute('data-operational-brief');
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(summary.querySelector('[data-operational-metric="size"]')).toHaveAttribute('data-value-state', 'value');
+    expect(summary).toHaveTextContent('not a server-wide total');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('returned run list');
+    expect(screen.getByRole('button', { name: 'Quick backup' })).toBeInTheDocument();
+    expect(screen.getByText('Backup history')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-export-import')).toBeInTheDocument();
+  });
+
   it('renders the KPI band with derived totals, success-rate and size', async () => {
     renderPage();
     await waitForLoaded();
@@ -320,14 +351,14 @@ describe('BackupRestorePage — data rendering', () => {
     expect(screen.getByRole('region', { name: 'Backup overview' })).toBeInTheDocument();
 
     // Labels for all six KPIs.
-    expect(screen.getByText('Total Configs')).toBeInTheDocument();
-    expect(screen.getByText('Total Backups')).toBeInTheDocument();
-    expect(screen.getByText('Failed Runs')).toBeInTheDocument();
-    expect(screen.getByText('Total Size')).toBeInTheDocument();
+    expect(screen.getByText('Total configs')).toBeInTheDocument();
+    expect(screen.getByText('Total backups')).toBeInTheDocument();
+    expect(screen.getByText('Failed runs')).toBeInTheDocument();
+    expect(screen.getByText('Total size')).toBeInTheDocument();
 
     // Derived values: 3 completed of 4 → 75%, total size 8.0 MB.
-    expect(screen.getAllByText('75%').length).toBeGreaterThan(0);
-    expect(screen.getByText('8.0 MB')).toBeInTheDocument();
+    expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0);
+    expect(screen.getByText('8.00 MB')).toBeInTheDocument();
   });
 
   it('lists backup configurations and flags disabled ones', async () => {
@@ -344,12 +375,12 @@ describe('BackupRestorePage — data rendering', () => {
     renderPage();
     await waitForLoaded();
 
-    expect(screen.getByText('Reliability & Storage')).toBeInTheDocument();
+    expect(screen.getByText('Reliability & storage')).toBeInTheDocument();
     // Completed-vs-total sublabel.
     expect(screen.getByText('3 / 4')).toBeInTheDocument();
     // s3 accumulates 6MB across 2 runs (sorted first by size).
-    expect(screen.getByText('6.0 MB · 2')).toBeInTheDocument();
-    expect(screen.getByText('2.0 MB · 2')).toBeInTheDocument();
+    expect(screen.getByText('6.00 MB · 2')).toBeInTheDocument();
+    expect(screen.getByText('2.00 MB · 2')).toBeInTheDocument();
     // The single failed run surfaces in Recent Errors.
     expect(screen.getByText(/disk full/)).toBeInTheDocument();
   });
@@ -382,10 +413,10 @@ describe('BackupRestorePage — data rendering', () => {
   it('surfaces the QueryError recovery UI when the configs query fails', async () => {
     configureRoutes({ configsError: new Error('boom') });
     renderPage();
-    await waitForLoaded();
+    await waitForLoaded({ configs: 'missing', backups: 'value' });
 
     expect(await screen.findByText('Partial data')).toBeInTheDocument();
-    expect(screen.getByText('Backup configurations')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Backup configurations' })).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(screen.getByText('Backup runs')).toBeInTheDocument();
     expect(screen.getByText('Ready')).toBeInTheDocument();
@@ -394,6 +425,52 @@ describe('BackupRestorePage — data rendering', () => {
     expect(screen.queryByText('Nightly Full')).not.toBeInTheDocument();
     expect(screen.getByText('backup-101.sql.gz')).toBeInTheDocument();
   });
+
+  it('retains both independent sources and every completed-run action after refresh failure', async () => {
+    const { client } = renderPage();
+    await waitForLoaded();
+    await screen.findByText('backup-101.sql.gz');
+    routeState.configsError = new Error('config refresh failed');
+    routeState.runsError = new Error('run refresh failed');
+
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['backup-configs'] });
+      await client.refetchQueries({ queryKey: ['backup-runs'] });
+    });
+    await waitFor(() => expect(screen.getAllByText('Data may be stale').length).toBeGreaterThan(0));
+    expect(screen.getByText('Nightly Full')).toBeInTheDocument();
+    expect(screen.getByText('Weekly Local')).toBeInTheDocument();
+    expect(screen.getByText('backup-101.sql.gz')).toBeInTheDocument();
+    expect(screen.getByText('3 / 4')).toBeInTheDocument();
+    expect(screen.getByText('6.00 MB · 2')).toBeInTheDocument();
+    expect(screen.getByText(/disk full/)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Download' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Verify' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(3);
+    expect(screen.getByTestId('settings-export-import')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry', exact: true })).not.toBeInTheDocument();
+  });
+
+  it('keeps the known config count while failed run-source metrics remain unknown', async () => {
+    configureRoutes({ runsError: new Error('runs unavailable') });
+    renderPage();
+    await waitForLoaded({ configs: 'value', backups: 'missing' });
+    const band = screen.getByRole('region', { name: 'Backup overview' });
+    expect(within(band).getByText('2')).toBeInTheDocument();
+    expect(within(band).getAllByText('—')).toHaveLength(5);
+    expect(screen.getByText('Nightly Full')).toBeInTheDocument();
+    expect(screen.queryByText('0 B')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New config' })).toBeInTheDocument();
+  });
+
+  it('retains an authoritative zero-byte file rather than rendering it as missing', async () => {
+    configureRoutes({ runs: [makeRun({ file_name: 'zero-length-backup.sql.gz', file_size: 0 })] });
+    renderPage();
+    await waitForLoaded();
+    const row = screen.getByRole('row', { name: /zero-length-backup\.sql\.gz/ });
+    expect(within(row).getByText(/^0(?:[.,]0+)?\s*B$/)).toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Download' })).toBeInTheDocument();
+  });
 });
 
 describe('BackupRestorePage — actions & mutations', () => {
@@ -401,7 +478,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     renderPage();
     await waitForLoaded();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Quick Backup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Quick backup' }));
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -416,7 +493,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     renderPage();
     await waitForLoaded();
 
-    fireEvent.click(screen.getByRole('button', { name: 'New Config' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New config' }));
 
     const dialog = await screen.findByRole('dialog');
     const createBtn = within(dialog).getByRole('button', { name: 'Create' });
@@ -448,7 +525,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     renderPage();
     await waitForLoaded();
 
-    fireEvent.click(screen.getByRole('button', { name: 'New Config' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New config' }));
     const dialog = await screen.findByRole('dialog');
 
     // Default provider is local → a single Path field.
@@ -462,7 +539,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     // S3 reveals bucket/region/credentials and drops the local Path field.
     expect(within(dialog).getByLabelText(/Bucket/)).toBeInTheDocument();
     expect(within(dialog).getByLabelText(/Region/)).toBeInTheDocument();
-    expect(within(dialog).getByLabelText(/Secret Key/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Secret key/)).toBeInTheDocument();
     expect(within(dialog).queryByLabelText(/Path/)).not.toBeInTheDocument();
   });
 
@@ -478,7 +555,7 @@ describe('BackupRestorePage — actions & mutations', () => {
     expect(nameInput.value).toBe('Nightly Full');
 
     fireEvent.change(nameInput, { target: { value: 'Nightly Full v2' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Save Changes' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -627,6 +704,124 @@ describe('BackupRestorePage — restore preview', () => {
 
     expect(await screen.findByText('Failed to load preview')).toBeInTheDocument();
     // The restore-preview modal never opened.
-    expect(screen.queryByText('Restore Preview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Restore preview')).not.toBeInTheDocument();
+  });
+});
+
+describe('BackupRestorePage — phase five preservation', () => {
+  it('keeps unobserved paused sources unknown rather than announcing empty backups', async () => {
+    onlineManager.setOnline(false);
+    const view = renderPage();
+    try {
+      await waitFor(() => expect(screen.getAllByText('Unknown')).toHaveLength(3));
+      expect(screen.queryByText('No backup configurations')).not.toBeInTheDocument();
+      expect(screen.queryByText('No backup runs yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('No backup runs to analyze yet.')).not.toBeInTheDocument();
+      expect(screen.getByText('Backup history')).toBeInTheDocument();
+      expect(screen.getByTestId('settings-export-import')).toBeInTheDocument();
+      expect(mockedRequest).not.toHaveBeenCalled();
+    } finally {
+      view.unmount();
+      onlineManager.setOnline(true);
+    }
+  });
+
+  it('locks destructive confirmation while pending and retains it after failure', async () => {
+    const router = mockedRequest.getMockImplementation()!;
+    let rejectDelete: (reason: Error) => void = () => {};
+    const pendingDelete = new Promise<never>((_resolve, reject) => { rejectDelete = reject; });
+    mockedRequest.mockImplementation((path, options) =>
+      options?.method === 'DELETE' ? pendingDelete : router(path, options));
+    renderPage();
+    await waitForLoaded();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]);
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled());
+    expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeDisabled();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(dialog).toBeInTheDocument();
+    await act(async () => rejectDelete(new Error('mock deletion failed')));
+    expect(await screen.findByText('Failed to delete config')).toBeInTheDocument();
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
+    expect(mockedRequest.mock.calls.filter(([, options]) => options?.method === 'DELETE')).toHaveLength(1);
+  });
+
+  it('keeps selective table configuration and retention in an edit payload', async () => {
+    const selective = { ...makeConfig({ provider: 'local', provider_config: { path: '/mock-only-backups' }, max_retention: 19 }), include_tables: ['vehicles', 'drives'] };
+    configureRoutes({ configs: [selective] });
+    renderPage();
+    await waitForLoaded();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByLabelText('Max retention')).toHaveValue(19);
+    expect(within(dialog).getByLabelText('Name')).toHaveAttribute('required');
+    expect(within(dialog).getByLabelText(/Path/)).toHaveAttribute('id', 'backup-provider-path');
+    expect(within(dialog).getByLabelText(/Path/)).toHaveAttribute('required');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/backup/configs/1', expect.objectContaining({
+      method: 'PUT',
+      body: expect.stringContaining('"include_tables":["vehicles","drives"]'),
+    })));
+    const saved = mockedRequest.mock.calls.find(([path, options]) => path === '/backup/configs/1' && options?.method === 'PUT');
+    expect(JSON.parse(String(saved?.[1]?.body)).max_retention).toBe(19);
+  });
+
+  it('ignores obsolete preview responses and keeps the most recently selected manifest', async () => {
+    const router = mockedRequest.getMockImplementation()!;
+    let resolveFirst: (preview: RestorePreview) => void = () => {};
+    const first = new Promise<RestorePreview>((resolve) => { resolveFirst = resolve; });
+    mockedRequest.mockImplementation((path, options) =>
+      path === '/backup/runs/101/preview' ? first as Promise<never> : router(path, options));
+    renderPage();
+    await waitForLoaded();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Preview' })[0]);
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Preview' })[0]).toBeDisabled());
+    fireEvent.click(screen.getAllByRole('button', { name: 'Preview' })[1]);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('vehicles')).toBeInTheDocument();
+    await act(async () => resolveFirst({ tables: [{ name: 'obsolete_manifest', rows: 9 }], metadata: null, checksum_verified: false }));
+    expect(within(dialog).queryByText('obsolete_manifest')).not.toBeInTheDocument();
+    expect(within(dialog).getByText('vehicles')).toBeInTheDocument();
+    expect(within(dialog).getByText('Checksum verified')).toBeInTheDocument();
+  });
+
+  it('exposes all configuration and completed-run actions plus full details in narrow tables', async () => {
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(target: Element) {
+        this.callback([{ target, contentRect: { width: 375 } } as ResizeObserverEntry], this as unknown as ResizeObserver);
+      }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      renderPage();
+      await waitForLoaded();
+      expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(2);
+      expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(2);
+      expect(screen.getAllByRole('button', { name: 'Trigger now' })).toHaveLength(2);
+      expect(screen.getAllByRole('button', { name: 'Download' })).toHaveLength(3);
+      expect(screen.getAllByRole('button', { name: 'Verify' })).toHaveLength(3);
+      expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(3);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Quick view' })[0]);
+      const configDetail = await screen.findByRole('dialog');
+      for (const field of ['Name', 'Type', 'Provider', 'Frequency', 'Schedule', 'Options', 'Max retention']) {
+        expect(within(configDetail).getByText(field)).toBeInTheDocument();
+      }
+      expect(within(configDetail).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+      fireEvent.click(within(configDetail).getAllByRole('button', { name: 'Close', exact: true })[0]);
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      fireEvent.click(screen.getAllByRole('button', { name: 'Quick view' })[2]);
+      const runDetail = await screen.findByRole('dialog');
+      for (const field of ['Time', 'Run type', 'Status', 'Provider', 'File', 'Size', 'Records', 'Duration']) {
+        expect(within(runDetail).getByText(field)).toBeInTheDocument();
+      }
+      expect(within(runDetail).getByText('backup-101.sql.gz')).toBeInTheDocument();
+      expect(within(runDetail).getByRole('button', { name: 'Download' })).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

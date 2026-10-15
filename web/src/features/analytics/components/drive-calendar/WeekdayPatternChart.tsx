@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Bar,
   BarChart,
-  ChartContainer,
   ChartTooltip,
   CHART_COLORS,
   ResponsiveContainer,
@@ -15,13 +14,15 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { QueryError } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import type { CalendarWeekday } from '../../lib/driveCalendar';
 import { getWeekdayLabels } from './labels';
 import type { DriveCalendarSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface WeekdayPatternChartProps extends DriveCalendarSectionState {
   weekdays: CalendarWeekday[];
@@ -36,6 +37,7 @@ export function WeekdayPatternChart({
   error,
   onRetry,
 }: WeekdayPatternChartProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const labels = getWeekdayLabels(t);
@@ -62,8 +64,9 @@ export function WeekdayPatternChart({
   );
 
   return (
-    <ChartContainer
-      className={className}
+    <div className={className}>
+    <ChartCard
+      size="standard"
       title={t('driveCalendar.weekdayPattern.title', 'Day-of-week pattern')}
       subtitle={t(
         'driveCalendar.weekdayPattern.subtitle',
@@ -87,7 +90,7 @@ export function WeekdayPatternChart({
         {
           key: 'distance',
           label: distanceName,
-          format: (value) => fmtNumber(value, 1),
+          format: (value) => fmtNumber(value),
         },
         {
           key: 'drives',
@@ -120,13 +123,13 @@ export function WeekdayPatternChart({
               tick={axisTick}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => fmtNumber(value, 0)}
+              tickFormatter={(value) => fmtNumber(value)}
             />
             <Tooltip
               content={
                 <ChartTooltip
                   valueFormatter={(value) =>
-                    `${fmtNumber(value, 1)} ${distanceUnit}`
+                    `${fmtNumber(value)} ${distanceUnit}`
                   }
                 />
               }
@@ -141,6 +144,7 @@ export function WeekdayPatternChart({
           </BarChart>
         </ResponsiveContainer>
       )}
-    </ChartContainer>
+    </ChartCard>
+    </div>
   );
 }

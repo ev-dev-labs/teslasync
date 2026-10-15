@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { RangeBufferResult } from '../../lib/rangeBuffer';
 import {
   rangeBufferBandLabel,
@@ -20,6 +20,7 @@ import {
 } from './labels';
 import { RangeBufferSectionBody } from './RangeBufferSectionBody';
 import type { RangeBufferQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RangeBufferEvidenceSupportProps {
   result: RangeBufferResult;
@@ -32,6 +33,7 @@ export function RangeBufferEvidenceSupport({
   state,
   locale,
 }: RangeBufferEvidenceSupportProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const support = result.coverage.support;
 
@@ -62,7 +64,7 @@ export function RangeBufferEvidenceSupport({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
             <MetricCard
               label={t('rangeBuffer.support.index', 'Support index')}
-              value={`${rangeBufferNumber(support.index, locale, 1)}/100`}
+              value={`${rangeBufferNumber(support.index, locale)}/100`}
               subtitle={rangeBufferBandLabel(t, support.band)}
               icon={<ShieldCheck className="h-5 w-5" />}
               color="purple"
@@ -109,7 +111,6 @@ export function RangeBufferEvidenceSupport({
                         value: rangeBufferNumber(
                           result.coverage.daysSinceLastObservation,
                           locale,
-                          1,
                         ),
                       },
                     )

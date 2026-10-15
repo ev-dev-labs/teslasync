@@ -1,13 +1,13 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity, BarChart3, CalendarClock, Clock, DollarSign, MapPin, RefreshCw, Zap,
+  Activity, BarChart3, CalendarClock, MapPin, RefreshCw,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui';
-import { MetricCard, MetricBar } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { PageLayout, CardGrid, LayoutCard } from '@/components/layout';
+import { Accordion, Button, SectionTitle, Table, Text, Caption } from '@/components/ui';
+import { MetricBar } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -20,9 +20,9 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { useFormatting } from '@/hooks/useFormatting';
-import { fmtInt } from '@/lib/numberFormat';
-import { DAYS } from '@/lib/constants';
+import { useDataState } from '@/hooks/useDataState';
+
+import { formatTime } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
 
 import {
@@ -31,35 +31,111 @@ import {
   aggregateLocations,
   aggregateByDayOfWeek,
   deriveInsights,
-  formatHourLabel,
 } from '../components/charging-heatmap';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { ChargingHeatmapSummary } from '../components/charging-heatmap-modernization';
 
 export default function ChargingHeatmapPage() {
+  const { fmtInt, locale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('charging.heatmap.title', 'Charging Patterns'));
 
   // The header VehiclePicker is the source of truth for the active vehicle.
-  const { vehicleId } = useSelectedVehicle();
-  const { start, end } = useRangeState({
+  const { vehicleId: selectedVehicleId, vehiclesState } = useSelectedVehicle();
+  const vehicleId = selectedVehicleId != null && Number.isSafeInteger(selectedVehicleId) && selectedVehicleId > 0
+    ? selectedVehicleId : null;
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'charging-heatmap.range',
     defaultPresetId: 'all',
   });
 
-  const query = useChargingSessionsPaginated(vehicleId, { limit: 2000, start, end });
-  const { data, isLoading, isError, error, refetch } = query;
-  const sessions = data ?? [];
+  const query = useChargingSessionsPaginated(vehicleId, {
+    limit: 2000,
+    start: startInstant,
+    end: endInstantExclusive,
+  });
+  const refetch = useCallback(async () => {
+    if (vehicleId == null) throw new Error('Vehicle scope has not resolved');
+    return query.refetch();
+  }, [vehicleId, query.refetch]);
+  const scopedQuery = vehicleId != null
+    ? { ...query, refetch }
+    : { data: undefined, refetch: undefined };
+  const state = useDataState(scopedQuery, { provenance: 'historical' });
+  // Background errors/pauses must not replace a previously loaded calendar.
+  const isLoading = !state.hasData && (vehicleId != null
+    ? query.isLoading
+    : vehiclesState?.status === 'initial' && !vehiclesState.isRefreshBlocked);
+  const isError = state.fatalError != null;
+  const error = state.fatalError;
+  const sessions = state.data ?? [];
   const hasData = sessions.length > 0;
 
-  const { formatEnergy, formatDuration } = useUnits();
-  const { formatCurrency } = useFormatting();
+  const { formatEnergy } = useUnits();
+  // Labels describe browser-local bucket identities, not real instants to
+  // convert into another timezone. UTC reference dates keep them stable.
+  const dayLabels = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
+    return Array.from({ length: 7 }, (_, day) => formatter.format(new Date(Date.UTC(2024, 0, 7 + day))));
+  }, [locale]);
+  const fullDayLabels = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
+    return Array.from({ length: 7 }, (_, day) => formatter.format(new Date(Date.UTC(2024, 0, 7 + day))));
+  }, [locale]);
+  const hourLabels = useMemo(() => Array.from({ length: 24 }, (_, hour) =>
+    formatTime(new Date(Date.UTC(2024, 0, 7, hour)), { locale, tz: 'UTC' }),
+  ), [locale]);
 
   const model = useMemo(() => buildGrid(sessions), [sessions]);
   const insights = useMemo(() => deriveInsights(model), [model]);
-  const dayOfWeekData = useMemo(() => aggregateByDayOfWeek(model, DAYS), [model]);
+  const dayOfWeekData = useMemo(() => aggregateByDayOfWeek(model, dayLabels), [model, dayLabels]);
   const locationData = useMemo(
     () => aggregateLocations(sessions, t('charging.heatmap.unknownPlace', 'Unknown')),
     [sessions, t],
   );
+  const loadedScope = t('charging.heatmap.loadedScope', 'Summary of the returned sessions for the shared vehicle and date scope (request limit: 2,000). This is not a complete-history total.');
+  const slotData = useMemo(() => {
+    // Match the existing browser-local buckets without treating missing Wh as
+    // a measured zero in the keyboard/touch/export alternative.
+    const recorded = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
+    const energy = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
+    for (const session of sessions) {
+      if (!session.started_at) continue;
+      const started = new Date(session.started_at);
+      if (Number.isNaN(started.getTime())) continue;
+      if (session.total_energy_added_wh != null && Number.isFinite(session.total_energy_added_wh)) {
+        recorded[started.getDay()][started.getHours()] += 1;
+        energy[started.getDay()][started.getHours()] += session.total_energy_added_wh;
+      }
+    }
+    return model.grid.flatMap((row, day) => row.map((cell, hour) => ({
+      dayIndex: day,
+      hourIndex: hour,
+      day: dayLabels[day],
+      hour: hourLabels[hour],
+      count: cell.count,
+      energy_wh: recorded[day][hour] > 0 ? energy[day][hour] : null,
+      recorded_energy_count: recorded[day][hour],
+      energyStatus: cell.count === 0
+        ? t('common.noReading', 'No reading')
+        : recorded[day][hour] === 0
+          ? t('charging.heatmap.noMeasurements', 'No recorded measurements in the returned sessions')
+          : recorded[day][hour] < cell.count
+            ? t('charging.heatmap.partialMeasurements', 'Some returned sessions have no recorded value; the total includes recorded values only.')
+            : '',
+    })));
+  }, [model, sessions, t, dayLabels, hourLabels]);
+  const slotColumns = [
+    { key: 'day', label: t('charging.heatmap.day', 'Day') },
+    { key: 'hour', label: t('chart.col.time', 'Time') },
+    { key: 'count', label: t('charging.heatmap.sessionsWord', 'sessions'), kind: 'count' as const },
+    {
+      key: 'energy_wh', label: t('charging.heatmap.totalEnergy', 'Total Energy'),
+      format: (value: unknown) =>
+        typeof value === 'number' && Number.isFinite(value) ? formatEnergy(value) : '—',
+    },
+    { key: 'energyStatus', label: t('common.status', 'Status') },
+  ];
 
   const stats = useMemo(() => {
     if (sessions.length === 0) return null;
@@ -67,10 +143,18 @@ export default function ChargingHeatmapPage() {
     let totalCost = 0;
     let totalDurationS = 0;
     let durationCount = 0;
+    let energyCount = 0;
+    let costCount = 0;
     for (const s of sessions) {
-      totalEnergyWh += s.total_energy_added_wh ?? 0;
-      totalCost += s.cost_decimal ?? 0;
-      const started = new Date(s.started_at).getTime();
+      if (typeof s.total_energy_added_wh === 'number' && Number.isFinite(s.total_energy_added_wh)) {
+        totalEnergyWh += s.total_energy_added_wh;
+        energyCount += 1;
+      }
+      if (typeof s.cost_decimal === 'number' && Number.isFinite(s.cost_decimal)) {
+        totalCost += s.cost_decimal;
+        costCount += 1;
+      }
+      const started = s.started_at ? new Date(s.started_at).getTime() : Number.NaN;
       const ended = s.ended_at ? new Date(s.ended_at).getTime() : Number.NaN;
       if (Number.isFinite(started) && Number.isFinite(ended) && ended > started) {
         totalDurationS += (ended - started) / 1000;
@@ -81,6 +165,9 @@ export default function ChargingHeatmapPage() {
       count: sessions.length,
       totalEnergyWh,
       totalCost,
+      energyCount,
+      costCount,
+      durationCount,
       // Average only over sessions that actually have a measured duration —
       // live (unfinished) or timestamp-less sessions must not dilute the mean.
       avgDurationS: durationCount > 0 ? totalDurationS / durationCount : 0,
@@ -94,7 +181,9 @@ export default function ChargingHeatmapPage() {
       <Button
         variant="ghost"
         onClick={() => refetch()}
+        disabled={vehicleId == null}
         aria-label={t('common.refresh', 'Refresh')}
+        className="h-11 w-11"
       >
         <RefreshCw className="h-4 w-4" aria-hidden="true" />
       </Button>
@@ -102,54 +191,49 @@ export default function ChargingHeatmapPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('charging.heatmap.title', 'Charging Patterns')}
       subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
-      actions={actions}
-      query={query}
+      secondaryActions={actions}
+      query={vehicleId != null ? { ...query, refetch } : undefined}
     >
+      {vehiclesState && (
+        <StaleRefreshWarning state={vehiclesState} label={t('nav.vehicles', 'Fleet')} />
+      )}
+      {vehiclesState?.fatalError && (
+        <QueryError
+          error={vehiclesState.fatalError}
+          onRetry={vehiclesState.retry ?? undefined}
+          resourceName={t('nav.vehicles', 'Fleet')}
+        />
+      )}
+      {vehicleId == null && vehiclesState?.hasData && (
+        <EmptyState
+          title={t('common.noVehicleSelected.title', 'No vehicle selected')}
+          message={t('common.noVehicleSelected.desc', 'Add a vehicle to your fleet to see data on this page.')}
+          actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
+        />
+      )}
+      <StaleRefreshWarning state={state} label={t('charging.heatmap.title', 'Charging Patterns')} />
+      {!state.hasData && (state.isRefreshBlocked || (vehicleId == null && vehiclesState?.isRefreshBlocked)) && (
+        <AlertBanner variant="warning" role="status">
+          {t('charging.heatmap.loadPaused', 'Loading is paused. Charging history will appear when the connection resumes.')}
+        </AlertBanner>
+      )}
+      <Text variant="bodySm" className="min-w-0 break-words">
+        {loadedScope}
+      </Text>
       {/* ── KPI band ── */}
       <FadeIn>
         <section
           aria-label={t('charging.heatmap.kpis', 'Charging summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+          className="min-w-0"
         >
-          {isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={92} />)
-          ) : isError ? (
-            <QueryError
-              error={error}
-              onRetry={() => refetch()}
-              className="col-span-2 lg:col-span-4"
-            />
-          ) : (
-            <>
-              <MetricCard
-                label={t('charging.heatmap.totalSessions', 'Total Sessions')}
-                value={fmtInt(stats?.count ?? 0)}
-                icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('charging.heatmap.totalEnergy', 'Total Energy')}
-                value={formatEnergy(stats?.totalEnergyWh ?? 0)}
-                icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('charging.heatmap.totalCost', 'Total Cost')}
-                value={formatCurrency(stats?.totalCost ?? 0)}
-                icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('charging.heatmap.avgDuration', 'Avg Duration')}
-                value={formatDuration(stats?.avgDurationS ?? 0)}
-                icon={<Clock className="h-5 w-5" aria-hidden="true" />}
-                color="amber"
-              />
-            </>
-          )}
+          <ChargingHeatmapSummary
+            stats={stats}
+            state={state}
+            loading={isLoading}
+          />
         </section>
       </FadeIn>
 
@@ -159,12 +243,11 @@ export default function ChargingHeatmapPage() {
           <SectionTitle id="charging-heatmap-when">
             {t('charging.heatmap.whenSection', 'When You Charge')}
           </SectionTitle>
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-            <GlassPanel className="min-w-0 p-4 sm:p-5 xl:col-span-2">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <CalendarClock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('charging.heatmap.gridTitle', 'Weekly Charging Heatmap')}
-              </PanelTitle>
+          <CardGrid
+            label={t('charging.heatmap.whenSection', 'When You Charge')}
+            items={[
+              { id: 'charging-heatmap-weekly', size: 'half', content: (
+            <LayoutCard title={t('charging.heatmap.gridTitle', 'Weekly Charging Heatmap')}>
               {isLoading ? (
                 <Skeleton height={260} />
               ) : isError ? (
@@ -173,18 +256,73 @@ export default function ChargingHeatmapPage() {
                 /* no-action: transient empty — resolves once sessions exist in the selected range */
                 <EmptyState
                   icon={<CalendarClock className="h-8 w-8" aria-hidden="true" />}
-                  message={t('charging.heatmap.noData', 'No charging sessions in this range')}
+                  message={state.hasData
+                    ? t('charging.heatmap.noData', 'No charging sessions in this range')
+                    : t('charging.heatmap.historyNotLoaded', 'Charging history has not loaded')}
                 />
               ) : (
-                <HeatmapGrid model={model} formatEnergy={formatEnergy} />
+                <>
+                  <EmbeddedChart
+                    title={t('charging.heatmap.gridTitle', 'Weekly Charging Heatmap')}
+                    ariaLabel={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
+                    ariaDescription={loadedScope}
+                    data={slotData}
+                    dataColumns={slotColumns}
+                    exportData={slotData}
+                    exportable
+                    fullscreen
+                    fluid={false}
+                    height={300}
+                    mobileHeight={300}
+                  >
+                    <HeatmapGrid model={model} energySlots={slotData} formatEnergy={formatEnergy} framed />
+                  </EmbeddedChart>
+                  <Accordion
+                    title={t('chart.a11y.fallbackTableLabel', '{{title}} — data table', {
+                      title: t('charging.heatmap.gridTitle', 'Weekly Charging Heatmap'),
+                    })}
+                    description={loadedScope}
+                    className="mt-4"
+                    headerClassName="min-h-11 px-3 py-3"
+                    bodyClassName="p-3"
+                  >
+                    <div
+                      role="region"
+                      aria-label={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
+                      className="max-h-96 min-w-0 overflow-auto rounded-panel"
+                    >
+                      <Table
+                        variant="embedded"
+                        tabIndex={0}
+                        aria-label={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
+                        className="focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+                      >
+                        <thead>
+                          <tr>
+                            {slotColumns.map((column) => <th key={column.key} scope="col">{column.label}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {slotData.map((slot) => (
+                            <tr key={`${slot.dayIndex}-${slot.hourIndex}`}>
+                              <th scope="row">{slot.day} {slot.hour}</th>
+                              <td>{slot.hour}</td>
+                              <td>{fmtInt(slot.count)}</td>
+                              <td>{slot.energy_wh != null ? formatEnergy(slot.energy_wh) : '—'}</td>
+                              <td><Text variant="bodySm">{slot.energyStatus}</Text></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </div>
+                  </Accordion>
+                </>
               )}
-            </GlassPanel>
+            </LayoutCard>
+              ) },
 
-            <GlassPanel className="min-w-0 p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('charging.heatmap.insights', 'Charging Insights')}
-              </PanelTitle>
+              { id: 'charging-heatmap-insights', size: 'third', content: (
+            <LayoutCard title={t('charging.heatmap.insights', 'Charging Insights')}>
               {isLoading ? (
                 <Skeleton height={220} />
               ) : isError ? (
@@ -193,23 +331,26 @@ export default function ChargingHeatmapPage() {
                 /* no-action: transient empty — insights derive from charging history */
                 <EmptyState
                   icon={<Activity className="h-8 w-8" aria-hidden="true" />}
-                  message={t('charging.heatmap.noInsights', 'Insights appear once you have charging history')}
+                  message={state.hasData
+                    ? t('charging.heatmap.noInsights', 'Insights appear once you have charging history')
+                    : t('charging.heatmap.historyNotLoaded', 'Charging history has not loaded')}
                 />
               ) : (
                 <div className="space-y-4">
-                  <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/[0.06] p-3">
+                  <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
                     <Caption>{t('charging.heatmap.favorite', 'Favorite Charging Time')}</Caption>
                     <Text as="p" size="sm" weight="semibold" color="primary" className="mt-1">
                       {model.maxCount > 0
-                        ? t('charging.heatmap.favoriteValue', '{{day}}s at {{hour}}', {
-                            day: DAYS[model.favDay],
-                            hour: formatHourLabel(model.favHour),
+                        ? t('charging.heatmap.favoriteValue', '{{day}} at {{hour}}', {
+                            day: fullDayLabels[model.favDay],
+                            hour: hourLabels[model.favHour],
                           })
                         : '—'}
                     </Text>
                     <Caption>
-                      {t('charging.heatmap.favoriteSessions', '{{count}} sessions', {
+                      {t('charging.heatmap.favoriteSessions', '{{formattedCount}} sessions', {
                         count: model.maxCount,
+                        formattedCount: fmtInt(model.maxCount),
                       })}
                     </Caption>
                   </div>
@@ -220,20 +361,23 @@ export default function ChargingHeatmapPage() {
                       value={insights.busiestDayCount}
                       max={barMax}
                       color={chartTokens.series[5]}
-                      sublabel={`${DAYS[insights.busiestDay]} · ${fmtInt(insights.busiestDayCount)}`}
+                      fill="solid"
+                      sublabel={`${dayLabels[insights.busiestDay]} · ${fmtInt(insights.busiestDayCount)}`}
                     />
                     <MetricBar
                       label={t('charging.heatmap.busiestHour', 'Busiest Hour')}
                       value={insights.busiestHourCount}
                       max={barMax}
                       color={chartTokens.series[1]}
-                      sublabel={`${formatHourLabel(insights.busiestHour)} · ${fmtInt(insights.busiestHourCount)}`}
+                      fill="solid"
+                      sublabel={`${hourLabels[insights.busiestHour]} · ${fmtInt(insights.busiestHourCount)}`}
                     />
                     <MetricBar
                       label={t('charging.heatmap.weekdays', 'Weekdays')}
                       value={insights.weekdayCount}
                       max={barMax}
                       color={chartTokens.series[0]}
+                      fill="solid"
                       sublabel={fmtInt(insights.weekdayCount)}
                     />
                     <MetricBar
@@ -241,13 +385,16 @@ export default function ChargingHeatmapPage() {
                       value={insights.weekendCount}
                       max={barMax}
                       color={chartTokens.series[4]}
+                      fill="solid"
                       sublabel={fmtInt(insights.weekendCount)}
                     />
                   </div>
                 </div>
               )}
-            </GlassPanel>
-          </div>
+            </LayoutCard>
+              ) },
+            ]}
+          />
         </section>
       </FadeIn>
 
@@ -257,12 +404,11 @@ export default function ChargingHeatmapPage() {
           <SectionTitle id="charging-heatmap-breakdowns">
             {t('charging.heatmap.breakdowns', 'Charging Breakdowns')}
           </SectionTitle>
-          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2 xl:gap-5">
-            <GlassPanel className="min-w-0 p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('charging.heatmap.topLocations', 'Top Charging Locations')}
-              </PanelTitle>
+          <CardGrid
+            label={t('charging.heatmap.breakdowns', 'Charging Breakdowns')}
+            items={[
+              { id: 'charging-heatmap-locations', size: 'half', content: (
+            <LayoutCard title={t('charging.heatmap.topLocations', 'Top Charging Locations')}>
               {isLoading ? (
                 <Skeleton height={260} />
               ) : isError ? (
@@ -271,7 +417,9 @@ export default function ChargingHeatmapPage() {
                 /* no-action: transient empty — needs ≥2 sessions at a named place */
                 <EmptyState
                   icon={<MapPin className="h-8 w-8" aria-hidden="true" />}
-                  message={t('charging.heatmap.noLocations', 'No repeat charging locations yet')}
+                  message={state.hasData
+                    ? t('charging.heatmap.noLocations', 'No repeat charging locations yet')
+                    : t('charging.heatmap.historyNotLoaded', 'Charging history has not loaded')}
                 />
               ) : (
                 <EmbeddedChart
@@ -281,6 +429,9 @@ export default function ChargingHeatmapPage() {
                     'Charging session counts at the most frequently used locations',
                   )}
                   data={locationData.map(({ name, count }) => ({ name, count }))}
+                  exportData={locationData.map(({ name, count }) => ({ name, count }))}
+                  exportable
+                  fullscreen
                   dataColumns={[
                     { key: 'name', label: t('charging.heatmap.location', 'Location') },
                     { key: 'count', label: t('charging.heatmap.sessionsWord', 'sessions') },
@@ -309,13 +460,11 @@ export default function ChargingHeatmapPage() {
                   </ResponsiveContainer>
                 </EmbeddedChart>
               )}
-            </GlassPanel>
+            </LayoutCard>
+              ) },
 
-            <GlassPanel className="min-w-0 p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('charging.heatmap.byDayOfWeek', 'Sessions by Day of Week')}
-              </PanelTitle>
+              { id: 'charging-heatmap-weekdays', size: 'half', content: (
+            <LayoutCard title={t('charging.heatmap.byDayOfWeek', 'Sessions by Day of Week')}>
               {isLoading ? (
                 <Skeleton height={260} />
               ) : isError ? (
@@ -324,7 +473,9 @@ export default function ChargingHeatmapPage() {
                 /* no-action: transient empty — resolves once sessions exist in the selected range */
                 <EmptyState
                   icon={<BarChart3 className="h-8 w-8" aria-hidden="true" />}
-                  message={t('charging.heatmap.noData', 'No charging sessions in this range')}
+                  message={state.hasData
+                    ? t('charging.heatmap.noData', 'No charging sessions in this range')
+                    : t('charging.heatmap.historyNotLoaded', 'Charging history has not loaded')}
                 />
               ) : (
                 <EmbeddedChart
@@ -334,6 +485,9 @@ export default function ChargingHeatmapPage() {
                     'Charging session counts for each day of the week',
                   )}
                   data={dayOfWeekData.map(({ day, count }) => ({ day, count }))}
+                  exportData={dayOfWeekData.map(({ day, count }) => ({ day, count }))}
+                  exportable
+                  fullscreen
                   dataColumns={[
                     { key: 'day', label: t('charging.heatmap.day', 'Day') },
                     { key: 'count', label: t('charging.heatmap.sessionsWord', 'sessions') },
@@ -358,10 +512,12 @@ export default function ChargingHeatmapPage() {
                   </ResponsiveContainer>
                 </EmbeddedChart>
               )}
-            </GlassPanel>
-          </div>
+            </LayoutCard>
+              ) },
+            ]}
+          />
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

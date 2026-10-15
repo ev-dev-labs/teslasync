@@ -1,0 +1,1337 @@
+{
+  "item": "phase6-qa-vehicles-vehicle-management",
+  "attempt": 1,
+  "status": "SOURCE_QA_REPORT_COMPLETE_WITH_CONFIRMED_NEEDS",
+  "acceptance": "SOURCE_INSPECTION_ONLY; native/application acceptance NOTRUN",
+  "startedAt": "2026-10-14T01:43:42.9921207Z",
+  "returnBy": "2026-10-14T01:59:44.162Z",
+  "hardStop": "2026-10-14T02:04:44.162Z",
+  "scope": {
+    "route": "/vehicle-management",
+    "acceptedPage": "web/src/features/vehicles/pages/VehicleManagementPage.tsx",
+    "productionFiles": [
+      "web/src/features/vehicles/pages/VehicleManagementPage.tsx",
+      "web/src/features/vehicles/components/vehicle-management/EnterprisePayerCard.tsx",
+      "web/src/features/vehicles/components/vehicle-management/EnterpriseRolesCard.tsx",
+      "web/src/features/vehicles/components/vehicle-management/EnterpriseRolesDataView.tsx",
+      "web/src/features/vehicles/components/vehicle-management/index.ts",
+      "web/src/features/vehicles/components/vehicle-management/managementData.ts",
+      "web/src/features/vehicles/components/vehicle-management/ManagementDataView.tsx",
+      "web/src/features/vehicles/components/vehicle-management/ManagementEndpointBody.tsx",
+      "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.tsx",
+      "web/src/features/vehicles/components/vehicle-management/managementJson.ts",
+      "web/src/features/vehicles/components/vehicle-management/ManagementRawDetails.tsx",
+      "web/src/features/vehicles/components/vehicle-management/OpaqueJsonDialog.tsx",
+      "web/src/features/vehicles/components/vehicle-management/PaidVehicleSpecsCard.tsx",
+      "web/src/features/vehicles/components/vehicle-management/StructuredDataView.tsx",
+      "web/src/features/vehicles/components/vehicle-management/SubscriptionDataView.tsx",
+      "web/src/features/vehicles/components/vehicle-management/VehicleManagementWorkspace.tsx",
+      "web/src/features/vehicles/components/vehicle-management/VehicleMetadataCards.tsx",
+      "web/src/features/vehicles/components/vehicle-management/VehicleOptionsDataView.tsx",
+      "web/src/features/vehicles/components/vehicle-management/VehiclePricingCard.tsx",
+      "web/src/features/vehicles/components/vehicle-management/VehicleSpecsDataView.tsx",
+      "web/src/features/vehicles/components/vehicle-management/WarrantyDataView.tsx"
+    ],
+    "directTestFiles": [
+      "web/src/features/vehicles/pages/VehicleManagementPage.test.tsx",
+      "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.test.tsx",
+      "web/src/features/vehicles/components/vehicle-management/managementJson.test.ts",
+      "web/src/features/vehicles/components/vehicle-management/VehicleManagementWorkspace.test.tsx"
+    ],
+    "productionFileCount": 21,
+    "directTestFileCount": 4,
+    "contextLimit": "Direct management functions/useVehicles tests and shared selection/trust/guards/layout/UI/formatters inspected; unrelated hook behavior not certified."
+  },
+  "authority": {
+    "orchestrator": "docs/orchestrator-loop.md fully read",
+    "contract": "docs/frontend-design-contract.md core1-650, MDC-020-026/031-033/040-047/060-070; relevant later anchors searched",
+    "mission": "docs/frontend-mission.md principles, layouts/states/preferences/mobile/a11y and43-45 definition of done",
+    "inventory": "docs/frontend-inventory.md:291 exact route and audit-page-240.json",
+    "handoff": "docs/session-handoff.md:1-240 current new-machine recovery/evidence limits and relevant management anchors",
+    "instructions": [
+      ".github/copilot-instructions.md applicable sections",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md; current raw-SI contract supersedes legacy examples"
+    ],
+    "queue": {
+      "path": "migration-queue.md",
+      "qaLine": 64,
+      "qaStatus": "[~]",
+      "attempt": 1,
+      "acceptedSourceLine": 2050,
+      "acceptedItem": "phase5-page-vehicles-vehicle-management",
+      "acceptedStatus": "[x]",
+      "acceptedCommit": "4111a866233cccd24b1e0b84696f84e3032125ed",
+      "priorAuditLine": 796,
+      "written": false
+    }
+  },
+  "beforePins": [
+    {
+      "path": "web/src/features/vehicles/pages/VehicleManagementPage.tsx",
+      "sha256": "6700298EEA2A4868D2700CFDA75091EC9978B024EE70739907D8521CA1F6FC87",
+      "bytes": 3649
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleManagementPage.test.tsx",
+      "sha256": "0213F09564B8E54EB31DC9E0AB8A7B300DB87879D2044294E2EA527CA557755D",
+      "bytes": 6452
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/EnterprisePayerCard.tsx",
+      "sha256": "84F2F4E0FF99CF4242C29ED71628B7EDCA9E64FB35966B4BED19C18BB55C46EE",
+      "bytes": 4379
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/EnterpriseRolesCard.tsx",
+      "sha256": "EB957A8B95A285EEDAB1F1DCDBAD1EAF25CFE632A035F8BC145DE8C9F33798C3",
+      "bytes": 1323
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/EnterpriseRolesDataView.tsx",
+      "sha256": "53BCB27A4A6383EF4266775CF4DE471997ED24F9EE59DA992A11DA3AC9156658",
+      "bytes": 1737
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/index.ts",
+      "sha256": "956A8DE20700054654623B90F2CEA5204856C57586D8BF198F9396B077368A93",
+      "bytes": 74
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/managementData.ts",
+      "sha256": "A8FA120B384518873E769E214494D0F840E6F9C854DDDDBEF7A2F10C55614B78",
+      "bytes": 10936
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/ManagementDataView.tsx",
+      "sha256": "91C683ACC0C1439ADA326F28BF0E00A8D87EF28A54440B72DD5049D310F8F01D",
+      "bytes": 2115
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/ManagementEndpointBody.tsx",
+      "sha256": "8EC62E4D09E383B6BCED90480404F3E39D355810E76C5C62EBE0E9CB5C76134F",
+      "bytes": 4583
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.test.tsx",
+      "sha256": "2D55B06A6994F1640046646BB0C9C062AC6C00AA53D976067E75EECF2B3E5980",
+      "bytes": 2765
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.tsx",
+      "sha256": "92E0F50D291E56D022BF958A6F16857426C57D491DC69F1446DD9EC20E2C3FB8",
+      "bytes": 4551
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/managementJson.test.ts",
+      "sha256": "A7D887CB8C711FFBDC1281700CF35C046D662DD961D92B6A0B2EB8B31B1BFB85",
+      "bytes": 4915
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/managementJson.ts",
+      "sha256": "DB421A37BF708D4234E65558C025F4CE6FE34FBDC5741424CEFD1F658E2A7114",
+      "bytes": 3870
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/ManagementRawDetails.tsx",
+      "sha256": "46D06B632AC61A03E646D0A8B4C60D27E011415D490B0C927AB3EB80F99052A0",
+      "bytes": 603
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/OpaqueJsonDialog.tsx",
+      "sha256": "4CF3608D9D9187FC10987E4CE8712DFB2A29AD0A4F138E4169B492EB4B42083E",
+      "bytes": 3197
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/PaidVehicleSpecsCard.tsx",
+      "sha256": "194FF0A37BCF3A3D522976338C9FCEA07D240C2EA8FC7AB091DEE89DF0A49317",
+      "bytes": 2768
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/StructuredDataView.tsx",
+      "sha256": "D749C2538EB650962D41758E77F8485CD165038C7E367CEE3C1AECE66AF1CA9E",
+      "bytes": 3811
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/SubscriptionDataView.tsx",
+      "sha256": "FCF54A0478D9DA40744579F9A0EA6CC6DAE1ABBB6D82BC2F16C104805D4BA865",
+      "bytes": 6388
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehicleManagementWorkspace.test.tsx",
+      "sha256": "3F426790EC440AF1C8557E928D73156C51276991983687DA8FFC6CA05FFE2FB0",
+      "bytes": 16102
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehicleManagementWorkspace.tsx",
+      "sha256": "0E5F288F0BCF77991D688FDF10594CE953103B41F02E282EC9F0241CAB2E71F7",
+      "bytes": 3121
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehicleMetadataCards.tsx",
+      "sha256": "568EEF18D650E124F6EC04C9C5D5C794D1F07E64FB5D918A3C06B50AD1855D3F",
+      "bytes": 4487
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehicleOptionsDataView.tsx",
+      "sha256": "5B30325066858ABBD5620C27A5D959FE8B34CD336F442E6BB919C738B6796BBD",
+      "bytes": 4571
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehiclePricingCard.tsx",
+      "sha256": "D591A66FB2C2E91AE44A0E5EDBEB870A16FB981700F88CD75D157288A79D57E9",
+      "bytes": 2223
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehicleSpecsDataView.tsx",
+      "sha256": "D3AE4D0B4DAA4F76552C1C69E39566DC3130B9CDF91E056F23DD981332071AFE",
+      "bytes": 2610
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/WarrantyDataView.tsx",
+      "sha256": "421BB2C478D7DB0FE5ED93EDCE5771EDE00173C025E794E14B35AC42215CA296",
+      "bytes": 7667
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "bytes": 2035
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "bytes": 6593
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "bytes": 70205
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "bytes": 4411
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "bytes": 15482
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "bytes": 4093
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "bytes": 658
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "bytes": 10783
+    },
+    {
+      "path": "web/src/components/ui/ConfirmDialog.tsx",
+      "sha256": "36655275CB1AC502E35DA2EDC4930CFE4D734ADD15E8B7CF24490C915C9DADB6",
+      "bytes": 8134
+    },
+    {
+      "path": "web/src/components/ui/Modal.tsx",
+      "sha256": "BD90F0AF735A0219D76EA6491E4CE20C1D62935F71019DE445F5A1797DE0D383",
+      "bytes": 8285
+    },
+    {
+      "path": "web/src/components/ui/Table.tsx",
+      "sha256": "B61E99F1AEDD878BC422456906B3C04071C3416C53E2B9A517D67A0204310026",
+      "bytes": 1388
+    },
+    {
+      "path": "web/src/components/ui/Textarea.tsx",
+      "sha256": "6DE5EFA5B3F0077C97712BE4FC7C3B436DF47A4C803012CAE8CB0756BAD2DB75",
+      "bytes": 4609
+    },
+    {
+      "path": "web/src/api/hooks/_toastHelpers.ts",
+      "sha256": "96BC3304B4CD5A9FD4EAD533B10120FBB2EACE1AC162D28B839D3F0843689966",
+      "bytes": 5112
+    },
+    {
+      "path": "web/src/hooks/useAsOfDate.ts",
+      "sha256": "DCE9CC82AF1D73AC61F793D0DF69FF124E44FA21D85AFDD0D60D74DDB1AD8C1E",
+      "bytes": 3028
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "bytes": 18863
+    },
+    {
+      "path": "web/src/lib/currencyFormat.ts",
+      "sha256": "94A663D71E8E2F1DB4BD6F723665837E1AC22C333E1864124AF8938BFEA95563",
+      "bytes": 8924
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "bytes": 6443
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "bytes": 2095
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "bytes": 120243
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "bytes": 17825
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.test.tsx",
+      "sha256": "4E85295FE1B47AA509CB6AD8C1083B6743728074DD3E728CAEB72736FA7B78B2",
+      "bytes": 81269
+    },
+    {
+      "path": "web/src/lib/operationalMode.ts",
+      "sha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D",
+      "bytes": 2495
+    },
+    {
+      "path": "web/src/api/offlineCache.ts",
+      "sha256": "EDE8370B47BC67BEFD688A6434D6696C1EFDAE22E77BFDCC56C2D11D2857E6CE",
+      "bytes": 6961
+    },
+    {
+      "path": "web/src/api/queryClient.ts",
+      "sha256": "6CEBFB8ECDF6F4482756692866BD98B635E84974476D015CCE780ECB797EBC57",
+      "bytes": 3802
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "sha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "bytes": 4608
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "bytes": 5174
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "bytes": 6545
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "bytes": 5230
+    }
+  ],
+  "afterPins": [
+    {
+      "path": "web/src/features/vehicles/pages/VehicleManagementPage.tsx",
+      "sha256": "6700298EEA2A4868D2700CFDA75091EC9978B024EE70739907D8521CA1F6FC87",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleManagementPage.test.tsx",
+      "sha256": "0213F09564B8E54EB31DC9E0AB8A7B300DB87879D2044294E2EA527CA557755D",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/EnterprisePayerCard.tsx",
+      "sha256": "84F2F4E0FF99CF4242C29ED71628B7EDCA9E64FB35966B4BED19C18BB55C46EE",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/EnterpriseRolesCard.tsx",
+      "sha256": "EB957A8B95A285EEDAB1F1DCDBAD1EAF25CFE632A035F8BC145DE8C9F33798C3",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/EnterpriseRolesDataView.tsx",
+      "sha256": "53BCB27A4A6383EF4266775CF4DE471997ED24F9EE59DA992A11DA3AC9156658",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/index.ts",
+      "sha256": "956A8DE20700054654623B90F2CEA5204856C57586D8BF198F9396B077368A93",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/managementData.ts",
+      "sha256": "A8FA120B384518873E769E214494D0F840E6F9C854DDDDBEF7A2F10C55614B78",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/ManagementDataView.tsx",
+      "sha256": "91C683ACC0C1439ADA326F28BF0E00A8D87EF28A54440B72DD5049D310F8F01D",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/ManagementEndpointBody.tsx",
+      "sha256": "8EC62E4D09E383B6BCED90480404F3E39D355810E76C5C62EBE0E9CB5C76134F",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.test.tsx",
+      "sha256": "2D55B06A6994F1640046646BB0C9C062AC6C00AA53D976067E75EECF2B3E5980",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.tsx",
+      "sha256": "92E0F50D291E56D022BF958A6F16857426C57D491DC69F1446DD9EC20E2C3FB8",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/managementJson.test.ts",
+      "sha256": "A7D887CB8C711FFBDC1281700CF35C046D662DD961D92B6A0B2EB8B31B1BFB85",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/managementJson.ts",
+      "sha256": "DB421A37BF708D4234E65558C025F4CE6FE34FBDC5741424CEFD1F658E2A7114",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/ManagementRawDetails.tsx",
+      "sha256": "46D06B632AC61A03E646D0A8B4C60D27E011415D490B0C927AB3EB80F99052A0",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/OpaqueJsonDialog.tsx",
+      "sha256": "4CF3608D9D9187FC10987E4CE8712DFB2A29AD0A4F138E4169B492EB4B42083E",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/PaidVehicleSpecsCard.tsx",
+      "sha256": "194FF0A37BCF3A3D522976338C9FCEA07D240C2EA8FC7AB091DEE89DF0A49317",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/StructuredDataView.tsx",
+      "sha256": "D749C2538EB650962D41758E77F8485CD165038C7E367CEE3C1AECE66AF1CA9E",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/SubscriptionDataView.tsx",
+      "sha256": "FCF54A0478D9DA40744579F9A0EA6CC6DAE1ABBB6D82BC2F16C104805D4BA865",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehicleManagementWorkspace.test.tsx",
+      "sha256": "3F426790EC440AF1C8557E928D73156C51276991983687DA8FFC6CA05FFE2FB0",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehicleManagementWorkspace.tsx",
+      "sha256": "0E5F288F0BCF77991D688FDF10594CE953103B41F02E282EC9F0241CAB2E71F7",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehicleMetadataCards.tsx",
+      "sha256": "568EEF18D650E124F6EC04C9C5D5C794D1F07E64FB5D918A3C06B50AD1855D3F",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehicleOptionsDataView.tsx",
+      "sha256": "5B30325066858ABBD5620C27A5D959FE8B34CD336F442E6BB919C738B6796BBD",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehiclePricingCard.tsx",
+      "sha256": "D591A66FB2C2E91AE44A0E5EDBEB870A16FB981700F88CD75D157288A79D57E9",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/VehicleSpecsDataView.tsx",
+      "sha256": "D3AE4D0B4DAA4F76552C1C69E39566DC3130B9CDF91E056F23DD981332071AFE",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-management/WarrantyDataView.tsx",
+      "sha256": "421BB2C478D7DB0FE5ED93EDCE5771EDE00173C025E794E14B35AC42215CA296",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/ConfirmDialog.tsx",
+      "sha256": "36655275CB1AC502E35DA2EDC4930CFE4D734ADD15E8B7CF24490C915C9DADB6",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/Modal.tsx",
+      "sha256": "BD90F0AF735A0219D76EA6491E4CE20C1D62935F71019DE445F5A1797DE0D383",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/Table.tsx",
+      "sha256": "B61E99F1AEDD878BC422456906B3C04071C3416C53E2B9A517D67A0204310026",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/Textarea.tsx",
+      "sha256": "6DE5EFA5B3F0077C97712BE4FC7C3B436DF47A4C803012CAE8CB0756BAD2DB75",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/hooks/_toastHelpers.ts",
+      "sha256": "96BC3304B4CD5A9FD4EAD533B10120FBB2EACE1AC162D28B839D3F0843689966",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useAsOfDate.ts",
+      "sha256": "DCE9CC82AF1D73AC61F793D0DF69FF124E44FA21D85AFDD0D60D74DDB1AD8C1E",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/currencyFormat.ts",
+      "sha256": "94A663D71E8E2F1DB4BD6F723665837E1AC22C333E1864124AF8938BFEA95563",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.test.tsx",
+      "sha256": "4E85295FE1B47AA509CB6AD8C1083B6743728074DD3E728CAEB72736FA7B78B2",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/operationalMode.ts",
+      "sha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/offlineCache.ts",
+      "sha256": "EDE8370B47BC67BEFD688A6434D6696C1EFDAE22E77BFDCC56C2D11D2857E6CE",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/queryClient.ts",
+      "sha256": "6CEBFB8ECDF6F4482756692866BD98B635E84974476D015CCE780ECB797EBC57",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "sha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "matchesBefore": true
+    }
+  ],
+  "pinCheck": {
+    "status": "MATCH",
+    "algorithm": "SHA256",
+    "pinCount": 53,
+    "changedPaths": [],
+    "checkedAt": "2026-10-14T01:57:45.168565+00:00"
+  },
+  "confirmedFindings": [
+    {
+      "id": "VM01",
+      "priority": "P1",
+      "rule": "initial-paused-and-retained-trust",
+      "contract": "MDC-026",
+      "file": "web/src/features/vehicles/pages/VehicleManagementPage.tsx",
+      "line": 84,
+      "related": [
+        "web/src/features/vehicles/pages/VehicleManagementPage.tsx:17-18,41,56,84-96",
+        "web/src/features/vehicles/components/vehicle-management/VehicleMetadataCards.tsx:43-49",
+        "web/src/features/vehicles/components/vehicle-management/PaidVehicleSpecsCard.tsx:35-41",
+        "web/src/features/vehicles/components/vehicle-management/EnterpriseRolesCard.tsx:29-35",
+        "web/src/features/vehicles/components/vehicle-management/ManagementEndpointBody.tsx:16-24,46,63-80,123-154",
+        "web/src/api/dataState.ts:191-224",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:60-61"
+      ],
+      "mechanism": "Cold paused roster has data undefined,isPending true,isLoading false,fetchStatus paused,error null; shared state is initial/blocked but page claims No vehicles available. Endpoint callers drop fetchStatus/isPending/updatedAt, so initial pause becomes No cached data and retained paused payloads have no endpoint blocked/stale notice.",
+      "repro": "STATIC UNEXECUTED: use the cold paused shape above; page vehicles=[]/fatalError=null selects84-96. With synthetic selected ID, cold paused options reaches body142-154. Retained options plus paused/no error loses pause at the adapter and renders no refreshNotice.",
+      "fix": "Carry existing source/trust fields into endpoint body; distinguish unresolved pause, active loading and authoritative empty while retaining all eight shells and individual recovery. No shared dataState rewrite.",
+      "classification": "SOURCE_CONFIRMED",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No management corrective claim found; accepted audit-page-240 and phase5-page-vehicles-vehicle-management remain closed."
+    },
+    {
+      "id": "VM02",
+      "priority": "P1",
+      "rule": "paid-refresh-live-only-guard",
+      "contract": "MDC-046",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 1720,
+      "related": [
+        "web/src/api/hooks/useVehicles.ts:1716-1730",
+        "web/src/features/vehicles/components/vehicle-management/PaidVehicleSpecsCard.tsx:46-50,57-75",
+        "web/src/api/client.ts:347-374",
+        "web/src/lib/operationalMode.ts:66-76",
+        "web/src/api/offlineCache.ts:50-77,108-111,155-161",
+        "web/src/api/hooks/useVehicles.ts:1873-1880"
+      ],
+      "mechanism": "Cost-bearing specs refresh sends confirmed:true but omits requiresLiveMode. Client defaults it false and operational guard exits for false. Offline unsafe path patterns do not match /vehicles/{id}/specs/refresh. Paid confirmation remains but does not establish live readiness; payer correctly has the guard.",
+      "repro": "STATIC UNEXECUTED: selected synthetic42 with ?as_of=2026-08-08T12:00:00Z. Follow paid confirm -> mutate -> request options false -> operational guard early return. Offline specs/refresh also misses unsafe root command|wake|refresh pattern. No actual request, server authorization or billing result established.",
+      "fix": "Grant exact useVehicles management-function/test corrective ownership; add accepted live-only request option and UI readiness explanation for paid specs. Preserve confirmation/24h disclosure. Do not blanket-classify account-level read-only pricing POST as a physical write.",
+      "classification": "SOURCE_CONFIRMED",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No management corrective claim found; accepted audit-page-240 and phase5-page-vehicles-vehicle-management remain closed."
+    },
+    {
+      "id": "VM03",
+      "priority": "P2",
+      "rule": "payer-control-readiness-feedback",
+      "contract": "MDC-021/MDC-046",
+      "file": "web/src/features/vehicles/components/vehicle-management/EnterprisePayerCard.tsx",
+      "line": 47,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/EnterprisePayerCard.tsx:19-24,45-48,69,72-114",
+        "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.tsx:140-149",
+        "web/src/api/hooks/useVehicles.ts:1869-1881",
+        "web/src/lib/operationalMode.ts:44-47,66-76"
+      ],
+      "mechanism": "Payer availability tests only selectedId. In historical/offline mode with a selected vehicle the JSON staging and exact PAYER confirmation remain offered, despite the existing hook correctly rejecting the mutation before network. This is readiness UX, not an unguarded payer write.",
+      "repro": "STATIC UNEXECUTED: selected vehicle,payer.isPending=false,operational mode as_of/cached -> Configure payer enabled -> nonempty object stages -> exact PAYER enables confirm -> client guard refuses. No workflow executed.",
+      "fix": "Reuse operational readiness to disable/explain before staging and recheck at confirm. Preserve mandatory typed phrase, staged-payload clearing, danger confirmation and truthful success/error feedback; permissions remain server-owned.",
+      "classification": "SOURCE_CONFIRMED",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No management corrective claim found; accepted audit-page-240 and phase5-page-vehicles-vehicle-management remain closed."
+    },
+    {
+      "id": "VM04",
+      "priority": "P1",
+      "rule": "fabricated-warranty-active-status",
+      "contract": "MDC-025/MDC-026; mission3",
+      "file": "web/src/features/vehicles/components/vehicle-management/managementData.ts",
+      "line": 315,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/managementData.ts:301-363",
+        "web/src/features/vehicles/components/vehicle-management/WarrantyDataView.tsx:21-25,37-41,70-72,127-140"
+      ],
+      "mechanism": "No recognized coverage groups plus a display name causes fallback to active with state:active, without checking status or expiry. The view renders Active/success and counts it as active; a name alone establishes no coverage state.",
+      "repro": "STATIC UNEXECUTED input {warrantyDisplayName:\"Synthetic coverage\",warrantyExpiredOn:\"2020-01-01\"}, no groups -> predicate301-311 succeeds -> line315 manufactures active -> Active badge.",
+      "fix": "Retain unclassified/unknown status unless source establishes group/status; keep bare record, expiration and raw disclosure. Existing managementData/warranty owner, not new global status engine.",
+      "classification": "SOURCE_CONFIRMED",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No management corrective claim found; accepted audit-page-240 and phase5-page-vehicles-vehicle-management remain closed."
+    },
+    {
+      "id": "VM05",
+      "priority": "P2",
+      "rule": "unknown-warranty-groups-as-zero",
+      "contract": "MDC-026/MDC-033",
+      "file": "web/src/features/vehicles/components/vehicle-management/WarrantyDataView.tsx",
+      "line": 136,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/managementData.ts:106-120,278-299",
+        "web/src/features/vehicles/components/vehicle-management/WarrantyDataView.tsx:127-141,163-172"
+      ],
+      "mechanism": "Missing/null/unrecognized warranty groups normalize to [] indistinguishably from explicit empty arrays. When any coverage exists the brief uses data!=null to publish all group lengths, so absent upcoming/expired groups are reported0.",
+      "repro": "STATIC UNEXECUTED input {activeWarranty:[{warrantyDisplayName:\"Synthetic coverage\"}]} with no upcoming/expired keys -> parser[] -> visible brief rawValue0 for absent groups. Explicit empty groups produce identical values despite different source facts.",
+      "fix": "Retain per-group presence/recognition; missing groups null/unknown, explicit successful empty groups genuine0. Preserve cards/raw details. Unrelated Carbon unknown-count repair is not an existing owner of this boundary.",
+      "classification": "SOURCE_CONFIRMED",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No management corrective claim found; accepted audit-page-240 and phase5-page-vehicles-vehicle-management remain closed."
+    },
+    {
+      "id": "VM06",
+      "priority": "P2",
+      "rule": "unknown-option-activity-as-zero",
+      "contract": "MDC-026",
+      "file": "web/src/features/vehicles/components/vehicle-management/VehicleOptionsDataView.tsx",
+      "line": 17,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/VehicleOptionsDataView.tsx:16-17,40-46,61-69",
+        "web/src/features/vehicles/components/vehicle-management/managementData.ts:91-104,210-222"
+      ],
+      "mechanism": "Per-option null activity correctly says Status unknown, but headline filters only true and says N active of total. Unknown contributes same zero as explicitly inactive, yielding an inconsistent aggregate assertion.",
+      "repro": "STATIC UNEXECUTED input {codes:[{code:\"SYNTHETIC_OPTION\",displayName:\"Synthetic option\"}]} without isActive -> null/Status unknown row but0 active of1 headline.",
+      "fix": "Label confirmed-active count and disclose unknowns, or keep total-active fact unknown. Preserve true,false,null and real zero; existing options/warranty unknown scope can be one narrow owner.",
+      "classification": "SOURCE_CONFIRMED",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No matching management corrective source claim found; closed page migration preserved."
+    },
+    {
+      "id": "VM07",
+      "priority": "P2",
+      "rule": "date-time-preferences-bypassed",
+      "contract": "MDC-044/MDC-045",
+      "file": "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.tsx",
+      "line": 136,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.tsx:11,134-138",
+        "web/src/features/vehicles/components/vehicle-management/WarrantyDataView.tsx:4,114-117",
+        "web/src/lib/dateFormat.ts:40-75",
+        "web/src/hooks/useDateFormat.ts:72-96"
+      ],
+      "mechanism": "Cached timestamps and expiration use direct formatDateTime/formatDate without locale/timezone options. Defaults use browser context, not persisted app locale/tz_display_default from existing useDateFormat.",
+      "repro": "STATIC UNEXECUTED: browser en-US/America/Los_Angeles, app de-DE/UTC, cachedAt2026-08-08T00:30:00Z -> only timestamp passed, so browser date/English context wins. Expiration has same omission; date-only vendor semantics remain conditional C05.",
+      "fix": "Use existing preference-bound formatter at display boundary; preserve raw source. Do not change shared defaults. phase6-fix-relative-future-dates owns different future-relative behavior; completed advanced-evidence-date-preferences is a reuse example, not redispatch.",
+      "classification": "SOURCE_CONFIRMED",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No matching management corrective source claim found; closed page migration preserved."
+    },
+    {
+      "id": "VM08",
+      "priority": "P2",
+      "rule": "primary-spec-number-locale-bypassed",
+      "contract": "MDC-044",
+      "file": "web/src/features/vehicles/components/vehicle-management/VehicleSpecsDataView.tsx",
+      "line": 66,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/VehicleSpecsDataView.tsx:48-66",
+        "web/src/features/vehicles/components/vehicle-management/managementData.ts:142-169",
+        "web/src/hooks/useNumberFormatting.ts:19-38"
+      ],
+      "mechanism": "Primary user-facing specification numeric cells use String(field.value), bypassing application locale/preferences. Technical raw disclosure is a separate source-preserving exception; no physical unit is established for these undocumented fields.",
+      "repro": "STATIC UNEXECUTED input {syntheticNumericField:1234.5}, app de-DE -> primary cell literal1234.5 and no locale formatter.",
+      "fix": "Use existing numeric preference owner for recognized primary numbers while retaining exact raw access and identifier/source-precision exceptions. Never guess SI/source units.",
+      "classification": "SOURCE_CONFIRMED",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No matching management corrective source claim found; closed page migration preserved."
+    },
+    {
+      "id": "VM09",
+      "priority": "P2",
+      "rule": "hardcoded-string",
+      "contract": "MDC-044",
+      "file": "web/src/features/vehicles/components/vehicle-management/SubscriptionDataView.tsx",
+      "line": 62,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/SubscriptionDataView.tsx:48-64,67-72",
+        "web/src/features/vehicles/components/vehicle-management/managementData.ts:375-379"
+      ],
+      "mechanism": "Known billing periods have translated labels computed, but visible heading ignores them and humanizes source enum MONTHLY into English Monthly. Only suffix uses translated period; primary known label is not technical raw JSON.",
+      "repro": "STATIC UNEXECUTED MONTHLY plus non-English translator -> heading humanizeManagementLabel(MONTHLY)=Monthly, suffix translated month.",
+      "fix": "Reuse existing canonical localized period keys for primary heading; preserve unknown source enums explicitly. New catalog leaves only through parent if genuinely needed.",
+      "classification": "SOURCE_CONFIRMED",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No matching management corrective source claim found; closed page migration preserved."
+    },
+    {
+      "id": "VM10",
+      "priority": "P2",
+      "rule": "billing-precision-preference-bypassed",
+      "contract": "MDC-033/MDC-044",
+      "file": "web/src/features/vehicles/components/vehicle-management/SubscriptionDataView.tsx",
+      "line": 27,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/SubscriptionDataView.tsx:18-43",
+        "web/src/lib/currencyFormat.ts:80-98",
+        "web/src/hooks/useNumberFormatting.ts:19-31"
+      ],
+      "mechanism": "Price and total force0 decimals for integers/exactly2 otherwise, bypassing effective precision and finer source monetary precision accepted by parser. Currency helper enforces supplied digits. Reported ISO currency is correctly preserved.",
+      "repro": "STATIC UNEXECUTED price/total60.125,USD,user decimal_precision3 -> each passes2 and helper maximumFractionDigits2. Raw source remains in disclosure; primary presentation loses preferred precision.",
+      "fix": "Use existing precision/locale owner with agreed reported-money precision policy; preserve reported currency and valid negative/zero values. No guessed currency conversion.",
+      "classification": "SOURCE_CONFIRMED",
+      "confidence": "high",
+      "reproExecution": "NOTRUN",
+      "queueDedup": "No matching management corrective source claim found; closed page migration preserved."
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/vehicles/components/vehicle-management/VehicleMetadataCards.tsx",
+      "line": 46,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/PaidVehicleSpecsCard.tsx:38",
+        "web/src/features/vehicles/components/vehicle-management/EnterpriseRolesCard.tsx:32",
+        "web/src/features/vehicles/components/vehicle-management/ManagementEndpointBody.tsx:46,63-67"
+      ],
+      "mechanism": "Old refresh mutation error takes precedence over later successful independent GET until reset/retry; no reset is wired.",
+      "repro": "UNEXECUTED sequence: mutation.error retained, query new data/fetched_at,error null.",
+      "needs": "Owner decide failure history versus data-stale semantics; safe mocked sequence required before confirming false-stale defect.",
+      "classification": "CONDITIONAL_SOURCE_CANDIDATE",
+      "reproExecution": "NOTRUN"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/vehicles/components/vehicle-management/EnterpriseRolesDataView.tsx",
+      "line": 53,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/SubscriptionDataView.tsx:144",
+        "web/src/features/vehicles/components/vehicle-management/VehicleSpecsDataView.tsx:51",
+        "web/src/features/vehicles/components/vehicle-management/StructuredDataView.tsx:91-92",
+        "web/src/features/vehicles/components/vehicle-management/managementData.ts:123-139,182-192"
+      ],
+      "mechanism": "Humanizer recases product/role display names and generates English prose from keys. Technical identifiers may be exempt, real display names may not.",
+      "repro": "UNEXECUTED role displayName iOS Fleet Admin -> Ios fleet admin.",
+      "needs": "Establish enum-versus-source-label semantics; retain source names and localize known enums without manufacturing catalog keys for raw technical keys.",
+      "classification": "CONDITIONAL_SOURCE_CANDIDATE",
+      "reproExecution": "NOTRUN"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/vehicles/components/vehicle-management/StructuredDataView.tsx",
+      "line": 47,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/StructuredDataView.tsx:22,46-49",
+        "web/src/features/vehicles/components/vehicle-management/ManagementRawDetails.tsx:13-21"
+      ],
+      "mechanism": "Depth8 replaces even scalar with Additional nested data and has no deeper expansion/export here. Limitation is explicit, not silent.",
+      "repro": "UNEXECUTED nonsensitive scalar at depth8.",
+      "needs": "Establish allowed schema depth/required completeness before defect confirmation; preserve redaction and avoid unbounded renderer.",
+      "classification": "CONDITIONAL_SOURCE_CANDIDATE",
+      "reproExecution": "NOTRUN"
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/vehicles/components/vehicle-management/VehicleManagementWorkspace.tsx",
+      "line": 30,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.tsx:95",
+        "web/src/features/vehicles/components/vehicle-management/VehicleOptionsDataView.tsx:80",
+        "web/src/features/vehicles/components/vehicle-management/SubscriptionDataView.tsx:138",
+        "web/src/features/vehicles/components/vehicle-management/WarrantyDataView.tsx:57"
+      ],
+      "mechanism": "Five existing fixed-hue icon treatments; actual success usage differs from decorative grouping.",
+      "needs": "Deduplicate five unowned hue reviews already in phase5 queue2050/historical audit. Existing foundation/domain disposition; contrast NOTRUN, no neon/contrast failure inferred from class names.",
+      "classification": "CONDITIONAL_SOURCE_CANDIDATE",
+      "reproExecution": "NOTRUN"
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/vehicles/components/vehicle-management/WarrantyDataView.tsx",
+      "line": 115,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/managementData.ts:263-275,346-357",
+        "web/src/lib/dateFormat.ts:67-75"
+      ],
+      "mechanism": "Date-only string parsed as instant can shift prior day in negative-offset browser.",
+      "repro": "UNEXECUTED warrantyExpiredOn2026-08-08 and negative-offset browser.",
+      "needs": "Vendor calendar-date versus instant semantics unknown; reuse date-only policy only when confirmed.",
+      "classification": "CONDITIONAL_SOURCE_CANDIDATE",
+      "reproExecution": "NOTRUN"
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "N01",
+      "file": "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.tsx",
+      "line": 144,
+      "related": [
+        "web/src/features/vehicles/pages/VehicleManagementPage.tsx:75",
+        "web/src/features/vehicles/components/vehicle-management/OpaqueJsonDialog.tsx:94-106",
+        "web/src/components/ui/Button.tsx:36-48",
+        "web/src/components/ui/ConfirmDialog.tsx:177-193"
+      ],
+      "sourceEvidence": "Endpoint/roster sm36px and JSON defaults md40px lack caller mobile44px; shared confirmations do opt into44px.",
+      "needs": "Measure actual target/spacing at320/375/390/430 and200% text; no measured WCAG failure claimed.",
+      "classification": "NATIVE_NOTRUN",
+      "reproExecution": "NOTRUN"
+    },
+    {
+      "id": "N02",
+      "file": "web/src/features/vehicles/components/vehicle-management/OpaqueJsonDialog.tsx",
+      "line": 66,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/OpaqueJsonDialog.tsx:67-109",
+        "web/src/components/ui/Modal.tsx:157-180",
+        "web/src/features/vehicles/components/vehicle-management/VehicleManagementWorkspace.tsx:71-79",
+        "web/src/features/vehicles/components/vehicle-management/VehicleSpecsDataView.tsx:46-72"
+      ],
+      "sourceEvidence": "Masonry/reflow,min-w-0,shared modal/table present; JSON actions are inside scroll body not persistent footer.",
+      "needs": "Synthetic open/nested transition,focus/restore/Escape,table-scroll keyboard,long source/JSON,narrow allocation,safe-area/footer reachability QA; no captures run.",
+      "classification": "NATIVE_NOTRUN",
+      "reproExecution": "NOTRUN"
+    },
+    {
+      "id": "N03",
+      "file": "web/src/features/vehicles/components/vehicle-management/StructuredDataView.tsx",
+      "line": 88,
+      "related": [
+        "web/src/features/vehicles/components/vehicle-management/VehicleSpecsDataView.tsx:53",
+        "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.tsx:95,132-149"
+      ],
+      "sourceEvidence": "Specs text-right and technical sm fixed-grid need RTL/extreme-data review; shared primitives alone are not acceptance.",
+      "needs": "RTL/long translations,dark/light/saved-custom/forced-colors,contrast/focus,reduced-motion/low-bandwidth,200% text,announcements; NOTRUN.",
+      "classification": "NATIVE_NOTRUN",
+      "reproExecution": "NOTRUN"
+    }
+  ],
+  "writes": [
+    "docs/frontend-audits/phase6-qa-vehicles-vehicle-management.json",
+    "web/logs/phase6-qa-vehicles-vehicle-management.log"
+  ],
+  "release": {
+    "status": "RELEASED",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-vehicles-vehicle-management.json",
+      "web/logs/phase6-qa-vehicles-vehicle-management.log"
+    ],
+    "sourceWrites": "None authorized/performed; report/log only",
+    "commands": "No background/service/test process started; all bounded inspection calls completed. No ongoing command or further write requested.",
+    "releasedAt": "2026-10-14T01:57:45.168591+00:00"
+  },
+  "summary": {
+    "confirmedFindings": 10,
+    "conditionalCandidates": 5,
+    "nativeCandidates": 3,
+    "candidateTotal": 8,
+    "confirmedByRule": {
+      "initial-paused-and-retained-trust": 1,
+      "paid-refresh-live-only-guard": 1,
+      "payer-control-readiness-feedback": 1,
+      "fabricated-warranty-active-status": 1,
+      "unknown-warranty-groups-as-zero": 1,
+      "unknown-option-activity-as-zero": 1,
+      "date-time-preferences-bypassed": 1,
+      "primary-spec-number-locale-bypassed": 1,
+      "hardcoded-string": 1,
+      "billing-precision-preference-bypassed": 1
+    },
+    "confirmedByPriority": {
+      "P1": 3,
+      "P2": 7
+    },
+    "filesWithMostIssues": [
+      {
+        "file": "web/src/features/vehicles/components/vehicle-management/SubscriptionDataView.tsx",
+        "count": 2
+      },
+      {
+        "file": "web/src/features/vehicles/pages/VehicleManagementPage.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/api/hooks/useVehicles.ts",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-management/EnterprisePayerCard.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-management/managementData.ts",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-management/WarrantyDataView.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-management/VehicleOptionsDataView.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-management/ManagementEndpointCard.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-management/VehicleSpecsDataView.tsx",
+        "count": 1
+      }
+    ],
+    "priorityFixes": [
+      "VM02 paid refresh guard",
+      "VM01 paused-source discrimination",
+      "VM04 fabricated warranty active",
+      "VM03 payer readiness",
+      "VM05/VM06 unknown-zero",
+      "VM07-VM10 display preferences/i18n"
+    ],
+    "countingBasis": "One confirmed finding per distinct source mechanism, not per affected callsite; conditional/native candidates excluded from confirmed count."
+  },
+  "needs": [
+    {
+      "scope": "Existing page/direct endpoint trust propagation",
+      "findingIds": [
+        "VM01"
+      ],
+      "dedup": "Do not redispatch global dataState/StaleRefreshWarning or closed page migration."
+    },
+    {
+      "scope": "Exact paid-spec useVehicles function/direct tests guard",
+      "findingIds": [
+        "VM02"
+      ],
+      "dedup": "Parent grant narrow shared-hook claim; no blanket pricing/write rule."
+    },
+    {
+      "scope": "Payer operational-readiness UI",
+      "findingIds": [
+        "VM03"
+      ],
+      "dedup": "Keep existing client guard; no enrollment/delete/token/identity action needed."
+    },
+    {
+      "scope": "Existing warranty/options normalization and views",
+      "findingIds": [
+        "VM04",
+        "VM05",
+        "VM06"
+      ],
+      "dedup": "One shared domain-unknown scope; unrelated Carbon count repair not duplicate."
+    },
+    {
+      "scope": "Management display formatters/known-period i18n",
+      "findingIds": [
+        "VM07",
+        "VM08",
+        "VM09",
+        "VM10"
+      ],
+      "dedup": "Reuse useDateFormat/useNumberFormatting/period keys; future-relative shared owner retains claim; no parent-only catalog writes."
+    },
+    {
+      "scope": "Conditional/native acceptance",
+      "candidateIds": [
+        "C01",
+        "C02",
+        "C03",
+        "C04",
+        "C05",
+        "N01",
+        "N02",
+        "N03"
+      ],
+      "dedup": "C04 existing five-treatment debt not five new defects. Preserve native/helper budgets; no browser lock granted."
+    }
+  ],
+  "preservation": {
+    "pageLines": 110,
+    "pagePlusSupportProductionLines": 2430,
+    "endpointCount": 8,
+    "confirmDialogCount": 2,
+    "opaqueJsonDialogCount": 2,
+    "endpointIds": [
+      "vehicle-options",
+      "warranty-details",
+      "subscription-eligibility",
+      "upgrade-eligibility",
+      "vehicle-specs",
+      "vehicle-pricing",
+      "enterprise-roles",
+      "enterprise-payer"
+    ],
+    "actions": "Six explicit cache refreshes,paid confirm,account-level read-only pricing JSON POST,payer staging/exact PAYER danger confirmation,roster retry,technical disclosure retained. No automatic POST on mount.",
+    "scope": "Shared header vehicle consumed; workspace key resets session mutation/dialog state on vehicle change; no duplicate picker/range.",
+    "trust": "Fatal roster keeps account workspace; retained roster warning/cache data and402/412 versus403 states preserved. VM01 pause gap remains.",
+    "SI": "Wire/cache/raw source unchanged. Warranty odometer explicitly unknown-unit/raw with note, NOT guessed SI/miles. Currency ISO retained; null em dash,zero/signed source values preserved before formatting.",
+    "privacy": "Nonempty opaque JSON parser honestly does not validate vendor schema; source redaction present; this audit never reads actual payloads/credentials or persists user objects.",
+    "mobileA11y": "Shared Button,Textarea,Table,Modal,ConfirmDialog,labels/headings,min-w-0/wrapping/masonry exist; no native acceptance inferred."
+  },
+  "ruleScan": {
+    "basis": "Actual native Select-String and read-only catalog literal comparison, raw output logged; candidates are not violations.",
+    "productionFiles": 21,
+    "staticInlineStyle": {
+      "broadVarMatchedLines": 12,
+      "actualStyleObjectMatchedLines": 0,
+      "classification": "Tailwind var classes acceptable, not inline style."
+    },
+    "rawHtml": {
+      "initialCaseInsensitiveMatches": 1,
+      "correctedCaseSensitiveMatches": 0,
+      "classification": "Shared Table at VehicleSpecsDataView:46 acceptable."
+    },
+    "directLibraryImportMatchedLines": 0,
+    "oldApiImportMatchedLines": 0,
+    "doublePrefixMatchedLines": 0,
+    "camelcaseParam": {
+      "initialInsensitiveMatches": 4,
+      "correctedSensitiveMatches": 0,
+      "classification": "Lowercase vendor display ?vin=, not camelCase URL."
+    },
+    "hiddenPanelMatchedLines": 0,
+    "hardcodedLiteralCandidatesMatchedLines": 0,
+    "containerPatternMatches": 3,
+    "containerClassification": "PageLayout resolves actual PageContainer adapter, not missing wrapper.",
+    "fetchUseEffectMatches": 1,
+    "fetchUseEffectClassification": "OpaqueJsonDialog:34 local form reset only; no data fetching.",
+    "managementHooks": {
+      "doublePrefix": 0,
+      "camelcaseParam": 0,
+      "fetch": 0
+    },
+    "canonicalEnglish": {
+      "literalOccurrencesCompared": 162,
+      "missing": 0,
+      "mismatched": 0,
+      "limit": "Regex literal calls only, no guard/non-English test; VM09 computed heading not covered."
+    },
+    "backendRules": "NOT_APPLICABLE; no internal/**/*.go scope."
+  },
+  "testEvidence": {
+    "authoredSourceCases": {
+      "page": 7,
+      "workspace": 8,
+      "endpointCard": 3,
+      "managementJsonExpandedLiteralArrays": 19,
+      "total": 37,
+      "basis": "Inspection of it/it.each declarations/arrays; not runner discovery."
+    },
+    "fresh": {
+      "status": "NOTRUN_BY_ASSIGNMENT",
+      "discovered": null,
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "note": "Zero execution not a pass."
+    },
+    "mocks": "Page mocks workspace; workspace mocks request/client+i18n; card mocks i18n. No real vehicle/scope/dialog/mode/non-English/native acceptance.",
+    "historical": "Queue2050 records7 old passing page cases; source page tests mock workspace. Old raw receipt absent among this machine vehicle-management filenames; no independent certification or passing rerun."
+  },
+  "commands": [
+    {
+      "shellId": "1533",
+      "purpose": "Clock/status/discovery, initial pre-transcript output not fully in log",
+      "exit": 0
+    },
+    {
+      "shellId": "1545",
+      "purpose": "Instruction discovery raw text appended",
+      "exit": 0
+    },
+    {
+      "shellId": "1544",
+      "purpose": "Feature discovery raw text appended",
+      "exit": 0
+    },
+    {
+      "shellId": "1560",
+      "purpose": "rg unavailable discovery failure",
+      "exit": 1
+    },
+    {
+      "shellId": "1561",
+      "purpose": "rg unavailable narrowing failure",
+      "exit": 1
+    },
+    {
+      "shellId": "1585",
+      "purpose": "Start transcript and fresh status/instruction paths",
+      "exit": 0
+    },
+    {
+      "shellId": "1592",
+      "purpose": "Full orchestrator/control anchors",
+      "exit": 0
+    },
+    {
+      "shellId": "1605",
+      "purpose": "Exact queue/contract/inventory anchors",
+      "exit": 0
+    },
+    {
+      "shellId": "1611",
+      "purpose": "Support list/accepted queue/handoff",
+      "exit": 0
+    },
+    {
+      "shellId": "1618",
+      "purpose": "Before hashes/support; nonterminating absent guessed useVehicleManagement.ts error preserved",
+      "exit": 0
+    },
+    {
+      "shellId": "1625",
+      "purpose": "Full support batch2",
+      "exit": 0
+    },
+    {
+      "shellId": "1626",
+      "purpose": "Inventory/prior audit/owner search",
+      "exit": 0
+    },
+    {
+      "shellId": "1631",
+      "purpose": "Hook/owner/receipt discovery",
+      "exit": 0
+    },
+    {
+      "shellId": "1637",
+      "purpose": "Compact owner map/hook anchors",
+      "exit": 0
+    },
+    {
+      "shellId": "1643",
+      "purpose": "Context before pins",
+      "exit": 0
+    },
+    {
+      "shellId": "1648",
+      "purpose": "Coverage/cross-report dedup",
+      "exit": 0
+    },
+    {
+      "shellId": "1654",
+      "purpose": "Readiness/formatting evidence",
+      "exit": 0
+    },
+    {
+      "shellId": "1659",
+      "purpose": "Pattern scans and JSON dedup; python0",
+      "exit": 0
+    },
+    {
+      "shellId": "1668",
+      "purpose": "Canonical literal keys/anchors; python0",
+      "exit": 0
+    },
+    {
+      "shellId": "1674",
+      "purpose": "Guard/owner/inventory scans; python0",
+      "exit": 0
+    },
+    {
+      "shellId": "1687",
+      "purpose": "Supplemental pins/exact owners/test source; python0",
+      "exit": 0
+    },
+    {
+      "shellId": "1694",
+      "purpose": "Preference/prior audit evidence; python0",
+      "exit": 0
+    },
+    {
+      "shellId": "1700",
+      "purpose": "Exact scan/source totals and anchors; python0",
+      "exit": 0
+    },
+    {
+      "shellId": "1701",
+      "purpose": "Classification: explanatory sentence incorrect, explicitly corrected1702",
+      "exit": 0
+    },
+    {
+      "shellId": "1702",
+      "purpose": "Correct case-sensitive scans, no test rerun",
+      "exit": 0
+    },
+    {
+      "shellId": "1730",
+      "purpose": "Oversized artifact serialization rejected before execution, os206; no JSON produced",
+      "exit": 1
+    },
+    {
+      "shellId": "1744",
+      "purpose": "Bounded permitted report serialization base; python0",
+      "exit": 0
+    },
+    {
+      "shellId": "1787",
+      "purpose": "Report findings1-5 serialization; python0",
+      "exit": 0
+    },
+    {
+      "shellId": "1805",
+      "purpose": "Report findings6-10 serialization; python0",
+      "exit": 0
+    },
+    {
+      "shellId": "1840",
+      "purpose": "Candidate/needs/count serialization; python0",
+      "exit": 0
+    },
+    {
+      "purpose": "Final JSON parse and current-source BEFORE/AFTER hashes plus post-write reparse/pin verification",
+      "exit": 0,
+      "freshTestExecution": false
+    }
+  ],
+  "notRun": [
+    "Fresh Vitest/scoped tests or passing reruns",
+    "Fresh lint/style/preservation/audit helper CLI",
+    "Build",
+    "npx tsc --noEmit/global TSC",
+    "Browser/native/mounted/mobile/keyboard/a11y capture",
+    "Network/API/server/enrollment/delete/token/identity/vehicle/physical action",
+    "Servers/installs/subagents/Git writes/source/test/catalog writes"
+  ],
+  "evidenceLimits": [
+    "Source-confirmed means exact branch/request mechanism plus UNEXECUTED synthetic reproduction, not runtime validation.",
+    "Pins cover named inspected source/test/context only; concurrent unrelated repository changes not attributed to this audit.",
+    "No whole Phase6/7 or native/application completion claimed.",
+    "rg failures, absent guessed hook, openly corrected regex classification and rejected oversized serializer retained in log.",
+    "Initial pre-transcript status output not fully captured;1585 fresh status is logged as its own instant, not substituted historical evidence.",
+    "No new source/test/English/catalog/Git writes; do not redispatch accepted source owners."
+  ],
+  "writtenAt": "2026-10-14T01:57:09.811353+00:00"
+}

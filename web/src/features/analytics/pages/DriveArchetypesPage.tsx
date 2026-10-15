@@ -4,9 +4,9 @@ import { RefreshCw } from 'lucide-react';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
@@ -16,24 +16,24 @@ import {
   ArchetypeCentroidMap,
   ArchetypeClusterComposition,
   ArchetypeConfidenceDistribution,
-  ArchetypeEvidenceLedger,
   ArchetypeExactAccounting,
   ArchetypeFeatureEvidence,
-  ArchetypeHistoryCoverage,
   ArchetypeHourlyProfile,
   ArchetypeMethodology,
   ArchetypeMonthlyComposition,
   ArchetypeProfiles,
   ArchetypeSeparation,
-  ArchetypeSourceDisposition,
   useDriveArchetypeDisplay,
   type ArchetypeQueryState,
 } from '../components/drive-archetypes';
+import { ArchetypeEvidenceBrief as ArchetypeEvidenceLedger } from '../components/operationalbrief-a-m/ArchetypeEvidenceBrief';
+import { ArchetypeSourceBrief as ArchetypeSourceDisposition } from '../components/operationalbrief-a-m/ArchetypeSourceBrief';
+import { ArchetypeCoverageBrief as ArchetypeHistoryCoverage } from '../components/operationalbrief-a-m/ArchetypeCoverageBrief';
 import { summarizeArchetypes } from '../lib/driveArchetypes';
 
 export default function DriveArchetypesPage() {
   const { t } = useTranslation();
-  usePageTitle(t('archetypes.title', 'Drive Archetypes'));
+  usePageTitle(t('archetypes.title', 'Drive archetypes'));
   const { vehicleId } = useSelectedVehicle();
   const timeZone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -93,23 +93,25 @@ export default function DriveArchetypesPage() {
   }, [historyQuery.refetch, vehicleId]);
 
   return (
-    <PageContainer
-      title={t('archetypes.title', 'Drive Archetypes')}
+    <PageLayout
+      title={t('archetypes.title', 'Drive archetypes')}
       subtitle={t(
         'archetypes.subtitle',
         'A dense observational workspace for source eligibility, deterministic clustering, assignments, and interpretation limits',
       )}
       query={vehicleId != null ? historyQuery : undefined}
-      actions={(
+      secondaryActions={(
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="secondary"
             size="sm"
+            className="min-h-11 min-w-11 md:min-h-9"
             onClick={refresh}
             disabled={vehicleId == null}
             loading={historyQuery.isFetching && vehicleId != null}
-            icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icon icon={RefreshCw} />}
+            wrapLabel
           >
             {t('archetypes.actions.refresh', 'Refresh evidence')}
           </Button>
@@ -193,6 +195,6 @@ export default function DriveArchetypesPage() {
           display={display}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

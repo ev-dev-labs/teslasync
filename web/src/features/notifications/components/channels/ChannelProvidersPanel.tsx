@@ -64,7 +64,7 @@ export function ChannelProvidersPanel({ channels }: ChannelProvidersPanelProps) 
                 <Icon className="h-4 w-4" style={{ color: p.color }} aria-hidden="true" />
               </div>
               <div className="min-w-0 flex-1">
-                <Text as="p" variant="body" className="truncate">{p.label}</Text>
+                <Text as="p" variant="body" className="truncate">{t(p.i18nKey, p.label)}</Text>
                 <Text as="p" variant="caption">
                   {count > 0
                     ? t('notifications.channels.providers.configured', '{{count}} configured', { count })

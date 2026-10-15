@@ -25,6 +25,13 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ComponentProps, ReactNode } from 'react'
 
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C',
+    pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2 } }),
+}))
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}))
 // Hoisted formatter spies — referenced inside the (hoisted) vi.mock factory.
 const { formatRelativeTime, formatDateTime } = vi.hoisted(() => ({
   formatRelativeTime: vi.fn((v: unknown) => `rel:${String(v)}`),
@@ -89,14 +96,22 @@ beforeEach(() => {
 })
 
 describe('SessionsSummaryCards — loading', () => {
-  it('renders four skeletons, no cards, and marks the region busy', () => {
+  it('renders four loading values in the retained Brief shell and marks the region busy', () => {
     const { container } = renderCards({ isLoading: true })
 
-    // One `.animate-pulse` element per Skeleton — the layout must not jump.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4)
-    // None of the KPI labels are painted while the query is in flight.
-    expect(screen.queryByText('Active sessions')).toBeNull()
-    expect(screen.queryByText('This device')).toBeNull()
+    // Each retained metric owns a static value placeholder, not a shared Skeleton.
+    const metrics = container.querySelectorAll('[data-operational-metric]')
+    expect(metrics).toHaveLength(4)
+    const placeholders = container.querySelectorAll('[data-operational-metric] [aria-hidden="true"][class~="bg-[var(--surface-3)]"]')
+    expect(placeholders).toHaveLength(4)
+    metrics.forEach((metric) => {
+      const placeholder = metric.querySelector('[aria-hidden="true"][class~="bg-[var(--surface-3)]"]')
+      expect(placeholder).toHaveClass('block', 'h-5', 'w-20', 'max-w-full', 'rounded')
+      expect(placeholder).not.toHaveClass('animate-pulse', 'motion-safe:animate-pulse')
+    })
+    expect(screen.getByText('Active sessions')).toBeInTheDocument()
+    expect(screen.getByText('This device')).toBeInTheDocument()
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0)
 
     const region = screen.getByRole('region', { name: 'Session summary' })
     expect(region).toHaveAttribute('aria-busy', 'true')
@@ -184,7 +199,7 @@ describe('SessionsSummaryCards — empty / no current session', () => {
 })
 
 describe('SessionsSummaryCards — error state', () => {
-  it('renders QueryError instead of cards and wires Retry to onRetry', () => {
+  it('renders QueryError beside unavailable Brief values and wires Retry to onRetry', () => {
     const onRetry = vi.fn()
     const { container } = renderCards({
       isError: true,
@@ -192,9 +207,10 @@ describe('SessionsSummaryCards — error state', () => {
       onRetry,
     })
 
-    // Cards + skeletons are gone; the error banner owns the region.
-    expect(screen.queryByText('Active sessions')).toBeNull()
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0)
+    // Unavailable metric shells remain beside the error, with no loading values.
+    expect(screen.getByText('Active sessions')).toBeInTheDocument()
+    expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4)
+    expect(container.querySelectorAll('[data-operational-metric] [aria-hidden="true"][class~="bg-[var(--surface-3)]"]')).toHaveLength(0)
     expect(screen.getByText("Can't reach server")).toBeInTheDocument()
 
     const retry = screen.getByRole('button', { name: 'Retry' })

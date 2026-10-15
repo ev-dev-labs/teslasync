@@ -1,0 +1,372 @@
+{
+  "item": "audit-page-172",
+  "page": "web\\src\\features\\settings\\pages\\HelixPage.tsx",
+  "routes": ["/integrations/helix"],
+  "purpose": "Configure the optional Helix AI integration, explicit mode and feature opt-ins, provider credentials, daily cap, and audited usage.",
+  "primaryGoal": "Review and explicitly save a safe off/local/cloud configuration without silently restoring features or losing other settings or provider credentials.",
+  "dataSources": [
+    {
+      "hook": "useSettings",
+      "file": "web\\src\\api\\hooks\\useSettings.ts",
+      "line": 27,
+      "endpoints": ["GET /api/v1/settings"],
+      "sourceOwner": "internal/api/settings via settingsHandler",
+      "routeEvidence": "internal\\api\\router.go:3659",
+      "behavior": "Shared ['settings'] cache; AbortSignal forwarded. AISettings derives trust and mirrors only its AI subtree into a reviewable draft."
+    },
+    {
+      "hook": "useSaveAiSettings",
+      "file": "web\\src\\api\\hooks\\useAiSettings.ts",
+      "line": 127,
+      "endpoints": ["PUT /api/v1/settings"],
+      "sourceOwner": "internal/api/settings via settingsHandler",
+      "routeEvidence": "internal\\api\\router.go:3660",
+      "behavior": "Requires an existing cached settings document, merges the AI patch with that document, invalidates/broadcasts settings and emits mutation toasts. No mutation exercised."
+    },
+    {
+      "hook": "useValidateAiProvider",
+      "file": "web\\src\\api\\hooks\\useAiSettings.ts",
+      "line": 194,
+      "endpoints": ["POST /api/v1/settings/ai/validate-config"],
+      "sourceOwner": "internal/api/aisettingsvalidate",
+      "routeEvidence": "internal\\api\\router.go:3674",
+      "behavior": "Available during off-mode opt-in. Typed 422 rejection becomes inline outcome; other failures are caught by the provider form. Empty key omitted to retain saved credentials. No probe exercised."
+    },
+    {
+      "hook": "useAiUsageToday",
+      "file": "web\\src\\api\\hooks\\useAiUsage.ts",
+      "line": 135,
+      "endpoints": ["GET /api/v1/ai/usage/today"],
+      "sourceOwner": "internal/api/aiusage; existing AICallLogRepo",
+      "routeEvidence": "internal\\api\\router.go:5121 -> internal\\api\\aiusage\\usage.go:109-110",
+      "behavior": "Shared ['ai','usage','today'] polling query with AbortSignal. Status strip, usage card and cap bar share cache; multiple consumers are not evidence of duplicate HTTP requests. Uses calling-subject audited UTC-day totals."
+    },
+    {
+      "hook": "useAiUsageByFeature",
+      "file": "web\\src\\api\\hooks\\useAiUsage.ts",
+      "line": 148,
+      "endpoints": ["GET /api/v1/ai/usage/by-feature"],
+      "sourceOwner": "internal/api/aiusage; existing AICallLogRepo",
+      "routeEvidence": "internal\\api\\router.go:5121 -> internal\\api\\aiusage\\usage.go:111,157-175,206-208",
+      "behavior": "Page omits since; handler defaults to rolling seven days. Rows sorted locally by audited cost then calls. Historical data retained independently of recent attribution."
+    },
+    {
+      "hook": "useAiUsageRecent",
+      "file": "web\\src\\api\\hooks\\useAiUsage.ts",
+      "line": 164,
+      "endpoints": ["GET /api/v1/ai/usage/recent?limit=50"],
+      "sourceOwner": "internal/api/aiusage; existing AICallLogRepo",
+      "routeEvidence": "internal\\api\\router.go:5121 -> internal\\api\\aiusage\\usage.go:112",
+      "behavior": "Newest sampled provider/model per feature, explicitly not a breakdown of seven-day spend; separate query and trust state."
+    },
+    {
+      "hook": "AI_FEATURE_IDS / AI_FEATURES",
+      "file": "web\\src\\ai\\features.ts",
+      "line": 1,
+      "endpoints": [],
+      "sourceOwner": "Generated mirror of internal/ai/features/registry.go",
+      "behavior": "Canonical stable IDs, names, explanations and default-off metadata; filter categories are presentation-only. Registry generation and backend feature behavior were not exercised."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "contract": "Existing PageContainer props, title/subtitle/breadcrumbs and full-width min-w-0 container; preserve shell ownership.", "usedAt": "web\\src\\features\\settings\\pages\\HelixPage.tsx:71"},
+    {"name": "AISettings", "owner": "web\\src\\features\\settings\\components\\AISettings.tsx", "contract": "Single domain controller, always mounted; no page-wide loading gate or withAiFeature guard.", "usedAt": "web\\src\\features\\settings\\pages\\HelixPage.tsx:83"},
+    {"name": "SettingsSummaryBrief -> OperationalBrief", "owner": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx", "contract": "Typed raw StatMetric values via useOperationalMetrics; source/scope/loading/unavailable/retained labels and source details. Do not replace with a second KPI pipeline.", "usedBy": ["HelixStatusStrip", "AIUsageCard"]},
+    {"name": "RadioCard", "owner": "web\\src\\components\\ui\\RadioCard.tsx", "contract": "Native radio, name/value/checked/onChange, localized labels/descriptions, disabled, ref, automatic ID and selected/focus state; preserve off/local/cloud identities."},
+    {"name": "Input / Select / Button / Typography", "owner": "web\\src\\components\\ui", "contract": "Category-barrel imports, field labels and descriptions, secret password field, focus and disabled/loading semantics; Button.wrapLabel available."},
+    {"name": "FormSection", "owner": "web\\src\\components\\forms", "contract": "Existing provider form section; reuse rather than introducing a Helix-only surface primitive. Implementation not independently inspected."},
+    {"name": "MetricBar", "owner": "web\\src\\components\\data-display", "contract": "Existing null-capable metric bar, max=100, ariaLabel, slim solid fill and semantic gauge colors; implementation not independently inspected."},
+    {"name": "DataStateNotice / InlineCallout", "owner": "web\\src\\components\\feedback", "contract": "Existing nonfatal trust and semantic callout pipeline, reason/evidence/message and preserveSeverity; preserve retained data."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "contract": "Existing entrance motion uses motion preference and initial=false under reduction. Runtime motion behavior unverified."},
+    {"name": "useFormatting / useNumberFormatting", "owner": "web\\src\\hooks\\useFormatting.ts", "contract": "Existing currency and locale/precision preference bridges; do not invent FX conversion or change cents/micro-cents wire values."}
+  ],
+  "duplicatedPatterns": [
+    {"pattern": "Today spend appears in status summary, usage totals and cap context", "decision": "Preserve each distinct purpose; reuse the existing shared query cache and formatting owners, not collapse sections or assert redundant network work."},
+    {"pattern": "Feature/category and spend list surfaces use local grids", "decision": "Domain-specific generated opt-ins and sampled spend attribution remain feature-owned; insufficient cross-page evidence for a new universal list component."},
+    {"pattern": "Hardcoded result foreground colors and archive prompt chrome", "decision": "Reuse current semantic feedback/palette owners; findings below identify concrete inherited and page-owned changes."}
+  ],
+  "responsive": {
+    "sourceObserved": [
+      "AISettings mode grid stacks below sm and becomes three columns at sm.",
+      "Provider inputs stack below sm; provider-plus-usage bento becomes three columns at xl with provider spanning two.",
+      "Feature groups retain all rows, search and explanations; row grid becomes two columns at lg.",
+      "Spend list stacks below sm; header badges and save footer use flex-wrap.",
+      "PageLayout provides w-full/min-w-0 and a container context; feature grids still use viewport breakpoints."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\settings\\components\\AIRestorePanel.tsx",
+        "line": 108,
+        "rule": "MDC-043 / mission 15-16",
+        "detail": "Restore action row has no wrapping/stacking and neither action opts into wrapLabel. Long translated action labels must share a narrow panel row.",
+        "fix": "Use responsive stacking or flex-wrap and existing Button.wrapLabel for both actions, preserving both confirm and decline and complete archive preview.",
+        "owner": "page",
+        "confidence": "high source evidence; actual overflow unverified"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\AIProviderSection.tsx",
+        "line": 246,
+        "rule": "MDC-043 / mission 18",
+        "detail": "Both validation rows (246 and 342) use Stack direction=row without wrapping; Stack's default row renderer does not wrap. Long returned validation messages compete with action width.",
+        "fix": "Pass existing className flex-wrap with min-width handling or stack the result below the action at narrow widths; preserve full feedback text and Validate behavior.",
+        "owner": "page",
+        "confidence": "high source evidence; actual clipping unverified"
+      }
+    ],
+    "viewportTesting": "Unverified at 320/375/390/430/768/1024/1280/1440/1920/2560, narrow shell allocations, RTL and 200% text."
+  },
+  "accessibility": {
+    "sourceObserved": [
+      "Mode group has localized aria-labelledby and native shared radio cards.",
+      "Each feature toggle has a localized accessible label and resolvable description ID; disclosure actions supply aria-expanded/controls.",
+      "Search is labeled; category actions use aria-pressed; feature count uses role=status.",
+      "Validation feedback uses role=status; initial failures use alert/retry; decorative icons are hidden.",
+      "FadeIn delegates reduced motion to the current shared preference owner."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\settings\\components\\AIFeatureToggleList.tsx",
+        "line": 121,
+        "rule": "MDC-040",
+        "detail": "More/Less detail explicitly requests min-h-6 while size=sm keeps shared h-9, so min-h-6 is not proof of a 24px computed target. The sm disclosure/category controls (178) still request a 36px rather than 44px minimum target.",
+        "fix": "Use existing Button sizing/classes to ensure at least 44px reachable touch targets or document measured spacing exceptions; retain aria-controls/expanded and all explanations. Do not add a second Button primitive.",
+        "owner": "page",
+        "confidence": "high source size evidence; computed dimensions and WCAG spacing compliance unverified"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\AISettings.tsx",
+        "line": 572,
+        "rule": "MDC-020 / mission 19",
+        "detail": "Save communicates pending state with disabled and changed copy but does not pass Button.loading, whose shared implementation supplies aria-busy. Provider validation follows the same copy-only pending pattern.",
+        "fix": "Use existing loading prop or explicit aria-busy with existing copy and disabled behavior; do not add parallel pending-state implementations.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "evidence": "Keyboard, screen reader, focus visibility/restoration, effective contrast, forced colors and touch behavior unverified; no browser or accessibility runner exercised."
+  },
+  "states": {
+    "initialLoading": "AISettings stays mounted; settings-derived summary becomes loading/unknown. Mode controls initialize safely off; Save disabled while settings isLoading. No page spinner should be added.",
+    "empty": "No calls is distinct from missing data in AIUsageCard; spend list and generated-registry/search misses have explanations. Registry-empty branch exists.",
+    "error": "Settings fatal failure uses QueryError with refetch. Usage/breakdown initial failures have independent retry; validation gives inline fail outcome; save uses mutation toast.",
+    "retained": "deriveDataState/useDataState retain values on refresh failures. Configured forms and independently retained spend/attribution remain visible.",
+    "off": "Provider/feature/usage panels are intentionally conditional on local mode; saved off guard prevents usage polling before saved opt-in. This is consent gating, not a null-data section-loss finding.",
+    "partial": "Recent provider/model attribution failure does not remove seven-day spend totals; sampled context is explicitly distinguished from the aggregate.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\settings\\components\\AISettings.tsx",
+        "line": 422,
+        "rule": "MDC-026 / mission 25",
+        "detail": "Settings stale rendering does not use isRefreshBlocked, updatedAt or retry. Usage/spend stale messages state that refresh failed even when deriveDataState can mark a paused/offline refresh stale without an error (AIUsageCard:97; AIFeatureSpendPanel:94).",
+        "fix": "Forward existing trust evidence into current DataStateNotice/message/retry controls, distinguish paused/offline from failed refresh and expose last-success context; retain enabled stale-cache saving and every retained panel.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\AICostCapSpendBar.tsx",
+        "line": 115,
+        "rule": "MDC-026 / mission 24",
+        "detail": "Spend unavailable state explains the server cap continues, but provides no explicit retry although usageQuery.refetch is available. Stale notice also lacks independent recovery control.",
+        "fix": "Add existing localized Button retry for this source without blocking config saving or hiding the cap, and retain null rather than zero for unknown spend.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\HelixStatusStrip.tsx",
+        "line": 116,
+        "rule": "MDC-026 / MDC-033",
+        "detail": "Whole summary is labeled unavailable when daily usage lacks data even if settings and three draft metrics are available. Spend missingReason only distinguishes off/loading, not initial failure; SettingsSummaryBrief accepts only aggregate unavailable/retained flags.",
+        "fix": "Preserve known configuration metrics and explicitly explain independent unavailable/retained spend via existing per-metric missingReason/context and summary source text. Do not substitute unavailable zeros or create a new stats owner.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\ui\\RadioCard.tsx",
+      "line": 72,
+      "rule": "MDC-010 / MDC-011 / mission 5-7",
+      "detail": "Helix selected mode cards inherit neonColorMap backgrounds/borders/dots (tokens.ts:21-26); shared focus also hardcodes cyan (RadioCard:76). Helix mode accents blue/green/cyan are categories rather than success/failure severity.",
+      "fix": "Shared owner should offer subdued theme/control selected chrome and theme focus ring while preserving checked/native semantics and persisted theme IDs; page adopts approved neutral selection contract.",
+      "owner": "shared",
+      "confidence": "high source evidence; rendered intensity unverified"
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\AIRestorePanel.tsx",
+      "line": 79,
+      "rule": "MDC-010 / MDC-015 / MDC-025",
+      "detail": "Archive confirmation invents purple border/background and fixed purple icon for an informational consent prompt instead of existing neutral surface/semantic feedback chrome.",
+      "fix": "Compose existing surface and feedback primitives with neutral hierarchy; preserve complete archive explanation/list, live-region announcement, explicit confirm/decline and stable test IDs.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\AIProviderSection.tsx",
+      "line": 398,
+      "rule": "MDC-012 / MDC-025",
+      "detail": "Full validation result text uses fixed emerald-300/rose-300; cap amount text likewise uses cyan-300/amber-300/rose-300 (AICostCapSpendBar:36-40,101). These do not follow primary/secondary body text across themes. Token documentation explicitly limits severity foreground to icons and small labels.",
+      "fix": "Keep result/readout body text on existing theme text tokens; apply semantic hue to concise icon/badge accents, retaining textual OK/failure and cap warning/critical explanations. Measure actual contrast after implementation.",
+      "owner": "page",
+      "confidence": "high source evidence; no contrast failure claimed"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\settings\\components\\AISettings.tsx",
+      "line": 232,
+      "rule": "MDC-046 / mission 33",
+      "detail": "Every changed AI server snapshot resets mode/features/provider and clears restore dismissal. There is no dirty-draft guard, so an AI-subtree refresh during editing can overwrite unsaved local changes. This is a preservation risk, not permission to change query policy.",
+      "fix": "Feature owner should explicitly track draft/baseline and protect dirty edits on refresh, with focused tests for refresh versus save success; retain current cache keys, invalidation, explicit save and all provider merge/secret semantics.",
+      "owner": "page",
+      "confidence": "high source control flow; race not exercised"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "reason": "Root is already a thin shared-layout orchestrator; most modernization needs are inherited page-specific presentation/trust and one shared RadioCard palette contract.",
+    "order": ["Resolve shared selection palette/focus contract", "Preserve consent/provider/cache invariants", "Correct source trust labels and recovery affordances", "Adopt neutral result/archive presentation", "Validate mobile action rows and touch targets"],
+    "noSourceImplementationPerformed": true
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Restrained RadioCard selection and theme-aware focus",
+      "owner": "web\\src\\components\\ui\\RadioCard.tsx",
+      "existingOwner": true,
+      "contract": {
+        "props": "Retain label, description, icon, accent, checked, name, value, disabled, id/ref/onChange and native attributes. Shared owner may extend with an opt-in neutral presentation variant; no competing radio implementation.",
+        "variants": ["Unselected neutral control surface", "Selected subdued control surface with visible checked indicator", "Theme-aware focus"],
+        "states": ["checked", "unchecked", "hover", "focus-visible", "disabled", "forced-colors"],
+        "preservation": "No saved mode/theme identity changes; preserve native keyboard radio behavior and readable selected indicator."
+      },
+      "usedBy": ["web\\src\\features\\settings\\components\\AISettings.tsx:447-497"],
+      "dependsOn": ["Existing control/focus tokens", "Shared-owner cohort evidence for a new variant; only this assigned page's consumer was audited", "Focused RadioCard regression and later theme/keyboard acceptance"],
+      "scope": "Report only; do not globally rewrite neonColorMap or reset explicit user chart/theme preferences."
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "Surface/feedback styling", "file": "web\\src\\features\\settings\\components\\AIRestorePanel.tsx", "line": 79, "existingOwner": "Current UI surfaces and feedback category", "decision": "Adopt existing owner, no new HelixCard or universal status system."},
+    {"pattern": "Local cap readout colors", "file": "web\\src\\features\\settings\\components\\AICostCapSpendBar.tsx", "line": 36, "existingOwner": "web\\src\\lib\\tokens.ts; existing Typography/MetricBar", "decision": "Keep domain thresholds and arithmetic feature-owned; move presentation to established theme text and semantic accents."},
+    {"pattern": "Operational KPI rendering", "file": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx", "line": 35, "existingOwner": "OperationalBrief / useOperationalMetrics", "decision": "Already reuses the canonical pipeline; no replacement StatCard grid warranted."}
+  ],
+  "preservation": {
+    "sourceHash": "2f88258387fab97296dc3759c90d9e7a85362f71a8c00936c0cf7ed75dc7d76b",
+    "hashAlgorithm": "SHA256",
+    "sourceHashAppliesTo": "web\\src\\features\\settings\\pages\\HelixPage.tsx",
+    "currentLineCount": 86,
+    "pageSpecificPresentationLineCount": 2001,
+    "countedFiles": {
+      "web\\src\\features\\settings\\pages\\HelixPage.tsx": 86,
+      "web\\src\\features\\settings\\components\\AISettings.tsx": 584,
+      "web\\src\\features\\settings\\components\\AIProviderSection.tsx": 405,
+      "web\\src\\features\\settings\\components\\AIFeatureToggleList.tsx": 223,
+      "web\\src\\features\\settings\\components\\AIRestorePanel.tsx": 128,
+      "web\\src\\features\\settings\\components\\AIUsageCard.tsx": 116,
+      "web\\src\\features\\settings\\components\\AICostCapSpendBar.tsx": 141,
+      "web\\src\\features\\settings\\components\\AIFeatureSpendPanel.tsx": 152,
+      "web\\src\\features\\settings\\components\\HelixStatusStrip.tsx": 121,
+      "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx": 45
+    },
+    "sections": [
+      {"name": "Page title, subtitle and integration breadcrumbs", "count": 1, "condition": "Always", "source": "HelixPage.tsx:71-82"},
+      {"name": "Helix configuration and spend summary", "count": 1, "condition": "Always; settings and usage independently trusted", "source": "AISettings.tsx:424-433"},
+      {"name": "Off/local/cloud mode and off explanation", "count": 1, "condition": "Always; off explanation only in off draft", "source": "AISettings.tsx:437-509"},
+      {"name": "Archived feature consent and complete preview", "count": 1, "condition": "Enabled draft plus archive and not declined", "source": "AISettings.tsx:513-521"},
+      {"name": "Provider configuration", "count": 1, "condition": "Non-off draft", "source": "AISettings.tsx:531-535"},
+      {"name": "Usage today", "count": 1, "condition": "Non-off draft; fetch only for saved-enabled mode", "source": "AISettings.tsx:539"},
+      {"name": "Daily cap spend progress", "count": 1, "condition": "Cloud draft, saved non-off mode and positive cap", "source": "AISettings.tsx:547-550"},
+      {"name": "Spend by feature and recent provider/model attribution", "count": 1, "condition": "Non-off draft; enabled source only for saved-enabled mode", "source": "AISettings.tsx:557-564"},
+      {"name": "Generated per-feature opt-ins/search/categories/details", "count": 1, "condition": "Non-off draft", "source": "AISettings.tsx:567-570"},
+      {"name": "Explicit Save", "count": 1, "condition": "Always mounted", "source": "AISettings.tsx:572-581"}
+    ],
+    "sectionCount": 10,
+    "sourceElementCounts": {"GlassPanel": 5, "ChartContainer": 0, "note": "Counts across the ten listed presentation files; not mounted section counts or shared-wrapper internals."},
+    "actions": [
+      "Choose off/local/cloud without automatic save",
+      "Edit provider, base URL, model, masked API key and daily USD cap",
+      "Azure protocol selection and optional embedding deployment",
+      "Validate local URL or cloud connection with optional existing-key fallback and visible outcome",
+      "Switch providers while retaining other saved provider entries and credentials",
+      "Search opt-ins and select All/Enabled/Chat/Alerts/Driving/Energy/Operations/Insights",
+      "Individually toggle canonical features; expand/collapse technical descriptions",
+      "Explicitly confirm archived selection and immediately persist, or decline for session",
+      "Explicit Save with pending/disabled state and mutation toast",
+      "Retry failed settings, today usage or feature spend queries"
+    ],
+    "data": [
+      "Default-off consent and saved-off usage-query guard; always mounted opt-in surface",
+      "Off-mode feature clearing/archive behavior and explicit restore; no silent opt-in",
+      "API keys remain in-memory draft only, masked; omit blank key on save/validation and preserve server encryption/redaction contract",
+      "Namespaced provider configuration, untouched provider entries, legacy Azure migration handling and non-AI settings preservation",
+      "Cost cap in whole cents, audit costs in existing cost_micro_cents wire units, display division by 100 or 1000000; no wire/cache conversion",
+      "Daily UTC totals, seven-day default feature window, limit=50 recent sample and explicit aggregate/sample distinction",
+      "Independent query keys, AbortSignal, inherited polling/retry/cache policies and invalidation/broadcast",
+      "Unknown spend remains null/em-dash rather than fabricated zero; measured zero and no audited calls remain distinct",
+      "All existing source metrics, call/error/token counts, provider/model samples and last-call UTC timestamps",
+      "Workspace scope remains absent: integration route has vehicle disabled and no registered shared range. Operational UTC periods are not selected-vehicle analysis; do not introduce duplicate selectors",
+      "Locale/precision and currency-display preferences preserved; no FX conversion or currency-source capability invented",
+      "No physical measurements altered; raw SI and any existing specialist unit metadata remain unchanged"
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only Phase 0 source audit; only report and heartbeat written.",
+    "runtime": "Unverified; no application mounted, API requests, provider validation or save/restore mutation.",
+    "visual": "Unverified; source palette concerns are not screenshot/contrast acceptance.",
+    "accessibility": "Keyboard/screen reader/focus/contrast/forced-colors/reduced-motion and viewport behavior unverified.",
+    "validation": "No TypeScript, build, lint or tests run per assignment. Skill audit.sh was inspected but not executed because it unconditionally runs project-wide npx tsc --noEmit. Scoped read-only regex counts were used instead.",
+    "sourceChecks": {
+      "exitCode": 0,
+      "output": [
+        "style={{ | matches=0",
+        "<(button|input|textarea|select|table) | matches=0",
+        "direct recharts/react-leaflet/framer-motion imports | matches=0",
+        "old ../api or ../../api imports | matches=0",
+        "text-neon- | matches=0",
+        "text-white | matches=0",
+        "Root lines=86; presentation total=2001; GlassPanel=5; ChartContainer=0"
+      ],
+      "scope": "Ten explicitly counted presentation files; no global cleanliness claim. Shared RadioCard's inherited neon classes are outside these regex counts."
+    },
+    "apiVerification": "All six actual mounted endpoint operations traced to router registration or explicit aiusage mount. Source contract only; no HTTP reachability, authorization, database/cap enforcement or provider probe acceptance.",
+    "historicalTests": "AISettings test source excerpts include default-off, no usage before saved opt-in, explicit restore and retained configured form cases. Not executed and not borrowed as current acceptance.",
+    "unknowns": ["Backend spend calculations, cap enforcement and provider validation internals not reviewed", "Shared primitive implementations not named in filesRead were not independently inspected", "Other page consumers are not audited; new shared extensions require cohort evidence", "No Git/history or original catalog mutation/comparison"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\settings\\pages\\HelixPage.tsx",
+    "web\\src\\features\\settings\\components\\index.ts",
+    "web\\src\\features\\settings\\components\\AISettings.tsx",
+    "web\\src\\features\\settings\\components\\AIProviderSection.tsx",
+    "web\\src\\features\\settings\\components\\AIFeatureToggleList.tsx",
+    "web\\src\\features\\settings\\components\\AIRestorePanel.tsx",
+    "web\\src\\features\\settings\\components\\AIUsageCard.tsx",
+    "web\\src\\features\\settings\\components\\AICostCapSpendBar.tsx",
+    "web\\src\\features\\settings\\components\\AIFeatureSpendPanel.tsx",
+    "web\\src\\features\\settings\\components\\HelixStatusStrip.tsx",
+    "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx",
+    "web\\src\\features\\settings\\components\\__tests__\\AISettings.test.tsx",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\hooks\\useAiSettings.ts",
+    "web\\src\\api\\hooks\\useAiUsage.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\ai\\features.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\Stack.tsx",
+    "web\\src\\components\\ui\\RadioCard.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\feedback\\InlineCallout.tsx",
+    "web\\src\\components\\feedback\\DataStateNotice.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\aiusage\\usage.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-172.json", ".agent-status\\audit-page-172.txt"]
+}

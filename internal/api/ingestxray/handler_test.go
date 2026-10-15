@@ -200,7 +200,7 @@ func TestHandler_HappyPath_200WithFreshness(t *testing.T) {
 		t.Fatalf("window/bucket round-trip wrong: %s/%s", body.Window, body.Bucket)
 	}
 	if body.TotalSamples != 105 {
-		t.Fatalf("total_samples should be sum of field counts (105), got %d", body.TotalSamples)
+		t.Fatalf("total_samples should be sum of bucket counts (105), got %d", body.TotalSamples)
 	}
 	if body.LastSeenAt == nil {
 		t.Fatalf("expected last_seen_at populated")
@@ -216,6 +216,61 @@ func TestHandler_HappyPath_200WithFreshness(t *testing.T) {
 	}
 	if fake.gotLimit != 50 {
 		t.Fatalf("repo got wrong limit: %d", fake.gotLimit)
+	}
+}
+
+func TestHandler_TotalSamplesIncludesFieldsOutsideLimit(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name   string
+		fields []dbobs.IngestXRayFieldStat
+	}{
+		{
+			name: "capped_ranking",
+			fields: []dbobs.IngestXRayFieldStat{
+				{Field: "VehicleSpeed", SampleCount: 100},
+			},
+		},
+		{
+			// The independent bucket scan can observe samples arriving after the field scan.
+			name:   "empty_ranking_with_samples",
+			fields: []dbobs.IngestXRayFieldStat{},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			fake := &fakeIngestXRayRepo{
+				fields: tc.fields,
+				buckets: []dbobs.IngestXRayBucket{
+					{BucketStart: time.Now().UTC().Add(-2 * time.Minute), Count: 60},
+					{BucketStart: time.Now().UTC().Add(-time.Minute), Count: 45},
+				},
+			}
+			srv := httptest.NewServer(mountIngestXRay(newHandlerForTest(fake)))
+			defer srv.Close()
+
+			resp, err := http.Get(srv.URL + "/system/ingest-xray/42?limit=1")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("expected 200, got %d", resp.StatusCode)
+			}
+			var body IngestXRayResponse
+			if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+				t.Fatal(err)
+			}
+			if body.TotalSamples != 105 {
+				t.Fatalf("expected full-window total_samples 105, got %d", body.TotalSamples)
+			}
+			if fake.gotLimit != 1 || len(body.Fields) != len(tc.fields) {
+				t.Fatalf("field cap changed: limit=%d, returned fields=%d", fake.gotLimit, len(body.Fields))
+			}
+			if len(body.Buckets) != 2 {
+				t.Fatalf("expected populated bucket series preserved, got %d buckets", len(body.Buckets))
+			}
+		})
 	}
 }
 

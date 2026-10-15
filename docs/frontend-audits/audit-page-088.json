@@ -1,0 +1,328 @@
+{
+  "item": "audit-page-088",
+  "page": "web\\src\\features\\charging\\pages\\SmartChargePage.tsx",
+  "routes": ["/smart-charge", "/charging/schedule"],
+  "purpose": "Compare time-of-use charging estimates, configure charging Autopilot, apply a selected charge plan, review plan history, and inspect non-Tesla OCPP chargers.",
+  "primaryGoal": "Find and explicitly apply an affordable charging window for the workspace-selected vehicle without confusing estimates, saved automation, historical savings, and observed charger data.",
+  "dataSources": [
+    {
+      "name": "Workspace vehicle",
+      "hooks": ["useSelectedVehicle"],
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "evidence": "web\\src\\features\\charging\\pages\\SmartChargePage.tsx:125-135,154-157,419",
+      "behavior": "Header-owned selection; resets deterministic result/applied state and remounts Autopilot by vehicle. Hook implementation not inspected."
+    },
+    {
+      "name": "Deterministic planner and history",
+      "hooks": ["useRatePlans", "useOptimizeCharge", "useApplySchedule", "useChargePlans"],
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "endpoints": [
+        {"method": "GET", "path": "/charge-planner/rate-plans", "hookLine": 488, "routerLine": 3947},
+        {"method": "POST", "path": "/charge-planner/optimize", "hookLine": 444, "routerLine": 3943},
+        {"method": "POST", "path": "/charge-planner/apply", "hookLine": 461, "routerLine": 3945},
+        {"method": "GET", "path": "/charge-planner/history?vehicle_id={vehicleId}", "hookLine": 478, "routerLine": 3946}
+      ],
+      "routeOwner": "internal\\api\\router.go",
+      "behavior": "Read hooks forward AbortSignal, normalize arrays, and key history by selected vehicle. Rate plans have STATIC staleTime. Apply requires live mode and invalidates/broadcasts charge-plans. Local optimizer results are estimates, not measured costs.",
+      "contract": "Inspected web\\src\\types\\charging.ts:151-220 retains battery_capacity_kwh, kwh_needed, estimated_duration_hours and cents/kWh. This audit does not assert SI backend equivalence or authorize wire renames."
+    },
+    {
+      "name": "Charging Autopilot",
+      "hooks": ["useAutopilotProfile", "useSaveAutopilotProfile", "useAutopilotPreview", "useAutopilotRun", "useAutopilotSavings"],
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "endpoints": [
+        {"method": "GET", "path": "/charge-autopilot/profile?vehicle_id={vehicleId}", "hookLine": 509, "routerLine": 3952},
+        {"method": "PUT", "path": "/charge-autopilot/profile", "hookLine": 520, "routerLine": 3953},
+        {"method": "POST", "path": "/charge-autopilot/preview", "hookLine": 537, "routerLine": 3954},
+        {"method": "POST", "path": "/charge-autopilot/run", "hookLine": 555, "routerLine": 3955},
+        {"method": "GET", "path": "/charge-autopilot/savings?vehicle_id={vehicleId}", "hookLine": 589, "routerLine": 3956}
+      ],
+      "routeOwner": "internal\\api\\router.go",
+      "behavior": "Profile and savings are independent vehicle-scoped reads with cancellation. Save invalidates/broadcasts Autopilot; Run requires live mode and invalidates both Autopilot and charge plans. Preview does not apply a schedule. Realized savings have unknown reported time bounds."
+    },
+    {
+      "name": "OCPP inventory and recent transactions",
+      "hooks": ["useOcppChargePoints", "useOcppSessions"],
+      "owner": "web\\src\\api\\hooks\\useOcpp.ts",
+      "endpoints": [
+        {"method": "GET", "path": "/ocpp/charge-points", "hookLine": 60, "routerLine": 3962},
+        {"method": "GET", "path": "/ocpp/sessions?charge_point_id=&limit=10", "hookLine": 72, "routerLine": 3963}
+      ],
+      "routeOwner": "internal\\api\\router.go",
+      "behavior": "Fleet-wide, not selected-Tesla history. Inventory and ten recent transactions stay independent on failure; energy_delivered_wh is passed to useUnits.formatEnergy. Reads cancel and use FAST staleTime."
+    },
+    {
+      "name": "Opt-in Helix schedule draft",
+      "hooks": ["useAiStream", "useAiEnabled through withAiFeature"],
+      "owner": "web\\src\\components\\ai\\AISmartChargeScheduleSuggestion.tsx",
+      "endpoints": [{"method": "POST streaming", "path": "/ai/charging/schedule/draft", "sourceLine": 102}],
+      "evidence": "web\\src\\components\\ai\\AISmartChargeScheduleSuggestion.tsx:69-110,115-140; web\\src\\components\\ai\\withAiFeature.tsx:46-57; internal\\api\\router.go:1596,5071",
+      "behavior": "Positive integer vehicle and nonempty rate plan gate start. Vehicle/departure scope identifies the stream. Opt-out removes the AI surface. No automatic save/apply is wired by this component.",
+      "endpointVerification": "URL observed in caller; router supplies SmartChargeSchedule handler to an integration registrar. Exact delegated route registration and stream implementation were not inspected, so mounted endpoint/runtime behavior remains unverified."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout, LayoutCard, ChartCard, Grid", "owner": "web\\src\\components\\layout\\index.ts", "role": "Canonical page/card/chart framing and responsive grids", "evidence": "index.ts:8,11-12; SmartChargePage.tsx:379-384,424,516-537,544,547,611,652"},
+    {"name": "Button, Select, Input, Slider, Badge, Text, Caption, ErrorText", "owner": "web\\src\\components\\ui", "role": "Existing actions, labeled fields, semantic statuses and typography; no replacement primitives", "evidence": "web\\src\\features\\charging\\pages\\SmartChargePage.tsx:11-23,439-509,552-568"},
+    {"name": "FormSection, UnitInput", "owner": "web\\src\\components\\forms\\UnitInput.tsx", "role": "Settings form and canonical Wh input with locale/preferences", "evidence": "SmartChargePage.tsx:426,483-492; UnitInput.tsx:50-59,107-112,177-187"},
+    {"name": "DataTable/useSortToggle", "owner": "web\\src\\components\\ui\\DataTable.tsx", "role": "History sorting, value filters, pagination and persisted table pipeline", "evidence": "SmartChargePage.tsx:304-375,659-675; DataTable.tsx:184-188,714-725,1385-1407"},
+    {"name": "ChargingSummaryBrief", "owner": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx", "role": "Domain adapter over OperationalBrief/useOperationalMetrics with independent source periods", "evidence": "ChargingSummaryBrief.tsx:13-66; SmartChargePage.tsx:269-302,405-413; AutopilotCard.tsx:181-183,221-234"},
+    {"name": "RateTimeline", "owner": "web\\src\\features\\charging\\components\\smart-charge-modernization\\RateTimeline.tsx", "role": "Shared-within-feature tariff visualization used by manual planner and Autopilot preview", "evidence": "RateTimeline.tsx:10-13,39-127"},
+    {"name": "AutopilotCard", "owner": "web\\src\\features\\charging\\components\\smart-charge-modernization\\AutopilotCard.tsx", "role": "Profile controls, preview, health cap explanation, execution and realized savings", "evidence": "AutopilotCard.tsx:26-240"},
+    {"name": "ChargePointsCard", "owner": "web\\src\\features\\charging\\components\\smart-charge-modernization\\ChargePointsCard.tsx", "role": "Independent OCPP charger and transaction lists", "evidence": "ChargePointsCard.tsx:28-101"},
+    {"name": "AISmartChargeScheduleSuggestion / AIFeatureCard / withAiFeature", "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx", "role": "Existing opt-in draft scaffold, streaming output and localized action naming", "evidence": "AISmartChargeScheduleSuggestion.tsx:115-144; AIFeatureCard.tsx:279-352; withAiFeature.tsx:46-57"},
+    {"name": "Skeleton, EmptyState, QueryError, StaleRefreshWarning, FadeIn", "owner": "web\\src\\components\\feedback and web\\src\\components\\motion", "role": "Existing loading/recovery/trust/motion mechanisms; implementations outside this scoped inspection", "evidence": "SmartChargePage.tsx:27-28,389-681"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\SmartChargePage.tsx", "line": 177,
+      "rule": "MDC-002 / reuse domain derivation",
+      "detail": "Rate-plan name/utility option mapping and fallback selection also occur in AutopilotCard.tsx:67-70, with different fallback sets. Both already share useRatePlans and its query key.",
+      "fix": "If consolidated, put only option-label derivation in one charging-domain helper; preserve each form's explicit selected value and existing fallback policy. Do not merge query ownership or silently change defaults.",
+      "owner": "page", "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "plannerColumns default=1/xl=3, factColumns default=1/sm=2/lg=4; Autopilot default=1/lg=2. Cards use min-w-0; actions and alternative/OCPP rows wrap. Chart has 24 flex bars and every-third-hour labels.",
+    "evidence": "SmartChargePage.tsx:54-55,424,515,544,546,587,632-643; AutopilotCard.tsx:23; RateTimeline.tsx:65-125; ChargePointsCard.tsx:51,86",
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\SmartChargePage.tsx", "line": 666,
+        "rule": "MDC-023 / MDC-043 / preserve mobile details",
+        "detail": "mobileColumns keeps only created_at, savings and status. DataTable.tsx:714-725 applies hidden md:table-cell to window, rate_plan and estimated_cost; this caller supplies neither mobilePresentation nor expandable details. The source-configured small-screen table lacks an in-row path to those three values.",
+        "fix": "Use the existing DataTable mobilePresentation full-detail contract, or retain horizontal access to all columns; preserve filtering, sorting, pagination, row IDs and tableId. Do not create a parallel mobile table.",
+        "owner": "page", "confidence": "high"
+      }
+    ],
+    "verification": "All ten mission widths, allocated-container widths, open fullscreen state, long labels, text zoom and RTL are unverified; no browser session used."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Localized field labels and explicit rate-plan/SOC/amps IDs; date/capacity use the existing input identity owner.",
+      "Action icons are aria-hidden; status has labels as well as Badge variants.",
+      "Cost comparison section has an aria-label; rate chart has named group and per-bar role=img labels including rate, tier and charge-window membership.",
+      "ChartCard receives accessible dataColumns and export/fullscreen inputs; source presence is not screen-reader acceptance."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\smart-charge-modernization\\RateTimeline.tsx", "line": 102,
+        "rule": "MDC-040 / keyboard and touch parity",
+        "detail": "Visual bar tooltip uses group-hover:block on a nonfocusable div. ARIA bar labels and ChartCard's data alternative retain information, but the visual hover affordance has no keyboard/touch equivalent in this renderer.",
+        "fix": "Reuse the existing accessible Tooltip policy or make the existing chart data alternative clearly discoverable on keyboard/touch; do not add a competing tooltip engine or make 24 bars unnecessary tab stops.",
+        "owner": "page", "confidence": "high"
+      }
+    ],
+    "verification": "Keyboard, focus order/restoration, screen reader, effective contrast, touch targets, forced colors and reduced motion are NOTRUN."
+  },
+  "states": {
+    "initialLoading": "Plan history, Autopilot profile/savings and independent OCPP reads have skeletons; optimizer pending drives schedule/alternatives skeletons and ChartCard. Rate select uses fallbacks while the query resolves.",
+    "empty": "Cost band persists with missing raw values; timeline, schedule, alternatives, history and both OCPP lists retain empty states; AI is intentionally absent when disabled, not a data-loss defect.",
+    "error": "Rate plans/history/profile/savings/OCPP show QueryError with source retries; deterministic Optimize/Apply and Autopilot Save/Preview/Run surface ErrorText. ChartCard gets optimize error.",
+    "staleOffline": "useDataState and StaleRefreshWarning preserve independent read sources. No dedicated page offline banner is shown; actual pause/offline and retained-payload rendering were not exercised.",
+    "successDisabled": "Optimize requires vehicle and is disabled pending; Apply shows success Badge; Autopilot shows on/off, disables Run when locally off, and shows run message. Apply/Run hooks require live mode.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\smart-charge-modernization\\AutopilotCard.tsx", "line": 127,
+        "rule": "MDC-026 / failed source is not a known default",
+        "detail": "Fatal profile QueryError is followed by the editable default form whenever loading is false. Save at lines 158-160 is disabled only for missing vehicle/pending mutation, so a failed profile read can submit initialized defaults as a replacement profile.",
+        "fix": "Retain the form and retry surface but distinguish unavailable profile from a successfully returned never-saved default; prevent overwriting an unknown stored profile until recovery or an explicit supported reset workflow.",
+        "owner": "page", "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\SmartChargePage.tsx", "line": 154,
+        "rule": "MDC-046 / scope-bound mutation state",
+        "detail": "Vehicle change clears result/applied and success callbacks check currentVehicleId, but neither optimizeMutation nor applyMutation is reset. Their previous error/pending state can remain associated with the newly selected vehicle's form/chart. Actual switch timing was not exercised.",
+        "fix": "Reset or explicitly scope displayed mutation feedback when vehicle identity changes while retaining command-side effects, live-mode safeguards and history invalidation; test pending, failure and rapid selection changes.",
+        "owner": "page", "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\SmartChargePage.tsx", "line": 358,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Positive savings body text is fixed text-emerald-300 instead of a theme-resolved semantic foreground. This is toned-down rather than neon, but is still a light-theme/contrast risk; contrast is not measured.",
+      "fix": "Use the existing semantic success foreground or typography token without changing positive/missing savings semantics.",
+      "owner": "page", "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\smart-charge-modernization\\RateTimeline.tsx", "line": 16,
+      "rule": "MDC-010 / MDC-034 / restrained saturation",
+      "detail": "Tier swatches/bars hardcode emerald/amber/red 500 at 40-50% opacity and charge-window bars use primary at 60% with an accent ring (lines 109-111). These are source-level saturated treatments to review, not proved excessive rendered noise. No neon/glow/pure-white matches were found in the page.",
+      "fix": "Use existing restrained chart/semantic palette contracts while keeping every tier, relative rate height, window membership, legend and data alternative; preserve saved theme/chart choices.",
+      "owner": "page", "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx", "line": 296,
+      "rule": "MDC-010 / shared action styling",
+      "detail": "Shared Helix action overrides Button border/background/text/focus with fixed cyan-400/500 and dark:text-cyan-100. The badge also hardcodes cyan at line 214. This is an accent-saturation/theme-noise candidate, not measured visual failure or literal pure-white/neon.",
+      "fix": "Review one existing AIFeatureCard action/badge theme treatment with semantic tokens, retaining brand identity, streaming/disabled states, localized names and motion preference. No page-local restyle.",
+      "owner": "shared", "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\components\\smart-charge-modernization\\AutopilotCard.tsx", "line": 4,
+      "rule": "MDC-002 / category imports",
+      "detail": "Feature imports LayoutCard/ChartCard from layout/layout-reference and StatMetric from data-display/stat-reference (line 7); ChargePointsCard.tsx:3 does the same for LayoutCard. layout/index.ts:8,11-12 already exports the identical canonical owners.",
+      "fix": "Use @/components/layout and @/components/data-display category exports; do not copy or replace the reference implementations.",
+      "owner": "page", "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\smart-charge-modernization\\RateTimeline.tsx", "line": 30,
+      "rule": "MDC-044 / locale-aware time",
+      "detail": "formatHour emits hardcoded 12a/12p and English a/p suffixes instead of the existing user's time-format preference. fmtNumber localizes rates, but these hour labels bypass useDateFormat.",
+      "fix": "Use the existing localized time display owner with explicit tariff wall-clock-hour semantics; retain midnight/cross-midnight interpretation and do not invent a tariff timezone.",
+      "owner": "page", "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\SmartChargePage.tsx", "line": 200,
+      "rule": "MDC-034 / preserve exact schedule meaning",
+      "detail": "chargeWindow drops minutes/date/offset into local getHours and endHour||24 before highlighting. AutopilotCard.tsx:214-215 repeats it. Non-hour-aligned windows can be visually rounded down; tariff-hour timezone equivalence is not established by inspected types.",
+      "fix": "Retain exact timestamps in the schedule facts/export; agree a single domain window-to-hour overlap rule using known hourly-rate timezone semantics and cover fractional-hour, midnight and DST cases before changing the highlight.",
+      "owner": "integration", "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AISmartChargeScheduleSuggestion.tsx", "line": 88,
+      "rule": "MDC-026 / MDC-045 / do not invent observed data",
+      "detail": "SmartChargePage.tsx:390-397 supplies no currentSoc, so draft payload uses current_soc=20. Invalid/blank departure silently becomes now at lines 74-77. Manual planner instead rejects invalid departure. Whether backend uses or replaces the SOC hint is unknown.",
+      "fix": "Keep the draft capability but explicitly label assumptions or supply an existing authoritative SOC source; align validation with the manual form without fabricating measured SOC or inventing backend behavior.",
+      "owner": "integration", "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx", "line": 45,
+      "rule": "MDC-026 / accurate estimate provenance",
+      "detail": "Default brief description says Recorded measurements although page cost metrics and Autopilot preview explicitly use unknown periods explained as optimizer estimates. Source-specific reasons are preserved in provenance/narrative, but the generic description can contradict them.",
+      "fix": "Supply an estimate-specific description from each estimate caller, retaining historical realized-savings description and unknown time bounds. Reuse the existing description prop rather than changing all charging summaries globally.",
+      "owner": "page", "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\SmartChargePage.tsx", "line": 238,
+      "rule": "MDC-045 / contract migration coordination",
+      "detail": "Current planner/AI/Autopilot contracts are kWh/hour/cents-per-kWh shaped. The page bridges batteryCapacity kWh to UnitInput Wh at lines 487-490 and energy metric kWh to Wh at line 298; inspected convertEnergyFromSI confirms this arithmetic. This is a bounded existing-contract exception, not permission for new legacy fields.",
+      "fix": "Preserve current payload semantics during presentation work. Any canonical wire migration needs coordinated types/hooks/backend evidence and the Phase-48 methodology; never simply rename units or remove the existing boundary conversions.",
+      "owner": "integration", "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Profile-read failure can leave default Save enabled; mobile history omits critical plan details; estimate/source assumptions and scope feedback need explicit treatment. Existing modernized composition should be preserved, not redesigned from scratch.",
+    "order": ["Profile failure protection", "Full mobile history details", "Draft assumptions and mutation scope", "Estimate labeling and hour semantics", "Category imports and restrained theme styling"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "AIFeatureCard semantic action/badge treatment",
+      "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "propsVariantsStates": {
+        "existingProps": ["title", "description", "buttonLabel", "badgeLabel", "canStart", "stream", "buttonPlacement", "inputSlot"],
+        "variants": ["Existing Button outline and Badge/brand treatment; no new variant required"],
+        "states": ["idle", "streaming", "disabled", "error output", "light/dark/custom themes", "focus-visible", "reduced motion"]
+      },
+      "usedBy": ["AISmartChargeScheduleSuggestion mounted by /smart-charge and /charging/schedule"],
+      "dependsOn": ["Existing Button semantic tokens", "Existing Helix identity", "Parent-owned theme/contrast acceptance"],
+      "reason": "One shared style owner, not a page override. This scoped audit confirms only this consumer; other production consumers require inventory reconciliation before a shared contract extension."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\SmartChargePage.tsx", "line": 177,
+      "rule": "MDC-002 / preserve independent workflows",
+      "detail": "Manual optimization, saved Autopilot and opt-in AI all schedule-related, but have different source ownership and actions. Shared RateTimeline and ChargingSummaryBrief already remove presentation duplication; these are not interchangeable business workflows.",
+      "fix": "Retain all three workflows; only deduplicate presentation/option mapping through the existing charging owners.",
+      "owner": "page", "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "20737A9642914210D02A6E731D103B689610E1FFB4BB5664A17257E5CA5C8FA0",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 686,
+    "relatedFeatureLineCounts": {"AutopilotCard.tsx": 240, "RateTimeline.tsx": 127, "ChargePointsCard.tsx": 101, "ChargingSummaryBrief.tsx": 73},
+    "inspectedPagePlusRelatedFeatureLines": 1227,
+    "sectionCount": 9,
+    "sections": [
+      {"name": "Opt-in Helix schedule draft", "line": 389, "count": 1},
+      {"name": "Cost comparison brief", "line": 401, "count": 1, "metrics": ["charge now cost", "optimized cost with tier/rate", "savings with positive percentage", "energy needed with estimated duration"]},
+      {"name": "Charging Autopilot", "line": 419, "count": 1, "subsections": ["Profile and enable state", "Preview and health guardrail/explanation", "Preview rate timeline", "Realized savings"]},
+      {"name": "Charge settings", "line": 426, "count": 1},
+      {"name": "24-hour rate timeline", "line": 516, "count": 1},
+      {"name": "Recommended schedule", "line": 547, "count": 1, "facts": ["Current SOC", "Target SOC", "Start time", "End time"]},
+      {"name": "Alternative windows", "line": 611, "count": 1},
+      {"name": "Plan history", "line": 652, "count": 1, "columns": ["Created date", "Scheduled window", "Rate plan", "Estimated cost", "Savings", "Status"]},
+      {"name": "OCPP charge points", "line": 681, "count": 1, "subsections": ["Charger inventory with connectors", "Recent transactions"]}
+    ],
+    "sectionCountingConvention": "Nine individually named top-level surfaces; nested Autopilot preview/savings and OCPP inventory/transactions are explicitly retained separately.",
+    "frameCounts": {"pageLayout": 1, "pageFormSection": 1, "pageLayoutCard": 3, "pageChartCard": 1, "pageGlassPanel": 0, "pageChartContainer": 0, "autopilotLayoutCard": 1, "autopilotConditionalChartCard": 1, "ocppLayoutCard": 1},
+    "actions": [
+      "Header-owned vehicle selection (consume, do not duplicate)",
+      "Select rate plan; adjust target SOC 20-100 step 5; edit local departure, max amps 8-80 and battery capacity",
+      "Find cheapest window after validation; show errors and pending state",
+      "Apply optimized plan with live-mode safeguard; show applied success and apply failure",
+      "Timeline accessible data view, export and fullscreen through ChartCard",
+      "History sort, value filters, pagination and existing persisted table controls",
+      "Retry rate plans/history, profile/savings and independent OCPP reads",
+      "Autopilot enable, daily ready-by, current SOC, target SOC, daily cap, rate plan, max amps, trip override and preconditioning",
+      "Save Autopilot, preview next run and live-mode Run now with feedback",
+      "Opt-in Ask Helix draft, streaming output and error states"
+    ],
+    "dataBehavior": [
+      "Tomorrow 07:30 departure built from local calendar fields, then validated and serialized to ISO for requests.",
+      "Default SOC 80, amps 32, capacity 75 kWh and backend-first rate options with existing named fallback IDs remain.",
+      "UnitInput takes Wh; page retains the existing kWh-shaped optimizer boundary bridge. Numeric zero remains distinct from unavailable metrics.",
+      "Unknown costs/energy/SOC render missing markers; estimates never become observed historical charging measurements.",
+      "Every hourly rate and alternative window retains time, rate/tier/cost; no sampling or fabricated tariff values.",
+      "History retains created time, scheduled window, rate plan, cost, savings and lifecycle status; tableId charging:smart-charge-history and record id key remain.",
+      "Autopilot retains stored profile hydration, independent savings, estimated preview, capped-target explanation and command results.",
+      "OCPP stays fleet-wide and separate from Tesla vehicle scope; preserve vendor/model/id, last-seen, all connectors/statuses, active count and ten recent transaction identifiers/energy.",
+      "Retain AI-off gate, scope identity, positive-integer vehicle validation and no automatic draft application.",
+      "Preserve query keys, cancellation, stale times, invalidation/broadcast and request live-mode guards; do not add a duplicate workspace range/vehicle selector.",
+      "Planner departure and daily ready-by are business dates, not a historical workspace date range; no new range picker is warranted."
+    ],
+    "exportedHelpers": ["defaultDepartBy at line 78", "planStatusVariant at line 87"],
+    "sourceEditCount": 0
+  },
+  "evidenceLimits": {
+    "auditType": "Atomic Phase0 source-only audit; exact assigned page and directly relevant dependencies only.",
+    "runtime": "NOTRUN",
+    "visual": "NOTRUN",
+    "keyboardContrastViewport": "NOTRUN",
+    "typescriptLintBuildTests": "NOTRUN per assignment; no git, full repository lint/build or source edits.",
+    "skillAudit": "audit-violations skill and audit.sh read. Script NOTRUN because it unconditionally executes project-wide npx tsc --noEmit, outside this source-only assignment. Scoped source searches/counts used instead; no all-checks-pass claim.",
+    "sourceChecks": [
+      {"command": "Get-FileHash web\\src\\features\\charging\\pages\\SmartChargePage.tsx -Algorithm SHA256; (Get-Content <same path>).Count", "exitCode": 0, "output": "20737A9642914210D02A6E731D103B689610E1FFB4BB5664A17257E5CA5C8FA0; 686"},
+      {"command": "Scoped Get-Content/Select-String counts on SmartChargePage.tsx", "exitCode": 0, "output": "StaticInlineStyles=0; DirectLibraries=0; OldApiImports=0; NeonGlowWhite=0; LayoutCard=3; ChartCard=1; GlassPanel=0"},
+      {"command": "Get-Content web\\src\\features\\charging\\pages\\SmartChargePage.tsx | Select-String -CaseSensitive -Pattern '^\\s*<(button|input|textarea|select|table)\\b'", "exitCode": 0, "output": "Raw control JSX (case-sensitive, anchored)=0"},
+      {"command": "Scoped rg of charge-planner, charge-autopilot and ocpp in internal\\api\\router.go plus useCharging.ts:432-592 and useOcpp.ts", "exitCode": 0, "output": "Inspected planner/Autopilot/OCPP hook methods and paths match router registrations at 3942-3963. AI delegated registrar endpoint is not fully verified."}
+    ],
+    "countCorrection": "Initial PowerShell raw-control pattern was case-insensitive and matched five shared component tags. Corrected case-sensitive anchored count is zero. Comments containing input examples are not JSX violations.",
+    "scopeLimits": [
+      "Assigned route identities are preserved verbatim, not independently verified against the application router or a mount.",
+      "Backend handlers/data queries, tariff timezone and response validity are not inspected; no server filtering, unit conversion or device command success inferred.",
+      "Shared renderers are inspected only where needed for this page's confirmed API/import/mobile/noise contracts; their dependencies are not exhaustively audited.",
+      "AI output panel/stream internals and global query/theme/motion implementations are not audited; inherited contracts are not runtime acceptance.",
+      "No prior audit or historical screenshot used as fresh proof; no new shared component justified from hypothetical consumers."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-088.json", ".agent-status\\audit-page-088.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\SmartChargePage.tsx",
+    "web\\src\\features\\charging\\components\\smart-charge-modernization\\RateTimeline.tsx",
+    "web\\src\\features\\charging\\components\\smart-charge-modernization\\AutopilotCard.tsx",
+    "web\\src\\features\\charging\\components\\smart-charge-modernization\\ChargePointsCard.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useOcpp.ts",
+    "web\\src\\types\\charging.ts",
+    "web\\src\\components\\forms\\UnitInput.tsx",
+    "web\\src\\components\\ai\\AISmartChargeScheduleSuggestion.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "internal\\api\\router.go"
+  ]
+}

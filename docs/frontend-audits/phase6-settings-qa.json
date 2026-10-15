@@ -1,0 +1,715 @@
+{
+  "schemaVersion": 1,
+  "item": "phase4-pilot-settings",
+  "phase": 6,
+  "status": "PARTIAL_NOT_ACCEPTED",
+  "reason": "Bounded native review completed; full acceptance remains incomplete. Device emulation reloaded the page and discarded the document-scoped guard; the gap is disclosed, not certified safe.",
+  "assignmentReceivedAt": "2026-10-13T15:33:32.166Z",
+  "desktopGuardInstalledAt": "2026-10-13T15:40:17.393Z",
+  "mobileGuardReinstalledAt": "2026-10-13T15:47:45.427Z",
+  "lastRecordedClock": "2026-10-13T15:53:03.3678247Z",
+  "reportValidationAt": "2026-10-13T15:55:57.8496043Z",
+  "timeboxDisclosure": "Browser closed immediately after the 15:53:03 clock, before the original 20-minute boundary at 15:53:32. Report finalization and JSON validation reached 22m25.684s overall, exceeding the requested 20-minute worker budget but below the 25-minute hard limit. No timebox reset or false within-20 completion claim.",
+  "closure": {
+    "ownedPageId": 3,
+    "isolatedContext": "phase6-settings-qa-20261013",
+    "explicitPageSelection": true,
+    "closePageResult": "Previously selected page closed; only page 2 about:blank remains.",
+    "browserOwnershipReleased": true,
+    "boundedCommands": "All PowerShell calls completed exit 0; no background commands started.",
+    "sourceWriteClaimReleased": true,
+    "onlyWritableTrackedFile": "docs\\frontend-audits\\phase6-settings-qa.json"
+  },
+  "authority": {
+    "queueRow": "migration-queue.md:1420",
+    "queueStateRead": "Pending Phase6 deferred-read-only-pilot-QA; external unavailable model failure, zero charged QA attempts.",
+    "read": [
+      "migration-queue.md current dispatch header and exact row",
+      "docs\\orchestrator-loop.md",
+      "docs\\session-handoff.md current phase and historical fixture/privacy conventions",
+      "docs\\frontend-design-contract.md relevant foundation, persistence, responsive, accessibility and acceptance sections",
+      "docs\\frontend-mission.md principles and design authority",
+      "docs\\frontend-inventory.md authority and preservation conventions",
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md"
+    ],
+    "skills": ["chrome-devtools", "a11y-debugging"],
+    "provider": "Native Chrome DevTools MCP only",
+    "noPlaywright": true,
+    "noSubagentsOrModelOverrides": true,
+    "noHelperRetries": true
+  },
+  "preview": {
+    "url": "http://localhost:5173/settings?vehicle_id=4",
+    "readinessCommand": "curl.exe --silent --output NUL --write-out 'preview_http=%{http_code}\\n' http://localhost:5173/settings",
+    "readinessOutput": "preview_http=200",
+    "readinessExit": 0,
+    "sourceCommit": "NOT_READ: worker Git operations prohibited",
+    "sourcePinsSha256": {
+      "web\\src\\features\\settings\\pages\\SettingsPage.tsx": "4c04502800bc077a58fedec3cf5f6c14c783aeeb0b7e9267eaaebb99cb76d85c",
+      "web\\src\\features\\settings\\components\\GeneralSettings.tsx": "58c8021e1adfe2274309b021e587ce5a7e75631281b57b61e27993098eae2708",
+      "web\\src\\features\\settings\\components\\SettingsSearch.tsx": "6d4cf20de8670a98789c7cfd8432f07bc5b13caa54154c52bbcab08f1c7e8c1f",
+      "web\\src\\features\\settings\\components\\SettingsNavigation.tsx": "81348f51d4b06bc135b72e8266610e5b073bc2a46fb364ce5cde0fa53521eae8",
+      "web\\src\\features\\settings\\components\\ResetSection.tsx": "2ac8bacd7ea61b84dee4e44464a31270e979321e8c5d99ffb6df11bf5a3bb22f"
+    },
+    "pinLimitation": "Read-only hashes measured near return, not a pre/post source-stability or commit proof."
+  },
+  "privacyAndSafety": {
+    "guard": "Installed using native navigate_page initScript before desktop mount and again before corrected mobile mount. Allows only same-origin localhost:5173 GET/HEAD/OPTIONS through fetch/XHR/EventSource; blocks beacon, WebSocket and unsafe form submissions.",
+    "guardCoverage": "PARTIAL: emulate mobile/touch discarded the first document guard. Detection occurred when the initial category-loop evidence assignment threw because the guard object was undefined. No screenshot was taken in that interval. Guarded navigation restored coverage and repeated all eight mobile category checks.",
+    "guardGapNotRetroactivelyCertified": true,
+    "guardLimitations": "Document JavaScript guard is not a browser-wide network firewall and does not certify independent browser/service-worker/resource requests.",
+    "fixture": {
+      "selectedLocalStorageKey": "teslasync-selected-vehicle",
+      "selectedValue": "4",
+      "releaseAcknowledgementKey": "teslasync:changelog:seen-version",
+      "releaseAcknowledgementValue": "0.7.0",
+      "actualRosterCount": 3,
+      "fixture4PresentAndSynthetic": true,
+      "nonFixtureRenderedNameOrVinMatchesBeforeDesktopCapture": 0,
+      "nonFixtureRenderedNameOrVinMatchesBeforeCorrectedMobileCapture": 0,
+      "identityScanLimit": "Compared known non-DRILL roster name/display_name/VIN against rendered body text; not a universal PII detector. No roster identity values retained."
+    },
+    "guardedWriteRequestsObserved": 0,
+    "guardedMutationAttemptsBlocked": 0,
+    "blockedWebSocketsPerGuardedDocument": 2,
+    "mocksOrSyntheticResponses": false,
+    "intentionalPreferenceChanges": false,
+    "serverPreferenceChanges": "No save/autosave/reset/paid action intentionally invoked. The unguarded emulation interval prevents an unconditional whole-session no-write certification.",
+    "isolatedBrowserInitialization": "Initial mount itself wrote browser keys for theme/mode/font defaults, shell collapse, scroll/recent navigation, consent and onboarding. Observed through storage instrumentation; not user toggles and not shared-profile changes. Do not misreport zero browser-storage writes.",
+    "prohibitedActionsNotInvoked": [
+      "Appearance/theme/density/time format/chart palette/status/celebration toggles",
+      "Font or typography preference changes",
+      "Save settings or workspace reset defaults",
+      "Sync units from car",
+      "Server change/disconnect",
+      "Reset confirmation or typed RESET",
+      "Paid AI actions, export creation, onboarding restart",
+      "Git, Docker, installs, helper tools, source/catalog/global edits"
+    ]
+  },
+  "exercised": {
+    "desktopCategories": {
+      "actualCssViewport": [1441, 937],
+      "requestedWindowSize": [1440, 936],
+      "method": "Native click on each real settings category button; Overview initially rendered.",
+      "visited": ["overview", "general", "workspace", "appearance", "typography", "advanced", "server", "reset"],
+      "observations": {
+        "overview": "Preference summary, source/scope, quick actions and all seven metrics present. Several server text preferences empty; displayed em dashes, zero cost and Celsius fallback. No data values edited.",
+        "general": "Application; Units & measurements; Language, region & currency; Energy & comparison costs; save control retained, not clicked.",
+        "workspace": "Profile, landing page, default vehicle, default range, help and release-highlight controls present; inspected only.",
+        "appearance": "Real appearance controls rendered; Light and Custom selected; no control changed or accordion expansion claimed.",
+        "typography": "Live preview, UI/monospace font choices, reading presets, text scale, line height, tracking, heading weight and harmonic scale present; inspected only.",
+        "advanced": "Real empty state: No silenced prompts; no restore action available.",
+        "server": "Browser-default server and Change server action present; no Disconnect in same-origin mode; no connection action clicked.",
+        "reset": "Eight reset rows, deny-list and danger-zone final action present."
+      }
+    },
+    "searchDesktop": {
+      "query": "unit",
+      "initialResult": "Distance unit",
+      "arrowDownResult": "Temperature unit",
+      "inputKeptFocus": true,
+      "ariaActivedescendantUpdated": true,
+      "enterResult": "/settings#general",
+      "enterClosedResultsAndClearedQuery": true,
+      "selectedFixtureRemained4": true,
+      "urlSearchDropped": "Search commit navigates to indexed href without vehicle_id; selected browser fixture remained 4. Not promoted to a confirmed scope defect.",
+      "noMatchQuery": "zzzz-nomatch-qa",
+      "noMatchResult": "No matching settings. / aria-disabled=true",
+      "escapeClosedListWithoutNavigationAndKeptInputFocus": true,
+      "queryClearedBeforeMobile": true,
+      "notRun": ["ArrowUp", "Home/End", "mobile search keyboard", "real assistive-technology announcement"]
+    },
+    "resetDialogDesktop": {
+      "trigger": "reset-section-button-general",
+      "dialogName": "Reset General preferences?",
+      "initialFocus": "Close",
+      "shiftTabResult": "Reset; focus stayed inside dialog",
+      "cancel": "Native click on Cancel, never Reset",
+      "afterCancelDialogCount": 0,
+      "restoredFocusTestId": "reset-section-button-general",
+      "guardedWrites": 0,
+      "notRun": ["Complete Tab-cycle trap", "background inert acceptance", "all-settings typed dialog", "mobile reset dialog"]
+    },
+    "mobileCategories": {
+      "viewport": [375, 844],
+      "pointerCoarse": true,
+      "touchPoints": 1,
+      "method": "After guard restoration, changed the real native category select via DOM change events, waiting 350ms per category. This is real mounted navigation, NOT native pointer or keyboard-select acceptance.",
+      "visited": ["overview", "general", "workspace", "appearance", "typography", "advanced", "server", "reset"],
+      "eachHadCorrectHashAndExactlyOneVisibleCategory": true,
+      "eachDocumentWidth": 375,
+      "nativePickerOptionsPresent": 8
+    },
+    "mobileMaximumScroll": {
+      "category": "reset",
+      "scrollOwner": "main",
+      "actualTop": 1903.3333740234375,
+      "maximum": 1904,
+      "maximumTolerancePx": 1,
+      "finalAction": {
+        "name": "Reset ALL settings",
+        "top": 577,
+        "bottom": 631.3333358764648,
+        "width": 296,
+        "height": 54.333335876464844,
+        "centerHit": true,
+        "fourCenterOffset21pxHits": [true, true, true, true],
+        "notActivated": true
+      },
+      "statusFooter": {"top": 676, "height": 112},
+      "allEightRowResetButtonRectangles": {"width": 69.63542175292969, "height": 53},
+      "conclusion": "Final action clear of fixed footer at genuine maximum scroll; no occlusion defect confirmed. Other categories' maximum-scroll actions NOTRUN."
+    },
+    "accessibilityAndContrast": {
+      "documentLanguage": "en",
+      "title": "Settings — TeslaSync",
+      "viewportMeta": "width=device-width, initial-scale=1.0, viewport-fit=cover",
+      "oneMainAndSettingsH1": "Observed in native snapshots, not global automated acceptance.",
+      "nativeConsoleLabelIssue": "No label associated with a form field (count: 4); one specific source/DOM issue confirmed below, not four diagnosed defects.",
+      "resetHelpText": {"foreground": "rgb(87, 102, 124)", "composedBackground": [250, 251, 252], "ratio": 5.635310049647951, "fontSize": "12px"},
+      "resetFinalAction": {"foreground": "rgb(131, 70, 78)", "computedBackground": "color(srgb 0.952392 0.941725 0.947294)", "composedBackground": [242.85996, 240.139875, 241.55997], "ratio": 6.29024187716772, "fontSize": "14px"},
+      "method": "Computed RGB/sRGB and ancestor-background composition, no gradients and opacity 1 for these sampled targets; not screenshot-derived contrast.",
+      "correction": "Initial generic numeric color parser treated color(srgb) channels as 0..255 and falsely returned 2.93 for final action. Explicit sRGB normalization corrected to 6.29; initial result is rejected, not a product defect.",
+      "notRun": ["Full contrast matrix", "focus-ring contrast", "screen reader", "axe", "Lighthouse"]
+    }
+  },
+  "defaultCaptures": [
+    {
+      "provider": "chrome-devtools take_screenshot",
+      "capture": "Desktop overview, default inline output",
+      "cssViewport": [1441, 937],
+      "mode": "Existing saved Light / Custom; not toggled",
+      "privacyCheckBeforeCapture": true,
+      "filePath": null,
+      "hash": null,
+      "limitation": "Actual provider image viewed in tool output; no custom path requested, no retained file/hash or raster-size claim."
+    },
+    {
+      "provider": "chrome-devtools take_screenshot",
+      "capture": "Mobile reset at genuine maximum main scroll, default inline output",
+      "cssViewport": [375, 844],
+      "mode": "Existing saved Light / Custom; not toggled",
+      "privacyCheckBeforeCapture": true,
+      "guardReinstalledBeforeCapture": true,
+      "filePath": null,
+      "hash": null,
+      "limitation": "Actual provider image viewed in tool output; no custom path requested and no retained file/hash claim."
+    }
+  ],
+  "confirmedIssues": [
+    {
+      "id": "settings-timezone-override-unassociated-label",
+      "rule": "MDC-021 / MDC-040",
+      "file": "web\\src\\features\\settings\\components\\GeneralSettings.tsx",
+      "line": 344,
+      "relatedFile": "web\\src\\features\\settings\\components\\SettingField.tsx",
+      "relatedLine": 34,
+      "cause": "Timezone SettingField passes visible label but no htmlFor; child Input has neither explicit associated label nor aria-label. SettingField renders the label as a sibling rather than a wrapper.",
+      "reproduction": "Open Settings, select Units, language & costs. Inspect My time zone override input. Native accessibility snapshot names the textbox solely with its example placeholder; DOM control.labels is empty and aria-label absent.",
+      "actual": "Textbox accessible name: e.g. America/Los_Angeles (leave blank for browser default), not My time zone override.",
+      "expected": "Programmatic association with the localized visible field label, preserving placeholder and helper description.",
+      "scope": "Confirmed on desktop DOM and 375px native snapshot. Other native-console label candidates not individually diagnosed.",
+      "sourceChanged": false
+    }
+  ],
+  "runtimeObservations": {
+    "settingsGetStatus": 200,
+    "settingsShape": "Top-level settings fields present, not a settings envelope.",
+    "degradedBanner": "Fleet Telemetry and Tesla API degradation remained visible.",
+    "consoleRead": "Native list_console_messages error/warn/issue pageSize=12, includePreservedMessages=true: first 12 of 71 messages; not all console entries reviewed.",
+    "observedResourceStatuses": [501, 503, 404],
+    "fastRefreshWarning": "React DevTools hook shim; Fast Refresh disabled.",
+    "consoleClean": false,
+    "pageExceptions": "NOT_CERTIFIED: no exhaustive exception review",
+    "naturallyObservedStates": ["available settings", "empty silenced prompts", "search no match", "degraded service", "stale freshness label", "reset dialog open and cancelled"]
+  },
+  "notRun": [
+    "Full ten-width matrix, breakpoints, tablets, narrow allocated containers",
+    "Dark/auto/other custom modes; autosaving preference changes expressly forbidden",
+    "Native mobile category picker keyboard/touch interaction",
+    "All control dropdown/open/hover/focus/disabled/error states",
+    "Save, autosave, preference persistence, server disconnect, reset confirm and paid actions",
+    "Offline/retained/error/retry/empty/slow network injection; no mocks or disconnects",
+    "Null/negative/huge/extreme supplied datasets",
+    "RTL, long labels, 200% text, forced colors, reduced motion",
+    "Complete keyboard traversal/traps and all-category final-action scroll checks",
+    "Lighthouse navigation would introduce another load beyond current bounded guarded work; no unguarded audit launched",
+    "TypeScript/build/lint/full suites/violations scan/API-router audit: read-only native report assignment, no source edits or gate authority",
+    "Original failed capture helper, retry budgets, Docker deployment and full pilot/Phase6 acceptance"
+  ],
+  "reportValidation": {
+    "command": "Get-Content -Raw .\\..\\docs\\frontend-audits\\phase6-settings-qa.json | ConvertFrom-Json",
+    "exit": 0,
+    "rawOutput": "JSON_PARSE=PASS\nSTATUS=PARTIAL_NOT_ACCEPTED\nCONFIRMED_ISSUES=1\nOWNED_PAGE_CLOSED=True\n2026-10-13T15:55:57.8496043Z",
+    "scope": "JSON parse only, before adding this validation/timebox metadata; not application validation."
+  },
+  "delivery": "Report-only partial evidence and one confirmed label issue. No full-matrix/page acceptance. Application, catalog, global, helper, queue and handoff files remained read-only to this worker.",
+  "nativeContinuation2": {
+    "status": "PARTIAL_NOT_ACCEPTED",
+    "assignmentReceivedAt": "2026-10-13T18:15:54.752Z",
+    "firstRecordedClock": "2026-10-13T18:17:06.9672508Z",
+    "nativeGuardInstalledAt": "2026-10-13T18:21:19.843Z",
+    "lastNativeRecordedClock": "2026-10-13T18:26:00.872Z",
+    "browserClosedBeforeClock": "2026-10-13T18:26:39.6311587Z",
+    "timebox": "The preferred ten-minute target was exceeded. Browser closure was confirmed by 10m44.879s after the supplied assignment clock, before the unchanged twenty-minute return and twenty-five-minute hard deadlines. Final report validation clock is in the ignored validation log; no timebox reset.",
+    "preservation": {
+      "acceptedReportCommit": "1a1b06e33, supplied authority; no Git command run",
+      "acceptedReportSha256": "10f5206b57db45209c433ef334d206c5e6b992924412201b46e35a6f56c0ce08",
+      "acceptedReportByteCopy": "web\\logs\\phase6-settings-native-continuation.original.json",
+      "policy": "Append this section only. All prior fields, chronology, guard-gap disclosure, actual 1441 desktop measurements, original captures, issue reproduction, other console candidates and NOTRUN findings remain historical evidence without alteration or retroactive certification.",
+      "sourceLabelOwner": "User reports owner released at 17:38:51Z with twenty-four passing scoped tests; existing release log was read, not rerun. Parent owns source intake/acceptance."
+    },
+    "authority": {
+      "provider": "Exclusive native Chrome DevTools MCP grant in this assignment",
+      "skills": ["chrome-devtools", "a11y-debugging"],
+      "read": [
+        "Entire existing docs\\frontend-audits\\phase6-settings-qa.json",
+        "docs\\frontend-design-contract.md responsive, accessibility, privacy, evidence and bounded-worker requirements",
+        "docs\\session-handoff.md current native lifecycle and prior fixture/guard conventions",
+        "Checkpoint 026 Settings partial-report, guard-gap and provider-release chronology",
+        "Exact migration-queue.md Settings pilot and timezone-label entries, read-only",
+        "web\\src\\features\\settings\\components\\GeneralSettings.tsx timezone field",
+        "web\\src\\features\\settings\\components\\SettingField.tsx",
+        "web\\logs\\phase6-fix-settings-timezone-label.log release/preservation receipt",
+        ".github\\instructions\\react-frontend.instructions.md and observability.instructions.md",
+        "a11y-debugging native DOM/keyboard reference snippets",
+        ".gitignore existing logs/ rule"
+      ],
+      "writableTrackedScope": ["docs\\frontend-audits\\phase6-settings-qa.json"],
+      "newIgnoredLogsPrefix": "web\\logs\\phase6-settings-native-continuation.",
+      "noApplicationTestsCatalogOrGlobalWrites": true,
+      "noPlaywrightHelpersNewToolsExtensionsGitDockerServersOrDirectApiRequests": true
+    },
+    "previewAndSafety": {
+      "url": "http://localhost:5173/settings?vehicle_id=4#general",
+      "ownedPageId": 4,
+      "isolatedContext": "phase6-settings-qa-20261013",
+      "existingContextReused": true,
+      "guardBeforeSpaMount": "Opened an owned about:blank tab in the released Settings context, then used native navigate_page initScript before the one Settings mount. Read-only request/form guard uses same-origin localhost:5173 GET/HEAD/OPTIONS only; WebSocket/beacon/form mutation paths blocked. Storage.prototype setItem/removeItem/clear are guarded, with only the two existing fixture/acknowledgement values permitted.",
+      "permittedLocalStorageWrites": {
+        "teslasync-selected-vehicle": "4",
+        "teslasync:changelog:seen-version": "0.7.0"
+      },
+      "guardPersistenceObserved": "Same non-configurable wrapper references, document token and original installation timestamp survived every native window resize and label/keyboard operation. Final installationStillOriginal=true. No emulation, reload, second navigation or guard-loss interval observed during this continuation.",
+      "persistentGuardScope": "CURRENT DOCUMENT ONLY. This is not a browser-wide firewall or a proof for future documents, workers, native subresources, cookies, IndexedDB or storage named-property assignments. No unconditional whole-session/server/browser-storage no-write claim. Original attempt's guard gap remains uncertified.",
+      "finalNativeCounters": {
+        "clock": "2026-10-13T18:26:00.872Z",
+        "permittedRequests": 193,
+        "blockedRequests": 0,
+        "blockedSockets": 2,
+        "blockedStorageWrites": 53,
+        "permittedFixtureWrites": 2,
+        "blockedFormSubmissions": 0
+      },
+      "counterScope": "Instrumented JavaScript entry points only; allowed calls are natural mounted-SPA reads, not manually requested API probes. Fifty-three observed storage method writes were blocked, not silently treated as successful preference changes.",
+      "intentionalPreferenceOrDraftChanges": false,
+      "timezoneValueStayedEmpty": true,
+      "privacy": "No roster/VIN/name response was requested or retained. Pre-capture checks found zero visible VIN-pattern matches, no open roster/menu/listbox and only generic account-control text; native snapshots and captures contained Settings labels/sample-data notice, not real identity. These checks are bounded, not a universal PII certification.",
+      "sourceStability": "No source commit/stability certification or class-to-native-geometry substitution. GeneralSettings and shared field source were read-only; mounted current label behavior is the native proof."
+    },
+    "actualViewportChecks": [
+      {
+        "clock": "2026-10-13T18:22:42.679Z",
+        "requestedWindow": [1439, 935],
+        "actualViewport": [1439, 935],
+        "documentWidth": 1439,
+        "documentScrollWidth": 1439,
+        "visualViewportWidth": 1439,
+        "visualViewportScale": 1,
+        "purpose": "Bounded desktop sizing probe; does not replace original actual 1441 evidence."
+      },
+      {
+        "clock": "2026-10-13T18:23:05.671Z",
+        "requestedWindow": [1440, 936],
+        "actualViewport": [1440, 936],
+        "documentWidth": 1440,
+        "documentScrollWidth": 1440,
+        "visualViewportWidth": 1440,
+        "visualViewportScale": 1,
+        "result": "Genuine 1440 document and viewport in this continuation; no horizontal page overflow in the inspected General state."
+      },
+      {
+        "clock": "2026-10-13T18:24:38.739Z",
+        "requestedWindow": [375, 844],
+        "actualViewport": [500, 844],
+        "documentWidth": 500,
+        "documentScrollWidth": 500,
+        "visualViewportWidth": 500,
+        "visualViewportScale": 1,
+        "pointerCoarse": false,
+        "touchPoints": 0,
+        "result": "375 NOTRUN: native window resizing bottoms out at actual 500 in this browser. No device emulation attempted because the prior run proved it discarded the document guard. This is a narrow desktop-pointer context, not a 375px/touch/mobile acceptance pass."
+      }
+    ],
+    "timezoneLabelNativeChecks": {
+      "desktopAccessibleTree": "Native take_snapshot: textbox \"My time zone override\"; separate unchanged IANA guidance StaticText. Previously the textbox was named only by the example placeholder.",
+      "narrowAccessibleTree": "At actual 500x844, native take_snapshot: textbox \"My time zone override\" focusable focused; same IANA guidance remains.",
+      "association": {
+        "visibleLabel": "My time zone override",
+        "htmlFor": "settings-timezone-user",
+        "inputId": "settings-timezone-user",
+        "controlLabelsCount": 1,
+        "labelControlIsActualInput": true,
+        "type": "text",
+        "disabled": false,
+        "readOnly": false,
+        "placeholder": "e.g. America/Los_Angeles (leave blank for browser default)"
+      },
+      "nativeVisibleLabelClicks": [
+        {
+          "clock": "2026-10-13T18:23:25.999Z",
+          "viewport": [1440, 936],
+          "providerAction": "click uid 5_145, the visible label StaticText",
+          "activeElementIsTimezoneInput": true,
+          "labelControlsEnabledEditableInput": true,
+          "valueStillEmpty": true,
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px"
+        },
+        {
+          "clock": "2026-10-13T18:25:42.315Z",
+          "viewport": [500, 844],
+          "providerAction": "click uid 5_145, the same visible label in the narrow layout",
+          "activeElementIsTimezoneInput": true,
+          "valueStillEmpty": true,
+          "focusVisible": true,
+          "inputWidth": 412,
+          "inputHeight": 43,
+          "fivePointInputHits": [true, true, true, true, true]
+        }
+      ],
+      "keyboard": {
+        "method": "Native press_key Tab and Shift+Tab, no text entry or control-value changes",
+        "tabClock": "2026-10-13T18:23:59.057Z",
+        "tabFromTimezone": "Help for electricity-cost button; focus-visible=true",
+        "shiftTabClock": "2026-10-13T18:24:11.892Z",
+        "shiftTabReturnedToTimezone": true,
+        "returnedInputFocusVisible": true,
+        "returnedInputInsideViewport": true,
+        "scope": "Immediate local forward/backward reachability only, not a full-page keyboard/trap/AT acceptance."
+      },
+      "guidance": {
+        "text": "IANA tz name. Useful when travelling but you'd rather see times in your home zone.",
+        "nativeStaticTextPresent": true,
+        "placeholderPreserved": true,
+        "clockAfterNeededFieldCentering": "2026-10-13T18:25:25.926Z",
+        "actualViewport": [500, 844],
+        "guidanceTop": 623,
+        "guidanceBottom": 659,
+        "footerTop": 676,
+        "guidanceCenterHit": true,
+        "clearOfFooter": true,
+        "ariaDescribedby": null,
+        "helperId": null,
+        "limitation": "Guidance remains visible and in the accessibility tree but is not programmatically linked as the textbox description. No screen-reader guidance-announcement claim; no shared component or callsite change made."
+      },
+      "result": "The original specific visible-label/accessible-name/focus defect is no longer reproduced on the mounted current source at actual 1440 and 500. This narrow native confirmation does not delete its accepted historical reproduction, certify the source suite, or accept the entire Settings pilot."
+    },
+    "boundedGlobalAndNaturalStateObservations": {
+      "documentLanguage": "en",
+      "title": "Settings — TeslaSync",
+      "viewportMeta": "width=device-width, initial-scale=1.0, viewport-fit=cover",
+      "mainCount": 1,
+      "h1Count": 1,
+      "positiveTabindexCount": 0,
+      "naturalStates": [
+        "Mounted General preferences with existing empty timezone override",
+        "Existing stale Settings freshness label",
+        "Existing Fleet Telemetry/Tesla API degraded banner",
+        "Existing synthetic sample-data notice"
+      ],
+      "notClaimed": "No exhaustive heading/landmark/contrast/exception/console, source-state honesty, persisted preference or retained/offline acceptance."
+    },
+    "newCandidatesNotPromotedToAcceptedDefects": [
+      {
+        "id": "timezone-guidance-unlinked-description",
+        "evidence": "Actual helper exists and is readable as separate StaticText, but aria-describedby and helper id are absent.",
+        "classification": "Preserved existing guidance semantics, not an introduced label-fix regression. Assistive-technology announcement not tested; parent owns any follow-up."
+      },
+      {
+        "id": "timezone-narrow-input-43px",
+        "evidence": "Actual 500x844 mounted input is 412x43px with five successful native DOM hit points. Desktop 1440 input height is also 43px.",
+        "classification": "MDC-043 below-md 44px target candidate only. Actual 375/touch geometry could not safely be established; no 375px failure/pass fabricated, no source/class-only inference or repair performed."
+      }
+    ],
+    "defaultCaptures": [
+      {
+        "provider": "chrome-devtools take_screenshot",
+        "capture": "Focused editable timezone input only, uid 5_146",
+        "actualCssViewport": [1440, 936],
+        "filePath": null,
+        "hash": null,
+        "limitation": "Default inline element crop; not a whole-page geometry or unclipped focus-ring/contrast proof."
+      },
+      {
+        "provider": "chrome-devtools take_screenshot",
+        "capture": "Identity-free narrow Settings viewport with named focused timezone input and preserved visible guidance",
+        "actualCssViewport": [500, 844],
+        "requestedNativeWindow": [375, 844],
+        "filePath": null,
+        "hash": null,
+        "limitation": "Actual provider image inspected; no custom screenshot path or retained image/hash. It is 500px context evidence, never a 375px capture claim."
+      }
+    ],
+    "notRun": [
+      "Genuine new 375px viewport/document: native resize returned 500px; guard-losing emulation prohibited",
+      "Offline/retained/error/retry/slow-network injection: no persistent guard guarantee for emulator-created documents or network bypass, no mocks or API probes",
+      "Zoom/200% text, RTL, forced-colors, reduced-motion and alternate saved modes: no new permission to change saved/browser preferences or discard the guard",
+      "Typing, draft persistence, save/autosave, reset confirm, disconnect/replay/destructive/paid/export actions",
+      "Full keyboard traversal, dialogs/traps, assistive technology, exhaustive contrast/focus visibility and Lighthouse navigation",
+      "Remaining full ten-width/other-category/state matrix",
+      "Original eight-category, search, maximum-scroll and reset-Cancel checks were not rerun",
+      "TypeScript/build/lint/audits/API-router verification/full tests: report-only assignment, application and tests read-only",
+      "Git, Docker, servers, helpers, scripts/extensions/new tools, catalog/source edits and parent intake/dispatch"
+    ],
+    "closure": {
+      "ownedPage4Closed": true,
+      "closePageRawResult": "Note: the previously selected page was closed. Page 2 is now selected. Pages: 2 about:blank [selected].",
+      "preExistingPage2Untouched": true,
+      "browserProviderClaimReleased": true,
+      "noBrowserHandlesOrBackgroundCommandsRemainOwned": true,
+      "reportLogAndCommandClaimsReleasedAtReturn": true,
+      "postReturnWrites": "NONE; final validation/logging completes before returning this worker result.",
+      "validationLog": "web\\logs\\phase6-settings-native-continuation.validation.log"
+    },
+    "delivery": "Report-only bounded native continuation. Specific timezone visible-label naming/focus confirmed; genuine 1440 measured, requested375 actually500 disclosed, new candidates retained and forbidden state cases NOTRUN. Original accepted report and safety gap preserved. Full Settings/Phase6 acceptance remains incomplete."
+  },
+  "nativeContinuation3": {
+    "status": "NOTRUN",
+    "pageAcceptance": "PARTIAL_NOT_ACCEPTED",
+    "assignmentReceivedAt": "2026-10-14T05:22:02.549Z",
+    "firstMeasuredClock": "2026-10-14T05:22:07.9848509Z",
+    "queueConservativeStartObservedLater": "2026-10-14T05:21:00Z",
+    "returnDeadline": "2026-10-14T05:41:00Z",
+    "hardDeadline": "2026-10-14T05:46:00Z",
+    "clockPolicy": "Earlier parent queue reservation wins over assignment+20/25. Actual lifecycle creation time is not independently exposed; no reset or later-deadline claim.",
+    "boundedCommandLimitSeconds": 900,
+    "scope": "Continue the original pending Phase6 phase4-pilot-settings missing-native-budget2 only. No remigration, repeat helper campaign, new helper, source repair, queue edit or budget reset.",
+    "authority": {
+      "queueRow": "migration-queue.md:2135",
+      "queueStatusRead": "[ ]",
+      "queueStatusReadAtFinalInspection": "[~] with actual actor 41370122-8183-4514-a3ab-920988588322; inspected at 2026-10-14T05:27:14.9269187Z",
+      "queueAttemptsRead": "2",
+      "acceptedTimezoneLabelFix": "e693301e1, supplied authority; not reopened or tested again",
+      "browserLockGrant": [3, 4],
+      "otherBrowserLocks": "1 drives and 2 dashboard; untouched",
+      "allowedBrowserChannel": "msedge",
+      "writableFiles": [
+        "docs\\frontend-audits\\phase6-settings-qa.json",
+        "web\\logs\\phase4-pilot-settings.log"
+      ],
+      "read": [
+        "Full docs\\orchestrator-loop.md and full retained Settings report",
+        "Exact current queue row and current native/privacy dispatch restrictions",
+        "Full docs\\frontend-design-contract.md; mission sections 22-26 and 43-45; inventory authority/preservation",
+        "Current handoff recovery, installed-Edge and retained fixture/privacy conventions",
+        "React frontend, frontend SI cutover, observability and unit-conversion instructions",
+        "docs\\privacy.md",
+        "Existing scripts\\frontend-qa.mjs guard, launch, mode and capture entry points",
+        "Existing playwright.config.ts, e2e\\configEnv.ts and Settings/accessibility/performance harness entry points",
+        "GeneralSettings.tsx accepted explicit timezone label association, read-only; no new issue campaign"
+      ]
+    },
+    "preservation": {
+      "priorReportBytes": 31452,
+      "priorReportSha256": "a131c395707f1dcab8e55974a91fd513bed793be982716e3820f2fc42fa2e778",
+      "priorRootFieldsCanonicalSha256": "0417442ec0ceefc2aa3614cf2db801be8381eba3cd74ab6cd74c61e881bc65f4",
+      "method": "Append this member only. Compare canonical JSON of all prior root fields after removing nativeContinuation3; JSON punctuation changes are not a byte-identical whole-file claim.",
+      "retainedEvidence": "All prior timestamps, receipts, eighteen dark diagnostics, eight categories, search/reset-Cancel/mobile maximum-scroll/contrast evidence and original unsafe emulation interval remain historical, not a whole-page pass. Original requested1440 actual1441x937 and later requested375 actual500 discrepancies remain disclosed.",
+      "previousGuardGap": "Not retroactively certified safe. No unconditional whole-session no-write claim.",
+      "helperAttempts": "Unchanged; no failed/exhausted helper invoked and no native attempt or QA pass invented."
+    },
+    "preview": {
+      "url": "http://localhost:5173/settings",
+      "command": "curl.exe --silent --output NUL --write-out 'preview_http=%{http_code}\\n' --max-time 10 http://localhost:5173/settings",
+      "shellId": "4412",
+      "exit": 0,
+      "rawOutput": "preview_http=200",
+      "meaning": "HTML route responsiveness only. Response body discarded; no JavaScript, API, fixture, backend-health, Settings-data or Docker acceptance.",
+      "runtimeCommand": "node --version",
+      "runtimeRawOutput": "v26.8.1",
+      "fixtureStatus": "NOT_VERIFIED_CURRENT: historical synthetic DRILL4 authority retained; no roster, identity or account read requested.",
+      "backend500": "NOT_OBSERVED_OR_RULED_OUT: no API probe or guarded application mount; historical availability statuses do not establish current backend status.",
+      "docker": "Independent deployment worker untouched; no deployment operation, polling or success assumed."
+    },
+    "confirmedExecutionBlockers": [
+      {
+        "id": "existing-native-provider-unexposed",
+        "owner": "Current host/tool capability, not a Settings source owner",
+        "evidence": "This worker exposes shell/file tools and GitHub MCP only; neither prior chrome-devtools nor Playwright native browser MCP context/page/default-capture operations are exposed. Installed Playwright resolves, but that is not the previously guarded native provider.",
+        "consequence": "Prior document guard cannot be installed/reused through its native provider. No unsafe context/page/emulation operation was attempted to work around it."
+      },
+      {
+        "id": "existing-helper-incompatible-with-exact-grant",
+        "owner": "Existing web\\scripts\\frontend-qa.mjs:164-176,698-724; read-only and exhausted helper budget",
+        "evidence": "Existing browserChecks launches chromium without channel:'msedge', writes a separate qa-screenshots/cache tree, creates context and page before its page.route write guard, and seeds/synchronizes application mode via localStorage. That route callback blocks non-read methods only; it does not exclude identity/token/roster reads or enforce the historical synthetic fixture/storage guard.",
+        "consequence": "Cannot invoke unchanged under installed-Edge-only, existing pre-operation guard, no unsafe preference writes, no identity requests, exact writable paths and unchanged helper-budget policies. No patch, extraction driver, fresh guard/helper or retry campaign authored."
+      },
+      {
+        "id": "existing-e2e-harness-is-mocked-not-native-fixture",
+        "owner": "Existing web\\e2e\\settings.smoke.spec.ts:1-18,accessibility.smoke.spec.ts:1-23,performance.perf.spec.ts:1-8",
+        "evidence": "Existing entry points seed browser preferences and install populated API mocks. Settings harness later edits distance preference; configured projects do not pin the required Edge channel.",
+        "consequence": "These commands cannot establish the requested read-only native/synthetic-backend acceptance. They were not run; no success-shaped fake app data or unsafe edit used."
+      },
+      {
+        "id": "lighthouse-dependency-and-guard-unavailable",
+        "owner": "Current installed audit runtime/guard capability; no install or source owner requested",
+        "evidence": "Local require.resolve('lighthouse') returned MODULE_NOT_FOUND. Playwright and axe-core/axe.min.js do resolve. No guarded native mounted page is available to run axe; no existing guarded Lighthouse navigation is available.",
+        "consequence": "Lighthouse NOTRUN, no install/download/separate unguarded browser. Axe NOTRUN because safe mount is unavailable, not because axe is absent."
+      }
+    ],
+    "remainingMatrix": [
+      {
+        "case": "Dark/auto/saved-custom modes",
+        "status": "NOTRUN",
+        "blocker": "No existing guarded mounted provider; helper seeds/synchronizes forbidden saved preferences. CSS-only impersonation would not prove actual saved-mode behavior."
+      },
+      {
+        "case": "RTL and long labels",
+        "status": "NOTRUN",
+        "blocker": "No existing guarded mounted provider/fixture. No language/preferences/catalog modification or fabricated text campaign authorized."
+      },
+      {
+        "case": "Native zoom and 200% text",
+        "status": "NOTRUN",
+        "blocker": "No existing guard-preserving native device/document operation exposed. Prior emulation guard loss prevents assuming safety; CSS scale is not native zoom acceptance."
+      },
+      {
+        "case": "Forced colors and reduced motion",
+        "status": "NOTRUN",
+        "blocker": "No safely guarded native context/page. Existing tests use mocked app data; no OS-mode or browser emulation acceptance inferred from source."
+      },
+      {
+        "case": "Offline/retained/error/retry/unknown/extreme states",
+        "status": "NOTRUN",
+        "blocker": "No current safely guarded synthetic mount or supplied native state dataset. No response fabrication, connection changes, unsafe reload or backend500 diagnosis."
+      },
+      {
+        "case": "Whole-session full guard, complete keyboard/AT/a11y and contrast",
+        "status": "NOTRUN",
+        "blocker": "Existing guard cannot be installed through prior provider; current helper does not enforce privacy/fixture/storage guard before each operation. Prior partial checks are not repeated or promoted."
+      },
+      {
+        "case": "Lighthouse",
+        "status": "NOTRUN",
+        "blocker": "Installed module unavailable and no safe guarded native navigation; installs/downloads/new helpers expressly forbidden."
+      }
+    ],
+    "privacyAndSafety": {
+      "browserLaunched": false,
+      "contextsCreated": 0,
+      "pagesCreated": 0,
+      "deviceOrEmulationOperations": 0,
+      "newGuardInstalled": false,
+      "guardPolicy": "Pre-operation guard is mandatory. Because the existing eligible guard/provider was unavailable, every browser operation was withheld, not performed first and guarded afterward.",
+      "apiRequestsPerformed": 0,
+      "realIdentityUserTokenRequestsOrCaptures": 0,
+      "appResponsesMockedOrFabricated": 0,
+      "preferenceSaveResetDisconnectPaidActions": 0,
+      "nativeCaptures": [],
+      "nativeMeasurements": [],
+      "newWholeSessionSafetyCertification": false,
+      "prohibitedOperations": "No Git/PR/merge, nested agents, installs, downloads, new helpers/extensions, source/tests/shared helper/catalog/config/queue writes, servers, Docker or full suites."
+    },
+    "protectedInputsBeforeSha256": {
+      "web\\src\\features\\settings\\pages\\SettingsPage.tsx": "4c04502800bc077a58fedec3cf5f6c14c783aeeb0b7e9267eaaebb99cb76d85c",
+      "web\\src\\features\\settings\\components\\GeneralSettings.tsx": "64745e5a2ba11f15ab026c296aaf64ef0d48692d9af6b834bd7401e98326c47a",
+      "web\\src\\features\\settings\\components\\SettingField.tsx": "d7f58ab5ca4b91282725ece716c504d98689c27d9736c0721f93048fe3e73c7c",
+      "web\\src\\features\\settings\\components\\SettingsSearch.tsx": "6d4cf20de8670a98789c7cfd8432f07bc5b13caa54154c52bbcab08f1c7e8c1f",
+      "web\\src\\features\\settings\\components\\SettingsNavigation.tsx": "81348f51d4b06bc135b72e8266610e5b073bc2a46fb364ce5cde0fa53521eae8",
+      "web\\src\\features\\settings\\components\\ResetSection.tsx": "2ac8bacd7ea61b84dee4e44464a31270e979321e8c5d99ffb6df11bf5a3bb22f",
+      "web\\scripts\\frontend-qa.mjs": "e82fb2d99d429af549766ce1a50951f6ace714e8ad2f55cd4fcdf7e4c2067d0c",
+      "web\\e2e\\settings.smoke.spec.ts": "5c565e65d2da71d9025aa430f4c557fe2b3b9305396431ba534b4e2e5a1c039b",
+      "web\\e2e\\configEnv.ts": "37138faf9f796885442112181dec77126c9c10bb84de8df3777cd2cbc2114a2b",
+      "web\\playwright.config.ts": "a5d99ffbc3c7bb4bf615e5fa70884f0bc19e13fe7d304f11a79f19000a676000",
+      "web\\src\\i18n\\en.json": "df6829c0588aa9c6ea9605fd2a6db9f208dfb6c6e8d76bca11b18f89d345eba8",
+      "web\\package.json": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a",
+      "migration-queue.md": "821c7c5a7180b80e40e188ef9bd86124135ed057f577878b6907f39c603d48a3"
+    },
+    "verificationReceipt": {
+      "shellId": "4426",
+      "exit": 1,
+      "measuredAt": "2026-10-14T05:27:05.747622Z",
+      "jsonParse": "PASS",
+      "priorRootFieldsPreserved": 23,
+      "priorRootFieldsCanonicalSha256": "0417442ec0ceefc2aa3614cf2db801be8381eba3cd74ab6cd74c61e881bc65f4",
+      "protectedInputsChecked": 13,
+      "unchangedSourceHelperTestConfigCatalogInputs": 12,
+      "driftedInputs": [
+        {
+          "file": "migration-queue.md",
+          "afterSha256": "8ec8a7f2a4193a9c0080e832b1bb4b45c51bc6e03955a75a9d38c3aba7cd6ec8",
+          "scope": "Shared orchestrator-owned queue stayed read-only to this worker. Fresh exact-row inspection in shell4427 shows pending->in-progress and parent actor/lock/deadline dispatch note, attempts still2. No queue repair or own-write attribution.",
+          "limit": "Exact-row change observed; whole-file drift may include other concurrent changes, whose actors are not established by a hash."
+        }
+      ],
+      "failurePreserved": "The initial broad immutable-input assertion exited1 on shared queue drift, after JSON/history and twelve scoped inputs matched. Do not claim13unchanged or erase this failure.",
+      "finalValidationScope": "Named final command checks JSON, all23 historical root fields and the twelve scoped source/helper/test/config/catalog pins; separately prints current queue hash without certifying queue immutability. Exact command/output/numeric exit and artifact/command release UTC are in the ignored log."
+    },
+    "verificationScope": "JSON parse, unchanged prior-report fields and twelve measured scoped protected hashes only; shared queue drift disclosed. Native tests/captures=0. TypeScript/build/lint/violations audit/API hook audit/line and section comparisons/full suites NOTRUN: evidence-only assignment, no source changes or phase-gate authority.",
+    "closure": {
+      "browserLocksReleasedAt": "2026-10-14T05:24:42.889285Z",
+      "browserLocksReleased": [3, 4],
+      "locksWereNeverUsedForBrowserOperations": true,
+      "ownedBrowserContextsOrPagesRemaining": 0,
+      "backgroundCommandsStarted": 0,
+      "boundedCommandHandlesAtRelease": "4399,4401,4403,4406,4409,4410,4412,4414,4415,4418 all completed exit0; none required termination.",
+      "artifactAndCommandRelease": "Exact final artifact/command release UTC and numeric exit are recorded by bounded shell phase4-pilot-settings-final-validation in web\\logs\\phase4-pilot-settings.log before return; no post-return writes. Earlier queue return05:41/hard05:46 applies."
+    },
+    "delivery": "Original missing-native continuation remains unavailable/NOTRUN, with exact confirmed guard/provider/helper/runtime blockers and narrow owners only. Prior partial native evidence and accepted timezone fix remain intact. No page, Phase6, backend, Docker or whole-session safety pass."
+  },
+  "blockedPrerequisiteReview20261014": {
+    "measuredAt": "2026-10-14T15:08:11.835Z",
+    "status": "BLOCKED",
+    "nativeExecution": "NOTRUN",
+    "scope": "Exact prerequisite/authority review only; not a renewed native continuation, helper retry or page migration.",
+    "authorityRead": [
+      ".runner\\prompts\\phase4-pilot-settings.md",
+      "docs\\frontend-design-contract.md authority and MDC-040/041/060/070 conventions",
+      "docs\\session-handoff.md current drain/export and retained native/privacy conventions",
+      "docs\\frontend-audits\\phase6-settings-qa.json retained acceptance and blocker evidence",
+      "work-items.json exact phase4-pilot-settings object"
+    ],
+    "authorityCheck": {
+      "exactWorkItemCount": 1,
+      "existingAcceptance": "PARTIAL_NOT_ACCEPTED; this item is not already complete.",
+      "attemptsUsed": 2,
+      "budgetRenewed": false,
+      "currentTaskRequires": "Safe explicit caller-only synthetic vehicle 2 rebinding and provider authorization; do not assume historical DRILL4 remains eligible.",
+      "grantFound": false,
+      "grantLimit": "Neither the supplied prompt nor the exact remaining-work object grants the required rebinding/provider authority. The handoff's synthetic seed evidence is not a Settings caller-specific grant.",
+      "currentToolBoundary": "No native browser context/page/guard/capture provider is exposed in this session. Shell access does not authorize a replacement helper or restore exhausted safety/native budgets.",
+      "historicalRuntimeBlockers": "Prior helper incompatibility and Lighthouse MODULE_NOT_FOUND remain historical evidence, not fresh runtime measurements."
+    },
+    "requiredBeforeNativeExecution": [
+      "Explicit Settings caller-only synthetic vehicle 2 binding and approved read/privacy scope, without preference/save/reset/disconnect/paid actions or assuming DRILL4.",
+      "Explicit eligible provider/guard authorization and remaining execution budget; retain the exhausted original/helper/native safety history rather than resetting attempts.",
+      "An available approved installed-Edge provider with pre-operation privacy/write guards that survive the authorized operations."
+    ],
+    "preservation": {
+      "priorRootFields": 24,
+      "priorReportBytes": 45731,
+      "priorReportSha256": "204d25cb70d211d7c767ae4da4a5b3bac7f1c50be80dbd32f84497c482e360e7",
+      "priorRootFieldsJsonStringifySha256": "b46fb3c40b9edd2934ff11ddc30e914f6bdc49b4e04dfb54c3280fb18701d554",
+      "method": "Append this member only; validate all prior root fields after excluding this member using Node JSON.stringify and SHA-256.",
+      "retainedLimits": "All prior partial evidence, guard gap, failed trial, viewport discrepancies, accepted timezone source fix and remaining NOTRUN cases retained without promotion."
+    },
+    "execution": {
+      "browserLaunches": 0,
+      "browserContextsOrPagesCreated": 0,
+      "apiOrNetworkRequests": 0,
+      "nativeTestsOrCaptures": 0,
+      "helperInvocations": 0,
+      "sourceOrQueueEdits": 0,
+      "gitCommands": 0,
+      "backgroundProcessesStarted": 0
+    },
+    "validationScope": "Report JSON parse, exact blocked-authority fields and preservation of all 24 historical root fields only. Application TypeScript, lint, audits, line/section counts, API-hook checks, suites and browser QA NOTRUN: report-only blocked assignment, no application changes.",
+    "delivery": "Prerequisites cannot be resolved within the supplied authority. Only this report is updated; Settings native acceptance remains blocked, with no new attempt charged or pass claimed."
+  }
+}

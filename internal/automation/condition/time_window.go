@@ -33,6 +33,51 @@ type timeWindowSnapshot struct {
 	Reason      string `json:"reason"`
 }
 
+// EvaluateTypedTimeWindow applies the CTI clock window and optional weekday gate.
+// Equal clocks mean a full day; overnight gates use the current local weekday,
+// not the weekday on which the window started. Legacy JSON parsing stays stricter.
+func EvaluateTypedTimeWindow(start, end time.Time, timezone string, days []int16, now time.Time) (Result, json.RawMessage, error) {
+	for _, day := range days {
+		if day < 0 || day > 6 {
+			return Result{}, nil, fmt.Errorf("days_of_week value %d must be between 0 and 6", day)
+		}
+	}
+	result, snapshot, err := EvaluateTimeWindow(&TimeWindowConfig{
+		StartTime: start.Format("15:04"),
+		EndTime:   end.Format("15:04"),
+		Timezone:  timezone,
+	}, now)
+	if err != nil {
+		return Result{}, nil, fmt.Errorf("evaluate typed clock window: %w", err)
+	}
+	if len(days) == 0 {
+		return result, snapshot, nil
+	}
+	allowedDays := make([]int, len(days))
+	for i, day := range days {
+		allowedDays[i] = int(day)
+	}
+	dayResult, daySnapshot, err := EvaluateDayFilter(&DayFilterConfig{
+		Days:     allowedDays,
+		Timezone: timezone,
+	}, now)
+	if err != nil {
+		return Result{}, nil, fmt.Errorf("evaluate typed weekday gate: %w", err)
+	}
+	result.Met = result.Met && dayResult.Met
+	result.Reason += "; " + dayResult.Reason
+	combinedSnapshot, err := json.Marshal(struct {
+		Clock   json.RawMessage `json:"clock"`
+		Weekday json.RawMessage `json:"weekday"`
+		Met     bool            `json:"met"`
+		Reason  string          `json:"reason"`
+	}{snapshot, daySnapshot, result.Met, result.Reason})
+	if err != nil {
+		return Result{}, nil, fmt.Errorf("marshal typed time window snapshot: %w", err)
+	}
+	return result, combinedSnapshot, nil
+}
+
 // EvaluateTimeWindow checks whether the given time falls within the configured
 // time window. The window is defined by start_time and end_time in HH:MM format
 // evaluated in the configured timezone (local wall-clock comparison, not duration).

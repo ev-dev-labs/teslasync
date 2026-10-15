@@ -24,7 +24,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import { Tooltip, type TooltipProps } from './Tooltip';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -158,6 +158,37 @@ describe('Tooltip — placement (side)', () => {
 });
 
 describe('Tooltip — multiline', () => {
+  it('repositions an unopened tooltip when its initially hidden layout becomes measurable', () => {
+    let measuredWidth = 0;
+    let notifyResize: () => void = () => undefined;
+    const disconnect = vi.fn();
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) { notifyResize = callback; }
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = disconnect;
+    });
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(() => measuredWidth);
+    const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(390);
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(340, 40, 36, 36));
+    const { unmount } = render(<Tooltip content="Help" multiline><button>Info</button></Tooltip>);
+    try {
+      const tip = screen.getByRole('tooltip');
+      expect(tip.style.translate).toBe('');
+      measuredWidth = 320;
+      act(() => notifyResize());
+      expect(tip.style.translate).toBe('-140px 0');
+      unmount();
+      expect(disconnect).toHaveBeenCalled();
+    } finally {
+      unmount();
+      width.mockRestore();
+      viewport.mockRestore();
+      bounds.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('forces a single line (whitespace-nowrap) by default', () => {
     render(
       <Tooltip content="Short tip">
@@ -169,7 +200,7 @@ describe('Tooltip — multiline', () => {
     expect(cls).not.toContain('whitespace-normal');
   });
 
-  it('wraps with a max width when multiline is set', () => {
+  it('uses a readable width bounded by the viewport when multiline is set', () => {
     render(
       <Tooltip content="A much longer help body that should wrap" multiline>
         <button>T</button>
@@ -177,7 +208,68 @@ describe('Tooltip — multiline', () => {
     );
     const cls = screen.getByRole('tooltip').className;
     expect(cls).toContain('whitespace-normal');
-    expect(cls).toContain('max-w-[260px]');
+    expect(cls).toContain('w-80');
+    expect(cls).toContain('max-w-tooltip-viewport');
+    expect(cls).toContain('leading-relaxed');
+    expect(cls).toContain('transition-opacity');
+    expect(cls).not.toContain('transition-all');
+  });
+
+  it.each(['hover', 'focus'])('keeps a wide tooltip inside the viewport on %s', (interaction) => {
+    render(
+      <Tooltip content="Long help text" side="bottom" multiline>
+        <button>Info</button>
+      </Tooltip>,
+    );
+    const tip = screen.getByRole('tooltip');
+    const trigger = screen.getByRole('button', { name: 'Info' });
+    const wrapper = trigger.parentElement!;
+    const width = vi.spyOn(tip, 'offsetWidth', 'get').mockReturnValue(320);
+    const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(390);
+    const bounds = vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue(
+      new DOMRect(340, 40, 36, 36),
+    );
+    try {
+      if (interaction === 'hover') fireEvent.mouseEnter(wrapper);
+      else fireEvent.focus(trigger);
+      expect(tip.style.translate).toBe('-140px 0');
+    } finally {
+      width.mockRestore();
+      viewport.mockRestore();
+      bounds.mockRestore();
+    }
+  });
+
+  it('positions an unopened tooltip on mount and updates its bounds after resizing', () => {
+    const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(320);
+    const viewport = vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(390);
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(
+      new DOMRect(340, 40, 36, 36),
+    );
+    try {
+      const { unmount } = render(
+        <Tooltip content="Long help text" side="bottom" multiline>
+          <button>Info</button>
+        </Tooltip>,
+      );
+      const tip = screen.getByRole('tooltip');
+      expect(tip.style.translate).toBe('-140px 0');
+
+      width.mockReturnValue(296);
+      viewport.mockReturnValue(320);
+      bounds.mockReturnValue(new DOMRect(270, 40, 36, 36));
+      fireEvent(window, new Event('resize'));
+      expect(tip.style.translate).toBe('-128px 0');
+
+      unmount();
+      const callsAfterUnmount = bounds.mock.calls.length;
+      fireEvent(window, new Event('resize'));
+      expect(bounds.mock.calls).toHaveLength(callsAfterUnmount);
+    } finally {
+      width.mockRestore();
+      viewport.mockRestore();
+      bounds.mockRestore();
+    }
   });
 });
 
@@ -305,5 +397,52 @@ describe('Tooltip — typed props surface', () => {
     const tip = screen.getByRole('tooltip');
     expect(tip).toHaveTextContent('Typed tip');
     expect(tip.className).toContain('whitespace-normal');
+  });
+
+  describe('Tooltip — restrained motion and dismissal', () => {
+    it('dismisses focused help with Escape without replacing the trigger or its descriptions', () => {
+      const { rerender } = render(
+        <Tooltip content="Complete help"><button aria-describedby="external-hint">Info</button></Tooltip>,
+      );
+      const trigger = screen.getByRole('button', { name: 'Info' });
+      const tip = screen.getByRole('tooltip');
+      act(() => trigger.focus());
+      expect(document.activeElement).toBe(trigger);
+      fireEvent.keyDown(trigger, { key: 'Escape' });
+      expect(tip).toHaveClass('!opacity-0');
+      expect(trigger).toHaveAttribute('aria-describedby', `external-hint ${tip.id}`);
+      rerender(
+        <Tooltip content="Translated complete help"><button aria-describedby="external-hint">Information</button></Tooltip>,
+      );
+      expect(screen.getByRole('button', { name: 'Information' })).toBe(trigger);
+      expect(document.activeElement).toBe(trigger);
+      expect(screen.getByRole('tooltip')).toBe(tip);
+      expect(tip).toHaveTextContent('Translated complete help');
+      fireEvent.blur(trigger);
+      fireEvent.focus(trigger);
+      expect(tip).not.toHaveClass('!opacity-0');
+    });
+
+    it('dismisses hovered help on Escape and allows a new hover to reveal it', () => {
+      render(<Tooltip content="Hover help"><button>Info</button></Tooltip>);
+      const wrapper = screen.getByRole('button').parentElement!;
+      const tip = screen.getByRole('tooltip');
+      fireEvent.mouseEnter(wrapper);
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(tip).toHaveClass('!opacity-0');
+      fireEvent.mouseLeave(wrapper);
+      fireEvent.mouseEnter(wrapper);
+      expect(tip).not.toHaveClass('!opacity-0');
+    });
+
+    it('keeps long content complete and uses only opacity feedback with a reduced-motion safety net', () => {
+      const content = 'Full contextual explanation, including its final instruction. '.repeat(30);
+      render(<Tooltip content={content} multiline><button>Info</button></Tooltip>);
+      const tip = screen.getByRole('tooltip');
+      expect(tip.textContent).toBe(content);
+      expect(tip).toHaveClass('whitespace-normal', 'break-words', 'motion-reduce:transition-none');
+      expect(tip.className).not.toMatch(/scale-|truncate|line-clamp/);
+      expect(tip).toHaveClass('bg-[var(--text-primary)]', 'shadow-e2', 'rounded-shape-sm');
+    });
   });
 });

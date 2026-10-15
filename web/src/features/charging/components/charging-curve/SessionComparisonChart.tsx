@@ -27,6 +27,18 @@ interface SessionComparisonChartProps {
 export default function SessionComparisonChart({ sessions }: SessionComparisonChartProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
+  const modeledContext = t(
+    'charging.curve.modernization.modeledCurves',
+    'Curves are modeled from session metadata, not sampled charging telemetry.',
+  );
+  const windowContext = t(
+    'charging.curve.modernization.resultScope',
+    'Up to 200 returned sessions; not a full-history aggregate.',
+  );
+  const returnedContext = t(
+    'charging.curve.modernization.returnedSessions',
+    'Returned sessions in the workspace range',
+  );
 
   const comparisonSessions = useMemo(() => (sessions ?? []).slice(0, 10), [sessions]);
 
@@ -51,18 +63,32 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
   }, [comparisonSessions]);
 
   return (
-    // chart-a11y:no-table dense overlay of up to 10 power curves; per-session detail available on the session page
     <ChartContainer
         title={t('charging.curve.sessionComparison', 'Session Comparison')}
-        subtitle={t(
-          'charging.curve.sessionComparisonDesc',
-          'Power curves overlaid from last 10 sessions',
-        )}
-        ariaLabel={t(
-          'charging.curve.sessionComparison.aria',
-          'Overlaid power-vs-SOC line chart comparing the last several charging sessions',
-        )}
+        subtitle={modeledContext}
+        ariaLabel={`${t('charging.curve.sessionComparison', 'Session Comparison')} — ${returnedContext}`}
+        ariaDescription={`${modeledContext} ${windowContext} ${comparisonSessions.length} / ${(sessions ?? []).length}`}
+        metadata={{
+          sourceLabel: modeledContext,
+          rangeLabel: `${returnedContext}: ${comparisonSessions.length} / ${(sessions ?? []).length}`,
+        }}
         height={300}
+        data={comparisonData}
+        exportData={comparisonData.map((point) => ({
+          ...point,
+          source_context: modeledContext,
+          returned_window: windowContext,
+          sessions_shown: comparisonSessions.length,
+          sessions_returned: (sessions ?? []).length,
+          overlay_limit: 10,
+        }))}
+        dataColumns={[
+          { key: 'soc', label: t('charging.curve.col.soc', 'SOC %') },
+          ...comparisonSessions.map((session, index) => ({
+            key: `s${index}`,
+            label: `${formatDateShort(session.started_at)} (${getChargerLabel(session)})`,
+          })),
+        ]}
         empty={comparisonSessions.length === 0}
         exportable
         exportFilename="session-comparison"
@@ -77,7 +103,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
                 value: t('charging.curve.socPercent', 'SOC (%)'),
                 position: 'insideBottomRight',
                 offset: -5,
-                style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+                style: axisTickSm,
               }}
             />
             <YAxis
@@ -86,7 +112,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
                 value: t('charging.curve.powerKw', 'Power (kW)'),
                 angle: -90,
                 position: 'insideLeft',
-                style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+                style: axisTickSm,
               }}
             />
             <Tooltip content={<ChartTooltip />} />

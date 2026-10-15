@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Badge, PanelTitle, Text } from '@/components/ui';
+import { Badge } from '@/components/ui/Badge';
+import { PanelTitle, Text } from '@/components/ui/Typography';
 import { Icons } from '@/lib/icons';
 import { cn } from '@/lib/cn';
+import { severityTokens } from '@/lib/tokens';
 
 export interface CalculationDetailsProps {
   methods?: readonly string[];
@@ -107,7 +109,7 @@ export function CalculationDetails({
           <ul className="mt-1 space-y-1">
             {exclusionList.map((item) => (
               <li key={item}>
-                <Text as="span" size="xs" className="text-amber-300">
+                <Text as="span" size="xs" className={severityTokens.warn.fg}>
                   {item}
                 </Text>
               </li>

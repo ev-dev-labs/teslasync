@@ -61,7 +61,11 @@ vi.mock('react-i18next', () => ({
 // Mutable unit preference so one file exercises both the metric (km) and
 // imperial (mi) display-conversion branches. Hoisted so the settings mock
 // factory can close over it.
-const unitState = vi.hoisted(() => ({ length: 'km' as 'km' | 'mi' }));
+const unitState = vi.hoisted(() => ({
+  length: 'km' as 'km' | 'mi',
+  precision: 2,
+  locale: 'en-US',
+}));
 
 // File-level useSettings mock (overrides the global test-setup stub) so
 // `useUnits` sees a stable shape while `unit_of_length` flips.
@@ -104,7 +108,7 @@ vi.mock('@/hooks/useSettings', async (importActual) => {
   return {
     ...actual,
     useSettings: () => ({
-      settings: { ...defaults, unit_of_length: unitState.length },
+      settings: { ...defaults, unit_of_length: unitState.length, decimal_precision: unitState.precision, locale: unitState.locale },
       isMiles: unitState.length === 'mi',
       isFahrenheit: false,
       isPSI: false,
@@ -171,10 +175,12 @@ import {
   useFleetStates,
   useSyncVehicles,
   useDeleteVehicle,
+  FleetStatesBatchError,
 } from '@/api/hooks/useVehicles';
 import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
 import { useFleetWorkOrders, type FleetWorkOrder } from '@/api/hooks/useFleetOps';
 import { fmtNumber } from '@/lib/numberFormat';
+import { maskFor } from '@/lib/maskValue';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
@@ -392,7 +398,7 @@ function renderPage(entries: string[] = ['/vehicles']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const view = render(
     <MemoryRouter initialEntries={entries}>
       <QueryClientProvider client={client}>
         <VehicleListPage />
@@ -400,6 +406,7 @@ function renderPage(entries: string[] = ['/vehicles']) {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  return { ...view, client };
 }
 
 /** The vehicle-card grid `<section>` — robust scope for per-card assertions. */
@@ -419,12 +426,32 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   unitState.length = 'km';
+  unitState.precision = 2;
+  unitState.locale = 'en-US';
   installHappyPath();
 });
 
 /* ─────────────────────────────── Happy path ─────────────────────────────── */
 
 describe('VehicleListPage — happy path', () => {
+  it('uses real raw bridges for both fleet summaries and reviews verified charge-state coverage', () => {
+    renderPage();
+    const summary = screen.getByTestId('fleet-current-summary');
+    expect(summary).toHaveAttribute('data-operational-brief');
+    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]')).toHaveAttribute('data-value-state', 'value');
+    expect(briefMetric('Live utilization')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Charging / live state')).toBeInTheDocument();
+    expect(within(drawer).getByText('1/2')).toBeInTheDocument();
+    expect(drawer).toHaveAccessibleName('Current verified fleet readings details');
+    const fleetEvidence = within(drawer).getByText('Total vehicles').parentElement?.parentElement;
+    if (!(fleetEvidence instanceof HTMLElement)) throw new Error('Missing fleet source evidence metric');
+    expect(within(fleetEvidence).getByText(
+      'Current field coverage differs by measurement; no common observation timestamp is supplied',
+    )).toBeInTheDocument();
+  });
+
   it('renders the shell, the fleet KPI band, and a card per vehicle', async () => {
     renderPage();
 
@@ -438,11 +465,11 @@ describe('VehicleListPage — happy path', () => {
 
     // KPI band — scoped to its labelled landmark to avoid cross-panel collisions.
     const summary = screen.getByRole('region', { name: 'Fleet summary' });
-    expect(within(summary).getByText('Total Vehicles')).toBeInTheDocument();
-    expect(within(summary).getByText('Avg Battery')).toBeInTheDocument();
-    expect(within(summary).getByText('Total Range (km)')).toBeInTheDocument();
+    expect(within(summary).getByText('Total vehicles')).toBeInTheDocument();
+    expect(within(summary).getByText('Avg battery')).toBeInTheDocument();
+    expect(within(summary).getByText('Total range (km)')).toBeInTheDocument();
     // 1 charging (V1) of 2 vehicles reporting live state (V1, V2).
-    expect(within(summary).getByText('1 / 2')).toBeInTheDocument();
+    expect(within(summary).getByText('1/2')).toBeInTheDocument();
 
     const posture = screen.getByTestId('fleet-operational-brief');
     const readinessMetric = within(posture)
@@ -458,7 +485,7 @@ describe('VehicleListPage — happy path', () => {
     )).toBeInTheDocument();
     expect(within(posture).getByText('Live utilization')).toBeInTheDocument();
     // V1 charging + V2 driving out of 2 covered = 100 %, not 67 % of 3.
-    expect(within(posture).getByText('100%')).toBeInTheDocument();
+    expect(within(posture).getByText('100.00%')).toBeInTheDocument();
     expect(within(posture).getByText('Software posture')).toBeInTheDocument();
     expect(within(posture).getByText('2 versions')).toBeInTheDocument();
     expect(within(posture).getByText(
@@ -498,7 +525,7 @@ describe('VehicleListPage — happy path', () => {
     unitState.length = 'mi';
     renderPage();
     const summary = await screen.findByRole('region', { name: 'Fleet summary' });
-    expect(within(summary).getByText('Total Range (mi)')).toBeInTheDocument();
+    expect(within(summary).getByText('Total range (mi)')).toBeInTheDocument();
     // 650_000 m / 1609.344 ≈ 403.89 mi — read through the real SI converter.
     const expected = fmtNumber(convertDistanceFromSI(650_000, 'mi'));
     expect(within(summary).getByText(expected)).toBeInTheDocument();
@@ -507,8 +534,8 @@ describe('VehicleListPage — happy path', () => {
 
   it('summarises battery bars and a per-status breakdown in the overview bento', async () => {
     renderPage();
-    expect(await screen.findByText('Fleet Battery Status')).toBeInTheDocument();
-    expect(screen.getByText('Fleet Status')).toBeInTheDocument();
+    expect(await screen.findByText('Fleet battery status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet status')).toBeInTheDocument();
 
     // Each loaded vehicle contributes a battery bar labelled with its name; the
     // same name also appears on its card, so a loaded vehicle renders ≥ 2 times.
@@ -541,13 +568,66 @@ describe('VehicleListPage — happy path', () => {
 /* ─────────────────────────────── Accessibility ──────────────────────────── */
 
 describe('VehicleListPage — accessibility & derived per-card data', () => {
+  it('keeps the selected preview open while fresh evidence becomes retained and recovers', async () => {
+    const { rerender, client } = renderPage();
+    fireEvent.click(within(cardGrid()).getByRole('button', { name: 'Actions for Model 3 Alpha' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Quick view Model 3 Alpha' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Model 3 Alpha' });
+    expect(within(drawer).getByText('Live')).toBeInTheDocument();
+    expect(within(drawer).getByText('80.00%')).toBeInTheDocument();
+
+    const rerenderPage = () => rerender(
+      <MemoryRouter>
+        <QueryClientProvider client={client}>
+          <VehicleListPage />
+          <LocationProbe />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    mockFleetStates.mockReturnValue(qr({ data: [
+      retainedEntry(V1, S1, Date.now() - 600_000),
+      resolvedEntry(V2, S2),
+      missingEntry(V3),
+    ] }));
+    rerenderPage();
+
+    expect(screen.getByRole('dialog', { name: 'Model 3 Alpha' })).toBe(drawer);
+    expect(within(drawer).getByText('Unknown')).toBeInTheDocument();
+    expect(within(drawer).getByText('Last known')).toBeInTheDocument();
+    expect(within(drawer).queryByText('Live')).not.toBeInTheDocument();
+    expect(within(drawer).queryByText('80.00%')).not.toBeInTheDocument();
+    expect(within(drawer).getByText(/Last known: 80\.00% .* not currently verified/)).toBeInTheDocument();
+    expect(within(drawer).getByRole('button', { name: 'Open vehicle details' })).toBeEnabled();
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' })).toHaveAttribute('href', '/signals');
+
+    const recovered = makeState({ ...S1, battery_level: 63, rated_range: 315_000 });
+    mockFleetStates.mockReturnValue(qr({ data: [
+      resolvedEntry(V2, S2),
+      missingEntry(V3),
+      resolvedEntry(V1, recovered),
+    ] }));
+    rerenderPage();
+    expect(screen.getByRole('dialog', { name: 'Model 3 Alpha' })).toBe(drawer);
+    expect(within(drawer).getByText('Live')).toBeInTheDocument();
+    expect(within(drawer).getByText('63.00%')).toBeInTheDocument();
+    expect(within(drawer).getByText('315.00 km')).toBeInTheDocument();
+    expect(within(drawer).queryByText(/Last known: .*%/)).not.toBeInTheDocument();
+    expect(within(drawer).queryByText(/Last known: (400|315)\.00 km/)).not.toBeInTheDocument();
+    // Recovery verifies battery/range, not the unchanged sparse-feed fields.
+    expect(within(drawer).getAllByText(/Last known:/)).toHaveLength(2);
+    expect(within(drawer).getByText(/Last known: 100\.00 km .* not currently verified/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/Last known: Locked .* not currently verified/)).toBeInTheDocument();
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Open vehicle details' }));
+    expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicles/1');
+  });
+
   it('exposes labelled landmarks and accessible names on icon-only controls', async () => {
     renderPage();
     await screen.findByRole('heading', { level: 1, name: 'Fleet' });
 
     expect(screen.getByRole('region', { name: 'Fleet summary' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Fleet overview' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'All Vehicles' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'All vehicles' })).toBeInTheDocument();
 
     const grid = cardGrid();
     // One labelled battery progressbar per card; aria-valuenow tracks the level.
@@ -556,17 +636,18 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     expect(bars[0]).toHaveAttribute('aria-valuenow', '80');
     expect(bars[1]).toHaveAttribute('aria-valuenow', '50');
     // V3 has no live state ⇒ the level is UNKNOWN. `aria-valuenow="0"` would
-    // announce "0 percent", a reading the vehicle never produced; an indefinite
-    // progressbar (no aria-valuenow) is the honest representation.
+    // announce "0 percent", a reading the vehicle never produced.
     expect(bars[2]).not.toHaveAttribute('aria-valuenow');
-    expect(within(grid).getByText('—')).toBeInTheDocument();
+    expect(bars[2]).toHaveAttribute('aria-valuetext', 'No reading');
+    // Battery is missing for V3; odometer is retained but unverified for V1/V2.
+    expect(within(grid).getAllByText('—')).toHaveLength(6);
 
     // Icon-only row actions + status glyphs carry accessible names. Destructive
     // actions sit behind the per-card menu instead of adjacent icon buttons.
     expect(within(grid).getAllByRole('button', { name: /^Actions for / })).toHaveLength(3);
     expect(within(grid).queryByLabelText('Remove Model 3 Alpha')).toBeNull();
-    expect(within(grid).getByLabelText('Locked')).toBeInTheDocument();
-    expect(within(grid).getByLabelText('Sentry mode on')).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: Locked .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: Sentry mode on .* not currently verified/)).toBeInTheDocument();
     expect(within(grid).getAllByRole('link', { name: /^Open .+ details$/ })).toHaveLength(3);
   });
 
@@ -685,11 +766,53 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     fireEvent.click(within(grid).getByRole('button', { name: 'Reveal value' }));
     expect(within(grid).getByText('VINBLANK000000007')).toBeInTheDocument();
   });
+
+  it.each(['VINBLANK000000007', 'short', ''])(
+    'uses the existing masked fallback in an unnamed vehicle preview (%s)',
+    async (vin) => {
+      const vehicle = makeVehicle({ id: 7, vehicle_id: 7, vin, display_name: '' });
+      const masked = maskFor(vin, 'vin');
+      mockVehicles.mockReturnValue(qr({ data: [vehicle] }));
+      mockFleetStates.mockReturnValue(qr({ data: [missingEntry(vehicle)] }));
+      renderPage();
+
+      fireEvent.click(within(cardGrid()).getByRole('button', { name: `Actions for ${masked}`.trim() }));
+      fireEvent.click(await screen.findByRole('button', { name: `Quick view ${masked}`.trim() }));
+      const drawer = await screen.findByRole('dialog', { name: masked || 'Vehicle details' });
+      if (vin) {
+        expect(drawer).not.toHaveTextContent(vin);
+        expect(drawer.outerHTML).not.toContain(vin);
+      }
+      expect(mockFleetStates).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ id: 7, vin })]),
+      );
+      fireEvent.click(within(drawer).getByRole('button', { name: 'Open vehicle details' }));
+      await waitFor(() =>
+        expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicles/7'),
+      );
+      expect(vehicle.vin).toBe(vin);
+    },
+  );
 });
 
 /* ─────────────────────────── User interactions ──────────────────────────── */
 
 describe('VehicleListPage — sync & compare actions', () => {
+  it('compares the first two retained roster members, not pinned display order or current-state coverage', async () => {
+    mockVehicles.mockReturnValue(qr({ data: [V2, V3, V1], isError: true, error: new Error('Roster refresh failed') }));
+    mockPinned.mockReturnValue(qr({ data: [{ id: 9, item_type: 'vehicle', item_id: 1, position: 0 }] }));
+    mockFleetStates.mockReturnValue(qr({ data: [
+      resolvedEntry(V1, S1), failedEntry(V2), missingEntry(V3),
+    ] }));
+    renderPage();
+    expect(within(cardGrid()).getAllByRole('link', { name: /^Open .+ details$/ })[0])
+      .toHaveAccessibleName('Open Model 3 Alpha details');
+    fireEvent.click(await screen.findByRole('button', { name: 'Compare vehicles' }));
+    expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicle-comparison');
+    const params = new URLSearchParams(screen.getByTestId('location').getAttribute('data-search') ?? '');
+    expect([...params.entries()]).toEqual([['leftId', '2'], ['rightId', '3']]);
+  });
+
   it('fires the sync mutation when the header Sync button is pressed', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Sync from Tesla' }));
@@ -747,6 +870,28 @@ describe('VehicleListPage — sync & compare actions', () => {
 });
 
 describe('VehicleListPage — delete flow', () => {
+  it.each(['VINBLANK000000007', 'short', ''])(
+    'masks the unnamed vehicle removal message without changing its numeric ID (%s)',
+    async (vin) => {
+      const vehicle = makeVehicle({ id: 7, vehicle_id: 7, vin, display_name: '' });
+      const masked = maskFor(vin, 'vin');
+      mockVehicles.mockReturnValue(qr({ data: [vehicle] }));
+      mockFleetStates.mockReturnValue(qr({ data: [missingEntry(vehicle)] }));
+      renderPage();
+
+      fireEvent.click(within(cardGrid()).getByRole('button', { name: `Actions for ${masked}`.trim() }));
+      fireEvent.click(await screen.findByRole('button', { name: `Remove ${masked}`.trim() }));
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText(
+        `Are you sure you want to remove "${masked}"? This will delete all associated data including drives, charges, and state history.`,
+      )).toBeInTheDocument();
+      if (vin) expect(dialog.outerHTML).not.toContain(vin);
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
+      expect(deleteMut.mutate).toHaveBeenCalledWith(7, expect.anything());
+      expect(vehicle.vin).toBe(vin);
+    },
+  );
+
   it('opens a confirm dialog and fires the delete mutation on confirm', async () => {
     renderPage();
     await screen.findByRole('heading', { level: 1, name: 'Fleet' });
@@ -802,6 +947,17 @@ describe('VehicleListPage — pinned ordering', () => {
 /* ──────────────────── Loading / error / empty branches ───────────────────── */
 
 describe('VehicleListPage — loading, error & empty states', () => {
+  function expectUnknownRosterShells() {
+    for (const title of ['Fleet summary', 'Fleet overview', 'All vehicles']) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('group', { name: 'Availability and readiness across the fleet' })).toBeInTheDocument();
+    expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No fleet records for/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('fleet-operational-brief')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fleet ready')).not.toBeInTheDocument();
+  }
+
   it('renders the skeleton while the vehicles query is pending', () => {
     mockVehicles.mockReturnValue(qr({ isLoading: true, data: undefined }));
     renderPage();
@@ -809,6 +965,75 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(screen.getByTestId('vehicle-list-skeleton')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Fleet' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Compare vehicles' })).not.toBeInTheDocument();
+    expectUnknownRosterShells();
+  });
+
+  it('uses initial data state for an unresolved idle read, not isLoading or an empty roster', () => {
+    mockVehicles.mockReturnValue(qr({ isPending: true, fetchStatus: 'idle', isLoading: false }));
+    renderPage();
+
+    expect(screen.getByTestId('vehicle-list-skeleton')).toBeInTheDocument();
+    expectUnknownRosterShells();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+  });
+
+  it('keeps paused initial reads distinct and independently retryable without asserting registration', () => {
+    const refetch = vi.fn();
+    const serviceRefetch = vi.fn();
+    mockVehicles.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch }));
+    mockFleetWorkOrders.mockReturnValue(qr({
+      isError: true, error: new Error('service unavailable'), refetch: serviceRefetch,
+    }));
+    renderPage();
+
+    expectUnknownRosterShells();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-list-skeleton')).not.toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Fleet' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(serviceRefetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(serviceRefetch).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Sync from Tesla' }));
+    expect(syncMut.mutate).toHaveBeenCalledOnce();
+  });
+
+  it('preserves populated fleet cards when the roster refresh is paused', () => {
+    const refetch = vi.fn();
+    mockVehicles.mockReturnValue(qr({ data: VEHICLES, fetchStatus: 'paused', refetch }));
+    renderPage();
+
+    expect(within(cardGrid()).getAllByRole('link', { name: /^Open .+ details$/ })).toHaveLength(3);
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.getByTestId('fleet-operational-brief')).toBeInTheDocument();
+    const compare = screen.getByRole('button', { name: 'Compare vehicles' });
+    expect(within(compare).queryByRole('button')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Fleet' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicles');
+    expect(syncMut.mutate).not.toHaveBeenCalled();
+    expect(deleteMut.mutate).not.toHaveBeenCalled();
+  });
+
+  it('retries only the failed roster read on reconnect without triggering sync or deletion', () => {
+    const online = vi.spyOn(window.navigator, 'onLine', 'get').mockReturnValue(false);
+    const refetch = vi.fn();
+    mockVehicles.mockReturnValue(qr({
+      isError: true, error: new TypeError('Failed to fetch'), refetch,
+    }));
+    try {
+      // Connection state comes from the resilience module's offline/online events.
+      fireEvent(window, new Event('offline'));
+      renderPage();
+      expectUnknownRosterShells();
+      fireEvent(window, new Event('online'));
+      expect(refetch).toHaveBeenCalledOnce();
+      expect(syncMut.mutate).not.toHaveBeenCalled();
+      expect(deleteMut.mutate).not.toHaveBeenCalled();
+    } finally {
+      online.mockRestore();
+    }
   });
 
   it('renders a retryable error panel when the vehicles query fails', async () => {
@@ -819,6 +1044,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     renderPage();
 
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    expectUnknownRosterShells();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -838,9 +1064,31 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(syncMut.mutate).toHaveBeenCalled();
   });
 
+  it('keeps every empty fleet section with the existing shared sync recovery rather than duplicating mutations', () => {
+    mockVehicles.mockReturnValue(qr({ data: [] }));
+    mockFleetStates.mockReturnValue(qr({ data: [] }));
+    renderPage();
+
+    for (const section of ['Fleet posture', 'Fleet summary', 'Fleet overview', 'All vehicles']) {
+      expect(screen.getByText(`No fleet records for ${section}.`)).toBeInTheDocument();
+    }
+    for (const section of ['Fleet summary', 'Fleet overview', 'All vehicles']) {
+      expect(screen.getByRole('region', { name: section })).toBeInTheDocument();
+    }
+    expect(screen.queryByTestId('fleet-operational-brief')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total range (km)')).not.toBeInTheDocument();
+    const syncButtons = screen.getAllByRole('button', { name: 'Sync from Tesla' });
+    expect(syncButtons).toHaveLength(2);
+    fireEvent.click(syncButtons[1]!);
+    expect(syncMut.mutate).toHaveBeenCalledTimes(1);
+    expect(syncMut.mutate).toHaveBeenCalledWith(undefined, expect.objectContaining({
+      onSuccess: expect.any(Function),
+    }));
+  });
+
   it('shows fleet-states skeletons while keeping every card visible', () => {
     mockFleetStates.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
-    const { container } = renderPage();
+    renderPage();
 
     // Pending live state stays neutral instead of briefly classifying every
     // registered vehicle as offline or reporting zero-valued fleet KPIs.
@@ -849,7 +1097,27 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(screen.queryByText('0 / 0')).not.toBeInTheDocument();
     // Every card still renders, each with the null-safe no-live-data placeholder.
     expect(screen.getAllByText('No live data')).toHaveLength(3);
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const skeletons = screen.getByTestId('fleet-status-skeleton').querySelectorAll(
+      '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(skeletons.length).toBeGreaterThan(0);
+    expect(skeletons).toHaveLength(3);
+    for (const skeleton of skeletons) {
+      expect(skeleton).toHaveClass('h-8', 'w-full', 'rounded-lg');
+      expect(skeleton).not.toHaveClass('animate-pulse');
+    }
+    const summary = screen.getByRole('region', { name: 'Fleet summary' });
+    const pending = within(summary).getByRole('status', { name: 'Loading stat cards' });
+    expect(pending).toHaveAttribute('aria-busy', 'true');
+    const summarySkeletons = pending.querySelectorAll(
+      '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(summarySkeletons).toHaveLength(4);
+    for (const skeleton of summarySkeletons) {
+      expect(skeleton).toHaveClass('h-24', 'w-full', 'rounded-xl');
+      expect(skeleton).not.toHaveClass('animate-pulse');
+    }
+    expect(summary.querySelector('[data-operational-value]')).toBeNull();
   });
 
   it('does NOT paint the whole fleet as offline while live state is still loading', () => {
@@ -865,7 +1133,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     // The breakdown bar is a progressbar labelled with the status name.
     expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
     // The panel header still anchors the section — nothing is hidden.
-    expect(screen.getByText('Fleet Status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet status')).toBeInTheDocument();
   });
 
   it('keeps the retained status breakdown during a BACKGROUND fleet-state refresh', () => {
@@ -996,7 +1264,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     renderPage();
 
     // Only V1 has a fresh reading; it is charging ⇒ 1/1 covered = 100 %.
-    expect(within(briefMetric('Live utilization')).getByText('100%')).toBeInTheDocument();
+    expect(within(briefMetric('Live utilization')).getByText('100.00%')).toBeInTheDocument();
     expect(within(briefMetric('Departure ready')).getByText('1/1')).toBeInTheDocument();
     expect(within(briefMetric('Departure ready')).getByText(
       /Based on 1 of 3 vehicles with a current battery reading/,
@@ -1138,7 +1406,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     // Both ARE live-state responses — that is what the card measures.
     expect(within(briefMetric('Live state available')).getByText('2/3')).toBeInTheDocument();
     // Neither is driving or charging, so utilization is a real 0 % of 2.
-    expect(within(briefMetric('Live utilization')).getByText('0%')).toBeInTheDocument();
+    expect(within(briefMetric('Live utilization')).getByText('0.00%')).toBeInTheDocument();
     // Backend explicitly said offline/asleep, so the breakdown may say so.
     expect(screen.getByRole('progressbar', { name: 'Offline' })).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Asleep' })).toBeInTheDocument();
@@ -1173,6 +1441,88 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
 
+  it('retains qualified battery rows from a failed batch envelope and recovers fresh aggregates on retry', () => {
+    const observedAt = Date.now() - 600_000;
+    const entries = [retainedEntry(V1, S1, observedAt), retainedEntry(V2, S2, observedAt), failedEntry(V3)];
+    const error = new FleetStatesBatchError(entries, new Error('502 Bad Gateway'));
+    const refetch = vi.fn();
+    mockFleetStates.mockReturnValue(qr({
+      data: error.entries, isError: true, error, refetch, dataUpdatedAt: Date.now(),
+    }));
+    const view = renderPage();
+    const batteryPanel = screen.getByText('Fleet battery status').parentElement?.parentElement;
+    if (!batteryPanel) throw new Error('Missing battery panel');
+    expect(within(batteryPanel).getByRole('progressbar', { name: 'Model 3 Alpha' }))
+      .toHaveAttribute('aria-valuenow', '80');
+    expect(within(batteryPanel).getByText(/Last known: 80\.00% \(10m ago\) — not currently verified/))
+      .toBeInTheDocument();
+    expect(within(batteryPanel).queryByText(/Live battery readings have not arrived/)).toBeNull();
+    expect(within(briefMetric('Departure ready')).getByText('—')).toBeInTheDocument();
+    const summary = screen.getByTestId('fleet-current-summary');
+    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(screen.queryByRole('progressbar', { name: 'Charging' })).toBeNull();
+    const warning = screen.getAllByTestId('stale-refresh-warning')
+      .find(node => node.textContent?.includes('Live vehicle state'));
+    if (!warning) throw new Error('Missing live-state refresh warning');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
+
+    mockFleetStates.mockReturnValue(qr({
+      data: [resolvedEntry(V1, makeState({ ...S1, battery_level: 0 }), Date.now()), missingEntry(V2), missingEntry(V3)],
+      refetch,
+    }));
+    view.rerender(
+      <MemoryRouter initialEntries={['/vehicles']}>
+        <QueryClientProvider client={view.client}><VehicleListPage /><LocationProbe /></QueryClientProvider>
+      </MemoryRouter>,
+    );
+    const recoveredBar = screen.getByRole('progressbar', { name: 'Model 3 Alpha' });
+    expect(recoveredBar).toHaveAttribute('aria-valuenow', '0');
+    expect(recoveredBar).toHaveTextContent('0.00%');
+    expect(recoveredBar).not.toHaveTextContent('Last known');
+    expect(screen.getByTestId('fleet-current-summary')
+      .querySelector('[data-operational-metric="fleet-average-battery"]'))
+      .toHaveAttribute('data-value-state', 'value');
+    expect(within(briefMetric('Departure ready')).getByText('0/1')).toBeInTheDocument();
+    expect(screen.queryByText('502 Bad Gateway')).toBeNull();
+  });
+
+  it('shows retained battery rows beside fresh rows without including them in the fleet average', () => {
+    mockFleetStates.mockReturnValue(qr({
+      data: [retainedEntry(V1, S1, Date.now() - 600_000), resolvedEntry(V2, S2), missingEntry(V3)],
+    }));
+    renderPage();
+    const panel = screen.getByText('Fleet battery status').parentElement?.parentElement;
+    if (!panel) throw new Error('Missing battery panel');
+    expect(within(panel).getByRole('progressbar', { name: 'Model 3 Alpha' })).toHaveTextContent('Last known: 80.00%');
+    expect(within(panel).getByRole('progressbar', { name: 'Model Y Beta' })).not.toHaveTextContent('Last known: 50.00%');
+    expect(within(screen.getByTestId('fleet-current-summary')).getByText(`${fmtNumber(50)}%`)).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText('1/1')).toBeInTheDocument();
+  });
+
+  it('keeps active battery loading distinct from a successful empty batch', () => {
+    mockFleetStates.mockReturnValue(qr({
+      isLoading: true, isPending: true, isFetching: true, fetchStatus: 'fetching',
+    }));
+    renderPage();
+    expect(screen.getByTestId('fleet-battery-skeleton')).toBeInTheDocument();
+    expect(screen.queryByText('Live battery readings have not arrived for the registered fleet.')).toBeNull();
+    expect(screen.queryByRole('progressbar', { name: 'Model 3 Alpha' })).toBeNull();
+  });
+
+  it('explains paused battery reads without data and retries only the live-state source', () => {
+    const refetch = vi.fn();
+    mockFleetStates.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch }));
+    renderPage();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByTestId('fleet-battery-skeleton')).toBeNull();
+    expect(screen.queryByText('Live battery readings have not arrived for the registered fleet.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Live vehicle state' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mockVehicles.mock.results[0]?.value.refetch).not.toHaveBeenCalled();
+  });
+
   it('explains a successful battery-state gap and refreshes without presenting an error retry', () => {
     const refetch = vi.fn();
     mockFleetStates.mockReturnValue(qr({ data: [], refetch }));
@@ -1203,7 +1553,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(
       await screen.findByText('Service attention is temporarily unavailable'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Fleet availability and live state remain visible, but maintenance work orders could not be loaded.')).toBeInTheDocument();
+    expect(screen.getByText('Available sections remain visible. Source status is tracked independently below.')).toBeInTheDocument();
     expect(within(cardGrid()).getByText('Model 3 Alpha')).toBeInTheDocument();
   });
 
@@ -1285,5 +1635,239 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(notice).toHaveTextContent('2 vehicle(s) have not reported a snapshot yet');
     expect(notice).not.toHaveTextContent(/request\(s\) failed/);
     expect(screen.queryByText("Can't reach server")).toBeNull();
+  });
+});
+
+describe('VehicleListPage — field and independent source qualification', () => {
+  it.each([
+    ['missing', undefined],
+    ['null', null],
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['negative infinity', Number.NEGATIVE_INFINITY],
+  ])('does not manufacture measured zero from %s readings', (_label, input) => {
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [{
+      ...resolvedEntry(V1, S1),
+      state: { ...S1, battery_level: input, rated_range: input, odometer: input, charger_power: input },
+      verifiedFields: [...VERIFIED_FIELDS, 'odometer', 'charger_power'],
+    }] }));
+    renderPage();
+    const summary = screen.getByTestId('fleet-current-summary');
+    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelector('[data-operational-metric="fleet-total-range"]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    const grid = cardGrid();
+    // Battery, range, odometer and charger power stay unknown (other fields may also show placeholders).
+    expect(within(grid).getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    expect(within(grid).queryByText('0.00 kW')).toBeNull();
+    expect(screen.getByTestId('fleet-battery-unknown')).toHaveTextContent('Not reported');
+  });
+
+  it('parses numeric strings as reported measurements instead of treating them as missing', () => {
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [resolvedEntry(V1, {
+      ...S1,
+      battery_level: '0',
+      rated_range: '0',
+      odometer: '0',
+      charger_power: '0',
+    })] }));
+    renderPage();
+
+    expect(screen.getByTestId('fleet-current-summary').querySelector(
+      '[data-operational-metric="fleet-average-battery"]',
+    )).toHaveAttribute('data-value-state', 'value');
+    expect(cardGrid()).toHaveTextContent('0.00 kW');
+  });
+
+  it.each([0, -12.375, 12.375])('retains raw signed and fractional readings (%s) independently of display precision', (input) => {
+    const state = Object.freeze(makeState({
+      battery_level: input,
+      rated_range: input * 1_000,
+      odometer: input * 1_000,
+      charger_power: input,
+      is_charging: true,
+    }));
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [{
+      ...resolvedEntry(V1, state),
+      verifiedFields: [...VERIFIED_FIELDS, 'odometer', 'charger_power'],
+    }] }));
+    renderPage();
+    const summary = screen.getByTestId('fleet-current-summary');
+    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]'))
+      .toHaveAttribute('data-value-state', 'value');
+    expect(within(summary).getByText(`${fmtNumber(input)}%`)).toBeInTheDocument();
+    expect(within(cardGrid()).getByText(`${fmtNumber(input)} kW`)).toBeInTheDocument();
+    expect(screen.getByRole(input < 0 ? 'group' : 'progressbar', { name: 'Model 3 Alpha' }))
+      .toHaveTextContent(`${fmtNumber(input)}%`);
+    expect(state.battery_level).toBe(input);
+    expect(state.rated_range).toBe(input * 1_000);
+    expect(state.charger_power).toBe(input);
+  });
+
+  it('uses effective metric preferences rather than the formatter bridge defaults', () => {
+    unitState.length = 'mi';
+    unitState.precision = 3;
+    unitState.locale = 'de-DE';
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [resolvedEntry(V1, makeState({
+      battery_level: 12.375,
+      rated_range: 1_234_567,
+      is_charging: false,
+      speed: 0,
+    }))] }));
+    renderPage();
+    const summary = screen.getByTestId('fleet-current-summary');
+    expect(within(summary).getByText('12,375%')).toBeInTheDocument();
+    expect(within(summary).getByText(fmtNumber(convertDistanceFromSI(1_234_567, 'mi'), 3, 'de-DE')))
+      .toBeInTheDocument();
+    expect(within(briefMetric('Live utilization')).getByText('0,000%')).toBeInTheDocument();
+    expect(within(briefMetric('Live state available')).getByText('1/1')).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText('0/1')).toBeInTheDocument();
+  });
+
+  it('formats fractional utilization without rounding the raw ratio to a whole percent', () => {
+    mockFleetStates.mockReturnValue(qr({ data: [
+      resolvedEntry(V1, makeState({ is_charging: true })),
+      resolvedEntry(V2, makeState({ is_charging: false, speed: 0 })),
+      resolvedEntry(V3, makeState({ is_charging: false, speed: 0 })),
+    ] }));
+    renderPage();
+    expect(within(briefMetric('Live utilization')).getByText('33.33%')).toBeInTheDocument();
+    expect(within(briefMetric('Live state available')).getByText('3/3')).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText('3/3')).toBeInTheDocument();
+  });
+
+  it('keeps sparse card readings retained without claiming current battery range power or security', () => {
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [{
+      ...resolvedEntry(V1, S1, Date.now() - 10_000),
+      verifiedFields: ['state'],
+    }] }));
+    renderPage();
+    const grid = cardGrid();
+    const battery = within(grid).getByRole('progressbar', { name: 'Battery level' });
+    expect(battery).not.toHaveAttribute('aria-valuenow');
+    expect(battery).toHaveAttribute('aria-valuetext', 'No reading');
+    expect(battery.querySelector('[data-metric-fill]')).toBeNull();
+    expect(within(grid).getByText(/Last known: 80\.00% .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: 400\.00 km .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: 100\.00 km .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: 11\.00 kW .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: Locked .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: Sentry mode on .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).queryByLabelText('Locked')).toBeNull();
+    expect(within(grid).getByRole('link', { name: 'Open Model 3 Alpha details' })).toHaveAttribute('href', '/vehicles/1');
+  });
+
+  it('distinguishes missing card readings from verified measured zero and preserves the kW boundary', () => {
+    mockVehicles.mockReturnValue(qr({ data: [V1, V2] }));
+    const fields = [...VERIFIED_FIELDS, 'odometer', 'charger_power', 'is_locked', 'sentry_mode'];
+    mockFleetStates.mockReturnValue(qr({ data: [
+      { ...resolvedEntry(V1, S1), verifiedFields: fields,
+        state: { ...S1, battery_level: null, rated_range: null, odometer: null, charger_power: null } },
+      { ...resolvedEntry(V2, makeState({ ...S2, battery_level: 0, rated_range: 0, odometer: 0, is_charging: true, charger_power: 0 })),
+        verifiedFields: fields },
+    ] }));
+    renderPage();
+    const grid = cardGrid();
+    const bars = within(grid).getAllByRole('progressbar', { name: 'Battery level' });
+    expect(bars[0]).not.toHaveAttribute('aria-valuenow');
+    expect(bars[0]).toHaveAttribute('aria-valuetext', 'No reading');
+    expect(bars[1]).toHaveAttribute('aria-valuenow', '0');
+    expect(bars[1]).not.toHaveAttribute('aria-valuetext');
+    expect(within(grid).getAllByText('0.00 km')).toHaveLength(2);
+    expect(within(grid).getByText('0.00 kW')).toBeInTheDocument();
+    expect(within(grid).getAllByText('—')).toHaveLength(4);
+  });
+
+  it('preserves imperial card distance formatting without modifying raw readings', () => {
+    unitState.length = 'mi';
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [{
+      ...resolvedEntry(V1, S1),
+      verifiedFields: [...VERIFIED_FIELDS, 'odometer', 'charger_power', 'is_locked', 'sentry_mode'],
+    }] }));
+    renderPage();
+    expect(within(cardGrid()).getByText('248.55 mi')).toBeInTheDocument();
+    expect(within(cardGrid()).getByText('62.14 mi')).toBeInTheDocument();
+    expect(within(cardGrid()).getByText('11.00 kW')).toBeInTheDocument();
+    expect(S1.rated_range).toBe(400_000);
+    expect(S1.odometer).toBe(100_000);
+    expect(S1.charger_power).toBe(11);
+  });
+
+  it('does not claim zero service work or fleet-ready status while work orders are pending', () => {
+    mockFleetWorkOrders.mockReturnValue(qr({ isPending: true, isLoading: true }));
+    renderPage();
+    expect(briefMetric('Service attention')).toHaveAttribute('data-value-state', 'missing');
+    expect(within(briefMetric('Service attention')).queryByText('0 open')).toBeNull();
+    expect(screen.getByText('Review recommended')).toBeInTheDocument();
+    expect(screen.queryByText('Fleet ready')).toBeNull();
+    fireEvent.click(within(screen.getByTestId('fleet-operational-brief')).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText(/Unknown urgent work orders remain open/)).toBeInTheDocument();
+    expect(within(drawer).queryByText(/0 open work orders were evaluated/)).toBeNull();
+  });
+
+  it('retains service counts and bounded coverage through work-order refresh failure with independent retry', () => {
+    const refetch = vi.fn();
+    mockFleetWorkOrders.mockReturnValue(qr({
+      data: { items: [OPEN_WORK_ORDER], total: 101, limit: 100, offset: 0 },
+      isError: true, error: new Error('work-order refresh failed'), refetch,
+    }));
+    renderPage();
+    expect(within(briefMetric('Service attention')).getByText('1 open')).toBeInTheDocument();
+    expect(within(briefMetric('Service attention')).getByText(/1 loaded of 101 source records; offset 0, limit 100/)).toBeInTheDocument();
+    const warning = screen.getAllByTestId('stale-refresh-warning')
+      .find((element) => element.textContent?.includes('Fleet work orders may be out of date'));
+    if (!warning) throw new Error('Missing retained work-order warning');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(within(cardGrid()).getByText('Model 3 Alpha')).toBeInTheDocument();
+    expect(screen.queryByText('Fleet ready')).toBeNull();
+    fireEvent.click(within(screen.getByTestId('fleet-operational-brief')).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getAllByText(/1 loaded of 101 source records/).length).toBeGreaterThan(0);
+    expect(within(screen.getByRole('dialog')).getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0);
+  });
+
+  it('keeps pin-read uncertainty distinct from unpinned and retries without toggling or hiding cards', () => {
+    const refetch = vi.fn();
+    mockPinned.mockReturnValue(qr({ isError: true, error: new Error('pins failed'), refetch }));
+    renderPage();
+    const notice = screen.getByText('Pinned').closest('[role="alert"]');
+    expect(notice).not.toBeNull();
+    expect(notice).toBe(screen.getByRole('alert', { name: 'Pinned' }));
+    expect(notice).toHaveAttribute('aria-live', 'assertive');
+    expect(notice).toHaveTextContent('Unavailable');
+    expect(notice).not.toHaveTextContent('Unpinned');
+    fireEvent.click(within(notice as HTMLElement).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(within(cardGrid()).getAllByTestId('pin-button')).toHaveLength(3);
+    within(cardGrid()).getAllByTestId('pin-button').forEach((button) => {
+      expect(button).not.toHaveAttribute('aria-pressed');
+      expect(button).toHaveClass('min-h-11', 'min-w-11');
+    });
+    expect(mockTogglePin().mutate).not.toHaveBeenCalled();
+    expect(within(cardGrid()).getAllByRole('link', { name: /^Open .* details$/ })).toHaveLength(3);
+  });
+
+  it('uses restrained solid overview bars and wrapping reachable overflow actions', async () => {
+    renderPage();
+    const charging = screen.getByRole('progressbar', { name: 'Charging' });
+    const fill = charging.querySelector<HTMLElement>('[data-metric-fill]');
+    expect(fill?.style.background).toBe('var(--semantic-warning)');
+    const grid = cardGrid();
+    fireEvent.click(within(grid).getByRole('button', { name: 'Actions for Model 3 Alpha' }));
+    const quickView = await screen.findByRole('button', { name: 'Quick view Model 3 Alpha' });
+    const remove = screen.getByRole('button', { name: 'Remove Model 3 Alpha' });
+    expect(quickView).toHaveClass('min-h-11', 'whitespace-normal');
+    expect(remove).toHaveClass('min-h-11', 'whitespace-normal');
+    expect(remove).toHaveClass('text-[var(--semantic-danger)]');
+    expect(deleteMut.mutate).not.toHaveBeenCalled();
+    expect(syncMut.mutate).not.toHaveBeenCalled();
   });
 });

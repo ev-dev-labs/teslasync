@@ -30,6 +30,7 @@ import { render, screen, within, fireEvent, waitFor } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -59,7 +60,11 @@ const H = vi.hoisted(() => ({
   history: { mode: 'resolve' as 'resolve' | 'reject' | 'pending', value: [] as unknown },
   calls: { latest: 0, history: 0 },
   historyPaths: [] as string[],
+  historySignals: [] as (AbortSignal | undefined)[],
+  startInstant: '2026-06-01T00:00:00Z',
+  endInstantExclusive: '2026-07-01T00:00:00Z',
   setRange: vi.fn(),
+  dateOptions: { locale: 'en-US', tz: 'UTC' },
 }));
 
 /* ── framer-motion: render eagerly as plain divs (no matchMedia / IO). ────── */
@@ -79,21 +84,19 @@ function stripMotionProps(props: Record<string, unknown>): Record<string, unknow
   return out;
 }
 
-vi.mock('framer-motion', () => ({
-  motion: new Proxy(
-    {},
-    {
-      get:
-        () =>
-        ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => (
-          <div {...stripMotionProps(props)}>{children}</div>
-        ),
-    },
-  ),
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  useInView: () => true,
-  useReducedMotion: () => false,
-}));
+vi.mock('framer-motion', () => {
+  // Stable identity keeps query updates from remounting the scoped KPI/table
+  // nodes that async assertions are waiting on.
+  const MotionElement = ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => (
+    <div {...stripMotionProps(props)}>{children}</div>
+  );
+  return {
+    motion: new Proxy({}, { get: () => MotionElement }),
+    AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    useInView: () => true,
+    useReducedMotion: () => false,
+  };
+});
 
 /* ── react-i18next: deterministic English-fallback `t` with interpolation. ── */
 
@@ -128,7 +131,7 @@ vi.mock('@/api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/client')>();
   return {
     ...actual, // keep ApiError / isApiError / getApiBase for QueryError
-    request: (path: string) => {
+    request: (path: string, options?: { signal?: AbortSignal }) => {
       if (path.startsWith('/tire-pressure/latest')) {
         H.calls.latest += 1;
         if (H.latest.mode === 'reject') return Promise.reject(new Error('latest boom'));
@@ -138,6 +141,7 @@ vi.mock('@/api/client', async (importOriginal) => {
       if (path.startsWith('/tire-pressure?')) {
         H.calls.history += 1;
         H.historyPaths.push(path);
+        H.historySignals.push(options?.signal);
         if (H.history.mode === 'reject') return Promise.reject(new Error('history boom'));
         if (H.history.mode === 'pending') return new Promise(() => {});
         return Promise.resolve(H.history.value);
@@ -148,6 +152,31 @@ vi.mock('@/api/client', async (importOriginal) => {
 });
 
 /* ── App hooks the page reads (kept minimal — only what the page consumes). ─ */
+
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (async () => {
+  const { useMemo } = await import('react');
+  const { formatDateTime } = await import('@/lib/dateFormat');
+  return {
+    useDateFormat: () => {
+      const { locale, tz } = H.dateOptions;
+      return useMemo(() => ({
+        formatDateTime: (value: string | Date | null | undefined) => formatDateTime(value, { locale, tz }),
+      }), [locale, tz]);
+    },
+  };
+})();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
+    }),
+  };
+});
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -185,8 +214,8 @@ vi.mock('@/hooks/useRangeState', () => ({
   useRangeState: () => ({
     start: '2026-06-01',
     end: '2026-06-30',
-    startInstant: '2026-06-01T00:00:00Z',
-    endInstantExclusive: '2026-07-01T00:00:00Z',
+    startInstant: H.startInstant,
+    endInstantExclusive: H.endInstantExclusive,
     timezone: 'UTC',
     presetId: '30d',
     compare: false,
@@ -256,27 +285,48 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
-    <MemoryRouter initialEntries={['/tire-pressure']}>
-      <QueryClientProvider client={client}>
-        <TirePressurePage />
-      </QueryClientProvider>
-    </MemoryRouter>,
-  );
+  return {
+    client,
+    ...render(<TirePressurePage />, {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <MemoryRouter initialEntries={['/tire-pressure']}>
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        </MemoryRouter>
+      ),
+    }),
+  };
 }
 
-/** Scope a query to a single KPI MetricCard by its label. */
+/** Scope to the real shared statistic, not its label/tooltip wrapper. */
 function kpiCard(label: string) {
-  const el = screen.getByText(label).closest('div');
+  const el = screen.getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' }).closest('[data-operational-metric]');
   if (!el) throw new Error(`KPI card not found for label: ${label}`);
   return within(el as HTMLElement);
+}
+
+function historyTable() {
+  const card = screen.getByRole('heading', { name: 'History table' }).closest('[data-card]');
+  if (!(card instanceof HTMLElement)) throw new Error('Missing pressure history table shell');
+  return within(card);
+}
+
+function pressureMetric(label: string, value: string, unit: string) {
+  // OperationalBrief retains the formatted value and unit together.
+  const card = kpiCard(label);
+  expect(card.getByText(`${value} ${unit}`, { selector: '[data-operational-value]' })).toHaveTextContent(value);
+  expect(card.getByText(`${value} ${unit}`, { selector: '[data-operational-value]' })).toHaveTextContent(unit);
 }
 
 beforeEach(() => {
   H.vehicleId = 42;
   H.pressure = 'bar';
+  H.dateOptions = { locale: 'en-US', tz: 'UTC' };
   H.calls.latest = 0;
   H.calls.history = 0;
+  H.historyPaths = [];
+  H.historySignals = [];
+  H.startInstant = '2026-06-01T00:00:00Z';
+  H.endInstantExclusive = '2026-07-01T00:00:00Z';
   H.setRange.mockClear();
   setLatest(makeReading());
   setHistory([makeReading()]);
@@ -393,6 +443,35 @@ describe('getTirePressureValue — corner mapping through normaliseTpmsToPa', ()
  * ════════════════════════════════════════════════════════════════════════ */
 
 describe('TirePressurePage — populated data (bar)', () => {
+  it('refreshes table, chart labels and summary on date preference changes without rewriting UTC data', async () => {
+    const readings = [
+      makeReading({ id: 2, created_at: '2026-06-16T00:30:00Z' }),
+      makeReading({ id: 1, created_at: '2026-06-15T09:00:00Z' }),
+    ];
+    setHistory(readings);
+    const original = readings.map(row => ({ ...row }));
+    const { rerender, client } = renderPage();
+    const newest = readings[0].created_at;
+    await waitFor(() => {
+      expect(kpiCard('Last updated').getByText(formatDateTime(newest, H.dateOptions))).toBeInTheDocument();
+    });
+
+    H.dateOptions = { locale: 'de-DE', tz: 'America/Los_Angeles' };
+    rerender(<TirePressurePage />);
+    const labels = readings.map(row => formatDateTime(row.created_at, H.dateOptions));
+    await waitFor(() => {
+      expect(kpiCard('Last updated').getByText(labels[0])).toBeInTheDocument();
+      expect(historyTable().getAllByRole('row').slice(1)
+        .map(row => within(row).getAllByRole('cell')[0].textContent)).toEqual(labels);
+    });
+    // The chart's accessible data table uses the same projected labels.
+    const chartTable = screen.getByRole('table', { name: 'Pressure history — data table' });
+    expect(within(chartTable).getAllByRole('row').slice(1)
+      .map(row => within(row).getAllByRole('cell')[0].textContent)).toEqual([...labels].reverse());
+    expect(client.getQueryData(['tire-pressure-history', 42, H.startInstant, H.endInstantExclusive])).toEqual(original);
+    expect(readings).toEqual(original);
+  });
+
   it('renders KPIs, four corner gauges with statuses, and the sorted history table', async () => {
     setLatest(
       makeReading({
@@ -403,22 +482,22 @@ describe('TirePressurePage — populated data (bar)', () => {
       }),
     );
     setHistory([
-      makeReading({ id: 1, created_at: '2026-06-10T08:00:00Z' }),
+      makeReading({ id: 1, created_at: '2026-06-10T08:00:00Z', tpms_hard_warnings: 'false', tpms_soft_warnings: 'false' }),
       makeReading({ id: 2, created_at: '2026-06-15T09:00:00Z', tpms_soft_warnings: '{"rl":true}' }),
     ]);
     renderPage();
 
     // Header shell always renders.
-    expect(screen.getByRole('heading', { level: 1, name: 'Tire Pressure' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Tire pressure' })).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
 
     // Wait for the latest reading to resolve (avg KPI is a unique post-resolution
     // string), then scope each KPI to its card. avg = 300k Pa = 3 bar,
     // min = 200k Pa = 2 bar, 2 warnings.
-    await screen.findByText('3.00 bar');
-    expect(kpiCard('Avg Pressure').getByText('3.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Min Pressure').getByText('2.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Warning Count').getByText('2')).toBeInTheDocument();
+    await kpiCard('Avg pressure').findByText('3.00 bar', { selector: '[data-operational-value]' });
+    pressureMetric('Avg pressure', '3.00', 'bar');
+    pressureMetric('Min pressure', '2.00', 'bar');
+    expect(kpiCard('Warning count').getByText('2')).toBeInTheDocument();
 
     // Gauge status badges reflect each corner's bucket.
     expect(screen.getAllByText('Normal')).toHaveLength(2);
@@ -430,9 +509,9 @@ describe('TirePressurePage — populated data (bar)', () => {
 
     // History table headers carry the active display unit; the soft-warning row
     // surfaces its badge and the clean row an OK badge. No empty/placeholder.
-    expect(screen.getByText('Front Left (bar)')).toBeInTheDocument();
-    expect(screen.getByText('Soft Warning')).toBeInTheDocument();
-    expect(screen.getByText('OK')).toBeInTheDocument();
+    expect(historyTable().getByRole('columnheader', { name: /Front left \(bar\)/ })).toBeInTheDocument();
+    expect(historyTable().getByText('Soft warning')).toBeInTheDocument();
+    expect(historyTable().getByText('OK')).toBeInTheDocument();
     expect(screen.queryByText('No history data')).not.toBeInTheDocument();
     expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
   });
@@ -452,12 +531,15 @@ describe('TirePressurePage — populated data (bar)', () => {
     renderPage();
 
     // Wait for the reading to resolve; avg + min both convert to 3.00 bar.
-    await screen.findAllByText('3.00 bar');
-    expect(kpiCard('Min Pressure').getByText('3.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Avg Pressure').getByText('3.00 bar')).toBeInTheDocument();
-    expect(kpiCard('Warning Count').getByText('0')).toBeInTheDocument();
+    await kpiCard('Avg pressure').findByText('3.00 bar', { selector: '[data-operational-value]' });
+    pressureMetric('Min pressure', '3.00', 'bar');
+    pressureMetric('Avg pressure', '3.00', 'bar');
+    expect(kpiCard('Warning count').getByText('0')).toBeInTheDocument();
+    expect(screen.getAllByRole('meter')).toHaveLength(3);
     // The phantom 0-bar reading must not leak into the KPI band.
     expect(screen.queryByText('0.00 bar')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Tire pressure summary' }))
+      .queryByText('0.00 bar', { selector: '[data-operational-value]' })).not.toBeInTheDocument();
   });
 });
 
@@ -469,9 +551,9 @@ describe('TirePressurePage — unit-aware display', () => {
     renderPage();
 
     // Column header advertises the psi unit ...
-    expect(await screen.findByText('Front Left (psi)')).toBeInTheDocument();
+    expect(await historyTable().findByRole('columnheader', { name: /Front left \(psi\)/ })).toBeInTheDocument();
     // ... and the KPI values are converted into psi (not left as bar).
-    expect(kpiCard('Avg Pressure').getByText('43.51 psi')).toBeInTheDocument();
+    pressureMetric('Avg pressure', '43.51', 'psi');
     expect(screen.queryByText('3.00 bar')).not.toBeInTheDocument();
   });
 });
@@ -483,7 +565,7 @@ describe('TirePressurePage — TPMS warning banners', () => {
     renderPage();
 
     expect(await screen.findByText('Hard TPMS warning active')).toBeInTheDocument();
-    expect(screen.getByText('Hard Warning')).toBeInTheDocument();
+    expect(screen.getByText('Hard warning')).toBeInTheDocument();
     expect(screen.queryByText('Soft TPMS warning active')).not.toBeInTheDocument();
   });
 
@@ -498,14 +580,28 @@ describe('TirePressurePage — TPMS warning banners', () => {
 });
 
 describe('TirePressurePage — loading / empty / error states', () => {
+  it('distinguishes disabled vehicle prerequisites from successful empty responses', () => {
+    H.vehicleId = null;
+    renderPage();
+    expect(screen.getAllByText('No vehicle selected')).toHaveLength(3);
+    expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No history data')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Retry$/ })).not.toBeInTheDocument();
+    expect(H.calls).toEqual({ latest: 0, history: 0 });
+    for (const title of ['Tire pressure summary', 'Current readings', 'Pressure history', 'History table']) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+  });
+
   it('shows skeletons (not empty states) while both queries are in flight', async () => {
     setLatest(null, 'pending');
     setHistory([], 'pending');
     const { container } = renderPage();
 
-    await waitFor(() => expect(container.querySelector('.animate-pulse')).toBeTruthy());
+    await waitFor(() => expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy());
     // Loading must not masquerade as "no data".
     expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No history data')).not.toBeInTheDocument();
     expect(screen.queryByText('Normal')).not.toBeInTheDocument();
     // KPIs fall back to em-dash placeholders, never a stray 0-value.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
@@ -516,11 +612,11 @@ describe('TirePressurePage — loading / empty / error states', () => {
     setHistory([], 'resolve');
     renderPage();
 
-    expect(await screen.findByText('No current readings available')).toBeInTheDocument();
+    expect((await screen.findAllByText(/vehicle/i)).length).toBeGreaterThan(0);
     // Both the chart and the table surface an empty placeholder.
-    expect(screen.getAllByText('No history data').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/vehicle/i).length).toBeGreaterThan(0);
     expect(screen.queryByText('Normal')).not.toBeInTheDocument();
-    expect(kpiCard('Avg Pressure').getByText('—')).toBeInTheDocument();
+    expect(kpiCard('Avg pressure').getByText('—')).toBeInTheDocument();
   });
 
   it('names the failed source, preserves history, and keeps section retry working', async () => {
@@ -530,19 +626,45 @@ describe('TirePressurePage — loading / empty / error states', () => {
 
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByText('Partial data')).toBeInTheDocument();
-    expect(screen.getByText('Latest tire pressure')).toBeInTheDocument();
+    expect(screen.getByText('Latest tire pressure', { selector: 'li span' })).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(screen.getByText('Tire pressure history')).toBeInTheDocument();
     expect(screen.getByText('Ready')).toBeInTheDocument();
     expect(screen.getAllByText('No history data').length).toBeGreaterThanOrEqual(1);
 
     const callsBefore = H.calls.latest;
+    const historyCallsBefore = H.calls.history;
     fireEvent.click(screen.getByRole('button', { name: /^Retry$/ }));
     await waitFor(() => expect(H.calls.latest).toBeGreaterThan(callsBefore));
+    expect(H.calls.history).toBe(historyCallsBefore);
   });
 });
 
 describe('TirePressurePage — interactions + a11y', () => {
+  it('retains pagination and raw-pressure filters without rewriting history values', async () => {
+    const readings = Array.from({ length: 26 }, (_, index) => makeReading({
+      id: index + 1,
+      created_at: `2026-06-${String(index + 1).padStart(2, '0')}T09:00:00Z`,
+      front_left: index === 0 ? 230_000 : 300_000,
+    }));
+    setHistory(readings);
+    const { client } = renderPage();
+    await historyTable().findByRole('columnheader', { name: /Front left/ });
+    expect(historyTable().getAllByRole('row').slice(1)).toHaveLength(25);
+    fireEvent.click(historyTable().getByRole('button', { name: /next page/i }));
+    expect(historyTable().getAllByRole('row').slice(1)).toHaveLength(1);
+    expect(historyTable().getByText('2.30 bar · Low')).toBeInTheDocument();
+    fireEvent.click(historyTable().getByRole('button', { name: /Front left.*filter/i }));
+    const filter = screen.getByRole('dialog', { name: /Front left.*filter/i });
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'Select all shown values' }));
+    fireEvent.click(within(filter).getByRole('checkbox', { name: '2.30 bar' }));
+    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+    expect(historyTable().getAllByRole('row').slice(1)).toHaveLength(1);
+    expect(historyTable().getByText('2.30 bar · Low')).toBeInTheDocument();
+    expect(client.getQueryData(['tire-pressure-history', 42, H.startInstant, H.endInstantExclusive])).toEqual(readings);
+    expect(readings[0].front_left).toBe(230_000);
+  });
+
   it('exposes aria-sort on the sortable Time column and toggles it on header click', async () => {
     setLatest(makeReading());
     setHistory([
@@ -551,24 +673,179 @@ describe('TirePressurePage — interactions + a11y', () => {
     ]);
     renderPage();
 
-    const timeHeader = await screen.findByRole('columnheader', { name: /Time/i });
+    const timeHeader = await historyTable().findByRole('columnheader', { name: /Time/i });
     // Default sort is newest-first (descending) by created_at.
     expect(timeHeader).toHaveAttribute('aria-sort', 'descending');
+    const newestFirst = historyTable().getAllByRole('row').slice(1)
+      .map(row => within(row).getAllByRole('cell')[0].textContent);
+    expect(newestFirst).toHaveLength(2);
 
     fireEvent.click(within(timeHeader).getByRole('button'));
     // Re-query rather than trust the pre-click node reference.
-    expect(screen.getByRole('columnheader', { name: /Time/i })).toHaveAttribute(
+    expect(historyTable().getByRole('columnheader', { name: /Time/i })).toHaveAttribute(
       'aria-sort',
       'ascending',
     );
+    expect(historyTable().getAllByRole('row').slice(1)
+      .map(row => within(row).getAllByRole('cell')[0].textContent))
+      .toEqual([...newestFirst].reverse());
   });
 
   it('uses the shared range for history without rendering a local range picker', async () => {
     renderPage();
 
-    await screen.findByText('Front Left (bar)'); // wait for populated render
-    expect(H.historyPaths).toContain('/tire-pressure?vehicle_id=42&start=2026-06-01&end=2026-06-30');
+    await historyTable().findByRole('columnheader', { name: /Front left \(bar\)/ });
+    expect(H.historyPaths).toContain('/tire-pressure?vehicle_id=42&start=2026-06-01T00%3A00%3A00Z&end=2026-07-01T00%3A00%3A00Z');
     expect(screen.queryByTestId('tire-pressure-range')).not.toBeInTheDocument();
     expect(H.setRange).not.toHaveBeenCalled();
+  });
+
+  it('encodes workspace instants and isolates history cache entries when either bound changes', async () => {
+    H.startInstant = '2026-06-15T08:30:00+05:30';
+    H.endInstantExclusive = '2026-06-16T08:30:00+05:30';
+    const initialHistory = [makeReading()];
+    setHistory(initialHistory);
+    const { client, rerender } = renderPage();
+    const initialKey = ['tire-pressure-history', 42, H.startInstant, H.endInstantExclusive];
+
+    await waitFor(() => expect(client.getQueryData(initialKey)).toEqual(initialHistory));
+    expect(H.historyPaths).toEqual([
+      '/tire-pressure?vehicle_id=42&start=2026-06-15T08%3A30%3A00%2B05%3A30&end=2026-06-16T08%3A30%3A00%2B05%3A30',
+    ]);
+    expect(H.historySignals[0]).toBeInstanceOf(AbortSignal);
+
+    const updatedHistory = [makeReading({ id: 2, front_left: 230_000 })];
+    setHistory(updatedHistory);
+    H.startInstant = '2026-06-15T09:30:00+05:30';
+    rerender(<TirePressurePage />);
+    const startChangedKey = ['tire-pressure-history', 42, H.startInstant, H.endInstantExclusive];
+    await waitFor(() => expect(client.getQueryData(startChangedKey)).toEqual(updatedHistory));
+
+    H.endInstantExclusive = '2026-06-16T09:30:00+05:30';
+    rerender(<TirePressurePage />);
+    const endChangedKey = ['tire-pressure-history', 42, H.startInstant, H.endInstantExclusive];
+    await waitFor(() => expect(client.getQueryData(endChangedKey)).toEqual(updatedHistory));
+    expect(client.getQueryData(initialKey)).toEqual(initialHistory);
+    expect(H.historyPaths).toHaveLength(3);
+    const params = new URL(H.historyPaths[2], 'http://localhost').searchParams;
+    expect(params.get('start')).toBe(H.startInstant);
+    expect(params.get('end')).toBe(H.endInstantExclusive);
+    expect(H.calls.latest).toBe(1);
+    expect(await historyTable().findByText('2.30 bar · Low')).toBeInTheDocument();
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
+  });
+
+  it('aborts an in-flight history request when the workspace window changes', async () => {
+    setHistory([], 'pending');
+    const { rerender, unmount } = renderPage();
+    await waitFor(() => expect(H.historySignals).toHaveLength(1));
+    const previousSignal = H.historySignals[0];
+    expect(previousSignal?.aborted).toBe(false);
+
+    H.endInstantExclusive = '2026-07-01T01:00:00Z';
+    rerender(<TirePressurePage />);
+    await waitFor(() => expect(H.historySignals).toHaveLength(2));
+    expect(previousSignal?.aborted).toBe(true);
+    expect(H.historySignals[1]?.aborted).toBe(false);
+    unmount();
+    expect(H.historySignals[1]?.aborted).toBe(true);
+  });
+});
+
+
+/* Phase 5 page-only adoption: keep the entire inherited suite above intact. */
+describe('TirePressurePage — restrained semantic presentation and preservation', () => {
+  it('uses five theme-aware semantic bands while retaining all four labeled meters', async () => {
+    renderPage();
+    const meter = await screen.findByRole('meter', { name: 'Front left' });
+    expect(screen.getAllByRole('meter')).toHaveLength(4);
+    const bands = [...meter.querySelectorAll<HTMLElement>('[style*="background"]')];
+    expect(bands).toHaveLength(5);
+    expect(bands.map(band => band.style.background)).toEqual([
+      'color-mix(in srgb, var(--semantic-danger) 55%, transparent)',
+      'color-mix(in srgb, var(--semantic-warning) 55%, transparent)',
+      'color-mix(in srgb, var(--semantic-success) 55%, transparent)',
+      'color-mix(in srgb, var(--semantic-warning) 55%, transparent)',
+      'color-mix(in srgb, var(--semantic-danger) 55%, transparent)',
+    ]);
+    expect(meter).toHaveAttribute('aria-valuemin', '1.5');
+    expect(meter).toHaveAttribute('aria-valuemax', '4.5');
+    expect(meter).toHaveAttribute('aria-valuetext', '3.00bar — Normal');
+  });
+
+  it('shows localized pressure units and severity text for every historical corner', async () => {
+    setHistory([makeReading({ front_left: 300_000, front_right: 230_000,
+      rear_left: 370_000, rear_right: 450_000 })]);
+    renderPage();
+    expect(await historyTable().findByText('3.00 bar · Normal')).toBeInTheDocument();
+    expect(historyTable().getByText('2.30 bar · Low')).toBeInTheDocument();
+    expect(historyTable().getByText('3.70 bar · High')).toBeInTheDocument();
+    expect(historyTable().getByText('4.50 bar · Critical')).toBeInTheDocument();
+  });
+
+  it('keeps missing historical corners and absent TPMS flags unknown rather than healthy', async () => {
+    setHistory([makeReading({ front_left: null, front_right: 0,
+      rear_left: Number.NaN, rear_right: Number.POSITIVE_INFINITY })]);
+    renderPage();
+    await historyTable().findByRole('columnheader', { name: /Front left/ });
+    expect(historyTable().getAllByText('— · Unknown')).toHaveLength(4);
+    expect(historyTable().queryByText('OK')).not.toBeInTheDocument();
+    expect(historyTable().queryByText(/0.00 bar/)).not.toBeInTheDocument();
+    pressureMetric('Avg pressure', '3.00', 'bar');
+  });
+
+  it('treats small positive wire values as Pa and bridges to kPa only at display', async () => {
+    H.pressure = 'kPa';
+    const reading = Object.freeze(makeReading({ front_left: 300, front_right: 300,
+      rear_left: 300, rear_right: 300 }));
+    setLatest(reading);
+    setHistory([reading]);
+    renderPage();
+    await kpiCard('Avg pressure').findByText('0.30 kPa', { selector: '[data-operational-value]' });
+    pressureMetric('Min pressure', '0.30', 'kPa');
+    expect(historyTable().getAllByText('0.30 kPa · Critical')).toHaveLength(4);
+    expect(kpiCard('Warning count').getByText('4')).toBeInTheDocument();
+    expect(reading.front_left).toBe(300);
+    expect(screen.queryByText('300.00 kPa')).not.toBeInTheDocument();
+  });
+
+  it('keeps each persistent section visible and makes no requests without a selected vehicle', async () => {
+    H.vehicleId = null;
+    renderPage();
+    expect(screen.getByRole('region', { name: 'Tire pressure summary' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Current readings' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pressure history' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'History table' })).toBeInTheDocument();
+    expect((await screen.findAllByText(/vehicle/i)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/vehicle/i).length).toBeGreaterThan(0);
+    expect(H.calls).toEqual({ latest: 0, history: 0 });
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('tire-pressure-range')).not.toBeInTheDocument();
+  });
+
+  it('preserves latest readings and their summary when only history fails', async () => {
+    setHistory([], 'reject');
+    renderPage();
+    await kpiCard('Avg pressure').findByText('3.00 bar', { selector: '[data-operational-value]' });
+    expect(screen.getAllByRole('meter')).toHaveLength(4);
+    expect(screen.getByRole('heading', { name: 'Pressure history' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'History table' })).toBeInTheDocument();
+    expect(await screen.findByText('Failed')).toBeInTheDocument();
+    pressureMetric('Min pressure', '3.00', 'bar');
+  });
+
+  it('sorts historical pressure columns by raw Pa, not localized severity labels', async () => {
+    setHistory([makeReading({ id: 1, front_left: 400_000 }),
+      makeReading({ id: 2, front_left: 200_000 })]);
+    renderPage();
+    await historyTable().findByRole('columnheader', { name: /Front left/ });
+    const sortFrontLeft = historyTable().getAllByRole('button', { name: /Front left/ })[0]!;
+    fireEvent.click(sortFrontLeft);
+    fireEvent.click(sortFrontLeft);
+    expect(historyTable().getByRole('columnheader', { name: /Front left/ }))
+      .toHaveAttribute('aria-sort', 'ascending');
+    const values = historyTable().getAllByRole('row').slice(1)
+      .map(row => within(row).getAllByRole('cell')[1].textContent);
+    expect(values).toEqual(['2.00 bar · Low', '4.00 bar · High']);
   });
 });

@@ -9,6 +9,7 @@
  */
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { VisuallyHidden } from '@/components/a11y';
 import { Pencil, Trash2 } from 'lucide-react';
 
 import {
@@ -20,6 +21,8 @@ import {
   type PaginationConfig,
 } from '@/components/ui';
 import type { FeatureFlagEntry } from '@/types/admin-diagnostics';
+import { TableSkeleton } from '@/components/feedback';
+import type { CsvCellValue } from '@/lib/csvExport';
 
 interface FlagsTableProps {
   rows: FeatureFlagEntry[];
@@ -62,19 +65,28 @@ function truncatePreview(text: string): string {
  * Exported so the formatting contract can be unit-tested in isolation
  * without rendering the whole table.
  */
-export function previewValue(value: unknown): string {
+function fullValue(value: unknown): string {
   if (value === null) return 'null';
   if (value === undefined) return '—';
   const tx = typeof value;
-  if (tx === 'string') return truncatePreview(JSON.stringify(value));
+  if (tx === 'string') return JSON.stringify(value);
   if (tx === 'boolean' || tx === 'number') return String(value);
   try {
     const json = JSON.stringify(value);
     if (json == null) return '—';
-    return truncatePreview(json);
+    return json;
   } catch {
     return '—';
   }
+}
+
+export function previewValue(value: unknown): string {
+  return truncatePreview(fullValue(value));
+}
+
+function rawExportValue(value: unknown): CsvCellValue {
+  return value == null || typeof value === 'string' || typeof value === 'number'
+    || typeof value === 'boolean' || typeof value === 'object' ? value : '—';
 }
 
 export function FlagsTable({
@@ -102,6 +114,7 @@ export function FlagsTable({
     () => [
       {
         key: 'key',
+        filterValue: (row) => row.key ?? null,
         header: t('admin.flags.cols.key', 'Flag key'),
         sortable: true,
         visibleOnMobile: true,
@@ -114,6 +127,7 @@ export function FlagsTable({
       {
         key: 'value',
         header: t('admin.flags.cols.value', 'Value'),
+        exportValue: (row) => rawExportValue(row.value),
         visibleOnMobile: true,
         render: (row) => (
           <Text as="span" mono size="xs" color="muted">
@@ -156,12 +170,28 @@ export function FlagsTable({
     [t, onEdit, onAskDelete],
   );
 
+  if (loading && sorted.length === 0) {
+    return (
+      <div role="region" aria-busy="true" aria-label={t('admin.flags.table.loading', 'Loading flags…')}>
+        <VisuallyHidden liveRegion>
+          {t('admin.flags.table.loading', 'Loading flags…')}
+        </VisuallyHidden>
+        <div aria-hidden="true">
+          <TableSkeleton rows={5} cols={3} />
+        </div>
+      </div>
+    );
+  }
+
   return (
+    <div aria-busy={loading || undefined}>
     <DataTable<FeatureFlagEntry>
       tableId="admin:feature-flags"
       name="feature-flags"
       columns={columns}
       data={sorted}
+      enableValueFilters
+      filterData={rows ?? []}
       keyExtractor={keyExtractor}
       sortKey={sortKey}
       sortDir={sortDir}
@@ -174,5 +204,6 @@ export function FlagsTable({
       pagination={FLAGS_PAGINATION}
       mobileColumns={FLAGS_MOBILE_COLUMNS}
     />
+    </div>
   );
 }

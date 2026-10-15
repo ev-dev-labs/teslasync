@@ -32,7 +32,7 @@ export function TeslaOrdersKpiBand({ stats }: TeslaOrdersKpiBandProps) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6">
       <MetricCard
-        label={t('admin.teslaOrders.kpi.total', 'Total Orders')}
+        label={t('admin.teslaOrders.kpi.total', 'Total orders')}
         value={stats.total ?? 0}
         icon={<ShoppingCart className="h-5 w-5" aria-hidden="true" />}
         color="cyan"
@@ -44,14 +44,14 @@ export function TeslaOrdersKpiBand({ stats }: TeslaOrdersKpiBandProps) {
         color="green"
       />
       <MetricCard
-        label={t('admin.teslaOrders.kpi.inProgress', 'In Progress')}
+        label={t('admin.teslaOrders.kpi.inProgress', 'In progress')}
         value={stats.inProgress ?? 0}
         icon={<Clock className="h-5 w-5" aria-hidden="true" />}
         color="amber"
         subtitle={t('admin.teslaOrders.kpi.inProgressHint', 'Booked or building')}
       />
       <MetricCard
-        label={t('admin.teslaOrders.kpi.ready', 'Ready · Transit')}
+        label={t('admin.teslaOrders.kpi.ready', 'Ready · transit')}
         value={stats.ready ?? 0}
         icon={<Truck className="h-5 w-5" aria-hidden="true" />}
         color="blue"
@@ -64,7 +64,7 @@ export function TeslaOrdersKpiBand({ stats }: TeslaOrdersKpiBandProps) {
         color="purple"
       />
       <MetricCard
-        label={t('admin.teslaOrders.kpi.nextDelivery', 'Next Delivery')}
+        label={t('admin.teslaOrders.kpi.nextDelivery', 'Next delivery')}
         value={stats.nextDelivery ? formatDate(stats.nextDelivery) : '—'}
         icon={<CalendarClock className="h-5 w-5" aria-hidden="true" />}
         color="cyan"

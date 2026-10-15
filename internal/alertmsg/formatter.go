@@ -141,6 +141,7 @@ type Preset struct {
 	// Template is the literal msg_template string the preset writes
 	// into the editor when the user picks it.
 	Template string `json:"template"`
+	Example  string `json:"example,omitempty"`
 
 	// Kind narrows which rules this preset is eligible for ("signal",
 	// "computed_metric", or empty = both).
@@ -163,7 +164,7 @@ type Preset struct {
 // they computed locally — most commonly MetricValue/MetricPrevValue/
 // MetricChangePct from the computed-metric worker. Keys in `builtins`
 // win over any same-named signal key.
-func BuildContext(rule *alertmodel.AlertRule, vehicleName string, signals map[string]any, builtins map[string]any) Context {
+func BuildContext(rule *alertmodel.AlertRule, vehicleName string, signals map[string]any, builtins map[string]any, preferences ...Preferences) Context {
 	ctx := make(Context, len(signals)+10)
 	for k, v := range signals {
 		ctx[k] = v
@@ -218,9 +219,16 @@ func BuildContext(rule *alertmodel.AlertRule, vehicleName string, signals map[st
 	if vehicleName != "" {
 		ctx["VehicleName"] = vehicleName
 	}
-	ctx["Now"] = time.Now().UTC().Format(time.RFC3339)
+	now := time.Now().UTC()
+	if len(preferences) > 0 && !preferences[0].ReferenceTime.IsZero() {
+		now = preferences[0].ReferenceTime.UTC()
+	}
+	ctx["Now"] = now.Format(time.RFC3339)
 	for k, v := range builtins {
 		ctx[k] = v
+	}
+	if len(preferences) > 0 {
+		applyPreferences(ctx, rule, preferences[0])
 	}
 	return ctx
 }
@@ -268,9 +276,8 @@ func RenderBody(rule *alertmodel.AlertRule, ctx Context) string {
 		return ""
 	}
 	if rule.MsgTemplate != nil {
-		tmpl := strings.TrimSpace(*rule.MsgTemplate)
-		if tmpl != "" {
-			return Substitute(tmpl, ctx)
+		if strings.TrimSpace(*rule.MsgTemplate) != "" {
+			return Substitute(*rule.MsgTemplate, ctx)
 		}
 	}
 	return RenderDefaultBody(rule, ctx)
@@ -286,11 +293,7 @@ func RenderBody(rule *alertmodel.AlertRule, ctx Context) string {
 //   - computed_metric, comparisons          -> "<Metric> <value> over <window>"
 //   - computed_metric, % change             -> "<Metric> <delta>% vs prior <window>"
 //
-// The "<unit>" suffix is intentionally omitted from this first cut
-// because the unit-history layer stores everything in SI base units and
-// we don't yet have the per-user display preference plumbed through to
-// the rendering path. Future work: add UnitKind-aware display formatting.
-// The current output is still better than the old "Drive Started: D" wording.
+// Display preferences are applied by BuildContext, after raw evaluation.
 func RenderDefaultBody(rule *alertmodel.AlertRule, ctx Context) string {
 	if rule == nil {
 		return ""
@@ -336,7 +339,7 @@ func defaultSignalBody(rule *alertmodel.AlertRule, ctx Context) string {
 	case "<", "<=", ">", ">=":
 		threshold := ""
 		if rule.ValueNum != nil {
-			threshold = trimNumber(*rule.ValueNum)
+			threshold = contextValue(ctx, "Threshold", *rule.ValueNum)
 		}
 		if hasVal && threshold != "" {
 			return fmt.Sprintf("%s %s · threshold %s %s",
@@ -347,7 +350,7 @@ func defaultSignalBody(rule *alertmodel.AlertRule, ctx Context) string {
 		}
 	case "between":
 		if rule.ValueMin != nil && rule.ValueMax != nil {
-			rng := fmt.Sprintf("%s–%s", trimNumber(*rule.ValueMin), trimNumber(*rule.ValueMax))
+			rng := fmt.Sprintf("%s–%s", contextValue(ctx, "Min", *rule.ValueMin), contextValue(ctx, "Max", *rule.ValueMax))
 			if hasVal {
 				return fmt.Sprintf("%s %s · expected %s", signal, formatValue(val), rng)
 			}
@@ -355,7 +358,7 @@ func defaultSignalBody(rule *alertmodel.AlertRule, ctx Context) string {
 		}
 	case "outside":
 		if rule.ValueMin != nil && rule.ValueMax != nil {
-			rng := fmt.Sprintf("%s–%s", trimNumber(*rule.ValueMin), trimNumber(*rule.ValueMax))
+			rng := fmt.Sprintf("%s–%s", contextValue(ctx, "Min", *rule.ValueMin), contextValue(ctx, "Max", *rule.ValueMax))
 			if hasVal {
 				return fmt.Sprintf("%s %s · outside %s", signal, formatValue(val), rng)
 			}
@@ -365,7 +368,7 @@ func defaultSignalBody(rule *alertmodel.AlertRule, ctx Context) string {
 		// Numeric =/!= falls through to a generic "Signal value · op threshold".
 		if rule.ValueNum != nil && hasVal {
 			return fmt.Sprintf("%s %s · %s %s",
-				signal, formatValue(val), rule.Op, trimNumber(*rule.ValueNum))
+				signal, formatValue(val), rule.Op, contextValue(ctx, "Threshold", *rule.ValueNum))
 		}
 	}
 	if hasVal {
@@ -379,7 +382,7 @@ func defaultComputedBody(rule *alertmodel.AlertRule, ctx Context) string {
 	window := strDeref(rule.MetricWindow)
 	threshold := ""
 	if rule.MetricThreshold != nil {
-		threshold = trimNumber(*rule.MetricThreshold)
+		threshold = contextValue(ctx, "MetricThreshold", *rule.MetricThreshold)
 	}
 	op := strDeref(rule.MetricOp)
 
@@ -389,7 +392,7 @@ func defaultComputedBody(rule *alertmodel.AlertRule, ctx Context) string {
 
 	if op == "%_change_>" || op == "%_change_<" {
 		if hasChg {
-			prefix := fmt.Sprintf("%s %s%% vs prior %s", metric, formatValue(chg), nonEmpty(window, "window"))
+			prefix := fmt.Sprintf("%s %s%% vs prior %s", metric, strings.TrimSuffix(formatValue(chg), "%"), nonEmpty(window, "window"))
 			if hasVal && hasPrev {
 				return prefix + fmt.Sprintf(" · %s → %s", formatValue(prev), formatValue(val))
 			}
@@ -424,17 +427,33 @@ func Substitute(tmpl string, ctx Context) string {
 	if tmpl == "" {
 		return ""
 	}
-	return substituteRe.ReplaceAllStringFunc(tmpl, func(match string) string {
-		sub := substituteRe.FindStringSubmatch(match)
-		if len(sub) < 2 {
-			return match
-		}
-		key := sub[1]
+	var out strings.Builder
+	end := 0
+	for _, match := range substituteRe.FindAllStringSubmatchIndex(tmpl, -1) {
+		out.WriteString(tmpl[end:match[0]])
+		key := tmpl[match[2]:match[3]]
 		if v, ok := ctx[key]; ok {
-			return toString(v)
+			if display, ok := v.(displayValue); ok {
+				ownedUnit := templateOwnedUnit(tmpl[match[1]:], display.unit)
+				decorate := ownedUnit == ""
+				ownedCurrency := templateOwnsCurrency(tmpl[:match[0]], display.prefs.Currency)
+				if (display.unit == "currency" || display.unit == "currency_per_mi") && ownedCurrency {
+					decorate = false
+				}
+				if display.unit == "currency_per_mi" && ownedUnit != "" && !ownedCurrency {
+					out.WriteString(display.prefs.Currency)
+				}
+				out.WriteString(display.render(ownedUnit, decorate))
+			} else {
+				out.WriteString(toString(v))
+			}
+		} else {
+			out.WriteString(tmpl[match[0]:match[1]])
 		}
-		return match
-	})
+		end = match[1]
+	}
+	out.WriteString(tmpl[end:])
+	return out.String()
 }
 
 // Placeholders returns the autocomplete catalog the editor should show
@@ -454,8 +473,30 @@ func Substitute(tmpl string, ctx Context) string {
 //
 // The slice is sorted alphabetically inside each group; the frontend
 // groups by Placeholder.Group when rendering.
-func Placeholders(rule *alertmodel.AlertRule) []Placeholder {
-	out := make([]Placeholder, 0, 16)
+func Placeholders(rule *alertmodel.AlertRule, preferences ...Preferences) (out []Placeholder) {
+	defer func() {
+		for _, entry := range []Placeholder{
+			{Key: "NowDisplay", Label: "Timestamp", Description: "Uses the persisted relative/absolute time preference.", Group: "Built-in"},
+			{Key: "NowAbsolute", Label: "Timestamp", Description: "Locale-sensitive full date and time.", Group: "Built-in"},
+			{Key: "NowRelative", Label: "Timestamp", Description: "Relative time; older than seven days uses the locale-sensitive date.", Group: "Built-in"},
+			{Key: "NowDate", Label: "Date", Description: "Date including year in the display timezone.", Group: "Built-in"},
+			{Key: "NowDateShort", Label: "Date", Description: "Short date without year in the display timezone.", Group: "Built-in"},
+			{Key: "NowTime", Label: "Timestamp", Description: "Time with the locale's hour cycle.", Group: "Built-in"},
+			{Key: "NowRFC3339", Label: "Timestamp", Description: "Explicit raw UTC RFC3339 instant, independent of display preferences.", Group: "Built-in"},
+		} {
+			out = append(out, entry)
+		}
+		if len(preferences) == 0 {
+			return
+		}
+		ctx := SampleContext(rule, preferences[0])
+		for i := range out {
+			if v, ok := ctx[out[i].Key]; ok && v != nil {
+				out[i].Example = toString(v)
+			}
+		}
+	}()
+	out = make([]Placeholder, 0, 16)
 	if rule != nil && (rule.Kind == alertmodel.AlertRuleKindSystemComponent || rule.Kind == alertmodel.AlertRuleKindPlace) {
 		transitionExample, ruleExample, messageExample := "enter", "Arrived Home", "Vehicle 42 entered Home"
 		if rule.Kind == alertmodel.AlertRuleKindSystemComponent {
@@ -486,7 +527,7 @@ func Placeholders(rule *alertmodel.AlertRule) []Placeholder {
 		Placeholder{Key: "RuleName", Label: "Rule name", Description: "Name field of the alert rule.", Group: "Built-in", Example: "Battery Low"},
 		Placeholder{Key: "Severity", Label: "Severity", Description: "Severity level the rule fired at.", Group: "Built-in", Example: "warn"},
 		Placeholder{Key: "Value", Label: "Triggering value", Description: "Current value of the signal that triggered the rule.", Group: "Built-in", Example: "18.2"},
-		Placeholder{Key: "Now", Label: "Timestamp", Description: "RFC3339 UTC timestamp of the fire.", Group: "Built-in", Example: time.Now().UTC().Format(time.RFC3339)},
+		Placeholder{Key: "Now", Label: "Timestamp", Description: "RFC3339 timestamp in the configured display timezone.", Group: "Built-in", Example: time.Now().UTC().Format(time.RFC3339)},
 	)
 
 	// Op-conditional keys mirror what BuildContext sets:

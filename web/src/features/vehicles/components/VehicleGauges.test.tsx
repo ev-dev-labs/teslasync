@@ -262,18 +262,18 @@ describe('VehicleGauges — metric bars', () => {
   it('always shows battery + range bars and hides charge-rate while not charging', () => {
     render(<VehicleGauges vehicle={makeVehicle()} state={makeState({ is_charging: false })} />)
 
-    const battery = screen.getByTestId('bar-Battery Level')
+    const battery = screen.getByTestId('bar-Battery level')
     expect(battery).toHaveAttribute('data-value', '82')
-    expect(battery).toHaveAttribute('data-sublabel', '82%')
+    expect(battery).toHaveAttribute('data-sublabel', '82.00%')
 
-    const range = screen.getByTestId('bar-Estimated Range')
+    const range = screen.getByTestId('bar-Estimated range')
     expect(range).toHaveAttribute('data-value', '400')
     // The sublabel must be produced from the raw SI range, not a pre-converted
     // magnitude — proving the display-boundary conversion contract.
     expect(range).toHaveAttribute('data-sublabel', 'SI:400000')
     expect(mockUnits.formatDistance).toHaveBeenCalledWith(400000)
 
-    expect(screen.queryByTestId('bar-Charge Rate')).toBeNull()
+    expect(screen.queryByTestId('bar-Charge rate')).toBeNull()
   })
 
   it('shows the charge-rate bar and greens the power gauge while charging', () => {
@@ -285,7 +285,7 @@ describe('VehicleGauges — metric bars', () => {
     )
 
     // 160 000 m/h / 1000 = 160 km/h-equivalent range added per hour.
-    const chargeBar = screen.getByTestId('bar-Charge Rate')
+    const chargeBar = screen.getByTestId('bar-Charge rate')
     expect(chargeBar).toHaveAttribute('data-value', '160')
     expect(chargeBar).toHaveAttribute('data-sublabel', 'SI:160000/h')
     expect(mockUnits.formatDistance).toHaveBeenCalledWith(160000)
@@ -417,8 +417,8 @@ describe('VehicleGauges — null-safety', () => {
     expect(screen.getByTestId('gauge-Range')).toHaveAttribute('data-value', '0')
     expect(screen.getByTestId('gauge-Speed')).toHaveAttribute('data-value', '0')
     expect(screen.getByTestId('gauge-Power')).toHaveAttribute('data-value', '0')
-    expect(screen.getByTestId('bar-Battery Level')).toHaveAttribute('data-value', '0')
-    expect(screen.getByTestId('bar-Estimated Range')).toHaveAttribute('data-value', '0')
+    expect(screen.getByTestId('bar-Battery level')).toHaveAttribute('data-value', '0')
+    expect(screen.getByTestId('bar-Estimated range')).toHaveAttribute('data-value', '0')
 
     // And the visualisation receives 0 (a valid number), not NaN.
     const viz = screen.getByTestId('car-viz')

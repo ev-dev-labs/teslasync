@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
@@ -34,17 +35,48 @@ const (
 
 // Handler handles battery degradation prediction HTTP requests.
 //
-// Point-in-time fallback reads use signal.StateReader (ADR-002), while bounded
-// historical capacity trends come from cagg_battery_daily.
+// Unscoped trends use cagg_battery_daily and signal.StateReader fallback.
+// Precise analysis windows aggregate only their signal_log emissions.
 type Handler struct {
 	db                *database.DB
 	state             signal.StateReader
 	now               func() time.Time
 	healthCacheMu     sync.RWMutex
-	healthCache       map[int64]batteryHealthCacheEntry
+	healthCache       map[batteryHealthScope]batteryHealthCacheEntry
 	healthLoadLocksMu sync.Mutex
-	healthLoadLocks   map[int64]*batteryHealthLoadLock
+	healthLoadLocks   map[batteryHealthScope]*batteryHealthLoadLock
 	healthLoader      func(context.Context, int64) (*batteryHealthResponse, batteryHealthTimings, error)
+	healthRangeLoader func(context.Context, batteryHealthScope) (*batteryHealthResponse, batteryHealthTimings, error)
+}
+
+type batteryHealthScope struct {
+	vehicleID int64
+	start     time.Time
+	end       time.Time
+}
+
+func (s batteryHealthScope) bounded() bool { return !s.start.IsZero() }
+
+func parseBatteryHealthScope(r *http.Request, vehicleID int64) (batteryHealthScope, error) {
+	scope := batteryHealthScope{vehicleID: vehicleID}
+	start, end := r.URL.Query().Get("start"), r.URL.Query().Get("end")
+	if start == "" && end == "" {
+		return scope, nil
+	}
+	var err error
+	scope.start, err = time.Parse(time.RFC3339Nano, start)
+	if err != nil {
+		return scope, fmt.Errorf("start must be an RFC3339 timestamp")
+	}
+	scope.end, err = time.Parse(time.RFC3339Nano, end)
+	if err != nil {
+		return scope, fmt.Errorf("end must be an RFC3339 timestamp")
+	}
+	if scope.start.IsZero() || scope.end.IsZero() || !scope.start.Before(scope.end) {
+		return scope, fmt.Errorf("start must be before end")
+	}
+	scope.start, scope.end = scope.start.UTC(), scope.end.UTC()
+	return scope, nil
 }
 
 type batteryHealthCacheEntry struct {
@@ -69,10 +101,11 @@ func NewHandler(db *database.DB, state signal.StateReader) *Handler {
 		db:              db,
 		state:           state,
 		now:             time.Now,
-		healthCache:     make(map[int64]batteryHealthCacheEntry),
-		healthLoadLocks: make(map[int64]*batteryHealthLoadLock),
+		healthCache:     make(map[batteryHealthScope]batteryHealthCacheEntry),
+		healthLoadLocks: make(map[batteryHealthScope]*batteryHealthLoadLock),
 	}
 	h.healthLoader = h.buildBatteryHealth
+	h.healthRangeLoader = h.buildBatteryHealthInRange
 	return h
 }
 
@@ -127,10 +160,6 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		// SI charging_sessions schema (migration 000184): peak_power_w
 		// (Watts; >50000W == DC fast charging), total_energy_added_wh
 		// (Watt-hours), start_soc_pct/end_soc_pct (DOUBLE PRECISION).
-		// Convert energy back to kWh at the response boundary so the
-		// JSON key avg_energy_per_session keeps its kilowatt-hour
-		// semantics for the frontend.
-		var avgEnergyWh float64
 		err = h.db.Pool.QueryRow(ctx, `
 			SELECT
 				COUNT(*) FILTER (WHERE peak_power_w > 50000),
@@ -144,14 +173,12 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 			WHERE vehicle_id = $1`, vehicleID).Scan(
 			&habits.FastChargeCount, &habits.SlowChargeCount,
 			&habits.DeepDischargeCount, &habits.ChargeToFullCount,
-			&habits.HighSocCount, &avgEnergyWh,
+			&habits.HighSocCount, &habits.AvgEnergyPerSessionWh,
 			&habits.TotalCount)
 		if err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get charging habits")
 		}
-		habits.AvgEnergyPerSession = avgEnergyWh / 1000.0
 	}
-	habits.AvgEnergyPerSession = math.Round(habits.AvgEnergyPerSession*10) / 10
 
 	var currentHealth, currentCapacity, currentDegradation, currentRange, currentTemp float64
 	var currentCycles int
@@ -260,14 +287,6 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 	if len(snapshots) > 0 {
 		ageMonths = int(time.Since(snapshots[0].CreatedAt).Hours() / (24 * 30.44))
 	}
-	avgTemp := 25.0
-	if len(snapshots) > 0 {
-		var totalTemp float64
-		for _, s := range snapshots {
-			totalTemp += s.AvgCellTempC
-		}
-		avgTemp = totalTemp / float64(len(snapshots))
-	}
 	cyclesPerMonth := 0.0
 	if ageMonths > 0 {
 		cyclesPerMonth = float64(currentCycles) / float64(ageMonths)
@@ -279,7 +298,8 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		deepDischargePct = float64(habits.DeepDischargeCount) / float64(totalCharges) * 100
 	}
 
-	riskFactors := computeRiskFactors(fastChargeRatio, highSocPct, avgTemp, cyclesPerMonth, deepDischargePct)
+	// Capacity-derived snapshots do not contain thermal observations.
+	riskFactors := computeRiskFactors(fastChargeRatio, highSocPct, nil, cyclesPerMonth, deepDischargePct, 0)
 	recommendations := generateRecommendations(riskFactors)
 
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
@@ -297,7 +317,8 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		"stress_level":                   stressLevel,
 		"fast_charge_ratio":              math.Round(fastChargeRatio*10) / 10,
 		"current_health_pct":             currentHealth,
-		"degradation_rate_pct_per_month": math.Round(result.RatePerMonth*1000) / 1000,
+		"degradation_rate_pct_per_month": fittedMonthlyRate(result),
+		"degradation_rate_available":     result.Prediction.FitValid,
 		"projected_80pct_date":           result.Prediction.PredictedDate,
 		"projections":                    result.Projections,
 		"horizon_outlook":                result.Horizon,
@@ -306,6 +327,13 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		"battery_capacity_wh":            capacityWh,
 		"capacity_source":                capacitySource,
 	})
+}
+
+func fittedMonthlyRate(result regressionResult) *float64 {
+	if !result.Prediction.FitValid {
+		return nil
+	}
+	return &result.RatePerMonth
 }
 
 const batteryHealthHistoryQuery = `
@@ -326,11 +354,13 @@ const batteryHealthHistoryQuery = `
 	SELECT
 		d.bucket,
 		d.capacity_wh,
-		COALESCE(r.range_m, 0),
-		COALESCE(o.odometer_m, 0)
+		r.range_m,
+		o.odometer_m,
+		r.sampled_at,
+		o.sampled_at
 	FROM capacity_days d
 	LEFT JOIN LATERAL (
-		SELECT COALESCE(float_value, int_value::float8) AS range_m
+		SELECT COALESCE(float_value, int_value::float8) AS range_m, ts AS sampled_at
 		FROM signal_log
 		WHERE vehicle_id = $1
 		  AND field = 'EstBatteryRange'
@@ -340,7 +370,7 @@ const batteryHealthHistoryQuery = `
 		LIMIT 1
 	) r ON TRUE
 	LEFT JOIN LATERAL (
-		SELECT COALESCE(float_value, int_value::float8) AS odometer_m
+		SELECT COALESCE(float_value, int_value::float8) AS odometer_m, ts AS sampled_at
 		FROM signal_log
 		WHERE vehicle_id = $1
 		  AND field = 'Odometer'
@@ -351,27 +381,65 @@ const batteryHealthHistoryQuery = `
 	) o ON TRUE
 	ORDER BY d.bucket ASC`
 
+// Partial UTC days must be aggregated from only the requested emissions;
+// filtering daily buckets alone would include data outside rolling/local ranges.
+const batteryHealthRangeDaysQuery = `
+	WITH ranged_days AS (
+		SELECT time_bucket('1 day', ts) AS bucket, vehicle_id,
+			MIN(float_value) FILTER (WHERE field = 'BatteryLevel') AS min_soc,
+			MAX(float_value) FILTER (WHERE field = 'BatteryLevel') AS max_soc,
+			MAX(float_value) FILTER (WHERE field = 'ACChargingEnergyIn')
+				- MIN(float_value) FILTER (WHERE field = 'ACChargingEnergyIn') AS ac_energy_added_wh,
+			MAX(float_value) FILTER (WHERE field = 'DCChargingEnergyIn')
+				- MIN(float_value) FILTER (WHERE field = 'DCChargingEnergyIn') AS dc_energy_added_wh
+		FROM signal_log
+		WHERE vehicle_id = $1 AND ts >= $3 AND ts < $4
+		  AND field IN ('BatteryLevel', 'ACChargingEnergyIn', 'DCChargingEnergyIn')
+		GROUP BY bucket, vehicle_id
+	), capacity_days AS (`
+
+func batteryHistoryRequest(scope batteryHealthScope) (string, []any) {
+	if !scope.bounded() {
+		return batteryHealthHistoryQuery, []any{scope.vehicleID, batteryMinSOCSwing, batteryHistoryLimit}
+	}
+	query := strings.Replace(batteryHealthHistoryQuery, "WITH capacity_days AS (", batteryHealthRangeDaysQuery, 1)
+	query = strings.Replace(query, "FROM cagg_battery_daily", "FROM ranged_days", 1)
+	query = strings.Replace(query, "LIMIT $3", "", 1)
+	query = strings.ReplaceAll(query, "ts < d.bucket + INTERVAL '1 day'",
+		"ts < LEAST(d.bucket + INTERVAL '1 day', $4::timestamptz)")
+	return query, []any{scope.vehicleID, batteryMinSOCSwing, scope.start, scope.end}
+}
+
 const batteryHealthSummaryQuery = `
 	WITH charging AS (
 		SELECT
-			COUNT(*) FILTER (WHERE peak_power_w > 50000)::bigint AS fast_count,
-			COUNT(*) FILTER (WHERE peak_power_w <= 50000 OR peak_power_w IS NULL)::bigint AS slow_count,
-			COUNT(*) FILTER (WHERE start_soc_pct < 10)::bigint AS deep_discharge_count,
-			COUNT(*) FILTER (WHERE end_soc_pct > 95)::bigint AS full_charge_count,
-			COUNT(*) FILTER (WHERE end_soc_pct > 90)::bigint AS high_soc_count,
+			COUNT(*) FILTER (WHERE peak_power_w > 50000 AND peak_power_w < 'Infinity'::float8)::bigint AS fast_count,
+			COUNT(*) FILTER (WHERE peak_power_w BETWEEN 0 AND 50000)::bigint AS slow_count,
+			COUNT(*) FILTER (WHERE start_soc_pct >= 0 AND start_soc_pct < 10)::bigint AS deep_discharge_count,
+			COUNT(*) FILTER (WHERE end_soc_pct > 95 AND end_soc_pct <= 100)::bigint AS full_charge_count,
+			COUNT(*) FILTER (WHERE end_soc_pct > 90 AND end_soc_pct <= 100)::bigint AS high_soc_count,
+			COUNT(*) FILTER (WHERE start_soc_pct BETWEEN 0 AND 100)::bigint AS valid_start_count,
+			COUNT(*) FILTER (WHERE end_soc_pct BETWEEN 0 AND 100)::bigint AS valid_end_count,
 			COUNT(*)::bigint AS total_count,
-			COALESCE(AVG(total_energy_added_wh), 0)::float8 AS avg_energy_wh,
-			COALESCE(SUM(total_energy_added_wh), 0)::float8 AS total_energy_wh,
+			COALESCE(AVG(total_energy_added_wh) FILTER (WHERE total_energy_added_wh >= 0 AND total_energy_added_wh < 'Infinity'::float8), 0)::float8 AS avg_energy_wh,
+			COALESCE(SUM(total_energy_added_wh) FILTER (WHERE total_energy_added_wh >= 0 AND total_energy_added_wh < 'Infinity'::float8), 0)::float8 AS total_energy_wh,
+			COUNT(*) FILTER (WHERE total_energy_added_wh >= 0 AND total_energy_added_wh < 'Infinity'::float8)::bigint AS valid_energy_count,
 			MIN(started_at) AS first_started_at
 		FROM charging_sessions
 		WHERE vehicle_id = $1
+		  AND ($2::timestamptz IS NULL OR started_at >= $2)
+		  AND ($3::timestamptz IS NULL OR started_at < $3)
 	),
 	driving AS (
 		SELECT
-			AVG(GREATEST(start_soc_pct - end_soc_pct, 0))::float8 AS avg_dod_pct,
+			AVG(start_soc_pct - end_soc_pct)::float8 AS avg_dod_pct,
+			COUNT(*)::bigint AS valid_dod_count,
 			MIN(started_at) AS first_started_at
 		FROM drives
-		WHERE vehicle_id = $1 AND start_soc_pct > end_soc_pct
+		WHERE vehicle_id = $1 AND start_soc_pct >= end_soc_pct
+		  AND start_soc_pct BETWEEN 0 AND 100 AND end_soc_pct BETWEEN 0 AND 100
+		  AND ($2::timestamptz IS NULL OR started_at >= $2)
+		  AND ($3::timestamptz IS NULL OR started_at < $3)
 	),
 	thermal AS (
 		SELECT
@@ -380,7 +448,8 @@ const batteryHealthSummaryQuery = `
 		FROM signal_log
 		WHERE vehicle_id = $1
 		  AND field IN ('ModuleTempMax', 'ModuleTempAvg')
-		  AND ts > NOW() - INTERVAL '90 days'
+		  AND ts >= COALESCE($2::timestamptz, NOW() - INTERVAL '90 days')
+		  AND ($3::timestamptz IS NULL OR ts < $3)
 		  AND (float_value IS NOT NULL OR int_value IS NOT NULL)
 	)
 	SELECT
@@ -396,7 +465,11 @@ const batteryHealthSummaryQuery = `
 		d.avg_dod_pct,
 		d.first_started_at,
 		t.avg_temp_c,
-		t.sample_count
+		t.sample_count,
+		c.valid_start_count,
+		c.valid_end_count,
+		d.valid_dod_count,
+		c.valid_energy_count
 	FROM charging c
 	CROSS JOIN driving d
 	CROSS JOIN thermal t`
@@ -405,10 +478,12 @@ const recentChargingSessionsQuery = `
 	SELECT start_soc_pct, end_soc_pct, total_energy_added_wh, peak_power_w, charger_type
 	FROM charging_sessions
 	WHERE vehicle_id = $1
+	  AND ($3::timestamptz IS NULL OR started_at >= $3)
+	  AND ($4::timestamptz IS NULL OR started_at < $4)
 	ORDER BY started_at DESC
 	LIMIT $2`
 
-// Health handles GET /analytics/battery-health?vehicle_id=X.
+// Health accepts optional paired RFC3339 start/end bounds with [start, end) semantics.
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	started := h.currentTime()
 	ctx, span := otel.Tracer("teslasync/internal/api/batterydegradation").Start(
@@ -432,16 +507,22 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	}
 	span.SetAttributes(attribute.Int64("vehicle.id", vehicleID))
 
-	if response, ok := h.cachedBatteryHealth(vehicleID); ok {
+	scope, err := parseBatteryHealthScope(r, vehicleID)
+	if err != nil {
+		span.RecordError(err)
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if response, ok := h.cachedBatteryHealth(scope); ok {
 		h.writeBatteryHealthResponse(w, response, batteryHealthTimings{total: h.currentTime().Sub(started)}, true)
 		span.SetAttributes(attribute.Bool("cache.hit", true))
 		return
 	}
 
-	releaseLoadLock := h.acquireBatteryHealthLoadLock(vehicleID)
+	releaseLoadLock := h.acquireBatteryHealthLoadLock(scope)
 	defer releaseLoadLock()
 
-	if response, ok := h.cachedBatteryHealth(vehicleID); ok {
+	if response, ok := h.cachedBatteryHealth(scope); ok {
 		h.writeBatteryHealthResponse(w, response, batteryHealthTimings{total: h.currentTime().Sub(started)}, true)
 		span.SetAttributes(attribute.Bool("cache.hit", true))
 		return
@@ -449,7 +530,13 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 
 	loadCtx, cancel := context.WithTimeout(ctx, batteryHealthTimeout)
 	defer cancel()
-	response, timings, err := h.healthLoader(loadCtx, vehicleID)
+	var response *batteryHealthResponse
+	var timings batteryHealthTimings
+	if scope.bounded() {
+		response, timings, err = h.healthRangeLoader(loadCtx, scope)
+	} else {
+		response, timings, err = h.healthLoader(loadCtx, vehicleID)
+	}
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "build battery health analytics")
@@ -458,7 +545,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	timings.total = h.currentTime().Sub(started)
-	h.cacheBatteryHealth(vehicleID, response)
+	h.cacheBatteryHealth(scope, response)
 	h.writeBatteryHealthResponse(w, response, timings, false)
 	span.SetAttributes(
 		attribute.Bool("cache.hit", false),
@@ -475,6 +562,11 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) buildBatteryHealth(ctx context.Context, vehicleID int64) (*batteryHealthResponse, batteryHealthTimings, error) {
+	return h.buildBatteryHealthInRange(ctx, batteryHealthScope{vehicleID: vehicleID})
+}
+
+func (h *Handler) buildBatteryHealthInRange(ctx context.Context, scope batteryHealthScope) (*batteryHealthResponse, batteryHealthTimings, error) {
+	vehicleID := scope.vehicleID
 	var timings batteryHealthTimings
 	capacityWh := defaultBatteryCapacityWh
 	capacitySource := "default"
@@ -497,7 +589,7 @@ func (h *Handler) buildBatteryHealth(ctx context.Context, vehicleID int64) (*bat
 		phaseStarted := time.Now()
 		phaseCtx, phaseSpan := otel.Tracer("teslasync/internal/api/batterydegradation").Start(ctx, "battery-health.history")
 		defer phaseSpan.End()
-		history, historyErr = h.loadBatteryHealthHistory(phaseCtx, vehicleID, capacityWh)
+		history, historyErr = h.loadBatteryHealthHistoryInRange(phaseCtx, scope, capacityWh)
 		timings.history = time.Since(phaseStarted)
 		if historyErr != nil {
 			phaseSpan.RecordError(historyErr)
@@ -510,7 +602,7 @@ func (h *Handler) buildBatteryHealth(ctx context.Context, vehicleID int64) (*bat
 		phaseStarted := time.Now()
 		phaseCtx, phaseSpan := otel.Tracer("teslasync/internal/api/batterydegradation").Start(ctx, "battery-health.summary")
 		defer phaseSpan.End()
-		summary, summaryErr = h.loadBatterySummary(phaseCtx, vehicleID)
+		summary, summaryErr = h.loadBatterySummary(phaseCtx, scope)
 		timings.summary = time.Since(phaseStarted)
 		if summaryErr != nil {
 			phaseSpan.RecordError(summaryErr)
@@ -522,7 +614,7 @@ func (h *Handler) buildBatteryHealth(ctx context.Context, vehicleID int64) (*bat
 		phaseStarted := time.Now()
 		phaseCtx, phaseSpan := otel.Tracer("teslasync/internal/api/batterydegradation").Start(ctx, "battery-health.charging")
 		defer phaseSpan.End()
-		charging, chargingErr = h.loadChargingAnalysis(phaseCtx, vehicleID)
+		charging, chargingErr = h.loadChargingAnalysis(phaseCtx, scope)
 		timings.charging = time.Since(phaseStarted)
 		if chargingErr != nil {
 			phaseSpan.RecordError(chargingErr)
@@ -540,36 +632,40 @@ func (h *Handler) buildBatteryHealth(ctx context.Context, vehicleID int64) (*bat
 		return nil, timings, fmt.Errorf("query charging analysis: %w", chargingErr)
 	}
 
-	currentCapacityWh := medianRecentCapacity(history, 8)
-	if currentCapacityWh <= 0 {
-		liveCapacityWh, rangeM, err := h.loadLiveBatteryCapacity(ctx, vehicleID, capacityWh)
+	// Keep the observed estimator separate from the VIN/model/default baseline.
+	// Actual original-capacity calibration remains candidate BD-C01.
+	currentCapacityWh, capacityAvailable := recentCapacityEvidence(history, 8)
+	if !capacityAvailable && !scope.bounded() {
+		liveCapacityWh, _, err := h.loadLiveBatteryCapacity(ctx, vehicleID, capacityWh)
 		if err != nil {
 			return nil, timings, err
 		}
-		if liveCapacityWh > 0 {
-			currentCapacityWh = liveCapacityWh
-			history = append(history, batteryHealthHistoryPoint{
-				Date:       h.currentTime().UTC().Format("2006-01-02"),
-				CapacityWh: roundTo(liveCapacityWh, 1),
-				RangeM:     roundTo(rangeM, 1),
-				SohPct:     roundTo(clampSOH(liveCapacityWh/capacityWh*100), 1),
-			})
+		if liveCapacityWh != nil {
+			currentCapacityWh = *liveCapacityWh
+			capacityAvailable = true
+			// Carried-forward live state has no observation timestamp here;
+			// keep the estimator without fabricating a dated history sample.
 		}
 	}
 	currentSOH := 0.0
-	if currentCapacityWh > 0 && capacityWh > 0 {
+	sohAvailable := capacityAvailable && capacityWh > 0 && !math.IsNaN(capacityWh) && !math.IsInf(capacityWh, 0)
+	if sohAvailable {
 		currentSOH = clampSOH(currentCapacityWh / capacityWh * 100)
 	}
 
 	snapshots := historyToRegressionSnapshots(history)
-	prediction := h.predictDegradation(snapshots)
-	ageMonths := batteryAgeMonths(h.currentTime(), history, summary.firstCharging, summary.firstDrive)
-	totalCycles := 0
-	if capacityWh > 0 {
-		totalCycles = int(math.Round(summary.totalEnergyWh / capacityWh))
+	// The prediction carries the filtered fit sample and approximate interval
+	// contract; retained history length is not necessarily the fit sample count.
+	analysisAt := h.currentTime()
+	if scope.bounded() {
+		analysisAt = scope.end
 	}
-	fastChargePct := percentage(summary.fastChargeCount, summary.totalCount)
-	fullChargePct := percentage(summary.fullChargeCount, summary.totalCount)
+	prediction := h.predictDegradationAt(snapshots, analysisAt)
+	observationMonths, observationStart, observationSource := batteryObservation(analysisAt, history, summary.firstCharging, summary.firstDrive)
+	totalCycles, cyclesAvailable := chargeEquivalentCycles(summary.totalEnergyWh, capacityWh, summary.validEnergyCount)
+	validChargeCount := summary.fastChargeCount + summary.slowChargeCount
+	fastChargePct := percentage(summary.fastChargeCount, validChargeCount)
+	fullChargePct := percentage(summary.fullChargeCount, summary.validEndSocCount)
 	chargeHabitsScore := calculateChargeHabitsScore(
 		fastChargePct,
 		fullChargePct,
@@ -579,35 +675,25 @@ func (h *Handler) buildBatteryHealth(ctx context.Context, vehicleID int64) (*bat
 		fastChargePct,
 		summary.deepDischargeCount,
 		summary.fullChargeCount,
-		summary.totalCount,
+		summary.validEndSocCount,
 	)
-	degradationRate := math.Abs(prediction.Prediction.SlopePerYear)
-	if !prediction.Prediction.HasEnoughData && ageMonths > 0 && currentSOH > 0 {
-		degradationRate = math.Max(0, (100-currentSOH)/(float64(ageMonths)/12))
-	}
+	// Loss is the negative of the fitted SOH slope, not its absolute magnitude.
+	degradationRate := -prediction.Prediction.SlopePerYear
 
-	avgTempC := 25.0
-	if summary.avgTempC != nil {
-		avgTempC = *summary.avgTempC
-	}
 	cyclesPerMonth := 0.0
-	if ageMonths > 0 {
-		cyclesPerMonth = float64(totalCycles) / float64(ageMonths)
+	if observationMonths != nil && *observationMonths > 0 {
+		cyclesPerMonth = float64(totalCycles) / float64(*observationMonths)
 	}
-	highSocPct := percentage(summary.highSocCount, summary.totalCount)
-	deepDischargePct := percentage(summary.deepDischargeCount, summary.totalCount)
-	riskFactors := computeRiskFactors(fastChargePct, highSocPct, avgTempC, cyclesPerMonth, deepDischargePct)
+	highSocPct := percentage(summary.highSocCount, summary.validEndSocCount)
+	deepDischargePct := percentage(summary.deepDischargeCount, summary.validStartSocCount)
+	riskFactors := computeRiskFactors(fastChargePct, highSocPct, summary.avgTempC, cyclesPerMonth, deepDischargePct, summary.tempSamples)
 	tempScore, tempReason := temperatureExposure(summary.avgTempC, summary.tempSamples)
+	riskFactors = healthRiskEvidence(riskFactors, validChargeCount > 0, summary.validEndSocCount > 0,
+		tempScore != nil, observationMonths != nil && *observationMonths > 0 && cyclesAvailable, summary.validStartSocCount > 0)
+	riskFactors = healthRiskMessages(riskFactors, fastChargePct, highSocPct, summary.avgTempC, cyclesPerMonth, deepDischargePct)
+	habitsAvailable := validChargeCount > 0 && summary.validEndSocCount > 0 && summary.validStartSocCount > 0
 
-	habits := chargingHabits{
-		FastChargeCount:     summary.fastChargeCount,
-		SlowChargeCount:     summary.slowChargeCount,
-		DeepDischargeCount:  summary.deepDischargeCount,
-		ChargeToFullCount:   summary.fullChargeCount,
-		HighSocCount:        summary.highSocCount,
-		AvgEnergyPerSession: roundTo(summary.avgEnergyWh/1000, 1),
-		TotalCount:          summary.totalCount,
-	}
+	habits := chargingHabitsFromSummary(summary)
 	if history == nil {
 		history = []batteryHealthHistoryPoint{}
 	}
@@ -622,29 +708,51 @@ func (h *Handler) buildBatteryHealth(ctx context.Context, vehicleID int64) (*bat
 		recommendations = []string{}
 	}
 
+	var analysisStart, analysisEnd *time.Time
+	if scope.bounded() {
+		analysisStart, analysisEnd = &scope.start, &scope.end
+	}
 	return &batteryHealthResponse{
-		VehicleID:                 vehicleID,
-		CurrentSoh:                roundTo(currentSOH, 1),
-		EstimatedCapacityWh:       roundTo(currentCapacityWh, 1),
-		OriginalCapacityWh:        capacityWh,
-		DegradationRatePctPerYear: roundTo(degradationRate, 2),
-		BatteryAgeMonths:          ageMonths,
-		TotalCycles:               totalCycles,
-		AvgDepthOfDischargePct:    roundTo(summary.avgDoDPct, 1),
-		FastChargePct:             roundTo(fastChargePct, 1),
-		FullChargePct:             roundTo(fullChargePct, 1),
-		ChargeHabitsScore:         math.Round(chargeHabitsScore),
-		StressLevel:               stressLevel,
-		TempExposureScore:         tempScore,
-		TempExposureReason:        tempReason,
-		History:                   history,
-		Prediction:                prediction.Prediction,
-		Projections:               prediction.Projections,
-		ChargingHabits:            habits,
-		RiskFactors:               riskFactors,
-		Recommendations:           recommendations,
-		ChargingAnalysis:          charging,
-		CapacitySource:            capacitySource,
+		AnalysisStart:              analysisStart,
+		AnalysisEndExclusive:       analysisEnd,
+		VehicleID:                  vehicleID,
+		CurrentSoh:                 roundTo(currentSOH, 1),
+		CurrentSohAvailable:        sohAvailable,
+		EstimatedCapacityWh:        roundTo(currentCapacityWh, 1),
+		EstimatedCapacityAvailable: capacityAvailable,
+		OriginalCapacityWh:         capacityWh,
+		DegradationRatePctPerYear:  degradationRate,
+		DegradationRateAvailable:   prediction.Prediction.FitValid,
+		ObservationDurationMonths:  observationMonths,
+		ObservationStartedAt:       observationStart,
+		ObservationSource:          observationSource,
+		TotalCycles:                int(math.Round(totalCycles)),
+		totalCyclesExact:           &totalCycles,
+		TotalCyclesAvailable:       cyclesAvailable,
+		ValidEnergyCount:           summary.validEnergyCount,
+		ValidChargeCount:           validChargeCount,
+		ValidStartSocCount:         summary.validStartSocCount,
+		ValidEndSocCount:           summary.validEndSocCount,
+		ValidDoDCount:              summary.validDoDCount,
+		AvgDepthOfDischargePct:     summary.avgDoDPct,
+		FastChargePct:              roundTo(fastChargePct, 1),
+		FullChargePct:              roundTo(fullChargePct, 1),
+		ChargeHabitsScore:          math.Round(chargeHabitsScore),
+		ChargeHabitsAvailable:      habitsAvailable,
+		StressLevel:                stressLevel,
+		TempExposureScore:          tempScore,
+		TempExposureReason:         tempReason,
+		TempExposureAvailable:      tempScore != nil,
+		TempSampleCount:            summary.tempSamples,
+		History:                    history,
+		Prediction:                 prediction.Prediction,
+		Projections:                prediction.Projections,
+		ChargingHabits:             habits,
+		RiskFactors:                riskFactors,
+		Recommendations:            recommendations,
+		RecommendationMessages:     generateRecommendationMessages(riskFactors),
+		ChargingAnalysis:           charging,
+		CapacitySource:             capacitySource,
 	}, timings, nil
 }
 
@@ -662,13 +770,22 @@ type batterySummaryStats struct {
 	avgDoDPct          float64
 	avgTempC           *float64
 	tempSamples        int
+	validStartSocCount int
+	validEndSocCount   int
+	validDoDCount      int
+	validEnergyCount   int
 }
 
 func (h *Handler) loadBatteryHealthHistory(ctx context.Context, vehicleID int64, capacityWh float64) ([]batteryHealthHistoryPoint, error) {
+	return h.loadBatteryHealthHistoryInRange(ctx, batteryHealthScope{vehicleID: vehicleID}, capacityWh)
+}
+
+func (h *Handler) loadBatteryHealthHistoryInRange(ctx context.Context, scope batteryHealthScope, capacityWh float64) ([]batteryHealthHistoryPoint, error) {
 	if h.db == nil {
 		return []batteryHealthHistoryPoint{}, nil
 	}
-	rows, err := h.db.Pool.Query(ctx, batteryHealthHistoryQuery, vehicleID, batteryMinSOCSwing, batteryHistoryLimit)
+	query, args := batteryHistoryRequest(scope)
+	rows, err := h.db.Pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("query cagg_battery_daily: %w", err)
 	}
@@ -677,23 +794,29 @@ func (h *Handler) loadBatteryHealthHistory(ctx context.Context, vehicleID int64,
 	history := make([]batteryHealthHistoryPoint, 0, batteryHistoryLimit)
 	for rows.Next() {
 		var (
-			bucket    time.Time
-			capacity  float64
-			rangeM    float64
-			odometerM float64
+			bucket            time.Time
+			capacity          float64
+			rangeM            *float64
+			odometerM         *float64
+			rangeSampledAt    *time.Time
+			odometerSampledAt *time.Time
 		)
-		if err := rows.Scan(&bucket, &capacity, &rangeM, &odometerM); err != nil {
+		if err := rows.Scan(&bucket, &capacity, &rangeM, &odometerM, &rangeSampledAt, &odometerSampledAt); err != nil {
 			return nil, fmt.Errorf("scan battery capacity day: %w", err)
 		}
-		if capacity <= 0 || capacity > capacityWh*1.2 {
+		if bucket.IsZero() || !isFinite(capacityWh) || capacityWh <= 0 ||
+			!isFinite(capacity) || capacity < 0 || capacity > capacityWh*1.2 {
 			continue
 		}
 		history = append(history, batteryHealthHistoryPoint{
-			Date:       bucket.UTC().Format("2006-01-02"),
-			OdometerM:  roundTo(odometerM, 1),
-			SohPct:     roundTo(clampSOH(capacity/capacityWh*100), 1),
-			CapacityWh: roundTo(capacity, 1),
-			RangeM:     roundTo(rangeM, 1),
+			// Keep the aggregate day separate from the unmodified sample instants.
+			Date:              bucket.UTC().Format("2006-01-02"),
+			OdometerM:         distanceEvidence(odometerM),
+			OdometerSampledAt: odometerSampledAt,
+			SohPct:            roundTo(clampSOH(capacity/capacityWh*100), 1),
+			CapacityWh:        roundTo(capacity, 1),
+			RangeM:            distanceEvidence(rangeM),
+			RangeSampledAt:    rangeSampledAt,
 		})
 	}
 	if err := rows.Err(); err != nil {
@@ -702,7 +825,7 @@ func (h *Handler) loadBatteryHealthHistory(ctx context.Context, vehicleID int64,
 	return history, nil
 }
 
-func (h *Handler) loadBatterySummary(ctx context.Context, vehicleID int64) (batterySummaryStats, error) {
+func (h *Handler) loadBatterySummary(ctx context.Context, scope batteryHealthScope) (batterySummaryStats, error) {
 	var summary batterySummaryStats
 	if h.db == nil {
 		return summary, nil
@@ -717,7 +840,8 @@ func (h *Handler) loadBatterySummary(ctx context.Context, vehicleID int64) (batt
 		avgDoDPct          *float64
 		tempSamples        int64
 	)
-	err := h.db.Pool.QueryRow(ctx, batteryHealthSummaryQuery, vehicleID).Scan(
+	err := h.db.Pool.QueryRow(ctx, batteryHealthSummaryQuery, scope.vehicleID,
+		apiparams.NullableTime(scope.bounded(), scope.start), apiparams.NullableTime(scope.bounded(), scope.end)).Scan(
 		&fastCount,
 		&slowCount,
 		&deepDischargeCount,
@@ -731,6 +855,10 @@ func (h *Handler) loadBatterySummary(ctx context.Context, vehicleID int64) (batt
 		&summary.firstDrive,
 		&summary.avgTempC,
 		&tempSamples,
+		&summary.validStartSocCount,
+		&summary.validEndSocCount,
+		&summary.validDoDCount,
+		&summary.validEnergyCount,
 	)
 	if err != nil {
 		return summary, fmt.Errorf("query battery summary aggregates: %w", err)
@@ -748,7 +876,7 @@ func (h *Handler) loadBatterySummary(ctx context.Context, vehicleID int64) (batt
 	return summary, nil
 }
 
-func (h *Handler) loadChargingAnalysis(ctx context.Context, vehicleID int64) (batteryChargingAnalysis, error) {
+func (h *Handler) loadChargingAnalysis(ctx context.Context, scope batteryHealthScope) (batteryChargingAnalysis, error) {
 	analysis := batteryChargingAnalysis{
 		ChargeLevelDistribution: make([]chargeLevelBucket, 10),
 	}
@@ -762,7 +890,12 @@ func (h *Handler) loadChargingAnalysis(ctx context.Context, vehicleID int64) (ba
 		return analysis, nil
 	}
 
-	rows, err := h.db.Pool.Query(ctx, recentChargingSessionsQuery, vehicleID, batteryRecentSessionLimit)
+	var limit any = batteryRecentSessionLimit
+	if scope.bounded() {
+		limit = nil
+	}
+	rows, err := h.db.Pool.Query(ctx, recentChargingSessionsQuery, scope.vehicleID, limit,
+		apiparams.NullableTime(scope.bounded(), scope.start), apiparams.NullableTime(scope.bounded(), scope.end))
 	if err != nil {
 		return analysis, fmt.Errorf("query recent charging sessions: %w", err)
 	}
@@ -777,7 +910,7 @@ func (h *Handler) loadChargingAnalysis(ctx context.Context, vehicleID int64) (ba
 			return analysis, fmt.Errorf("scan recent charging session: %w", err)
 		}
 		analysis.TotalSessions++
-		if startSOC != nil {
+		if startSOC != nil && numericEvidence(*startSOC, true, 0, 100) != nil {
 			bucket := socBucket(*startSOC)
 			analysis.ChargeLevelDistribution[bucket].StartCount++
 			startTotal += *startSOC
@@ -786,7 +919,7 @@ func (h *Handler) loadChargingAnalysis(ctx context.Context, vehicleID int64) (ba
 				analysis.DeepDischargeCount++
 			}
 		}
-		if endSOC != nil {
+		if endSOC != nil && numericEvidence(*endSOC, true, 0, 100) != nil {
 			bucket := socBucket(*endSOC)
 			analysis.ChargeLevelDistribution[bucket].EndCount++
 			endTotal += *endSOC
@@ -794,8 +927,8 @@ func (h *Handler) loadChargingAnalysis(ctx context.Context, vehicleID int64) (ba
 		}
 		isDC, isSupercharger := classifyChargeSession(peakPowerW, chargerType)
 		energy := 0.0
-		if energyWh != nil {
-			energy = math.Max(0, *energyWh)
+		if energyWh != nil && isFinite(*energyWh) && *energyWh >= 0 {
+			energy = *energyWh
 		}
 		if isDC {
 			analysis.DCSessionCount++
@@ -826,49 +959,50 @@ func (h *Handler) loadChargingAnalysis(ctx context.Context, vehicleID int64) (ba
 	return analysis, nil
 }
 
-func (h *Handler) loadLiveBatteryCapacity(ctx context.Context, vehicleID int64, nominalCapacityWh float64) (float64, float64, error) {
+func (h *Handler) loadLiveBatteryCapacity(ctx context.Context, vehicleID int64, nominalCapacityWh float64) (*float64, *float64, error) {
 	if h.state == nil {
-		return 0, 0, nil
+		return nil, nil, nil
 	}
 	now := h.currentTime()
 	energyWh, err := h.readSignalFloat(ctx, vehicleID, "EnergyRemaining", now)
 	if err != nil {
-		return 0, 0, err
+		return nil, nil, err
 	}
 	batteryLevel, err := h.readSignalFloat(ctx, vehicleID, "BatteryLevel", now)
 	if err != nil {
-		return 0, 0, err
+		return nil, nil, err
 	}
 	rangeM, err := h.readSignalFloat(ctx, vehicleID, "EstBatteryRange", now)
 	if err != nil {
-		return 0, 0, err
+		return nil, nil, err
 	}
-	if energyWh <= 0 || batteryLevel < 5 || batteryLevel > 100 {
-		return 0, rangeM, nil
+	rangeValue := distanceEvidence(rangeM)
+	if energyWh == nil || batteryLevel == nil || *energyWh < 0 || *batteryLevel < 5 || *batteryLevel > 100 {
+		return nil, rangeValue, nil
 	}
-	capacityWh := energyWh / (batteryLevel / 100)
-	if capacityWh <= 0 || capacityWh > nominalCapacityWh*1.2 {
-		return 0, rangeM, nil
+	capacityWh := *energyWh / (*batteryLevel / 100)
+	if math.IsNaN(capacityWh) || math.IsInf(capacityWh, 0) || capacityWh > nominalCapacityWh*1.2 {
+		return nil, rangeValue, nil
 	}
-	return capacityWh, rangeM, nil
+	return &capacityWh, rangeValue, nil
 }
 
-func (h *Handler) readSignalFloat(ctx context.Context, vehicleID int64, field string, at time.Time) (float64, error) {
+func (h *Handler) readSignalFloat(ctx context.Context, vehicleID int64, field string, at time.Time) (*float64, error) {
 	value, err := h.state.SignalAt(ctx, vehicleID, field, at)
 	if err != nil {
-		return 0, fmt.Errorf("read %s signal: %w", field, err)
+		return nil, fmt.Errorf("read %s signal: %w", field, err)
 	}
 	if value == nil {
-		return 0, nil
+		return nil, nil
 	}
 	number, ok := toFloatOkLocal(value)
-	if !ok || number <= 0 {
-		return 0, nil
+	if !ok || math.IsNaN(number) || math.IsInf(number, 0) {
+		return nil, nil
 	}
-	return number, nil
+	return &number, nil
 }
 
-func (h *Handler) cachedBatteryHealth(vehicleID int64) (*batteryHealthResponse, bool) {
+func (h *Handler) cachedBatteryHealth(vehicleID batteryHealthScope) (*batteryHealthResponse, bool) {
 	h.healthCacheMu.RLock()
 	entry, ok := h.healthCache[vehicleID]
 	h.healthCacheMu.RUnlock()
@@ -883,10 +1017,10 @@ func (h *Handler) cachedBatteryHealth(vehicleID int64) (*batteryHealthResponse, 
 	return entry.response, true
 }
 
-func (h *Handler) cacheBatteryHealth(vehicleID int64, response *batteryHealthResponse) {
+func (h *Handler) cacheBatteryHealth(vehicleID batteryHealthScope, response *batteryHealthResponse) {
 	h.healthCacheMu.Lock()
 	if h.healthCache == nil {
-		h.healthCache = make(map[int64]batteryHealthCacheEntry)
+		h.healthCache = make(map[batteryHealthScope]batteryHealthCacheEntry)
 	}
 	now := h.currentTime()
 	for cachedVehicleID, entry := range h.healthCache {
@@ -895,7 +1029,7 @@ func (h *Handler) cacheBatteryHealth(vehicleID int64, response *batteryHealthRes
 		}
 	}
 	if len(h.healthCache) >= batteryHealthCacheMaxSize {
-		var oldestVehicleID int64
+		var oldestVehicleID batteryHealthScope
 		var oldestExpiry time.Time
 		for cachedVehicleID, entry := range h.healthCache {
 			if oldestExpiry.IsZero() || entry.expiresAt.Before(oldestExpiry) {
@@ -912,10 +1046,10 @@ func (h *Handler) cacheBatteryHealth(vehicleID int64, response *batteryHealthRes
 	h.healthCacheMu.Unlock()
 }
 
-func (h *Handler) acquireBatteryHealthLoadLock(vehicleID int64) func() {
+func (h *Handler) acquireBatteryHealthLoadLock(vehicleID batteryHealthScope) func() {
 	h.healthLoadLocksMu.Lock()
 	if h.healthLoadLocks == nil {
-		h.healthLoadLocks = make(map[int64]*batteryHealthLoadLock)
+		h.healthLoadLocks = make(map[batteryHealthScope]*batteryHealthLoadLock)
 	}
 	loadLock := h.healthLoadLocks[vehicleID]
 	if loadLock == nil {
@@ -976,11 +1110,15 @@ func historyToRegressionSnapshots(history []batteryHealthHistoryPoint) []battery
 		if err != nil {
 			continue
 		}
+		rangeKm := 0.0
+		if point.RangeM != nil {
+			rangeKm = *point.RangeM / 1000
+		}
 		snapshots = append(snapshots, batterySnapshotData{
 			HealthScore:    point.SohPct,
 			CapacityWh:     point.CapacityWh,
 			DegradationPct: math.Max(0, 100-point.SohPct),
-			EstRangeKm:     point.RangeM / 1000,
+			EstRangeKm:     rangeKm,
 			CreatedAt:      createdAt,
 		})
 	}
@@ -988,52 +1126,12 @@ func historyToRegressionSnapshots(history []batteryHealthHistoryPoint) []battery
 }
 
 func medianRecentCapacity(history []batteryHealthHistoryPoint, sampleCount int) float64 {
-	if len(history) == 0 || sampleCount <= 0 {
-		return 0
-	}
-	start := len(history) - sampleCount
-	if start < 0 {
-		start = 0
-	}
-	values := make([]float64, 0, len(history)-start)
-	for _, point := range history[start:] {
-		if point.CapacityWh > 0 {
-			values = append(values, point.CapacityWh)
-		}
-	}
-	if len(values) == 0 {
-		return 0
-	}
-	for i := 1; i < len(values); i++ {
-		for j := i; j > 0 && values[j] < values[j-1]; j-- {
-			values[j], values[j-1] = values[j-1], values[j]
-		}
-	}
-	middle := len(values) / 2
-	if len(values)%2 == 0 {
-		return (values[middle-1] + values[middle]) / 2
-	}
-	return values[middle]
-}
-
-func batteryAgeMonths(now time.Time, history []batteryHealthHistoryPoint, firstCharging, firstDrive *time.Time) int {
-	var first time.Time
-	if len(history) > 0 {
-		first, _ = time.Parse("2006-01-02", history[0].Date)
-	}
-	for _, candidate := range []*time.Time{firstCharging, firstDrive} {
-		if candidate != nil && (first.IsZero() || candidate.Before(first)) {
-			first = *candidate
-		}
-	}
-	if first.IsZero() || !first.Before(now) {
-		return 0
-	}
-	return int(now.Sub(first).Hours() / (24 * 30.44))
+	value, _ := recentCapacityEvidence(history, sampleCount)
+	return value
 }
 
 func temperatureExposure(avgTempC *float64, sampleCount int) (*int, *string) {
-	if avgTempC == nil || sampleCount < 10 {
+	if avgTempC == nil || math.IsNaN(*avgTempC) || math.IsInf(*avgTempC, 0) || sampleCount < 10 {
 		reason := "insufficient_data"
 		return nil, &reason
 	}

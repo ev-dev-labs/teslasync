@@ -150,7 +150,7 @@ describe('SoftwareUpdateStatusBreakdown', () => {
   it('exposes the bars as a list named "By Status" (a11y)', () => {
     render(<SoftwareUpdateStatusBreakdown counts={{ installed: 2 }} total={2} />);
 
-    const list = screen.getByRole('list', { name: 'By Status' });
+    const list = screen.getByRole('list', { name: 'By status' });
     expect(list).toBeInTheDocument();
     expect(within(list).getAllByRole('listitem')).toHaveLength(1);
   });

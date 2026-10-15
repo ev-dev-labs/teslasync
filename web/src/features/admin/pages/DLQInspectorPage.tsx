@@ -19,8 +19,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertOctagon, BarChart3, History } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, ConfirmDialog, PanelTitle } from '@/components/ui';
+import { PageLayout, LayoutCard } from '@/components/layout';
+import { ConfirmDialog, Icon } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, QueryError, SectionErrorBoundary } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -31,18 +31,21 @@ import {
   useDLQReplay,
 } from '@/api/hooks/useDLQ';
 import type { DLQEntrySummary } from '@/types/admin-diagnostics';
+import { deriveDataState } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
+import { typography } from '@/lib/tokens';
 
 import {
   AuditPanel,
   EntriesTable,
   EntryDrawer,
   ReasonBreakdown,
-  StatusHeader,
 } from '../components/dlq-inspector';
+import { DLQOperationalBrief } from '../components/statstrip-ingest-dlq-redis/DLQOperationalBrief';
 
 export default function DLQInspectorPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.dlq.pageTitle', 'DLQ Inspector'));
+  usePageTitle(t('admin.dlq.pageTitle', 'DLQ inspector'));
 
   // Selected DLQ summary row drives both the drawer and the scoped
   // audit fetch. Keeping it in page state (rather than a route param)
@@ -56,17 +59,32 @@ export default function DLQInspectorPage() {
   const entry = useDLQEntry(selected?.id, !!selected);
   const audit = useDLQAudit(null, 50);
   const replay = useDLQReplay();
+  const listState = deriveDataState(list);
+  const auditState = deriveDataState(audit);
+  const entryState = useDataState(entry);
+  const entryReplayReady = selected !== null
+    && entryState.data?.id === selected.id
+    && entryState.data.replayable
+    && typeof entryState.data.inner_payload_b64 === 'string'
+    && entryState.status === 'ok'
+    && !entryState.isRefreshing
+    && !entryState.isRefreshBlocked
+    && list.data?.replay_enabled === true;
 
   const handleInspect = (row: DLQEntrySummary) => {
     setSelected(row);
   };
 
   const handleAskReplay = () => {
-    if (selected) setPendingReplay(selected);
+    if (selected && entryReplayReady) setPendingReplay(selected);
   };
 
   const handleConfirmReplay = async () => {
     if (!pendingReplay) return;
+    if (!entryReplayReady || entryState.data?.id !== pendingReplay.id) {
+      setPendingReplay(null);
+      return;
+    }
     try {
       const result = await replay.mutateAsync({ id: pendingReplay.id });
       // Server may return 200 OK with result="disabled" via a future
@@ -98,13 +116,17 @@ export default function DLQInspectorPage() {
   };
 
   return (
-    <PageContainer
-      title={t('admin.dlq.pageTitle', 'DLQ Inspector')}
+    <PageLayout
+      title={t('admin.dlq.pageTitle', 'DLQ inspector')}
       subtitle={t(
         'admin.dlq.subtitle',
         'Dead-letter queue — inspect failed ingests and replay them back to their source topic.',
       )}
-      query={list}
+      query={[list, audit]}
+      dataSources={[
+        { id: 'dlq-list', label: t('admin.dlq.panels.entries', 'Dead-letter entries'), query: list },
+        { id: 'dlq-audit', label: t('admin.dlq.panels.audit', 'Recent replay activity'), query: audit },
+      ]}
     >
       <div className="space-y-6">
         {replayDisabledBanner && (
@@ -123,10 +145,11 @@ export default function DLQInspectorPage() {
         {/* 1 — KPI band: full-width responsive metric grid (2 → 3 → 6 cols) */}
         <FadeIn>
           <SectionErrorBoundary name="dlq-status">
-            <StatusHeader
+            <DLQOperationalBrief
               data={list.data}
-              loading={list.isLoading}
-              error={list.isError ? list.error : undefined}
+              loading={listState.status === 'initial'}
+              retained={listState.hasData && list.isError}
+              error={listState.fatalError}
             />
           </SectionErrorBoundary>
         </FadeIn>
@@ -135,34 +158,34 @@ export default function DLQInspectorPage() {
         <FadeIn delay={0.1}>
           <SectionErrorBoundary name="dlq-entries">
             <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-              <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-                <PanelTitle className="mb-3 flex items-center gap-2">
-                  <AlertOctagon className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                  {t('admin.dlq.panels.entries', 'Dead-letter entries')}
-                </PanelTitle>
-                {list.isError ? (
-                  <QueryError error={list.error} onRetry={() => list.refetch()} />
-                ) : (
-                  <EntriesTable
-                    rows={list.data?.entries ?? []}
-                    loading={list.isLoading}
-                    onInspect={handleInspect}
-                  />
-                )}
-              </GlassPanel>
+              <div className="min-w-0 xl:col-span-2">
+                <LayoutCard
+                  title={t('admin.dlq.panels.entries', 'Dead-letter entries')}
+                  actions={<Icon icon={AlertOctagon} className={typography.color.muted} />}
+                >
+                  {listState.fatalError ? (
+                    <QueryError error={listState.fatalError} onRetry={() => list.refetch()} />
+                  ) : (
+                    <EntriesTable
+                      rows={list.data?.entries ?? []}
+                      loading={listState.status === 'initial'}
+                      onInspect={handleInspect}
+                    />
+                  )}
+                </LayoutCard>
+              </div>
 
-              <GlassPanel className="p-4 sm:p-5">
-                <PanelTitle className="mb-3 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                  {t('admin.dlq.panels.reasons', 'Failure reasons')}
-                </PanelTitle>
+              <LayoutCard
+                title={t('admin.dlq.panels.reasons', 'Failure reasons')}
+                actions={<Icon icon={BarChart3} className={typography.color.muted} />}
+              >
                 <ReasonBreakdown
                   rows={list.data?.entries ?? []}
-                  loading={list.isLoading}
-                  error={list.isError ? list.error : null}
+                  loading={listState.status === 'initial'}
+                  error={listState.fatalError}
                   onRetry={() => list.refetch()}
                 />
-              </GlassPanel>
+              </LayoutCard>
             </section>
           </SectionErrorBoundary>
         </FadeIn>
@@ -170,17 +193,16 @@ export default function DLQInspectorPage() {
         {/* 3 — Detail band: full-width global replay-audit log */}
         <FadeIn delay={0.2}>
           <SectionErrorBoundary name="dlq-audit">
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-3 flex items-center gap-2">
-                <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                {t('admin.dlq.panels.audit', 'Recent replay activity')}
-              </PanelTitle>
-              {audit.isError ? (
-                <QueryError error={audit.error} onRetry={() => audit.refetch()} />
+            <LayoutCard
+              title={t('admin.dlq.panels.audit', 'Recent replay activity')}
+              actions={<Icon icon={History} className={typography.color.muted} />}
+            >
+              {auditState.fatalError ? (
+                <QueryError error={auditState.fatalError} onRetry={() => audit.refetch()} />
               ) : (
-                <AuditPanel rows={audit.data?.rows ?? []} loading={audit.isLoading} />
+                <AuditPanel rows={audit.data?.rows ?? []} loading={auditState.status === 'initial'} />
               )}
-            </GlassPanel>
+            </LayoutCard>
           </SectionErrorBoundary>
         </FadeIn>
       </div>
@@ -188,8 +210,9 @@ export default function DLQInspectorPage() {
       <EntryDrawer
         open={selected !== null}
         summary={selected}
-        full={entry.data}
-        loading={entry.isLoading}
+        full={entryState.data}
+        loading={entryState.status === 'initial'}
+        state={entryState}
         replayEnabled={list.data?.replay_enabled ?? false}
         replayInFlight={replay.isPending}
         onClose={() => setSelected(null)}
@@ -202,15 +225,16 @@ export default function DLQInspectorPage() {
         message={t(
           'admin.dlq.confirm.message',
           'This will republish entry #{{id}} to its source topic. The action is logged and rate-limited.',
-          { id: pendingReplay?.id ?? 0 },
+          { id: pendingReplay?.id ?? '—' },
         )}
         confirmLabel={t('admin.dlq.confirm.confirm', 'Replay')}
         cancelLabel={t('common.cancel', 'Cancel')}
         variant="warning"
         loading={replay.isPending}
+        confirmDisabled={!entryReplayReady}
         onConfirm={handleConfirmReplay}
         onCancel={() => setPendingReplay(null)}
       />
-    </PageContainer>
+    </PageLayout>
   );
 }

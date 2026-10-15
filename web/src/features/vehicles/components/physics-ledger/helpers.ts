@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import { chartTokens } from '@/lib/tokens';
 
-export const LEDGER_ACCENT = '#0891b2';
+export const LEDGER_ACCENT = chartTokens.series[0];
 
-export const LEDGER_SECONDARY = '#0d9488';
+export const LEDGER_SECONDARY = chartTokens.series[1];
 
-export const LEDGER_TERTIARY = '#d97706';
+export const LEDGER_TERTIARY = chartTokens.series[2];
 
 export type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
 

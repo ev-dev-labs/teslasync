@@ -1,0 +1,369 @@
+{
+  "item": "audit-page-082",
+  "page": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+  "routes": ["/charging/:id"],
+  "purpose": "Inspect a single recorded charging session, its invoice/pack energy reconciliation, physics, energy ledger, charging curves, vehicle parameters and share links.",
+  "primaryGoal": "Understand what happened during this session, distinguish measured versus billed or inferred information, inspect specialist evidence, and optionally print or share it.",
+  "dataSources": [
+    {
+      "hook": "useChargingSessionDetail",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 96,
+      "endpoint": "GET /charging/{sessionID}",
+      "routeEvidence": "internal\\api\\router.go:3502-3509",
+      "owner": "chargingHandler.Get",
+      "behavior": "Route ID, enabled for non-null ID; polls only a live session; AbortSignal forwarded; historical DataState preserves retained records."
+    },
+    {
+      "hook": "useChargeTelemetry",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 109,
+      "endpoint": "GET /charging/{sessionID}/telemetry",
+      "routeEvidence": "internal\\api\\router.go:3510",
+      "owner": "chargingHandler.TelemetryReadings",
+      "behavior": "Session-owned readings; safeArray normalization; AbortSignal forwarded; independent historical DataState. Canonical typed energy fields coexist with optional display aliases; actual alias population and units were not verified."
+    },
+    {
+      "hook": "useVehicle",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 86,
+      "endpoint": "GET /vehicles/{vehicleID}",
+      "routeEvidence": "internal\\api\\router.go:3327-3329",
+      "owner": "vehicleHandler.Get",
+      "behavior": "Uses the session vehicle rather than the workspace vehicle; title/identity enrichment only; no explicit local failure/retry presentation."
+    },
+    {
+      "hook": "useChargingTelemetryLatest",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 473,
+      "endpoint": "GET /charging-telemetry/latest?vehicle_id={vehicleID}",
+      "routeEvidence": "internal\\api\\router.go:4128-4130",
+      "owner": "chargingTelemetryHandler.Latest",
+      "behavior": "Current session-vehicle data, not historical session evidence; cached DataState; missing response distinguished as unavailable; no explicit polling interval supplied."
+    },
+    {
+      "hook": "useChargePhysics",
+      "file": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "line": 32,
+      "endpoint": "GET /physics/charging/{sessionID}",
+      "routeEvidence": "internal\\api\\router.go:3523",
+      "owner": "physicsHandler.ChargePhysics",
+      "behavior": "Historical query policy, AbortSignal, independent loading/fatal-error rendering."
+    },
+    {
+      "hook": "useChargeLedger",
+      "file": "web\\src\\api\\hooks\\usePhysicsLedger.ts",
+      "line": 65,
+      "endpoint": "GET /physics/charging/{sessionID}/ledger",
+      "routeEvidence": "internal\\api\\router.go:3527",
+      "owner": "physicsLedgerHandler.ChargeLedger",
+      "behavior": "Historical query policy, readPhysicsLedger adapter, truncation warning; adapter internals not inspected."
+    },
+    {
+      "hook": "useSessionShareLinks / useCreateSessionShareLink / useRevokeSessionShareLink",
+      "file": "web\\src\\api\\hooks\\useSharing.ts",
+      "line": 52,
+      "endpoints": ["GET /charging/{sessionID}/shares", "POST /charging/{sessionID}/share", "DELETE /shares/{token}"],
+      "routeEvidence": "internal\\api\\router.go:3495,3512-3513",
+      "owner": "shareHandler",
+      "behavior": "Lists safeArray shares, explicit create/revoke mutations invalidate session-share keys and use existing toasts. No mutation exercised."
+    },
+    {
+      "hook": "useAiStream",
+      "file": "web\\src\\components\\ai\\AIChargingDiagnosis.tsx",
+      "line": 61,
+      "endpoint": "POST /ai/charging/{sessionID}/diagnose",
+      "routeEvidence": "Endpoint declared in component; router handler construction inspected at internal\\api\\router.go:1298, exact registration not established in this bounded audit.",
+      "owner": "AIChargingDiagnosis / withAiFeature / aichargdiag",
+      "behavior": "Opt-in feature gate, positive-safe-integer validation, stream scope identity resets on session changes. No AI request exercised."
+    },
+    {
+      "hook": "useUnits / useFormatting / useNumberFormatting",
+      "owner": "existing saved unit/currency/number preferences",
+      "behavior": "Page uses SI distance, energy and power converters at render boundaries; configured cost fallback and specialist invoice formatting retained. Preference hook internals not inspected."
+    }
+  ],
+  "components": [
+    {"owner": "@/components/layout", "names": ["PageLayout", "CardGrid", "LayoutCard"], "role": "Existing page shell, full allocated-width card geometry and titled panels."},
+    {"owner": "@/components/ui", "names": ["GlassPanel", "Badge", "HelpTooltip", "PrintButton", "Button", "SectionTitle", "Text", "Modal", "Input", "Select", "Toggle", "CopyButton", "Table"], "role": "Surfaces, localized actions, semantic status, help, sharing controls and ledger table."},
+    {"owner": "@/components/data-display", "names": ["MetricBar", "InlineMetric", "AnimatedNumber", "KVList", "DateTime", "DataProvenanceBadge", "OperationalBrief"], "role": "Measurements, metadata, provenance, timestamps and retained eight-reading summary."},
+    {"owner": "@/components/charts", "names": ["LinearGauge", "EmbeddedChart", "ChartTimeRangeProvider", "ChartLegend", "ChartBrush", "ChartTooltip"], "role": "Four charts, three synchronized time axes, exports, fullscreen, legend persistence and screen-reader fallback."},
+    {"owner": "@/components/feedback", "names": ["Skeleton", "EmptyState", "QueryError", "LiveStaleDataBanner", "StaleRefreshWarning", "PageHeaderSkeleton", "ChartBlockSkeleton"], "role": "Source-specific recovery, retained data and loading outlines."},
+    {"owner": "@/components/motion", "names": ["FadeIn", "StaggerContainer", "StaggerItem"], "role": "Existing entrance animation owners; shared reduced-motion behavior not exercised."},
+    {"owner": "web\\src\\features\\charging\\components", "names": ["DetailPlacement", "DetailSessionStats", "DetailSourceOutline", "ChargingSummaryBrief", "ChargeBillTruthPanel", "ChargePhysicsPanel", "ChargeLedgerCompactPanel", "ShareSessionDialog"], "role": "Existing charging-specific source, statistic and specialist presentation owners."},
+    {"owner": "web\\src\\features\\vehicles\\components\\physics-ledger\\ChargeLedgerPanel.tsx", "names": ["ChargeLedgerPanel"], "role": "Existing cross-feature ledger renderer; preserve wall/preconditioning/session energy and efficiency evidence."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+      "line": 57,
+      "rule": "MDC-002 / mission section 33",
+      "detail": "Local isDC and synthesizeCurve compete with charging-curve/helpers.ts isDcSession/generateChargingCurve and chargeBillTruth.ts isDcCharger. They have materially different AC classification and model defaults.",
+      "fix": "Resolve classification against the actual source contract in the existing charging domain owner; retain distinct model explanations until equivalence is proven. Do not silently substitute one curve for another.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+      "line": 730,
+      "rule": "MDC-034",
+      "detail": "Three time-chart frames repeat source-state branching, export/table metadata, synchronization and cursor wiring; they already share EmbeddedChart and ChargingChartSync.",
+      "fix": "Keep existing shared chart owners. If local extraction is useful, retain all chart-specific columns, axes, series and persistent chart keys; no new global chart engine.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport behavior unverified",
+    "observed": ["CardGrid has full/half sizing and named source placements.", "Gauges use container-responsive 2/3/5-column reflow; progress and summary use container breakpoints.", "Chart sections use min-w-0 and explicit mobileHeight; timestamp content reflows.", "Header actions/status metadata wrap; back link has an explicit 44px target."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\ShareSessionDialog.tsx",
+        "line": 181,
+        "rule": "MDC-043",
+        "detail": "Share cards use a single flex row with two trailing actions and a nonwrapping metadata row. Long expiry labels, RTL and 320px may crowd the controls; title truncation hides full text.",
+        "fix": "Exercise narrow/long-label states; allow metadata wrapping or stacked actions and retain discoverable full titles without dropping share details.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredValidation": "320/375/390/430/768/1024/1280/1440/1920/2560px, allocated container widths, 200% text, RTL, long labels and open share dialog."
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, screen reader, contrast, forced colors and reduced motion unverified",
+    "observed": ["Localized back-link accessible name and visible focus classes.", "Status text accompanies semantic badges; most page icons explicitly decorative.", "Charts carry localized labels, data columns and full-resolution exports.", "At more than 2000 telemetry rows the accessible table is deliberately omitted, with a spoken summary and every visual sample retained.", "Existing Modal and shared controls own dialog interactions; runtime focus not tested."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+        "line": 654,
+        "rule": "MDC-040 / MDC-044",
+        "detail": "The curve X-axis uses hardcoded 'SoC %', unlike its localized series/table headings. The no-table dense-series path offers only a general description, not equivalent navigable sample data within the chart.",
+        "fix": "Localize the axis using the existing catalog. Preserve the documented dense-series cap and exports; validate accessible export/table alternatives before proposing any changed dense-series renderer.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\ShareSessionDialog.tsx",
+        "line": 206,
+        "rule": "MDC-040",
+        "detail": "Revoke is a small icon-only button; a localized name is present, but effective touch size/focus and pending duplicate-click behavior require verification.",
+        "fix": "Use the existing Button target-size behavior and mutation pending state; verify 44px reachability and keyboard feedback without altering revoke semantics.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "primary": "Session initial loading keeps header and 15 named source shells. Missing session shows QueryError with retry/list navigation plus source outlines. Retained session survives refresh failure with warning/provenance.",
+    "telemetry": "Timeline, temperature and electrical sections separately render loading, fatal error with retry, chart or explanatory empty state. Retained telemetry warning is present.",
+    "live": "Advanced parameters independently render loading/error/usable retained values/unavailable; explicitly labeled latest reported values. Current vehicle state also appears in the historical session status row.",
+    "sharing": "Loading/error/empty/list states preserved; create and revoke errors use mutation toasts. Existing-share error has no local retry.",
+    "specialists": "Physics and ledger have loading and fatal retry states, but return null inside their shells for resolved absent payload and do not show refresh warnings.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+        "line": 73,
+        "rule": "MDC-026 / MDC-045 / mission principle 3",
+        "detail": "Absent telemetry, including initial load or failure, yields a plausible 21-point curve using default 0/100% and 50kW values. A small 'estimated' label exists, but the curve and export use the same chart affordances as measured data.",
+        "fix": "Do not introduce or amplify fabricated evidence. Preserve the existing modeled capability distinctly as a labeled model with input provenance, while showing telemetry loading/error/unavailable and retry separately; never promote model points into recorded data.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+        "line": 309,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Missing energy, end SoC, peak/average power become numeric zero in summary/gauges; progress computes unknown SoC endpoints as zero. durationMinutes returns zero for ongoing/invalid intervals. Unknown readings can be described as source measurements available.",
+        "fix": "Preserve every metric but pass nullable raw values and explicit missing reasons to existing metric owners; keep genuine zero and billed-versus-pack precedence distinct. Treat unknown/ongoing duration separately from measured zero.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\ChargePhysicsPanel.tsx",
+        "line": 34,
+        "rule": "MDC-026",
+        "detail": "Physics and ChargeLedgerCompactPanel retain successful data via useDataState but have no retained-refresh warning; resolved missing payload renders no useful body.",
+        "fix": "Reuse StaleRefreshWarning and EmptyState in each independent specialist shell; preserve honesty text, truncation warning, story, schedule and navigation.",
+        "owner": "page",
+        "confidence": "high",
+        "additionalEvidence": "web\\src\\features\\charging\\components\\ChargeLedgerCompactPanel.tsx:30-56"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\ChargePhysicsPanel.tsx",
+        "line": 38,
+        "rule": "null safety",
+        "detail": "physics.story.map and nested etiquette/schedule access assume complete payloads. ChargePhysics types declare them required; actual backend nullability was not inspected, so this is a contract-hardening risk, not a reproduced crash.",
+        "fix": "Verify real response shape and normalize nullable collections at the existing typed boundary; guard missing nested evidence without manufacturing values.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+      "line": 364,
+      "rule": "MDC-010 / MDC-034 / mission sections 7 and 27",
+      "detail": "Five gauge accents and charts hardcode saturated hex colors, including cyan #00f0ff. Source scan found 18 hex literals, despite existing chartTokens cursor/axis owners. Gauge glow fields are defined but not passed; this is not evidence of rendered glow.",
+      "fix": "Reuse existing restrained theme/chart palette and semantic tokens for gauge and series colors. Reduce decorative gradient intensity without removing series, user palette choices, curve meaning or legends.",
+      "owner": "page",
+      "confidence": "high",
+      "additionalEvidence": "ChargingDetailPage.tsx:668-683,777-813,907-930,1017-1034"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\ShareSessionDialog.tsx",
+      "line": 125,
+      "rule": "MDC-012 / MDC-013",
+      "detail": "Dialog uses raw p/h3 typography classes and fixed green-400/red-400 rather than existing Text/role wrappers and semantic tokens.",
+      "fix": "Use existing Text/PanelTitle/Caption and semantic status/danger tokens, retaining all text, input labels and actions; no new typography abstraction.",
+      "owner": "page",
+      "confidence": "high",
+      "additionalEvidence": "ShareSessionDialog.tsx:89,158,183,213,221"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\ChargeLedgerCompactPanel.tsx",
+      "line": 21,
+      "rule": "MDC-015",
+      "detail": "Compact ledger wraps ChargeLedgerPanel, which supplies another GlassPanel/title, producing nested panel chrome for one ledger source.",
+      "fix": "Assess mounted hierarchy; preserve full ledger content and both navigation/truncation metadata. Only request an embedded variant of the existing ledger renderer if supported by concrete additional consumers.",
+      "owner": "page",
+      "confidence": "high",
+      "additionalEvidence": "web\\src\\features\\vehicles\\components\\physics-ledger\\ChargeLedgerPanel.tsx:26"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+      "line": 245,
+      "rule": "MDC-045",
+      "detail": "Energy chart uses optional energy_added directly and labels it kWh. The inspected type instead exposes canonical ac_charging_energy_in_wh/dc_charging_energy_in_wh. Live battery_range_mi is passed to a meters converter; actual wire semantics of that legacy-named field were not established.",
+      "fix": "Trace the current backend payload before changing calculations. Bind to verified SI source fields and convert only for display/export; do not infer units from legacy aliases or add a dual-shape adapter.",
+      "owner": "integration",
+      "confidence": "high",
+      "additionalEvidence": "ChargingDetailPage.tsx:798-804,1134-1135; web\\src\\api\\types.ts:231-261,2186-2205"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+      "line": 199,
+      "rule": "MDC-026 / MDC-032",
+      "detail": "Historical session UI also displays current vehicle charging state in the summary without a local 'current vehicle' qualifier. Detail route range control is disabled by exact-path membership; workspace vehicle selector remains enabled, although this page correctly queries the record's vehicle.",
+      "fix": "Retain record-owned scope and advanced live capability; label current-vehicle status distinctly from session ended_status and expose freshness. Have workspace owner assess record-detail vehicle-selector semantics rather than adding another picker or range.",
+      "owner": "integration",
+      "confidence": "high",
+      "additionalEvidence": "ChargingDetailPage.tsx:457-460,1069-1073; web\\src\\lib\\workspaceScope.ts:156-167"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\detail-modernization\\DetailSourceOutline.tsx",
+      "line": 2,
+      "rule": "MDC-002 category imports",
+      "detail": "Feature dependencies import concrete layout-reference/stat-reference sub-barrels even though canonical category barrels are available.",
+      "fix": "Use existing layout/data-display category exports without changing public component ownership or creating wrappers.",
+      "owner": "page",
+      "confidence": "high",
+      "additionalEvidence": "DetailPlacement.tsx:2; DetailSessionStats.tsx:3"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+      "line": 168,
+      "rule": "MDC-047",
+      "detail": "toDistanceDisplay is recreated each render and included in timeSeriesData useMemo dependencies; this invalidates mapping memoization even for very large retained telemetry.",
+      "fix": "Use existing converter directly with primitive preference dependency or stable useCallback; preserve every sample and avoid unmeasured downsampling.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Verify SI aliases and source trust; remove unknown-as-zero implications.", "Separate modeled curve and present current-versus-historical scope explicitly.", "Complete independent specialist missing/refresh states.", "Apply restrained existing palette/typography and validate share-dialog responsiveness/accessibility."],
+    "runtimeAcceptance": "not claimed"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace record-detail selector semantics review",
+      "owner": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "Assess /charging/:id as record-owned vehicle scope; range remains record-owned, no page picker; preserve shell selectors on routes that actually consume them.",
+      "usedBy": ["/charging/:id"],
+      "dependsOn": ["Shell/workspace owner review of other record-detail consumers; no speculative shared edit authorized"],
+      "status": "review needed; not an established missing shared API"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+      "line": 57,
+      "rule": "one domain source of truth",
+      "detail": "isDC treats any nonempty non-unknown type, including 'ac', as DC; chargeBillTruth.isDcCharger explicitly excludes 'ac'; curve/helpers.isDcSession uses charging category and peak-power evidence.",
+      "fix": "Unify verified classification in the existing domain owner, retaining intended behavior for every charger category; resolve before changing curve inference.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "3AECE59B6AA987CBE67780F310477584E31DCF30017858E7D415B4EC9302AD90",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashScope": "Current root page raw bytes; no Git snapshot or historic hash",
+    "currentLineCount": 1247,
+    "pagePlusDirectDetailModernizationComponentsLineCount": 1453,
+    "lineCountScope": "1247 page + 21 DetailPlacement + 142 DetailSessionStats + 43 DetailSourceOutline; tests excluded. Other inspected specialist files are additional preserved source, not included in this decomposition subtotal.",
+    "sectionCount": 20,
+    "contentSectionCount": 17,
+    "headingSectionCount": 3,
+    "sections": ["summary", "diagnosis", "metrics", "bill-truth", "physics", "ledger", "battery-heading", "gauges", "battery-progress", "analysis-heading", "charge-curve", "charge-summary", "session-timeline", "temperature", "voltage-current", "details-heading", "advanced", "session-info", "location", "timestamps"],
+    "sourceCounts": {"CardGrid": 1, "CardGridItems": 20, "LayoutCard": 7, "EmbeddedChart": 4, "GlassPanel": 1, "ChartContainer": 0, "skeletonOutlinePanels": 15, "summaryMetrics": 8, "gauges": 5},
+    "actions": ["Back to /charging", "Retry session", "Retry telemetry", "Retry live telemetry", "Retry physics", "Retry ledger", "Print", "Open/close share dialog", "Generate share with optional title, telemetry/cost toggle and 7/30/90/never expiry", "Copy/open generated share", "Create another link", "Copy/revoke existing share", "AI diagnosis when enabled", "Four chart exports/fullscreen", "Timeline brush", "Time-chart cursor synchronization", "Persistent legend hiding", "Navigate to /physics-cockpit", "Navigate to /tesla-physics/ledger"],
+    "dataBehavior": ["Preserve route/session IDs, safeArray normalization, query keys, inherited policies and AbortSignal cancellation.", "Retained session/telemetry must remain on refresh errors; keep independent source recovery.", "Preserve invoice energy/cost/rate priority, pack comparison, configuration-based estimate and all reason explanations.", "Preserve numeric SI payload/cache values; display conversion, preferences, currency/locale and timezone semantics only at boundaries.", "Keep all curve/time/temperature/electrical samples, three-series time charts, signed source readings and current absolute-value transformations until domain equivalence is established.", "Retain dense-series animation suppression and 2000-row table cap without silently discarding data.", "Keep location/charger/vehicle metadata, timestamps, advanced parameters, physics story/schedule/dwell and complete ledger evidence.", "No second workspace range or vehicle selector; session record owns detail queries.", "Preserve opt-in AI/privacy/share behaviors and existing default share settings.", "Existing modeled curve is a capability requiring explicitly inferred trust; never assert it is measured evidence."],
+    "sourceInventoryLimits": "Mounted page root fully read. Direct presentation owners inspected; deeper shared primitives, ledger TermRow/helpers, AI stream/gates and backend handlers were not exhaustively audited."
+  },
+  "evidenceLimits": {
+    "auditMode": "Phase 0 read-only source audit; only report and heartbeat writes",
+    "runtime": "unverified; no browser/server or API exercised",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified on composed backgrounds",
+    "viewport": "unverified",
+    "tests": "not run",
+    "typescript": "not run; source-only assignment",
+    "buildLint": "not run; prohibited",
+    "skillProtocol": "audit-violations skill and script read; script not executed because it invokes project-wide TypeScript. Equivalent bounded source pattern counts performed without claiming a clean full audit.",
+    "sourceScan": {
+      "tool": "Python regex over exact root page",
+      "exitCode": 0,
+      "output": "{\"inlineStyle\":0,\"rawControls\":1,\"directLibraryImports\":0,\"neonClasses\":0,\"hexColors\":18,\"GlassPanel\":1,\"ChartContainer\":0,\"EmbeddedChart\":4,\"LayoutCard\":7,\"CardGridItems\":20}",
+      "interpretation": "rawControls=1 is the explanatory <table> comment at line 62, not a rendered raw control; no rendered forbidden lowercase control found by this scan. Counts are source patterns, not runtime or full dependency acceptance.",
+      "failedAttempt": "Initial PowerShell count command failed with parser exit 1; corrected Python count command completed with exit 0."
+    },
+    "backend": "Router registrations inspected for charging, live telemetry, vehicle, physics, ledger and share endpoints; handlers/database payload/unit contracts unverified. AI endpoint registration not established.",
+    "historicalEvidence": "No historical acceptance borrowed; no Git operation performed.",
+    "writeScope": ["docs\\frontend-audits\\audit-page-082.json", ".agent-status\\audit-page-082.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\ChargingDetailPage.tsx",
+    "web\\src\\features\\charging\\components\\detail-modernization\\DetailPlacement.tsx",
+    "web\\src\\features\\charging\\components\\detail-modernization\\DetailSessionStats.tsx",
+    "web\\src\\features\\charging\\components\\detail-modernization\\DetailSourceOutline.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\features\\charging\\components\\ChargeBillTruthPanel.tsx",
+    "web\\src\\features\\charging\\components\\ChargePhysicsPanel.tsx",
+    "web\\src\\features\\charging\\components\\ChargeLedgerCompactPanel.tsx",
+    "web\\src\\features\\charging\\components\\ShareSessionDialog.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve\\helpers.ts",
+    "web\\src\\features\\charging\\lib\\chargeBillTruth.ts",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\LedgerPanels.ts",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\ChargeLedgerPanel.tsx",
+    "web\\src\\components\\ai\\AIChargingDiagnosis.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+    "web\\src\\api\\hooks\\usePhysicsLedger.ts",
+    "web\\src\\api\\hooks\\useSharing.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\types\\teslaPhysics.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

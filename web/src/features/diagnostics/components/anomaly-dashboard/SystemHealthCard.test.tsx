@@ -31,9 +31,8 @@ describe('SystemHealthCard', () => {
     const item = screen.getByRole('listitem');
     expect(screen.getByText('battery')).toBeInTheDocument();
     expect(screen.getByText('normal')).toBeInTheDocument();
-    // 'normal' → success (green) tone on the row container.
-    expect(item.className).toContain('bg-emerald-500/10');
-    expect(item.className).toContain('border-emerald-500/30');
+    expect(item).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
+    expect(screen.getByText('normal').parentElement?.className).toContain('bg-[var(--semantic-success-bg)]');
     // Known category → its own lucide glyph, not the fallback shield.
     expect(container.querySelector('svg.lucide-battery')).not.toBeNull();
     expect(container.querySelector('svg.lucide-shield')).toBeNull();
@@ -43,7 +42,8 @@ describe('SystemHealthCard', () => {
     const { container } = renderCard({ category: 'tires', status: 'warning' });
 
     const item = screen.getByRole('listitem');
-    expect(item.className).toContain('bg-amber-500/10');
+    expect(item).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
+    expect(screen.getByText('warning').parentElement?.className).toContain('bg-[var(--semantic-warning-bg)]');
     expect(screen.getByText('warning')).toBeInTheDocument();
     expect(container.querySelector('svg.lucide-car')).not.toBeNull();
   });
@@ -52,7 +52,8 @@ describe('SystemHealthCard', () => {
     const { container } = renderCard({ category: 'motors', status: 'critical' });
 
     const item = screen.getByRole('listitem');
-    expect(item.className).toContain('bg-red-500/10');
+    expect(item).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
+    expect(screen.getByText('critical').parentElement?.className).toContain('bg-[var(--semantic-danger-bg)]');
     expect(screen.getByText('critical')).toBeInTheDocument();
     expect(container.querySelector('svg.lucide-zap')).not.toBeNull();
   });
@@ -64,8 +65,9 @@ describe('SystemHealthCard', () => {
     const { container } = renderCard({ category: 'hvac', status: 'info' });
 
     const item = screen.getByRole('listitem');
-    expect(item.className).toContain('bg-sky-500/10');
-    expect(item.className).not.toContain('bg-emerald-500/10');
+    expect(item).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
+    expect(screen.getByText('info').parentElement?.className).toContain('bg-[var(--semantic-info-bg)]');
+    expect(screen.getByText('info').parentElement?.className).not.toContain('bg-[var(--semantic-success-bg)]');
     expect(screen.getByText('info')).toBeInTheDocument();
     expect(container.querySelector('svg.lucide-wind')).not.toBeNull();
   });
@@ -82,8 +84,8 @@ describe('SystemHealthCard', () => {
     const { container } = renderCard({ category: 'charging', status: null });
 
     const item = screen.getByRole('listitem');
-    expect(item.className).toContain('bg-sky-500/10');
-    expect(item.className).not.toContain('bg-emerald-500/10');
+    expect(item).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
+    expect(screen.getByText('Unknown').parentElement?.className).toContain('bg-[var(--semantic-info-bg)]');
     // Status label falls back to a friendly 'Unknown' — never 'anomaly.status.'.
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText(/anomaly\.status/)).toBeNull();
@@ -98,7 +100,7 @@ describe('SystemHealthCard', () => {
     expect(screen.queryByText(/anomaly\.category/)).toBeNull();
     // The (valid) status is still respected.
     expect(screen.getByText('critical')).toBeInTheDocument();
-    expect(screen.getByRole('listitem').className).toContain('bg-red-500/10');
+    expect(screen.getByText('critical').parentElement?.className).toContain('bg-[var(--semantic-danger-bg)]');
   });
 
   it('exposes the full category name via a title attribute on the truncated label', () => {
@@ -116,6 +118,23 @@ describe('SystemHealthCard', () => {
     const hidden = container.querySelectorAll('svg[aria-hidden="true"]');
     expect(hidden.length).toBeGreaterThanOrEqual(2);
   });
+
+  it.each(['normal', 'warning', 'critical', 'info', 'degraded', null, undefined])(
+    'keeps surfaces neutral and geometry intact for status %p',
+    (status) => {
+      const { container } = renderCard({ category: 'battery', status });
+      const item = screen.getByRole('listitem');
+      expect(item).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
+      expect(item.className).not.toContain('--semantic-');
+      expect(item).toHaveClass('flex', 'items-center', 'gap-3', 'rounded-xl', 'border', 'p-3');
+      const icon = container.querySelector('svg.lucide-battery');
+      expect(icon?.parentElement).toHaveClass(
+        'bg-[var(--surface-2)]', 'ring-[var(--border-default)]',
+        'h-9', 'w-9', 'rounded-lg', 'ring-1',
+      );
+      expect(icon).toHaveClass('h-4', 'w-4');
+    },
+  );
 
   describe('healthSeverity', () => {
     it.each([

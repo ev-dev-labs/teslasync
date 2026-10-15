@@ -3,6 +3,7 @@ package rediscache
 import (
 	"context"
 	"net"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -63,24 +64,16 @@ func newTestClient(t *testing.T) (*cache.Client, *miniredis.Miniredis) {
 // reliable.
 func sampleVehicle(id string) *vehicle.Vehicle {
 	ts := time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)
+	model, color := "model3", "midnight-silver"
 	return &vehicle.Vehicle{
-		ID:            id,
-		UserID:        "user-42",
-		VIN:           "5YJ3E1EA7KF000001",
-		DisplayName:   "Rocinante ☄",
-		Model:         "model3",
-		Year:          2025,
-		Color:         "midnight-silver",
-		FSMState:      fsm.State("parked"),
-		SubFSMState:   fsm.State("idle"),
-		OdometerMiles: 12345.6,
-		BatteryLevel:  87,
-		RangeMiles:    241.3,
-		IsCharging:    false,
-		Latitude:      37.7749,
-		Longitude:     -122.4194,
-		CreatedAt:     ts,
-		UpdatedAt:     ts.Add(time.Hour),
+		ID:          id,
+		TeslaID:     42,
+		VIN:         "5YJ3E1EA7KF000001",
+		DisplayName: "Rocinante ☄",
+		Model:       &model,
+		Color:       &color,
+		CreatedAt:   ts,
+		UpdatedAt:   ts.Add(time.Hour),
 	}
 }
 
@@ -96,7 +89,7 @@ func vehiclesEqual(a, b *vehicle.Vehicle) bool {
 	ac, bc := *a, *b
 	ac.CreatedAt, ac.UpdatedAt = time.Time{}, time.Time{}
 	bc.CreatedAt, bc.UpdatedAt = time.Time{}, time.Time{}
-	return ac == bc
+	return reflect.DeepEqual(ac, bc)
 }
 
 func TestNewVehicleCache(t *testing.T) {
@@ -162,8 +155,12 @@ func TestVehicleCacheSetGetRoundTrip(t *testing.T) {
 			if got == nil {
 				t.Fatal("Get returned nil vehicle with ok=true")
 			}
-			if !vehiclesEqual(got, tc.v) {
-				t.Fatalf("round-trip mismatch:\n got  = %+v\n want = %+v", got, tc.v)
+			want := *tc.v
+			want.Year, want.FSMState, want.SubFSMState = 0, "", ""
+			want.OdometerMiles, want.BatteryLevel, want.RangeMiles = 0, 0, 0
+			want.IsCharging, want.Latitude, want.Longitude = false, 0, 0
+			if !vehiclesEqual(got, &want) {
+				t.Fatalf("metadata round-trip mismatch:\n got  = %+v\n want = %+v", got, want)
 			}
 		})
 	}

@@ -23,6 +23,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 
 import { SettingsActionCard, type SettingsActionCardProps } from './SettingsActionCard'
 import { GLOW_CLASSES } from '@/components/ui/GlassPanel'
+import { neonColorMap } from '@/lib/tokens'
 
 const DEFAULTS: Pick<SettingsActionCardProps, 'icon' | 'title' | 'description'> = {
   icon: <span data-testid="glyph" />,
@@ -96,7 +97,7 @@ describe('SettingsActionCard — link card', () => {
   it('derives the link accessible name from the title + description', () => {
     renderCard({ href: '/data-export' })
 
-    const link = screen.getByRole('link', { name: /Data Export/i })
+    const link = screen.getByRole('link', { name: /Data export/i })
     expect(link).toBeInTheDocument()
     expect(link.textContent).toContain('Export drives and charging data')
   })
@@ -131,25 +132,25 @@ describe('SettingsActionCard — link card', () => {
 describe('SettingsActionCard — iconColor tint + glow mapping', () => {
   it('defaults to the cyan tint when iconColor is omitted', () => {
     renderCard()
-    expect(iconBoxClasses()).toContain('text-cyan-300')
+    expect(iconBoxClasses()).toContain(neonColorMap.cyan.text)
   })
 
   it('uses the green tint and a matching green hover glow for a green link', () => {
     const { container } = renderCard({ iconColor: 'green', href: '/x' })
-    expect(iconBoxClasses()).toContain('text-emerald-300')
+    expect(iconBoxClasses()).toContain(neonColorMap.green.text)
     expect(panelOf(container).className).toContain(GLOW_CLASSES.green)
   })
 
   it('uses the purple tint and a matching purple hover glow for a purple link', () => {
     const { container } = renderCard({ iconColor: 'purple', href: '/x' })
-    expect(iconBoxClasses()).toContain('text-purple-300')
+    expect(iconBoxClasses()).toContain(neonColorMap.purple.text)
     expect(panelOf(container).className).toContain(GLOW_CLASSES.purple)
   })
 
   it('falls back to the cyan glow for a color GlassPanel cannot glow (red)', () => {
     const { container } = renderCard({ iconColor: 'red', href: '/x' })
     // The icon tint still reflects the requested color…
-    expect(iconBoxClasses()).toContain('text-rose-300')
+    expect(iconBoxClasses()).toContain(neonColorMap.red.text)
     // …but the panel glow degrades to cyan since GlassPanel has no red glow.
     expect(panelOf(container).className).toContain(GLOW_CLASSES.cyan)
   })

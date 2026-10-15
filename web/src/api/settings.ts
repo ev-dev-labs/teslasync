@@ -20,8 +20,9 @@ import type {
 } from './types'
 
 // === Settings ===
-/** Fetches current application settings (units, language, cost). */
-export const getSettings = () => request<AppSettings>('/settings')
+/** Fetches current application settings (units, language, cost), with optional Query cancellation. */
+export const getSettings = (signal?: AbortSignal) =>
+  signal ? request<AppSettings>('/settings', { signal }) : request<AppSettings>('/settings')
 /** Persists updated application settings. */
 export const updateSettings = (s: AppSettings) => request<AppSettings>('/settings', { method: 'PUT', body: JSON.stringify(s) })
 /** Toggles the Tesla API suspension flag (blocks all Tesla Fleet API calls). */

@@ -1,0 +1,3359 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-system-commands",
+  "attempt": 1,
+  "status": "DONE",
+  "completionMeaning": "Source-QA report only, not repair/native/page/application approval.",
+  "page": "web\\src\\features\\system\\pages\\CommandsPage.tsx",
+  "routes": [
+    "/commands"
+  ],
+  "excluded": "CommandReliabilityPage is distinct; shared useCommands file inspected only.",
+  "deadline": {
+    "reservationUtc": "2026-10-14T02:37:46.371Z",
+    "returnUtc": "2026-10-14T02:57:46.371Z",
+    "hardUtc": "2026-10-14T03:02:46.371Z",
+    "reset": false
+  },
+  "authority": {
+    "orchestrator": "Full docs/orchestrator-loop.md read twice; worker boundaries only.",
+    "contract": "Full raw contract read command preserved; semantic review foundational MDC001-080 lines1-650, Commands references and explicit return-target addendum2481-EOF. Unrelated domain addenda not comprehensively adjudicated.",
+    "mission": "Principles/architecture,14-26 responsive/mobile/forms/buttons/overlays/states,29-37 commands/a11y/motion/types/extremes,43-45 QA/DoD.",
+    "inventory": "Existing /commands row235,G179/G186/G187, audit-page-184 preservation.",
+    "handoff": "Current new-machine recovery: Phases0-5 closed,Phase6 open,Phase7 NOTRUN; historical receipts not fresh proof.",
+    "instructions": [
+      "docs/frontend-worker-conventions.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "precedence": "Current contract/orchestrator and explicit source-only restrictions override legacy neon/source-unit and generic test examples. No scoped AGENTS found."
+  },
+  "objectiveAndDuplicates": {
+    "firstCheck": "Assigned JSON/log absent. Exact row210 [~] attempt1 depends phase5-page-system-commands; artifact-only scope. No completed duplicate Phase6 objective found.",
+    "completedRelated": "phase5-page-system-commands [x] source-only, audit-page-184 [x] historical audit; neither is Phase6 acceptance. Historical repeated findings linked below.",
+    "ownerSearch": "Exact source paths for tiles/dialogs/center/workspace/config/useCommands/useVehicleCommand/teslaAuthRecovery/operationalMode searched. No active exact source-fix owner found. Do not redispatch old completed objectives.",
+    "reuseOwners": [
+      "phase3-data-state [x]",
+      "phase3-use-data-state [x]",
+      "phase5-current-source-catalog-closure [x]"
+    ],
+    "distinctOwners": [
+      "phase6-qa-system-command-reliability [~] separate readonly QA",
+      "phase6-rescue-system-command-history [!] history page/test only",
+      "phase6-native-operational-mode-mobile-target [x] OperationalModeSegment only"
+    ],
+    "sharedApiExpansionNeeded": false,
+    "catalogChangeRequested": false,
+    "finalQueue": [
+      {
+        "line": 274,
+        "literal": "| [~] | 6 | phase6-qa-system-commands | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-commands.json; web\\logs\\phase6-qa-system-commands.log | phase5-page-system-commands | 1 | reserved02:37:46.371Z; actor pending | - | CommandsPage/direct supports; no vehicle/auth/command mutations. |"
+      }
+    ]
+  },
+  "dataSources": [
+    {
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "hook": "useVehicles",
+      "endpoint": "GET /vehicles",
+      "behavior": "Shared key/signal/safeArray; route DataState retains roster."
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 260,
+      "hook": "useVehicleState",
+      "endpoint": "GET /vehicles/{id}/state optional as_of",
+      "behavior": "Raw readings plus observedAt/freshness/verifiedFields; live policy and15sec caller interval; historical polling off."
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useCommands.ts",
+      "line": 93,
+      "hook": "useCommandLatest",
+      "endpoint": "GET /vehicles/{id}/commands/latest",
+      "behavior": "Normalized ID key/signal/null->[]; consumer loses trust metadata."
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useVehicleCommand.ts",
+      "line": 50,
+      "hook": "useVehicleCommand",
+      "endpoint": "POST /vehicles/{id}/command",
+      "behavior": "{command,params},requiresLiveMode/networkMode always,success discriminator/backend errors/four invalidations; never invoked."
+    }
+  ],
+  "preservation": {
+    "pageLines": 137,
+    "primaryContentSections": 3,
+    "sections": [
+      "Header/fleet last-known metadata/history",
+      "Vehicle hero battery/range/cabin/access",
+      "Readiness/motion/freshness/asleep-offline guidance/pending-result",
+      "Workspace/search/favorites/domains/categories",
+      "Three conditional input/select/confirmation dialogs",
+      "Three alternate loading/error/empty fallback shells"
+    ],
+    "catalogue": {
+      "entries": 67,
+      "offNames": 8,
+      "wireActions": 75,
+      "domains": 4,
+      "categories": 14
+    },
+    "actions": [
+      "Shared vehicle selection/keyed center",
+      "History /command-history",
+      "Roster/state retry and connect /tesla-account",
+      "Localized search and clear",
+      "Favorites and category disclosure",
+      "All configured direct/on-off/input/select actions",
+      "Dangerous confirmation,countdown3/5,ERASE,PINs",
+      "Pending/result/toast/latest badges/read-only reason"
+    ],
+    "preferences": [
+      "localStorage teslasync-cmd-favorites-{vehicleId}",
+      "sessionStorage teslasync-cat-{vehicleId}-{category}",
+      "Selection URL/path>store>first vehicle",
+      "No setting IDs reset; hero raw SI through useOperationalMetrics/useUnits/useFormatting"
+    ],
+    "si": "Battery percent/range meters/cabin Celsius raw through validated metric pipeline; no hook/cache/wire conversions. Vendor form units candidate C05.",
+    "workspace": {
+      "range": false,
+      "vehicle": true,
+      "citations": [
+        {
+          "file": "web\\src\\lib\\workspaceScope.ts",
+          "line": 156
+        },
+        {
+          "file": "web\\src\\lib\\routeLoaders.ts",
+          "line": 114
+        },
+        {
+          "file": "web\\src\\App.tsx",
+          "line": 614
+        }
+      ]
+    },
+    "parity": "audit-page-184 already describes same3sections/67entries/75actions. Current tests explicitly expect old Safety/Recent Activity panels absent; no invented deletion finding."
+  },
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "rule": "source-state-erasure",
+      "severity": "high",
+      "file": "web\\src\\features\\system\\components\\VehicleCommandCenter.tsx",
+      "line": 50,
+      "detail": "latestQuery.data??[] hides initial loading/fatal error/paused,retained refresh warning,age and retry; workspace loading is mutation-only.",
+      "sourceOnlyRepro": "Reason through latest={data:undefined,error:Error} vs success empty[]: identical workspace []. Retained rows+error/paused render same badges without warning. Not executed.",
+      "fix": "Reuse existing DataState/feedback/retry, retain badges and independent command availability.",
+      "owner": "Feature center/workspace integration; no shared rewrite",
+      "historicalDuplicate": "audit-page-184 states.issues"
+    },
+    {
+      "id": "F02",
+      "rule": "unknown-is-off",
+      "severity": "high",
+      "file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx",
+      "line": 31,
+      "detail": "Boolean missing/null stateField and localToggle=false manufacture OFF. Workspace omits trust metadata, so unverified/stale booleans appear current.",
+      "sourceOnlyRepro": "Lock state={} or is_locked:null yields OFF/pressed=false; expired true chooses unlock. Reasoning only,no action.",
+      "related": [
+        {
+          "file": "web\\src\\features\\system\\components\\command-center\\CommandWorkspace.tsx",
+          "line": 103
+        },
+        {
+          "file": "web\\src\\api\\hooks\\useVehicles.ts",
+          "line": 1117
+        }
+      ],
+      "fix": "Propagate existing field-currentness; unknown/last-known text, legitimate explicit choices without invented physical state.",
+      "owner": "Feature workspace/toggle; reuse shared trust helper",
+      "historicalDuplicate": "audit-page-184 states.issues"
+    },
+    {
+      "id": "F03",
+      "rule": "premature-toggle-lifecycle",
+      "severity": "high",
+      "file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx",
+      "line": 54,
+      "detail": "No-stateField toggles change local state before acceptance with no error rollback. Valet PIN branch never updates localToggle after acceptance,so initial tile never reaches valet_off.",
+      "sourceOnlyRepro": "Guest activation sets true before onExecute; success:false/error cannot roll back. Valet false->dialog->CommandDialogs onExecute/close supplies no tile setter; next activation still PIN. Not executed.",
+      "related": [
+        {
+          "file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx",
+          "line": 51
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\command-center\\CommandDialogs.tsx",
+          "line": 41
+        },
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 227
+        }
+      ],
+      "fix": "Separate request intent/acceptance/physical evidence and preserve reachable explicit OFF; no fake local measured truth.",
+      "owner": "Toggle/dialog/center feature integration",
+      "historicalDuplicate": null,
+      "testLimit": "ToggleCommandTile.test.tsx optimistic flip expectation is historical behavior,not current contract acceptance."
+    },
+    {
+      "id": "F04",
+      "rule": "favorite-keyboard-bubbling",
+      "severity": "high",
+      "file": "web\\src\\features\\system\\components\\InputCommandTile.tsx",
+      "line": 38,
+      "detail": "Favorite Enter/Space bubbles into tile keydown,preventDefault/open input dialog. Other tile handlers guard target!==currentTarget.",
+      "sourceOnlyRepro": "Trace target=favorite,currentTarget=panel,key=Enter ->handleActivate. Mouse click stopPropagation cannot block keydown. Not executed.",
+      "fix": "Match descendant-event guard; sibling targets F05; covering exact key isolation assertion needed.",
+      "owner": "InputCommandTile and existing test",
+      "historicalDuplicate": "audit-page-184 accessibility"
+    },
+    {
+      "id": "F05",
+      "rule": "nested-interactive-targets",
+      "severity": "medium",
+      "file": "web\\src\\features\\system\\components\\CommandTile.tsx",
+      "line": 58,
+      "detail": "role=button panel contains independently focusable native favorite Button; same input/toggle structure.",
+      "sourceOnlyRepro": "Rendered source tree div[role=button][tabIndex=0]>button; not independently sibling action targets. SR/hit boxes untested.",
+      "related": [
+        {
+          "file": "web\\src\\features\\system\\components\\CommandTile.tsx",
+          "line": 73
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\InputCommandTile.tsx",
+          "line": 58
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx",
+          "line": 75
+        }
+      ],
+      "fix": "Noninteractive feature frame and named sibling shared Buttons,preserve favorites44px/pressed/loading/read-only.",
+      "owner": "Three feature tile owners; existing unresolved G187,not global new component",
+      "historicalDuplicate": "audit-page-184 accessibility/G187"
+    },
+    {
+      "id": "F06",
+      "rule": "missing-field-label",
+      "severity": "high",
+      "file": "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx",
+      "line": 107,
+      "detail": "Typed-confirmation Input has placeholder/unassociated HelperText,no label/name binding. Actual valet single PIN definition has no sublabel; dialog optional label is undefined.",
+      "sourceOnlyRepro": "Erase Input has no label/aria name; valet->input label undefined; shared Input renders Label only if truthy. Not AT executed.",
+      "related": [
+        {
+          "file": "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+          "line": 219
+        },
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 227
+        },
+        {
+          "file": "web\\src\\components\\ui\\Input.tsx",
+          "line": 64
+        }
+      ],
+      "fix": "Visible localized field labels/linked prompts; keep ERASE token/PIN secrecy/countdown/validation/identity.",
+      "owner": "Both feature dialogs",
+      "historicalDuplicate": "Confirm field historical; valet adds precise configured site"
+    },
+    {
+      "id": "F07",
+      "rule": "permissive-decimal-validation",
+      "severity": "high",
+      "file": "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+      "line": 51,
+      "detail": "parseFloat/isNaN accepts numeric prefix junk and unbounded Infinity; original strings or separately parsed GPS forwarded.",
+      "sourceOnlyRepro": "Reasoned JS semantics:21junk parses21,pases15..30,original text sent to set_temps; unbounded Infinity coordinates pass and later numeric JSON becomes null;21,5 parses21. No eval/tests/actions run.",
+      "related": [
+        {
+          "file": "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+          "line": 152
+        },
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 305
+        },
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 662
+        }
+      ],
+      "fix": "Whole finite numeric validation,deliberate locale input policy,normalized payload/authoritative bounds; preserve negative coordinates.",
+      "owner": "Input validation plus commands config",
+      "historicalDuplicate": null
+    },
+    {
+      "id": "F08",
+      "rule": "missing-numeric-command-validation",
+      "severity": "high",
+      "file": "web\\src\\features\\system\\commands.ts",
+      "line": 470,
+      "detail": "set_charge_limit displayed50-100 has no numeric validation/bounds. Amps/volume/removal schedule IDs default to nonempty text; lat/lon configs lack geographic bounds.",
+      "sourceOnlyRepro": "percent=abc/999 reaches validateField default null,Send allowed; volume999 ignores displayed0..11. No API/business action.",
+      "related": [
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 459
+        },
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 562
+        },
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 583
+        },
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 760
+        },
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 623
+        },
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 659
+        }
+      ],
+      "fix": "Finite numeric/integer config and verified bounds; derive variable amp capabilities,do not guess/rename wire params. Preserve valid zero/negative.",
+      "owner": "commands config/existing validation integration",
+      "historicalDuplicate": null
+    },
+    {
+      "id": "F09",
+      "rule": "mobile-target-under44",
+      "severity": "medium",
+      "file": "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+      "line": 236,
+      "detail": "Five action sites: Input Cancel/Send,Confirm Cancel/Confirm,Select Cancel use sm with no mobile minimum; Button sm is h-9=36px,not44px.",
+      "sourceOnlyRepro": "Resolve shared Button sizes and caller classes; source sizing evidence,not measured hitboxes.",
+      "related": [
+        {
+          "file": "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+          "line": 245
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx",
+          "line": 122
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx",
+          "line": 131
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\CommandSelectDialog.tsx",
+          "line": 99
+        },
+        {
+          "file": "web\\src\\components\\ui\\Button.tsx",
+          "line": 37
+        }
+      ],
+      "fix": "Mobile min-h-11/wrapping,retain desktop compact behavior; input default40px also needs scoped mobile review.",
+      "owner": "Three command dialogs,not global Button remigration",
+      "historicalDuplicate": null
+    },
+    {
+      "id": "F10",
+      "rule": "incomplete-tab-contract",
+      "severity": "medium",
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.tsx",
+      "line": 48,
+      "detail": "Custom tablist/tab roles lack roving tabindex,arrow/Home/End handlers,tab IDs/panel labelledby; shared Button supplies no tab navigation.",
+      "sourceOnlyRepro": "Only onClick on four default Tab stops; panel role/id but no labelledby; inactive controls reference unmounted panels. No keyboard runtime.",
+      "fix": "Reuse compatible shared Tabs or ordinary button/group semantics; keep4domains/14categories.",
+      "owner": "CommandDomainBrowser",
+      "historicalDuplicate": "audit-page-184 accessibility"
+    },
+    {
+      "id": "F11",
+      "rule": "paused-initial-as-empty",
+      "severity": "medium",
+      "file": "web\\src\\features\\system\\pages\\CommandsPage.tsx",
+      "line": 66,
+      "detail": "fallbackStatus checks isLoading/fatalError only. Pending paused-without-data isLoading=false/no fatalError ->no vehicles/connect CTA despite roster not resolved.",
+      "sourceOnlyRepro": "data undefined,isPending true,isLoading false,fetchStatus paused,noerror/no selection ->DataState initial/blocked ->fallback empty. StaleRefreshWarning no-data returns null. Reasoning only.",
+      "related": [
+        {
+          "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+          "line": 62
+        },
+        {
+          "file": "web\\src\\api\\dataState.ts",
+          "line": 202
+        }
+      ],
+      "fix": "Distinct pending/paused before authoritative empty; explain blocked refresh without fake server/offline/no-fleet diagnosis.",
+      "owner": "CommandsPage/CommandCenterFallback",
+      "historicalDuplicate": null
+    },
+    {
+      "id": "F12",
+      "rule": "unrestrained-feature-chrome",
+      "severity": "medium",
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandCenterHero.tsx",
+      "line": 73,
+      "detail": "Decorative cyan-purple wash/online continual pulse; neon tile/favorite/submit/focus overrides,fixed-white domain/search backgrounds,three backdrop-blur-xl dialogs bypass restrained flat/theme-aware roles.",
+      "sourceOnlyRepro": "Explicit class/prop sites; StatusPill pulse->animate-pulse. Source policy presence,not composed visual/contrast acceptance.",
+      "related": [
+        {
+          "file": "web\\src\\features\\system\\components\\command-center\\CommandCenterHero.tsx",
+          "line": 94
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx",
+          "line": 22
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+          "line": 248
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\CommandSelectDialog.tsx",
+          "line": 68
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\FavoritesBar.tsx",
+          "line": 37
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\CommandSearch.tsx",
+          "line": 21
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.tsx",
+          "line": 67
+        },
+        {
+          "file": "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx",
+          "line": 86
+        },
+        {
+          "file": "web\\src\\components\\ui\\StatusPill.tsx",
+          "line": 27
+        }
+      ],
+      "fix": "Remove decoration/loop/blur/fixed palette;existing neutral control/panel/focus and truthful semantic tokens. Preserve cues/actions.",
+      "owner": "Feature presentation integration,no shared token remigration",
+      "historicalDuplicate": "Consolidates historical four visual issues into one deduplicated presentation family"
+    },
+    {
+      "id": "F13",
+      "rule": "toggle-outcome-chronology",
+      "severity": "medium",
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandWorkspace.tsx",
+      "line": 83,
+      "detail": "Primary entry wins via??before commandOff without comparing timestamps; old ON outcome masks newer OFF.",
+      "sourceOnlyRepro": "Reasoning example lock success10:00/unlock failure10:05 ->nonnull lock wins10:00success. No app fixture/API/action injected.",
+      "fix": "Compare existing created_at/id across both names;preserve latest actual status,not physical ON/OFF inference.",
+      "owner": "CommandWorkspace local adapter/existing tests",
+      "historicalDuplicate": null
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "kind": "native-matrix",
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandCenterHero.tsx",
+      "line": 83,
+      "detail": "Truncated names/two-column tiles,narrow allocations,dialog body/footer/focus need actual mounted widths320/375/390/430/768/1024/1280/1440/1920/2560,dark/light/custom,RTL,200%text,long labels,forced-colors,reduced-motion/low-bandwidth,keyboard/AT/open-nested restoration.",
+      "execution": "NOTRUN,no runtime approval/lock",
+      "owner": "Existing Phase6/native acceptance authority"
+    },
+    {
+      "id": "C02",
+      "kind": "auth-replay-consent",
+      "file": "web\\src\\api\\hooks\\useVehicleCommand.ts",
+      "line": 83,
+      "detail": "Expired-token closure replays original args after recovered event within5min/max10 without revisiting page confirmation/current selection. Existing tests pin this intended auth behavior;not automatically browser-offline queue violation.",
+      "related": [
+        {
+          "file": "web\\src\\lib\\teslaAuthRecovery.ts",
+          "line": 68
+        },
+        {
+          "file": "web\\src\\components\\feedback\\TeslaReauthBanner.tsx",
+          "line": 47
+        }
+      ],
+      "requiredEvidence": "Integration decision on dangerous delayed consent/cancellation;preserve client live/offline guards,no reconnect/drain/action attempted.",
+      "owner": "useVehicleCommand/teslaAuthRecovery/banner integration,exact open source owner not found"
+    },
+    {
+      "id": "C03",
+      "kind": "capability-auth-boundary",
+      "file": "web\\src\\features\\system\\commands.ts",
+      "line": 218,
+      "detail": "Admin/sensitive definitions render under operationalMode only,not explicit local per-command capability. NOT proof unauthorized server execution/bypass.",
+      "requiredEvidence": "Readonly backend auth/capability contract;no API/auth/vehicle checks authorized.",
+      "owner": "Feature/API integration,not reliability page"
+    },
+    {
+      "id": "C04",
+      "kind": "status-vocabulary",
+      "file": "web\\src\\features\\system\\components\\command-center\\commandLabels.ts",
+      "line": 45,
+      "detail": "Any status except literal success gets failure cross;pending/unknown should be neutral IF backend emits them. Server vocabulary uninspected.",
+      "requiredEvidence": "Existing backend vocabulary before confirming violation;preserve raw unknown labels.",
+      "historicalDuplicate": "audit-page-184 conditional vocabulary",
+      "owner": "Command outcomes integration"
+    },
+    {
+      "id": "C05",
+      "kind": "vendor-unit-locale",
+      "file": "web\\src\\features\\system\\commands.ts",
+      "line": 181,
+      "detail": "Fixed MPH limit_mph,Celsius prompt/payload,en-US navigation locale ignore display preferences;hero correctly uses units. Vendor/backend contracts unknown;do not blindly SI-rename/convert wire values.",
+      "related": [
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 303
+        },
+        {
+          "file": "web\\src\\features\\system\\commands.ts",
+          "line": 645
+        }
+      ],
+      "requiredEvidence": "Readonly vendor/backend semantics plus preference-aware display/input preserving payload;decimal bug F07 separate.",
+      "historicalDuplicate": "audit-page-184 vendor boundary",
+      "owner": "Config/dialog/API integration"
+    },
+    {
+      "id": "C06",
+      "kind": "conditional-submit-eligibility",
+      "file": "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+      "line": 152,
+      "detail": "Valid form submit ignores loading while Button disabled. Parent closes immediately on send;reachable duplicate-submit sequence not established.",
+      "requiredEvidence": "Existing scoped loading=true/Enter/pending/read-only race proof without real commands;NOTRUN.",
+      "owner": "InputDialog/Dialogs/center integration"
+    }
+  ],
+  "validationLimits": [
+    "Source only; tests/lint/compiler/build/server/browser/network/API/auth/vehicle/business actions NOTRUN.",
+    "No Git,agents,installs,helper files,source/test/catalog/queue edits. Only assigned JSON/log written via .NET APIs,not redirection/tee.",
+    "Source-only repro examples reason through mechanisms; not executed reproductions or native approval.",
+    "Initial absent artifacts exit1; bad routes glob exit1; missing .ts mode/out-of-range test views corrected. Wide output raw preserved. Report command os error206 not executed; bounded split same clock.",
+    "Case-insensitive scan false positives and69definition count corrected; originals preserved in log.",
+    "Queue and canonical en.json external drift observed; source/test/command split pins stable at pre-report check. No all-inputs-stable claim."
+  ],
+  "stateCoverage": {
+    "roster": "Skeleton/error-retry/empty-connect/retained warning; initial paused defectF11",
+    "vehicle": "Independent hero/readiness/workspace;null metrics missing,notzero;state retry/retained brief;status/motion trust exists,toggle trustF02. Paused metadata not exposed to hero/readiness; native not verified.",
+    "latest": "Trust/retry lostF01,pair chronologyF13",
+    "mutation": "Tiles loading/read-only; executeCommand rechecks canWrite; requiresLiveMode/client environment/offline guards. Softfailure/empty body never success feedback; local toggle contradicts lifecycleF03.",
+    "confirmation": "Dangerous branching,Modal,3/5countdown,ERASE,masked PIN/select/input remain;no actions executed.",
+    "empty": "Fleet/state/search-clear/select explicit;optional favorites/disclosure/dialog guards acceptable,not broad null hidden sections."
+  },
+  "engineeringChecks": {
+    "scopeProductionFiles": 26,
+    "patternMatches": {
+      "staticInlineStyle": 0,
+      "rawHtml": 0,
+      "directVendorImport": 0,
+      "oldApiImport": 0,
+      "doublePrefix": 0,
+      "camelcaseUrlParam": 0,
+      "rawFetch": 0,
+      "rawJsxEnglishCandidate": 0
+    },
+    "interpretation": "CaseSensitive actual grep output logged;zero narrow hits is NOT zero-violations certification. Broad33var refs are Tailwind not inline;20&&/null guards optional UI/validation. PageLayout forwards PageContainer:11. Four effects manage countdown/focus/dialog/read-only closing,not data fetch. Shared primitive raw HTML expected.",
+    "staticCommandKeysChecked": 230,
+    "missingStaticCommandKeys": 0,
+    "i18nLimit": "Pinned commands split only;dynamic statuses/off labels source reviewed,non-English/cold-load/RTL NOTRUN;canonical en.json drift external.",
+    "backendRules": "11-14 not applicable/not scanned",
+    "corrections": "Initial raw10/camelcase1 case-insensitive false hits and69config count included2schedule params.id,corrected67;all receipts preserved."
+  },
+  "priorityFixes": [
+    "F01/F02/F13 trust/outcomes",
+    "F03 physical/request/local lifecycle and OFF reachability",
+    "F04-F06 keyboard/target/field naming",
+    "F07/F08 whole finite numeric validation and verified bounds",
+    "F09-F12 mobile/tab/paused/restraint"
+  ],
+  "needs": "Orchestrator queue exact feature fixes only;no redispatch completed source/DataState/mobile-segment/catalog/reliability owners. Conditional/native questions unapproved NOTRUN.",
+  "pins": [
+    {
+      "file": ".github\\copilot-instructions.md",
+      "beforeSha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "afterSha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "match": true
+    },
+    {
+      "file": "docs\\frontend-design-contract.md",
+      "beforeSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "afterSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "match": true
+    },
+    {
+      "file": "docs\\frontend-inventory.md",
+      "beforeSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "afterSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "match": true
+    },
+    {
+      "file": "docs\\frontend-mission.md",
+      "beforeSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "afterSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "match": true
+    },
+    {
+      "file": "docs\\frontend-worker-conventions.md",
+      "beforeSha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "afterSha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "match": true
+    },
+    {
+      "file": "docs\\orchestrator-loop.md",
+      "beforeSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "afterSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "match": true
+    },
+    {
+      "file": "docs\\session-handoff.md",
+      "beforeSha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+      "afterSha256": "09FA66582FCEACEB709073D64299B2CA24842837D7C8ED43EF6F3AF40C80BFEB",
+      "match": false
+    },
+    {
+      "file": "migration-queue.md",
+      "beforeSha256": "B99617A253DBC607C066727A63DA9A4D09D03FFECF3CE8BD4476DEDEA6A90948",
+      "afterSha256": "01B3676F9D5B25B6DDD31F246B5A59DEB053DCB0055EAD33AB6F825BEFE7B9C7",
+      "match": false
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useCommands.test.tsx",
+      "beforeSha256": "AA5D2FB7ED29672955B966B654B4A581534762B0DE9819989E14849D1A4D8346",
+      "afterSha256": "AA5D2FB7ED29672955B966B654B4A581534762B0DE9819989E14849D1A4D8346",
+      "match": true
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useCommands.ts",
+      "beforeSha256": "BA78ADF8AD75E41252D7639F56AEED9DB3C18C5B9C69162240B85A84EC4C54E1",
+      "afterSha256": "BA78ADF8AD75E41252D7639F56AEED9DB3C18C5B9C69162240B85A84EC4C54E1",
+      "match": true
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useVehicleCommand.test.tsx",
+      "beforeSha256": "B176BCAC463ADDCDF3B6CCC597B72B0DD80CF1DE24384ABA6F93829BEE6125EF",
+      "afterSha256": "B176BCAC463ADDCDF3B6CCC597B72B0DD80CF1DE24384ABA6F93829BEE6125EF",
+      "match": true
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useVehicleCommand.ts",
+      "beforeSha256": "22DE3C31C59F4C2FC5AF6F3E0415123B6818A6E09D327D798D52022ABA736DF7",
+      "afterSha256": "22DE3C31C59F4C2FC5AF6F3E0415123B6818A6E09D327D798D52022ABA736DF7",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\commands.test.ts",
+      "beforeSha256": "33173CE6ACD2DEE83D16BF3E634AA0798CAB49BDCA77000BA12ED70616F6FD35",
+      "afterSha256": "33173CE6ACD2DEE83D16BF3E634AA0798CAB49BDCA77000BA12ED70616F6FD35",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\commands.ts",
+      "beforeSha256": "6A1970AECBC0D18ED362CF09311D7821E5DA90F586779B442147B60B504FB2EA",
+      "afterSha256": "6A1970AECBC0D18ED362CF09311D7821E5DA90F586779B442147B60B504FB2EA",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CollapsibleCommandGroup.test.tsx",
+      "beforeSha256": "F7ABF0125A83CE8B153403287491872DE32F0AD3EDDD2778CFAC9A51B1BA3BC6",
+      "afterSha256": "F7ABF0125A83CE8B153403287491872DE32F0AD3EDDD2778CFAC9A51B1BA3BC6",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CollapsibleCommandGroup.tsx",
+      "beforeSha256": "8DB509B1DC1F73BB89F640BF7D0C2501B927F626F2BDDF27FFB3D7CAC5913A94",
+      "afterSha256": "8DB509B1DC1F73BB89F640BF7D0C2501B927F626F2BDDF27FFB3D7CAC5913A94",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandCenterFallback.tsx",
+      "beforeSha256": "032196E9788F0DF0E5CCD2CD0E2FFED27582285B484C85C5CF237DD68F2C4F06",
+      "afterSha256": "032196E9788F0DF0E5CCD2CD0E2FFED27582285B484C85C5CF237DD68F2C4F06",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandCenterHero.tsx",
+      "beforeSha256": "30918F5CC97D464417B1DE0939AAB55557E41C1D63B6B7D0C5AE2E0DAEF32623",
+      "afterSha256": "30918F5CC97D464417B1DE0939AAB55557E41C1D63B6B7D0C5AE2E0DAEF32623",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandDialogs.tsx",
+      "beforeSha256": "50A16FEB8BCBF09E5954856194220326EE94C83886BF8A863659EB25F4FF618E",
+      "afterSha256": "50A16FEB8BCBF09E5954856194220326EE94C83886BF8A863659EB25F4FF618E",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.tsx",
+      "beforeSha256": "C3F147A682F4C2CE90063CF895036742B2A49F00EF358561F07F4ECB5640B1BC",
+      "afterSha256": "C3F147A682F4C2CE90063CF895036742B2A49F00EF358561F07F4ECB5640B1BC",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\commandDomains.test.ts",
+      "beforeSha256": "1672F23BDD37C92E2CEE72B5EAE69C64626B8DBF77423205325652C141507E4C",
+      "afterSha256": "1672F23BDD37C92E2CEE72B5EAE69C64626B8DBF77423205325652C141507E4C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\commandDomains.ts",
+      "beforeSha256": "1BD5EEADEE7E122C73D66250D12B7FD8471BA18274A1FBC0FA747848CDBFFE84",
+      "afterSha256": "1BD5EEADEE7E122C73D66250D12B7FD8471BA18274A1FBC0FA747848CDBFFE84",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\commandLabels.ts",
+      "beforeSha256": "E3AB4E2161156DD8A2C2648FD06709430F775595814A49F7D1805877D91F9A04",
+      "afterSha256": "E3AB4E2161156DD8A2C2648FD06709430F775595814A49F7D1805877D91F9A04",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandReadinessStrip.tsx",
+      "beforeSha256": "12425C6B6FBB80427DE24BB6CA3182657AB88C6D9AACD2C5566486A9A95E57F1",
+      "afterSha256": "12425C6B6FBB80427DE24BB6CA3182657AB88C6D9AACD2C5566486A9A95E57F1",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandWorkspace.tsx",
+      "beforeSha256": "67D513241951A4484CC688D614EFADBAAB87314565C3720F72D03A1440ACCB5A",
+      "afterSha256": "67D513241951A4484CC688D614EFADBAAB87314565C3720F72D03A1440ACCB5A",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\index.ts",
+      "beforeSha256": "25CA0683D8A7349A5F2A8FD558BCCA9F55C783CE8651A206A725F8F38CA66AD1",
+      "afterSha256": "25CA0683D8A7349A5F2A8FD558BCCA9F55C783CE8651A206A725F8F38CA66AD1",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\types.ts",
+      "beforeSha256": "8CB84BC26C6F3BA08540A041F0A4FB02EAE4562F73D05AD53723AEF0E1638572",
+      "afterSha256": "8CB84BC26C6F3BA08540A041F0A4FB02EAE4562F73D05AD53723AEF0E1638572",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\useCommandFavorites.ts",
+      "beforeSha256": "DF441028A8876BEA1312A5FC0263535892332B4D8066ACEE82346BAF0692513B",
+      "afterSha256": "DF441028A8876BEA1312A5FC0263535892332B4D8066ACEE82346BAF0692513B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandConfirmDialog.test.tsx",
+      "beforeSha256": "832CB89E776D01D6997406B7459E3E4D40432E5FE19BD65475200AF008C86732",
+      "afterSha256": "832CB89E776D01D6997406B7459E3E4D40432E5FE19BD65475200AF008C86732",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx",
+      "beforeSha256": "F63D8BC4C16D0D11C4EC8903FCF7D7C49AAB0DA4CBCC32E2D56FC3EEA6529389",
+      "afterSha256": "F63D8BC4C16D0D11C4EC8903FCF7D7C49AAB0DA4CBCC32E2D56FC3EEA6529389",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandInputDialog.test.tsx",
+      "beforeSha256": "B98541FB1A4EB6DF1BA0CC3AFE08BAA85382E6813C57707CAEBF84B1B895B36B",
+      "afterSha256": "B98541FB1A4EB6DF1BA0CC3AFE08BAA85382E6813C57707CAEBF84B1B895B36B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+      "beforeSha256": "F56DC971412306517BA805B987C858184F92CCC1C4EE0EA15242B4B1ED084508",
+      "afterSha256": "F56DC971412306517BA805B987C858184F92CCC1C4EE0EA15242B4B1ED084508",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandSearch.test.tsx",
+      "beforeSha256": "8657B3DDF4E3E0CF2B74BB1D2FF9160AFD3C48648A90F96B4473F4809B28FB88",
+      "afterSha256": "8657B3DDF4E3E0CF2B74BB1D2FF9160AFD3C48648A90F96B4473F4809B28FB88",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandSearch.tsx",
+      "beforeSha256": "57E18E7EA55FF56BD7E6F2AB5D4B46A4E683BB8C09C0E0A1F9C0332E3FE47EEF",
+      "afterSha256": "57E18E7EA55FF56BD7E6F2AB5D4B46A4E683BB8C09C0E0A1F9C0332E3FE47EEF",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandSelectDialog.test.tsx",
+      "beforeSha256": "3494F86A5C3EFEA60EB3EC5047A693D1B282603E8C15F8FBE80551FB777ED2DB",
+      "afterSha256": "3494F86A5C3EFEA60EB3EC5047A693D1B282603E8C15F8FBE80551FB777ED2DB",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandSelectDialog.tsx",
+      "beforeSha256": "E1E102A1BC7133A61C265A527E6264E9C9525A41D3A1C2242BC69E019D4A9E78",
+      "afterSha256": "E1E102A1BC7133A61C265A527E6264E9C9525A41D3A1C2242BC69E019D4A9E78",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandTile.test.tsx",
+      "beforeSha256": "469F1D58B7D7A52CF23C572EE668272D9DC33959E052AA83EAFE79C23341CCDF",
+      "afterSha256": "469F1D58B7D7A52CF23C572EE668272D9DC33959E052AA83EAFE79C23341CCDF",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CommandTile.tsx",
+      "beforeSha256": "4D1CEFBC6941742DD42590FDE967C3FFA59FE767A2F3040E1AE117FB42330DAD",
+      "afterSha256": "4D1CEFBC6941742DD42590FDE967C3FFA59FE767A2F3040E1AE117FB42330DAD",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\InputCommandTile.test.tsx",
+      "beforeSha256": "D255BECA73A808EF6D4CA4344B904BD29BF231E30BBF057EA570CD0AEC637B9B",
+      "afterSha256": "D255BECA73A808EF6D4CA4344B904BD29BF231E30BBF057EA570CD0AEC637B9B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\InputCommandTile.tsx",
+      "beforeSha256": "5EF581EA399D7A05395D8E6D840EC39CB0376A7CBF18537FB199FB1AE5193F90",
+      "afterSha256": "5EF581EA399D7A05395D8E6D840EC39CB0376A7CBF18537FB199FB1AE5193F90",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\statstrip-command-summaries\\commandSummaryMetrics.test.ts",
+      "beforeSha256": "FB02522F977A14146921E3E1979C1C5C363109F131C9E6C4FCD1C68683CA3B9C",
+      "afterSha256": "FB02522F977A14146921E3E1979C1C5C363109F131C9E6C4FCD1C68683CA3B9C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\statstrip-command-summaries\\commandSummaryMetrics.tsx",
+      "beforeSha256": "B1DB8677BD0BC014B1FA5CAF4B392E8A18D2D67FFA5053AE831732ABD2303BC8",
+      "afterSha256": "B1DB8677BD0BC014B1FA5CAF4B392E8A18D2D67FFA5053AE831732ABD2303BC8",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\ToggleCommandTile.test.tsx",
+      "beforeSha256": "2D6690F22F2BF5E9DEF0F5DC24CFC3C3ED6833C1430E026377DFC207983B8C16",
+      "afterSha256": "2D6690F22F2BF5E9DEF0F5DC24CFC3C3ED6833C1430E026377DFC207983B8C16",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx",
+      "beforeSha256": "CC2622E89CD16CA04825444C32725671BDCDC18E5168EB04087DFB1DA9CC2835",
+      "afterSha256": "CC2622E89CD16CA04825444C32725671BDCDC18E5168EB04087DFB1DA9CC2835",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\VehicleCommandCenter.test.tsx",
+      "beforeSha256": "C344133C39ED96E3CB8BC001F891BF0C4F4515A347A95D783F7C7DD9B58690FA",
+      "afterSha256": "C344133C39ED96E3CB8BC001F891BF0C4F4515A347A95D783F7C7DD9B58690FA",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\VehicleCommandCenter.tsx",
+      "beforeSha256": "064E3F7D441ADB2F290952CF3EEADD1C2FEADB18B3EE0386212A6E981CB230BF",
+      "afterSha256": "064E3F7D441ADB2F290952CF3EEADD1C2FEADB18B3EE0386212A6E981CB230BF",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandsPage.test.tsx",
+      "beforeSha256": "251290A4312542241D864DBB6DC4613B3A0E3824100EF6A5DADB5A03FE2C17FD",
+      "afterSha256": "251290A4312542241D864DBB6DC4613B3A0E3824100EF6A5DADB5A03FE2C17FD",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandsPage.tsx",
+      "beforeSha256": "8B4FA9D622CA557703CB720931375A320F66200A35881DC1B94A655298BB1242",
+      "afterSha256": "8B4FA9D622CA557703CB720931375A320F66200A35881DC1B94A655298BB1242",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-action-center.json",
+      "beforeSha256": "97F2D278ECBFC0EE6B0812E81F399A4B78C57425CF0DE955D3C62CE400B28D91",
+      "afterSha256": "97F2D278ECBFC0EE6B0812E81F399A4B78C57425CF0DE955D3C62CE400B28D91",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-admin.json",
+      "beforeSha256": "A16987DCB126D251B9D962D4CDCB5621E8061FA2EE9F63F2179B07297AE84371",
+      "afterSha256": "45DD7B30EC6BC09B7FA417256CE769AD614B8349C1C88BCD9F77408ABA9AA4E3",
+      "match": false
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-advanced-intelligence.json",
+      "beforeSha256": "FF41BA6EB0E1342DDC3A88506CB02DAEEEDDEFAA9C0B65C8BF4AC4CC8723B764",
+      "afterSha256": "FF41BA6EB0E1342DDC3A88506CB02DAEEEDDEFAA9C0B65C8BF4AC4CC8723B764",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-analytics.json",
+      "beforeSha256": "7FCD88A6AC2855A3E3BFD51C7E2B16642A2312AEBB3145AC0A120DFFAC2AA9E5",
+      "afterSha256": "7FCD88A6AC2855A3E3BFD51C7E2B16642A2312AEBB3145AC0A120DFFAC2AA9E5",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-automations.json",
+      "beforeSha256": "A7517A3426C1DA67AE8685322AD70165B39B9988B9B21611CBC5792467A23F93",
+      "afterSha256": "A7517A3426C1DA67AE8685322AD70165B39B9988B9B21611CBC5792467A23F93",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-battery.json",
+      "beforeSha256": "520A4E02440B7492F6E39E05194B35F43A027CDB15F6579B2E87F86DCB102880",
+      "afterSha256": "520A4E02440B7492F6E39E05194B35F43A027CDB15F6579B2E87F86DCB102880",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-benchmarks.json",
+      "beforeSha256": "4404DBE5885F1F39EDDC8CE4BC2B63170A2BF7CEF27619403A41A5E9A18193D7",
+      "afterSha256": "4404DBE5885F1F39EDDC8CE4BC2B63170A2BF7CEF27619403A41A5E9A18193D7",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-charging.json",
+      "beforeSha256": "003472AB1DAD656D693DBFB327ED5B2FB4A7CBA6234286FF7910D3CE7FB760E2",
+      "afterSha256": "003472AB1DAD656D693DBFB327ED5B2FB4A7CBA6234286FF7910D3CE7FB760E2",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-dashboard.json",
+      "beforeSha256": "3083BE5D6E947EF6E95F5CC66174F71EE6BCDA4270C2BA42348A84FEF6E251CA",
+      "afterSha256": "3083BE5D6E947EF6E95F5CC66174F71EE6BCDA4270C2BA42348A84FEF6E251CA",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-dashcam.json",
+      "beforeSha256": "C5927BD601633725C5654E3E6C405BE728B1E4AA545D92D916401BC4CA614EB7",
+      "afterSha256": "C5927BD601633725C5654E3E6C405BE728B1E4AA545D92D916401BC4CA614EB7",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-achievements.json",
+      "beforeSha256": "D5F4B2F8A9D86A5D5B1DF783EC89EF11DA3A42DBE549687EE0274D8C1FA96F76",
+      "afterSha256": "D5F4B2F8A9D86A5D5B1DF783EC89EF11DA3A42DBE549687EE0274D8C1FA96F76",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-activity.json",
+      "beforeSha256": "9BE9C9EF1B706774879095FA612D781D9827F3FF5438D92637DD7438A5EA90E5",
+      "afterSha256": "9BE9C9EF1B706774879095FA612D781D9827F3FF5438D92637DD7438A5EA90E5",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-addressInput.json",
+      "beforeSha256": "A57AB76774CAA38CD773A0380CF25DB085E5DE87C04B60DC2A27438E5EDECE0F",
+      "afterSha256": "A57AB76774CAA38CD773A0380CF25DB085E5DE87C04B60DC2A27438E5EDECE0F",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-alerts.json",
+      "beforeSha256": "712309EFFD557709516B006A0E5620CA9E5C67A99B2EC82CB47C04210B7B8324",
+      "afterSha256": "712309EFFD557709516B006A0E5620CA9E5C67A99B2EC82CB47C04210B7B8324",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-annotation.json",
+      "beforeSha256": "8B79FE632B149C5F4E4A24BA61B836B0526E997138A590F15E909D44B8375AB0",
+      "afterSha256": "8B79FE632B149C5F4E4A24BA61B836B0526E997138A590F15E909D44B8375AB0",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-anomalies.json",
+      "beforeSha256": "1A778819E9D67F9BEAE4EFB45286BF690D38E2222267FEEC4622F422F87624EC",
+      "afterSha256": "1A778819E9D67F9BEAE4EFB45286BF690D38E2222267FEEC4622F422F87624EC",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-apiLogs.json",
+      "beforeSha256": "5E6E7534F571A9F8836C2C78A3C0174C058AC84AD0C348D8174ACCB1786361D8",
+      "afterSha256": "5E6E7534F571A9F8836C2C78A3C0174C058AC84AD0C348D8174ACCB1786361D8",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-app.json",
+      "beforeSha256": "9561226593217FDE37010489F9B6E413FEDDD8A248019343F7CCCF456AED73C7",
+      "afterSha256": "9561226593217FDE37010489F9B6E413FEDDD8A248019343F7CCCF456AED73C7",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-arrivalReliability.json",
+      "beforeSha256": "939BFC72E5307AA38E63A8058B503B1F2A2ED2636986CF1B0291F2A1B9DBFA01",
+      "afterSha256": "939BFC72E5307AA38E63A8058B503B1F2A2ED2636986CF1B0291F2A1B9DBFA01",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-battery.json",
+      "beforeSha256": "0D8D2E07E139E871564B1EE6940E111097BC3E81FDC5370AE40547FF08781B6C",
+      "afterSha256": "0D8D2E07E139E871564B1EE6940E111097BC3E81FDC5370AE40547FF08781B6C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-browserNotifications.json",
+      "beforeSha256": "39B1F1AE276B6AAA012F45AF719AE58B5BA95DA1466516DD4C6B81583648E691",
+      "afterSha256": "39B1F1AE276B6AAA012F45AF719AE58B5BA95DA1466516DD4C6B81583648E691",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-bulk.json",
+      "beforeSha256": "54CDA8FB2D3D0ED664520CE0DF91FF4467ED03C4DBEF1A4548ACF71652F20DCD",
+      "afterSha256": "54CDA8FB2D3D0ED664520CE0DF91FF4467ED03C4DBEF1A4548ACF71652F20DCD",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-calculationDetails.json",
+      "beforeSha256": "6EED7B03BD69891CDCEBFE9806D9FE12D1E368BC2B57949CFEA92DED1FB11F11",
+      "afterSha256": "6EED7B03BD69891CDCEBFE9806D9FE12D1E368BC2B57949CFEA92DED1FB11F11",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-carbon.json",
+      "beforeSha256": "EF10E1A05291D0B5D967AB97B371AEE1DCED5DF00267B3F244194F3551F5344C",
+      "afterSha256": "EF10E1A05291D0B5D967AB97B371AEE1DCED5DF00267B3F244194F3551F5344C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-chart.json",
+      "beforeSha256": "516E7AB04B4A13E90407D851A4F92997695CE90FBC927CF2993E4A3D83DD73DE",
+      "afterSha256": "516E7AB04B4A13E90407D851A4F92997695CE90FBC927CF2993E4A3D83DD73DE",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-chatbot.json",
+      "beforeSha256": "EB18BB593DE9F14A9F519A5C7805F91CB464CC5C5BA3403B5957A96EB20B30D1",
+      "afterSha256": "EB18BB593DE9F14A9F519A5C7805F91CB464CC5C5BA3403B5957A96EB20B30D1",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-coldStart.json",
+      "beforeSha256": "CC7C601077E674267FEF2787D7DC26A47C6386A7CAC4546D67209CBC76E5F2BF",
+      "afterSha256": "CC7C601077E674267FEF2787D7DC26A47C6386A7CAC4546D67209CBC76E5F2BF",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-combobox.json",
+      "beforeSha256": "2114B164A534A379BFF7800E951EF40F3F494CE3AEED488F4B07656A879591A6",
+      "afterSha256": "2114B164A534A379BFF7800E951EF40F3F494CE3AEED488F4B07656A879591A6",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-commands.json",
+      "beforeSha256": "D69F86198DFDC352AE58926D79332AAA779313B9AF260885562F5F9B8E1D95DB",
+      "afterSha256": "D69F86198DFDC352AE58926D79332AAA779313B9AF260885562F5F9B8E1D95DB",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-consent.json",
+      "beforeSha256": "EBF1F178D294ADABD78A6E8B65036A931058295C23E7343F19B16C30934864CF",
+      "afterSha256": "EBF1F178D294ADABD78A6E8B65036A931058295C23E7343F19B16C30934864CF",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-dashboard.json",
+      "beforeSha256": "60B996AABA0ABE761FD6BE04B7A3D4B917A59D0FBB8DB0D6065C1ACF6278E8A8",
+      "afterSha256": "60B996AABA0ABE761FD6BE04B7A3D4B917A59D0FBB8DB0D6065C1ACF6278E8A8",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-dataState.json",
+      "beforeSha256": "781BB6571D31104FAF99B012830C2D13399BCA67A75B8EBDCECB3F6F01E5752F",
+      "afterSha256": "781BB6571D31104FAF99B012830C2D13399BCA67A75B8EBDCECB3F6F01E5752F",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-date.json",
+      "beforeSha256": "12A508AC19DF3F3DFB5B4DF82FDFD848BF8EF33116DEEC8A1E56DAFF2AD593C4",
+      "afterSha256": "12A508AC19DF3F3DFB5B4DF82FDFD848BF8EF33116DEEC8A1E56DAFF2AD593C4",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-dayLog.json",
+      "beforeSha256": "EA45CA903B1B556989DE8660C33907CA8C1C9C27831E8655BD08B40F3033F3C8",
+      "afterSha256": "EA45CA903B1B556989DE8660C33907CA8C1C9C27831E8655BD08B40F3033F3C8",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-delta.json",
+      "beforeSha256": "261F5A5AE78A1894C158EEE98FEF659009095BF500C5792C9BBCEE41D6DBA6C2",
+      "afterSha256": "261F5A5AE78A1894C158EEE98FEF659009095BF500C5792C9BBCEE41D6DBA6C2",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-departure.json",
+      "beforeSha256": "63A22188BDE9A64ADBA9D38C5B8C27052A5C1A5388D840F01B0F4926914917C4",
+      "afterSha256": "63A22188BDE9A64ADBA9D38C5B8C27052A5C1A5388D840F01B0F4926914917C4",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-departureForecast.json",
+      "beforeSha256": "916E862182FBB8838BA1A1AC8198A1B9933034BD7CDFE4E6A5BD1152F792FD60",
+      "afterSha256": "916E862182FBB8838BA1A1AC8198A1B9933034BD7CDFE4E6A5BD1152F792FD60",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-destinationTransitions.json",
+      "beforeSha256": "0D0748443AF252D62798225F1092D2902FC0057470406205170334EA24BD8FAA",
+      "afterSha256": "0D0748443AF252D62798225F1092D2902FC0057470406205170334EA24BD8FAA",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-developerReference.json",
+      "beforeSha256": "638E27C40F01E33C2F1367943C0F343BB81D9DE5DE6319F07E0559B2DFB1D684",
+      "afterSha256": "638E27C40F01E33C2F1367943C0F343BB81D9DE5DE6319F07E0559B2DFB1D684",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-diagnostic.json",
+      "beforeSha256": "B585D867589E6BB888C516420E7C4E85C18AF080CD5A05FDE766B8222D22FA06",
+      "afterSha256": "B585D867589E6BB888C516420E7C4E85C18AF080CD5A05FDE766B8222D22FA06",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-digitalTwin.json",
+      "beforeSha256": "2A0E294E68A79415875DFAFF9C3D98DD5E69C80467FBFCFDA9B1A31B7D24A239",
+      "afterSha256": "2A0E294E68A79415875DFAFF9C3D98DD5E69C80467FBFCFDA9B1A31B7D24A239",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-draft.json",
+      "beforeSha256": "6DF378A6A422346E2E8DCB559D59659C42525BBAA146818F89B7ABB6C3169B12",
+      "afterSha256": "6DF378A6A422346E2E8DCB559D59659C42525BBAA146818F89B7ABB6C3169B12",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-driveCompare.json",
+      "beforeSha256": "172EDFB600668B7419E3EE03E562031078D85926C7D366E81EA1CC77BD610BCC",
+      "afterSha256": "172EDFB600668B7419E3EE03E562031078D85926C7D366E81EA1CC77BD610BCC",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-driveDetail.json",
+      "beforeSha256": "1B188E65B128779DE8C60D56671ED787DE697CAB2A4D8D921152421A5D00CE8E",
+      "afterSha256": "1B188E65B128779DE8C60D56671ED787DE697CAB2A4D8D921152421A5D00CE8E",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-driveDna.json",
+      "beforeSha256": "563A61753441A3CC3BD0AFA572FDDF588E972C0AFA706E7259967C4D6101E72C",
+      "afterSha256": "563A61753441A3CC3BD0AFA572FDDF588E972C0AFA706E7259967C4D6101E72C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-drives.json",
+      "beforeSha256": "93AB8A35973B85B03B5780FBE70A6080E9578C2A22625C04526E32ECFD00F20B",
+      "afterSha256": "93AB8A35973B85B03B5780FBE70A6080E9578C2A22625C04526E32ECFD00F20B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-driveScore.json",
+      "beforeSha256": "10C459A221474FADB6F280B2C1E3C1A99016F194F04FF737520EAA2EAD50CA17",
+      "afterSha256": "10C459A221474FADB6F280B2C1E3C1A99016F194F04FF737520EAA2EAD50CA17",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-drivetrain.json",
+      "beforeSha256": "9777312722624176F48E1B191A22E3F3A58EE46743E619CA2AB7C13DEF989A56",
+      "afterSha256": "9777312722624176F48E1B191A22E3F3A58EE46743E619CA2AB7C13DEF989A56",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-driving.json",
+      "beforeSha256": "C6B05AC07E82F926019E647D04AD4B28A4CA602B5AC89D6737539693508EC92C",
+      "afterSha256": "C6B05AC07E82F926019E647D04AD4B28A4CA602B5AC89D6737539693508EC92C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-drivingSecondary.json",
+      "beforeSha256": "5D28BBE83502D8080ED8BF1A85DA538EF59937F54818D6AF2C9148B1E3A4A984",
+      "afterSha256": "5D28BBE83502D8080ED8BF1A85DA538EF59937F54818D6AF2C9148B1E3A4A984",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-dynamics.json",
+      "beforeSha256": "F1AB8ED1E115151CAB2F68E8D23DE4E092F1E1BD4A3613417D0F1AF661A66123",
+      "afterSha256": "F1AB8ED1E115151CAB2F68E8D23DE4E092F1E1BD4A3613417D0F1AF661A66123",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-editConflict.json",
+      "beforeSha256": "30D05C9EC829DEA964F9728F6D8725D65C97668800799F725FC4ADF723A0FC26",
+      "afterSha256": "30D05C9EC829DEA964F9728F6D8725D65C97668800799F725FC4ADF723A0FC26",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-efficiency.json",
+      "beforeSha256": "739E01E7A6D9D818A4A3422E11EEA316BFD7849A6ECE503E16D73E73C0713F91",
+      "afterSha256": "739E01E7A6D9D818A4A3422E11EEA316BFD7849A6ECE503E16D73E73C0713F91",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-effTarget.json",
+      "beforeSha256": "3F5690520E32B615016AF78D9D191A63733029CF878628C3226A3A2E6E9E836D",
+      "afterSha256": "3F5690520E32B615016AF78D9D191A63733029CF878628C3226A3A2E6E9E836D",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-emptyState.json",
+      "beforeSha256": "A1FF6B8C7D61ACB21413977CC5DFE747C922B170FD8531CA889DFA976E7FED99",
+      "afterSha256": "A1FF6B8C7D61ACB21413977CC5DFE747C922B170FD8531CA889DFA976E7FED99",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-energyAnatomy.json",
+      "beforeSha256": "70723ADC990E756FABDBA15800706A0066F47221959551E77BF73FBCE0E6BB25",
+      "afterSha256": "70723ADC990E756FABDBA15800706A0066F47221959551E77BF73FBCE0E6BB25",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-entityContext.json",
+      "beforeSha256": "5A78A9E16FAE8947783FFEBFA9B511A12E77B9EE3E67269CBA8BE52E54787B0C",
+      "afterSha256": "5A78A9E16FAE8947783FFEBFA9B511A12E77B9EE3E67269CBA8BE52E54787B0C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-error.json",
+      "beforeSha256": "7DFB4F89073C3D7B1D113A7172E10020978B807A6D6BE8EDE15B454F3694E1F9",
+      "afterSha256": "7DFB4F89073C3D7B1D113A7172E10020978B807A6D6BE8EDE15B454F3694E1F9",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-explorer.json",
+      "beforeSha256": "874B28047C69CB99EA9E31D2B69820167907CADEAD26C2937FBEF7B578372CC8",
+      "afterSha256": "874B28047C69CB99EA9E31D2B69820167907CADEAD26C2937FBEF7B578372CC8",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-export.json",
+      "beforeSha256": "0571B9A3816977ADE4686A8A7D79D73DA6C612644C415D41642F32FCECC93ABB",
+      "afterSha256": "0571B9A3816977ADE4686A8A7D79D73DA6C612644C415D41642F32FCECC93ABB",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-exports.json",
+      "beforeSha256": "7393D1C1B4441CDFB6EF3501A357E9F9633B7171C4899A29CE3E765CD32AA24D",
+      "afterSha256": "7393D1C1B4441CDFB6EF3501A357E9F9633B7171C4899A29CE3E765CD32AA24D",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-feedback.json",
+      "beforeSha256": "86196A7D3EF1AC7F49FC8A0D1E6B6038D290F08832221C0CB4C8816A0DE64B54",
+      "afterSha256": "86196A7D3EF1AC7F49FC8A0D1E6B6038D290F08832221C0CB4C8816A0DE64B54",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-feedbackTriage.json",
+      "beforeSha256": "20DC3CACBBC2F1E3BA48D77D5955868F729B84CEA499517E6B415471F601EA2F",
+      "afterSha256": "20DC3CACBBC2F1E3BA48D77D5955868F729B84CEA499517E6B415471F601EA2F",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-filters.json",
+      "beforeSha256": "8677C4892C588B16AC65F46A7403B401BD96DD56F1D5CED206DF8666023AFE49",
+      "afterSha256": "8677C4892C588B16AC65F46A7403B401BD96DD56F1D5CED206DF8666023AFE49",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-forms.json",
+      "beforeSha256": "439B238DD2ECA2D1F4DF07C411E20E09842EE0265E48544BDAAE46C7105BD672",
+      "afterSha256": "439B238DD2ECA2D1F4DF07C411E20E09842EE0265E48544BDAAE46C7105BD672",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-freshness.json",
+      "beforeSha256": "5A889570CEF596EAA7E60DCD269D7237D85FA4F83A062F84743CC19DF805E000",
+      "afterSha256": "5A889570CEF596EAA7E60DCD269D7237D85FA4F83A062F84743CC19DF805E000",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-fsd.json",
+      "beforeSha256": "5BD935A03BCE945E5C4C74E9B4FC5170A68113822AC3CDF032143626435A18E9",
+      "afterSha256": "5BD935A03BCE945E5C4C74E9B4FC5170A68113822AC3CDF032143626435A18E9",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-fsm.json",
+      "beforeSha256": "2779F548E61C3549F96707DCDC02F80B8FA9A85EC0664397F546962CCAF62348",
+      "afterSha256": "2779F548E61C3549F96707DCDC02F80B8FA9A85EC0664397F546962CCAF62348",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-glossary.json",
+      "beforeSha256": "8D271947863B0B485D8D52AF02F6D2F5F08B06B78324E4535654EF3E26344480",
+      "afterSha256": "8D271947863B0B485D8D52AF02F6D2F5F08B06B78324E4535654EF3E26344480",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-guard.json",
+      "beforeSha256": "DBFF03851A20E199D7948E43DF157757D4E5980854B6E939488199E8ADD4F28E",
+      "afterSha256": "DBFF03851A20E199D7948E43DF157757D4E5980854B6E939488199E8ADD4F28E",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-helix.json",
+      "beforeSha256": "74C58454419BE828088ABC303FFA5953D38910C62F5D49BB792C1BF543293F7E",
+      "afterSha256": "74C58454419BE828088ABC303FFA5953D38910C62F5D49BB792C1BF543293F7E",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-help.json",
+      "beforeSha256": "1BA00BB8AAD30A8F0866B02ECE63FDB975FBAECC823CDAB65AEB5E24A4CAD7CF",
+      "afterSha256": "1BA00BB8AAD30A8F0866B02ECE63FDB975FBAECC823CDAB65AEB5E24A4CAD7CF",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-impersonation.json",
+      "beforeSha256": "3D542A50E6177855D93459A91FD6415576158FE6BB221658991145FC24E4B306",
+      "afterSha256": "3D542A50E6177855D93459A91FD6415576158FE6BB221658991145FC24E4B306",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-journeyFragmentation.json",
+      "beforeSha256": "A9918EFABBE4E6B3E3D7BFFA5A12B19A6A074965DE267831794AEE1BA159A1A3",
+      "afterSha256": "A9918EFABBE4E6B3E3D7BFFA5A12B19A6A074965DE267831794AEE1BA159A1A3",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-kiosk.json",
+      "beforeSha256": "1281C1121796A949499A83BCD2279735FBD89911AEBA1112FB78CC9ECF4EA357",
+      "afterSha256": "1281C1121796A949499A83BCD2279735FBD89911AEBA1112FB78CC9ECF4EA357",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-landscape.json",
+      "beforeSha256": "73BCE24B99B160D6C7FACCA2A3956A636ADF71740FFF365913021F1B163A8E58",
+      "afterSha256": "73BCE24B99B160D6C7FACCA2A3956A636ADF71740FFF365913021F1B163A8E58",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-live.json",
+      "beforeSha256": "4AF2FCCB4EBA1B3A3D5F1537455DD8A6ADE00D18327D50C484394D065FC80224",
+      "afterSha256": "4AF2FCCB4EBA1B3A3D5F1537455DD8A6ADE00D18327D50C484394D065FC80224",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-liveLogs.json",
+      "beforeSha256": "10FF344E9BAC088CFA5D3206B18826AF4BFC323674D32F3EEF0309E4113980AD",
+      "afterSha256": "10FF344E9BAC088CFA5D3206B18826AF4BFC323674D32F3EEF0309E4113980AD",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-logbook.json",
+      "beforeSha256": "9344F9B733D79BDBF1267913EED4CD9ACFE0E01F4CCD6701D298BDDA76CD3275",
+      "afterSha256": "9344F9B733D79BDBF1267913EED4CD9ACFE0E01F4CCD6701D298BDDA76CD3275",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-maps.json",
+      "beforeSha256": "E6742055BC55B09F0D733523BAB00A899842595171DF077B0484EC1C29F6D0FF",
+      "afterSha256": "E6742055BC55B09F0D733523BAB00A899842595171DF077B0484EC1C29F6D0FF",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-mqttSseInspector.json",
+      "beforeSha256": "0675E3D6FFCF281923EBC75D8BA53E3B1A6A2538AF581B520ADDE2AC9714EF27",
+      "afterSha256": "0675E3D6FFCF281923EBC75D8BA53E3B1A6A2538AF581B520ADDE2AC9714EF27",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-notifications.json",
+      "beforeSha256": "8BC2F6CE3E595EC81D6D4E6A1A442436799B9E07EE5E7270BE2C3715A18BADF1",
+      "afterSha256": "8BC2F6CE3E595EC81D6D4E6A1A442436799B9E07EE5E7270BE2C3715A18BADF1",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-onboarding.json",
+      "beforeSha256": "44980D7283FAADC70CD8DC1545CCDEA124EBD1769838B417132648FFCE6B16E2",
+      "afterSha256": "44980D7283FAADC70CD8DC1545CCDEA124EBD1769838B417132648FFCE6B16E2",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-operationalMode.json",
+      "beforeSha256": "A0936CEF5CE7476A9914467A2145082FF1D82A5635D31856CE04349497CFABA3",
+      "afterSha256": "A0936CEF5CE7476A9914467A2145082FF1D82A5635D31856CE04349497CFABA3",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-operations.json",
+      "beforeSha256": "A9FAB845E9925FD1CBCB55A4C98FF74F06490ECA70E3578BEF4AC9D4BE150014",
+      "afterSha256": "A9FAB845E9925FD1CBCB55A4C98FF74F06490ECA70E3578BEF4AC9D4BE150014",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-originConcentration.json",
+      "beforeSha256": "7EBD06A2647CE1DCFCE501D12CD09C6176530F3568453B014D437EC4C02AA93B",
+      "afterSha256": "7EBD06A2647CE1DCFCE501D12CD09C6176530F3568453B014D437EC4C02AA93B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-pagination.json",
+      "beforeSha256": "614F2A0C884239DABC1621117DA7BF272CCCB225F94AB2F3E6C6D4CA8DFEFDF5",
+      "afterSha256": "614F2A0C884239DABC1621117DA7BF272CCCB225F94AB2F3E6C6D4CA8DFEFDF5",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-paint.json",
+      "beforeSha256": "D5CC64A329AD80DC397825A54C4344BD2CA979796A9A6F5D2512567BFDE03DF6",
+      "afterSha256": "D5CC64A329AD80DC397825A54C4344BD2CA979796A9A6F5D2512567BFDE03DF6",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-palette.json",
+      "beforeSha256": "4DC0FE042487CBECE065F72E963A4504B90A78E193876B0C72722F0DD61DA042",
+      "afterSha256": "4DC0FE042487CBECE065F72E963A4504B90A78E193876B0C72722F0DD61DA042",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-polling.json",
+      "beforeSha256": "96A824A608669EC602E29F83CA1FAC4E299751B4F373116F04CBA23B06059C10",
+      "afterSha256": "96A824A608669EC602E29F83CA1FAC4E299751B4F373116F04CBA23B06059C10",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-presentation.json",
+      "beforeSha256": "C63580821EF62EEC240F1F84231B85CB1B8AD3D8A515F7B4F7EA200C8EA71E35",
+      "afterSha256": "C63580821EF62EEC240F1F84231B85CB1B8AD3D8A515F7B4F7EA200C8EA71E35",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-problemReport.json",
+      "beforeSha256": "3132A425820E79219D5EDFBBF068FEFBA781F5D936706D96D2F2C0EFD694AA53",
+      "afterSha256": "3132A425820E79219D5EDFBBF068FEFBA781F5D936706D96D2F2C0EFD694AA53",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-productPreferences.json",
+      "beforeSha256": "BE2A1BA6F9B488DEB70A99C0F482A5B4D4822376B28822F36005CEB6F081AC5A",
+      "afterSha256": "BE2A1BA6F9B488DEB70A99C0F482A5B4D4822376B28822F36005CEB6F081AC5A",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-pwa.json",
+      "beforeSha256": "66C63FA081E18F17BC8AF489A017758B49267D4DC068C27720B52DD3F92F7814",
+      "afterSha256": "66C63FA081E18F17BC8AF489A017758B49267D4DC068C27720B52DD3F92F7814",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-rangeBuffer.json",
+      "beforeSha256": "8883ABB52EBD15590C0778234C43E9CD3D778B8E5AC3244BE7F0AE885AC79910",
+      "afterSha256": "8883ABB52EBD15590C0778234C43E9CD3D778B8E5AC3244BE7F0AE885AC79910",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-rbac.json",
+      "beforeSha256": "4894D82FB39A6D14421C012582BBCBD0CAA7599DE12480BE89271564B31F1F33",
+      "afterSha256": "4894D82FB39A6D14421C012582BBCBD0CAA7599DE12480BE89271564B31F1F33",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-recentPages.json",
+      "beforeSha256": "C86099EA4D54633D5A43CDAC2A147C5F00D5222F5E35F9B2FD46777711E41076",
+      "afterSha256": "C86099EA4D54633D5A43CDAC2A147C5F00D5222F5E35F9B2FD46777711E41076",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-regen.json",
+      "beforeSha256": "2C2F3DE7278AB7422456684EE64249A625E0E3D2ECA3B567A804F8068251C1BC",
+      "afterSha256": "2C2F3DE7278AB7422456684EE64249A625E0E3D2ECA3B567A804F8068251C1BC",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-replay.json",
+      "beforeSha256": "A9F8C176A47881C101C88A5BDF8D55A19751AEB7138BD09516D30CFD5DB1E7B8",
+      "afterSha256": "A9F8C176A47881C101C88A5BDF8D55A19751AEB7138BD09516D30CFD5DB1E7B8",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-requiresAuth.json",
+      "beforeSha256": "5F9411FE665F8104A49EB5CD0C8555A09437F23EEBBC144CDB8C6876B0CFE495",
+      "afterSha256": "5F9411FE665F8104A49EB5CD0C8555A09437F23EEBBC144CDB8C6876B0CFE495",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-rhythm.json",
+      "beforeSha256": "17B861DE6B381E3E969D614505B7DA8A0378919A142316938E2D82BF794A5AB0",
+      "afterSha256": "17B861DE6B381E3E969D614505B7DA8A0378919A142316938E2D82BF794A5AB0",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-routeEfficiency.json",
+      "beforeSha256": "0FC609FBC842B8BDD9D4BAEB5837859B16E256B35DA0F8EAB53167C02C9F2BE7",
+      "afterSha256": "0FC609FBC842B8BDD9D4BAEB5837859B16E256B35DA0F8EAB53167C02C9F2BE7",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-savedViews.json",
+      "beforeSha256": "2059D0DF44FFA3DF9B932322B9FBAA308219FB7D839B5366F595E104799BD6CB",
+      "afterSha256": "2059D0DF44FFA3DF9B932322B9FBAA308219FB7D839B5366F595E104799BD6CB",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-search.json",
+      "beforeSha256": "EF37D48162C2837A09071077EE1914355160C00388E1F3559885A4EFA8BE34A2",
+      "afterSha256": "EF37D48162C2837A09071077EE1914355160C00388E1F3559885A4EFA8BE34A2",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-seasonalEfficiency.json",
+      "beforeSha256": "5876B8C6A84CBCFC106CE2FBB7F094F8C260090A5576CCF8474C6C33FB7CF199",
+      "afterSha256": "5876B8C6A84CBCFC106CE2FBB7F094F8C260090A5576CCF8474C6C33FB7CF199",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-segments.json",
+      "beforeSha256": "8156945F0E0F1DF4508EA3CAA3D2147C9EA49BF01D8CB656568023277664FBFD",
+      "afterSha256": "8156945F0E0F1DF4508EA3CAA3D2147C9EA49BF01D8CB656568023277664FBFD",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-serviceMode.json",
+      "beforeSha256": "97B8381F334948AA1404C58F451D8EF66E480F9338C99BAE607E510AE89BAF61",
+      "afterSha256": "97B8381F334948AA1404C58F451D8EF66E480F9338C99BAE607E510AE89BAF61",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-session.json",
+      "beforeSha256": "07FEE60EB1C5C0AA0687853A44D2E7A14E02BDA34A6304EE0A2310890A2163A4",
+      "afterSha256": "07FEE60EB1C5C0AA0687853A44D2E7A14E02BDA34A6304EE0A2310890A2163A4",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-settings.json",
+      "beforeSha256": "007D6EA3ACA78B9FD099A65C6686A6ADEDBBAA0E75C8C9F2712091D785A1FA9A",
+      "afterSha256": "007D6EA3ACA78B9FD099A65C6686A6ADEDBBAA0E75C8C9F2712091D785A1FA9A",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-shortcuts.json",
+      "beforeSha256": "E01529DB8F7480ED636DBAA933C5DC22FE9FC7CCAD32BA0A441385417C71CA8D",
+      "afterSha256": "E01529DB8F7480ED636DBAA933C5DC22FE9FC7CCAD32BA0A441385417C71CA8D",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-signalConfig.json",
+      "beforeSha256": "F16A4D113BC2EEF190F1F17B44DB95DF7490079D4654AE7E4FD7D230B4494E7B",
+      "afterSha256": "F16A4D113BC2EEF190F1F17B44DB95DF7490079D4654AE7E4FD7D230B4494E7B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-signalQuery.json",
+      "beforeSha256": "22D371E4B0F2236DB18B793B9AD07222EAB2377CAA0213E9C775F0975FACB41C",
+      "afterSha256": "22D371E4B0F2236DB18B793B9AD07222EAB2377CAA0213E9C775F0975FACB41C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-sourceLayer.json",
+      "beforeSha256": "3416B8F1BECF4473837E5F3AD199D2A9C9D15D3482D61E47D13C2C59C98432AC",
+      "afterSha256": "3416B8F1BECF4473837E5F3AD199D2A9C9D15D3482D61E47D13C2C59C98432AC",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-speedProfile.json",
+      "beforeSha256": "C65055C1E510BE8451E1AB75430E2FCBFD6E711334BEE3FD006A96A6675C56A0",
+      "afterSha256": "C65055C1E510BE8451E1AB75430E2FCBFD6E711334BEE3FD006A96A6675C56A0",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-speedSweetSpot.json",
+      "beforeSha256": "17E5870BFE5165B23A0F7F86DE6AAF4AAD9D1698D08A0AD6FB120D5F29D5B23E",
+      "afterSha256": "17E5870BFE5165B23A0F7F86DE6AAF4AAD9D1698D08A0AD6FB120D5F29D5B23E",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-stateMachineDebugger.json",
+      "beforeSha256": "2CD6D4A6232CDA64DB24EE61B989FB1BC9B3CFFE1EF0B76648416E5FD759063E",
+      "afterSha256": "2CD6D4A6232CDA64DB24EE61B989FB1BC9B3CFFE1EF0B76648416E5FD759063E",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-statusBar.json",
+      "beforeSha256": "CE0C501DB7E5BA8FD43A14089B8FB11F5A55352AA9D39CC91BBE2AB0EC8E0866",
+      "afterSha256": "CE0C501DB7E5BA8FD43A14089B8FB11F5A55352AA9D39CC91BBE2AB0EC8E0866",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-sudo.json",
+      "beforeSha256": "793B2CDEE3D0E28B30250CB92CD40C99C599ED86A3FE059B186783E908B23326",
+      "afterSha256": "793B2CDEE3D0E28B30250CB92CD40C99C599ED86A3FE059B186783E908B23326",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-sweetSpot.json",
+      "beforeSha256": "E9FA653458F7F29AEAE43A6D9B51C80F3FA4CED148F30685EEF0C7D3A74F159F",
+      "afterSha256": "E9FA653458F7F29AEAE43A6D9B51C80F3FA4CED148F30685EEF0C7D3A74F159F",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-systemStatus.json",
+      "beforeSha256": "F3A4EE1021B47A38E1AD24EB9C0B95BF0D91E8999293AB5CE97F41E1FD2D3A7F",
+      "afterSha256": "F3A4EE1021B47A38E1AD24EB9C0B95BF0D91E8999293AB5CE97F41E1FD2D3A7F",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-table.json",
+      "beforeSha256": "60AA4DC1940AE942DF415AD488785B510693F465B56FF206DB6C1CA6EB08F230",
+      "afterSha256": "60AA4DC1940AE942DF415AD488785B510693F465B56FF206DB6C1CA6EB08F230",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-tagInput.json",
+      "beforeSha256": "E7C817FE904C98231E1BCBFA3E64770D7796CB00BF6CCBC4BDFF74377DFCD4A6",
+      "afterSha256": "E7C817FE904C98231E1BCBFA3E64770D7796CB00BF6CCBC4BDFF74377DFCD4A6",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-tesla.json",
+      "beforeSha256": "C6659469F58E7F06631601BB84A91C71E718BCDE53B259A642DDF948137FA59E",
+      "afterSha256": "C6659469F58E7F06631601BB84A91C71E718BCDE53B259A642DDF948137FA59E",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-teslaOnly.json",
+      "beforeSha256": "B45D1A81676DBD5361245C14958471472C7FEA864B6180D0CDACC3408E62B929",
+      "afterSha256": "B45D1A81676DBD5361245C14958471472C7FEA864B6180D0CDACC3408E62B929",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-theme.json",
+      "beforeSha256": "B947B57657C6BE8B60DEDF56C9BD47C70B2D28448D076E045B5F438FCA7BED1B",
+      "afterSha256": "B947B57657C6BE8B60DEDF56C9BD47C70B2D28448D076E045B5F438FCA7BED1B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-timeline.json",
+      "beforeSha256": "5800F87CC2706A8E0ACC0732C3CD178A6EF891DE0A9E77B6A818F222B6C11BA8",
+      "afterSha256": "5800F87CC2706A8E0ACC0732C3CD178A6EF891DE0A9E77B6A818F222B6C11BA8",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-timeMachine.json",
+      "beforeSha256": "0A3ADA601BA470149AAA026C4AE62834CFEC1BE9D396A7A2DF996D1A1A654992",
+      "afterSha256": "0A3ADA601BA470149AAA026C4AE62834CFEC1BE9D396A7A2DF996D1A1A654992",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-toast.json",
+      "beforeSha256": "C2E7B15111E63B711F502442CF00CC02A01C01E3105059889846E25040BE0A62",
+      "afterSha256": "C2E7B15111E63B711F502442CF00CC02A01C01E3105059889846E25040BE0A62",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-tour.json",
+      "beforeSha256": "C86A1F5EAB7AE24810FC3731C97DDDB8910CC8A4F5E6D442826FE66A79F52910",
+      "afterSha256": "C86A1F5EAB7AE24810FC3731C97DDDB8910CC8A4F5E6D442826FE66A79F52910",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-tripPlanner.json",
+      "beforeSha256": "C1DE454ADE737F56EACB2EA234AEFF75C6D8B8F7028215C622849CC041DE201F",
+      "afterSha256": "C1DE454ADE737F56EACB2EA234AEFF75C6D8B8F7028215C622849CC041DE201F",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-vehicleHero.json",
+      "beforeSha256": "5297E41EE92F239E5773248DB18B2F3CC1C29A7C543991CA1DC1FCEAE035386A",
+      "afterSha256": "5297E41EE92F239E5773248DB18B2F3CC1C29A7C543991CA1DC1FCEAE035386A",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-voiceMode.json",
+      "beforeSha256": "92FF6598D18B5D565ECC930DA54C6492C194FE235560A091AD4862E6CD680FEC",
+      "afterSha256": "92FF6598D18B5D565ECC930DA54C6492C194FE235560A091AD4862E6CD680FEC",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-watch.json",
+      "beforeSha256": "2709E75A3FB19EFF9E66BCDFC07DD7BF24EC61657C1B131F7DF0F1960B824BE8",
+      "afterSha256": "2709E75A3FB19EFF9E66BCDFC07DD7BF24EC61657C1B131F7DF0F1960B824BE8",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-watchFaceNL.json",
+      "beforeSha256": "9B13A17C3254C13A97061A54D9A2AF6BFA51BAFD205D1995D52918B49CA4ABC5",
+      "afterSha256": "9B13A17C3254C13A97061A54D9A2AF6BFA51BAFD205D1995D52918B49CA4ABC5",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-whatIf.json",
+      "beforeSha256": "AD0A8638769E87FDB95DC95958B3DF16EF1B7812B1A0EB2DA2CB459B3E58A903",
+      "afterSha256": "AD0A8638769E87FDB95DC95958B3DF16EF1B7812B1A0EB2DA2CB459B3E58A903",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-diagnostics.json",
+      "beforeSha256": "4C6362B41BD826472E53B0F4B78763627DE1B6FB3707F511112351A20093FBAE",
+      "afterSha256": "4C6362B41BD826472E53B0F4B78763627DE1B6FB3707F511112351A20093FBAE",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-arrival-reliability.json",
+      "beforeSha256": "8E0588F797E817DF0177CB2380371D3D5DC65C86820F99BD79C12213C72D8E05",
+      "afterSha256": "8E0588F797E817DF0177CB2380371D3D5DC65C86820F99BD79C12213C72D8E05",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-cold-start.json",
+      "beforeSha256": "62B55967930552C9702337F7C688B2FB0AB7D3BE60B5748554CB354D7E036231",
+      "afterSha256": "62B55967930552C9702337F7C688B2FB0AB7D3BE60B5748554CB354D7E036231",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-departure-forecast.json",
+      "beforeSha256": "D3601A72ADCE8D3CBBA9C7A7C7756A55B3104682688A1A481529E7532612BEF9",
+      "afterSha256": "D3601A72ADCE8D3CBBA9C7A7C7756A55B3104682688A1A481529E7532612BEF9",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-destination-transitions.json",
+      "beforeSha256": "D0BA5F5EF2A648720F5A6FD337475A54FE94D561FE17F67DFD89778B4C3CF107",
+      "afterSha256": "D0BA5F5EF2A648720F5A6FD337475A54FE94D561FE17F67DFD89778B4C3CF107",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-drive-compare.json",
+      "beforeSha256": "23898950D38D7D6C902CCD2DFE75ACEA007F760D99BD4015DC1BD20F3D38597B",
+      "afterSha256": "23898950D38D7D6C902CCD2DFE75ACEA007F760D99BD4015DC1BD20F3D38597B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-drive-dna.json",
+      "beforeSha256": "87615E9446AC94CEA2DD81ACA2DAC88B89B3FBF0C25FC0FBA6BB57556E2BAE84",
+      "afterSha256": "87615E9446AC94CEA2DD81ACA2DAC88B89B3FBF0C25FC0FBA6BB57556E2BAE84",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-drive-score.json",
+      "beforeSha256": "3F00E8C224C541BA540AA458F81BFF8500A611E9AA397650101C60AC2AFAFDC2",
+      "afterSha256": "3F00E8C224C541BA540AA458F81BFF8500A611E9AA397650101C60AC2AFAFDC2",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-drivetrain-health.json",
+      "beforeSha256": "5C5F07F6B6B7DA600F4DF0B940EFD526430215FD3EDE22FA02A7E3C707D6AFA4",
+      "afterSha256": "5C5F07F6B6B7DA600F4DF0B940EFD526430215FD3EDE22FA02A7E3C707D6AFA4",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-driving-dynamics.json",
+      "beforeSha256": "00357D0DCD823D03F5632D0BB1F095C98D264C91033147BB79864A7019858FF9",
+      "afterSha256": "00357D0DCD823D03F5632D0BB1F095C98D264C91033147BB79864A7019858FF9",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-driving-rhythm.json",
+      "beforeSha256": "EB18E82B3F2B69B8DB73BF2D86B488FA3BFF0702B83D27DF691E493DC34886A8",
+      "afterSha256": "EB18E82B3F2B69B8DB73BF2D86B488FA3BFF0702B83D27DF691E493DC34886A8",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-efficiency-target.json",
+      "beforeSha256": "5248956250DB75690FCEA74C4AF0DD5963B9BE386C9E0514D7A25B36835A7B74",
+      "afterSha256": "5248956250DB75690FCEA74C4AF0DD5963B9BE386C9E0514D7A25B36835A7B74",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-efficiency.json",
+      "beforeSha256": "B6454835E45A283DCB2DB3461D85F27C78C5A26D5D9F3DA25671084B4339B7A2",
+      "afterSha256": "B6454835E45A283DCB2DB3461D85F27C78C5A26D5D9F3DA25671084B4339B7A2",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-explorer.json",
+      "beforeSha256": "AD00263D9172FA2209501CADE499BCF4F576382C51B4C9A8C5FB2F57A25C6C31",
+      "afterSha256": "AD00263D9172FA2209501CADE499BCF4F576382C51B4C9A8C5FB2F57A25C6C31",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-fsdinsights.json",
+      "beforeSha256": "2C745E867A2540F46DC9DBE54BF6D5A8E69160EAF7455EBB95DAC0FA2E821FBB",
+      "afterSha256": "2C745E867A2540F46DC9DBE54BF6D5A8E69160EAF7455EBB95DAC0FA2E821FBB",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-journey-fragmentation.json",
+      "beforeSha256": "05D3E64F8C8BD0E5E9E0CF514DD4F6C5755B7D3A46F85FACAD0356A8E89D4542",
+      "afterSha256": "05D3E64F8C8BD0E5E9E0CF514DD4F6C5755B7D3A46F85FACAD0356A8E89D4542",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-range-buffer.json",
+      "beforeSha256": "E65922BAF997EE3C00D95DADC4A558D8DD75825953413344CB3C53AB64833B86",
+      "afterSha256": "E65922BAF997EE3C00D95DADC4A558D8DD75825953413344CB3C53AB64833B86",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-regen-efficiency.json",
+      "beforeSha256": "B294BAF81F284943AF13CDB59FC31ED569B9807653F6ED09D7163231F9DF4A50",
+      "afterSha256": "B294BAF81F284943AF13CDB59FC31ED569B9807653F6ED09D7163231F9DF4A50",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-route-efficiency.json",
+      "beforeSha256": "0F1F1630DB1A9C563887945A847DBFB41D9ECFE81F2AFD4F5DB6A650E35F7985",
+      "afterSha256": "0F1F1630DB1A9C563887945A847DBFB41D9ECFE81F2AFD4F5DB6A650E35F7985",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-seasonal-efficiency.json",
+      "beforeSha256": "985FC3136546C62389D67615C30209104A4E24DAD25CCAED9728FBFE172F356B",
+      "afterSha256": "985FC3136546C62389D67615C30209104A4E24DAD25CCAED9728FBFE172F356B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-segments.json",
+      "beforeSha256": "DF46140B3ADF72C0902BB2E09A4EF4B142287C5AE5CD8F742EDDDA96A46FDDC8",
+      "afterSha256": "DF46140B3ADF72C0902BB2E09A4EF4B142287C5AE5CD8F742EDDDA96A46FDDC8",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-speed-profile.json",
+      "beforeSha256": "44890A0D32393A32A98069A815FCC0E4452E382E384A82887607EC42746315FB",
+      "afterSha256": "44890A0D32393A32A98069A815FCC0E4452E382E384A82887607EC42746315FB",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-speed-sweet-spot.json",
+      "beforeSha256": "4A483C41CED84DF07309DF7D3F1DFAE8713E59B1EA197FBC65744CEB858E4B55",
+      "afterSha256": "4A483C41CED84DF07309DF7D3F1DFAE8713E59B1EA197FBC65744CEB858E4B55",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-trip-logbook.json",
+      "beforeSha256": "94DC132E713CA963B67EB6141B8817F8626F00C1ACF561E8AE602B2FF527F5CF",
+      "afterSha256": "94DC132E713CA963B67EB6141B8817F8626F00C1ACF561E8AE602B2FF527F5CF",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-trip-planner.json",
+      "beforeSha256": "7D946DECC9DAE121F4F1583B8B719429A6479BD5D732A5B345A55C850BF7D3C2",
+      "afterSha256": "7D946DECC9DAE121F4F1583B8B719429A6479BD5D732A5B345A55C850BF7D3C2",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-what-if.json",
+      "beforeSha256": "8885E686355EBEC06BF6A3C7BD365D53AB0449A573A64080447C36EB25694E31",
+      "afterSha256": "8885E686355EBEC06BF6A3C7BD365D53AB0449A573A64080447C36EB25694E31",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving.json",
+      "beforeSha256": "94356FE7FBB3358F1DE0964337821EB8B3E1BF4D8A7B951F3B5E97CF762D5468",
+      "afterSha256": "94356FE7FBB3358F1DE0964337821EB8B3E1BF4D8A7B951F3B5E97CF762D5468",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-explore.json",
+      "beforeSha256": "38D93CEF8D444B8FFCA27742C03E5E4756E8F2BAE67B8A16B1696B036F393E2B",
+      "afterSha256": "38D93CEF8D444B8FFCA27742C03E5E4756E8F2BAE67B8A16B1696B036F393E2B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-exports.json",
+      "beforeSha256": "56250B2502F148B4178359F66668CBBE2134BA7D8E0A842D19087D92778E69FD",
+      "afterSha256": "56250B2502F148B4178359F66668CBBE2134BA7D8E0A842D19087D92778E69FD",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-fleet-ops.json",
+      "beforeSha256": "0C0865164461F6784EA09599DD1B6A940726CC870C02C6A3951608CC199E5D2C",
+      "afterSha256": "0C0865164461F6784EA09599DD1B6A940726CC870C02C6A3951608CC199E5D2C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-home-energy.json",
+      "beforeSha256": "7DD6C09946404C817CC84CA2DCE0CF9B7E864DA585A7F106FD4D411849999D25",
+      "afterSha256": "7DD6C09946404C817CC84CA2DCE0CF9B7E864DA585A7F106FD4D411849999D25",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-intelligence-packs.json",
+      "beforeSha256": "8D492235271E874E4999448F0FF2F49E3DA3FC63C69FA042A83CB71D446B5B78",
+      "afterSha256": "8D492235271E874E4999448F0FF2F49E3DA3FC63C69FA042A83CB71D446B5B78",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-maps.json",
+      "beforeSha256": "CC503A2FD557C6FEB835E9DFA7EB684D690B85199D452756ADCE19EE5FEF7362",
+      "afterSha256": "CC503A2FD557C6FEB835E9DFA7EB684D690B85199D452756ADCE19EE5FEF7362",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-notifications.json",
+      "beforeSha256": "F0888894C53EF8428DBE8018B62757FE6A2B5916F6EE05436B4F10E614EC0AD0",
+      "afterSha256": "F0888894C53EF8428DBE8018B62757FE6A2B5916F6EE05436B4F10E614EC0AD0",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-ownership.json",
+      "beforeSha256": "58536E091CB61393DF19920A9A7D60F84235553D61D8630343FE58A7DA803CBA",
+      "afterSha256": "58536E091CB61393DF19920A9A7D60F84235553D61D8630343FE58A7DA803CBA",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-power-user.json",
+      "beforeSha256": "433B041F41305999F6365BA7B04BC853B9BD596D2CCF82DA7E484DE8928A2800",
+      "afterSha256": "433B041F41305999F6365BA7B04BC853B9BD596D2CCF82DA7E484DE8928A2800",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-resale-vault.json",
+      "beforeSha256": "FFA41251E1622760FE51C33A40E184E5350FD101445F03E23B57ED32BB3D9010",
+      "afterSha256": "FFA41251E1622760FE51C33A40E184E5350FD101445F03E23B57ED32BB3D9010",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-science.json",
+      "beforeSha256": "A34762F7708F9E22057DEF1046E2CA8CBF89414515301300CA8BC9073E03CBBD",
+      "afterSha256": "A34762F7708F9E22057DEF1046E2CA8CBF89414515301300CA8BC9073E03CBBD",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-service-intelligence.json",
+      "beforeSha256": "FF26D11993FF9D2F527FCB60E6B090A86C09F442F95E1CD3FD4CD52FEA88F0CA",
+      "afterSha256": "FF26D11993FF9D2F527FCB60E6B090A86C09F442F95E1CD3FD4CD52FEA88F0CA",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-settings.json",
+      "beforeSha256": "CA5149BD282CD90AA19C1B6D2A0B2CD43CAA23D64C66D954804A7AEF35BA61D2",
+      "afterSha256": "CA5149BD282CD90AA19C1B6D2A0B2CD43CAA23D64C66D954804A7AEF35BA61D2",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-sharing.json",
+      "beforeSha256": "94D37FFEBCFB94BE85208DB551CC3873CF1EA8BEB7578E18A267C01734E53ECE",
+      "afterSha256": "94D37FFEBCFB94BE85208DB551CC3873CF1EA8BEB7578E18A267C01734E53ECE",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-system.json",
+      "beforeSha256": "AEECB425F606A0D3CC9569A3296DE5D39D0A3D19A45EE76907989625484F3F8F",
+      "afterSha256": "AEECB425F606A0D3CC9569A3296DE5D39D0A3D19A45EE76907989625484F3F8F",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-telemetry.json",
+      "beforeSha256": "C5AAEE5AB0B68C1FDF9C1B7CE310A0358D3AA011DF8B11CE09C033CAFABD83DD",
+      "afterSha256": "C5AAEE5AB0B68C1FDF9C1B7CE310A0358D3AA011DF8B11CE09C033CAFABD83DD",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-trips.json",
+      "beforeSha256": "FB8D100807B2751143A6F8340FFA9169F36BE7F218EC43B6C17F2BE1CEECF037",
+      "afterSha256": "FB8D100807B2751143A6F8340FFA9169F36BE7F218EC43B6C17F2BE1CEECF037",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-unreferenced.json",
+      "beforeSha256": "55B9B8DCFD85E50ED4D38EF2A273EB3E47CF14960FB4F22F54AD27C09510E0E9",
+      "afterSha256": "55B9B8DCFD85E50ED4D38EF2A273EB3E47CF14960FB4F22F54AD27C09510E0E9",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-vehicle-systems.json",
+      "beforeSha256": "CC7E0B112A28DDB600D3F4AAAA8923595C761DD0E9ABA3209FF14366586A60A7",
+      "afterSha256": "CC7E0B112A28DDB600D3F4AAAA8923595C761DD0E9ABA3209FF14366586A60A7",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-vehicles.json",
+      "beforeSha256": "BCA10AD642E9C5DBF00CE3A1803D001857328AC85719AD9E4BD87465CE79FDFC",
+      "afterSha256": "BCA10AD642E9C5DBF00CE3A1803D001857328AC85719AD9E4BD87465CE79FDFC",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\runtime-manifest.json",
+      "beforeSha256": "F12336C510017FC79ED588E01D1DAA3C307F05D3FDC20A857FFCF6AA77FC9B0D",
+      "afterSha256": "F12336C510017FC79ED588E01D1DAA3C307F05D3FDC20A857FFCF6AA77FC9B0D",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\shell.json",
+      "beforeSha256": "EC8C6D42D5E93B3A9E1D8B151769E78B1766DB49BA30595B3F5F687DE11E384B",
+      "afterSha256": "EC8C6D42D5E93B3A9E1D8B151769E78B1766DB49BA30595B3F5F687DE11E384B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\usage-manifest.json",
+      "beforeSha256": "E8C13322D9518398436080F25B795266E21598262164D0216DF3292DC829BA37",
+      "afterSha256": "4CE06D27C87994038D26BE7331BB381296D33EF3A01821F6B69B396B12F62C9B",
+      "match": false
+    },
+    {
+      "file": "web\\src\\lib\\routeRegistry.test.ts",
+      "beforeSha256": "AD13CBC2EE3C826D772F78444D322BB6B52BDE335BE9981CB5A7D4519BD5E35E",
+      "afterSha256": "AD13CBC2EE3C826D772F78444D322BB6B52BDE335BE9981CB5A7D4519BD5E35E",
+      "match": true
+    },
+    {
+      "file": "web\\src\\lib\\routeRegistry.ts",
+      "beforeSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "afterSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "match": true
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "match": true
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "beforeSha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "afterSha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\api\\dataState.ts",
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "match": true
+    },
+    {
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "beforeSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "afterSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "match": true
+    },
+    {
+      "file": "web\\src\\lib\\teslaAuthRecovery.ts",
+      "beforeSha256": "BD5C522239D4A01105AB4D16B4881962DC00758AB29D17A49F5F36491E8E46BE",
+      "afterSha256": "BD5C522239D4A01105AB4D16B4881962DC00758AB29D17A49F5F36491E8E46BE",
+      "match": true
+    },
+    {
+      "file": "web\\src\\lib\\resilience.ts",
+      "beforeSha256": "E100C50C5CE8080AADDE8BADBF083254F1ED4730978E52FA4B690876CD2F0BCA",
+      "afterSha256": "E100C50C5CE8080AADDE8BADBF083254F1ED4730978E52FA4B690876CD2F0BCA",
+      "match": true
+    },
+    {
+      "file": "web\\src\\api\\client.ts",
+      "beforeSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "afterSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\FavoritesBar.tsx",
+      "beforeSha256": "6C40632026A2D67675003B67FD178BDC2705EC26E72C09EB591AD35DAADEBB62",
+      "afterSha256": "6C40632026A2D67675003B67FD178BDC2705EC26E72C09EB591AD35DAADEBB62",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+      "beforeSha256": "161AA955CB0E2AB4BE36351242EA88041026174968ECBD5E59AE9F4BF1958891",
+      "afterSha256": "161AA955CB0E2AB4BE36351242EA88041026174968ECBD5E59AE9F4BF1958891",
+      "match": true
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Button.tsx",
+      "beforeSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "afterSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\GlassPanel.tsx",
+      "beforeSha256": "E60A182C5579269B2A3D9869B0FC8FE14B3B1DC191DB09A3A3C19BB13A88F3AF",
+      "afterSha256": "E60A182C5579269B2A3D9869B0FC8FE14B3B1DC191DB09A3A3C19BB13A88F3AF",
+      "match": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Modal.tsx",
+      "beforeSha256": "BD90F0AF735A0219D76EA6491E4CE20C1D62935F71019DE445F5A1797DE0D383",
+      "afterSha256": "BD90F0AF735A0219D76EA6491E4CE20C1D62935F71019DE445F5A1797DE0D383",
+      "match": true
+    },
+    {
+      "file": "web\\src\\components\\feedback\\QueryError.tsx",
+      "beforeSha256": "5DC7D6A24694C2F34411D8B042864C94A630BE9FC0A516586C2596172F19E48A",
+      "afterSha256": "5DC7D6A24694C2F34411D8B042864C94A630BE9FC0A516586C2596172F19E48A",
+      "match": true
+    },
+    {
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "beforeSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "afterSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "match": true
+    },
+    {
+      "file": ".github\\instructions\\react-frontend.instructions.md",
+      "beforeSha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "afterSha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "match": true
+    },
+    {
+      "file": ".github\\instructions\\frontend-si-cutover.instructions.md",
+      "beforeSha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "afterSha256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "match": true
+    },
+    {
+      "file": ".github\\instructions\\unit-conversion.instructions.md",
+      "beforeSha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "afterSha256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "match": true
+    },
+    {
+      "file": "web\\src\\hooks\\useOperationalMode.tsx",
+      "beforeSha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+      "afterSha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+      "match": true
+    },
+    {
+      "file": "web\\src\\lib\\operationalMode.ts",
+      "beforeSha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D",
+      "afterSha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D",
+      "match": true
+    },
+    {
+      "file": "web\\src\\hooks\\useOperationalMetrics.tsx",
+      "beforeSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "afterSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "match": true
+    },
+    {
+      "file": "web\\src\\components\\feedback\\TeslaReauthBanner.tsx",
+      "beforeSha256": "2634F654F758CAF723EF06662CB9392AC742BD08AD315B65C697E8E1F8D7C6D7",
+      "afterSha256": "2634F654F758CAF723EF06662CB9392AC742BD08AD315B65C697E8E1F8D7C6D7",
+      "match": true
+    },
+    {
+      "file": "web\\src\\i18n\\en.json",
+      "beforeSha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "match": false
+    },
+    {
+      "file": "web\\src\\components\\ui\\Input.tsx",
+      "beforeSha256": "2C687DDCF37022148906E67B891DDAEC5AEB7A6F18385A93E92DBA2F32095B40",
+      "afterSha256": "2C687DDCF37022148906E67B891DDAEC5AEB7A6F18385A93E92DBA2F32095B40",
+      "match": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\StatusPill.tsx",
+      "beforeSha256": "6A8CF7E8357BAD0D72965CBC689DEDFD806003BD47F57B3BFE9FD0521C473091",
+      "afterSha256": "6A8CF7E8357BAD0D72965CBC689DEDFD806003BD47F57B3BFE9FD0521C473091",
+      "match": true
+    },
+    {
+      "file": "web\\src\\lib\\routeLoaders.ts",
+      "beforeSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "afterSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "match": true
+    },
+    {
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "beforeSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "afterSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "match": true
+    },
+    {
+      "file": "docs\\frontend-audits\\audit-page-184.json",
+      "beforeSha256": "90257907A475F5341A6E943F5654DC25103C6982DC68836F3BFF313F3F601F7B",
+      "afterSha256": "90257907A475F5341A6E943F5654DC25103C6982DC68836F3BFF313F3F601F7B",
+      "match": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\FavoritesBar.test.tsx",
+      "beforeSha256": "86336E81323DE9CA178C9875871510A38B506C40AB60AA9A2CABA545B6496EC0",
+      "afterSha256": "86336E81323DE9CA178C9875871510A38B506C40AB60AA9A2CABA545B6496EC0",
+      "match": true
+    }
+  ],
+  "pinCheck": {
+    "atUtc": "2026-10-14T02:57:27.8742810Z",
+    "total": 266,
+    "matched": 261,
+    "drifted": 5,
+    "driftPaths": [
+      "docs\\session-handoff.md",
+      "migration-queue.md",
+      "web\\src\\i18n\\en\\locale-admin.json",
+      "web\\src\\i18n\\en\\usage-manifest.json",
+      "web\\src\\i18n\\en.json"
+    ],
+    "limit": "Primary source pre-QA; supplemental hashes alongside/after locator/read;catalog pins protect files,not semantic audit of all catalogs. Concurrent drift not worker-attributed."
+  },
+  "testInspection": {
+    "sourceFiles": 15,
+    "sourceDeclarations": 187.0,
+    "files": [
+      {
+        "file": "web\\src\\api\\hooks\\useCommands.test.tsx",
+        "sourceDeclarations": 17,
+        "cases": [
+          {
+            "line": 78,
+            "literal": "it('describes a full command-log row', () => {"
+          },
+          {
+            "line": 93,
+            "literal": "it('produces distinct, prefixed tuples per domain', () => {"
+          },
+          {
+            "line": 100,
+            "literal": "it('normalises a numeric id to the same key as its string form', () => {"
+          },
+          {
+            "line": 109,
+            "literal": "it('preserves undefined so a disabled query keeps a distinct key', () => {"
+          },
+          {
+            "line": 122,
+            "literal": "it('GETs the history endpoint with limit and threads the AbortSignal', async () => {"
+          },
+          {
+            "line": 138,
+            "literal": "it('accepts a numeric vehicle id and builds the same URL', async () => {"
+          },
+          {
+            "line": 145,
+            "literal": "it('URL-encodes an id containing path-breaking characters', async () => {"
+          },
+          {
+            "line": 153,
+            "literal": "it('coerces a null body to an empty array at the fetch boundary', async () => {"
+          },
+          {
+            "line": 160,
+            "literal": "it('coerces an undefined (204/no-content) body to an empty array', async () => {"
+          },
+          {
+            "line": 170,
+            "literal": "it('is disabled when the vehicle id is undefined', async () => {"
+          },
+          {
+            "line": 178,
+            "literal": "it('is disabled when the vehicle id is the empty string', async () => {"
+          },
+          {
+            "line": 184,
+            "literal": "it('surfaces request failures as isError', async () => {"
+          },
+          {
+            "line": 197,
+            "literal": "it('pages through every attempt in the selected window without a 200-row cutoff', async () => {"
+          },
+          {
+            "line": 215,
+            "literal": "it('GETs the latest endpoint and passes the array through', async () => {"
+          },
+          {
+            "line": 228,
+            "literal": "it('accepts a numeric vehicle id and encodes the path segment', async () => {"
+          },
+          {
+            "line": 235,
+            "literal": "it('coerces a missing (undefined) payload to an empty array', async () => {"
+          },
+          {
+            "line": 243,
+            "literal": "it('is disabled when the vehicle id is undefined', async () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useVehicleCommand.test.tsx",
+        "sourceDeclarations": 10,
+        "cases": [
+          {
+            "line": 130,
+            "literal": "it('POSTs /vehicles/{id}/command with a JSON body of { command, params }', async () => {"
+          },
+          {
+            "line": 149,
+            "literal": "it('omits params from the body when the caller does not supply them', async () => {"
+          },
+          {
+            "line": 166,
+            "literal": "it('shows a success toast and invalidates the four command-dirtied caches', async () => {"
+          },
+          {
+            "line": 188,
+            "literal": "it('prefers a backend-supplied friendly message over the default when present', async () => {"
+          },
+          {
+            "line": 204,
+            "literal": "it('surfaces the backend `error` reason instead of a generic message', async () => {"
+          },
+          {
+            "line": 221,
+            "literal": "it('falls back to a generic failure message when the body carries no reason', async () => {"
+          },
+          {
+            "line": 231,
+            "literal": "it('treats a 204 / empty body as a soft failure without throwing (null-safety)', async () => {"
+          },
+          {
+            "line": 252,
+            "literal": "it('queues the command for replay and stays silent (no error toast)', async () => {"
+          },
+          {
+            "line": 270,
+            "literal": "it('replays the original command when the queued closure is drained', async () => {"
+          },
+          {
+            "line": 302,
+            "literal": "it('shows an interpolated error toast and neither queues nor invalidates', async () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\commands.test.ts",
+        "sourceDeclarations": 28,
+        "cases": [
+          {
+            "line": 35,
+            "literal": "it('is a non-empty, duplicate-free list of 14 categories', () => {"
+          },
+          {
+            "line": 41,
+            "literal": "it('references only categories that exist in CATEGORY_META', () => {"
+          },
+          {
+            "line": 47,
+            "literal": "it('covers exactly the CATEGORY_META keys (no orphans on either side)', () => {"
+          },
+          {
+            "line": 56,
+            "literal": "it('gives every category a non-empty labelKey, fallback and an icon', () => {"
+          },
+          {
+            "line": 67,
+            "literal": "it('namespaces every label key under \"commands.cat.\"', () => {"
+          },
+          {
+            "line": 76,
+            "literal": "it('holds the documented 67 entries with unique ids and command strings', () => {"
+          },
+          {
+            "line": 86,
+            "literal": "it('gives every entry a non-empty id, command, label and icon', () => {"
+          },
+          {
+            "line": 96,
+            "literal": "it('uses only known types, categories and variants', () => {"
+          },
+          {
+            "line": 106,
+            "literal": "it('expands 8 toggle entries (each with a distinct commandOff) into 75 commands', () => {"
+          },
+          {
+            "line": 126,
+            "literal": "it('backs every input command with an inputConfig or a selectConfig', () => {"
+          },
+          {
+            "line": 133,
+            "literal": "it('pairs every dangerous command with confirmation copy', () => {"
+          },
+          {
+            "line": 142,
+            "literal": "it('marks a stable set of default favorites including wake_up and lock', () => {"
+          },
+          {
+            "line": 152,
+            "literal": "it('assigns at least one command to every ordered category', () => {"
+          },
+          {
+            "line": 162,
+            "literal": "it('defines three distinct, fully-labelled COP temperature levels', () => {"
+          },
+          {
+            "line": 170,
+            "literal": "it('gives every select option a unique value plus label metadata', () => {"
+          },
+          {
+            "line": 186,
+            "literal": "it('gives lat/lon field groups unique, non-empty names', () => {"
+          },
+          {
+            "line": 208,
+            "literal": "it('parses a Supercharger id to an integer', () => {"
+          },
+          {
+            "line": 216,
+            "literal": "it('guards the Supercharger id behind numeric validation', () => {"
+          },
+          {
+            "line": 221,
+            "literal": "it('converts software-update minutes to seconds', () => {"
+          },
+          {
+            "line": 229,
+            "literal": "it('never emits the literal \"NaN\" for unparseable minute input', () => {"
+          },
+          {
+            "line": 243,
+            "literal": "it('mirrors the driver temperature onto the passenger for set_temps', () => {"
+          },
+          {
+            "line": 249,
+            "literal": "it('passes HomeLink coordinates straight through', () => {"
+          },
+          {
+            "line": 258,
+            "literal": "it('wraps a navigation address in the share_ext_content_raw envelope', () => {"
+          },
+          {
+            "line": 268,
+            "literal": "it('coerces GPS coordinates to numbers and appends the order field', () => {"
+          },
+          {
+            "line": 278,
+            "literal": "it('trims the requested vehicle name', () => {"
+          },
+          {
+            "line": 284,
+            "literal": "it('does not throw when the vehicle name key is absent', () => {"
+          },
+          {
+            "line": 296,
+            "literal": "it('seeds the rename field from the vehicle display name', () => {"
+          },
+          {
+            "line": 302,
+            "literal": "it('falls back to an empty string when the vehicle is missing', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\CollapsibleCommandGroup.test.tsx",
+        "sourceDeclarations": 10,
+        "cases": [
+          {
+            "line": 40,
+            "literal": "it('renders collapsed by default: label + count shown, panel hidden, aria-expanded=false, no aria-controls', () => {"
+          },
+          {
+            "line": 50,
+            "literal": "it('expands on click: children mount, aria-expanded flips true, aria-controls points at the panel, state persisted', () => {"
+          },
+          {
+            "line": 71,
+            "literal": "it('honours defaultOpen and collapses (persisting \"false\") on click', () => {"
+          },
+          {
+            "line": 84,
+            "literal": "it('restores a persisted OPEN state from sessionStorage, overriding defaultOpen=false', () => {"
+          },
+          {
+            "line": 92,
+            "literal": "it('restores a persisted CLOSED state from sessionStorage, overriding defaultOpen=true', () => {"
+          },
+          {
+            "line": 99,
+            "literal": "it('marks both decorative icons aria-hidden so the accessible name comes from the visible label', () => {"
+          },
+          {
+            "line": 108,
+            "literal": "it('defends against a missing count with a \"(0)\" fallback instead of rendering \"()\"', () => {"
+          },
+          {
+            "line": 115,
+            "literal": "it('renders nothing for an unknown category rather than crashing on meta.icon', () => {"
+          },
+          {
+            "line": 121,
+            "literal": "it('falls back to defaultOpen when sessionStorage.getItem throws (private mode / disabled storage)', () => {"
+          },
+          {
+            "line": 130,
+            "literal": "it('does not throw and still toggles when sessionStorage.setItem fails (quota exceeded)', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\command-center\\commandDomains.test.ts",
+        "sourceDeclarations": 2,
+        "cases": [
+          {
+            "line": 6,
+            "literal": "it('covers every command category exactly once', () => {"
+          },
+          {
+            "line": 14,
+            "literal": "it('keeps every configured command reachable through one domain', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\CommandConfirmDialog.test.tsx",
+        "sourceDeclarations": 15,
+        "cases": [
+          {
+            "line": 49,
+            "literal": "it('renders nothing when open=false', () => {"
+          },
+          {
+            "line": 57,
+            "literal": "it('renders an accessible dialog labelled by the command name', () => {"
+          },
+          {
+            "line": 74,
+            "literal": "it('shows the explicit confirmation copy, Cancel, and an enabled Confirm for a simple action', () => {"
+          },
+          {
+            "line": 91,
+            "literal": "it('falls back to the default confirmation copy when no key or fallback is given', () => {"
+          },
+          {
+            "line": 99,
+            "literal": "it('renders confirmation copy from the confirmKey branch (with fallback)', () => {"
+          },
+          {
+            "line": 112,
+            "literal": "it('fires onConfirm exactly once when Confirm is clicked, without closing', () => {"
+          },
+          {
+            "line": 123,
+            "literal": "it('fires onClose when Cancel is clicked and never confirms', () => {"
+          },
+          {
+            "line": 134,
+            "literal": "it('closes on Escape', () => {"
+          },
+          {
+            "line": 143,
+            "literal": "it('confirms on Enter when the command is confirmable', () => {"
+          },
+          {
+            "line": 152,
+            "literal": "it('gates Confirm behind an exact, case-insensitive, trimmed type-to-confirm word', () => {"
+          },
+          {
+            "line": 177,
+            "literal": "it('ignores Enter until the type-to-confirm word matches', () => {"
+          },
+          {
+            "line": 196,
+            "literal": "it('resets the typed value when the dialog is reopened', () => {"
+          },
+          {
+            "line": 228,
+            "literal": "it('disables Confirm with aria-busy while loading and makes Enter a no-op', () => {"
+          },
+          {
+            "line": 254,
+            "literal": "it('keeps Confirm disabled with a live seconds suffix until the timer elapses', () => {"
+          },
+          {
+            "line": 285,
+            "literal": "it('ignores Enter while the countdown is still running', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\CommandInputDialog.test.tsx",
+        "sourceDeclarations": 20,
+        "cases": [
+          {
+            "line": 135,
+            "literal": "it('flags empty and whitespace-only values as required', () => {"
+          },
+          {
+            "line": 141,
+            "literal": "it('accepts only 4-digit pins', () => {"
+          },
+          {
+            "line": 148,
+            "literal": "it('enforces whole numbers within min/max bounds', () => {"
+          },
+          {
+            "line": 163,
+            "literal": "it('parses decimals and applies bounds', () => {"
+          },
+          {
+            "line": 170,
+            "literal": "it('treats any non-empty free text as valid', () => {"
+          },
+          {
+            "line": 178,
+            "literal": "it('renders nothing while closed', () => {"
+          },
+          {
+            "line": 184,
+            "literal": "it('exposes an accessible dialog name, heading, prompt and icon', () => {"
+          },
+          {
+            "line": 192,
+            "literal": "it('seeds the single input from inputConfig.defaultValue', () => {"
+          },
+          {
+            "line": 197,
+            "literal": "it('derives the default value from the vehicle via getDefaultValue', () => {"
+          },
+          {
+            "line": 202,
+            "literal": "it('shows a translated validation error on blur and disables submit', () => {"
+          },
+          {
+            "line": 211,
+            "literal": "it('re-validates on change after a field is touched and clears the error', () => {"
+          },
+          {
+            "line": 223,
+            "literal": "it('submits the entered values when valid', () => {"
+          },
+          {
+            "line": 236,
+            "literal": "it('interpolates minimum and maximum bound errors for number fields', () => {"
+          },
+          {
+            "line": 249,
+            "literal": "it('renders one input per field and submits multi-field values', () => {"
+          },
+          {
+            "line": 265,
+            "literal": "it('validates each field independently and reports the invalid one', () => {"
+          },
+          {
+            "line": 274,
+            "literal": "it('marks all fields touched and blocks submit when submitted while invalid', () => {"
+          },
+          {
+            "line": 284,
+            "literal": "it('closes without submitting when Cancel is clicked', () => {"
+          },
+          {
+            "line": 291,
+            "literal": "it('closes when Escape is pressed inside the dialog', () => {"
+          },
+          {
+            "line": 297,
+            "literal": "it('disables and marks the submit button busy while loading', () => {"
+          },
+          {
+            "line": 305,
+            "literal": "it('resets values back to the default when reopened', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\CommandSearch.test.tsx",
+        "sourceDeclarations": 7,
+        "cases": [
+          {
+            "line": 51,
+            "literal": "it('renders an accessible search box with a name, type, and placeholder', () => {"
+          },
+          {
+            "line": 60,
+            "literal": "it('hides the decorative magnifier icon from assistive technology', () => {"
+          },
+          {
+            "line": 68,
+            "literal": "it('reflects the controlled value verbatim', () => {"
+          },
+          {
+            "line": 74,
+            "literal": "it('forwards the raw typed string (not the DOM event) to onChange', () => {"
+          },
+          {
+            "line": 83,
+            "literal": "it('forwards an empty string when the field is cleared', () => {"
+          },
+          {
+            "line": 92,
+            "literal": "it('does not call onChange on the initial render', () => {"
+          },
+          {
+            "line": 98,
+            "literal": "it('degrades a null/undefined value to a controlled empty string', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\CommandSelectDialog.test.tsx",
+        "sourceDeclarations": 9,
+        "cases": [
+          {
+            "line": 61,
+            "literal": "it('renders a named dialog with one button per option, descriptions, a decorative icon and Cancel', () => {"
+          },
+          {
+            "line": 89,
+            "literal": "it('renders nothing when open is false', () => {"
+          },
+          {
+            "line": 95,
+            "literal": "it('forwards the selected option value via onSelect without closing itself', () => {"
+          },
+          {
+            "line": 106,
+            "literal": "it('closes via the Cancel button without selecting anything', () => {"
+          },
+          {
+            "line": 115,
+            "literal": "it('disables every option while loading so a click cannot fire onSelect, yet Cancel stays usable', () => {"
+          },
+          {
+            "line": 130,
+            "literal": "it('shows an empty state (and no option buttons) when the command exposes no options', () => {"
+          },
+          {
+            "line": 142,
+            "literal": "it('tolerates a malformed definition with no selectConfig and renders the empty state instead of crashing', () => {"
+          },
+          {
+            "line": 152,
+            "literal": "it('omits the description caption for options that do not define one', () => {"
+          },
+          {
+            "line": 161,
+            "literal": "it('closes when Escape is pressed inside the dialog', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\CommandTile.test.tsx",
+        "sourceDeclarations": 11,
+        "cases": [
+          {
+            "line": 64,
+            "literal": "it('renders an accessible button tile with the translated label, the command icon (not a spinner), and no busy state when idle', () => {"
+          },
+          {
+            "line": 80,
+            "literal": "it('executes the command with its params on click for a non-dangerous action, without opening a dialog', () => {"
+          },
+          {
+            "line": 92,
+            "literal": "it('opens the confirmation dialog instead of executing when the command is dangerous, and shows the extra warning glyph', () => {"
+          },
+          {
+            "line": 106,
+            "literal": "it('shows a spinner, marks itself busy/disabled/unfocusable, and ignores clicks while loading', () => {"
+          },
+          {
+            "line": 122,
+            "literal": "it('activates on Enter and Space when the tile itself is focused, but ignores other keys', () => {"
+          },
+          {
+            "line": 137,
+            "literal": "it('routes keyboard activation to the dialog (not execute) for a dangerous command', () => {"
+          },
+          {
+            "line": 147,
+            "literal": "it('does NOT execute the command when a key press bubbles up from the nested favorite button', () => {"
+          },
+          {
+            "line": 159,
+            "literal": "it('toggles the favorite without activating the tile, and exposes the pressed state via aria-pressed', () => {"
+          },
+          {
+            "line": 178,
+            "literal": "it('renders the optional sublabel and colours a success status green', () => {"
+          },
+          {
+            "line": 190,
+            "literal": "it('colours a non-success status red and omits the optional rows when sublabel/status are absent', () => {"
+          },
+          {
+            "line": 201,
+            "literal": "it('applies the per-variant hover border and falls back to the default for an unknown variant', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\FavoritesBar.test.tsx",
+        "sourceDeclarations": 9,
+        "cases": [
+          {
+            "line": 56,
+            "literal": "it('renders nothing when there are no favourites', () => {"
+          },
+          {
+            "line": 67,
+            "literal": "it('renders nothing when favourites reference ids that do not exist', () => {"
+          },
+          {
+            "line": 76,
+            "literal": "it('renders only the favourited tiles and skips the rest', () => {"
+          },
+          {
+            "line": 93,
+            "literal": "it('preserves command order regardless of the favourites order', () => {"
+          },
+          {
+            "line": 105,
+            "literal": "it('exposes a labelled region, a heading and a favourite count', () => {"
+          },
+          {
+            "line": 116,
+            "literal": "it('marks the leading star icon as decorative (aria-hidden)', () => {"
+          },
+          {
+            "line": 129,
+            "literal": "it('renders live tiles that forward user interaction', () => {"
+          },
+          {
+            "line": 140,
+            "literal": "it('deduplicates repeated favourite ids', () => {"
+          },
+          {
+            "line": 151,
+            "literal": "it('degrades to nothing (no throw) when props are undefined or malformed', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\InputCommandTile.test.tsx",
+        "sourceDeclarations": 11,
+        "cases": [
+          {
+            "line": 92,
+            "literal": "it('renders the label, sublabel and glyph through i18n with the exact keys + fallbacks', () => {"
+          },
+          {
+            "line": 103,
+            "literal": "it('exposes the tile as a keyboard-focusable button named after the command', () => {"
+          },
+          {
+            "line": 113,
+            "literal": "it('opens the input dialog with the command def when clicked', () => {"
+          },
+          {
+            "line": 122,
+            "literal": "it('activates on Enter and Space (cancelling the key default) but ignores other keys', () => {"
+          },
+          {
+            "line": 136,
+            "literal": "it('shows a spinner and blocks activation while loading', () => {"
+          },
+          {
+            "line": 152,
+            "literal": "it('reflects the favourite state and toggles it without opening the dialog', () => {"
+          },
+          {
+            "line": 165,
+            "literal": "it('marks the favourite control unpressed and the star unfilled when not a favourite', () => {"
+          },
+          {
+            "line": 173,
+            "literal": "it('colours a successful status green and a failed status red (announced politely)', () => {"
+          },
+          {
+            "line": 186,
+            "literal": "it('applies the variant-specific hover accent and falls back to default for unknown variants', () => {"
+          },
+          {
+            "line": 200,
+            "literal": "it('omits the sublabel when the command has none', () => {"
+          },
+          {
+            "line": 207,
+            "literal": "it('degrades gracefully when the icon reference is missing (malformed config)', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\ToggleCommandTile.test.tsx",
+        "sourceDeclarations": 13,
+        "cases": [
+          {
+            "line": 81,
+            "literal": "it('renders an accessible toggle button that is OFF by default, showing the off glyph (not a spinner) and no busy state', () => {"
+          },
+          {
+            "line": 100,
+            "literal": "it('derives the ON state from the vehicle state field, flipping the glyph, sublabel, aria-pressed, and panel styling', () => {"
+          },
+          {
+            "line": 111,
+            "literal": "it('executes the ON command with its params when clicked while off (state-driven), without opening a dialog or flipping local state', () => {"
+          },
+          {
+            "line": 124,
+            "literal": "it('executes the OFF command (no params) when clicked while on (state-driven)', () => {"
+          },
+          {
+            "line": 135,
+            "literal": "it('does NOT dispatch an undefined command when it is on but declares no commandOff (regression guard)', () => {"
+          },
+          {
+            "line": 146,
+            "literal": "it('optimistically flips its own ON/OFF state and dispatches both commands when it has no stateField', () => {"
+          },
+          {
+            "line": 166,
+            "literal": "it('opens the input/confirmation dialog instead of executing when off and an inputConfig is present, without flipping state', () => {"
+          },
+          {
+            "line": 183,
+            "literal": "it('shows a spinner, marks itself busy/disabled/unfocusable, and ignores clicks and keypresses while loading', () => {"
+          },
+          {
+            "line": 201,
+            "literal": "it('activates on Enter and Space when the tile itself is focused, but ignores other keys', () => {"
+          },
+          {
+            "line": 217,
+            "literal": "it('does NOT activate the tile when a key press bubbles up from the nested favorite button', () => {"
+          },
+          {
+            "line": 229,
+            "literal": "it('toggles the favorite without activating the tile, and exposes the pressed state via aria-pressed + fill', () => {"
+          },
+          {
+            "line": 248,
+            "literal": "it('colours a success status emerald and a failure status rose, and omits the row when status is absent', () => {"
+          },
+          {
+            "line": 262,
+            "literal": "it('falls back to the default palette for an unknown variant instead of crashing on styles lookup', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\VehicleCommandCenter.test.tsx",
+        "sourceDeclarations": 15,
+        "cases": [
+          {
+            "line": 199,
+            "literal": "it('renders selected vehicle identity, converted telemetry, and all major sections', async () => {"
+          },
+          {
+            "line": 215,
+            "literal": "it('keeps commands usable when live state is unavailable and shows an honest error', async () => {"
+          },
+          {
+            "line": 228,
+            "literal": "it('does not block commands with the removed stale telemetry warning', () => {"
+          },
+          {
+            "line": 237,
+            "literal": "it('does not mistake an old vehicle record for the last signal or current readiness', async () => {"
+          },
+          {
+            "line": 252,
+            "literal": "it('uses a verified signal observation for current status and readiness', async () => {"
+          },
+          {
+            "line": 270,
+            "literal": "it('labels unverified asleep-state guidance as last reported', () => {"
+          },
+          {
+            "line": 289,
+            "literal": "it('keeps every domain, category, and configured action reachable', () => {"
+          },
+          {
+            "line": 326,
+            "literal": "it('disables command execution in historical mode', () => {"
+          },
+          {
+            "line": 340,
+            "literal": "it('preserves wake-up as a reachable command on the supported endpoint', async () => {"
+          },
+          {
+            "line": 350,
+            "literal": "it('sends a direct command through the supported endpoint and payload', async () => {"
+          },
+          {
+            "line": 364,
+            "literal": "it('requires confirmation before sending a dangerous command', async () => {"
+          },
+          {
+            "line": 384,
+            "literal": "it('preserves input and select command payloads', async () => {"
+          },
+          {
+            "line": 413,
+            "literal": "it('shows pending progress and disables command activation until settled', async () => {"
+          },
+          {
+            "line": 441,
+            "literal": "it('surfaces the backend reason for a soft failure', async () => {"
+          },
+          {
+            "line": 455,
+            "literal": "it('surfaces a hard request error without claiming success', async () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandsPage.test.tsx",
+        "sourceDeclarations": 10,
+        "cases": [
+          {
+            "line": 140,
+            "literal": "it('renders useful section shells while the fleet is loading', () => {"
+          },
+          {
+            "line": 160,
+            "literal": "it('renders a useful no-vehicle state without the removed cards', () => {"
+          },
+          {
+            "line": 175,
+            "literal": "it('keeps all section shells visible when the roster query fails', () => {"
+          },
+          {
+            "line": 191,
+            "literal": "it('renders the selected vehicle and honest last-known fleet reachability', () => {"
+          },
+          {
+            "line": 217,
+            "literal": "it('follows changes to the header-selected vehicle', () => {"
+          },
+          {
+            "line": 236,
+            "literal": "it('keeps the command workspace visible for a single-vehicle fleet', () => {"
+          },
+          {
+            "line": 246,
+            "literal": "it('navigates to command history from the header action', () => {"
+          },
+          {
+            "line": 260,
+            "literal": "it('renders canonical decorative route icons without changing the history action', () => {"
+          },
+          {
+            "line": 278,
+            "literal": "it('retains the selected command center and fleet metadata when a roster refresh fails', () => {"
+          },
+          {
+            "line": 304,
+            "literal": "it('retries an initial roster failure without selecting a vehicle or mounting commands', () => {"
+          }
+        ],
+        "execution": "NOTRUN"
+      }
+    ],
+    "discovered": "NOTRUN",
+    "executed": "NOTRUN",
+    "passed": "NOTRUN",
+    "failed": "NOTRUN",
+    "skipped": "NOTRUN",
+    "limit": "Source declarations not runtime discovery. Names all15;page/config/center/input/toggle/confirm/select/hook assertions read/excerpted;favorite/search/group names only.1shared reliability-history declaration not separate page acceptance."
+  },
+  "citationCheck": {
+    "checked": 66,
+    "invalid": 0,
+    "exitCode": 0
+  },
+  "summary": {
+    "confirmedFindings": 13,
+    "conditionalCandidates": 6,
+    "sourceScannedFiles": 26,
+    "meaning": "Distinct root mechanisms/families;sites not multiplied;conditional/native excluded.",
+    "byRule": [
+      {
+        "rule": "favorite-keyboard-bubbling",
+        "count": 1
+      },
+      {
+        "rule": "incomplete-tab-contract",
+        "count": 1
+      },
+      {
+        "rule": "missing-field-label",
+        "count": 1
+      },
+      {
+        "rule": "missing-numeric-command-validation",
+        "count": 1
+      },
+      {
+        "rule": "mobile-target-under44",
+        "count": 1
+      },
+      {
+        "rule": "nested-interactive-targets",
+        "count": 1
+      },
+      {
+        "rule": "paused-initial-as-empty",
+        "count": 1
+      },
+      {
+        "rule": "permissive-decimal-validation",
+        "count": 1
+      },
+      {
+        "rule": "premature-toggle-lifecycle",
+        "count": 1
+      },
+      {
+        "rule": "source-state-erasure",
+        "count": 1
+      },
+      {
+        "rule": "toggle-outcome-chronology",
+        "count": 1
+      },
+      {
+        "rule": "unknown-is-off",
+        "count": 1
+      },
+      {
+        "rule": "unrestrained-feature-chrome",
+        "count": 1
+      }
+    ],
+    "filesWithMostPrimaryFindings": [
+      {
+        "file": "web\\src\\features\\system\\components\\CommandInputDialog.tsx",
+        "count": 2
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\ToggleCommandTile.tsx",
+        "count": 2
+      },
+      {
+        "file": "web\\src\\features\\system\\commands.ts",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\command-center\\CommandCenterHero.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\command-center\\CommandWorkspace.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\CommandTile.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\InputCommandTile.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\VehicleCommandCenter.tsx",
+        "count": 1
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandsPage.tsx",
+        "count": 1
+      }
+    ]
+  },
+  "completedAtUtc": "2026-10-14T02:57:27.8742810Z",
+  "release": {
+    "artifacts": "RELEASE exact assigned JSON/log on this validated delivery",
+    "commands": "RELEASE bounded owned checks;no owned ongoing service/helper/server",
+    "source": "Never held source/test/catalog/queue/Git writes",
+    "runtimeApproval": false
+  },
+  "nativeContinuation20261014": {
+    "status": "BLOCKED_EXTERNAL",
+    "meaning": "Original unmet native QA attempted. Four actual diagnostic screenshots and ten degraded-shell geometry measurements are not loaded CommandsPage, DRILL4, visual, accessibility, or application acceptance.",
+    "originalAttemptUnchanged": true,
+    "historicalEvidence": "All original findings, conditional candidates, failed commands, source-only limits, pins, deadlines and release statements above remain historical and unchanged.",
+    "alreadyMetNoChange": "Original source-QA report and precise source findings already meet their source-only contract. No source audit, compiler, scoped tests, passing verification, catalog audit or hook audit repeated; no source repair authorized.",
+    "authority": {
+      "orchestratorLoop": "Read fully before acting.",
+      "exactQueueRow": "| [ ] | 6 | phase6-qa-system-commands | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-commands.json; web\\logs\\phase6-qa-system-commands.log | phase5-page-system-commands | 1 | reserved02:37:46.371Z; actor pending | - | CommandsPage/direct supports; no vehicle/auth/command mutations.; Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot. |",
+      "writableFiles": [
+        "docs\\frontend-audits\\phase6-qa-system-commands.json",
+        "web\\logs\\phase6-qa-system-commands.log"
+      ],
+      "browserLock": "Explicit original assignment lock3/4, acquired2026-10-14T05:00:49.401Z, released2026-10-14T05:01:00.976Z; acquisition/release persisted in matching ignored log."
+    },
+    "preflight": {
+      "origin": "http://127.0.0.1:5173",
+      "documentStatus": 200,
+      "vehiclesStatus": 500,
+      "vehiclesBodyBytes": 0,
+      "vehiclesContentType": "text/plain",
+      "firstProbeExit": 1,
+      "firstProbeFailure": "SyntaxError: Unexpected end of JSON input",
+      "correctedStatusProbeExit": 0,
+      "fixtureIdentityVerified": false,
+      "limit": "Requested fixture vehicle_id=4 is not an invented vehicle, but acknowledged DRILL4 cannot be revalidated while roster returns500. No roster data, real identity or nonfixture information disclosed."
+    },
+    "browser": {
+      "channel": "msedge",
+      "nodeVersion": "26.8.1",
+      "commandExit": 0,
+      "commandExitMeaning": "Bounded diagnostic command closed resources and persisted its result; result status BLOCKED, not native PASS.",
+      "startedAtUtc": "2026-10-14T05:00:49.401Z",
+      "closedAtUtc": "2026-10-14T05:01:00.976Z",
+      "route": "/commands?vehicle_id=4",
+      "scope": "Isolated returning-user browser preferences only; no stored credentials, existing user browser profile, server preference writes, API fixtures or fabricated responses.",
+      "guardsBeforeNavigation": [
+        "Existing QA GET/HEAD/OPTIONS-only guard enforced at context level.",
+        "Same-origin reads only; external origins and authentication/business-action paths blocked.",
+        "Service workers blocked and all WebSockets closed.",
+        "Because DRILL4 identity preflight failed, all API reads blocked except unchanged empty500 roster response. route.fulfill({response}) passes through the actual response without altering status, body or headers.",
+        "No command tile, authentication, vehicle, dialog-submit or other business action clicked."
+      ],
+      "blockedWriteAttempts": 0,
+      "blockedExternalRequests": 0,
+      "blockedOtherAPIRequests": 235,
+      "syntheticResponses": 0,
+      "businessActions": 0,
+      "pageExceptions": 0,
+      "mounted": {
+        "main": true,
+        "viteOverlay": false,
+        "operationalMode": "cached",
+        "dialogs": 1,
+        "commandHeading": true,
+        "errorCopy": true,
+        "fixtureText": false
+      },
+      "actualOfflineCheck": {
+        "method": "context.setOffline(true), no synthetic data or response replacement",
+        "navigatorOnline": false,
+        "operationalMode": "cached",
+        "mainRetained": true,
+        "ariaDisabledCommandsFound": 0,
+        "limit": "No loaded vehicle workspace; zero found commands is not proof of command write-block affordances."
+      }
+    },
+    "diagnosticScreenshots": {
+      "storage": "Four genuine PNG buffers embedded as base64 native-screenshot records in matching ignored log only; no screenshot/helper files created.",
+      "visuallyReviewed": false,
+      "records": [
+        {
+          "viewportWidth": 375,
+          "pngWidth": 375,
+          "pngHeight": 844,
+          "bytes": 46662,
+          "sha256": "196192803bc06ba1281cc31f18d840fa46f319158bbea46684170cd297868868"
+        },
+        {
+          "viewportWidth": 768,
+          "pngWidth": 768,
+          "pngHeight": 900,
+          "bytes": 88353,
+          "sha256": "3b60c6fd36773da60b2292eb96102b9c9c326040875af960cc98f35e53412716"
+        },
+        {
+          "viewportWidth": 1440,
+          "pngWidth": 1440,
+          "pngHeight": 900,
+          "bytes": 133814,
+          "sha256": "b6d61bcd7da55c48e07f0d37d486c4ad348a882c60a55655ca0076c311d0d181"
+        },
+        {
+          "viewportWidth": 1920,
+          "pngWidth": 1920,
+          "pngHeight": 900,
+          "bytes": 149481,
+          "sha256": "55166e8d99a278fb7597878633853282d65662ce22d62f2086e2c7286c71963e"
+        }
+      ],
+      "limit": "Actual shell/error diagnostic evidence only; no loaded workspace, section-scroll capture, light/dark/custom-theme acceptance, AT or visual review."
+    },
+    "responsive": {
+      "measuredWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+      "rootAndBodyClientAndScrollWidths": "Each of four measurements equals the requested width at all ten sizes; raw per-width records persisted in log.",
+      "overflowAtTheseDegradedShellMeasurements": false,
+      "limit": "Cannot promote error-shell geometry to loaded command tile/dialog responsive acceptance."
+    },
+    "canonicalQueueReadOnlyMapping": {
+      "queueSha256": "f2dcfde575754bb9171ffbbec7ec0c00e73a2da2d93892db93d7534ef059c4b2",
+      "preciseFindingFeaturePins": "Existing recorded hashes match every primary/related system-feature production file implicated by F01-F13. Continuity check only, not repeat source audit.",
+      "representedOrDistinct": [
+        {
+          "item": "phase5-page-system-commands",
+          "status": "[x]",
+          "meaning": "Completed source migration, not representation or repair of original Phase6 F01-F13."
+        },
+        {
+          "item": "phase6-qa-system-commands",
+          "status": "[ ]",
+          "meaning": "This original report-only objective, not a fix owner."
+        },
+        {
+          "item": "phase6-qa-system-command-reliability",
+          "status": "[ ]",
+          "meaning": "Distinct page and report, not commands tile/dialog fix coverage."
+        },
+        {
+          "item": "phase6-rescue-system-command-history",
+          "status": "[!]",
+          "meaning": "Distinct history page/test only."
+        },
+        {
+          "item": "phase6-native-operational-mode-mobile-target",
+          "status": "[x]",
+          "meaning": "Shared status-bar segment, not F09 feature-dialog footer targets."
+        },
+        {
+          "item": "phase6-fix-source-notice-neutral-pause",
+          "status": "[x]",
+          "meaning": "Shared DataSourceNotice presentation, not F01 lost latest-query metadata or F11 CommandsPage paused/empty branch."
+        }
+      ],
+      "unrepresentedActualFixCandidates": [
+        {"findings": ["F01", "F02", "F13"], "scope": "CommandCenter/Workspace/Toggle existing trust, latest-query states and paired outcome chronology"},
+        {"findings": ["F03"], "scope": "Toggle/dialog request lifecycle and reachable explicit OFF"},
+        {"findings": ["F04", "F05", "F06"], "scope": "Feature tiles keyboard isolation/sibling interactive targets and dialog field names"},
+        {"findings": ["F07", "F08"], "scope": "Input whole finite validation and verified command-config bounds"},
+        {"findings": ["F09"], "scope": "Five feature-dialog mobile footer targets, not completed shared status-bar fixes"},
+        {"findings": ["F10"], "scope": "Feature CommandDomainBrowser tab keyboard/relationship contract"},
+        {"findings": ["F11"], "scope": "CommandsPage initial paused versus authoritative empty"},
+        {"findings": ["F12"], "scope": "Existing feature presentation restraint sites"}
+      ],
+      "interpretation": "Only original confirmed source findings with stable implicated feature pins and no precise Phase6 source-fix queue owner. No new defect inferred from guarded error-shell screenshots; C01-C06 remain conditional, not actual fix candidates. Queue never edited."
+    },
+    "artifactVerification": {
+      "jsonParseExit": 0,
+      "historicalConfirmedFindingsPreserved": 13,
+      "historicalConditionalCandidatesPreserved": 6,
+      "persistedPNGRecords": 4,
+      "verifiedPNGHashesDimensionsBytes": 4,
+      "rawOutput": "{\"kind\": \"artifact-validation\", \"jsonParseExit\": 0, \"historicalConfirmedFindings\": 13, \"historicalConditionalCandidates\": 6, \"actualPNGBuffers\": 4, \"verifiedPNGHashesDimensionsBytes\": 4, \"browserDiagnosticExit\": 0, \"nativeAcceptance\": \"BLOCKED_EXTERNAL_API500\", \"sourceTestsCompilerAuditReruns\": 0, \"sourceCatalogQueueEdits\": 0}",
+      "limit": "Artifact integrity verification, not native/page acceptance. No new source test, compiler, violations audit or source parity pass claimed."
+    },
+    "remainingNativeUnmet": [
+      "Acknowledged DRILL4 loaded returning-user workspace after authorized API availability is restored.",
+      "Actual command tile/dialog responsive, hitbox, keyboard/focus/AT and state-affordance checks without business writes.",
+      "Full-page/scroll-section and verified theme/extreme-state acceptance matrix."
+    ],
+    "release": {
+      "browserClosed": true,
+      "contextClosed": true,
+      "browserLock3Of4Released": true,
+      "ownedOngoingCommands": 0,
+      "sourceWrites": 0,
+      "queueWrites": 0,
+      "GitCommands": 0,
+      "installsDownloadsDockerNewServersHelpersNestedAgents": 0,
+      "runtimeApproval": false
+    }
+  }
+}

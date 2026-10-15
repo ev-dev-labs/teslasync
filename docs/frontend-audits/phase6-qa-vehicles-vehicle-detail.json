@@ -1,0 +1,1873 @@
+{
+  "item": "phase6-qa-vehicles-vehicle-detail",
+  "attempt": 1,
+  "status": "SOURCE_QA_COMPLETE_WITH_CONFIRMED_NEEDS",
+  "page": "web/src/features/vehicles/pages/VehicleDetailPage.tsx",
+  "routes": [
+    "/vehicles/:id"
+  ],
+  "startedAt": "2026-10-14T01:43:42.5803175Z",
+  "reservation": "2026-10-14T01:39:44.162Z",
+  "returnDeadline": "2026-10-14T01:59:44.162Z",
+  "hardDeadline": "2026-10-14T02:04:44.162Z",
+  "scope": {
+    "writable": [
+      "docs/frontend-audits/phase6-qa-vehicles-vehicle-detail.json",
+      "web/logs/phase6-qa-vehicles-vehicle-detail.log"
+    ],
+    "mode": "SOURCE_ONLY_READONLY",
+    "queue": "migration-queue.md:62 attempt1; accepted phase5-page-vehicles-vehicle-detail source-only at751f783929f2be39bc0a5850267efc9c6a3654f9; exact queue reread",
+    "sourceTestCatalogGitWrites": false,
+    "realVehicleIdentityApiBrowserAccess": false,
+    "counting": "Deduplicated confirmed mechanism groups, NOT regex hits or executed tests. Related operands remain separately cited; candidates/native NOTRUN not counted."
+  },
+  "authorityRead": [
+    "docs/orchestrator-loop.md entire file",
+    "docs/frontend-design-contract.md core1-620 and addenda headings, MDC-026/032/033/040-046/060-070",
+    "docs/frontend-mission.md principles/architecture1-270, responsive529-602, states/date/chart704-845, accessibility/motion/data separation921-1025",
+    "docs/frontend-inventory.md exact route289, G234-G239/P468-P473 rows589-594, qualifications1429-1430",
+    "docs/session-handoff.md current1-48 and conventions/acceptance2148-2341 plus relevant references",
+    "migration-queue.md exact task/dependency and exact item/file owner searches",
+    "docs/frontend-worker-conventions.md full",
+    ".github/copilot-instructions.md full including resumed truncated range",
+    ".github/instructions/react-frontend.instructions.md full including resumed truncated range",
+    ".github/instructions/frontend-si-cutover.instructions.md full",
+    ".github/instructions/unit-conversion.instructions.md full; newer SI contract governs historical examples",
+    "docs/frontend-audits/audit-page-238.json prior findings/owners, not fresh acceptance"
+  ],
+  "scopeAndBounds": {
+    "identity": "VehicleDetailPage:46-49 uses safe positive integer route id. useSelectedVehicle.ts:54-59,67-85 gives path precedence and shared sticky store;107-126 picker navigates detail route. No duplicate vehicle selector or unsupported missing-global-selector finding.",
+    "range": "workspaceScope.ts:22-77 excludes /vehicles/:id from range routes;156-169 declares range=false,vehicle=true. Latest snapshots/latest-five previews are not full-range analytics. No missing from/to finding. Next-charge12h/mute business date are independent.",
+    "bounds": "drives/sessions each limit=5 at page117/124, same drive payload used for reverse trend and recent table; no claim of full results. API/backend/auth/order/bound enforcement NOTRUN.",
+    "historical": "F14 is missing live-only wake gating for ?as_of, not missing range bounds; alternate/historical state mapping equivalence C01."
+  },
+  "dataSources": [
+    "page54-59 vehicle /vehicles/{id}, key ['vehicles',String(id)]",
+    "page71-78 state /vehicles/{id}/state poll30000",
+    "page80-113 motor/climate/security15000,tire30000,charging-telemetry5000 latest?vehicle_id=id",
+    "page115-134 drives/charging latest5 and vehicle-config latest30000",
+    "all10 reads pass signal, enabled positive validated vehicleId, unprefixed snake_case URLs",
+    "useVehicleSettings.ts:50-64 cancellable normalized GET;81-127 PUT/DELETE encoded key, success invalidation/broadcast settings+record",
+    "useVehicles.ts:53-60 silence GET enabled id and STANDARD staleTime",
+    "useCharging.ts:570-582 next-charge id+finiteSoC including0, signal, FAST staleTime",
+    "page138 wake POST pending/toasts success-only5s refetch",
+    "AIVehiclePaintPreview.tsx:93-111 draft POST positive integer, feature gate, vehicle/style scopeKey clears old stream; source declares redacted propose-only output"
+  ],
+  "sourceCoverage": [
+    {
+      "surface": "identity/header",
+      "evidence": "page46-69,151-156,188-215;VehicleHeader32-71",
+      "actions": "Back/Wake, nickname/displayname, VIN/model/trim/status"
+    },
+    {
+      "surface": "record recovery",
+      "evidence": "page160-181,220-229",
+      "actions": "busy skeleton/invalid navigation/fatal Retry/retained warning, independent sections preserved"
+    },
+    {
+      "surface": "connection banner",
+      "evidence": "page219",
+      "actions": "existing LiveStaleDataBanner; actual behavior NOTRUN"
+    },
+    {
+      "surface": "silence",
+      "evidence": "page230;SilenceBanner16-35",
+      "actions": "quiet/silent/never guidance; ok intentionally absent;F08"
+    },
+    {
+      "surface": "next charge",
+      "evidence": "page231-234;NextChargeDecisionStrip36-95,112-160",
+      "actions": "verdict/costs/reason/review/Open Autopilot; fatal retry/retained/missingSoC/no-decision"
+    },
+    {
+      "surface": "battery/range overview",
+      "evidence": "VehicleDetailOverview21-33;BatteryRangePanel25-69",
+      "actions": "gauge, rated/ideal, charging/range-added/hour estimate; missing gauge distinct"
+    },
+    {
+      "surface": "live indicators",
+      "evidence": "VehicleDetailOverview35-50;LiveStateIndicators18-40",
+      "actions": "all5 badges;F03"
+    },
+    {
+      "surface": "quick stats",
+      "evidence": "VehicleDetailStats19-29;QuickStatsGrid38-70",
+      "actions": "8 raw metrics including signed power/temperatures, unknown preserved"
+    },
+    {
+      "surface": "powertrain",
+      "evidence": "VehicleDetailSystems29-37;MotorSection16-70",
+      "actions": "8 metrics: shift/voltage/current/torques/RPMs/peak finite temperature, signed readings"
+    },
+    {
+      "surface": "climate",
+      "evidence": "VehicleDetailSystems39-47;ClimateSection16-66",
+      "actions": "8 metrics including setpoint/fan/heaters/defrost; null/zero separate"
+    },
+    {
+      "surface": "charging telemetry",
+      "evidence": "VehicleDetailSystems51-58;ChargingTelemetrySection18-68",
+      "actions": "8 metrics, W/Wh/metres, m/h divided3600 for display, source/session/time, not vehicle motion"
+    },
+    {
+      "surface": "security",
+      "evidence": "VehicleDetailSystems61-69;SecuritySection19-71;securityReadings3-22",
+      "actions": "4 metrics mixed live and security sources, unknown/false/partial-open distinct"
+    },
+    {
+      "surface": "tires",
+      "evidence": "VehicleDetailSystems71-79;TirePressureSection16-54;helpers31-94",
+      "actions": "4 corners Pa thresholds then /1000 kPa display, high/low/unknown"
+    },
+    {
+      "surface": "battery chart",
+      "evidence": "page238-245;VehicleDetailCharts19-26;VehicleBatteryChart30-80",
+      "actions": "gauge before bars, current/remaining plus readouts, EmbeddedChart data columns;F04"
+    },
+    {
+      "surface": "drive trend",
+      "evidence": "VehicleDetailCharts28-35;VehicleDriveChart21-68",
+      "actions": "2 reverse-chronology series, chartKey battery-drive-trend/legend/frame controls/data columns, empty View all"
+    },
+    {
+      "surface": "recent drives",
+      "evidence": "VehicleDetailHistory20-31;RecentDrivesSection23-111",
+      "actions": "4 columns, SI sort, stable tableId, pagination/shared controls, View all"
+    },
+    {
+      "surface": "recent charges",
+      "evidence": "VehicleDetailHistory33-42;RecentChargesSection33-138",
+      "actions": "5 columns, duration fallback, legacy cost precedence, SoC nulls, stable tableId/View all"
+    },
+    {
+      "surface": "configuration",
+      "evidence": "page252-269;VehicleConfigSection18-54",
+      "actions": "12 KV rows, explicitfalse/unknown, software fallback when config exists, independent source recovery"
+    },
+    {
+      "surface": "Helix preview",
+      "evidence": "page267-269;AIVehiclePaintPreview66-161",
+      "actions": "optional feature gate legitimate, propose-only/redacted source declaration, scope-cleared draft"
+    },
+    {
+      "surface": "quick links",
+      "evidence": "page274-279;QuickLinksSection16-68",
+      "actions": "6 destinations named nav/focusring and2/3/6 columns; glow ID currently border tint only"
+    },
+    {
+      "surface": "settings",
+      "evidence": "page282-286;VehicleSettingsTab57-81,124-177,201-302,358-401",
+      "actions": "6 supported keys/source pills/drafts/validation/Save/Reset/RFC3339, F05-F07/F13"
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "rule": "source-observation-trust",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/pages/VehicleDetailPage.tsx",
+      "line": 78,
+      "related": [
+        "vehicle-detail/helpers.ts:5-8",
+        "statstrip-vehicle-detail/useVehicleDetailSummary.ts:21-29",
+        "api/hooks/useVehicles.ts:126-152,207-261"
+      ],
+      "mechanism": "Page consumes state/live only, ignores observed_at/freshness/verified_fields. Summary with no sourceTime relabels request dataUpdatedAt as observedAt. A newly fetched old/unverified snapshot can get live/ok/current source time.",
+      "repro": "UNEXECUTED source scenario: envelope state/readings,live=true,old observed_at,freshness=stale,verified_fields=[],current dataUpdatedAt. Badge live/ok/request time; live summaries request time.",
+      "fix": "Reuse exact typed state/evidence owner; separate receive from observation time, retain raw readings/keys/poll/signal; do not blindly swap hook shapes.",
+      "existingInventoryOwner": "G234/P468",
+      "owner": "existing useVehicles state owner plus separately leased page integration",
+      "confidence": "high"
+    },
+    {
+      "id": "F02",
+      "rule": "unknown-vehicle-status",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/pages/VehicleDetailPage.tsx",
+      "line": 151,
+      "related": [
+        "api/types.ts:1272-1278",
+        "vehicle-detail/VehicleHeader.tsx:40-55"
+      ],
+      "mechanism": "deriveStatus(state??vehicle) maps no evidence to offline; empty/unknown state object masks known record and defaults online.",
+      "repro": "UNEXECUTED: both initial record/state fail => Offline header; state={} plus record.state=asleep => Online. Neither is source evidence.",
+      "fix": "Neutral unknown status; preserve known-record fallback when state cannot establish status and retain real domain mappings.",
+      "owner": "existing deriveVehicleStatus and narrow page integration; absent-source concern already in audit-page-238",
+      "confidence": "high"
+    },
+    {
+      "id": "F03",
+      "rule": "unknown-boolean-as-false",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/components/vehicle-detail/LiveStateIndicators.tsx",
+      "line": 29,
+      "related": [
+        "same:30-39",
+        "vehicle-detail/SecuritySection.tsx:28-41"
+      ],
+      "mechanism": "Null lock=>Unlocked/danger; sentry/climate=>Off; charging=>Not charging, contradicting null-aware security/overview metrics.",
+      "repro": "UNEXECUTED: nonnull state with4 booleans null/omitted; truthiness selects negative labels.",
+      "fix": "Localized neutral unknown branches; preserve true/false and all5 indicators.",
+      "existingInventoryOwner": "G236/P470",
+      "owner": "existing LiveStateIndicators",
+      "confidence": "high"
+    },
+    {
+      "id": "F04",
+      "rule": "unknown-numeric-as-zero",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/components/modernization/VehicleBatteryChart.tsx",
+      "line": 30,
+      "related": [
+        "same:31-34,53-54",
+        "modernization/VehicleDriveChart.tsx:24-25,30-31",
+        "vehicle-detail/RecentDrivesSection.tsx:37,44",
+        "vehicle-detail/RecentChargesSection.tsx:40-42,64,71"
+      ],
+      "mechanism": "Missing battery=>gauge/bar0%,remaining100%; missing distance/duration=>0 chart/history; missing energy or unknown/in-progress charge duration=>0kWh/0m. Raw brief metrics may remain unknown.",
+      "repro": "UNEXECUTED: battery=null; drive distance/duration=null; charge energy=null or no ended_at. Static arithmetic generates zeros. RecentDrivesSection.test.tsx:197-209 explicitly expects coercion; do not erase that history.",
+      "fix": "Keep all rows/series/gauge shells with gaps/unavailable and unknown/in-progress duration; preserve genuine0 and signed-valid readings.",
+      "existingInventoryOwner": "G237/P471",
+      "owner": "existing charts owner plus recent-history domain owners, no new engine",
+      "confidence": "high"
+    },
+    {
+      "id": "F05",
+      "rule": "retained-settings-erasure",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/components/VehicleSettingsTab.tsx",
+      "line": 146,
+      "related": [
+        "same:126,158-174,215-221",
+        "api/dataState.ts:244-251"
+      ],
+      "mechanism": "isError replaces rows even with retained data, unmounting unsaved drafts/source pills; recovery recreates effective values.",
+      "repro": "UNEXECUTED: load settings, edit unsaved nickname, background GET fails with retained data/isError. ErrorDisplay replaces rows/draft state.",
+      "fix": "Only fatal initial failure replaces rows; retained warning/retry keeps drafts via existing trust API.",
+      "existingInventoryOwner": "G235/P469",
+      "owner": "existing VehicleSettingsTab",
+      "confidence": "high"
+    },
+    {
+      "id": "F06",
+      "rule": "cross-vehicle-draft-identity",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/components/VehicleSettingsTab.tsx",
+      "line": 162,
+      "related": [
+        "same:201-221,236",
+        "api/hooks/useVehicleSettings.ts:81-87"
+      ],
+      "mechanism": "Row key is setting key only; reset effect depends initialDraft not vehicleId. With both caches ready and same effective value, A's dirty draft survives route switch while mutation hook now targetsB.",
+      "repro": "UNEXECUTED: preloadedA/B identical effective nickname; editA unsaved; switch detail route toB without loading unmount. initialDraft unchanged, dirty draft retained; Save would useB withA text. No mutation attempted.",
+      "fix": "Scope row/draft identity to vehicleId+key, clear or explicitly retain vehicle-scoped drafts and settlement ownership.",
+      "existingInventoryOwner": "G235/P469",
+      "owner": "reuse existing settings owner; new exact race subcase",
+      "confidence": "high"
+    },
+    {
+      "id": "F07",
+      "rule": "missing-field-name-and-error-association",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/components/VehicleSettingsTab.tsx",
+      "line": 260,
+      "related": [
+        "same:249-265,358-401",
+        "components/ui/Input.tsx:55-72",
+        "components/ui/Select.tsx:59-76"
+      ],
+      "mechanism": "6 Input/Select calls omit label/id/aria-label/aria-labelledby and help/error links. Visible labels/errors are unassociated siblings; generated ID/data-testid alone is not a name.",
+      "repro": "UNEXECUTED DOM declaration: fields have no linked label; empty invalid draft creates siblingText but no error prop/aria-invalid/describedby.",
+      "fix": "Stable vehicle/keyIDs, localized labels/help/error association through existing primitives, preserving6 drafts/native values.",
+      "existingInventoryOwner": "G235/P469",
+      "owner": "existing VehicleSettingsTab",
+      "confidence": "high"
+    },
+    {
+      "id": "F08",
+      "rule": "silence-source-trust-omitted",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/components/SilenceBanner.tsx",
+      "line": 18,
+      "related": [
+        "same:20-35",
+        "api/hooks/useVehicles.ts:53-60"
+      ],
+      "mechanism": "Onlydata consumed: failed/paused/unavailable silence read looks like authoritative ok absence. Retained quiet/silent result after failure has no age/error/blocked warning/retry.",
+      "repro": "UNEXECUTED: undefined data+isError=>null; retained status=quiet+isError=>ordinary unchanged quiet banner.",
+      "fix": "Existing trust/feedback qualification for missing/failed/retained watchdog; only actualok intentionally absent.",
+      "existingInventoryOwner": "G239/P473",
+      "owner": "existing SilenceBanner",
+      "confidence": "high"
+    },
+    {
+      "id": "F09",
+      "rule": "initial-paused-not-distinguished",
+      "priority": "P2",
+      "file": "web/src/features/vehicles/components/modernization/VehicleSourcePanel.tsx",
+      "line": 27,
+      "related": [
+        "components/feedback/StaleRefreshWarning.tsx:60",
+        "api/dataState.ts:216-232",
+        "pages/VehicleDetailPage.tsx:160",
+        "VehicleSettingsTab.tsx:140-158",
+        "NextChargeDecisionStrip.tsx:57-79"
+      ],
+      "mechanism": "No-data pending/paused becomes Loading source skeleton; warning suppresses all no-data states. isLoading-only settings/decision branches instead can render default editable rows or No charge decision yet. Initial blocking is not differentiated from active loading/authoritative absence.",
+      "repro": "UNEXECUTED query: data=undefined,isPending=true,isLoading=false,fetchStatus=paused,error=null. SourcePanel loading; warning null; settings6defaults; finiteSoC decision no-data message.",
+      "fix": "Use existing isRefreshBlocked for explicit initial waiting/reconnect and disabled unresolved actions; paused query does not prove vehicle offline.",
+      "owner": "existing VehicleSourcePanel/direct consumers; dataState correctly exposes flag, no new store",
+      "confidence": "high"
+    },
+    {
+      "id": "F10",
+      "rule": "saved-date-preferences-bypassed",
+      "priority": "P2",
+      "file": "web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.tsx",
+      "line": 31,
+      "related": [
+        "vehicle-detail/RecentChargesSection.tsx:58",
+        "modernization/VehicleDriveChart.tsx:23,27",
+        "vehicle-detail/ChargingTelemetrySection.tsx:23,51",
+        "lib/dateFormat.ts:43-80",
+        "hooks/useDateFormat.ts:74-104"
+      ],
+      "mechanism": "Direct formatDate/formatDateTime omit locale/zone options, using browser rather than saved locale/tz_display_default. Trend memo depends drives/distance only. Other summaries/decision use saved preference hook.",
+      "repro": "UNEXECUTED: browserUTC/en-US vs saved differentzone/locale. Direct dates/browser output differs from saved summary times; saved-date-only change leaves chart memo unchanged.",
+      "fix": "Reuse useDateFormat callbacks and preference identity in memos; disclose relevant zone, no competing formatter.",
+      "owner": "existing history/chart/charging presenters",
+      "confidence": "high"
+    },
+    {
+      "id": "F11",
+      "rule": "saved-number-preferences-bypassed",
+      "priority": "P2",
+      "file": "web/src/features/vehicles/components/modernization/VehicleDriveChart.tsx",
+      "line": 24,
+      "related": [
+        "same:25,30-31",
+        "modernization/VehicleBatteryChart.tsx:44",
+        "vehicle-detail/RecentDrivesSection.tsx:50-53",
+        "vehicle-detail/RecentChargesSection.tsx:85-91",
+        "NextChargeDecisionStrip.tsx:122-126"
+      ],
+      "mechanism": "Trend rounds operands to integers and String cells ignore precision/locale. Accessible battery table and history/decisionSoC interpolate raw numbers. Other readouts use saved numeric bridge.",
+      "repro": "UNEXECUTED: savedde-DE precision2, SoC72.5,distance12345m => raw72.5 and rounded12km rather than preference12,35km. Current chart tests preserve Math.round, not complete preference acceptance.",
+      "fix": "Preserve raw SI/chart operands and apply useNumberFormatting at display tick/tooltip/table/narrative boundaries; keep signs/seriesIDs.",
+      "owner": "existing chart/history/decision owners",
+      "confidence": "high"
+    },
+    {
+      "id": "F12",
+      "rule": "mobile-fields-unreachable-in-declared-adapter",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.tsx",
+      "line": 93,
+      "related": [
+        "vehicle-detail/RecentChargesSection.tsx:121",
+        "components/ui/DataTable.tsx:451-453,479,510-515,733-743,1405-1409,1534-1535"
+      ],
+      "mechanism": "mobileColumns omits drive duration and charge duration/cost. No mobilePresentation/expandable/renderExpanded provided; adapter requires mobilePresentation; colHiddenClass forces omitted fields hidden belowmd regardless of column-menu choice. No declared narrow in-row access.",
+      "repro": "UNEXECUTED source/CSS below768: omittedfields hidden, native expansion false, mobile adapter inactive. NOT a measured browser reachability result.",
+      "fix": "Existing mobile adapter summary/details or complete contained column access; retain all fields/tableIDs, no second table.",
+      "owner": "existing recent-history callers; shared adapter already exists",
+      "confidence": "high"
+    },
+    {
+      "id": "F13",
+      "rule": "mobile-target-declaration-below-contract",
+      "priority": "P2",
+      "file": "web/src/features/vehicles/components/VehicleSettingsTab.tsx",
+      "line": 275,
+      "related": [
+        "same:286",
+        "vehicle-detail/VehicleHeader.tsx:65",
+        "components/ui/Button.tsx:37-40,63"
+      ],
+      "mechanism": "Save/Reset sm=h-9/36px, Wake defaultmd=h-10/40px without mobilemin-h-11. Static declaration below mission44px; no browser-measured WCAGfailure claimed.",
+      "repro": "UNEXECUTED: belowmd these button declarations remain36/40px; composed targets/spacing/overlap NOTRUN.",
+      "fix": "Caller mobilemin-h-11 and wrap/reflow, preserve desktop/density/actions; later native long-label/overlap verification.",
+      "owner": "existing settings/header callers, not globalButton redesign",
+      "confidence": "high"
+    },
+    {
+      "id": "F14",
+      "rule": "wake-historical-mode-guard-missing",
+      "priority": "P1",
+      "file": "web/src/features/vehicles/pages/VehicleDetailPage.tsx",
+      "line": 138,
+      "related": [
+        "vehicle-detail/VehicleHeader.tsx:65-71",
+        "api/client.ts:353-358,372",
+        "lib/operationalMode.ts:65-76",
+        "api/offlineCache.ts:52-53,153-161"
+      ],
+      "mechanism": "Wake omits requiresLiveMode, defaultfalse bypasses as_of read-only guard. Offlineunsafe pathguard catches disconnectedwake but not online historicalmode. Header disabled onlypending.",
+      "repro": "UNEXECUTED: online with valid?as_of; Wake would POST without flag. Operationalguard returns before snapshot check; offlineguard returns online. No command or API attempted.",
+      "fix": "Optwake into existing live-modeguard and historical disabled feedback; retain offline noqueue/pending/success-only refetch/toasts.",
+      "owner": "narrow separatelyqueued pagefollowup; sharedclient guard already exists",
+      "confidence": "high"
+    },
+    {
+      "id": "F15",
+      "rule": "unknown-decision-price-as-zero",
+      "priority": "P2",
+      "file": "web/src/features/vehicles/components/NextChargeDecisionStrip.tsx",
+      "line": 113,
+      "related": [
+        "same:115-123,130-137"
+      ],
+      "mechanism": "Reason interpolation coerces missing savings/home-now/Supercharger cost to0 while currency metrics retainnull. Templates using these variables can assert free/zero unsupported by decision.",
+      "repro": "UNEXECUTED: reason references home/sc/save with correspondingnull fields => narrativeformatted0 vs rawmetricnull. Applies only templates using these operands.",
+      "fix": "Explicit unknown narrative operands/source-supportedfallback; preserve genuine0/negative-valid savings and same metricvalues.",
+      "owner": "existing decisionstrip presentationowner",
+      "confidence": "high"
+    }
+  ],
+  "candidates": [
+    {
+      "rule": "typed-state-envelope-equivalence",
+      "file": "web/src/features/vehicles/pages/VehicleDetailPage.tsx",
+      "line": 73,
+      "detail": "Direct envelope bypasses alternate vehicle+position and as_of query-key mapping. Backend shape in this route/mode unverified; reuseG234/P468. Inline useQuery is architecture debt, not fetch-useeffect.",
+      "id": "C01"
+    },
+    {
+      "rule": "independent-software-source",
+      "file": "web/src/features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx",
+      "line": 19,
+      "detail": "No config returns empty even with known state software; intended no-config semantics unresolved, not confirmed regression.",
+      "id": "C02"
+    },
+    {
+      "rule": "full-identity-reachability",
+      "file": "web/src/features/vehicles/components/vehicle-detail/VehicleHeader.tsx",
+      "line": 60,
+      "detail": "VIN truncate has no localfullvalue affordance. Allocated-width/200% clipping needs nativeQA; no realVIN accessed.",
+      "id": "C03"
+    },
+    {
+      "rule": "battery-semantic-theme-review",
+      "file": "web/src/features/vehicles/components/vehicle-detail/helpers.ts",
+      "line": 17,
+      "detail": "Fixed hex and >60/>25 thresholds differ from QuickStats >50/>20. ReuseG238/P472, not newpalette/thresholdowner. ContrastNOTRUN. QuickLinks glow shadow allegation ruledout: current GlassPanel30-35 maps to semanticborder only.",
+      "id": "C04"
+    },
+    {
+      "rule": "parallel-mutation-order",
+      "file": "web/src/features/vehicles/components/VehicleSettingsTab.tsx",
+      "line": 276,
+      "detail": "Save/Reset disable ownpending only; opposing settle-order not exercised. SameG235/P469, not duplicateF06.",
+      "id": "C05"
+    },
+    {
+      "rule": "mute-zone-effective-unit-contract",
+      "file": "web/src/features/vehicles/components/VehicleSettingsTab.tsx",
+      "line": 98,
+      "detail": "Mute editor browserlocal withoutzone disclosure; useUnits consumes global preferences not pageeffective payload. Business-date/pervehicle resolution contract requires reconciliation before confirmed regression; reuseG235/P469.",
+      "id": "C06"
+    }
+  ],
+  "nativeAcceptance": {
+    "status": "NOTRUN",
+    "reason": "No browser/API/real vehicle/identity access or screenshot lock authorized; source-only",
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "openLimits": [
+      "Mountedauthorizedidentity/headerpickersync",
+      "freshness/retained/initialpaused/offline runtime",
+      "all10missionwidths/narrowcontainers/darklightcustom/RTL/200%longtext/overflow",
+      "keyboardfocus/restoration/openReviewdrawers/charttablecontrols",
+      "ATformnames/errors/announcements",
+      "composed44pxtargets/overlap",
+      "contrastforcedcolors/reducedmotion/lowbandwidth",
+      "savednumbers/date/timezone/hourcycle",
+      "serverauth/bounds/cacheabort/payloadtrust"
+    ],
+    "sourcePositive": "6Section landmarks, PageLayout single title, min-w-0/sharedgrid, 2/3/6 quicklinks, stacked/lgsettings, chartdatacolumns, namednav/group/decorativehiddenicons; declaration not acceptance."
+  },
+  "testEvidence": {
+    "status": "NOTRUN_BY_ASSIGNMENT",
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "freshRunnerExit": null,
+    "historical": "Accepted queue records20 parent page cases at751f783929; historical only, no fresh passing claim",
+    "read": "page/settings tests entire; VehicleSourcePanel/VehicleDetailCharts/VehicleDetailPreservation tests entire; VehicleSummaryBands180-319; indicator/history/nextcharge/silence declarations and focused null/retention/scope lines",
+    "limits": "Page test stubs child indicators/tables/settings/AI/charts and mocks fallback-only i18n. Does not establish dependent trust/identity/mobile/preferences. Existing unknown-coercion assertions preserved."
+  },
+  "notRun": [
+    "fresh tests/scoped Vitest",
+    "lint/scoped ESLint",
+    "build",
+    "npx tsc --noEmit",
+    "scanner/preservation/helper execution",
+    "installs/servers/subagents",
+    "browser/API/identity/vehicle actions",
+    "backend/DB/auth validation"
+  ],
+  "commandFailures": [
+    {
+      "session": "1567",
+      "exit": 1,
+      "command": "rg discovery/headings",
+      "raw": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+      "disposition": "Corrected with Select-String; no install"
+    },
+    {
+      "session": "1729",
+      "exit": 1,
+      "command": "Oversized report serialization command",
+      "raw": "The filename or extension is too long. (os error 206)",
+      "disposition": "Process did not start; report-only writes split into bounded commands"
+    }
+  ],
+  "preservation": {
+    "pageBeforeSha256": "AFE99F93D802426685398A8686479C412107C49B1E2F51E67AFB56C9792C6448",
+    "testBeforeSha256": "DA0D348ACF1020B99B7D82F7C0AC75B219BF2635B086058B558E688C35BE703C",
+    "pagePhysicalLines": 289,
+    "namedSectionDeclarations": 6,
+    "sourceTestChanges": false
+  },
+  "beforePins": [
+    {
+      "path": "web/src/api/client.ts",
+      "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+    },
+    {
+      "path": "web/src/api/hooks/useCharging.ts",
+      "sha256": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicleSettings.ts",
+      "sha256": "DD0ACDAAF62A4577F72899769509755F290113C553339F00E0266F3BB2013894"
+    },
+    {
+      "path": "web/src/api/offlineCache.ts",
+      "sha256": "EDE8370B47BC67BEFD688A6434D6696C1EFDAE22E77BFDCC56C2D11D2857E6CE"
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B"
+    },
+    {
+      "path": "web/src/components/ai/AIVehiclePaintPreview.tsx",
+      "sha256": "3BA58574FB1BD48D9013A0F20CD2366019C38B02068D0710070CF0A98BE96E3F"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7"
+    },
+    {
+      "path": "web/src/components/layout/WorkspaceHeader.tsx",
+      "sha256": "B414EBCD4A69886A2E40F9CE24C06124F40D0552EECA10DA881B72A78260B37C"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C"
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282"
+    },
+    {
+      "path": "web/src/components/ui/GlassPanel.tsx",
+      "sha256": "E60A182C5579269B2A3D9869B0FC8FE14B3B1DC191DB09A3A3C19BB13A88F3AF"
+    },
+    {
+      "path": "web/src/components/ui/Input.tsx",
+      "sha256": "2C687DDCF37022148906E67B891DDAEC5AEB7A6F18385A93E92DBA2F32095B40"
+    },
+    {
+      "path": "web/src/components/ui/Select.tsx",
+      "sha256": "3157A4B90D9142E619E619028FF33D8D980D80E4DAF880A45D1B120ED6782CD2"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/index.ts",
+      "sha256": "E84B7104DC05B720C09B17E08BE5044A01922FE2F5FBE31F9580761CEA9EDEC2"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleBatteryChart.tsx",
+      "sha256": "9A0F124163E6ABE5FA6415EA53E479021E5B751AD1568BF0929FC1AD5D073DE0"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleChartSkeleton.tsx",
+      "sha256": "7DA94AC95A517ECE4D327AB64B9FA185A51A39830888A8B3C51A9E03580CE1F5"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailCharts.test.tsx",
+      "sha256": "73B038D3820522BF4D5DF58686D8C4BE918E5D352289FA8D89B5679EA5311911"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailCharts.tsx",
+      "sha256": "64C9882E6728FB532AE36A8BF0B22BE0E3ACC5F4DEDE71A3B57D876C257BCD3B"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailHistory.tsx",
+      "sha256": "CC79D5C500478F222AF083DDC180E61B01601429CE6C6B0AB500FE825DE578B1"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailOverview.tsx",
+      "sha256": "B642CE8F1C4A2FCBF8FAA3B80D2CB182F37E6430B5260217680C03EA166B1109"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailPreservation.test.tsx",
+      "sha256": "01ADADB4A79CAE34B9C00E9086D2944C194C45DB8BB8616DF94EAE85B8E11E16"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailSkeleton.tsx",
+      "sha256": "0D9052EC9949D0F7589AC9E759E89CC97EFD3DECACA7E25E320AA92B1D0EB82D"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailStats.tsx",
+      "sha256": "3FA37D9F8A584943738706704D0633E522B776CB08303DACFAD7980549357D12"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailSystems.tsx",
+      "sha256": "8EF2BD705CA46E81AA29B7A4C16A91A992CD2A839E32D775C942310EDD562632"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDriveChart.tsx",
+      "sha256": "AE088ECCB1655EA7F9944069B1AD0BC23198FE801AD075A598EFB4446307CDB3"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelCell.tsx",
+      "sha256": "3AA9FC4411CE1E834D10261FDE243044953D95FD49902A9F6EB0FC7CA67264D0"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelGrid.test.tsx",
+      "sha256": "31F80A8748E197F0EA4557FA02101EFD258EAAED0D591F84BE25A5083B1C2751"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelGrid.tsx",
+      "sha256": "7B666BC9FBBCD743327375B75BC9922BCC5E2C431833A30ED020E8CC3D2FA7C6"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/vehicleSecurity.ts",
+      "sha256": "50EDC714B4D50E0F79A915C51403A1E30653000EAECB8AE1EFE8127EEF8E6B9A"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSecurityPanel.test.tsx",
+      "sha256": "423559EBDB016705A9D818B38678109416C8B2203467D31B16548293DD6EBDF8"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSecurityPanel.tsx",
+      "sha256": "565C0AA0BEA735533711969CF22F420965AA7B9292FF401127C079F378B69F2E"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSourcePanel.test.tsx",
+      "sha256": "5EE48AEB7B78B29B3606DDB6AA3E8559643C6B65958775E7EA680A8C7E61185F"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSourcePanel.tsx",
+      "sha256": "DDB4352249C000C30EBD9D65616EFB606AABA9FF89E7AC5C174BE7EDDFA0E59D"
+    },
+    {
+      "path": "web/src/features/vehicles/components/NextChargeDecisionStrip.test.tsx",
+      "sha256": "AEDC02097CA4E13994E4DF9FE2541791D560A97EC5233E11B61E5B20C47310AB"
+    },
+    {
+      "path": "web/src/features/vehicles/components/NextChargeDecisionStrip.tsx",
+      "sha256": "3DEF09BEA5B424ECD6084CBFF5AC16C3725762FB0AAD33E691855A52C3917009"
+    },
+    {
+      "path": "web/src/features/vehicles/components/SilenceBanner.test.tsx",
+      "sha256": "BF35F9E2DF034DCE5A585575C4E7DFFF19623AE04DD6191A6DA8C45B1F355C7B"
+    },
+    {
+      "path": "web/src/features/vehicles/components/SilenceBanner.tsx",
+      "sha256": "198ADE0BB556A74503F8373660EA482E7EE17506BB95B900E0D18F9423F376FA"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/powertrainFormatters.test.ts",
+      "sha256": "956EDCA6C43B8250A91408A3F337C0E3B59A741EB925996898BEE16BADC6B513"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/powertrainFormatters.ts",
+      "sha256": "026B88C149710D7A76146CFD5F7B89A4C7196A973DC9896BAA78261557088430"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/securityReadings.test.ts",
+      "sha256": "2E23F09EBF3A8B24B21FD77C8B27AFCE799232DA470D9590781E7475078808C1"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/securityReadings.ts",
+      "sha256": "F8872204741D3020F3B321C68969FF9AD456BC3D2623CBA83D72FFEDBD289E04"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/testQueries.ts",
+      "sha256": "E5FF6253FF4C7AD36ADC5507E257EF0C39DD59528A277E00A533419A40AAF378"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/useVehicleDetailSummary.ts",
+      "sha256": "CB7F32A62CCF73C6594B5BDBE7818676CE6F014EAE3CDF8A8A2910F71CA0B4F7"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/VehicleSummaryBands.test.tsx",
+      "sha256": "296CD4CE1180227E4765847307600A68DC8187EEF96BF41465C069A4D3DEBD4B"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/BatteryRangeCharts.test.tsx",
+      "sha256": "5B1B20C88AADC03A5F6453712D744022D64C00123A89A9AE0AC895712A9327EA"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx",
+      "sha256": "2B4F75C205FEF1A797A2A893F3788391D9FD1BE8F38FF8DE56180F43A2C4B919"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/BatteryRangePanel.test.tsx",
+      "sha256": "7C7FE9B039D024FAEDB147CC01498C77A1BAE141E0FA5FEFFF21309521B01073"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/BatteryRangePanel.tsx",
+      "sha256": "AA5E48420EEFC5DB9068212DC016A165BDE9B22789001F10779485269CCA5D4C"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/ChargingTelemetrySection.test.tsx",
+      "sha256": "95BB6EB579FAF15C7CBB5864C62210E551CC417CFCB941321A01A7509CA4FEA0"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/ChargingTelemetrySection.tsx",
+      "sha256": "07C47DEA7B2714EB693BF41F32C944D973FE7E9AD74153BDEA2A89FAEC78509E"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/ClimateSection.test.tsx",
+      "sha256": "895610A4E896312A67A047C4070981A13F8C63970A9D99A9A94F2CE3A0A4A10A"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/ClimateSection.tsx",
+      "sha256": "1D40E8B6F7F5F21270E45ECFEEA383CDAC9F8CC7EF2F7153FDF38D908E933030"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/helpers.test.ts",
+      "sha256": "33E46A0536C560C175C9729ADC441FCB17B4BDDA3392E702E0D85C1E42789A85"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/helpers.ts",
+      "sha256": "669B7985D59B8C378D6E2E58B54695B2ED2DE784AA8D9258B94E8C2BFC3D0049"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/index.ts",
+      "sha256": "A5FC9FB32FAFCB94AE622B322B156814B46FEBE957795C10B88B3E481A4E63C4"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/LiveStateIndicators.test.tsx",
+      "sha256": "5CE40F9D16936B548EA9C38C41AAA4B508499578CBD6576E5FB8561276C8B894"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/LiveStateIndicators.tsx",
+      "sha256": "70A5C883F73566B5CEF09495EB76593E0021C600722E20193BA2E5D5F75C48BC"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/MotorSection.test.tsx",
+      "sha256": "BE7D16CDB6D2BB643610399139ECC07728364F920D234AF9A6DD3EAD66AFAA7D"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/MotorSection.tsx",
+      "sha256": "F0E9591BBDB49BB6B4FC5071251BB584C5B8948C0ACB1ABB3C3FF15A2E651F7E"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/QuickLinksSection.test.tsx",
+      "sha256": "9B87A5F5929BB7C5E65B2A13A2EBC92E867278E4FE3808BC8638E92BC683DCA9"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/QuickLinksSection.tsx",
+      "sha256": "CAEC83CAF01BF7742D5F3CFB0F10788ED85557CC47E42237C573A12E306A9B07"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/QuickStatsGrid.test.tsx",
+      "sha256": "49A6EC6BB45F413913F35EF3FD39C3EED9459049836FC5056F4B4BA76BC71EEA"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/QuickStatsGrid.tsx",
+      "sha256": "492961D809817F006ECB295C7EBBBCC436F39322D739553C66B2DCB7309036B8"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentChargesSection.test.tsx",
+      "sha256": "2B214A9F7809E42DA8A8BBDB9A221D1522E5F2D180B2E803229A1A39426ABD08"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentChargesSection.tsx",
+      "sha256": "62D71EF85E25E82B2F0EB90F889733ACD92C1624AA57835CD6C8993C341EE426"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.test.tsx",
+      "sha256": "4315B89CB5DA5CCCB04049C64D3A205C43D4F26EBB8A0D80C1EF7FAD285A849C"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.tsx",
+      "sha256": "A866B79CD6EB14A9B937D73F97C9EE2ED4696622AA8B2AF279A03BA0CF0D4B54"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/SecuritySection.test.tsx",
+      "sha256": "E8BE48F6425BD6868AC345BA092B947D40587D955D3CDC5DA243D50C1A301822"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/SecuritySection.tsx",
+      "sha256": "AA742913747672A68560858FC77934BD4473766313724DAF08AB4222FA2AC19C"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/TirePressureSection.test.tsx",
+      "sha256": "C75BB17DC577815A089FC7F78CE951460F5988E3EA774463C33564E403425FFB"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx",
+      "sha256": "43E17D4F052680DA3F4A440F883C9C11E284E3F08114BA31D459310756F6E847"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/VehicleConfigSection.test.tsx",
+      "sha256": "07D42A01DDE47D5F626A3AF94FEEDC5B798598DB28BB10E9A865A2D3CA119C41"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx",
+      "sha256": "AA9CC7863D3EC2D8CD1D7B4BA55E8891F3B882F190469E39264C040714BBA4FB"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/VehicleHeader.test.tsx",
+      "sha256": "D89D288E1D4D294716778B5E02D618B076E8682CFF452BC570890F0D2FD2EEC6"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/VehicleHeader.tsx",
+      "sha256": "0F37B83CD7F4FF9D92B24C986EA2800A46252783E18EF51761BC6F291CBDCF34"
+    },
+    {
+      "path": "web/src/features/vehicles/components/VehicleSettingsTab.test.tsx",
+      "sha256": "EB1DE7771C83BA9BA3250AB76D15B1B37860D4B55EB801F8F1F98E1C3424CA8C"
+    },
+    {
+      "path": "web/src/features/vehicles/components/VehicleSettingsTab.tsx",
+      "sha256": "85123B4520E34525FA10E1E977A6F0649FD0D197DA738680458E034A7666342D"
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleDetailPage.test.tsx",
+      "sha256": "DA0D348ACF1020B99B7D82F7C0AC75B219BF2635B086058B558E688C35BE703C"
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleDetailPage.tsx",
+      "sha256": "AFE99F93D802426685398A8686479C412107C49B1E2F51E67AFB56C9792C6448"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B"
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542"
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "sha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64"
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3"
+    },
+    {
+      "path": "web/src/lib/operationalMode.ts",
+      "sha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D"
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+    }
+  ],
+  "pinScope": "Explicitly before-hashed sources/supports/tests; uninspected compatibility pins only protect preservation, not full-read evidence.",
+  "deduplication": {
+    "historical": "audit-page-238 prior observations not freshproof. Fixed safeinteger/cancellation/live=false/knownrecordfallback NOT redispatched.",
+    "queue": "Exact writable-source search found completed data-state/use-data-state and SourcePanel fixture owners, not active fixes for theseconsumer mechanisms. Reuse inventoryowners; no queue item created/dispatched.",
+    "candidateOwner": "G238/P472 theme qualification, currentglow notconfirmed",
+    "inventoryOwners": [
+      "G234/P468",
+      "G235/P469",
+      "G236/P470",
+      "G237/P471",
+      "G239/P473"
+    ]
+  },
+  "frontendRuleChecks": {
+    "method": "Select-String native grep, rawoutput log; broad case-insensitive falsepositives preserved then corrected case-sensitive",
+    "matchedLinesCorrected": {
+      "static-inline-style": 0,
+      "fetch-useeffect": 1,
+      "raw-html": 1,
+      "direct-library-import": 0,
+      "camelcase-param": 0,
+      "double-prefix": 0,
+      "old-api-import": 0
+    },
+    "semanticReview": "Hardcodedstring/hiddensection/wrapper manual source review; no fullrepo cleanclaim. Backendrules notapplicable.",
+    "exceptions": [
+      "rawinputmatch JSDoc VehicleSettingsTab90 notJSX",
+      "useEffect218 localdraftsync notdatafetch",
+      "CSS-variableTailwindclasses notinline",
+      "shared UI rawtags expected",
+      "AIfeaturegate intentional",
+      "data conditionals insideSourcePanel/history/configshells nothidden-section",
+      "PageLayout delegatesPageContainer10-15, validwrapper",
+      "t fallbackstrings localized",
+      "glowID currently semanticborder notshadow"
+    ]
+  },
+  "rawSIAndPreferences": {
+    "exceptions": "F04 unknown durations;F10 date preferences;F11 numericpreferences;C06 effectivepervehicle/mute contract. Explicit saved12/24h plumbing notproven by inspected FormatOptions, endtoendNOTRUN.",
+    "preserved": "Queries/cache remain raw; signedpower/current/torque/RPM/temperature passed to metric pipeline withoutabs/clamp. Powertrain uses preference precision/locale; RPM directinteger not guessedrad/s. Tires thresholdsPa then/1000kPa; chargingW/Wh/metres displayconversion and rangeaddedm/h /3600m/s explicitlynotmotion."
+  },
+  "states": {
+    "retained": "mainpage/sourcepanels preserveavailable children/warnings, exceptionsF05/F08",
+    "fatal": "recorderror leavesneighbors;sourceQueryErrorretry only unavailablecontent",
+    "actions": "Back/Wake/sourceRetryRefresh/Reviewdetails/chartlegendframe/tablecontrols/Viewall/6links/SaveReset/optionalHelix/OpenAutopilot declared, noneexercised",
+    "freshness": "F01 receivesvsobserves; suppliedmotor/climate/security/chargingts; tirecreated_at observationmeaning unverified",
+    "initial": "dedicatedbusy record skeleton;independent SourcePanels after, F09paused",
+    "unknown": "rawstats/overview/motor/climate/security/tires manycorrectnulls;F02-F04/F15 exceptions"
+  },
+  "summary": {
+    "native": "NOTRUN",
+    "byRule": [
+      {
+        "rule": "cross-vehicle-draft-identity",
+        "count": 1
+      },
+      {
+        "rule": "initial-paused-not-distinguished",
+        "count": 1
+      },
+      {
+        "rule": "missing-field-name-and-error-association",
+        "count": 1
+      },
+      {
+        "rule": "mobile-fields-unreachable-in-declared-adapter",
+        "count": 1
+      },
+      {
+        "rule": "mobile-target-declaration-below-contract",
+        "count": 1
+      },
+      {
+        "rule": "retained-settings-erasure",
+        "count": 1
+      },
+      {
+        "rule": "saved-date-preferences-bypassed",
+        "count": 1
+      },
+      {
+        "rule": "saved-number-preferences-bypassed",
+        "count": 1
+      },
+      {
+        "rule": "silence-source-trust-omitted",
+        "count": 1
+      },
+      {
+        "rule": "source-observation-trust",
+        "count": 1
+      },
+      {
+        "rule": "unknown-boolean-as-false",
+        "count": 1
+      },
+      {
+        "rule": "unknown-decision-price-as-zero",
+        "count": 1
+      },
+      {
+        "rule": "unknown-numeric-as-zero",
+        "count": 1
+      },
+      {
+        "rule": "unknown-vehicle-status",
+        "count": 1
+      },
+      {
+        "rule": "wake-historical-mode-guard-missing",
+        "count": 1
+      }
+    ],
+    "candidateGroups": 6,
+    "mappedFindings": 7,
+    "namedSections": 6,
+    "byPriority": [
+      {
+        "priority": "P1",
+        "count": 10
+      },
+      {
+        "priority": "P2",
+        "count": 5
+      }
+    ],
+    "auditedSurfaces": 21,
+    "confirmedMechanismGroups": 15,
+    "lintBuildTsc": "NOTRUN",
+    "distinctInventoryOwners": 5,
+    "freshTests": "NOTRUN",
+    "filesWithMostFindings": [
+      {
+        "file": "web/src/features/vehicles/components/VehicleSettingsTab.tsx",
+        "count": 4
+      },
+      {
+        "file": "web/src/features/vehicles/pages/VehicleDetailPage.tsx",
+        "count": 3
+      },
+      {
+        "file": "web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.tsx",
+        "count": 2
+      }
+    ],
+    "priorityNeeds": [
+      "P1: stop cross-vehicle unsaved draft transfer and live-only wake guard gap",
+      "P1: qualify true source observation/unknown telemetry/status and preserve retained settings/watchdog",
+      "P1: field accessible names/errors and complete mobile history fields",
+      "P2: initial-paused states, saved date/number display and caller mobile targets/unknown cost narrative"
+    ]
+  },
+  "generatedAt": "2026-10-14T01:57:05.6380796Z",
+  "afterPins": [
+    {
+      "path": "web/src/api/client.ts",
+      "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/hooks/useCharging.ts",
+      "sha256": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/hooks/useVehicleSettings.ts",
+      "sha256": "DD0ACDAAF62A4577F72899769509755F290113C553339F00E0266F3BB2013894",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/offlineCache.ts",
+      "sha256": "EDE8370B47BC67BEFD688A6434D6696C1EFDAE22E77BFDCC56C2D11D2857E6CE",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ai/AIVehiclePaintPreview.tsx",
+      "sha256": "3BA58574FB1BD48D9013A0F20CD2366019C38B02068D0710070CF0A98BE96E3F",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/layout/WorkspaceHeader.tsx",
+      "sha256": "B414EBCD4A69886A2E40F9CE24C06124F40D0552EECA10DA881B72A78260B37C",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/GlassPanel.tsx",
+      "sha256": "E60A182C5579269B2A3D9869B0FC8FE14B3B1DC191DB09A3A3C19BB13A88F3AF",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/Input.tsx",
+      "sha256": "2C687DDCF37022148906E67B891DDAEC5AEB7A6F18385A93E92DBA2F32095B40",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/components/ui/Select.tsx",
+      "sha256": "3157A4B90D9142E619E619028FF33D8D980D80E4DAF880A45D1B120ED6782CD2",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/index.ts",
+      "sha256": "E84B7104DC05B720C09B17E08BE5044A01922FE2F5FBE31F9580761CEA9EDEC2",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleBatteryChart.tsx",
+      "sha256": "9A0F124163E6ABE5FA6415EA53E479021E5B751AD1568BF0929FC1AD5D073DE0",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleChartSkeleton.tsx",
+      "sha256": "7DA94AC95A517ECE4D327AB64B9FA185A51A39830888A8B3C51A9E03580CE1F5",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailCharts.test.tsx",
+      "sha256": "73B038D3820522BF4D5DF58686D8C4BE918E5D352289FA8D89B5679EA5311911",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailCharts.tsx",
+      "sha256": "64C9882E6728FB532AE36A8BF0B22BE0E3ACC5F4DEDE71A3B57D876C257BCD3B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailHistory.tsx",
+      "sha256": "CC79D5C500478F222AF083DDC180E61B01601429CE6C6B0AB500FE825DE578B1",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailOverview.tsx",
+      "sha256": "B642CE8F1C4A2FCBF8FAA3B80D2CB182F37E6430B5260217680C03EA166B1109",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailPreservation.test.tsx",
+      "sha256": "01ADADB4A79CAE34B9C00E9086D2944C194C45DB8BB8616DF94EAE85B8E11E16",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailSkeleton.tsx",
+      "sha256": "0D9052EC9949D0F7589AC9E759E89CC97EFD3DECACA7E25E320AA92B1D0EB82D",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailStats.tsx",
+      "sha256": "3FA37D9F8A584943738706704D0633E522B776CB08303DACFAD7980549357D12",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailSystems.tsx",
+      "sha256": "8EF2BD705CA46E81AA29B7A4C16A91A992CD2A839E32D775C942310EDD562632",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDriveChart.tsx",
+      "sha256": "AE088ECCB1655EA7F9944069B1AD0BC23198FE801AD075A598EFB4446307CDB3",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelCell.tsx",
+      "sha256": "3AA9FC4411CE1E834D10261FDE243044953D95FD49902A9F6EB0FC7CA67264D0",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelGrid.test.tsx",
+      "sha256": "31F80A8748E197F0EA4557FA02101EFD258EAAED0D591F84BE25A5083B1C2751",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelGrid.tsx",
+      "sha256": "7B666BC9FBBCD743327375B75BC9922BCC5E2C431833A30ED020E8CC3D2FA7C6",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/vehicleSecurity.ts",
+      "sha256": "50EDC714B4D50E0F79A915C51403A1E30653000EAECB8AE1EFE8127EEF8E6B9A",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSecurityPanel.test.tsx",
+      "sha256": "423559EBDB016705A9D818B38678109416C8B2203467D31B16548293DD6EBDF8",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSecurityPanel.tsx",
+      "sha256": "565C0AA0BEA735533711969CF22F420965AA7B9292FF401127C079F378B69F2E",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSourcePanel.test.tsx",
+      "sha256": "5EE48AEB7B78B29B3606DDB6AA3E8559643C6B65958775E7EA680A8C7E61185F",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSourcePanel.tsx",
+      "sha256": "DDB4352249C000C30EBD9D65616EFB606AABA9FF89E7AC5C174BE7EDDFA0E59D",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/NextChargeDecisionStrip.test.tsx",
+      "sha256": "AEDC02097CA4E13994E4DF9FE2541791D560A97EC5233E11B61E5B20C47310AB",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/NextChargeDecisionStrip.tsx",
+      "sha256": "3DEF09BEA5B424ECD6084CBFF5AC16C3725762FB0AAD33E691855A52C3917009",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/SilenceBanner.test.tsx",
+      "sha256": "BF35F9E2DF034DCE5A585575C4E7DFFF19623AE04DD6191A6DA8C45B1F355C7B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/SilenceBanner.tsx",
+      "sha256": "198ADE0BB556A74503F8373660EA482E7EE17506BB95B900E0D18F9423F376FA",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/powertrainFormatters.test.ts",
+      "sha256": "956EDCA6C43B8250A91408A3F337C0E3B59A741EB925996898BEE16BADC6B513",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/powertrainFormatters.ts",
+      "sha256": "026B88C149710D7A76146CFD5F7B89A4C7196A973DC9896BAA78261557088430",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/securityReadings.test.ts",
+      "sha256": "2E23F09EBF3A8B24B21FD77C8B27AFCE799232DA470D9590781E7475078808C1",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/securityReadings.ts",
+      "sha256": "F8872204741D3020F3B321C68969FF9AD456BC3D2623CBA83D72FFEDBD289E04",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/testQueries.ts",
+      "sha256": "E5FF6253FF4C7AD36ADC5507E257EF0C39DD59528A277E00A533419A40AAF378",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/useVehicleDetailSummary.ts",
+      "sha256": "CB7F32A62CCF73C6594B5BDBE7818676CE6F014EAE3CDF8A8A2910F71CA0B4F7",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/VehicleSummaryBands.test.tsx",
+      "sha256": "296CD4CE1180227E4765847307600A68DC8187EEF96BF41465C069A4D3DEBD4B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/BatteryRangeCharts.test.tsx",
+      "sha256": "5B1B20C88AADC03A5F6453712D744022D64C00123A89A9AE0AC895712A9327EA",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx",
+      "sha256": "2B4F75C205FEF1A797A2A893F3788391D9FD1BE8F38FF8DE56180F43A2C4B919",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/BatteryRangePanel.test.tsx",
+      "sha256": "7C7FE9B039D024FAEDB147CC01498C77A1BAE141E0FA5FEFFF21309521B01073",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/BatteryRangePanel.tsx",
+      "sha256": "AA5E48420EEFC5DB9068212DC016A165BDE9B22789001F10779485269CCA5D4C",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/ChargingTelemetrySection.test.tsx",
+      "sha256": "95BB6EB579FAF15C7CBB5864C62210E551CC417CFCB941321A01A7509CA4FEA0",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/ChargingTelemetrySection.tsx",
+      "sha256": "07C47DEA7B2714EB693BF41F32C944D973FE7E9AD74153BDEA2A89FAEC78509E",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/ClimateSection.test.tsx",
+      "sha256": "895610A4E896312A67A047C4070981A13F8C63970A9D99A9A94F2CE3A0A4A10A",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/ClimateSection.tsx",
+      "sha256": "1D40E8B6F7F5F21270E45ECFEEA383CDAC9F8CC7EF2F7153FDF38D908E933030",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/helpers.test.ts",
+      "sha256": "33E46A0536C560C175C9729ADC441FCB17B4BDDA3392E702E0D85C1E42789A85",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/helpers.ts",
+      "sha256": "669B7985D59B8C378D6E2E58B54695B2ED2DE784AA8D9258B94E8C2BFC3D0049",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/index.ts",
+      "sha256": "A5FC9FB32FAFCB94AE622B322B156814B46FEBE957795C10B88B3E481A4E63C4",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/LiveStateIndicators.test.tsx",
+      "sha256": "5CE40F9D16936B548EA9C38C41AAA4B508499578CBD6576E5FB8561276C8B894",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/LiveStateIndicators.tsx",
+      "sha256": "70A5C883F73566B5CEF09495EB76593E0021C600722E20193BA2E5D5F75C48BC",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/MotorSection.test.tsx",
+      "sha256": "BE7D16CDB6D2BB643610399139ECC07728364F920D234AF9A6DD3EAD66AFAA7D",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/MotorSection.tsx",
+      "sha256": "F0E9591BBDB49BB6B4FC5071251BB584C5B8948C0ACB1ABB3C3FF15A2E651F7E",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/QuickLinksSection.test.tsx",
+      "sha256": "9B87A5F5929BB7C5E65B2A13A2EBC92E867278E4FE3808BC8638E92BC683DCA9",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/QuickLinksSection.tsx",
+      "sha256": "CAEC83CAF01BF7742D5F3CFB0F10788ED85557CC47E42237C573A12E306A9B07",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/QuickStatsGrid.test.tsx",
+      "sha256": "49A6EC6BB45F413913F35EF3FD39C3EED9459049836FC5056F4B4BA76BC71EEA",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/QuickStatsGrid.tsx",
+      "sha256": "492961D809817F006ECB295C7EBBBCC436F39322D739553C66B2DCB7309036B8",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentChargesSection.test.tsx",
+      "sha256": "2B214A9F7809E42DA8A8BBDB9A221D1522E5F2D180B2E803229A1A39426ABD08",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentChargesSection.tsx",
+      "sha256": "62D71EF85E25E82B2F0EB90F889733ACD92C1624AA57835CD6C8993C341EE426",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.test.tsx",
+      "sha256": "4315B89CB5DA5CCCB04049C64D3A205C43D4F26EBB8A0D80C1EF7FAD285A849C",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.tsx",
+      "sha256": "A866B79CD6EB14A9B937D73F97C9EE2ED4696622AA8B2AF279A03BA0CF0D4B54",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/SecuritySection.test.tsx",
+      "sha256": "E8BE48F6425BD6868AC345BA092B947D40587D955D3CDC5DA243D50C1A301822",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/SecuritySection.tsx",
+      "sha256": "AA742913747672A68560858FC77934BD4473766313724DAF08AB4222FA2AC19C",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/TirePressureSection.test.tsx",
+      "sha256": "C75BB17DC577815A089FC7F78CE951460F5988E3EA774463C33564E403425FFB",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx",
+      "sha256": "43E17D4F052680DA3F4A440F883C9C11E284E3F08114BA31D459310756F6E847",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/VehicleConfigSection.test.tsx",
+      "sha256": "07D42A01DDE47D5F626A3AF94FEEDC5B798598DB28BB10E9A865A2D3CA119C41",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx",
+      "sha256": "AA9CC7863D3EC2D8CD1D7B4BA55E8891F3B882F190469E39264C040714BBA4FB",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/VehicleHeader.test.tsx",
+      "sha256": "D89D288E1D4D294716778B5E02D618B076E8682CFF452BC570890F0D2FD2EEC6",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/VehicleHeader.tsx",
+      "sha256": "0F37B83CD7F4FF9D92B24C986EA2800A46252783E18EF51761BC6F291CBDCF34",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/VehicleSettingsTab.test.tsx",
+      "sha256": "EB1DE7771C83BA9BA3250AB76D15B1B37860D4B55EB801F8F1F98E1C3424CA8C",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/VehicleSettingsTab.tsx",
+      "sha256": "85123B4520E34525FA10E1E977A6F0649FD0D197DA738680458E034A7666342D",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleDetailPage.test.tsx",
+      "sha256": "DA0D348ACF1020B99B7D82F7C0AC75B219BF2635B086058B558E688C35BE703C",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleDetailPage.tsx",
+      "sha256": "AFE99F93D802426685398A8686479C412107C49B1E2F51E67AFB56C9792C6448",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "sha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/operationalMode.ts",
+      "sha256": "EE455C50BEF62D5751B3CD9C7BF92F342071E740B76B3FD6F8FDE8B4773C455D",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "matchesBefore": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "matchesBefore": true
+    }
+  ],
+  "pinCheck": {
+    "algorithm": "SHA256",
+    "checked": 94,
+    "mismatches": 0,
+    "allMatch": true,
+    "checkedAt": "2026-10-14T01:57:49.7763438Z"
+  },
+  "filesRead": [
+    {
+      "path": "web/src/api/client.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/api/hooks/useCharging.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicleSettings.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/api/offlineCache.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/components/ai/AIVehiclePaintPreview.tsx",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/components/ui/GlassPanel.tsx",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/components/ui/Input.tsx",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/components/ui/Select.tsx",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/index.ts",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleBatteryChart.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleChartSkeleton.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailCharts.test.tsx",
+      "extent": "entire file"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailCharts.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailHistory.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailOverview.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailPreservation.test.tsx",
+      "extent": "entire file"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailSkeleton.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailStats.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDetailSystems.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleDriveChart.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelCell.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelGrid.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/vehicleSecurity.ts",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSecurityPanel.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSourcePanel.test.tsx",
+      "extent": "entire file"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehicleSourcePanel.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/NextChargeDecisionStrip.test.tsx",
+      "extent": "focused declarations and null/retention/preference/scope excerpts; not full test acceptance"
+    },
+    {
+      "path": "web/src/features/vehicles/components/NextChargeDecisionStrip.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/SilenceBanner.test.tsx",
+      "extent": "focused declarations and null/retention/preference/scope excerpts; not full test acceptance"
+    },
+    {
+      "path": "web/src/features/vehicles/components/SilenceBanner.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/powertrainFormatters.ts",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/securityReadings.ts",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/testQueries.ts",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/useVehicleDetailSummary.ts",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/statstrip-vehicle-detail/VehicleSummaryBands.test.tsx",
+      "extent": "focused declarations and null/retention/preference/scope excerpts; not full test acceptance"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/BatteryRangePanel.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/ChargingTelemetrySection.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/ClimateSection.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/helpers.ts",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/index.ts",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/LiveStateIndicators.test.tsx",
+      "extent": "focused declarations and null/retention/preference/scope excerpts; not full test acceptance"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/LiveStateIndicators.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/MotorSection.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/QuickLinksSection.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/QuickStatsGrid.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentChargesSection.test.tsx",
+      "extent": "focused declarations and null/retention/preference/scope excerpts; not full test acceptance"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentChargesSection.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.test.tsx",
+      "extent": "focused declarations and null/retention/preference/scope excerpts; not full test acceptance"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/SecuritySection.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/vehicle-detail/VehicleHeader.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/components/VehicleSettingsTab.test.tsx",
+      "extent": "entire file"
+    },
+    {
+      "path": "web/src/features/vehicles/components/VehicleSettingsTab.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleDetailPage.test.tsx",
+      "extent": "entire file"
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleDetailPage.tsx",
+      "extent": "presenter full read or source-pattern inspection; compatibility/barrel not production parity proof"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/lib/operationalMode.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "extent": "relevant full source or cited ranges/excerpts; not whole-owner audit"
+    },
+    {
+      "extent": "signed/numeric validation and display converter source excerpts; not pinned before initial excerpt",
+      "path": "web/src/lib/metric-reference/formatMetric.ts"
+    }
+  ],
+  "sourceReadLimits": "WorkspaceHeader selected-vehicle search returned no matches; selected-vehicle synchronization proven only by useSelectedVehicle declarations, not mounted header. Early app route-declaration directory probe had no matches; route evidence is accepted inventory/queue, not fresh registry/native verification. Protectively pinned uninspected test files are excluded from filesRead.",
+  "completedAt": "2026-10-14T01:57:49.8953818Z",
+  "release": {
+    "files": [
+      "docs/frontend-audits/phase6-qa-vehicles-vehicle-detail.json",
+      "web/logs/phase6-qa-vehicles-vehicle-detail.log"
+    ],
+    "sourceWritesReleased": "No source writes ever held/performed; assigned report/log write claim released at final response",
+    "nativeAcceptance": "NOTRUN",
+    "needs": "15 confirmed groups,6 candidates; reuse5 inventory owners, no queued/dispatched fixes"
+  }
+}

@@ -1,0 +1,1169 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-ownership-consumables-lifecycle",
+  "attempt": 1,
+  "status": "DONE_SOURCE_ONLY_WITH_NEEDS",
+  "generated_at_utc": "2026-10-14T02:21:43.522743+00:00",
+  "route": "/ownership/consumables-lifecycle",
+  "scope": {
+    "readonly_page": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+    "direct_supports_and_existing_tests": [
+      "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "web/src/features/ownership/pages/ConsumablesLifecyclePage.test.tsx",
+      "web/src/api/hooks/useOwnership.ts",
+      "web/src/api/dataState.ts",
+      "web/src/hooks/useDataState.ts",
+      "web/src/hooks/useSelectedVehicle.ts",
+      "web/src/lib/workspaceScope.ts",
+      "web/src/features/ownership/formatters.ts",
+      "web/src/features/ownership/components/index.ts",
+      "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "web/src/features/ownership/components/EvidencePanel.tsx",
+      "web/src/features/ownership/components/MoneyInput.tsx",
+      "web/src/features/ownership/components/SiNumberInput.tsx",
+      "web/src/features/ownership/components/MutationError.tsx",
+      "web/src/features/ownership/components/StatGrid.tsx",
+      "web/src/features/ownership/components/VerdictBadge.tsx",
+      "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+      "web/src/types/ownership.ts",
+      "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "web/src/components/ui/Button.tsx",
+      "web/src/components/ui/DataTable.tsx",
+      "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "web/src/hooks/useUnits.ts",
+      "web/src/hooks/useNumberFormatting.ts",
+      "web/src/lib/dateFormat.ts",
+      "web/src/api/client.ts",
+      "web/src/api/dataState.test.ts",
+      "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+      "web/src/features/ownership/components/StatGrid.test.tsx",
+      "web/src/features/ownership/components/VerdictBadge.test.tsx",
+      "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+      "web/src/components/layout/layout-reference/PageLayout.test.tsx",
+      "web/src/components/ui/Button.test.tsx",
+      "web/src/components/ui/DataTable.test.tsx",
+      "web/src/lib/dateFormat.contract.test.ts",
+      "web/src/api/client.test.ts",
+      "web/src/components/layout/PageContainer.tsx",
+      "web/src/hooks/useFormatting.ts",
+      "web/src/hooks/useDateFormat.ts",
+      "web/src/api/queryClient.ts",
+      "web/src/components/ui/Modal.tsx",
+      "web/src/components/motion/FadeIn.tsx",
+      "web/src/api/queryClient.test.ts",
+      "web/src/components/ui/Modal.test.tsx",
+      "web/src/hooks/__tests__/useDateFormat.test.ts"
+    ],
+    "writable_files": [
+      "docs/frontend-audits/phase6-qa-ownership-consumables-lifecycle.json",
+      "web/logs/phase6-qa-ownership-consumables-lifecycle.log"
+    ],
+    "source_writes": 0,
+    "test_writes": 0,
+    "catalog_writes": 0,
+    "git_writes": 0,
+    "source_coverage": "Full955-line page and563-line page test; relevant direct-support branches and shared test declarations. Shared support entire runtime behavior is not certified."
+  },
+  "authority": {
+    "queue_line_at_read": 112,
+    "queue_row": "[~] | 6 | phase6-qa-ownership-consumables-lifecycle | read-only-finished-page-QA | two designated artifacts | phase5-page-ownership-consumables-lifecycle | 1 | reserved02:04:58.538Z; actor pending",
+    "release_deadline_utc": "2026-10-14T02:24:58.538Z",
+    "hard_deadline_utc": "2026-10-14T02:29:58.538Z",
+    "actual_start_utc": "2026-10-14T02:09:40.8355572Z",
+    "governing_documents": [
+      {
+        "file": "docs/orchestrator-loop.md",
+        "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767"
+      },
+      {
+        "file": "docs/frontend-design-contract.md",
+        "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e"
+      },
+      {
+        "file": "docs/frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f"
+      },
+      {
+        "file": "docs/frontend-inventory.md",
+        "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea"
+      },
+      {
+        "file": "docs/session-handoff.md",
+        "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2"
+      },
+      {
+        "file": "migration-queue.md",
+        "sha256": "bffa02660b5d08e7f3d314397695c60194f93c98cfb35646efd7414ae01b5ac0"
+      },
+      {
+        "file": ".github/copilot-instructions.md",
+        "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75"
+      },
+      {
+        "file": ".github/instructions/react-frontend.instructions.md",
+        "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e"
+      },
+      {
+        "file": ".github/instructions/frontend-si-cutover.instructions.md",
+        "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4"
+      },
+      {
+        "file": ".github/instructions/observability.instructions.md",
+        "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42"
+      },
+      {
+        "file": ".github/instructions/unit-conversion.instructions.md",
+        "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315"
+      }
+    ],
+    "reads": "Orchestrator entire296lines read; complete design-contract2539lines recorded in log, core trust/numeric/mobile/preservation and relevant ownership/dialog decisions reviewed. Mission relevant15-20/22-26/30-34/43-45 and relevant inventory154/current handoff/queue/instructions reviewed. Legacy two-unit examples are superseded by current SI/no-unknown-zero contract."
+  },
+  "summary": {
+    "confirmed_findings": 7,
+    "confirmed_sites": 27,
+    "confirmed_root_findings_by_rule": {
+      "hardcoded-string": 2,
+      "date-preferences": 1,
+      "initial-paused-trust": 1,
+      "editor-source-trust": 1,
+      "mutation-completion-identity": 1,
+      "disclosure-aria": 1
+    },
+    "standard_guideline_violation_sites_by_rule": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 5,
+      "missing-page-container": 0,
+      "fetch-useeffect": 0
+    },
+    "conditional_candidates": 2,
+    "native_candidates": 2,
+    "deduplicated_confirmed_owner_groups": 4,
+    "main_sections": 6,
+    "additional_safety_notice": 1,
+    "page_test_declarations": 18,
+    "source_files_pinned": 33,
+    "test_files_pinned": 14,
+    "source_test_hash_mismatches": 0,
+    "most_findings_by_file": {
+      "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx": 4,
+      "web/src/features/ownership/components/EvidencePanel.tsx": 1,
+      "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx": 1,
+      "web/src/features/ownership/components/OwnershipPanel.tsx": 1
+    },
+    "priority": "CL006 completion identity first; shared source-state accuracy next; localized/date/disclosure adoption follows. Shared-source/readiness findings do not authorize real maintenance writes.",
+    "counting_basis": "7 deduplicated mechanism findings, 27 distinct code call/label/state sites; the18 date call sites include two calls each on EvidencePanel99 and OwnershipBrief62. Standard guideline hardcoded-string=5sites grouped into2findings; all other confirmed findings are design-contract checks. Candidate counts are separate, not added as confirmed violations."
+  },
+  "confirmed_findings": [
+    {
+      "id": "CL001",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "owner_group": "consumables-page",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "line": 299,
+      "sites": [
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 299,
+          "source_text": "{row.category.replace(/_/g, ' ')}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 389,
+          "source_text": "{lifecycle.item.category.replace(/_/g, ' ')}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 463,
+          "source_text": "limit: lifecycle.binding_limit,"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 696,
+          "source_text": "label: category.replace(/_/g, ' '),"
+        }
+      ],
+      "title": "Known part categories and binding limits bypass i18n",
+      "mechanism": "The register and lifecycle card replace underscores in category codes; category options do the same. Bound by interpolates raw binding_limit. These are closed UI vocabulary, unlike user-entered labels/positions/notes or backend narratives. Translating the enclosing label does not translate the enum value.",
+      "repro": "Source scenario, NOT EXECUTED: render cabin_filter with binding_limit=distance under a non-English locale; open Record part. English cabin filter/distance remain in the card, register and options.",
+      "fix": "Localize recognized category/binding labels while retaining API enum values and unknown-code fallback. Request exact missing canonical keys from the serialized catalog owner; do not recase user content.",
+      "test_evidence": [
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.test.tsx",
+          "line": 403,
+          "detail": "Existing mobile assertion expects English cabin filter; mocked i18n is not localization acceptance."
+        }
+      ]
+    },
+    {
+      "id": "CL002",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "owner_group": "ownership-evidence-label",
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "line": 72,
+      "sites": [
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 72,
+          "source_text": "{quality.status}"
+        }
+      ],
+      "title": "Quality badge renders raw known English status",
+      "mechanism": "quality.status is rendered directly even though sufficient/limited/insufficient have existing ownership.verdict catalog labels and VerdictBadge recognizes them.",
+      "repro": "Source scenario, NOT EXECUTED: supply quality.status=limited and a non-English locale; the quality badge remains limited.",
+      "fix": "Reuse the existing localized known-status mapping/ownership VerdictBadge without changing quality thresholds, tone or raw status.",
+      "dedupe": "Shared EvidencePanel owner; not a separate page-by-page fix."
+    },
+    {
+      "id": "CL003",
+      "rule": "date-preferences",
+      "severity": "medium",
+      "owner_group": "ownership-date-integration",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "line": 308,
+      "sites": [
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 308,
+          "source_text": "filterValueLabel: (_value, row) => formatDateTime(row.installed_at),"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 313,
+          "source_text": "{formatDateTime(row.installed_at)}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 353,
+          "source_text": "? formatDateTime(row.retired_at)"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 358,
+          "source_text": "<Badge variant=\"neutral\">{formatDateTime(row.retired_at)}</Badge>"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 458,
+          "source_text": "? formatDateTime(lifecycle.projected_replace_at)"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 507,
+          "source_text": "{EVENT_KIND_LABELS[entry.kind](t)} · {formatDateTime(entry.occurred_at)}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 518,
+          "source_text": "{EVENT_KIND_LABELS[entry.kind](t)} · {formatDateTime(entry.occurred_at)}"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 589,
+          "source_text": "rawValue: report?.next_replace_at ? formatDateTime(report.next_replace_at) : null,"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 883,
+          "source_text": "if (key === 'installed') return formatDateTime(row.installed_at);"
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 886,
+          "source_text": "? formatDateTime(row.retired_at) : t('ownership.consumables.item.inService', 'in service');"
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 99,
+          "occurrence": 1,
+          "source_text": "? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}`"
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 99,
+          "occurrence": 2,
+          "source_text": "? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}`"
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 143,
+          "source_text": "date: formatDateTime(item.observed_at),"
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 145,
+          "source_text": ": formatDateTime(item.observed_at)}"
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 62,
+          "occurrence": 1,
+          "source_text": "from: formatDateTime(window.from), to: formatDateTime(window.to),"
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 62,
+          "occurrence": 2,
+          "source_text": "from: formatDateTime(window.from), to: formatDateTime(window.to),"
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 68,
+          "source_text": "? t('ownership.brief.observedAt', 'Source as of {{date}}', { date: formatDateTime(observedAt) })"
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 71,
+          "source_text": "date: formatDateTime(new Date(state.updatedAt).toISOString()),"
+        }
+      ],
+      "title": "Dates bypass saved locale and timezone",
+      "mechanism": "All 18 domain call sites invoke pure formatDateTime without options. dateFormat.ts:44-63 defaults to browser locale/timezone. The existing useDateFormat hook binds saved settings locale and timezone at lines73-93 but is not consumed by these owners.",
+      "repro": "Source scenario, NOT EXECUTED: browser locale en-US/timezone America/Los_Angeles; saved locale de-DE and timezone mode utc. An instant near UTC midnight still uses browser presentation in installed/retired/replacement/history/evidence/freshness displays and filter labels.",
+      "fix": "Adopt existing useDateFormat at these domain callers, preserving source UTC instants, table value identities, null placeholders and independent business-date semantics. Separately resolve candidate CC001 before reinterpreting calendar dates.",
+      "dedupe": "One ownership-domain date integration need for three callers. Completed phase6-fix-advanced-evidence-date-preferences concerns a different feature and is precedent, not acceptance of these files. Do not modify shared dateFormat or reopen its completed owner."
+    },
+    {
+      "id": "CL004",
+      "rule": "initial-paused-trust",
+      "severity": "medium",
+      "owner_group": "ownership-source-state",
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "line": 43,
+      "sites": [
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 43,
+          "source_text": "? source.isLoading || source.isPending"
+        }
+      ],
+      "title": "Initial paused summary is labelled loading rather than paused",
+      "mechanism": "deriveDataState returns initial plus isRefreshBlocked for a no-data paused query. OwnershipBrief checks stale/fatal/hasData but never isRefreshBlocked; isPending selects Loading source and line75 marks the brief loading although fetching is paused. OwnershipPanel separately supplies the correct initial-pause explanation, so two layers disagree.",
+      "repro": "Source scenario, NOT EXECUTED: source={data:undefined,isPending:true,isLoading:false,fetchStatus:paused}, enabled=true. Fleet wear posture/Wear economics show the initial-pause message while their brief status remains Loading source.",
+      "fix": "Distinguish initial paused, unresolved idle and active fetching at the existing brief owner; keep unknown values suppressed/unknown without inventing retained payload or an empty response.",
+      "test_evidence": [
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+          "line": 68,
+          "detail": "Declared paused coverage only supplies retained data; initial-paused status is not asserted."
+        }
+      ]
+    },
+    {
+      "id": "CL005",
+      "rule": "editor-source-trust",
+      "severity": "medium",
+      "owner_group": "ownership-source-state",
+      "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "line": 52,
+      "sites": [
+        {
+          "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+          "line": 52,
+          "source_text": ": independentEditor ? 'ready'"
+        }
+      ],
+      "title": "Independent editor masks initial register failure/pause and source retry",
+      "mechanism": "editing && !hasData forces SourceContent ready before fatal/paused/loading checks, and line70 removes errorRecovery. On this page opening Record part keeps the form, but also renders DataTable with items=[] and No parts recorded yet at page894, while the unresolved/failed register loses its local state explanation and retry. Preserving the draft is correct; hiding the independently unavailable read source is not required.",
+      "repro": "Source scenario, NOT EXECUTED: items query has no data and an initial error or fetchStatus=paused; click Record part. Editor remains mounted, but local register retry/state is absent and its table claims no recorded parts.",
+      "fix": "Keep unsaved editor reachable independently while retaining a nonblocking read-source notice/retry and distinguishing unresolved register from authoritative empty. Do not revert to fatal content replacement that deletes the form.",
+      "test_evidence": [
+        {
+          "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+          "line": 165,
+          "detail": "Existing declared editor test explicitly expects Retry to be absent; a source fix needs a narrow additive state/recovery assertion rather than sacrificing draft preservation."
+        }
+      ]
+    },
+    {
+      "id": "CL006",
+      "rule": "mutation-completion-identity",
+      "severity": "high",
+      "owner_group": "consumables-page",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "line": 185,
+      "sites": [
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 185,
+          "source_text": "{ onSuccess: () => setFormOpen(false) },"
+        }
+      ],
+      "title": "Old part-create success closes a newer editor context",
+      "mechanism": "submitItem onSuccess unconditionally closes formOpen; unlike submitEvent at203-204 it captures no form activation/revision or vehicle authority. The Record part/Cancel toggle remains usable while create is pending. An old success can therefore close an editor reopened for another vehicle or edited draft.",
+      "repro": "Source scenario, NOT EXECUTED and never perform a real write: with a mocked/deferred create, submit vehicle7 part; cancel, switch to vehicle8 and reopen/edit Record part; invoke the saved vehicle7 success callback. setFormOpen(false) closes the current vehicle8 editor.",
+      "fix": "Give the part form its own activation/context/revision settlement guard. Only the still-owning successful submission may close it; retain later drafts and avoid stealing focus. Reuse the existing event identity pattern where appropriate, without resetting drafts or changing payloads.",
+      "test_evidence": [
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.test.tsx",
+          "line": 480,
+          "detail": "Old-success coverage exists for event creation only."
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.test.tsx",
+          "line": 506,
+          "detail": "Part-create test checks raw payload but does not settle an old callback after scope/editor changes."
+        }
+      ]
+    },
+    {
+      "id": "CL007",
+      "rule": "disclosure-aria",
+      "severity": "medium",
+      "owner_group": "consumables-page",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "line": 681,
+      "sites": [
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 681,
+          "source_text": "onClick={() => setFormOpen((open) => !open)}"
+        }
+      ],
+      "title": "Record-part disclosure lacks exposed expansion/control relationship",
+      "mechanism": "The toolbar button toggles formOpen but supplies neither aria-expanded nor aria-controls; the controlled form at690 has no stable disclosure target id. Its changing localized Record part/Cancel label does not expose the relationship.",
+      "repro": "Source inspection only: inspect the button and conditionally mounted form at page675-690. No expanded state or target linkage is declared in its props.",
+      "fix": "Add stable locale-independent form identity and localized disclosure state via existing Button/native ARIA. Preserve native form labels, required markers, focus and mobile reachability."
+    }
+  ],
+  "conditional_and_native_candidates": [
+    {
+      "id": "CC001",
+      "classification": "conditional-business-contract",
+      "owner_group": "ownership-date-integration",
+      "file": "web/src/features/ownership/formatters.ts",
+      "line": 146,
+      "related": [
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 725
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 313
+        }
+      ],
+      "title": "Installed-on date becomes a UTC-midnight instant and may display on the preceding local day",
+      "mechanism": "fromDateInput appends T00:00:00.000Z; toDateInput extracts the UTC day. The installed date column formats the resulting instant in a timezone.",
+      "repro": "NOT EXECUTED: entering 2026-03-01 produces 2026-03-01T00:00Z, which corresponds to February28 in Los Angeles. Determine whether installed_at is a civil service date or an actual instant before changing it.",
+      "needed": "Business/backend contract for civil date versus instant and intended timezone. No backend, API or maintenance records accessed."
+    },
+    {
+      "id": "CC002",
+      "classification": "conditional-draft-policy",
+      "owner_group": "consumables-page",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "line": 114,
+      "related": [
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 98
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.test.tsx",
+          "line": 465
+        }
+      ],
+      "title": "One unbound event draft is reused after part/vehicle changes",
+      "mechanism": "Closing/cancelling or vehicle mismatch clears eventFor but not eventDraft. Opening another part therefore reuses the previous note/odometer/cost/kind. Existing test explicitly expects a note to survive vehicle7 -> vehicle8. This is not classified as a regression against that declared intention.",
+      "repro": "NOT EXECUTED: type a vehicle7 part note, switch vehicle, open another part; old note is shown under new target. Submission eligibility does guard the current item/vehicle.",
+      "needed": "Clarify whether drafts are portable or identity-bound. If identity-bound, retain per-target drafts rather than silently clearing data or weakening the existing preservation test."
+    },
+    {
+      "id": "NC001",
+      "classification": "native-modal-focus-candidate",
+      "owner_group": "mobile-table-action-integration",
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "line": 144,
+      "related": [
+        {
+          "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+          "line": 151
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 271
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 99
+        }
+      ],
+      "title": "Log event from Quick view opens an external editor while the modal stays open",
+      "mechanism": "Quick-view details call allColumns.render, including page row actions. Their Log event callback only sets eventFor; adapter detailKey is not cleared. The shared Modal remains aria-modal and focus-trapped while page effect requests focus on an external heading. Inline mobile row actions do not have this particular modal context.",
+      "repro": "NOT EXECUTED: narrow table -> Quick view -> Log event. Check actual focus, screen-reader exposure, dialog closure and reachable editor after closing. Do not submit a service event.",
+      "needed": "Mounted browser/native keyboard and focus evidence under an explicitly authorized synthetic read-only fixture. Existing mobile page test checks actions enabled but never activates Log event inside Quick view."
+    },
+    {
+      "id": "NC002",
+      "classification": "native-target-geometry-candidate",
+      "owner_group": "consumables-page",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "line": 678,
+      "related": [
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 799
+        },
+        {
+          "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+          "line": 860
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 36
+        }
+      ],
+      "title": "Record-part/editor buttons declare 36/40px defaults without page-level mobile minimum",
+      "mechanism": "Record part uses sm/wrapLabel (min36px); Save part and event Submit/Cancel use default md40px. MobileDataTableAdapter supplies44px descendant overrides for card row actions but not the external page toolbar/forms. Actual composed geometry and applicable WCAG spacing exceptions are not measured.",
+      "repro": "NOT EXECUTED: at320/375/390/430 and 200% text, measure toolbar/form buttons, focus clipping and nonoverlap; compare with mobile44px contract and permitted documented24px/spacing exceptions.",
+      "needed": "Browser/native computed boxes and keyboard/zoom evidence. This is not asserted as a measured target-size failure."
+    }
+  ],
+  "deduplicated_owner_needs": [
+    {
+      "id": "consumables-page",
+      "findings": [
+        "CL001",
+        "CL006",
+        "CL007"
+      ],
+      "candidates": [
+        "CC002",
+        "NC002"
+      ],
+      "need": "One new narrowly scoped leaf followup, not redispatch of completed phase5/rescue. Coordinate serially with the ownership-date owner over the same page. Canonical category/binding copy requires separate catalog-owner requests."
+    },
+    {
+      "id": "ownership-evidence-label",
+      "findings": [
+        "CL002"
+      ],
+      "need": "One shared EvidencePanel known-quality-label adoption; reuse existing verdict keys. Serialize with the date integration owner over EvidencePanel."
+    },
+    {
+      "id": "ownership-date-integration",
+      "findings": [
+        "CL003"
+      ],
+      "candidates": [
+        "CC001"
+      ],
+      "need": "One source-owned integration across page/EvidencePanel/OwnershipBrief; no shared formatter API change or completed date-root rerun."
+    },
+    {
+      "id": "ownership-source-state",
+      "findings": [
+        "CL004",
+        "CL005"
+      ],
+      "need": "One shared state-integration followup across OwnershipBrief and OwnershipPanel, preserving unsaved editor, fatal/retained/source-retry distinctions. Serialize with the date owner over OwnershipBrief."
+    }
+  ],
+  "section_inventory": [
+    {
+      "name": "Safety/duty-cycle notice",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "lines": [
+        552,
+        560
+      ],
+      "retained": "Explicit model projection, not physical wear; always inspect safety-critical parts."
+    },
+    {
+      "name": "Fleet wear posture",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "lines": [
+        563,
+        615
+      ],
+      "metrics": [
+        "due_soon_count",
+        "overdue_count",
+        "next_replace_at",
+        "twelve_month_cost_minor",
+        "lifetime_spend_minor",
+        "fleet_stress_average"
+      ],
+      "state": "Report source; persistent shell; unknown raw metrics versus actual zero."
+    },
+    {
+      "name": "Part-by-part projection",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "lines": [
+        620,
+        634
+      ],
+      "details": [
+        "item label/category/position",
+        "status and harsh-duty badge",
+        "health text and decorative clamped bar",
+        "distance used and rated-life percentage",
+        "adjusted life and wear multiplier",
+        "remaining distance/time",
+        "projected replacement and binding limit",
+        "narrative",
+        "replacement and wear costs",
+        "first6 event badges plus complete ordered service history with kind/date/odometer/cost/note"
+      ]
+    },
+    {
+      "name": "Why your wear rate differs",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "lines": [
+        638,
+        665
+      ],
+      "details": [
+        "factor label/narrative",
+        "observed SI trait",
+        "reference SI trait",
+        "wear multiplier"
+      ],
+      "table_id": "ownership-consumables-stress",
+      "mobile": "Existing table adapter plus full Quick-view column rendering."
+    },
+    {
+      "name": "Part register",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "lines": [
+        668,
+        897
+      ],
+      "details": [
+        "label/category/position",
+        "installed datetime and odometer",
+        "rated distance/time",
+        "cost/ISO currency",
+        "retired/in-service status",
+        "Log event",
+        "confirm-gated Remove"
+      ],
+      "table_id": "ownership-consumables-items",
+      "mobile": "Inline row actions plus Quick-view full column rendering; main desktop pipeline and source order/persistence retained."
+    },
+    {
+      "name": "Wear economics",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "lines": [
+        901,
+        931
+      ],
+      "metrics": [
+        "blended_cost_per_m_minor",
+        "odometer_m",
+        "parts tracked"
+      ],
+      "units": "Fixed original currency-minor per1000m basis is explicitly labelled; odometer separately uses display-distance preference."
+    },
+    {
+      "name": "Evidence, quality, limitations",
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "lines": [
+        934,
+        950
+      ],
+      "support": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "details": [
+        "quality status/sample count/coverage/observation window/reasons",
+        "all source evidence summaries/sample counts/observed timestamps",
+        "limitations fallback",
+        "explicit unsupported physical wear sensors and recalls"
+      ]
+    }
+  ],
+  "action_inventory": [
+    {
+      "action": "Record part / Cancel",
+      "lines": [
+        675,
+        689
+      ],
+      "effect": "Local disclosure only; CL007/NC002."
+    },
+    {
+      "action": "Save part",
+      "lines": [
+        168,
+        185
+      ],
+      "effect": "POST item; raw metres/seconds/minor currency; selected vehicle required; success-only close subject to CL006."
+    },
+    {
+      "action": "Log event opener",
+      "lines": [
+        263,
+        276
+      ],
+      "effect": "Local targeted editor; vehicle match and pending guard; NC001."
+    },
+    {
+      "action": "Log event submit",
+      "lines": [
+        189,
+        210
+      ],
+      "effect": "POST event; current membership/item/vehicle and pending checks; current instant occurred_at; old success guard; no operation performed."
+    },
+    {
+      "action": "Cancel event",
+      "lines": [
+        151,
+        157
+      ],
+      "effect": "Local dismissal; connected same-vehicle trigger restoration; CC002."
+    },
+    {
+      "action": "Remove part",
+      "lines": [
+        129,
+        140
+      ],
+      "effect": "Danger confirmation names part/history permanence; after confirmation requires same current vehicle; DELETE by item id; no delete performed."
+    },
+    {
+      "action": "Service history",
+      "lines": [
+        512,
+        536
+      ],
+      "effect": "Existing Accordion exposes every supplied event in source order, not just first6 badges."
+    },
+    {
+      "action": "Table filter/sort/layout/Quick view",
+      "lines": [
+        648,
+        664,
+        873,
+        895
+      ],
+      "effect": "Shared table pipeline with stable tableIds/raw keys; not executed."
+    },
+    {
+      "action": "Retry and Review details",
+      "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "lines": [
+        64,
+        73
+      ],
+      "effect": "Individual source retry and OperationalBrief drawer; independent editor retry gap CL005."
+    }
+  ],
+  "preservation": {
+    "observed_vs_estimated": "Measured driving traits are distinguished from modeled wear multiplier/remaining life/replacement costs. Notice explicitly denies physical wear measurement. No physical tire/pad condition is asserted by this audit.",
+    "workspace_scope": "useSelectedVehicle feeds both typed hooks; query keys contain vehicle id; snake_case vehicle_id, abort signal and positive-id enablement preserved. Route is not RANGE_ENABLED_PATHS and remains vehicle-enabled. No duplicate workspace picker/range. Installed date, event occurred_at, projected replacement, rolling next12months and lifetime spend are independent business/model dates, not header range; no unsupported backend bounds invented.",
+    "identity": "Event target must match current vehicle and current item list membership; old event success cannot close a different item editor. Remove completion checks current vehicle. Item create settlement lacks equivalent authority(CL006). Draft policy is conditional(CC002).",
+    "coverage": "Quality sample_count/coverage/window/reasons and evidence retained. allStress first-wins deduplicates by factor.code; whether differently scoped factors can share a code is backend-contract UNKNOWN, not a confirmed defect. Page briefs explicitly say recorded analysis bounds not supplied when no window prop is passed; EvidencePanel separately renders quality observation window. Do not infer model analysis bounds from quality bounds without authority.",
+    "raw_si": "Hooks return raw typed payloads; item/event odometers and rated life remain metres; daysToSeconds supplies rated_life_s; monetary values remain ISO minor units. Input hints convert only display; wear cost keeps original1000m denominator.",
+    "signs": "formatPct preserves source numeric sign/nonfinite->dash; formatSpan uses explicit sign; monetary helper retains negative source signs. Health clamps only aria-hidden visual width, not health text/cache. Domain nonnegative entry mins are declared, not measured validation behavior.",
+    "unknown_zero": "Summary raw missing values remain undefined/null through operational metric validation; actual zero counts/costs retained. Rated/remaining/per-metre unknown values use dash. Numeric form defaults/fallback0 are entered draft semantics, not measured telemetry.",
+    "states": "Persistent independent report/items/evidence shells; initial skeleton/unknown summaries, fatal recovery limited to source, retained payload and explicit refresh/pause warning, individual retry. Initial-paused summary and editor read-source gaps recorded as CL004/CL005. Missing selection disables queries and Save; no empty response inferred from a missing hook payload outside the editor gap.",
+    "preferences": "Distance/locale/number precision and recorded currency honored through existing units/number/currency display adapters. Saved date locale/timezone bypass recorded CL003. Saved12/24h acceptance not established; current inspected date API uses Intl locale, without an explicit clock-format option. Theme/density/chart/table settings not reset or rewritten.",
+    "i18n": "Labels/actions/help mostly use t with fallbacks; event kinds and lifecycle status use known mappings. Five enum-label sites still bypass localization(CL001/CL002). User/backend narratives are not blindly relabelled or recased.",
+    "mobile_a11y": "Explicit mobile adapters preserve row actions and full details; forms stack at base; wrapping/min-w0/logical alignment declared. Event form is named by stable useId heading and focus/restore mechanism; native inputs/shared components retain required labels. Decorative bar is aria-hidden with numeric text. Record disclosure lacks ARIA(CL007). Actual geometry/modal-focus/RTL/contrast/keyboard/forced-colors acceptance remains NOTRUN.",
+    "mutation_safety": "Audit executes no application writes or mutations. Production source QueryClient mutations retry0/networkMode=always at queryClient67-74 avoids offline replay. Safety/auth/capability/backend acceptance is not proved by these source checks."
+  },
+  "acceptable_exceptions": [
+    {
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "line": 406,
+      "rule": "static-inline-style",
+      "reason": "Computed health width; visual-only clamp, not static CSS var."
+    },
+    {
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "line": 98,
+      "rule": "fetch-useeffect",
+      "reason": "Focus/vehicle editor effect; no data fetch. Reads use typed TanStack hooks."
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "line": 1,
+      "rule": "direct-library-import",
+      "reason": "Shared building-block vendor adapter; source reduced/low-bandwidth preference hook retained."
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "line": 64,
+      "rule": "raw-html",
+      "reason": "Shared UI primitives intentionally implement native elements; same exemption for Modal/DataTable."
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "line": 241,
+      "rule": "fetch-useeffect",
+      "reason": "Central request client transport, not page/component ad-hoc data loading."
+    },
+    {
+      "file": "web/src/api/client.test.ts",
+      "line": 202,
+      "rule": "double-prefix",
+      "reason": "Existing API-prefix regression fixture, not a production hook URL."
+    },
+    {
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "line": 544,
+      "rule": "missing-page-container",
+      "reason": "PageLayout resolves to PageContainer at PageLayout.tsx11; no missing wrapper."
+    },
+    {
+      "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+      "line": 502,
+      "rule": "hidden-section",
+      "reason": "Optional history disclosure does not gate the containing lifecycle or six page sections; every supplied event is reachable when history exists."
+    }
+  ],
+  "checks": {
+    "frontend_rules_1_to_10": "Candidate regex commands executed, raw lines/counts and manual exception classification in log. Regex matched lines are not violations; known enum defects were identified by additional manual source probes. All47pinned files included across primary/supplemental scans; multiline static-var probe covers46prior pins plus separate no-style supplemental date-test grep.",
+    "backend_rules_11_to_14": "N/A: no internal/**/*.go in assigned scope; no backend audit or endpoint runtime validation claimed.",
+    "command_log": "web/logs/phase6-qa-ownership-consumables-lifecycle.log",
+    "command_failures": [
+      {
+        "kind": "powershell",
+        "shell_id": "2269",
+        "exit_code": 1,
+        "error": "Python stdout cp1252 UnicodeEncodeError U+2193 when printing documentation; no source/test check failure. UTF-8 documentation reread exited0."
+      },
+      {
+        "kind": "view",
+        "exit_code": null,
+        "error": "DataTable.tsx range1920-2100 beyond1708line EOF; corrected bounded source reads, not a test failure."
+      }
+    ],
+    "bootstrap_receipt_limit": "Initial nonvalidation .agents/document/source directory listing (shell2251) was emitted before log creation and is available in tool conversation; later read of its consumed shell returned no raw body. First worktree/time probe raw output is preserved in log. All source/test pin, rule, report and final verification outputs are captured directly.",
+    "executed_test_count": 0,
+    "runner_discovery": "NOTRUN",
+    "passed_tests": "NOTRUN",
+    "failed_tests": "NOTRUN",
+    "skipped_tests": "NOTRUN",
+    "historical_receipt": "Queue phase6-rescue-ownership-consumables-lifecycle records18/18pass and native0 on unchanged955/563line pair. Historical receipt only; neither reexecuted nor attributed as a fresh pass.",
+    "notrun": [
+      "Vitest or other fresh tests/passing reruns",
+      "lint",
+      "build",
+      "npx tsc --noEmit or any global/scoped compiler",
+      "preservation/catalog/helper CLIs",
+      "browser/native screenshots or real network/API requests",
+      "real maintenance/service/expense/device actions",
+      "auth/backend/capability/privacy acceptance",
+      "computed mobile sizes/focus/contrast/RTL/forced-colors/200percent text/reduced-motion/native-host acceptance"
+    ],
+    "declaration_coverage_gaps": [
+      "Non-English known categories/binding/quality",
+      "Saved date locale/timezone in these exact domain callers",
+      "Initial-paused OwnershipBrief status",
+      "Editor read-source retry/state beside preserved draft",
+      "Old part-create success after vehicle/form/revision changes",
+      "Log event activated from open mobile Quick view",
+      "Disclosure ARIA and actual mobile target geometry"
+    ]
+  },
+  "hashes": {
+    "algorithm": "SHA-256",
+    "source_and_tests": [
+      {
+        "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx",
+        "before_sha256": "bd3ae8c034532562353b8fc0d7e220f4b0fb78072928fa74e93a517b135d992d",
+        "after_sha256": "bd3ae8c034532562353b8fc0d7e220f4b0fb78072928fa74e93a517b135d992d",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.test.tsx",
+        "before_sha256": "f4dd996f8f27b2fdea283d1999055dbe9c6ba58c5ea32480b4f2a5c4773579c4",
+        "after_sha256": "f4dd996f8f27b2fdea283d1999055dbe9c6ba58c5ea32480b4f2a5c4773579c4",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useOwnership.ts",
+        "before_sha256": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+        "after_sha256": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "before_sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "after_sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "before_sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "after_sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "before_sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "after_sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "before_sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "after_sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/formatters.ts",
+        "before_sha256": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+        "after_sha256": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/index.ts",
+        "before_sha256": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+        "after_sha256": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+        "before_sha256": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+        "after_sha256": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "before_sha256": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+        "after_sha256": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/MoneyInput.tsx",
+        "before_sha256": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+        "after_sha256": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/SiNumberInput.tsx",
+        "before_sha256": "9e5942357afd0cba06ccb529f5090f4c66ae87d47d4c0f171cb5b0fd87221bee",
+        "after_sha256": "9e5942357afd0cba06ccb529f5090f4c66ae87d47d4c0f171cb5b0fd87221bee",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/MutationError.tsx",
+        "before_sha256": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+        "after_sha256": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/StatGrid.tsx",
+        "before_sha256": "510f046211579cfb493c23a51ddd55d9e1a1ed1b27de8b49233ffc9616413d2f",
+        "after_sha256": "510f046211579cfb493c23a51ddd55d9e1a1ed1b27de8b49233ffc9616413d2f",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/VerdictBadge.tsx",
+        "before_sha256": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+        "after_sha256": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "before_sha256": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+        "after_sha256": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+        "before_sha256": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+        "after_sha256": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/types/ownership.ts",
+        "before_sha256": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+        "after_sha256": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "before_sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "after_sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+        "before_sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+        "after_sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "before_sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "after_sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "before_sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "after_sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+        "before_sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+        "after_sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useUnits.ts",
+        "before_sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+        "after_sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "before_sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "after_sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "before_sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "after_sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "before_sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "after_sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/dataState.test.ts",
+        "before_sha256": "6ddccac6c0b22bcfb2d126c5d5c59c697d166cb117eb99d738d95653ef798e7c",
+        "after_sha256": "6ddccac6c0b22bcfb2d126c5d5c59c697d166cb117eb99d738d95653ef798e7c",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+        "before_sha256": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+        "after_sha256": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/StatGrid.test.tsx",
+        "before_sha256": "158ab9486d2478b48d3cd8e92fe5a72010a3504e71afd6c368eeefa822f9bff2",
+        "after_sha256": "158ab9486d2478b48d3cd8e92fe5a72010a3504e71afd6c368eeefa822f9bff2",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+        "before_sha256": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+        "after_sha256": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+        "before_sha256": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+        "after_sha256": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.test.tsx",
+        "before_sha256": "43c89ddc08017a42eaaba33a69cbf083b62a32fd67ce7a6d1dcf716b8892fc1e",
+        "after_sha256": "43c89ddc08017a42eaaba33a69cbf083b62a32fd67ce7a6d1dcf716b8892fc1e",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Button.test.tsx",
+        "before_sha256": "dda6285705d0d15264308c1ab1f838afde3ff9d70c53189f2b719fcb6df0d406",
+        "after_sha256": "dda6285705d0d15264308c1ab1f838afde3ff9d70c53189f2b719fcb6df0d406",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/DataTable.test.tsx",
+        "before_sha256": "080c61119d9bc8dbaf4864e772ee4d378c9db9a8119bff12e6c7b6c0b24f1161",
+        "after_sha256": "080c61119d9bc8dbaf4864e772ee4d378c9db9a8119bff12e6c7b6c0b24f1161",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/dateFormat.contract.test.ts",
+        "before_sha256": "4a210dfec7e175a73f221db0d6630cf91948fb3a2bd016c934ccc09ae9a4ef0b",
+        "after_sha256": "4a210dfec7e175a73f221db0d6630cf91948fb3a2bd016c934ccc09ae9a4ef0b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/client.test.ts",
+        "before_sha256": "da2f34cccbb0d735bedc71885595dc28fe28e7dbe5902ede3cc765bfa0e2ec68",
+        "after_sha256": "da2f34cccbb0d735bedc71885595dc28fe28e7dbe5902ede3cc765bfa0e2ec68",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "before_sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "after_sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useFormatting.ts",
+        "before_sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+        "after_sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useDateFormat.ts",
+        "before_sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "after_sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/queryClient.ts",
+        "before_sha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+        "after_sha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Modal.tsx",
+        "before_sha256": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+        "after_sha256": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "before_sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "after_sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/queryClient.test.ts",
+        "before_sha256": "e44b32d214f8a23d355874fc58f160669a89bff6e1af2fb18dcda09eac644979",
+        "after_sha256": "e44b32d214f8a23d355874fc58f160669a89bff6e1af2fb18dcda09eac644979",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Modal.test.tsx",
+        "before_sha256": "9f51bc863932a3ca7c41c4e9a32a8a992b715a17495650d4d2514123d6a22058",
+        "after_sha256": "9f51bc863932a3ca7c41c4e9a32a8a992b715a17495650d4d2514123d6a22058",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/__tests__/useDateFormat.test.ts",
+        "before_sha256": "71b69f429e490ceae638c112a6887b19e01b4b91dfee0cb952df793897d0a69d",
+        "after_sha256": "71b69f429e490ceae638c112a6887b19e01b4b91dfee0cb952df793897d0a69d",
+        "unchanged": true
+      }
+    ],
+    "all_unchanged_at_report_write": true,
+    "catalog_readonly_pin": {
+      "file": "web/src/i18n/en.json",
+      "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07"
+    },
+    "final_parse_and_pins": "Required terminal read-only verification follows this write; raw output/release timestamp are appended to log."
+  },
+  "release": {
+    "source_test_catalog_git_write_authority": "NONE_READONLY",
+    "artifact_and_command_release": "RELEASE: final command performs only artifact validation/logging; no further writes authorized after terminal completion",
+    "application_acceptance": "NOT_CLAIMED",
+    "verification_utc": "2026-10-14T02:23:04.824863+00:00"
+  }
+}

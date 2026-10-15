@@ -17,9 +17,28 @@
  * renders — assertions target the always-present panel header, the empty state,
  * the labelled chart region, and the screen-reader status text.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { formatTime as formatTimeWithOptions } from '@/lib/dateFormat';
+
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+const chartEvidence = vi.hoisted(() => ({
+  axis: undefined as undefined | ((value: unknown) => string),
+  tooltip: undefined as undefined | ((value: unknown) => string),
+  data: [] as Record<string, unknown>[],
+  columns: [] as { key: string; format?: (value: unknown) => string }[],
+}));
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatTime: (value: string | Date | null | undefined) =>
+      formatTimeWithOptions(value, datePreferences),
+  }),
+}));
+beforeEach(() => {
+  datePreferences.locale = 'en-US';
+  datePreferences.tz = 'UTC';
+});
 
 import { LiveThroughputPanel, type LiveThroughputPanelProps } from './LiveThroughputPanel';
 import type { ThroughputPoint } from '../hooks/useThroughputHistory';
@@ -39,16 +58,29 @@ vi.mock('@/components/charts', async () => {
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Inert = () => null;
   return {
-    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    EmbeddedChart: (props: Parameters<typeof chartTestDoubles.EmbeddedChart>[0] & {
+      data: Record<string, unknown>[];
+      dataColumns: typeof chartEvidence.columns;
+    }) => {
+      chartEvidence.data = props.data;
+      chartEvidence.columns = props.dataColumns;
+      return <chartTestDoubles.EmbeddedChart {...props} />;
+    },
     ChartTooltip: Inert,
     CartesianGrid: Inert,
-    Tooltip: Inert,
+    Tooltip: ({ labelFormatter }: { labelFormatter: (value: unknown) => string }) => {
+      chartEvidence.tooltip = labelFormatter;
+      return null;
+    },
     areaGradient: () => null,
     AreaChart: ({ children }: { children?: ReactNode }) => (
       <div data-testid="area-chart">{children}</div>
     ),
     Area: Inert,
-    XAxis: Inert,
+    XAxis: ({ tickFormatter }: { tickFormatter: (value: unknown) => string }) => {
+      chartEvidence.axis = tickFormatter;
+      return null;
+    },
     YAxis: Inert,
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
   };
@@ -90,7 +122,7 @@ describe('LiveThroughputPanel', () => {
     renderPanel({ rate: 12, peak: 40, connected: true });
 
     expect(
-      screen.getByRole('heading', { name: /Signal Throughput/ }),
+      screen.getByRole('heading', { name: /Signal throughput/ }),
     ).toBeInTheDocument();
     // Caption reflects the live + peak rate through the shared int formatter.
     expect(captionText()).toBe('Now: 12/s · Peak: 40/s');
@@ -175,12 +207,12 @@ describe('LiveThroughputPanel', () => {
     const { container, rerender } = renderPanel({ connected: true });
     // The header status dot is decorative (aria-hidden) but its colour encodes
     // connection state — assert the branch on the class rather than the role.
-    expect(container.querySelector('svg.text-rose-400')).not.toBeNull();
+    expect(container.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]');
 
     rerender(
       <LiveThroughputPanel history={[]} rate={0} peak={0} connected={false} />,
     );
-    expect(container.querySelector('svg.text-rose-400')).toBeNull();
+    expect(container.querySelector('svg')).toHaveClass('text-[var(--text-muted)]');
   });
 
   it('forwards a custom className onto the glass panel shell', () => {
@@ -190,5 +222,24 @@ describe('LiveThroughputPanel', () => {
     // Custom class is merged with the base padding, not replacing it.
     expect(panel?.className).toContain('test-marker');
     expect(panel?.className).toContain('p-4');
+  });
+
+  it('updates axis, tooltip and data-table formatting while retaining UTC chart data', () => {
+    const history = points(2);
+    const { rerender } = renderPanel({ history });
+    const timestamp = history[0].ts;
+    const assertFormatting = () => {
+      const expected = formatTimeWithOptions(timestamp, datePreferences);
+      expect(chartEvidence.axis?.(timestamp)).toBe(expected);
+      expect(chartEvidence.tooltip?.(timestamp)).toBe(expected);
+      expect(chartEvidence.columns.find(({ key }) => key === 'ts')?.format?.(timestamp)).toBe(expected);
+      expect(chartEvidence.data).toEqual(history);
+    };
+    assertFormatting();
+    datePreferences.locale = 'de-DE';
+    datePreferences.tz = 'America/Los_Angeles';
+    rerender(<LiveThroughputPanel history={history} rate={3} peak={3} connected />);
+    assertFormatting();
+    expect(history[0].ts).toBe('2026-07-04T12:00:00.000Z');
   });
 });

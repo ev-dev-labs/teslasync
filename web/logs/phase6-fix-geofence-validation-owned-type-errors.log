@@ -1,0 +1,187 @@
+item=phase6-fix-geofence-validation-owned-type-errors
+startedUTC=2026-10-14T07:40:54.683Z
+deadlineUTC=2026-10-14T08:00:54.683Z
+scope=web\src\features\maps\schemas\geofence.ts;web\src\features\maps\schemas\geofence.test.ts;web\logs\phase6-fix-geofence-validation-owned-type-errors.log
+Current source and test match the released tick-0726 snapshots byte-for-byte.
+Source SHA256=7FBBA3D1EA3BC49EF94F34C7C99E1EE0F45FE6CC2778A28812C3AEFB0ABE35C1
+Test SHA256=99C72134686FBCC7C9D083CB832FA3133B060273279E11B8FA75797F609492BB
+Current range callbacks already destructure NumericBounds and supply fresh { min, max } interpolation dictionaries at all three TFunction call sites.
+No source edits are justified without a demonstrated current owned diagnostic.
+No Git, queue, catalog, config, install, nested-agent, browser, server, Docker, or guard-bypass action authorized.
+Runtime probe actual Node v26.8.1; npm 11.19.0.
+Applicable root worker/design/mission and frontend instructions read.
+The task explicitly requests scoped tests with forks/maxWorkers2. One normal selected invocation will be attempted for the released pending-intake44 cases; no guard bypass or extra runner/config will be used. Zero executed is never a pass.
+
+COMMAND: node --input-type=module (inline TypeScript program; exact two owned roots; existing tsconfig options; no config writes)
+
+roots=2 diagnostics=0 owned=0 external=0
+owned_TS2345=0
+EXIT scoped-types=0
+
+COMMAND: npx eslint src\features\maps\schemas\geofence.ts src\features\maps\schemas\geofence.test.ts --max-warnings=0
+EXIT scoped-lint=0
+
+COMMAND: npx tsc --noEmit
+src/features/maps/pages/GeofencesPage.tsx(635,13): error TS2322: Type '(places: Geofence[]) => Promise<GeofenceBulkResult>' is not assignable to type '(places: Geofence[]) => Promise<void>'.
+  Type 'Promise<GeofenceBulkResult>' is not assignable to type 'Promise<void>'.
+    Type 'GeofenceBulkResult' is not assignable to type 'void'.
+src/features/notifications/components/InboxBody.tsx(849,17): error TS2367: This comparison appears to be unintentional because the types '"all"' and '"rule"' have no overlap.
+EXIT global-types=2
+
+COMMAND: npx vitest run src\features\maps\schemas\geofence.test.ts --pool=forks --maxWorkers=2
+[i18n-split] generated locale files are invalid (locale-detail-errorBoundary.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-unreferenced.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-power-user.json, locale-driving-route-efficiency.json, locale-driving-trip-planner.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.
+
+⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯
+Error: Command failed: C:\Program Files\nodejs\node.exe scripts/split-i18n-catalog.mjs --check
+    at genericNodeError (node:internal/errors:999:15)
+    at wrappedFn (node:internal/errors:544:14)
+    at checkExecSyncError (node:child_process:942:11)
+    at execFileSync (node:child_process:978:15)
+    at PluginContext.buildStart (file:///D:/repos/teslasync/web/node_modules/.vite-temp/vite.config.ts.timestamp-1791963964103-493c21107c96d8.mjs:55:5)
+    at EnvironmentPluginContainer.hookParallel (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42315:39)
+    at EnvironmentPluginContainer.buildStart (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42330:12)
+    at file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38867:49
+    at initServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38875:6)
+    at _createServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38890:11) {
+  status: 1,
+  signal: null,
+  output: [ null, null, null ],
+  pid: 47856,
+  stdout: null,
+  stderr: null
+}
+
+
+
+EXIT scoped-tests=1
+
+COMMAND: node scripts\frontend-qa.mjs scan --path src\features\maps\schemas
+{
+  "evidence": "static candidates only; no visual acceptance",
+  "counts": {
+    "candidate-violation": 0,
+    "token-reference-review": 0,
+    "token-owner-exemption": 0,
+    "forced-colors-accessibility-review": 0
+  },
+  "findings": [],
+  "excluded": []
+}
+EXIT scoped-style-scan=0
+
+COMMAND: node --input-type=module (inline SHA256/AST snapshot preservation and bounded prohibited-pattern counts)
+{"file":"src\\features\\maps\\schemas\\geofence.ts","snapshot":"C:\\Users\\AtulM\\.copilot\\session-state\\52d6bc50-50e0-4562-abde-3a8441085408\\files\\tick-0726-released-snapshots\\web__src__features__maps__schemas__geofence.ts","sourceSHA256":"7fbba3d1ea3bc49ef94f34c7c99e1ee0f45fe6cc2778a28812c3aefb0abe35c1","snapshotSHA256":"7fbba3d1ea3bc49ef94f34c7c99e1ee0f45fe6cc2778a28812c3aefb0abe35c1","byteIdentical":true,"originalLines":118,"currentLines":118,"retainedPercent":100}
+{"file":"src\\features\\maps\\schemas\\geofence.test.ts","snapshot":"C:\\Users\\AtulM\\.copilot\\session-state\\52d6bc50-50e0-4562-abde-3a8441085408\\files\\tick-0726-released-snapshots\\web__src__features__maps__schemas__geofence.test.ts","sourceSHA256":"99c72134686fbcc7c9d083cb832fa3133b060273279e11b8fa75797f609492bb","snapshotSHA256":"99c72134686fbcc7c9d083cb832fa3133b060273279e11b8fa75797f609492bb","byteIdentical":true,"originalLines":346,"currentLines":346,"retainedPercent":100}
+original_test_declarations=22 original_expanded_cases=44 preserved_byte_identically=true executed_not_implied=true
+scan_inlineStyles=0
+scan_rawHTML=0
+scan_directVendorImports=0
+scan_oldApiImports=0
+scan_directRequestCalls=0
+scan_camelCaseQueryParams=0
+scan_hiddenPanels=0
+production_any_types=0 production_assertions=0 NumericBounds_index_signatures=0 typed_range_dictionary_objects=3
+GlassPanel_original=0 GlassPanel_current=0 ChartContainer_original=0 ChartContainer_current=0 hooks_original=0 hooks_current=0 applicability=pure_schema_no_hook_changes
+localization/bounds/finite/zero-coordinate/field-associations/rawSI/payload=all source and original tests byte-identical to released snapshots
+preservation_mismatches=0 preservation_exit=0
+EXIT preservation-and-scans=0
+
+COMMAND: Git Bash audit.sh scoped to web\src\features\maps\schemas\geofence.ts (Windows paths converted with cygpath; unchanged official script)
+═══════════════════════════════════════════════════════════
+  TeslaSync Engineering Guidelines Audit
+  Target: /d/repos/teslasync/web/src/features/maps/schemas/geofence.ts
+═══════════════════════════════════════════════════════════
+
+▸ [1/7] Static inline styles (var(--*))...
+  ✅ 0 violations
+
+▸ [2/7] Raw HTML elements...
+  ✅ 0 violations
+
+▸ [3/7] Direct library imports...
+  ✅ 0 violations
+
+▸ [4/7] Old API imports...
+  ✅ 0 violations
+
+▸ [5/7] Double /api/v1/ prefix...
+  ✅ 0 violations
+
+▸ [6/7] camelCase query params (vehicleId=)...
+  ✅ 0 violations
+
+▸ [7/7] TypeScript compilation...
+  ✅ TypeScript passes
+
+═══════════════════════════════════════════════════════════
+  ✅ ALL CHECKS PASSED — 0 total violations
+═══════════════════════════════════════════════════════════
+EXIT official-scoped-audit=0
+
+COMMAND: node --input-type=module (inline authored test-title inventory; no test execution)
+AUTHORED_NOT_EXECUTED accepts a well-formed form and preserves the string field types
+AUTHORED_NOT_EXECUTED trims surrounding whitespace on the name and numeric strings
+AUTHORED_NOT_EXECUTED accepts the inclusive boundary %s=%s
+AUTHORED_NOT_EXECUTED accepts a name of exactly the 120-character maximum
+AUTHORED_NOT_EXECUTED rejects an empty or whitespace-only name as required
+AUTHORED_NOT_EXECUTED rejects a name longer than 120 characters
+AUTHORED_NOT_EXECUTED rejects an out-of-range latitude/longitude/radius with the range message
+AUTHORED_NOT_EXECUTED rejects an empty numeric field as required (not as NaN)
+AUTHORED_NOT_EXECUTED reports a NON-numeric value as "must be a number" WITHOUT a duplicate range issue
+AUTHORED_NOT_EXECUTED treats a non-finite value (Infinity) as "must be a number", not a range error
+AUTHORED_NOT_EXECUTED surfaces independent issues for every invalid field at once
+AUTHORED_NOT_EXECUTED leaves entry/exit alerts to Notification Studio
+AUTHORED_NOT_EXECUTED converts the numeric strings to numbers and passes through the name
+AUTHORED_NOT_EXECUTED handles negative and scientific-notation coordinate strings
+AUTHORED_NOT_EXECUTED round-trips a parsed form into a fully typed payload
+D:\repos\teslasync\web\node_modules\typescript\lib\typescript.js:30641
+  return node.kind === 11 /* StringLiteral */;
+              ^
+
+TypeError: Cannot read properties of undefined (reading 'kind')
+    at Object.isStringLiteral (D:\repos\teslasync\web\node_modules\typescript\lib\typescript.js:30641:15)
+    at visit (file:///D:/repos/teslasync/web/[eval1]:7:39)
+    at visitNode2 (D:\repos\teslasync\web\node_modules\typescript\lib\typescript.js:32449:18)
+    at forEachChildInExpressionStatement (D:\repos\teslasync\web\node_modules\typescript\lib\typescript.js:32679:12)
+    at Object.forEachChild (D:\repos\teslasync\web\node_modules\typescript\lib\typescript.js:32970:35)
+    at visit (file:///D:/repos/teslasync/web/[eval1]:12:6)
+    at visitNodes (D:\repos\teslasync\web\node_modules\typescript\lib\typescript.js:32457:22)
+    at forEachChildInBlock (D:\repos\teslasync\web\node_modules\typescript\lib\typescript.js:32927:10)
+    at Object.forEachChild (D:\repos\teslasync\web\node_modules\typescript\lib\typescript.js:32970:35)
+    at visit (file:///D:/repos/teslasync/web/[eval1]:12:6)
+
+Node.js v26.8.1
+EXIT authored-title-inventory=1
+FINAL source=src\features\maps\schemas\geofence.ts currentSHA256=7FBBA3D1EA3BC49EF94F34C7C99E1EE0F45FE6CC2778A28812C3AEFB0ABE35C1 releasedSHA256=7FBBA3D1EA3BC49EF94F34C7C99E1EE0F45FE6CC2778A28812C3AEFB0ABE35C1
+FINAL source=src\features\maps\schemas\geofence.test.ts currentSHA256=99C72134686FBCC7C9D083CB832FA3133B060273279E11B8FA75797F609492BB releasedSHA256=99C72134686FBCC7C9D083CB832FA3133B060273279E11B8FA75797F609492BB
+FINAL preservation_mismatches=0 source_writes=0 test_writes=0 log_only_writes=1
+SCOPED TESTS: exit1 solely external catalog split --check startup failure; runner aborted before test discovery, no test summary emitted; observed discovered0/executed0/passed0/failedCases0/skipped0, startupFailures1, originalUnexecutedCases44. NOT a test pass. No bypass/retry/config/catalog edits.
+VALIDATION: scoped types0/owned diagnostics0/owned TS2345=0; scoped lint0; style scan0/all candidate counts0; preservation/scans0; first explicit npx tsc --noEmit exit2 with two external diagnostics; later unchanged official audit exit0 including its actual compiler, six violation counts0. Concurrent external source changes are not attributed to this item. Build/browser/full suite NOTRUN.
+releaseUTC=2026-10-14T07:53:04.4387936Z | no source change needed: all3 call sites already use fresh typed { min, max } dictionaries; NumericBounds retains min/max only; original GEO05 source/test snapshots preserved exactly | needs=catalog integration owner to repair generated split projections and then scoped44-case rerun | all exact source/test/log claims released
+
+COMMAND: node --input-type=module (inline authored-title inventory corrected to guard zero-argument calls; previous metadata-only probe failure retained)
+AUTHORED_NOT_EXECUTED accepts a well-formed form and preserves the string field types
+AUTHORED_NOT_EXECUTED trims surrounding whitespace on the name and numeric strings
+AUTHORED_NOT_EXECUTED accepts the inclusive boundary %s=%s
+AUTHORED_NOT_EXECUTED accepts a name of exactly the 120-character maximum
+AUTHORED_NOT_EXECUTED rejects an empty or whitespace-only name as required
+AUTHORED_NOT_EXECUTED rejects a name longer than 120 characters
+AUTHORED_NOT_EXECUTED rejects an out-of-range latitude/longitude/radius with the range message
+AUTHORED_NOT_EXECUTED rejects an empty numeric field as required (not as NaN)
+AUTHORED_NOT_EXECUTED reports a NON-numeric value as "must be a number" WITHOUT a duplicate range issue
+AUTHORED_NOT_EXECUTED treats a non-finite value (Infinity) as "must be a number", not a range error
+AUTHORED_NOT_EXECUTED surfaces independent issues for every invalid field at once
+AUTHORED_NOT_EXECUTED leaves entry/exit alerts to Notification Studio
+AUTHORED_NOT_EXECUTED converts the numeric strings to numbers and passes through the name
+AUTHORED_NOT_EXECUTED handles negative and scientific-notation coordinate strings
+AUTHORED_NOT_EXECUTED round-trips a parsed form into a fully typed payload
+AUTHORED_NOT_EXECUTED localizes %s=%s without changing its field association
+AUTHORED_NOT_EXECUTED keeps a single localized numeric issue for every non-finite %s value
+AUTHORED_NOT_EXECUTED uses the current language on each parse of the same exported schema
+AUTHORED_NOT_EXECUTED retains simultaneous field associations and existing Zod issue codes
+AUTHORED_NOT_EXECUTED keeps whitespace-only numeric validation behavior and issue order
+AUTHORED_NOT_EXECUTED preserves physical payload values across locales: %s,%s,%s
+AUTHORED_NOT_EXECUTED does not widen input types or accepted category values
+authored_title_templates=22
+EXIT corrected-authored-title-inventory=0
+releaseUTC=2026-10-14T07:53:19.7455023Z | FINAL release of exact source/test/log claims; preceding metadata-only probe corrected without any source write; needs external catalog-only startup repair/scoped rerun; no source change needed

@@ -3,7 +3,7 @@ import { GlassPanel, PanelTitle } from '@/components/ui';
 import { useT } from './helpers';
 
 const sections = [
-  ['ledger-summary', 'physicsLedger.title', 'Physics Ledger'],
+  ['ledger-summary', 'physicsLedger.title', 'Physics ledger'],
   ['ledger-dynamics', 'physicsLedger.dynamics.title', 'Longitudinal dynamics'],
   ['ledger-drive', 'physicsLedger.drive.title', 'Drive energy ledger'],
   ['ledger-charge', 'physicsLedger.charge.title', 'Charge physics'],
@@ -25,7 +25,7 @@ export function PendingPanels({ loading }: { loading: boolean }) {
         <GlassPanel key={id} padding="auto" className="space-y-4" data-testid={id}>
           <PanelTitle>{t(key, title)}</PanelTitle>
           {loading ? <Skeleton className="h-32" /> : (
-            <EmptyState message={t('physicsLedger.empty', 'No ledger samples in this window. Drive, charge, or park with telemetry flowing.')} actionTo={{ label: t('physicsLedger.back', 'Tesla Physics'), to: '/tesla-physics' }} />
+            <EmptyState message={t('physicsLedger.empty', 'No ledger samples in this window. Drive, charge, or park with telemetry flowing.')} actionTo={{ label: t('physicsLedger.back', 'Tesla physics'), to: '/tesla-physics' }} />
           )}
         </GlassPanel>
       ))}

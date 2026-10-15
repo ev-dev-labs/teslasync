@@ -12,10 +12,12 @@
  *     availability verdict is deferred so the card never flashes a false
  *     "unsupported" before the key resolves.
  *   - Error — the key request failed (network/5xx); a retry is offered.
- *   - Unsupported (Notification API + PushManager + service worker not
- *     all available, OR the server has no VAPID keys configured).
+ *   - Paused — the server key read cannot proceed while offline.
+ *   - Browser lookup pending/failed — absence is not inferred; retry
+ *     reads only the browser subscription.
+ *   - Unsupported capability or known missing server configuration.
  *   - Not subscribed on this device.
- *   - Subscribed on this device.
+ *   - Browser registration and server registration confirmed separately.
  *
  * Plus a per-device list (every browser that has ever registered) so
  * the user can revoke a stale phone or laptop without having to log into
@@ -27,11 +29,12 @@ import { useTranslation } from 'react-i18next';
 import { BellRing, BellOff, Smartphone, Trash2, AlertCircle, Loader2 } from 'lucide-react';
 
 import { Badge, Button, GlassPanel, Heading, Text } from '@/components/ui';
-import { QueryError } from '@/components/feedback';
+import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useWebPush } from '@/hooks/useWebPush';
 import { usePushSubscriptions, useUnsubscribePush, usePushPublicKey } from '@/api/hooks/usePush';
 import { formatRelative } from '@/lib/dateFormat';
 import type { PushSubscriptionRow } from '@/api/types';
+import { useDataState } from '@/hooks/useDataState';
 
 interface BrowserPushChannelCardProps {
   className?: string;
@@ -43,20 +46,26 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
   const localPush = useWebPush();
   const {
     isSupported: notifSupported,
-    isPushSupported,
+    isPushAPISupported,
+    browserSubscriptionStatus,
+    browserSubscriptionError,
+    retryBrowserSubscription,
     isSubscribed,
     currentEndpoint,
     permission,
     subscribe,
     unsubscribe,
   } = webPush ?? localPush;
+  const keyQuery = usePushPublicKey();
+  const keyState = useDataState(keyQuery);
   const {
     data: publicKey,
-    isLoading: keyLoading,
-    isError: keyError,
     refetch: refetchPublicKey,
-  } = usePushPublicKey();
+  } = keyQuery;
+  const keyLoading = publicKey === undefined && !keyState.fatalError;
+  const keyError = Boolean(keyState.fatalError);
   const subsQuery = usePushSubscriptions();
+  const subsState = useDataState(subsQuery);
   const { data: subs } = subsQuery;
   const {
     mutateAsync: removeDevice,
@@ -73,36 +82,32 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
 
   const rows = useMemo<PushSubscriptionRow[]>(() => subs ?? [], [subs]);
 
-  // While the VAPID public key request is still in flight we cannot yet
-  // tell "push genuinely unsupported" from "key not fetched": useWebPush
-  // folds the key into `isPushSupported`, so it reads false during load.
-  // Deferring the verdict here (and surfacing a loading state below)
-  // prevents the card from flashing a false negative on first mount.
-  const isCheckingAvailability = notifSupported && keyLoading;
+  const isCheckingAvailability = notifSupported && isPushAPISupported && keyLoading;
+  const keyPaused = keyQuery.fetchStatus === 'paused' && publicKey === undefined;
+  const browserChecking = browserSubscriptionStatus === 'checking';
+  const browserError = browserSubscriptionStatus === 'error';
+  const serverRegistrationKnown = subsState.hasData && !subsState.refreshError && !subsState.isRefreshBlocked;
+  const serverRegistered = currentEndpoint !== null && rows.some((row) => row.endpoint === currentEndpoint);
+  const active = isSubscribed && serverRegistered && serverRegistrationKnown && !actionFailed;
 
-  // Disabled-state reason — the card still renders so users can SEE
-  // that browser push exists but is not currently available. Ordering is
-  // significant: a browser with no Notification API at all is decisively
-  // unavailable regardless of key/loading state, whereas the Push-API and
-  // server-key verdicts are deferred until the key request settles.
   const disabledReason = useMemo(() => {
     if (!notifSupported)
       return t('webpush.unsupported.notification', "This browser doesn't support notifications.");
-    if (isCheckingAvailability || keyError) return null;
-    if (!isPushSupported && publicKey === null)
-      return t('webpush.unsupported.serverDisabled', 'Browser push is not configured on this server. Ask your administrator to set the VAPID keys.');
-    if (!isPushSupported)
+    if (!isPushAPISupported)
       return t('webpush.unsupported.pushApi', "This browser doesn't support the Push API.");
     if (permission === 'denied')
       return t('webpush.unsupported.permissionDenied', 'Notifications are blocked for this site. Re-enable them in your browser settings to use browser push.');
+    if (isCheckingAvailability || keyError) return null;
+    if (publicKey === null)
+      return t('webpush.unsupported.serverDisabled', 'Browser push is not configured on this server. Ask your administrator to set the VAPID keys.');
     return null;
-  }, [notifSupported, isCheckingAvailability, keyError, isPushSupported, publicKey, permission, t]);
+  }, [notifSupported, isPushAPISupported, isCheckingAvailability, keyError, publicKey, permission, t]);
 
   const isUnsupported = disabledReason !== null;
   // A capable browser whose key request failed is an error (retryable), not
   // "unsupported" — only surface it once the unsupported verdict is ruled out.
   const showKeyError = !isUnsupported && notifSupported && keyError;
-  const showLoading = !isUnsupported && !showKeyError && isCheckingAvailability;
+  const showLoading = !isUnsupported && !showKeyError && (isCheckingAvailability || browserChecking);
 
   const runDeviceAction = useCallback(async (action: () => Promise<boolean>) => {
     setBusy(true);
@@ -121,14 +126,17 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
 
   const handleRemoveDevice = useCallback(
     (endpoint: string) => {
-      // Fire-and-forget: useUnsubscribePush toasts on success/failure and
-      // invalidates the device list, so the row disappears on its own. The
-      // catch keeps a rejected mutation from bubbling out of the click handler.
-      void removeDevice(endpoint).catch(() => {
-        /* toasted by the mutation hook */
+      if (endpoint === currentEndpoint) {
+        void runDeviceAction(unsubscribe);
+        return;
+      }
+      void runDeviceAction(async () => {
+        await removeDevice(endpoint);
+        retryBrowserSubscription();
+        return true;
       });
     },
-    [removeDevice],
+    [currentEndpoint, removeDevice, retryBrowserSubscription, runDeviceAction, unsubscribe],
   );
 
   const handleRetryKey = useCallback(() => {
@@ -138,12 +146,12 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
   return (
     <GlassPanel className={className}>
       <div className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl p-2.5 ring-1 ring-cyan-300/30 bg-cyan-300/10">
-              <BellRing className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="shrink-0 rounded-xl p-2.5 ring-1 ring-[var(--border-subtle)] bg-[var(--surface-2)]">
+              <BellRing className="h-5 w-5 text-[var(--text-secondary)]" aria-hidden="true" />
             </div>
-            <div>
+            <div className="min-w-0">
               <Heading level="panel" as="h3">
                 {t('webpush.title', 'Browser push')}
               </Heading>
@@ -155,30 +163,46 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
               </Text>
             </div>
           </div>
+          <StaleRefreshWarning state={keyState} label={t('webpush.title', 'Browser push')} />
           {isUnsupported ? (
             <Badge variant="warning">{t('webpush.status.unsupported', 'Unavailable')}</Badge>
-          ) : showKeyError || showLoading ? null : isSubscribed ? (
+          ) : showKeyError || showLoading || browserError ? null : active ? (
             <Badge variant="success">{t('webpush.status.subscribed', 'Active on this device')}</Badge>
+          ) : isSubscribed || actionFailed ? (
+            <Badge variant="warning">{t('dataState.partial.title', 'Partial data')}</Badge>
           ) : (
             <Badge variant="neutral">{t('webpush.status.notSubscribed', 'Not subscribed')}</Badge>
           )}
         </div>
 
         {isUnsupported ? (
-          <div className="flex items-start gap-2 rounded-lg bg-amber-300/5 p-3 ring-1 ring-amber-300/20">
-            <AlertCircle className="h-4 w-4 text-amber-300 mt-0.5 flex-shrink-0" aria-hidden="true" />
-            <Text as="p" size="xs" className="text-amber-300">{disabledReason}</Text>
+          <div className="flex items-start gap-2 rounded-lg bg-[var(--surface-2)] p-3 ring-1 ring-[var(--border-subtle)]">
+            <AlertCircle className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" aria-hidden="true" />
+            <Text as="p" variant="bodySm" className="break-words">{disabledReason}</Text>
           </div>
         ) : showKeyError ? (
           <div
             role="alert"
-            className="flex flex-wrap items-center gap-2 rounded-lg bg-rose-300/5 p-3 ring-1 ring-rose-300/20"
+            className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--surface-2)] p-3 ring-1 ring-[var(--border-subtle)]"
           >
-            <AlertCircle className="h-4 w-4 text-rose-300 mt-0.5 flex-shrink-0" aria-hidden="true" />
-            <Text as="p" size="xs" className="text-rose-300">
+            <AlertCircle className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" aria-hidden="true" />
+            <Text as="p" variant="bodySm" className="break-words">
               {t('webpush.error.load', "Couldn't check browser push availability.")}
             </Text>
-            <Button variant="secondary" size="sm" onClick={handleRetryKey}>
+            <Button wrapLabel variant="secondary" size="sm" onClick={handleRetryKey}>
+              {t('webpush.retry', 'Retry')}
+            </Button>
+          </div>
+        ) : browserError ? (
+          <QueryError
+            error={browserSubscriptionError}
+            message={t('webpush.error.action', 'This device could not update its browser push subscription. Check browser permission and service-worker availability, then retry.')}
+            onRetry={retryBrowserSubscription}
+          />
+        ) : keyPaused ? (
+          <div role="status" className="flex flex-wrap items-center gap-2">
+            <Text as="p" variant="bodySm">{t('dataSources.status.paused', 'Refresh paused')}</Text>
+            <Button wrapLabel variant="secondary" size="sm" onClick={handleRetryKey}>
               {t('webpush.retry', 'Retry')}
             </Button>
           </div>
@@ -193,6 +217,7 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
           <div className="flex flex-wrap items-center gap-2">
             {isSubscribed ? (
               <Button
+                wrapLabel
                 variant="secondary"
                 size="sm"
                 loading={busy}
@@ -202,8 +227,10 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
               >
                 {t('webpush.disable', 'Disable on this device')}
               </Button>
-            ) : (
+            ) : null}
+            {!active && (!isSubscribed || serverRegistrationKnown) && (
               <Button
+                wrapLabel
                 variant="primary"
                 size="sm"
                 loading={busy}
@@ -223,21 +250,29 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
           </div>
         )}
         {actionFailed && (
-          <div role="alert" className="rounded-lg bg-rose-300/5 p-3 ring-1 ring-rose-300/20">
+          <div role="alert" className="rounded-lg bg-[var(--surface-2)] p-3 ring-1 ring-[var(--border-subtle)]">
             <Text as="p" variant="bodySm">
               {t('webpush.error.action', 'This device could not update its browser push subscription. Check browser permission and service-worker availability, then retry.')}
             </Text>
           </div>
         )}
 
-        {subsQuery.isError && (
-          <QueryError error={subsQuery.error} onRetry={() => void subsQuery.refetch()} />
+        <section aria-label={t('webpush.devices.title', 'Registered devices')} className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
+          <Text as="h4" variant="label">{t('webpush.devices.title', 'Registered devices')}</Text>
+          <StaleRefreshWarning state={subsState} label={t('webpush.devices.title', 'Registered devices')} />
+        {!subsState.hasData && !subsState.fatalError && (
+          subsQuery.fetchStatus === 'paused' ? (
+            <div role="status">
+              <Text as="p" variant="bodySm">{t('dataSources.status.paused', 'Refresh paused')}</Text>
+              <Button variant="secondary" size="sm" onClick={() => void subsQuery.refetch()}>{t('webpush.retry', 'Retry')}</Button>
+            </div>
+          ) : <Skeleton className="h-20 w-full" />
         )}
-        {!subsQuery.isError && rows.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-[var(--border-subtle)]">
-            <Text as="h4" variant="label">
-              {t('webpush.devices.title', 'Registered devices')}
-            </Text>
+        {subsState.fatalError && (
+          <QueryError error={subsState.fatalError} onRetry={() => void subsQuery.refetch()} />
+        )}
+        {rows.length > 0 && (
+          <div className="space-y-2">
             <ul className="space-y-2">
               {rows.map((row) => {
                 const isThisDevice = currentEndpoint !== null && currentEndpoint === row.endpoint;
@@ -247,30 +282,31 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
                       when: formatRelative(row.last_used_at),
                     })
                   : t('webpush.devices.neverUsed', 'Not yet used');
-                const removing = removePending && removingEndpoint === row.endpoint;
+                const removing = (removePending && removingEndpoint === row.endpoint) || (busy && isThisDevice);
                 return (
                   <li
                     key={row.id}
-                    className="flex items-start justify-between gap-3 rounded-lg bg-white/[0.02] p-2.5 ring-1 ring-white/5"
+                    className="flex items-start justify-between gap-3 rounded-lg bg-[var(--surface-2)] p-2.5 ring-1 ring-[var(--border-subtle)]"
                   >
                     <div className="flex items-start gap-2 min-w-0">
                       <Smartphone className="h-4 w-4 text-[var(--text-secondary)] mt-0.5 flex-shrink-0" aria-hidden="true" />
                       <div className="min-w-0">
-                        <Text as="p" size="xs" color="primary" className="truncate" title={ua}>
+                        <Text as="p" variant="bodySm" color="primary" className="break-words" title={ua}>
                           {ua}
                           {isThisDevice && (
-                            <Text as="span" size="xs" className="ml-2 text-cyan-300">
+                            <Text as="span" variant="bodySm" className="ms-2">
                               {t('webpush.devices.thisDevice', '(this device)')}
                             </Text>
                           )}
                         </Text>
-                        <Text as="p" size="xs" color="secondary" className="mt-0.5">{last}</Text>
+                        <Text as="p" variant="caption" color="secondary" className="mt-0.5 break-words">{last}</Text>
                       </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       loading={removing}
+                      disabled={busy}
                       onClick={() => handleRemoveDevice(row.endpoint)}
                       icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
                       aria-label={t('webpush.devices.remove', 'Remove this device')}
@@ -282,6 +318,10 @@ export function BrowserPushChannelCard({ className, webPush }: BrowserPushChanne
             </ul>
           </div>
         )}
+        {subsState.hasData && rows.length === 0 && (
+          <Text as="p" variant="bodySm">{t('common.noData', 'No data available')}</Text>
+        )}
+        </section>
       </div>
     </GlassPanel>
   );

@@ -28,7 +28,8 @@ export function StatusBadge({ status }: { status: FeedbackStatus }) {
   // neutral variant but surface an explicit "Unknown" label rather than reusing
   // "Closed": an unrecognised (and possibly still-active) status must never be
   // masked as a terminal one.
-  const variant = STATUS_VARIANT[status] ?? 'neutral'
-  const text = label[status] ?? t('feedback.queue.status.unknown', 'Unknown')
+  const isKnownStatus = Object.prototype.hasOwnProperty.call(STATUS_VARIANT, status)
+  const variant = isKnownStatus ? STATUS_VARIANT[status] : 'neutral'
+  const text = isKnownStatus ? label[status] : t('feedback.queue.status.unknown', 'Unknown')
   return <Badge variant={variant}>{text}</Badge>
 }

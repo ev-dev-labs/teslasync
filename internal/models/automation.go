@@ -17,6 +17,7 @@ const (
 	AutomationStepKindActionNotify         = "action_notify"
 	AutomationStepKindActionSetSetting     = "action_set_setting"
 	AutomationStepKindActionCallAutomation = "action_call_automation"
+	AutomationStepKindActionWait           = "action_wait"
 )
 
 // Automation mirrors the post-migration `automations` table; see migration

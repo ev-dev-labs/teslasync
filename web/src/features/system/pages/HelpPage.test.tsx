@@ -36,10 +36,61 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import type { AppSettings } from '@/api/types';
+import { neonColorMap } from '@/lib/tokens';
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
 }));
+
+// Keep display preferences independent of the unresolved AI-gate settings.
+// Production useSettings supplies defaults even while its query is pending.
+vi.mock('@/hooks/useUnits', async () => {
+  const units = await vi.importActual<typeof import('@/lib/unitConversion')>(
+    '@/lib/unitConversion',
+  );
+  const unitPrefs: import('@/lib/unitConversion').UnitPref = {
+    distance: 'km',
+    speed: 'km/h',
+    temperature: '°C',
+    pressure: 'bar',
+    energy: 'kWh',
+    duration: 'h',
+    power: 'kW',
+    locale: 'en-US',
+    precision: 2,
+  };
+  const display: import('@/hooks/useUnits').UseUnitsResult = {
+    unitPrefs,
+    formatDistance: (value, options) => units.formatDistance(value, unitPrefs, options),
+    formatSpeed: (value, options) => units.formatSpeed(value, unitPrefs, options),
+    formatTemperature: (value, options) => units.formatTemperature(value, unitPrefs, options),
+    formatPressure: (value, options) => units.formatPressure(value, unitPrefs, options),
+    formatEnergy: (value, options) => units.formatEnergy(value, unitPrefs, options),
+    formatDuration: (value, options) => units.formatDuration(value, unitPrefs, options),
+    formatPower: (value, options) => units.formatPower(value, unitPrefs, options),
+  };
+  return { useUnits: () => display };
+});
+
+vi.mock('@/hooks/useFormatting', async () => {
+  const { deriveDataState } = await vi.importActual<typeof import('@/api/dataState')>(
+    '@/api/dataState',
+  );
+  const display: import('@/hooks/useFormatting').UseFormattingResult = {
+    currencySymbol: '$',
+    costPerKwh: null,
+    pricingState: deriveDataState<AppSettings>({ data: undefined, isPending: true }),
+    formatCurrency: (amount, decimals = 2) =>
+      `$${amount.toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })}`,
+    formatEnergyCost: () => '—',
+    costPerDistanceUnit: () => null,
+    estimateGasCost: () => null,
+  };
+  return { useFormatting: () => display };
+});
 
 // usePageTitle is a side-effect hook; mock it so we can assert the
 // canonical-title write without depending on a real DOM <head>.
@@ -264,7 +315,7 @@ describe('HelpPage', () => {
       screen.getByRole('heading', { name: 'Ask the help assistant' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText(/How do I enable energy cost forecasting/i),
+      screen.getByPlaceholderText(/How do I enable Energy cost forecasting/i),
     ).toBeInTheDocument();
 
     // Coexistence: the baseline links are still present, proving the AI
@@ -293,5 +344,45 @@ describe('HelpPage', () => {
     // asserts is "all five curated links survive", not "the page has exactly
     // five links in total".
     expect(within(baseline).getAllByRole('link')).toHaveLength(EXPECTED_LINKS.length);
+  });
+
+
+  it('uses neutral shared icon boxes for navigation without assigning status colors to help categories', () => {
+    renderHelp();
+
+    const channels = screen.getByRole('region', { name: 'Getting started' });
+    const channelItems = within(channels).getAllByRole('listitem');
+    expect(channelItems).toHaveLength(3);
+    for (const item of channelItems) {
+      const box = item.querySelector('svg')?.parentElement;
+      expect(box).toHaveClass(neonColorMap.neutral.text);
+      expect(box).toHaveClass(neonColorMap.neutral.bg);
+      expect(box).toHaveClass(neonColorMap.neutral.ring);
+    }
+    for (const { id, href, title } of EXPECTED_LINKS) {
+      const link = screen.getByTestId(`help-baseline-link-${id}`);
+      const box = link.querySelector('svg')?.parentElement;
+      expect(box).toHaveClass(neonColorMap.neutral.text);
+      expect(box).toHaveClass(neonColorMap.neutral.bg);
+      expect(box).toHaveClass(neonColorMap.neutral.ring);
+      expect(link).toHaveAttribute('href', href);
+      expect(link).toHaveTextContent(title);
+    }
+  });
+
+  it('keeps shared channel glyphs decorative and shrink-free inside the original responsive hero', () => {
+    renderHelp();
+
+    const hero = screen.getByRole('region', { name: 'Getting started' });
+    expect(hero).toHaveClass('grid', 'grid-cols-1', 'gap-4', 'xl:grid-cols-3');
+    for (const item of within(hero).getAllByRole('listitem')) {
+      const glyph = item.querySelector('svg');
+      expect(glyph).toHaveAttribute('aria-hidden', 'true');
+      expect(glyph).toHaveAttribute('focusable', 'false');
+      expect(glyph).toHaveClass('h-4', 'w-4', 'shrink-0');
+    }
+    expect(screen.getByTestId('help-baseline-links')).toHaveClass(
+      'grid', 'gap-4', '[grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))]',
+    );
   });
 });

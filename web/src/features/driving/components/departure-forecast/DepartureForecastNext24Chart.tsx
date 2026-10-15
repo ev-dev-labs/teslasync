@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import { ChartContainer } from '@/components/charts';
 import type { DepartureForecast } from '../../lib/departureForecast';
@@ -22,6 +23,10 @@ export function DepartureForecastNext24Chart({
   timeZone,
 }: DepartureForecastNext24ChartProps) {
   const { t } = useTranslation();
+  const [params, setParams] = useSearchParams();
+  const legacyHidden = (params.get('hidden_departure-forecast-24h') ?? '')
+    .split(',')
+    .filter(Boolean);
   const likelihoodName = t(
     'departure.next24.likelihoodSeries',
     'Hourly modeled likelihood',
@@ -125,22 +130,54 @@ export function DepartureForecastNext24Chart({
           },
         ]}
       >
-        {({ hiddenSeries }) => (
-          <DepartureForecastSectionBody
-            forecast={forecast}
-            state={state}
-            className="h-full min-h-0"
-            skeletonHeight={320}
-          >
-            <DepartureForecastNext24Plot
-              rows={rows}
-              likelihoodName={likelihoodName}
-              cumulativeName={cumulativeName}
-              locale={locale}
-              hiddenSeries={hiddenSeries}
-            />
-          </DepartureForecastSectionBody>
-        )}
+        {({ hiddenSeries }) => {
+          // Both saved identities remain valid: either may hide a series.
+          // Legend edits synchronize both keys atomically, without a second controller.
+          const hidden = new Set([
+            ...(hiddenSeries?.hidden ?? []),
+            ...legacyHidden,
+          ]);
+          const saveHidden = (keys: Set<string>) => {
+            setParams((previous) => {
+              const next = new URLSearchParams(previous);
+              for (const key of [
+                'hidden_departure-forecast-next-24',
+                'hidden_departure-forecast-24h',
+              ]) {
+                if (keys.size) next.set(key, [...keys].sort().join(','));
+                else next.delete(key);
+              }
+              return next;
+            }, { replace: true });
+          };
+          const compatibleSeries = {
+            hidden,
+            isHidden: (key: string) => hidden.has(key),
+            toggle: (key: string) => {
+              const next = new Set(hidden);
+              if (next.has(key)) next.delete(key);
+              else next.add(key);
+              saveHidden(next);
+            },
+            reset: () => saveHidden(new Set()),
+          };
+          return (
+            <DepartureForecastSectionBody
+              forecast={forecast}
+              state={state}
+              className="h-full min-h-0"
+              skeletonHeight={320}
+            >
+              <DepartureForecastNext24Plot
+                rows={rows}
+                likelihoodName={likelihoodName}
+                cumulativeName={cumulativeName}
+                locale={locale}
+                hiddenSeries={compatibleSeries}
+              />
+            </DepartureForecastSectionBody>
+          );
+        }}
       </ChartContainer>
     </section>
   );

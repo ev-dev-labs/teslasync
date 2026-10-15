@@ -72,17 +72,17 @@ beforeEach(() => {
 });
 
 describe('Range (component)', () => {
-  it('renders the rated range in km as a whole number for a metric user', () => {
+  it('renders the rated range in km at settings precision for a metric user', () => {
     configure('metric', 'rated');
     const { container } = render(<Range state={{ rated_range: KM_400, ideal_range: KM_450 }} />);
-    // Default precision is 0, and the rated field wins under the rated pref.
-    expect(container.textContent).toBe('400 km');
+    // Settings precision is 2, and the rated field wins under the rated pref.
+    expect(container.textContent).toBe('400.00 km');
   });
 
   it('converts the SI metres to miles for an imperial user', () => {
     configure('imperial', 'rated');
     const { container } = render(<Range state={{ rated_range: KM_400 }} />);
-    expect(container.textContent).toBe('249 mi');
+    expect(container.textContent).toBe('248.55 mi');
   });
 
   it('honours an explicit precision override', () => {
@@ -95,7 +95,7 @@ describe('Range (component)', () => {
     configure('metric', 'ideal');
     const { container } = render(<Range state={{ rated_range: KM_400, ideal_range: KM_450 }} />);
     // 450 (ideal) not 400 (rated) proves the preference drives field selection.
-    expect(container.textContent).toBe('450 km');
+    expect(container.textContent).toBe('450.00 km');
     expect(container.textContent).not.toBe('400 km');
   });
 
@@ -121,7 +121,7 @@ describe('Range (component)', () => {
   it('treats a zero range as a real value, not an empty one', () => {
     configure('metric', 'rated');
     const { container } = render(<Range state={{ rated_range: 0 }} />);
-    expect(container.textContent).toBe('0 km');
+    expect(container.textContent).toBe('0.00 km');
     expect(container.textContent).not.toBe('—');
   });
 
@@ -142,7 +142,7 @@ describe('Range (component)', () => {
       <Range state={{ rated_range: KM_400 }} className="text-cyan-300" />,
     );
     expect(span(container)?.getAttribute('class')).toBe('text-cyan-300');
-    expect(container.textContent).toBe('400 km');
+    expect(container.textContent).toBe('400.00 km');
   });
 
   it('applies the className to the empty-state span too', () => {
@@ -162,11 +162,11 @@ describe('Range (component)', () => {
   it('recomputes the display when the user switches unit systems', () => {
     configure('metric', 'rated');
     const { container, rerender } = render(<Range state={{ rated_range: MI_250 }} />);
-    expect(container.textContent).toBe('402 km');
+    expect(container.textContent).toBe('402.34 km');
 
     configure('imperial', 'rated');
     rerender(<Range state={{ rated_range: MI_250 }} />);
-    expect(container.textContent).toBe('250 mi');
+    expect(container.textContent).toBe('250.00 mi');
   });
 
   it('recomputes the selected range when the range-type preference flips', () => {
@@ -174,11 +174,11 @@ describe('Range (component)', () => {
     const { container, rerender } = render(
       <Range state={{ rated_range: KM_400, ideal_range: KM_450 }} />,
     );
-    expect(container.textContent).toBe('400 km');
+    expect(container.textContent).toBe('400.00 km');
 
     configure('metric', 'ideal');
     rerender(<Range state={{ rated_range: KM_400, ideal_range: KM_450 }} />);
-    expect(container.textContent).toBe('450 km');
+    expect(container.textContent).toBe('450.00 km');
   });
 });
 

@@ -8,8 +8,11 @@
  * This page reuses TeslaAccountSection and the same `/dev-tools/*` APIs.
  */
 import { useTranslation } from 'react-i18next'
-import { PageContainer } from '@/components/layout'
+import { PageLayout, SourceContent } from '@/components/layout'
+import { StaleRefreshWarning } from '@/components/feedback'
+import { deriveDataState } from '@/api/dataState'
 import { FadeIn } from '@/components/motion'
+import { HelperText } from '@/components/ui'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useAuthStatus } from '@/api/hooks/useSettings'
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding'
@@ -26,25 +29,29 @@ import {
 
 export default function FleetSetupPage() {
   const { t } = useTranslation('settings')
-  usePageTitle(t('fleetSetup.title', 'Fleet Setup'))
+  usePageTitle(t('fleetSetup.title', 'Fleet setup'))
 
   const auth = useAuthStatus()
   const apiInfo = useFleetApiInfo()
   const publicKey = usePublicKeyStatus()
   const onboarding = useOnboardingStatus({ pollAfterSetup: true })
+  const authState = deriveDataState(auth)
+  const apiState = deriveDataState(apiInfo)
+  const publicKeyState = deriveDataState(publicKey)
+  const onboardingState = deriveDataState(onboarding)
 
   const kpiLoading =
     auth.isLoading || apiInfo.isLoading || publicKey.isLoading || onboarding.isLoading
 
   return (
-    <PageContainer
-      title={t('fleetSetup.title', 'Fleet Setup')}
+    <PageLayout
+      title={t('fleetSetup.title', 'Fleet setup')}
       subtitle={t(
         'fleetSetup.subtitle',
         'Connect Tesla, keep the token fresh, subscribe a vehicle, then wait for telemetry.',
       )}
       copyLink
-      query={[apiInfo, publicKey, onboarding]}
+      query={[auth, apiInfo, publicKey, onboarding]}
     >
       <FadeIn>
         <FleetSetupKpiBand
@@ -53,8 +60,31 @@ export default function FleetSetupPage() {
           publicKey={publicKey.data}
           onboarding={onboarding.data}
           isLoading={kpiLoading}
+          retained={[authState, apiState, publicKeyState, onboardingState].some(state => state.status === 'stale')}
+          sourceLoading={{
+            account: !authState.hasData && !apiState.hasData && (authState.status === 'initial' || apiState.status === 'initial'),
+            token: apiState.status === 'initial',
+            domain: publicKeyState.status === 'initial',
+            stream: onboardingState.status === 'initial',
+          }}
         />
       </FadeIn>
+      {apiState.fatalError && (
+        <SourceContent
+          state="error"
+          label={t('fleetSetup.kpi.token', 'Access token')}
+          emptyMessage={t('fleetSetup.tokenUnavailable', 'Fleet access-token status unavailable.')}
+          errorMessage={t('fleetSetup.tokenUnavailable', 'Fleet access-token status unavailable.')}
+          error={apiState.fatalError}
+          errorRecovery={{ onRetry: () => void apiInfo.refetch() }}
+        >
+          {null}
+        </SourceContent>
+      )}
+      <StaleRefreshWarning
+        state={apiState}
+        label={t('fleetSetup.kpi.token', 'Access token')}
+      />
 
       <FadeIn delay={0.1}>
         <section
@@ -65,10 +95,21 @@ export default function FleetSetupPage() {
             <TeslaAccountSection />
           </div>
           <div className="xl:col-span-1">
+            <HelperText className="mb-3">
+              {t(
+                'fleetSetup.telemetryScope',
+                'Progress and streaming status are fleet-wide observations. Check the selected VIN configuration below; fleet history does not confirm that VIN is streaming.',
+              )}
+            </HelperText>
             <FleetSetupProgress
-              authenticated={auth.data?.authenticated === true}
+              authenticated={auth.data?.authenticated}
               apiInfo={apiInfo.data}
               onboarding={onboarding.data}
+              sources={{
+                account: { ...authState, isLoading: auth.isFetching },
+                token: { ...apiState, isLoading: apiInfo.isFetching },
+                telemetry: { ...onboardingState, isLoading: onboarding.isFetching },
+              }}
             />
           </div>
         </section>
@@ -93,10 +134,20 @@ export default function FleetSetupPage() {
           aria-label={t('fleetSetup.streamAria', 'Streaming and domain readiness')}
           className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:gap-5"
         >
-          <FleetSetupStreamingPanel onboarding={onboarding.data} />
-          <FleetSetupReadiness publicKey={publicKey.data} />
+          <FleetSetupStreamingPanel
+            onboarding={onboarding.data}
+            state={onboardingState.fatalError ? 'error' : onboardingState.status === 'initial' ? 'loading' : onboardingState.status === 'stale' ? 'retained' : onboarding.data ? 'ready' : 'empty'}
+            error={onboardingState.fatalError}
+            onRetry={() => void onboarding.refetch()}
+          />
+          <FleetSetupReadiness
+            publicKey={publicKey.data}
+            state={publicKeyState.fatalError ? 'error' : publicKeyState.status === 'initial' ? 'loading' : publicKeyState.status === 'stale' ? 'retained' : publicKey.data ? 'ready' : 'empty'}
+            error={publicKeyState.fatalError}
+            onRetry={() => void publicKey.refetch()}
+          />
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

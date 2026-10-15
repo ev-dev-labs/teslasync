@@ -1,0 +1,321 @@
+{
+  "item": "audit-page-185",
+  "page": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+  "routes": ["/data-export"],
+  "purpose": "Create and download asynchronous vehicle-data exports, account ZIP archives, and authenticated recurring export schedules.",
+  "primaryGoal": "Choose export data, format, columns, vehicle and business date bounds; queue an export, monitor its history and download its artifact.",
+  "dataSources": [
+    {
+      "hook": "Page-local jobsQuery",
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 1158,
+      "endpoints": ["GET /api/v1/export/jobs", "POST /api/v1/export/jobs", "GET /api/v1/export/jobs/{jobID}/download"],
+      "sourceOwner": "internal\\api\\exports\\handler.go",
+      "routeEvidence": "internal\\api\\router.go:4970-4982",
+      "behavior": "Historical useDataState; unconditionally polls every 10000ms; list-derived summaries explicitly describe loaded history, not global or unique session totals. POST invalidates export-jobs; download opens a browser tab."
+    },
+    {
+      "hook": "Page-local vehiclesQuery",
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 1168,
+      "endpoints": ["GET /api/v1/vehicles"],
+      "sourceOwner": "vehicleHandler.List mounted in internal\\api\\router.go:3319-3320",
+      "behavior": "useDataState retains vehicle data; fatal failure has retry above wizard; local export selectors initialize and synchronize from useSelectedVehicle."
+    },
+    {
+      "hook": "useExportColumns",
+      "file": "web\\src\\api\\hooks\\useExports.ts",
+      "line": 228,
+      "endpoints": ["GET /api/v1/exports/columns?type=drives", "GET /api/v1/exports/columns?type=charging"],
+      "sourceOwner": "exportColumnsHandler.ListColumns mounted in internal\\api\\router.go:4969",
+      "behavior": "Five-minute staleTime; signal forwarded; picker currently restricts catalog lookup to drives and charging; required columns locked, selections retain catalog order, null selection omits columns."
+    },
+    {
+      "hook": "useCreateAccountExport",
+      "file": "web\\src\\api\\hooks\\useExports.ts",
+      "line": 141,
+      "endpoints": ["POST /api/v1/export/jobs/account"],
+      "sourceOwner": "internal\\api\\exports\\handler.go:390-421",
+      "routeEvidence": "internal\\api\\router.go:4972",
+      "behavior": "Mutation toast and broadcast invalidation; optional vehicle/date bounds; account ZIP cap warning and global JobProgressDrawer are preserved capabilities."
+    },
+    {
+      "hook": "useScheduledExports / useCreateScheduledExport / useUpdateScheduledExport / useDeleteScheduledExport / useRunScheduledExportNow",
+      "file": "web\\src\\api\\hooks\\useExports.ts",
+      "line": 291,
+      "endpoints": ["GET /api/v1/scheduled-exports", "POST /api/v1/scheduled-exports", "PUT /api/v1/scheduled-exports/{id}", "DELETE /api/v1/scheduled-exports/{id}", "POST /api/v1/scheduled-exports/{id}/run"],
+      "sourceOwner": "scheduledExportsHandler mounted in internal\\api\\router.go:4992-4997",
+      "behavior": "Authenticated ownership documented by router; RequiresAuth capability=session_list gates mounted panel; list safeArray, signal forwarding, 60000ms polling; mutation toasts and broadcast invalidation.",
+      "limits": "Source route matching only; authentication, delivery dispatch, worker execution and ZIP contents were not exercised."
+    }
+  ],
+  "components": [
+    {"owner": "@/components/layout", "names": ["PageLayout"], "evidence": "DataExportPage.tsx:1220-1233"},
+    {"owner": "@/components/ui", "names": ["GlassPanel", "Badge", "Button", "Input", "Select", "Checkbox", "RadioCard", "DataTable", "PanelTitle", "Label", "Text", "HelperText"], "evidence": "DataExportPage.tsx:12-26"},
+    {"owner": "@/components/data-display", "names": ["TimeStamp", "OperationalBrief via SystemSummaryBrief"], "evidence": "DataExportPage.tsx:28-29; SystemSummaryBrief.tsx:3-5,36-61"},
+    {"owner": "@/components/feedback", "names": ["Skeleton", "EmptyState", "QueryError", "AlertBanner", "JobProgressDrawer", "RequiresAuth", "StaleRefreshWarning", "Toast"], "evidence": "DataExportPage.tsx:30-40"},
+    {"owner": "@/components/motion", "names": ["FadeIn"], "evidence": "DataExportPage.tsx:38,1244-1289"},
+    {"owner": "web\\src\\features\\system\\pages\\ScheduledExportsPanel.tsx", "names": ["ScheduledExportsPanel", "Table", "ConfirmDialog", "Code"], "evidence": "ScheduledExportsPanel.tsx:25-47,370-502"},
+    {"owner": "web\\src\\hooks\\useNumberFormatting.ts", "names": ["formatBytes", "formatDurationMsLong", "precision", "locale"], "evidence": "DataExportPage.tsx:433,839-840"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 497,
+      "rule": "MDC-002 / mission 33",
+      "detail": "Wizard and account panel duplicate local vehicle state, global synchronization and selection parsing at 497-530 and 1034-1059. Local selectors are legitimate here because /data-export disables the shell vehicle picker.",
+      "fix": "Use a feature-local adapter for shared vehicle-selection behavior while preserving distinct all-values and independent export forms. Do not delete selectors or add a workspace control.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 1158,
+      "rule": "MDC-002 / existing hook ownership",
+      "detail": "Local ExportJobSummary, query and create mutation compete with useExports.ts:35-66,96-129; local GETs bypass existing safeArray, cancellation and mutation broadcast behavior.",
+      "fix": "Consolidate through existing export/vehicle hooks only after preserving the current 10-second polling contract and resolving type support. Do not silently adopt a different polling default.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "Wizard type cards reflow at sm/lg/2xl; main grid stacks until xl; format/preset controls wrap; account fields stack until sm; schedules use explicit overflow-x-auto.",
+    "runtime": "unverified",
+    "viewportsExercised": [],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+        "line": 1011,
+        "rule": "MDC-023 / MDC-043 preservation",
+        "detail": "History passes mobileColumns=['type','status','time'], omitting actions, format, vehicle, records, size and duration. DataTable.tsx:724-725 applies hidden md:table-cell; the caller supplies neither mobilePresentation nor expanded-row detail. Download and failed-job explanation are in the hidden actions column.",
+        "fix": "Use the existing DataTable mobilePresentation contract with all metadata and ready-job download/failed-job details retained, or retain accessible horizontal-scroll columns. Keep tableId and the table pipeline.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\ScheduledExportsPanel.tsx",
+        "line": 178,
+        "rule": "MDC-043 / long-content reachability",
+        "detail": "Schedule title and New schedule button share a non-wrapping flex row with p-6 at all widths; export-history title, active badge and refresh similarly share a non-wrapping header at DataExportPage.tsx:973. Narrow/translated label fit is a source risk, not a measured overflow.",
+        "fix": "Permit wrapping/stacking using existing layout utilities and verify 320px plus long labels without hiding controls.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "positiveEvidence": [
+      "Type RadioCards use a named radiogroup and decorative aria-hidden icons at DataExportPage.tsx:191-215; RadioCard.tsx:54-68 uses native radios.",
+      "Format/preset buttons expose aria-pressed; custom dates and account fields supply primitive labels.",
+      "Scheduled table headers have scope=col and delete uses ConfirmDialog."
+    ],
+    "runtime": "Keyboard, focus, screen reader, effective contrast, forced colors and touch-target acceptance unverified.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+        "line": 604,
+        "rule": "MDC-021 / MDC-040 accessible name",
+        "detail": "Wizard Select has no label, id/label association, aria-label or aria-labelledby. Its preceding category-barrel Label is a typography span, not the Select's own associated label; Select.tsx:67-78 only renders its associated label when label is supplied.",
+        "fix": "Pass the localized vehicle label directly to Select or give explicit stable id/aria-labelledby wiring. Preserve the visible step heading and all-vehicles choice.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+        "line": 960,
+        "rule": "MDC-040 / complete error explanation",
+        "detail": "Failure text is truncated to 120px and full text is only in title; no focusable detail action is supplied. Mobile also hides the entire actions cell.",
+        "fix": "Expose the complete failure explanation in reachable text or an existing accessible disclosure/detail surface.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "loading": "Jobs initial-load skeletons; summary loading flags; column-catalog skeleton; schedules skeletons. Vehicles have no dedicated loading placeholder in wizard and selector is absent until data arrives.",
+    "empty": "History empty state directs creation above; schedules empty state paired with New schedule button; unknown summary source stays unavailable.",
+    "error": "Fatal jobs alert and history QueryError; vehicle fatal QueryError/retry; mutation toasts; failed job explanation; schedule fatal QueryError.",
+    "staleOffline": "useDataState and StaleRefreshWarning retain jobs, vehicles and schedules on refresh failures; summaries receive retained flag. Actual offline UI unverified.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+        "line": 701,
+        "rule": "MDC-026 / asynchronous source distinction",
+        "detail": "Column-catalog error, missing response, unsupported selection and empty catalog all return null. Refresh failure hides a previously useful catalog; initial failure provides no explanation or retry.",
+        "fix": "Use current data-state and feedback components to retain catalog data on refresh failure and offer retry on fatal failure. Keep truly unsupported types distinct and allow default-all export behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+        "line": 925,
+        "rule": "MDC-026 / zero distinct from unknown",
+        "detail": "File-size render/filter uses zeroAsEmpty=true at 925 and 919, collapsing measured zero bytes into the same dash used for missing size.",
+        "fix": "Render known zero bytes distinctly while retaining missing/invalid values as unknown; keep raw file_size and source formatter preferences.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 332,
+      "rule": "MDC-010 / MDC-015 restrained semantic palette",
+      "detail": "Static CSV/JSON explanation cards opt into hover cyan/purple border tint. GlassPanel.tsx:31-35,70-75 confirms these are hover-border tints, not an actual glow; no claim of rendered bloom. Multiple decorative format hues are unnecessary.",
+      "fix": "Keep both preview cards and content; prefer neutral panel interaction treatment and restrained accent for selected/actionable controls only.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 1121,
+      "rule": "MDC-010 / MDC-011 theme neutrality",
+      "detail": "Account warning separator uses border-white/[0.06] rather than the established semantic border variable.",
+      "fix": "Use the existing border-subtle token; verify composed contrast in light/dark/custom themes rather than claiming token names prove contrast.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 470,
+      "rule": "MDC-033 / typed specialist formatter contract",
+      "detail": "Formatter returns {value} without required unit. MetricDisplayOptions.formatter at web\\src\\lib\\metric-reference\\types.ts:38-41 requires both value:string and unit:string. This is a source-confirmed type-contract error; no compiler was executed and no compiler output is claimed.",
+      "fix": "Preserve raw byte metric and formatBytes output; supply the required unit field consistently with the existing combined-string specialist contract. Record a targeted compiler finding, not a source edit in Phase 0.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 1067,
+      "rule": "MDC-045 / actual endpoint contract",
+      "detail": "Account optional dates are converted to ISO timestamps. Mounted SubmitAccountJob parses only YYYY-MM-DD at internal\\api\\exports\\handler.go:405-419. Thus either supplied date is rejected by the inspected handler.",
+      "fix": "Align request dates with the existing endpoint contract and retain both optional bounds; resolve end-bound/timezone semantics with backend owner without inventing them. Do not run a private-data export to verify.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 111,
+      "rule": "MDC-045 / preserve capabilities without invented backend support",
+      "detail": "Wizard submits full_backup, maintenance and energy directly as type. Mounted SubmitJob's allowlist at internal\\api\\exports\\handler.go:141-150 accepts backup, not full_backup, and excludes maintenance/energy. Analytics also forces JSON at handler.go:156-158 despite wizard offering CSV.",
+      "fix": "Resolve wire identifiers and supported formats with integration owner while preserving visible export intentions. Do not delete advertised capabilities as cosmetic cleanup or claim unsupported export implementations exist.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 1160,
+      "rule": "MDC-002 / cancellation",
+      "detail": "Both page-local queryFns ignore TanStack Query signal; the existing useExports read hooks forward it.",
+      "fix": "Forward signal through request, preferably through the existing domain owner, retaining keys, payloads, trust state and polling interval.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Source-confirmed formatter contract error, account date/type endpoint mismatches and hidden mobile download action precede cosmetic work.",
+    "order": ["Resolve formatter signature", "Resolve export request contracts without data/feature loss", "Restore mobile full details/actions and selector names", "Retain column catalog on refresh errors", "Neutralize decorative styling"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Export domain contract reconciliation",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useExports.ts",
+      "propsVariantsStates": "Typed supported export identifiers/formats, account date-bound payload contract, existing ExportJobSummary and read cancellation; retain mutation feedback/broadcast and independent capability intents.",
+      "usedBy": ["DataExportPage.ExportWizard", "DataExportPage.AccountExportPanel", "ScheduledExportsPanel"],
+      "dependsOn": ["Mounted internal\\api\\exports\\handler.go contracts", "Integration decision for full_backup/maintenance/energy and analytics CSV"],
+      "owner": "integration",
+      "required": true
+    },
+    {
+      "name": "Reuse existing mobile table presentation; no new shared renderer",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Existing mobilePresentation, complete metadata, accessible row action/detail, same loaded-row filtering/pagination and stable tableId. Preserve failed/ready/unknown status states.",
+      "usedBy": ["DataExportPage.ExportHistoryTable"],
+      "dependsOn": ["Page adapter for current ExportJobSummary"],
+      "owner": "page",
+      "required": false
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 62,
+      "existingOwnerFile": "web\\src\\api\\hooks\\useExports.ts",
+      "detail": "Local job type/query/create pipeline overlaps existing domain hook/type; keep polling and accepted request semantics deliberate during consolidation."
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+      "line": 433,
+      "existingOwnerFile": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+      "detail": "Summary already reuses OperationalBrief/useOperationalMetrics; do not replace it with a second KPI/stat implementation."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "5F8C4AC3F75DF2D252E3FCC210570461EA87E4C958AD22F3A83BF55DEC167C05",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 1313,
+    "sectionNames": ["Export summary metrics", "Create a new export: type/format/columns/vehicle/date wizard", "Data overview", "CSV preview", "JSON preview", "Download my data", "Export history", "Scheduled exports", "Floating job progress drawer"],
+    "sectionCounts": {"topLevelBands": 5, "explicitSectionElements": 4, "glassPanelOccurrencesInPage": 5, "chartContainerOccurrencesInPage": 0, "systemSummaryBriefOccurrencesInPage": 2, "scheduledPanelGlassPanelOccurrences": 1},
+    "actions": ["Refresh jobs from page header and history", "Choose seven advertised data types", "Choose CSV/JSON", "Select/clear catalog columns; required columns locked", "Select all/specific vehicle in wizard and account export", "Choose 7/30/90/365/all-time preset", "Toggle custom range and edit both bounds", "Start export", "Start full account export", "Download ready artifact", "History sorting/value filters/pagination", "Create/edit/save/cancel schedule", "Run schedule now", "Enable/disable schedule", "Delete schedule with confirmation", "Global job progress drawer"],
+    "dataBehavior": [
+      "Keep raw SI export previews and native catalog column identities; no display conversion in export payloads.",
+      "Retain null untouched/default-all column selection, always-included columns, catalog order and type-switch reset.",
+      "Retain jobs polling/cache key, historical trust/retained data, vehicle retry, independent schedule source and authentication boundary.",
+      "Summary scope is loaded jobs only; counts may overlap and byte totals include recorded sizes only. Do not relabel as unique database totals.",
+      "Preserve unknown/forward-compatible type, format and status badge fallbacks.",
+      "Export business dates are local form inputs, not analytical workspace range. /data-export is absent from RANGE_ENABLED_PATHS and explicitly vehicle-disabled at workspaceScope.ts:115; required local selectors must remain.",
+      "Positive local vehicle changes currently update shared selected vehicle; choosing all does not clear shared selection. Preserve/resolve intentionally, not by deleting controls.",
+      "Keep stable tableId=system:data-export-jobs, download URL construction, user locale/precision, warnings about ZIP caps, and schedule cron/range/delivery/ownership data.",
+      "Preview examples are explanatory samples, not real measured data; never route them into production summaries."
+    ],
+    "changesMade": "No source or shared files changed."
+  },
+  "evidenceLimits": {
+    "method": "Bounded read-only source audit and pattern counts; no runtime execution.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "compiler": "NOTRUN; formatter finding is source type-contract evidence only.",
+    "formatterChecks": "No formatter execution; inspected useNumberFormatting, formatBytes and MetricDisplayOptions signatures.",
+    "auditScript": "Not executed: audit.sh includes project-wide tsc, prohibited for this Phase 0 concurrent audit. Read script; used page-only read-only source regex counts instead.",
+    "sourcePatternCounts": {"inlineStyleAttributes": 0, "rawButtonInputTextareaSelectTableTags": 0, "directRechartsLeafletFramerImports": 0, "textNeonClasses": 0},
+    "commandEvidence": [
+      {"command": "Get-FileHash 'web\\src\\features\\system\\pages\\DataExportPage.tsx' -Algorithm SHA256; (Get-Content 'web\\src\\features\\system\\pages\\DataExportPage.tsx').Count", "exitCode": 0, "output": "SHA256 5F8C4AC3F75DF2D252E3FCC210570461EA87E4C958AD22F3A83BF55DEC167C05; 1313"},
+      {"command": "Page-only Get-Content -Raw plus regex match counts for style=, raw controls, direct library imports, text-neon-, GlassPanel, ChartContainer, section", "exitCode": 0, "output": "style= = 0; raw controls = 0; direct library imports = 0; text-neon- = 0; GlassPanel = 5; ChartContainer = 0; section = 4"}
+    ],
+    "notPerformed": ["Git operations", "source/shared/queue changes", "full builds", "lint", "project compiler", "tests", "API requests", "private-data exports", "production mutations", "browser navigation"],
+    "backendLimits": "Read mounted router and page-specific handler validation only. Artifact generation, table coverage, range inclusivity, scheduler dispatch and actual authorization are not verified."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\DataExportPage.tsx",
+    "web\\src\\features\\system\\pages\\ScheduledExportsPanel.tsx",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useExports.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\metric-reference\\types.ts",
+    "web\\src\\components\\data-display\\stat-reference\\types.ts",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\RadioCard.tsx",
+    "web\\src\\components\\ui\\Label.tsx",
+    "web\\src\\components\\ui\\index.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\exports\\handler.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-185.json", ".agent-status\\audit-page-185.txt"]
+}

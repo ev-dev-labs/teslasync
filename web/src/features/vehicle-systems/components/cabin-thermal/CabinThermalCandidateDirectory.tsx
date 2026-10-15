@@ -1,14 +1,15 @@
-import { ListTree } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
 import { CabinThermalCandidateRow } from './CabinThermalCandidateRow';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalCandidateDirectoryProps {
   summary: CabinThermalSummary;
@@ -27,16 +28,14 @@ export function CabinThermalCandidateDirectory({
   formatTemperature,
   formatDuration,
 }: CabinThermalCandidateDirectoryProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const directory = summary.candidateDirectory;
+  const resolved = state.vehicleSelected && state.isResolved && !state.error;
 
   return (
     <section data-testid="cabin-thermal-candidate-directory">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListTree className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('cabinThermal.directory.title', 'Candidate-window directory')}
-        </PanelTitle>
+      <LayoutCard title={t('cabinThermal.directory.title', 'Candidate-window directory')}>
         <Text as="p" variant="caption" className="mb-1">
           {t(
             'cabinThermal.directory.subtitle',
@@ -44,7 +43,7 @@ export function CabinThermalCandidateDirectory({
           )}
         </Text>
         <Text as="p" variant="caption" className="mb-4">
-          {t(
+          {resolved ? t(
             'cabinThermal.directory.cap',
             'Showing {{shown}} of {{total}} candidates; {{omitted}} omitted by the {{cap}}-window display cap.',
             {
@@ -53,6 +52,9 @@ export function CabinThermalCandidateDirectory({
               omitted: fmtInt(directory.omitted),
               cap: fmtInt(directory.cap),
             },
+          ) : t(
+            'cabinThermal.states.pendingPassive',
+            'Climate-history availability has not resolved.',
           )}
         </Text>
         <CabinThermalSectionBody summary={summary} state={state} requirement="candidates">
@@ -69,7 +71,7 @@ export function CabinThermalCandidateDirectory({
             ))}
           </ol>
         </CabinThermalSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

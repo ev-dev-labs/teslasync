@@ -12,6 +12,7 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { createRef } from 'react';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -163,5 +164,71 @@ describe('Slider', () => {
     );
     const slider = screen.getByRole('slider', { name: 'Custom ID' });
     expect(slider).toHaveAttribute('id', 'my-slider');
+  });
+
+  it('forwards the ref to the native range with fractional bounds and steps', () => {
+    const ref = createRef<HTMLInputElement>();
+    const onChange = vi.fn();
+    render(
+      <Slider ref={ref} label="Adjustment" value={-0.5} min={-2} max={2}
+        step={0.25} onChange={onChange} />,
+    );
+    const slider = screen.getByRole('slider', { name: 'Adjustment' });
+    expect(ref.current).toBe(slider);
+    expect(slider).toHaveAttribute('min', '-2');
+    expect(slider).toHaveAttribute('max', '2');
+    expect(slider).toHaveAttribute('step', '0.25');
+    expect(slider).toHaveAttribute('aria-valuetext', '-0.5');
+    fireEvent.change(slider, { target: { value: '-0.25' } });
+    expect(onChange).toHaveBeenCalledWith(-0.25);
+  });
+
+  it('retains zero, updated formatter output and implicit identity across rerenders', () => {
+    const { rerender } = render(
+      <Slider label="Setting" value={0} min={0} max={10} onChange={() => {}} />,
+    );
+    const slider = screen.getByRole('slider', { name: 'Setting' });
+    const id = slider.id;
+    expect(slider).toHaveAttribute('step', '1');
+    expect(slider).toHaveAttribute('aria-valuetext', '0');
+    rerender(
+      <Slider label="Setting" value={5} min={0} max={10}
+        formatValue={(n) => `${n} units`} onChange={() => {}} />,
+    );
+    expect(slider.id).toBe(id);
+    expect(slider).toHaveValue('5');
+    expect(slider).toHaveAttribute('aria-valuetext', '5 units');
+    expect(screen.getByText('5 units')).toBeInTheDocument();
+  });
+
+  it('uses distinct native label identities for repeated captions', () => {
+    render(
+      <>
+        <Slider label="Limit" value={1} min={0} max={10} onChange={() => {}} />
+        <Slider label="Limit" value={2} min={0} max={10} onChange={() => {}} />
+      </>,
+    );
+    const sliders = screen.getAllByRole('slider', { name: 'Limit' });
+    expect(sliders[0].id).not.toBe(sliders[1].id);
+    expect(screen.getAllByText('Limit').map((label) => label.getAttribute('for')))
+      .toEqual(sliders.map((slider) => slider.id));
+  });
+
+  it('keeps native geometry, quiet focus and a real mobile input target', () => {
+    render(
+      <Slider label="A long caption that must stay visible"
+        className="custom-slider" value={2} min={0} max={10}
+        formatValue={(n) => `${n} long formatted units`} onChange={() => {}} />,
+    );
+    const slider = screen.getByRole('slider');
+    expect(slider).toHaveClass('appearance-auto', 'h-full', 'min-w-11',
+      'accent-[var(--semantic-info)]', 'focus-visible:outline-[var(--focus-ring)]');
+    expect(slider).not.toHaveClass('appearance-none', 'accent-cyan-500');
+    expect(slider.parentElement).toHaveClass('h-11', 'md:h-9');
+    expect(slider.parentElement?.parentElement).toHaveClass('custom-slider', 'min-w-0');
+    expect(screen.getByText('A long caption that must stay visible').parentElement)
+      .toHaveClass('flex-wrap');
+    expect(screen.getByText('2 long formatted units')).toHaveClass('break-words');
+    expect(slider).not.toHaveAttribute('onkeydown');
   });
 });

@@ -3,22 +3,20 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useTimezone } from '@/lib/timezone';
 import type { Drive } from '@/types/driving';
 
 import {
-  SeasonalAccounting,
-  SeasonalCalendarCoverage,
   SeasonalComponentDiagnostics,
   SeasonalDeseasonalizedTrend,
-  SeasonalEvidenceSupport,
   SeasonalFittedCurve,
-  SeasonalKpiEvidenceBand,
   SeasonalMethodology,
   SeasonalMonthProfile,
   SeasonalMonthSupport,
@@ -28,6 +26,8 @@ import {
   SeasonalYearDirectory,
   type SeasonalQueryState,
 } from '../components/seasonal-efficiency';
+import { SeasonalSummaryBrief } from '../components/operationalbrief-n-z/SeasonalSummaryBrief';
+import { SeasonalCoverageBrief } from '../components/operationalbrief-n-z/SeasonalCoverageBrief';
 import { analyzeSeasonalEfficiency } from '../lib/seasonalEfficiency';
 
 const DRIVE_HISTORY_LIMIT = 1_000;
@@ -42,8 +42,9 @@ export default function SeasonalEfficiencyPage() {
   const timeZone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const [nowMs] = useState(() => Date.now());
-  const hasCachedData = vehicleId != null && drivesQuery.data !== undefined;
+  const hasCachedData = vehicleId != null && drivesState.hasData;
   const isResolved = vehicleId != null && (hasCachedData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
     () => (vehicleId != null ? drivesQuery.data ?? [] : []),
@@ -57,10 +58,10 @@ export default function SeasonalEfficiencyPage() {
   );
   const state: SeasonalQueryState = {
     vehicleSelected: vehicleId != null,
-    isLoading: vehicleId != null && !hasCachedData && drivesQuery.isLoading,
+    isLoading: vehicleId != null && drivesState.status === 'initial',
     isResolved,
-    error: drivesQuery.isError && !hasCachedData ? drivesQuery.error : null,
-    refreshError: drivesQuery.isError && hasCachedData ? drivesQuery.error : null,
+    error: drivesState.fatalError,
+    refreshError: drivesState.refreshError,
     onRetry: () => void drivesQuery.refetch(),
   };
   const sectionProps = {
@@ -72,55 +73,87 @@ export default function SeasonalEfficiencyPage() {
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('seasonalEfficiency.title', 'Seasonal Efficiency')}
+      query={drivesQuery}
       subtitle={t(
         'seasonalEfficiency.subtitle',
         'Vehicle-local calendar normalization with explicit evidence accounting and descriptive support',
       )}
     >
+      {drivesState.isRefreshBlocked && (
+        <StaleRefreshWarning state={drivesState} label={t('seasonalEfficiency.title', 'Seasonal Efficiency')} />
+      )}
       <FadeIn>
-        <SeasonalKpiEvidenceBand {...sectionProps} />
+        <SectionErrorBoundary name="SeasonalSummaryBrief">
+          <SeasonalSummaryBrief {...sectionProps} />
+        </SectionErrorBoundary>
       </FadeIn>
       <FadeIn delay={0.05}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalCalendarCoverage {...sectionProps} />
-          <SeasonalEvidenceSupport {...sectionProps} />
+          <SectionErrorBoundary name="SeasonalCoverageBrief-calendar">
+            <SeasonalCoverageBrief kind="calendar" {...sectionProps} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="SeasonalCoverageBrief-support">
+            <SeasonalCoverageBrief kind="support" {...sectionProps} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
       <FadeIn delay={0.1}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalFittedCurve {...sectionProps} />
-          <SeasonalMonthProfile {...sectionProps} />
+          <SectionErrorBoundary name="SeasonalFittedCurve">
+            <SeasonalFittedCurve {...sectionProps} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="SeasonalMonthProfile">
+            <SeasonalMonthProfile {...sectionProps} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
       <FadeIn delay={0.15}>
-        <SeasonalObservationTimeline {...sectionProps} />
+        <SectionErrorBoundary name="SeasonalObservationTimeline">
+          <SeasonalObservationTimeline {...sectionProps} />
+        </SectionErrorBoundary>
       </FadeIn>
       <FadeIn delay={0.2}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalDeseasonalizedTrend {...sectionProps} />
-          <SeasonalResidualDistribution {...sectionProps} />
+          <SectionErrorBoundary name="SeasonalDeseasonalizedTrend">
+            <SeasonalDeseasonalizedTrend {...sectionProps} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="SeasonalResidualDistribution">
+            <SeasonalResidualDistribution {...sectionProps} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
       <FadeIn delay={0.25}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalComponentDiagnostics {...sectionProps} />
-          <SeasonalMonthSupport {...sectionProps} />
+          <SectionErrorBoundary name="SeasonalComponentDiagnostics">
+            <SeasonalComponentDiagnostics {...sectionProps} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="SeasonalMonthSupport">
+            <SeasonalMonthSupport {...sectionProps} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
       <FadeIn delay={0.3}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalYearDirectory {...sectionProps} />
-          <SeasonalRankedMonths {...sectionProps} />
+          <SectionErrorBoundary name="SeasonalYearDirectory">
+            <SeasonalYearDirectory {...sectionProps} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="SeasonalRankedMonths">
+            <SeasonalRankedMonths {...sectionProps} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
       <FadeIn delay={0.35}>
-        <SeasonalAccounting {...sectionProps} />
+        <SectionErrorBoundary name="SeasonalCoverageBrief-accounting">
+          <SeasonalCoverageBrief kind="accounting" {...sectionProps} />
+        </SectionErrorBoundary>
       </FadeIn>
       <FadeIn delay={0.4}>
-        <SeasonalMethodology {...sectionProps} />
+        <SectionErrorBoundary name="SeasonalMethodology">
+          <SeasonalMethodology {...sectionProps} />
+        </SectionErrorBoundary>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

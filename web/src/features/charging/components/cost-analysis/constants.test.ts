@@ -175,11 +175,12 @@ describe('cost-analysis constants — wired through useCostAnalysisData', () => 
     expect(cs.treeEquiv).toBeCloseTo(cs.co2SavedKg / KG_CO2_PER_TREE_YEAR, 6);
     expect(cs.treeEquiv).toBeCloseTo(1.1987, 3); // concrete end-to-end value
 
-    // DEFAULT_MPG + DEFAULT_GAS_PRICE flow into the distance-based comparison,
-    // DEFAULT_ELECTRICITY_RATE into the raw EV cost. 20 miles @ 30 mpg.
+    // Charge odometer deltas are not proof of driven distance, so the gasoline
+    // comparison stays unavailable; metered energy still seeds the EV model.
     const gc = result.current.gasComparison;
     if (!gc) throw new Error('expected gasComparison for a non-empty session set');
-    expect(gc.gasCost).toBeCloseTo((20 / DEFAULT_MPG) * DEFAULT_GAS_PRICE, 4);
+    expect(gc.unavailableReason).toBe('no-verified-driven-distance');
+    expect(Number.isNaN(gc.gasCost)).toBe(true);
     expect(gc.evCost).toBeCloseTo(cs.totalEnergy * DEFAULT_ELECTRICITY_RATE, 6);
     expect(gc.evCost).toBeCloseTo(13, 6);
   });

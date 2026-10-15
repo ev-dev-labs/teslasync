@@ -41,8 +41,11 @@ import { renderHook } from '@testing-library/react';
 
 import type { UnitPref } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 import type { DriveDetail, DriveTelemetryPoint, DrivePosition } from '@/types/driving';
 import type { Vehicle } from '@/types/vehicle';
+import { formatTime } from '@/lib/dateFormat';
+import type { FormatOptions } from '@/lib/dateFormat';
 
 // ── Mutable holder shared with the hoisted vi.mock factories. Tests mutate
 //    H.drive / H.unitPrefs / H.error etc. before rendering; each mock reads the
@@ -52,10 +55,14 @@ const H = vi.hoisted(() => ({
   drive: undefined as DriveDetail | undefined,
   isLoading: false,
   error: null as unknown,
-  vehicle: undefined as unknown,
+  vehicle: undefined as Vehicle | undefined,
   vehicleIdArg: '' as string,
   unitPrefs: null as unknown as UnitPref,
   formatTime: (v: unknown): string => (v == null ? '—' : String(v)),
+  realDates: false,
+  locale: 'de-DE',
+  mode: 'vehicle' as 'vehicle' | 'user' | 'utc',
+  userTimezone: 'Asia/Tokyo',
 }));
 
 vi.mock('@/api/hooks/useDriving', () => ({
@@ -74,10 +81,24 @@ vi.mock('@/hooks/useUnits', () => ({
 }));
 
 vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({ formatTime: H.formatTime }),
+  useDateFormat: () => ({
+    formatTime: H.realDates
+      ? (value: string | Date | null | undefined, override?: FormatOptions) =>
+        formatTime(value, { locale: H.locale, tz: 'America/Los_Angeles', ...override })
+      : H.formatTime,
+  }),
+}));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { timezone_user: H.userTimezone, tz_display_default: H.mode, locale: H.locale },
+    locale: H.locale,
+  }),
 }));
 
 import { useDriveDetailData } from './useDriveDetailData';
+import { driveEnergyEvidence } from './energyEvidence';
+import { interpretDriveDebrief } from './drivePhysicsDebrief';
 import {
   SPEED_SEGMENT_LOW_MPS,
   SPEED_SEGMENT_MED_MPS,
@@ -120,7 +141,6 @@ function tele(o: Partial<DriveTelemetryPoint> = {}): DriveTelemetryPoint {
   return {
     timestamp: '1970-01-01T00:00:00Z',
     speed: null,
-    power: null,
     batteryLevel: null,
     outsideTemp: null,
     insideTemp: null,
@@ -142,8 +162,17 @@ function tele(o: Partial<DriveTelemetryPoint> = {}): DriveTelemetryPoint {
     latitude: null,
     longitude: null,
     ...o,
+    // Scenarios specify kW; the endpoint fixture carries canonical watts.
+    power: o.power == null ? null : o.power * 1000,
   };
 }
+
+it('converts canonical signed fractional watts to drive-detail kW without filling gaps', () => {
+  const { result } = setup(drive({
+    telemetry: [1250.5, -2500.25, 0, null].map(power => ({ ...tele(), power })),
+  }));
+  expect(result.current.chartData.map(point => point.power)).toEqual([1.2505, -2.50025, 0, null]);
+});
 
 // Positions are read through an `any` cast in the hook (snake_case fallback),
 // so the factory accepts arbitrary extra keys and casts the result.
@@ -152,7 +181,6 @@ function pos(o: Record<string, unknown> = {}): DrivePosition {
     latitude: 0,
     longitude: 0,
     speed: null,
-    power: null,
     batteryLevel: 0,
     timestamp: '1970-01-01T00:00:00Z',
     insideTemp: null,
@@ -164,6 +192,7 @@ function pos(o: Record<string, unknown> = {}): DrivePosition {
     fanStatus: null,
     isClimateOn: null,
     ...o,
+    power: typeof o.power === 'number' ? o.power * 1000 : null,
   } as DrivePosition;
 }
 
@@ -213,6 +242,105 @@ beforeEach(() => {
   H.vehicle = undefined;
   H.vehicleIdArg = '';
   H.unitPrefs = METRIC;
+  H.realDates = false;
+  H.mode = 'vehicle';
+  H.userTimezone = 'Asia/Tokyo';
+});
+
+describe('useDriveDetailData — elevation pair evidence', () => {
+  it.each([
+    [],
+    [null, null],
+    [undefined, undefined],
+    [0],
+    [-12.5],
+    [0, null, 10],
+    [NaN, 0],
+    [0, Infinity],
+    [-Infinity, 0],
+    [-Number.MAX_VALUE, Number.MAX_VALUE],
+  ].map((elevations) => ({ elevations })))('keeps insufficient elevation deltas unknown for $elevations', ({ elevations }) => {
+    const { result } = setup(drive({
+      telemetry: elevations.map((elevation) => tele({ elevation })),
+    }));
+    expect(result.current.stats?.elevationEvidence).toEqual({
+      gainM: null,
+      lossM: null,
+      eligiblePairCount: 0,
+      pairCount: Math.max(elevations.length - 1, 0),
+      coverage: elevations.length > 1 ? 0 : null,
+    });
+  });
+
+  it.each([0, -12.5, 0.25])('keeps actual flat pairs at %s metres as measured zero', (elevation) => {
+    const { result } = setup(drive({
+      telemetry: [tele({ elevation }), tele({ elevation })],
+    }));
+    expect(result.current.stats?.elevationEvidence).toEqual({
+      gainM: 0, lossM: 0, eligiblePairCount: 1, pairCount: 1, coverage: 1,
+    });
+  });
+
+  it.each(['telemetry', 'positions'] as const)('preserves signed fractional %s readings and tracks partial pair coverage', (source) => {
+    const elevations = [-2.5, -1.75, null, 20, 18.5, 19];
+    const { result } = setup(drive(source === 'telemetry'
+      ? { telemetry: elevations.map((elevation) => tele({ elevation })) }
+      : { positions: elevations.map((elevation) => pos({ elevation })) }));
+    expect(result.current.chartData.map((point) => point.elevation)).toEqual(elevations);
+    expect(result.current.stats?.elevationEvidence).toEqual({
+      gainM: 1.25, lossM: 1.5, eligiblePairCount: 3, pairCount: 5, coverage: 0.6,
+    });
+    expect(result.current.stats?.elevGain).toBe(1.25);
+    expect(result.current.stats?.elevLoss).toBe(1.5);
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '0', '', false])(
+    'normalizes invalid position elevation %s without manufacturing zero',
+    (elevation) => {
+      const { result } = setup(drive({ positions: [pos({ elevation }), pos({ elevation: 0 })] }));
+      expect(result.current.chartData.map((point) => point.elevation)).toEqual([null, 0]);
+      expect(result.current.stats?.elevationEvidence.gainM).toBeNull();
+      expect(result.current.stats?.elevationEvidence.lossM).toBeNull();
+      expect(result.current.stats?.elevationEvidence.eligiblePairCount).toBe(0);
+    },
+  );
+
+  it('normalizes non-finite telemetry readings to chart gaps', () => {
+    const { result } = setup(drive({
+      telemetry: [tele({ elevation: NaN }), tele({ elevation: Infinity }), tele({ elevation: -Infinity })],
+    }));
+    expect(result.current.chartData.map((point) => point.elevation)).toEqual([null, null, null]);
+  });
+});
+
+describe('useDriveDetailData — record timezone and saved display preferences', () => {
+  it.each(['vehicle', 'user', 'utc'] as const)('formats telemetry in %s mode without changing business timezone', (mode) => {
+    H.realDates = true;
+    H.mode = mode;
+    H.vehicle = { timezone: 'America/New_York' } as Vehicle;
+    const instant = '2026-01-02T00:30:00Z';
+    const { result } = setup(drive({ telemetry: [tele({ timestamp: instant }), tele({ timestamp: 'invalid' })] }));
+    const tz = mode === 'vehicle' ? 'America/New_York' : mode === 'user' ? 'Asia/Tokyo' : 'UTC';
+    expect(result.current.timezone).toBe('America/New_York');
+    expect(result.current.chartData.map(row => row.time)).toEqual([
+      formatTime(instant, { locale: 'de-DE', tz }), '—',
+    ]);
+  });
+
+  it('formats position aliases across midnight and leaves missing dates unknown', () => {
+    H.realDates = true;
+    H.vehicle = { timezone: 'Pacific/Auckland' } as Vehicle;
+    const { result } = setup(drive({ positions: [
+      pos({ timestamp: '2026-01-01T23:30:00Z' }),
+      pos({ timestamp: undefined }),
+    ] }));
+    expect(result.current.chartData.map(row => row.time)).toEqual(['12:30', '—']);
+  });
+
+  it('uses the saved user zone when the record vehicle zone is unavailable', () => {
+    const { result } = setup(drive());
+    expect(result.current.timezone).toBe('Asia/Tokyo');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -357,15 +485,99 @@ describe('useDriveDetailData — speed-coloured segments', () => {
     const segs = result.current.speedSegments;
     expect(segs).toHaveLength(4);
     expect(segs.map((s) => s.color)).toEqual([
-      '#10b981', // green — below low
-      '#00f0ff', // cyan — >= low
-      '#f59e0b', // amber — >= med
-      '#ef4444', // red — >= high
+      chartTokens.series[1], // green — below low
+      chartTokens.series[0], // blue — >= low
+      chartTokens.series[2], // amber — >= med
+      chartTokens.series[3], // rose — >= high
     ]);
     // Each segment spans the previous → current coordinate pair.
     expect(segs[0].positions).toEqual([
       [1, 1],
       [2, 2],
+    ]);
+  });
+});
+
+describe('useDriveDetailData — unknown route speed', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'keeps absent/invalid speed %s unknown in telemetry and position routes',
+    (speed) => {
+      for (const source of ['telemetry', 'positions'] as const) {
+        const samples = [
+          { latitude: 1, longitude: 1, speed: 0, createdAt: 'start' },
+          { latitude: 2, longitude: 2, speed, createdAt: 'end' },
+        ];
+        const { result, unmount } = setup(drive({
+          telemetry: source === 'telemetry' ? samples.map((sample) => tele(sample)) : [],
+          positions: source === 'positions' ? samples.map((sample) => pos(sample)) : [],
+        }));
+        expect(result.current.routeSource[1]).toEqual({
+          lat: 2, lng: 2, speed: null, timestamp: 'end',
+        });
+        expect(result.current.chartData[1].speed).toBeNull();
+        expect(result.current.speedSegments[0]).toEqual({
+          positions: [[1, 1], [2, 2]], color: chartTokens.tooltipMutedText,
+        });
+        expect(result.current.speedHistData).toEqual([
+          { range: `${fmtNumber(0)}–${fmtNumber(20)}`, pct: 100 },
+        ]);
+        unmount();
+      }
+    },
+  );
+
+  it.each([0, -0, -1.25, 0.125, SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS])(
+    'preserves measured speed %s without rounding or treating it as unknown',
+    (speed) => {
+      for (const source of ['telemetry', 'positions'] as const) {
+        const samples = [
+          { latitude: 1, longitude: 1, speed: 0 },
+          { latitude: 2, longitude: 2, speed },
+        ];
+        const { result, unmount } = setup(drive({
+          telemetry: source === 'telemetry' ? samples.map((sample) => tele(sample)) : [],
+          positions: source === 'positions' ? samples.map((sample) => pos(sample)) : [],
+        }));
+        expect(result.current.routeSource[1].speed).toBe(speed);
+        expect(result.current.chartData[1].speed).toBeCloseTo(speed * MPS_TO_KMH);
+        const color = speed >= SPEED_SEGMENT_HIGH_MPS ? chartTokens.series[3]
+          : speed >= SPEED_SEGMENT_MED_MPS ? chartTokens.series[2]
+          : speed >= SPEED_SEGMENT_LOW_MPS ? chartTokens.series[0] : chartTokens.series[1];
+        expect(result.current.speedSegments[0].color).toBe(color);
+        unmount();
+      }
+    },
+  );
+
+  it('does not borrow position speed or timestamps for an unknown telemetry route', () => {
+    const { result } = setup(drive({
+      telemetry: [
+        tele({ latitude: 1, longitude: 1, speed: null, createdAt: 'tele-start' }),
+        tele({ latitude: 2, longitude: 2, speed: null, created_at: 'tele-end' }),
+      ],
+      positions: [pos({ latitude: 3, longitude: 3, speed: 25, createdAt: 'position' })],
+    }));
+    expect(result.current.routeSource).toEqual([
+      { lat: 1, lng: 1, speed: null, timestamp: 'tele-start' },
+      { lat: 2, lng: 2, speed: null, timestamp: 'tele-end' },
+    ]);
+    expect(result.current.speedHistData).toEqual([]);
+  });
+
+  it('falls back to original positions when telemetry coordinates are invalid', () => {
+    const { result } = setup(drive({
+      telemetry: [
+        tele({ latitude: NaN, longitude: 1, speed: 10 }),
+        tele({ latitude: 91, longitude: 1, speed: 10 }),
+      ],
+      positions: [
+        pos({ latitude: Infinity, longitude: 1 }),
+        pos({ latitude: 1, longitude: 181 }),
+        pos({ latitude: -1.25, longitude: 0, speed: null, timestamp: 'position' }),
+      ],
+    }));
+    expect(result.current.routeSource).toEqual([
+      { lat: -1.25, lng: 0, speed: null, timestamp: 'position' },
     ]);
   });
 });
@@ -412,15 +624,15 @@ describe('useDriveDetailData — chart data conversion', () => {
     expect(c.climateOn).toBe(true);
   });
 
-  it('null-coalesces missing battery/elevation/power/speed to 0', () => {
+  it('preserves absent battery/elevation/power/speed as null, not false zero observations', () => {
     const { result } = setup(
       drive({ telemetry: [tele({ latitude: 47.6, longitude: -122.3, createdAt: '08:00' })] }),
     );
     const c = result.current.chartData[0];
-    expect(c.speed).toBe(0);
-    expect(c.battery).toBe(0);
-    expect(c.elevation).toBe(0);
-    expect(c.power).toBe(0);
+    expect(c.speed).toBeNull();
+    expect(c.battery).toBeNull();
+    expect(c.elevation).toBeNull();
+    expect(c.power).toBeNull();
   });
 
   it('converts to imperial units when the pressure/speed/temp/distance prefs flip', () => {
@@ -542,7 +754,7 @@ describe('useDriveDetailData — stats', () => {
     expect(s.odometerStart).toBeCloseTo(1000, 5);
     expect(s.odometerEnd).toBeCloseTo(1010, 5);
     expect(s.hasTirePressure).toBe(true);
-    expect(s.efficiencyPctPer100).toBeCloseTo(2, 5); // (80-60)/100km*10
+    expect(s.efficiencyPctPer100).toBeCloseTo(20, 5); // (80-60)/100km*100
   });
 
   it('computes energy/regen/power fallbacks when the drive aggregates are absent', () => {
@@ -565,12 +777,12 @@ describe('useDriveDetailData — stats', () => {
     expect(s.powerMax).toBe(-10); // max of [-10,-20]
     expect(s.powerMin).toBe(-20);
     expect(s.avgPower).toBe(-15); // mean of chart powers
-    expect(s.energyWh).toBeCloseTo(15000, 5); // |avgPower| * 1h * 1000
+    expect(s.energyWh).toBeCloseTo(-15000, 5); // signed net pack power * 1h
     expect(s.regenWh).toBeCloseTo(15000, 5); // (10+20) * (1/2) * 1000
     expect(s.minSpd).toBeCloseTo(5 * MPS_TO_KMH, 5); // 18 km/h
   });
 
-  it('reports minSpd = 0 when the car never moves and powerMax falls back to avgPowerW', () => {
+  it('retains observed zero power rather than fabricating a peak from avgPowerW', () => {
     const { result } = setup(
       drive({
         avgPowerW: 8000,
@@ -583,8 +795,114 @@ describe('useDriveDetailData — stats', () => {
     const s = result.current.stats!;
 
     expect(s.minSpd).toBe(0);
-    expect(s.powerMax).toBe(8); // no per-row power → avgPowerW 8000 / 1000
+    expect(s.powerMax).toBe(0); // observed zero power; average is not a peak
     expect(s.powerMin).toBe(0);
+  });
+
+  it.each([null, NaN, Infinity, -Infinity])('retains unknown energy evidence for invalid power %s', (power) => {
+    const input = drive({
+      energyUsedWh: power, regenEnergyWh: power, avgPowerW: power,
+      telemetry: [tele({ power })],
+    });
+    const { result } = setup(input);
+    const s = result.current.stats!;
+    expect(s.energyEvidence).toMatchObject({
+      energyWh: null, regenWh: null, energySource: 'missing', regenSource: 'missing',
+    });
+    expect(driveEnergyEvidence(input, s)).toBe(s.energyEvidence);
+    expect(interpretDriveDebrief(s, result.current.chartData, undefined).regenShare).toBeNull();
+  });
+
+  it.each([0, -0.25, 0.125])('preserves measured summary energy %s without replacing it with estimates', (energy) => {
+    const { result } = setup(drive({
+      energyUsedWh: energy, regenEnergyWh: energy, avgPowerW: 8000,
+      telemetry: [tele({ power: -10 })],
+    }));
+    expect(result.current.stats!.energyWh).toBe(energy);
+    expect(result.current.stats!.regenWh).toBe(energy);
+    expect(result.current.stats!.energyEvidence).toMatchObject({
+      energyWh: energy, regenWh: energy, energySource: 'observed', regenSource: 'observed',
+    });
+  });
+
+  it('recognizes measured zero regen rather than marking it missing', () => {
+    const { result } = setup(drive({
+      energyUsedWh: 0.25, regenEnergyWh: 0, telemetry: [tele({ power: 0 })],
+    }));
+    const debrief = interpretDriveDebrief(result.current.stats, result.current.chartData, undefined);
+    expect(debrief.regenShare).toBe(0);
+    expect(debrief.beats.find((beat) => beat.id === 'regen')?.honesty).toBe('live');
+  });
+
+  it.each([NaN, Infinity, -1])('does not estimate energy from invalid duration %s', (durationS) => {
+    const { result } = setup(drive({ durationS, telemetry: [tele({ power: -0.5 })] }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({
+      energyWh: null, regenWh: null, energySource: 'missing', regenSource: 'missing',
+    });
+  });
+
+  it('preserves fractional signed estimates and reports their provenance', () => {
+    const { result } = setup(drive({
+      durationS: 1.8, telemetry: [tele({ power: -0.5 }), tele({ power: 0.25 })],
+    }));
+    const s = result.current.stats!;
+    expect(s.energyWh).toBeCloseTo(-0.0625);
+    expect(s.regenWh).toBeCloseTo(0.125);
+    expect(s.energyEvidence).toMatchObject({ energySource: 'estimated', regenSource: 'estimated' });
+    const debrief = interpretDriveDebrief(s, result.current.chartData, undefined);
+    expect(debrief.regenShare).toBeCloseTo(2);
+    expect(debrief.beats.find((beat) => beat.id === 'regen')?.honesty).toBe('guessed');
+  });
+
+  it('uses all eligible power observations, including positive and zero, without treating gaps as zero', () => {
+    const { result } = setup(drive({
+      durationS: 3600,
+      telemetry: [-0.5, 0.25, 0, null, NaN, Infinity, -Infinity].map((power) => tele({ power })),
+    }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({
+      powerObservationCount: 3, powerSampleCount: 7,
+      energySource: 'estimated', regenSource: 'estimated',
+    });
+    expect(result.current.stats!.energyEvidence!.energyWh).toBeCloseTo(-250 / 3);
+    expect(result.current.stats!.energyEvidence!.regenWh).toBeCloseTo(500 / 3);
+    expect(result.current.chartData.map((point) => point.power)).toEqual([-0.5, 0.25, 0, null, null, null, null]);
+  });
+
+  it.each([0, 0.25])('keeps nonnegative observed power %s as a known zero regeneration estimate', (power) => {
+    const { result } = setup(drive({
+      durationS: 3600, telemetry: [tele({ power }), tele()],
+    }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({
+      energyWh: power * 1000, regenWh: 0,
+      powerObservationCount: 1, powerSampleCount: 2, regenSource: 'estimated',
+    });
+  });
+
+  it('uses eligible position power observations for regeneration coverage', () => {
+    const { result } = setup(drive({
+      durationS: 3600, positions: [pos({ power: -0.5 }), pos({ power: 0 }), pos()],
+    }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({
+      energyWh: -250, regenWh: 250, powerObservationCount: 2, powerSampleCount: 3,
+    });
+  });
+
+  it('does not borrow position power when the selected telemetry source has none', () => {
+    const { result } = setup(drive({
+      telemetry: [tele()], positions: [pos({ power: 10 })],
+    }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({ energyWh: null, regenWh: null, hasPower: false });
+  });
+
+  it('estimates from position power when telemetry is absent', () => {
+    const { result } = setup(drive({ durationS: 1800, positions: [pos({ power: -0.25 })] }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({ energyWh: -125, regenWh: 125, hasPower: true });
+  });
+
+  it('does not fabricate regen from average power alone', () => {
+    const { result } = setup(drive({ avgPowerW: 0.25 }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({ energyWh: 0.25, regenWh: null });
+    expect(interpretDriveDebrief(result.current.stats, [], undefined).regenShare).toBeNull();
   });
 
   it('returns null stats when there is no drive', () => {
@@ -622,6 +940,63 @@ describe('useDriveDetailData — climate status branches', () => {
 });
 
 describe('useDriveDetailData — speed histogram', () => {
+  it('rebuckets raw SI samples when the selected speed unit changes', () => {
+    const raw = drive({ telemetry: [tele({ speed: 20 })] });
+    const { result, rerender } = setup(raw, METRIC);
+    expect(result.current.speedHistData).toEqual([
+      { range: `${fmtNumber(60)}–${fmtNumber(80)}`, pct: 100 },
+    ]);
+    expect(result.current.chartData[0].speed).toBeCloseTo(72);
+
+    H.unitPrefs = IMPERIAL;
+    rerender();
+    expect(result.current.speedHistData).toEqual([
+      { range: `${fmtNumber(40)}–${fmtNumber(60)}`, pct: 100 },
+    ]);
+    expect(result.current.chartData[0].speed).toBeCloseTo(20 * MPS_TO_MPH);
+    expect(result.current.drive?.telemetry?.[0].speed).toBe(20);
+  });
+
+  it.each(['telemetry', 'positions'] as const)('excludes missing and invalid %s speeds but counts measured zero', (source) => {
+    const speeds = [null, undefined, NaN, Infinity, -Infinity];
+    const makeDrive = (values: typeof speeds) => drive(source === 'telemetry'
+      ? { telemetry: values.map((speed) => tele({ speed })) }
+      : { positions: values.map((speed) => pos({ speed })) });
+    const { result, rerender } = setup(makeDrive(speeds));
+    expect(result.current.speedHistData).toEqual([]);
+    expect(result.current.chartData.map((point) => point.speed)).toEqual(speeds.map(() => null));
+
+    H.drive = makeDrive([...speeds, 0]);
+    rerender();
+    expect(result.current.speedHistData).toEqual([
+      { range: `${fmtNumber(0)}–${fmtNumber(20)}`, pct: 100 },
+    ]);
+    expect(result.current.chartData.at(-1)?.speed).toBe(0);
+  });
+
+  it.each(['telemetry', 'positions'] as const)('retains signed, fractional and open-ended %s observations in the denominator', (source) => {
+    for (const prefs of [METRIC, IMPERIAL]) {
+      const factor = prefs.speed === 'km/h' ? MPS_TO_KMH : MPS_TO_MPH;
+      const speeds = [-0.125, 0, 19.75, 20.25, 10000].map((speed) => speed / factor);
+      const raw = drive(source === 'telemetry'
+        ? { telemetry: speeds.map((speed) => tele({ speed })) }
+        : { positions: speeds.map((speed) => pos({ speed })) });
+      const { result, unmount } = setup(raw, prefs);
+      expect(result.current.speedHistData).toEqual([
+        { range: `<${fmtNumber(0)}`, pct: 20 },
+        { range: `${fmtNumber(0)}–${fmtNumber(20)}`, pct: 40 },
+        { range: `${fmtNumber(20)}–${fmtNumber(40)}`, pct: 20 },
+        { range: `${fmtNumber(120)}+`, pct: 20 },
+      ]);
+      result.current.chartData.forEach((point, index) => {
+        expect(point.speed).toBeCloseTo(speeds[index] * factor);
+      });
+      expect((source === 'telemetry' ? raw.telemetry : raw.positions)?.map((point) => point.speed)).toEqual(speeds);
+      expect(result.current.drive).toBe(raw);
+      unmount();
+    }
+  });
+
   it('buckets display-unit speeds, drops empty buckets, and rounds the percentage', () => {
     // Metric speeds must land in the 0–20, 20–40 and 120+ buckets: pick SI m/s
     // that convert to 10, 30 and 130 km/h respectively.

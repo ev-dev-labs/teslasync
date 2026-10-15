@@ -3,7 +3,7 @@
  *
  * Owns no data fetching; consumers pass `data` (sorted ascending by
  * timestamp) and `selectedSignals`. When `isLive` is true the panel uses
- * the "live" visual treatment (red pulse, event/point counters, no
+ * the "live" visual treatment (static mode indicator, event/point counters, no
  * series animation) but the underlying chart structure is identical.
  *
  * The `chartMode` prop controls layout:
@@ -11,7 +11,7 @@
  *   - 'grid'    — SmallMultiplesChart, one cell per series
  *   - 'auto'    — overlay until `gridAutoThreshold` is exceeded, then grid
  *
- * The grid mode keeps the panel header and (for live mode) the pulse
+ * The grid mode keeps the panel header and (for live mode) the static
  * indicator, only the chart body swaps. This lets the workspace page
  * stay legible when the user pins many signals at once without forcing
  * them to manage display modes themselves.
@@ -25,11 +25,12 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3, Radio } from 'lucide-react';
 
-import { GlassPanel, SectionTitle } from '@/components/ui';
+import { Caption, GlassPanel, SectionTitle } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import { SourceContent } from '@/components/layout';
 import {
+  ChartTooltip,
   LineChart,
   Line,
   XAxis,
@@ -43,10 +44,12 @@ import {
   projectSmallMultipleSeries,
 } from '@/components/charts';
 import { CHART_COLORS } from '@/lib/colors';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
+import { chartTokens, neonColorMap, typography } from '@/lib/tokens';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export type SignalChartMode = 'overlay' | 'grid' | 'auto';
 
@@ -66,6 +69,9 @@ export interface SignalChartPanelProps {
   stats: SignalStat[];
   isLive?: boolean;
   loading?: boolean;
+  /** Initial failure only; callers pass DataState.fatalError, never refresh errors. */
+  error?: Error | null;
+  onRetry?: () => void;
   /** Total points loaded (historical) or live event count. Header annotation. */
   pointsLoaded?: number;
   liveEventCount?: number;
@@ -105,6 +111,8 @@ export function SignalChartPanel({
   stats = [],
   isLive = false,
   loading = false,
+  error,
+  onRetry,
   pointsLoaded,
   liveEventCount,
   title,
@@ -114,6 +122,7 @@ export function SignalChartPanel({
   gridCellHeight = 140,
   className,
 }: SignalChartPanelProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTime, formatDateTime } = useDateFormat();
 
@@ -132,7 +141,7 @@ export function SignalChartPanel({
     return selectedSignals.length > gridAutoThreshold ? 'grid' : 'overlay';
   }, [chartMode, selectedSignals.length, gridAutoThreshold]);
 
-  const resolvedTitle = title ?? (isLive ? t('signalChart.liveTitle', 'Live Signal Stream') : t('signalChart.histTitle', 'Signal Chart'));
+  const resolvedTitle = title ?? (isLive ? t('signalChart.liveTitle', 'Live signal stream') : t('signalChart.histTitle', 'Signal chart'));
   const accessibleRows = useMemo(
     () => data.map((point) => {
       const row: Record<string, AccessibleChartValue> = {
@@ -160,27 +169,35 @@ export function SignalChartPanel({
   }, [data, effectiveMode, selectedSignals]);
 
   return (
-    <FadeIn>
-      <GlassPanel className={cn('p-4 sm:p-5', className)}>
-        <div className="flex items-center gap-2 mb-4">
+    <FadeIn className="min-w-0 max-w-full">
+      <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+        <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2">
           {isLive ? (
-            <Radio className="h-4 w-4 text-red-500 animate-pulse" aria-hidden="true" />
+            <Radio className={cn('h-4 w-4', typography.color.secondary)} aria-hidden="true" />
           ) : (
-            <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <BarChart3 className={cn('h-4 w-4', typography.color.secondary)} aria-hidden="true" />
           )}
-          <SectionTitle>{resolvedTitle}</SectionTitle>
+          <SectionTitle className="min-w-0 break-words">{resolvedTitle}</SectionTitle>
           {isLive ? (
-            <span className="ml-auto flex items-center gap-1.5 text-2xs text-red-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
+            <Caption className="ms-auto flex flex-wrap items-center gap-1.5">
+              <span className={cn('h-1.5 w-1.5 rounded-full', neonColorMap.cyan.dot)} aria-hidden="true" />
               {fmtInt(liveEventCount ?? 0)} {t('events')} · {fmtInt(data.length)} {t('points')}
-            </span>
+            </Caption>
           ) : data.length > 0 && pointsLoaded != null ? (
-            <span className="ml-auto text-2xs text-[var(--text-muted)]">
+            <Caption className="ms-auto">
               {fmtInt(pointsLoaded)} {t('signalChart.pointsLoaded', 'points loaded')}
-            </span>
+            </Caption>
           ) : null}
         </div>
 
+        <SourceContent
+          state={error ? 'error' : 'ready'}
+          label={resolvedTitle}
+          error={error}
+          errorMessage={t('error.loadFailed', 'Failed to load data')}
+          emptyMessage={t('signalChart.emptyRange', 'No signal samples were recorded in this time range.')}
+          errorRecovery={{ onRetry }}
+        >
         {loading && !isLive ? (
           <div style={{ height }} role="status" aria-label={t('signalChart.loading', 'Loading chart…')}>
             <Skeleton className="h-full w-full" />
@@ -217,18 +234,18 @@ export function SignalChartPanel({
             {({ hiddenSeries }) => (
               <ResponsiveContainer width="100%" height={height}>
                 <LineChart data={data} margin={{ top: 10, right: useRightAxis ? 20 : 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
                   <XAxis
                     dataKey="timestampMs"
                     type="number"
                     allowDuplicatedCategory={false}
                     domain={['dataMin', 'dataMax']}
-                    tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                    tick={{ fill: chartTokens.axisStroke, fontSize: 10 }}
                     tickFormatter={(value: number) => formatTime(new Date(value))}
                   />
-                  <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis yAxisId="left" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                   {useRightAxis ? (
-                    <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                   ) : null}
                   <Tooltip
                     content={(
@@ -249,9 +266,9 @@ export function SignalChartPanel({
                       type="monotone"
                       dataKey={sig}
                       stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                      strokeWidth={1.5}
+                      strokeWidth={2}
                       data={overlaySeries.get(sig)?.rows}
-                      dot={overlaySeries.get(sig)?.showDots ? { r: 2, strokeWidth: 0 } : false}
+                      dot={overlaySeries.get(sig)?.showDots ? { r: 3, strokeWidth: 0 } : false}
                       name={sig}
                       yAxisId={useRightAxis && i === 1 ? 'right' : 'left'}
                       connectNulls={false}
@@ -264,6 +281,7 @@ export function SignalChartPanel({
             )}
           </EmbeddedChart>
         )}
+        </SourceContent>
       </GlassPanel>
     </FadeIn>
   );

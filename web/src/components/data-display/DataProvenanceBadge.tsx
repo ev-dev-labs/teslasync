@@ -9,15 +9,16 @@ import {
   Wrench,
 } from 'lucide-react';
 
-import { Badge } from '@/components/ui';
+import { Badge } from '@/components/ui/Badge';
 import type { DataProvenance, DataStatus } from '@/api/dataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 export interface DataProvenanceBadgeProps
   extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
   provenance: DataProvenance;
   /** Downgrades the badge tone when the payload is no longer trustworthy. */
   status?: DataStatus;
-  /** Epoch ms of the snapshot the value came from. */
+  /** Raw update epoch ms; a successful fetch is not a signal observation. */
   updatedAt?: number | null;
   size?: 'sm' | 'md';
   /** Hide the icon (dense table cells). */
@@ -90,13 +91,36 @@ const PROVENANCE_CONFIG: Record<
  * provenance itself.
  */
 export function DataProvenanceBadge({
+  updatedAt,
+  ...props
+}: DataProvenanceBadgeProps) {
+  const asOf = updatedAt != null && Number.isFinite(updatedAt)
+    ? new Date(updatedAt)
+    : null;
+
+  // Untimed badges also appear on public surfaces without workspace providers.
+  return asOf != null && Number.isFinite(asOf.getTime())
+    ? <TimedProvenanceBadge {...props} asOf={asOf} />
+    : <ProvenanceBadge {...props} />;
+}
+
+function TimedProvenanceBadge({
+  asOf,
+  ...props
+}: DataProvenanceBadgeProps & { asOf: Date }) {
+  const { formatDateTime, tz } = useDateFormat();
+  const time = `${formatDateTime(asOf, { clock: { second: '2-digit' } })} (${tz})`;
+  return <ProvenanceBadge {...props} time={time} />;
+}
+
+function ProvenanceBadge({
   provenance,
   status,
-  updatedAt,
+  time,
   size = 'sm',
   iconOnly = false,
   ...props
-}: DataProvenanceBadgeProps) {
+}: Omit<DataProvenanceBadgeProps, 'updatedAt'> & { time?: string }) {
   const { t } = useTranslation();
   const config = PROVENANCE_CONFIG[provenance] ?? PROVENANCE_CONFIG.unknown;
   const Icon = config.Icon;
@@ -105,12 +129,9 @@ export function DataProvenanceBadge({
   const variant: BadgeVariant = degraded ? 'neutral' : config.variant;
 
   const label = t(config.key, config.label);
-  const asOf = updatedAt != null && Number.isFinite(updatedAt) && updatedAt > 0
-    ? new Date(updatedAt).toISOString()
-    : null;
-  const title = asOf != null
+  const title = time != null
     ? `${t(`${config.key}Hint`, config.hint)} ${t('freshness.lastUpdated', 'Last updated: {{time}}', {
-        time: new Date(asOf).toLocaleString(),
+        time,
       })}`
     : t(`${config.key}Hint`, config.hint);
 

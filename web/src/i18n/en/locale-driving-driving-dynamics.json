@@ -1,0 +1,1059 @@
+{
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement unlocked",
+    "view": "View"
+  },
+  "activity": {
+    "action": {
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleDelete": "Alert rule deleted",
+      "alertRuleUpdate": "Alert rule updated",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyDelete": "API key revoked",
+      "apiKeyUpdate": "API key updated",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out",
+      "automation": "Automation change",
+      "automationAutoDisabled": "Automation auto-disabled",
+      "automationCreate": "Automation created",
+      "automationCreated": "Automation created",
+      "automationDelete": "Automation deleted",
+      "automationDeleted": "Automation deleted",
+      "automationDisabled": "Automation disabled",
+      "automationEnabled": "Automation enabled",
+      "automationExecuted": "Automation ran",
+      "automationExported": "Automations exported",
+      "automationFailed": "Automation failed",
+      "automationImported": "Automations imported",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationUpdate": "Automation updated",
+      "automationUpdated": "Automation updated",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandCharge": "Charging command",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandWake": "Wake vehicle"
+    },
+    "myActivity": {
+      "empty": "No recent activity in this window."
+    }
+  },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
+  "advancedIntelligence": {
+    "panel": {
+      "paused": "The initial evidence query is paused; no empty result is inferred."
+    }
+  },
+  "battery": {
+    "delta": {
+      "aria": "Battery {{from}}% to {{to}}%",
+      "unknown": "Battery delta unknown"
+    }
+  },
+  "bulk": {
+    "clear": "Clear selection",
+    "itemDefault": "item",
+    "itemDefault_one": "item",
+    "itemDefault_other": "items",
+    "ofTotal": "of {{total}}",
+    "selected": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "toolbarLabel": "Bulk actions for selected items"
+  },
+  "calculationDetails": {
+    "coverage": "Data coverage",
+    "exclusions": "Exclusions and limitations",
+    "method": "Method",
+    "noExclusions": "No additional exclusions were supplied.",
+    "period": "Analysis period",
+    "provenance": "Provenance",
+    "sources": "Data sources",
+    "title": "How this was calculated",
+    "unavailable": "Not provided",
+    "version": "Calculation version"
+  },
+  "chart": {
+    "a11y": {
+      "metricSelector": "{{title}} metric"
+    },
+    "col": {
+      "date": "Date",
+      "value": "Value"
+    }
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
+    }
+  },
+  "delta": {
+    "noComparison": "No comparison data",
+    "title": "{{current}} vs {{previous}}"
+  },
+  "developerReference": {
+    "stats": {
+      "metric": {
+        "byteRate": {
+          "description": "Recorded bytes per second; the displayed interval is explicit.",
+          "label": "Data rate"
+        },
+        "bytes": {
+          "description": "Recorded byte count, displayed with binary size units.",
+          "label": "Data size"
+        },
+        "charge": {
+          "avgDuration": {
+            "description": "Existing average session duration calculation, expressed in canonical seconds.",
+            "label": "Average session duration"
+          },
+          "energyAdded": {
+            "description": "Recorded energy added on included charging sessions.",
+            "label": "Energy added"
+          },
+          "meanSessionPower": {
+            "description": "Arithmetic mean of finite session average powers; not peak power.",
+            "label": "Mean session power"
+          },
+          "overallRate": {
+            "description": "Aggregate valid energy divided by corresponding positive duration; not mean session power.",
+            "label": "Overall charging rate"
+          },
+          "peakPower": {
+            "description": "Highest observed charging power; never a replacement for an average.",
+            "label": "Peak power"
+          },
+          "recordedCost": {
+            "description": "Recorded session costs, not tariff estimates or billing.",
+            "label": "Recorded cost"
+          },
+          "sessions": {
+            "description": "Number of returned charging sessions included by the existing filter.",
+            "label": "Sessions"
+          }
+        },
+        "count": {
+          "description": "Declared count, not inferred from an integer measurement.",
+          "label": "Count"
+        },
+        "currency": {
+          "description": "Amount in its recorded denomination; no currency conversion.",
+          "label": "Cost"
+        },
+        "distance": {
+          "description": "Measured distance; canonical input is meters.",
+          "label": "Distance"
+        },
+        "duration": {
+          "description": "Elapsed duration; canonical input is seconds.",
+          "label": "Duration"
+        },
+        "efficiency": {
+          "description": "Consumption in watt-hours per meter; not reciprocal economy.",
+          "label": "Energy intensity"
+        },
+        "energy": {
+          "description": "Measured energy; canonical input is watt-hours.",
+          "label": "Energy"
+        },
+        "identifier": {
+          "description": "Source identifier, retained without grouping or rounding.",
+          "label": "Identifier"
+        },
+        "latency": {
+          "description": "Recorded non-negative elapsed time in seconds, displayed in milliseconds or seconds.",
+          "label": "Latency"
+        },
+        "mass": {
+          "description": "Recorded mass in kilograms.",
+          "label": "Mass"
+        },
+        "multiplier": {
+          "description": "Dimensionless multiplier, not a percentage.",
+          "label": "Multiplier"
+        },
+        "number": {
+          "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
+          "label": "Value"
+        },
+        "percent": {
+          "description": "Percentage input is already on the 0–100 scale.",
+          "label": "Percentage"
+        },
+        "power": {
+          "description": "Measured power; canonical input is watts.",
+          "label": "Power"
+        },
+        "pressure": {
+          "description": "Pressure in kilopascals.",
+          "label": "Pressure"
+        },
+        "rate": {
+          "description": "Source-defined rate; the caller declares the quantity and time unit.",
+          "label": "Rate"
+        },
+        "ratio": {
+          "description": "Dimensionless coefficient, not a percentage.",
+          "label": "Ratio"
+        },
+        "score": {
+          "description": "Numeric score on a declared 100-point scale.",
+          "label": "Score"
+        },
+        "seasonal": {
+          "fitStatus": {
+            "description": "Existing translated fit status; no invented eligibility threshold.",
+            "label": "Fit status"
+          },
+          "inSampleRSquared": {
+            "description": "Existing dimensionless in-sample coefficient, not a percent.",
+            "label": "In-sample R²"
+          },
+          "includedDrives": {
+            "description": "Drive count admitted by the existing seasonal eligibility rules.",
+            "label": "Included drives"
+          },
+          "observedIntensity": {
+            "description": "Existing observed consumption over included drives.",
+            "label": "Observed energy intensity"
+          }
+        },
+        "speed": {
+          "description": "Measured speed; canonical input is meters per second.",
+          "label": "Speed"
+        },
+        "status": {
+          "description": "Source-provided status, retained without numeric coercion.",
+          "label": "Status"
+        },
+        "temperature": {
+          "description": "Absolute temperature in degrees Celsius; not a temperature difference.",
+          "label": "Temperature"
+        },
+        "text": {
+          "description": "Source-provided text, retained without numeric coercion.",
+          "label": "Text"
+        }
+      },
+      "state": {
+        "empty": "No metrics supplied",
+        "loading": "Loading measurements",
+        "retained": "Showing retained measurements"
+      },
+      "valueState": {
+        "invalid": "invalid",
+        "missing": "missing",
+        "value": "value"
+      }
+    }
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "driving": {
+    "brief": {
+      "completeScope": "Complete analysis window",
+      "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
+      "eyebrow": "Driving evidence",
+      "loading": "Loading source",
+      "observationUnknown": "Source observation time not provided",
+      "retained": "Retained source",
+      "returned": "Returned evidence",
+      "subsetScope": "Returned subset",
+      "unavailable": "Source unavailable",
+      "unknownScope": "Coverage unknown"
+    }
+  },
+  "dynamics": {
+    "autopilot": "Autopilot & cruise",
+    "autopilotNoData": "No cruise / autopilot telemetry received yet",
+    "avg": "Avg",
+    "avgDriveSpeed": "Avg drive speed",
+    "avgMotorTemp": "Avg motor temp",
+    "avgPower": "Avg power",
+    "avgTorque": "Avg torque",
+    "awaiting": "Awaiting data",
+    "awaitingData": "Awaiting motor telemetry data...",
+    "brake": "Brake",
+    "brakeActive": "Brake active",
+    "brakeInactive": "Brake inactive",
+    "brakePedal": "Brake pedal status",
+    "brakePedalPosition": "Brake pedal position",
+    "brakeUnknown": "Brake unknown",
+    "brief": {
+      "accelerationAxes": "Reported acceleration axes",
+      "coachConsumption": "Vehicle coaching consumption",
+      "cruiseScope": "Current speed requires a trusted vehicle-state observation. Cruise set speed and follow distance are latest independent historical observations; their continuous freshness is not established.",
+      "cruiseTitle": "Speed and cruise settings",
+      "followScope": "Reported follow-distance enum; its suffix is a bar setting, not a physical distance.",
+      "liveQuantities": "Reported powertrain quantities",
+      "rideTotals": "Recorded ride totals",
+      "source": "Returned motor-history samples inside the existing selected-drive query bounds."
+    },
+    "coach": {
+      "avgEfficiency": "Avg efficiency",
+      "bestEfficiency": "Best efficiency",
+      "coldStarts": "Cold-weather drives",
+      "drivesAnalyzed": "{{count}} drives analyzed",
+      "hardAccel": "High power demand",
+      "hardBrake": "Strong regeneration",
+      "highway": "Highway driving",
+      "impact": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium"
+      },
+      "needWeeks": "Need at least 2 weeks of data for trend analysis.",
+      "noData": "Drive more to see your style breakdown.",
+      "noDrives": "No drives found.",
+      "noPatterns": "No driving-pattern evidence available.",
+      "noRecs": "Recommendations will appear after more drives.",
+      "noScore": "No vehicle-wide score available.",
+      "overallScore": "Efficiency comparison",
+      "patterns": "Driving patterns",
+      "perDriveScores": "Per-drive scores",
+      "recommendations": "Recommendations",
+      "scopeDescription": "Completed drives with positive recorded energy and available speed, power, and temperature over the last 30 days. Scores compare consumption with this vehicle’s best measured trip; power and speed profiles are heuristics, not observed braking technique or safety ratings.",
+      "score": "Score",
+      "shortTrips": "Short trips (<5 km)",
+      "style": "Style",
+      "styleBreakdown": "Style breakdown",
+      "styleCount": "{{style}}: {{count}} drives",
+      "styles": {
+        "aggressive": "Aggressive",
+        "efficient": "Efficient",
+        "moderate": "Moderate"
+      },
+      "vehicleTitle": "Vehicle coaching · last 30 days",
+      "weeklyTrend": "Weekly score trend",
+      "weeklyTrendAria": "Line chart of weekly driving score over time",
+      "whPerKm": "Wh/km"
+    },
+    "col": {
+      "drive": "Drive",
+      "drives": "Drives",
+      "range": "Speed range"
+    },
+    "combined": "Combined",
+    "contextCharts": {
+      "averageKw": "Average power (kW)",
+      "load": "Trip load comparison",
+      "loadAria": "Per-drive scatter chart of average motor power versus trip distance",
+      "loadDescription": "Recorded average motor power versus trip distance — not peak power or acceleration",
+      "profileAria": "Recent-drives average motor power and recorded recovered energy on separate axes",
+      "profileDescription": "Average power (left, kW) and recovered energy (right, kWh) for the latest 20 loaded trips",
+      "recoveredKwh": "Recovered energy (kWh)"
+    },
+    "cruiseSetSpeed": "Cruise set speed",
+    "currentSpeed": "Current speed",
+    "distance": "Distance",
+    "drive": "Drive",
+    "driveAnalytics": "Drive analytics",
+    "drives": "Drives",
+    "evidence": {
+      "powerDemand": "Power demand",
+      "powerMeaning": "Measured motor output, not pedal position. Power alone cannot classify driving style.",
+      "thermalMeaning": "Average of the hotter reported motor in each sample. Temperature alone does not establish thermal limiting or powertrain health.",
+      "torqueMeaning": "Sum of reported axle torque. Sample share is not time spent under load or a driver rating.",
+      "torqueSamples": "Torque samples above 200 Nm"
+    },
+    "followDistance": "Follow distance",
+    "forward": "Forward",
+    "gForce": "Acceleration G-force",
+    "gForceNoData": "No G-force telemetry received yet",
+    "grok": {
+      "cockpit": "Open Tesla physics cockpit",
+      "combinedG": "Combined g",
+      "drivePower": "Drive power",
+      "find": {
+        "cornering": "Lateral accelerometer {{g}} g. That is chassis load, not a grip percentage."
+      },
+      "honesty": "Interpreted from live motor, pedal, and accelerometer signals. Not Autopilot, not the chassis controller, and not a 0–60 claim.",
+      "rearShare": "Rear axle share",
+      "rearShareUnknown": "AWD split unknown — both axles have not reported torque yet.",
+      "rearShareValue": "{{value}}% of |torque|",
+      "regenPower": "Regen harvest",
+      "thermalUnknown": "Motor thermal envelope not reported yet.",
+      "torque": "Axle torque"
+    },
+    "guidance": {
+      "empty": "No measured motor evidence available for trip-specific guidance.",
+      "power": "Compare power peaks with the trip’s speed and road conditions. Average motor power alone cannot tell whether acceleration was smooth or efficient.",
+      "regen": "Review energy recovered alongside energy used. A peak regen reading is not a measure of braking quality, and friction-brake use cannot be reconstructed from motor power.",
+      "thermal": "Temperature adds context to sustained motor load. Without the vehicle’s limiting signals, these samples do not prove overheating or reduced power.",
+      "title": "How to read this ride",
+      "torque": "Use the front and rear torque traces to see which axle reported load. Gaps are missing telemetry, not evidence that an axle was inactive."
+    },
+    "lateral": "Lateral",
+    "liveInterpretation": {
+      "axleShare": "Rear axle accounts for {{share}}% of reported absolute axle torque. This does not establish traction or grip.",
+      "brakeOff": "The brake switch reports inactive alongside regeneration signals.",
+      "brakeOn": "The brake switch reports active alongside regeneration signals. Friction-brake force is not measured here.",
+      "empty": "No current axle torque, regen, or acceleration signals reported.",
+      "limits": "Observed values only — not a launch, grip, thermal-health, or selected-trip assessment.",
+      "load": "Axle torque is a reported motor measurement, not a driver rating or a claim about vehicle motion.",
+      "loading": "Loading current powertrain signals…",
+      "parked": "The latest reported shift state is Park; this is current vehicle context.",
+      "pedal": "Pedal and axle torque signals are present. They do not establish launch performance.",
+      "regen": "Regeneration is reported in current motor signals. Peak power does not establish recovered trip energy.",
+      "scope": "Latest vehicle signals",
+      "thermal": "Hottest reported stator/inverter {{temp}}. Thermal limiting has not been established.",
+      "title": "Live powertrain interpretation"
+    },
+    "liveMotor": "Live motor status",
+    "longitudinal": "Longitudinal",
+    "maxMotorTemp": "Max motor temp",
+    "maxTorque": "Max torque",
+    "modernization": {
+      "gSource": "Latest reported acceleration; missing axes are not zero.",
+      "gUnit": "g",
+      "loadedSpeeds": "Average and maximum of the loaded trips, including any current drive; not a complete-range aggregate.",
+      "motorSource": "Latest reported motor signals; not selected-trip history.",
+      "rideSource": "Recorded drive totals; missing measurements remain unknown.",
+      "sampleMetrics": "Selected-drive motor samples",
+      "torqueUnit": "Newton-metres (Nm)"
+    },
+    "motorLoading": "Loading motor telemetry…",
+    "motorResource": "Motor telemetry",
+    "motorTemp": "Motor",
+    "motorThermal": "Motor thermal",
+    "noLiveMotor": "Awaiting live motor data",
+    "noMotorData": "No motor data recorded yet",
+    "peakPower": "Peak power",
+    "peakRegen": "Peak regen",
+    "pedalLoading": "Loading pedal telemetry…",
+    "pedalNoData": "No pedal telemetry received yet",
+    "pedalResource": "Pedal telemetry",
+    "pedalUsage": "Pedal usage",
+    "power": "Power",
+    "powerOverTime": "Motor power over time",
+    "powerOverTimeAria": "Motor power and regen over time area chart",
+    "powerOverTimeDesc": "Drive and regen power from motor telemetry",
+    "powerProfile": "Power profile",
+    "powertrain": {
+      "coverage": "Up to {{limit}} motor samples inside the selected drive. Averages describe reported samples, not a time-weighted or complete-trip assessment.",
+      "empty": "No motor samples in this drive window. Trip totals remain available above; current readings are kept separate below.",
+      "inputs": "Driver inputs",
+      "inputsEvidence": "Motor power does not establish pedal position or braking technique. Pedal, G-force, gear, and cruise panels below show current vehicle signals, not this trip’s historical inputs.",
+      "load": "Motor load & temperature",
+      "loadEvidence": "Peak reported axle torque {{torque}}; hottest recorded motor {{temperature}}. A missing axle or temperature signal limits the evidence.",
+      "loading": "Loading selected-drive evidence",
+      "output": "Power & regeneration",
+      "outputEvidence": "Peak sampled power {{power}}; peak sampled regen {{regen}}. These are instantaneous readings, not trip energy totals.",
+      "scope": "Selected-drive evidence",
+      "title": "Powertrain summary"
+    },
+    "regen": "Regen",
+    "reverse": "Reverse",
+    "review": {
+      "context": "Beyond this ride",
+      "contextDescription": "Vehicle coaching covers the last 30 days. Speed and power analytics cover loaded trips in the selected date range, plus any current drive. Neither is a score for this ride.",
+      "evidence": "Inside this ride",
+      "evidenceDescription": "Power delivery, recovered power, axle load, and temperature — sampled only within the selected trip window.",
+      "live": "Vehicle now",
+      "liveBadge": "Current signals · not trip history",
+      "liveDescription": "Latest reported motor, pedal, G-force, gear, and cruise state for this vehicle. These readings may be parked or older than now and do not describe the selected ride.",
+      "rangeAnalytics": "Date-range trip context",
+      "speedGearScope": "Gear and motor power: latest vehicle signals. Average and top speed: loaded trips in the date range, not just the selected ride.",
+      "subtitle": "Understand one ride: energy outcome, powertrain evidence, and the signals behind it."
+    },
+    "ride": {
+      "battery": "Battery: {{start}} → {{end}}",
+      "details": "Open trip details",
+      "distance": "Distance",
+      "duration": "Duration",
+      "empty": "Choose a trip with recorded data to review its outcome.",
+      "energy": "Energy used",
+      "energyMeaning": "Energy recovered is recorded regeneration, not peak regen power. Missing measurements remain unknown; these totals do not rate driving style.",
+      "onTheRoad": "On the road",
+      "open": "In progress · totals may change",
+      "recorded": "Recorded trip",
+      "recovered": "Energy recovered",
+      "speed": "Average / peak speed: {{average}} / {{peak}}",
+      "title": "Selected ride",
+      "unknownDestination": "Destination not recorded",
+      "unknownOrigin": "Origin not recorded",
+      "unselected": "No trip selected"
+    },
+    "rpmFront": "Front RPM",
+    "rpmHistory": "Motor RPM history",
+    "rpmHistoryAria": "Front and rear motor RPM over time line chart",
+    "rpmHistoryDesc": "Front and rear motor RPM over time",
+    "rpmRear": "Rear RPM",
+    "section": {
+      "trip": "Trip review"
+    },
+    "shiftState": "Shift state",
+    "speedDistDesc": "Drives grouped by average speed",
+    "speedDistribution": "Speed distribution",
+    "speedDistributionAria": "Speed-bucket drive count distribution bar chart",
+    "speedGear": "Speed & gear",
+    "throttle": "Throttle",
+    "throttlePosition": "Throttle position",
+    "title": "Driving dynamics",
+    "topDriveSpeed": "Top drive speed",
+    "torque": "Torque",
+    "torqueDistribution": "Torque distribution",
+    "torqueFront": "Front torque",
+    "torqueHistory": "Motor torque history",
+    "torqueHistoryAria": "Front and rear motor torque over time line chart",
+    "torqueHistoryDesc": "Front and rear motor torque over time",
+    "torqueRear": "Rear torque",
+    "totalReadings": "Total readings",
+    "trip": {
+      "drive": "Drive",
+      "inProgress": "In progress",
+      "liveDrive": "Current drive",
+      "noDrives": "No drives in this range",
+      "reviewDescription": "Choose a ride to review its recorded outcome and motor samples. Current vehicle signals and multi-trip context are separated below.",
+      "title": "Trip review",
+      "unknownStart": "Unknown start"
+    },
+    "unknown": "Unknown"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "emptyState": {
+    "generic": "No data available yet.",
+    "label": {
+      "likelyCause": "Most likely reason",
+      "prerequisite": "What has to happen first"
+    }
+  },
+  "entityContext": {
+    "title": "Related context"
+  },
+  "errorBoundary": {
+    "body": "An unexpected error occurred. Please try again.",
+    "chunkBody": "A new version was deployed. Click Reload to load the latest assets.",
+    "chunkTitle": "New Version Deployed",
+    "connectionBody": "Unable to reach the server. Check your connection and try again.",
+    "connectionTitle": "Connection Lost",
+    "goHome": "Go Home",
+    "inlineTitle": "Component failed to load",
+    "retriesExceeded": "Multiple retries failed. Try refreshing the page or checking system status.",
+    "retry": "Retry",
+    "retryAttempt": "Retry attempt {{count}}",
+    "title": "Something went wrong",
+    "tryAgain": "Try Again",
+    "tryAgainAnyway": "Try Again Anyway"
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "downloadLabel": "Download {{type}} export",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "feedback": {
+    "statSkeleton": {
+      "loading": "Loading statistics"
+    }
+  },
+  "freshness": {
+    "noData": "No recent data",
+    "offline": "Offline",
+    "seconds": "{{s}}s ago"
+  },
+  "fsm": {
+    "typeLabel": {
+      "alertCooldown": "Cooldown",
+      "automation": "Automation",
+      "chargeSession": "Charge",
+      "command": "Command",
+      "driveSession": "Drive",
+      "notification": "Notify",
+      "telemetryConnection": "Telemetry",
+      "unknown": "—",
+      "vehicle": "Vehicle"
+    }
+  },
+  "gas": {
+    "pollTriggered": "Gas price poll triggered"
+  },
+  "impersonation": {
+    "toast": {
+      "ended": "Impersonation ended",
+      "started": "Impersonation started"
+    }
+  },
+  "lifetime": {
+    "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
+    "unlocked": "✓ Unlocked"
+  },
+  "live": {
+    "connected": "Live",
+    "disconnected": "Offline",
+    "reconnecting": "Reconnecting…",
+    "scope": "Live data",
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    },
+    "unknown": "Unknown"
+  },
+  "operationalMode": {
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "operations": {
+    "attention": "Attention",
+    "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
+    "metrics": "Operational metrics",
+    "narrative": {
+      "causeUnavailable": "Cause is not established by the available evidence.",
+      "confidence": {
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium",
+        "not_scored": "Not scored",
+        "title": "Confidence",
+        "unavailable": "No confidence basis was supplied."
+      },
+      "evidence": "Supporting evidence",
+      "evidenceCoverage": "{{count}} supporting records supplied.",
+      "likelyCause": "Likely cause",
+      "limitations": "Limitations",
+      "noEvidence": "No supporting records were supplied.",
+      "noLimitations": "No additional limitations were supplied.",
+      "recommendedResponse": "Recommended response",
+      "record": "Record",
+      "responseUnavailable": "No action is recommended from this evidence alone.",
+      "title": "Decision narrative",
+      "whatChanged": "What changed",
+      "whyItMatters": "Why it matters",
+      "whyUnavailable": "No defensible impact statement is available."
+    },
+    "noAttention": "No current attention items.",
+    "reviewAll": "Review all",
+    "reviewDetails": "Review details"
+  },
+  "problemReport": {
+    "context": {
+      "appVersion": "App version",
+      "browser": "Browser",
+      "page": "Page",
+      "pageNote": "(record ids are replaced with :id)",
+      "title": "What is sent with your report"
+    },
+    "form": {
+      "description": "What were you doing, and what did you expect?",
+      "descriptionPlaceholder": "Steps you took, what you saw, and what you expected to see instead.",
+      "descriptionTooShort": "Please add at least {{count}} characters.",
+      "hidePreview": "Hide exactly what is sent",
+      "includeDiagnostics": "Attach a redacted technical summary ({{count}} recent errors)",
+      "includeDiagnosticsHint": "Versions, browser capability, service health, error messages and trace IDs. Never VINs, locations, tokens, e-mail addresses or raw logs.",
+      "showPreview": "Show exactly what is sent",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "title": "What went wrong?",
+      "titlePlaceholder": "Short summary (e.g. \"Charging costs show as blank\")"
+    },
+    "intro": "Describe what happened in your own words. We attach a redacted technical summary only if you allow it.",
+    "policy": {
+      "consoleTail": "Console output",
+      "files": "File attachments",
+      "screenshots": "Screenshots",
+      "userEmail": "E-mail address"
+    },
+    "submitError": "Could not send the report. Please try again.",
+    "title": "Report a problem"
+  },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "auto": "Automatic (follow the network)",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "off": "Always off",
+      "on": "Always on",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusOff": "Not active — the app is using full quality.",
+      "statusUser": "Active — enabled manually on this device."
+    }
+  },
+  "rbac": {
+    "toasts": {
+      "saved": "RBAC matrix updated."
+    }
+  },
+  "replay": {
+    "elevation": {
+      "aria": "Elevation profile chart — no data available yet",
+      "gainLoss": "↑ {{gain}}m  ↓ {{loss}}m",
+      "label": "Elevation",
+      "noData": "No elevation data available",
+      "title": "Elevation profile"
+    }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "savedViews": {
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "defaultBadge": "Default",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "deleteTitle": "Delete saved view",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "error": "Unable to load saved views",
+    "loading": "Loading saved views…",
+    "makeDefault": "Apply automatically when I open this page",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "pin": "Pin",
+    "renamePrompt": "Rename view",
+    "saveCurrent": "Save current view…",
+    "setDefault": "Set as default",
+    "title": "Saved views",
+    "unpin": "Unpin",
+    "unsetDefault": "Clear default"
+  },
+  "shortcuts": {
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "gotoPrompt": "Go to…",
+    "search": "Search shortcuts…",
+    "title": "Keyboard shortcuts"
+  },
+  "sourceLayer": {
+    "age": "age",
+    "log": {
+      "desc": "Replayed from signal_log (durable history).",
+      "label": "Log"
+    },
+    "stale": {
+      "label": "Stale"
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
+  },
+  "timeline": {
+    "empty": "No timeline entries yet.",
+    "label": "Timeline"
+  },
+  "toast": {
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created"
+        },
+        "delete": {
+          "success": "API key deleted"
+        },
+        "revoke": {
+          "success": "API key revoked"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated"
+      }
+    },
+    "alerts": {
+      "ack": {
+        "success": "Alert acknowledged"
+      },
+      "comment": {
+        "success": "Comment added"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted"
+      },
+      "markRead": {
+        "success": "Alert marked as read"
+      },
+      "reopen": {
+        "success": "Alert reopened"
+      },
+      "saveRule": {
+        "success": "Alert rule saved"
+      },
+      "test": {
+        "success": "Test alert sent"
+      }
+    },
+    "annotation": {
+      "deleted": {
+        "success": "Annotation removed"
+      },
+      "updated": {
+        "success": "Annotation updated"
+      }
+    },
+    "export": {
+      "account": {
+        "success": "Account export queued — track progress in the floating widget"
+      },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
+      "create": {
+        "success": "Export started"
+      }
+    },
+    "notifications": {
+      "archive": {
+        "success": "Archived"
+      },
+      "delete": {
+        "success": "Deleted"
+      },
+      "markRead": {
+        "success": "Marked as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread"
+      },
+      "unarchive": {
+        "success": "Restored from archive"
+      }
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned"
+      },
+      "unpinned": {
+        "success": "Unpinned"
+      }
+    },
+    "quietHours": {
+      "delete": {
+        "success": "Quiet hours window removed"
+      }
+    },
+    "savedViews": {
+      "create": {
+        "success": "Saved view created"
+      },
+      "delete": {
+        "success": "View deleted"
+      },
+      "update": {
+        "success": "View updated"
+      }
+    },
+    "settings": {
+      "auth": {
+        "disconnect": {
+          "success": "Tesla account disconnected"
+        },
+        "refresh": {
+          "success": "Auth refreshed"
+        },
+        "url": {
+          "success": "Auth URL generated"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved"
+      },
+      "gasPrice": {
+        "config": {
+          "success": "Gas price config updated"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved"
+      },
+      "save": {
+        "success": "Settings saved"
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced"
+        }
+      }
+    },
+    "vehicles": {
+      "delete": {
+        "success": "Vehicle deleted"
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed"
+        }
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed"
+      },
+      "refresh": {
+        "success": "Vehicle refreshed"
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed"
+        }
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)"
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed"
+        }
+      },
+      "wake": {
+        "success": "Wake command sent"
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed"
+        }
+      }
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "finish": "Get started!",
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour"
+  },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
+  }
+}

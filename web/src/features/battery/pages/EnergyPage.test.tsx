@@ -16,8 +16,8 @@
  *   2. Gas-savings regression: `gasEquivalent` derives from SI meters converted
  *      to miles for the configured MPG model (200 km → $19.88), NOT raw meters
  *      × 0.12 (which produced a ~$24,000 "equivalent" after the SI cutover).
- *   3. Loading — the dedicated skeleton replaces the page while stats are
- *      in flight, never a half-populated dashboard.
+ *   3. Loading — named source sections remain while drive stats are in flight;
+ *      independent charging rows and BMS lifetime values remain visible.
  *   4. Error — a failed stats query surfaces a retryable <QueryError> banner
  *      while the independent sessions table still renders (graceful degrade),
  *      and Retry re-fires the stats request.
@@ -35,7 +35,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -127,6 +127,7 @@ vi.mock('@/hooks/useSettings', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 import EnergyPage from './EnergyPage'
@@ -242,6 +243,7 @@ const defaultSessions: ChargingSession[] = [
 ]
 
 interface InstallOpts {
+  chartPalette?: 'cb_safe' | 'neon'
   vehicles?: Vehicle[]
   stats?: EnergyStats | null
   statsPending?: boolean
@@ -262,6 +264,7 @@ interface InstallOpts {
 
 function install(opts: InstallOpts = {}) {
   const {
+    chartPalette = 'cb_safe',
     vehicles = [makeVehicle()],
     stats = defaultStats,
     statsPending = false,
@@ -282,6 +285,7 @@ function install(opts: InstallOpts = {}) {
 
   mockedRequest.mockImplementation((path: string) => {
     if (path === '/vehicles') return Promise.resolve(vehicles)
+    if (path === '/settings') return Promise.resolve({ chart_palette: chartPalette })
     if (path.includes('/energy?start=')) {
       if (statsPending) return never()
       if (statsError) return Promise.reject(new Error('energy boom'))
@@ -307,6 +311,12 @@ function install(opts: InstallOpts = {}) {
 const energyCallCount = () =>
   mockedRequest.mock.calls.filter((c) => String(c[0]).includes('/energy?start=')).length
 
+function getCardHeading(title: string) {
+  const header = screen.getByText(title, { selector: '[data-card-title="true"]' }).closest('header')
+  if (!(header instanceof HTMLElement)) throw new Error(`Missing card header: ${title}`)
+  return within(header).getByRole('heading', { name: title, exact: true })
+}
+
 function renderPage(initialEntries: string[] = ['/energy']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
@@ -315,9 +325,11 @@ function renderPage(initialEntries: string[] = ['/energy']) {
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <ToastProvider>
-          <SelectedVehicleProvider>
-            <EnergyPage />
-          </SelectedVehicleProvider>
+          <ThemeProvider>
+            <SelectedVehicleProvider>
+              <EnergyPage />
+            </SelectedVehicleProvider>
+          </ThemeProvider>
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
@@ -339,7 +351,7 @@ describe('EnergyPage', () => {
     renderPage()
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Energy Intelligence' }),
+      await screen.findByRole('heading', { level: 1, name: 'Energy intelligence' }),
     ).toBeInTheDocument()
 
     // KPI band derived at the SI→display boundary: 200_000 m → "200 km",
@@ -351,7 +363,7 @@ describe('EnergyPage', () => {
     expect(screen.getAllByText('$121.67').length).toBeGreaterThan(0)
 
     // Lifetime energy comes straight from live charging telemetry.
-    expect(screen.getByText('54,321.00')).toBeInTheDocument()
+    expect(await screen.findByText('54,321.00 kWh')).toBeInTheDocument()
 
     // The decision brief combines measured drive consumption, real 90-day
     // parked-drain evidence, a usage projection, and explicit unsupported
@@ -359,7 +371,7 @@ describe('EnergyPage', () => {
     expect(screen.getByText('1.20%/day')).toBeInTheDocument()
     expect(screen.getByText('Projected 30-day use')).toBeInTheDocument()
     expect(screen.getByText('Not measured')).toBeInTheDocument()
-    expect(screen.getByText('Efficiency driver investigation')).toBeInTheDocument()
+    expect(getCardHeading('Efficiency driver investigation')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Review temperature impact' })).toHaveAttribute('href', '/temperature-impact')
     expect(screen.getByRole('link', { name: 'Review speed profile' })).toHaveAttribute('href', '/speed-profile')
     expect(screen.getByRole('link', { name: 'Review route efficiency' })).toHaveAttribute('href', '/route-efficiency')
@@ -367,7 +379,7 @@ describe('EnergyPage', () => {
     // Recent-sessions table renders real rows with per-type badges. 'CCS' is
     // the raw type echoed only in the table; 'Supercharger' also appears in the
     // charger-breakdown legend.
-    expect(screen.getByText('Recent Charging Sessions')).toBeInTheDocument()
+    expect(screen.getByText('Recent charging sessions')).toBeInTheDocument()
     expect(screen.getByText('CCS')).toBeInTheDocument()
     expect(screen.getAllByText('Supercharger').length).toBeGreaterThan(0)
   })
@@ -408,16 +420,39 @@ describe('EnergyPage', () => {
     expect(screen.queryByText('Electric operation remains cost-favorable')).not.toBeInTheDocument()
   })
 
-  it('shows the loading skeleton while energy stats are in flight', async () => {
+  it('keeps the named source outline and independent charging/BMS content while energy stats are in flight', async () => {
     install({ statsPending: true })
-    renderPage()
+    const { container } = renderPage()
 
-    // Once the fleet loads and the vehicle is auto-selected, the stats query is
-    // enabled and the page short-circuits to its dedicated skeleton.
-    expect(await screen.findByTestId('energy-page-skeleton')).toBeInTheDocument()
-    // The real dashboard chrome is withheld during loading.
-    expect(screen.queryByRole('heading', { level: 1, name: 'Energy Intelligence' })).toBeNull()
-    expect(screen.queryByText('Recent Charging Sessions')).toBeNull()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Energy intelligence' })).toBeVisible()
+    for (const name of [
+      'Key energy metrics', 'Energy overview', 'Cost savings versus gas',
+      'Daily energy trends', 'Charging patterns',
+    ]) expect(screen.getByRole('region', { name })).toBeInTheDocument()
+    for (const name of [
+      'Efficiency driver investigation', 'Efficiency & cost overview', 'Lifetime metrics',
+      'Energy & cost daily', 'Efficiency trend', 'Charging by time of day',
+      'Charger type breakdown', 'Recent charging sessions',
+    ]) expect(name === 'Lifetime metrics'
+      ? getCardHeading(name)
+      : screen.getByRole('heading', { name })).toBeInTheDocument()
+
+    // Keep the visibility guarantee: asynchronous independent requests and
+    // the real FadeIn entrances must settle while the drive request stays pending.
+    const overview = screen.getByRole('region', { name: 'Energy overview' })
+    await waitFor(() => {
+      expect(within(overview).getByText('54,321.00 kWh')).toBeVisible()
+      expect(screen.getByText('CCS')).toBeVisible()
+      expect(screen.getByRole('heading', { name: 'Recent charging sessions' })).toBeVisible()
+    }, { timeout: 2_000 })
+    expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true')
+    expect(energyCallCount()).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole('button', { name: 'Saved views' })).toBeVisible()
+    // Workspace selection belongs to the shell's VehiclePicker, whose
+    // combobox is named "Select vehicle". Table pagination is not a duplicate.
+    expect(within(container).queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument()
+    expect(container.querySelector('[data-role="vehicle-picker-control"]')).not.toBeInTheDocument()
+    expect(within(container).getByRole('combobox', { name: 'Rows per page' })).toBeVisible()
   })
 
   it('surfaces a retryable error banner and still degrades gracefully when stats fail', async () => {
@@ -468,7 +503,7 @@ describe('EnergyPage', () => {
     expect(await screen.findByTestId('energy-partial-data')).toHaveTextContent(
       'Unavailable sources: idle-drain history.',
     )
-    expect(screen.getByText('Recent Charging Sessions')).toBeInTheDocument()
+    expect(screen.getByText('Recent charging sessions')).toBeInTheDocument()
     expect(screen.getByText('CCS')).toBeInTheDocument()
     expect(screen.getByText('Not measured')).toBeInTheDocument()
   })
@@ -495,19 +530,100 @@ describe('EnergyPage', () => {
 
     // Charger buckets resolve to all three human-readable family labels once the
     // sessions query settles (this also anchors the section assertions below).
-    expect(await screen.findByText('DC Fast')).toBeInTheDocument()
-    expect(screen.getByText('Home/AC')).toBeInTheDocument()
+    const chargerHeading = await screen.findByRole('heading', { name: 'Charger type breakdown' })
+    const chargerCard = chargerHeading.closest('[data-card]')
+    if (!(chargerCard instanceof HTMLElement)) throw new Error('Missing charger breakdown card')
+    expect(await within(chargerCard).findByText('DC fast', { selector: 'span' })).toBeInTheDocument()
+    expect(within(chargerCard).getByText('Home/AC', { selector: 'span' })).toBeInTheDocument()
 
     // All four chart panels + hero + lifetime are present — nothing stubbed out.
-    expect(screen.getByText('Energy & Cost Daily')).toBeInTheDocument()
-    expect(screen.getByText('Efficiency Trend')).toBeInTheDocument()
-    expect(screen.getByText('Charging by Time of Day')).toBeInTheDocument()
-    expect(screen.getByText('Charger Type Breakdown')).toBeInTheDocument()
-    expect(screen.getByText('Efficiency & Cost Overview')).toBeInTheDocument()
-    expect(screen.getByText('Lifetime Metrics')).toBeInTheDocument()
+    for (const title of [
+      'Energy & cost daily', 'Efficiency trend', 'Charging by time of day',
+      'Charger type breakdown', 'Efficiency & cost overview', 'Lifetime metrics',
+    ]) {
+      expect(getCardHeading(title))
+        .toHaveAttribute('data-card-title', 'true')
+    }
 
     // Landmark regions expose their accessible names for screen-reader nav.
     expect(screen.getByRole('region', { name: 'Energy overview' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Cost savings versus gas' })).toBeInTheDocument()
+  })
+
+  it('uses the saved chart palette while keeping thresholds semantic and charger types neutral', async () => {
+    install({ chartPalette: 'neon' })
+    renderPage()
+
+    const chargerHeading = await screen.findByRole('heading', { name: 'Charger type breakdown' })
+    const chargerCard = chargerHeading.closest('[data-card]')
+    if (!(chargerCard instanceof HTMLElement)) throw new Error('Missing charger breakdown card')
+
+    await waitFor(() => {
+      expect(within(chargerCard).getByText('Home/AC', { selector: 'span' }).previousElementSibling)
+        .toHaveStyle({ backgroundColor: '#91b9a5' })
+      expect(within(chargerCard).getByText('Supercharger', { selector: 'span' }).previousElementSibling)
+        .toHaveStyle({ backgroundColor: '#cfb481' })
+      expect(within(chargerCard).getByText('DC fast', { selector: 'span' }).previousElementSibling)
+        .toHaveStyle({ backgroundColor: '#a5aac9' })
+    })
+    expect(screen.getByText('CCS')).toHaveClass('text-[var(--text-secondary)]')
+    const meter = screen.getByRole('meter', { name: 'Efficiency' })
+    expect(meter).toHaveAttribute('aria-valuenow', '180')
+    expect(meter).toHaveAttribute('aria-valuemax', '300')
+    const bands = meter.querySelectorAll('[aria-hidden="true"][style*="background"]')
+    expect(Array.from(bands, band => (band as HTMLElement).style.background))
+      .toEqual([
+        'var(--semantic-success)', 'var(--semantic-info)',
+        'var(--semantic-warning)', 'var(--semantic-danger)',
+      ])
+  })
+
+  it.each([
+    { caseId: 'missing recorded price', cost: null, expected: '—' },
+    { caseId: 'measured free charging', cost: 0, expected: '$0.00' },
+  ])('distinguishes $caseId in the real decision narrative', async ({ cost, expected }) => {
+    install({ sessions: [makeSession({ cost_decimal: cost })] })
+    renderPage()
+
+    const brief = await screen.findByTestId('energy-operational-brief')
+    await screen.findByText('200 km')
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    const drawer = await screen.findByRole('dialog', {
+      name: 'Consumption, efficiency, and cost in one operating view details',
+    })
+    expect(within(drawer).getByText(
+      `36.00 kWh of measured drive energy across 3 daily records, with ${expected} in recorded charging cost.`,
+    )).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Recent charging sessions' })).toBeInTheDocument()
+  })
+
+  it('keeps native investigation links focusable and all charging fields available', async () => {
+    renderPage()
+    const firstLink = await screen.findByRole('link', { name: 'Review temperature impact' })
+    firstLink.focus()
+    expect(firstLink).toHaveFocus()
+    for (const name of ['Review temperature impact', 'Review speed profile', 'Review route efficiency']) {
+      expect(screen.getByRole('link', { name })).toHaveClass(
+        'min-h-11', 'focus-visible:outline-2', 'focus-visible:outline-offset-2',
+      )
+    }
+    for (const name of ['Date', 'Energy', 'Battery', 'Power', 'Type', 'Cost', '$/kWh']) {
+      expect(screen.getByRole('columnheader', { name })).toBeInTheDocument()
+    }
+    expect(screen.getByRole('link', { name: 'Jun 1' })).toHaveAttribute('href', '/charging/101')
+  })
+
+  it('retries failed idle evidence without dropping independent charging content', async () => {
+    install({ idleError: true })
+    renderPage()
+    expect(await screen.findByTestId('energy-partial-data')).toHaveTextContent('idle-drain history')
+    const before = mockedRequest.mock.calls.filter(call => String(call[0]).startsWith('/vampire-drain/stats')).length
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(
+      mockedRequest.mock.calls.filter(call => String(call[0]).startsWith('/vampire-drain/stats')).length,
+    ).toBeGreaterThan(before))
+    expect(screen.getByText('CCS')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Charging by time of day' })).toBeInTheDocument()
+    expect(screen.getByText('Not measured')).toBeInTheDocument()
   })
 })

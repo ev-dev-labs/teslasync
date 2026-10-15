@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { createInstance } from 'i18next';
+import en from '@/i18n/en.json';
 
 import {
   statusVariant,
@@ -38,6 +40,7 @@ import type { SignalObservation } from '@/types/signals';
 const REAL_STATUSES = [
   'Inactive',
   'Handshaking',
+  'Init',
   'Enabled',
   'EnabledReconnectingSoon',
   'Stopped',
@@ -85,7 +88,7 @@ describe('statusVariant', () => {
   });
 
   it('flags error / fail states as danger, ahead of any active-like match', () => {
-    expect(statusVariant('PowershareStatusError')).toBe('danger');
+    expect(statusVariant('PowershareStateError')).toBe('danger');
     expect(statusVariant('Failure')).toBe('danger');
     // danger has precedence: a value carrying both "active" and "error"
     // resolves to danger because error/fail is evaluated first.
@@ -213,24 +216,53 @@ describe('humanizeEnum', () => {
     expect(humanizeEnum(null, 'PowershareStatus')).toBeNull();
   });
 
-  it('strips the supplied signal prefix then splits camelCase', () => {
-    expect(humanizeEnum('PowershareStatusActive', 'PowershareStatus')).toBe('Active');
+  it('retains unverified identities rather than guessing their labels', () => {
+    expect(humanizeEnum('PowershareStatusActive', 'PowershareStatus')).toBe('PowershareStatusActive');
     expect(humanizeEnum('PowershareStopReasonUserRequest', 'PowershareStopReason')).toBe(
-      'User Request',
+      'PowershareStopReasonUserRequest',
     );
   });
 
-  it('falls back to the generic Powershare strip when no prefix is supplied', () => {
-    expect(humanizeEnum('PowershareStopReasonUserRequest')).toBe('Stop Reason User Request');
+  it('preserves unknown prefixed values when no signal is supplied', () => {
+    expect(humanizeEnum('PowershareStopReasonUserRequest')).toBe('PowershareStopReasonUserRequest');
   });
 
-  it('falls back to the generic strip when the supplied prefix does not match', () => {
-    expect(humanizeEnum('SomethingElse', 'NoMatch')).toBe('Something Else');
+  it('preserves values when the supplied signal does not match', () => {
+    expect(humanizeEnum('SomethingElse', 'NoMatch')).toBe('SomethingElse');
+    expect(humanizeEnum('Home', 'PowershareStatus')).toBe('Home');
   });
 
-  it('splits acronym boundaries (SOCTooLow → SOC Too Low)', () => {
-    // Exercises both regex passes: lower→Upper and UPPER→UpperLower.
-    expect(humanizeEnum('SOCTooLow')).toBe('SOC Too Low');
+  it('uses canonical labels for actual proto identities and decoder output', () => {
+    expect(humanizeEnum('SOCTooLow')).toBe('Battery charge too low');
+    expect(humanizeEnum('PowershareStopReasonStatusSOCTooLow', 'PowershareStopReason'))
+      .toBe('Battery charge too low');
+    expect(humanizeEnum('PowershareStateInit', 'PowershareStatus')).toBe('Initializing');
+    expect(humanizeEnum('PowershareStateInactive', 'PowershareStatus')).toBe('Inactive');
+    expect(humanizeEnum('PowershareTypeStatusHome', 'PowershareType')).toBe('Home');
+    expect(humanizeEnum('PowershareTypeStatusLoad', 'PowershareType')).toBe('Load');
+    expect(humanizeEnum('EnabledReconnectingSoon', 'PowershareStatus'))
+      .toBe('Enabled, reconnecting soon');
+  });
+
+  it('localizes verified identities and leaves future raw values untouched', async () => {
+    const translator = createInstance();
+    await translator.init({
+      lng: 'test',
+      fallbackLng: 'en',
+      resources: {
+        en: { translation: en },
+        test: { translation: { powershare: { enums: { inactive: 'Localized inactive' } } } },
+      },
+    });
+    for (const raw of ['Inactive', 'PowershareStateInactive', 'PowershareStatusInactive']) {
+      expect(humanizeEnum(raw, 'PowershareStatus', translator.t)).toBe('Localized inactive');
+      expect(statusVariant(raw)).toBe('neutral');
+    }
+    for (const raw of ['FutureState', 'PowershareStateFutureState', '  Future_State  ', '99']) {
+      expect(humanizeEnum(raw, 'PowershareStatus', translator.t)).toBe(raw);
+    }
+    expect(humanizeEnum('SOCTooLow', 'PowershareStopReason', translator.t))
+      .toBe('Battery charge too low');
   });
 
   it('humanises the bare (prefix-trimmed) decoder output unchanged', () => {

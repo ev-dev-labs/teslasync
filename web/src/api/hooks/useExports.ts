@@ -167,22 +167,27 @@ export interface ExportBulkResult {
 }
 
 /**
- * Delete a batch of export-job UUIDs, refresh the jobs list and legacy
+ * Delete a batch of export-job UUIDs in live mode, refresh the jobs list and legacy
  * /exports cache, and return the server report for partial-success UI.
  */
 export function useBulkExportsDelete() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  const { success, warning, error } = useMutationToast();
   return useMutation({
     mutationFn: (ids: string[]) =>
       request<ExportBulkResult>('/export/jobs/bulk', {
         method: 'POST',
         body: JSON.stringify({ ids, op: 'delete' }),
+        requiresLiveMode: true,
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateAndBroadcast(qc, { queryKey: exportKeys.jobs });
       invalidateAndBroadcast(qc, { queryKey: exportKeys.all });
-      success('toast.export.bulkDelete.success', 'Exports deleted');
+      if (result.failed.length > 0) {
+        warning('toast.export.bulkDelete.error', 'Failed to delete exports');
+      } else {
+        success('toast.export.bulkDelete.success', 'Exports deleted');
+      }
     },
     onError: (err) =>
       error(err, 'toast.export.bulkDelete.error', 'Failed to delete exports'),
@@ -367,4 +372,3 @@ export function useRunScheduledExportNow() {
       error(err, 'toast.export.scheduled.run.error', 'Failed to queue schedule'),
   });
 }
-

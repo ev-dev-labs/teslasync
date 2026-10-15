@@ -1,6 +1,8 @@
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { deriveDataState } from '@/api/dataState';
+import { DataFreshness } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { Badge, Button, Text } from '@/components/ui';
 import type { CarbonQueryState, CarbonQueryStates } from './types';
@@ -97,6 +99,13 @@ export function CarbonSourceRow({
 }: CarbonSourceRowProps) {
   const { t } = useTranslation();
   const status = statusLabel(state, t);
+  const source = deriveDataState({
+    data: state.hasData ? true : undefined,
+    dataUpdatedAt: state.dataUpdatedAt,
+    error: state.error ?? state.refreshError,
+    fetchStatus: state.isPaused || state.refreshPaused ? 'paused' : state.isFetching ? 'fetching' : 'idle',
+    isFetching: state.isFetching,
+  });
 
   return (
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
@@ -104,6 +113,15 @@ export function CarbonSourceRow({
         <div>
           <Text as="p" variant="label">{name}</Text>
           <Text as="p" variant="caption">{scope}</Text>
+          {state.enabled && source.updatedAt != null ? (
+            <DataFreshness
+              updatedAt={source.updatedAt}
+              isFetching={source.isRefreshing}
+              isStale={state.isStale === true || source.status === 'stale'}
+              isError={source.fatalError != null || source.refreshError != null}
+              source={name}
+            />
+          ) : null}
         </div>
         <Badge variant={status.variant} dot>{status.label}</Badge>
       </div>

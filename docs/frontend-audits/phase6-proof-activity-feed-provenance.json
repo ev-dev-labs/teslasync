@@ -1,0 +1,550 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-activity-feed-provenance",
+  "phase": 6,
+  "status": "BLOCKED_EXTERNAL_CATALOG_UNCHARGED",
+  "runtimeStatus": "NOTRUN",
+  "proofComplete": false,
+  "sourceChanges": false,
+  "fixtureChanges": false,
+  "attemptCharge": 0,
+  "normalStartupAttempts": 2,
+  "latestEvidence": "continuation20261014T152220Z; all earlier clocks, commands, runtime accounting, artifactValidation and release entries remain historical evidence, not this continuation's execution",
+  "sourceAssignmentCommit": "80c4fe5fa6e7cac032a0d15490bb34f8ef6da85f",
+  "commitIdentityEvidence": "Provided by the root queue assignment; no Git commands or independent commit inspection performed. Four live source hashes match the predecessor's final preservation receipt.",
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-proof-activity-feed-provenance.json",
+    "web\\logs\\phase6-proof-activity-feed-provenance.log"
+  ],
+  "clock": {
+    "requestUTC": "2026-10-14T07:40:55.355Z",
+    "firstObservedUTC": "2026-10-14T07:41:09.3200784Z",
+    "returnDeadlineUTC": "2026-10-14T08:00:55.355Z",
+    "commandLimitSeconds": 480,
+    "hashCaptureBeforeUTC": "2026-10-14T07:43:31.5992058Z",
+    "hashCaptureAfterUTC": "2026-10-14T07:48:00.4098317Z",
+    "releaseUTC": "2026-10-14T07:51:09.3137382Z"
+  },
+  "commands": [
+    {
+      "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx src\\features\\system\\components\\activity-timeline\\helpers.test.ts src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --testNamePattern='wraps full source-authored titles|retains all five category icons|uses the selected locale for both day headings|keeps invalid timestamps unknown|retains source order, SI zero|preserves domain status and severity mappings|uses selected locale .* for labels without shifting|keeps unknown and valid buckets in input order|formats both loaded-page ordinals|reacts to saved locale changes|keeps empty-page zero ordinals|retains page counts and source state|keeps unavailable and loading sections'",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "nodeVersion": "v26.8.1",
+      "nodePath": "C:\\Program Files\\nodejs\\node.exe",
+      "startUTC": "2026-10-14T07:43:31.9522376Z",
+      "endUTC": "2026-10-14T07:47:21.4256082Z",
+      "exitCode": 1,
+      "classification": "External generated-catalog startup failure, before Vitest discovery or assertion execution",
+      "reportersRequested": ["verbose", "json"],
+      "freshVitestJson": null,
+      "freshVitestJsonAbsenceReason": "Startup failed before reporter initialization. No fabricated or stale Vitest JSON is substituted.",
+      "stdoutAndStderr": "Raw combined output retained in the exact owned web log",
+      "retry": false,
+      "retryReason": "No catalog ownership or changed startup inputs; repeating the same blocked command would not establish new proof."
+    },
+    {
+      "command": "Get-FileHash",
+      "arguments": {
+        "paths": "All seven entries in readOnlyFiles and all ten dependency entries, before and after the normal Vitest command",
+        "algorithm": "SHA256"
+      },
+      "exitCode": 0,
+      "mismatches": 0,
+      "rawEvidence": "HASH_BEFORE/HASH_AFTER and DEPENDENCY_HASH_BEFORE/DEPENDENCY_HASH_AFTER entries in the exact owned log"
+    },
+    {
+      "command": "Select-String -Path src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx,src\\features\\system\\components\\activity-timeline\\helpers.test.ts,src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx -Pattern '^\\s+it(?:\\(|\\.each\\()'",
+      "startUTC": "2026-10-14T07:48:31.6577262Z",
+      "exitCode": 0,
+      "kind": "Static authored-name extraction, not runtime discovery",
+      "declarations": 28,
+      "correction": "Earlier broad ^\\s+it extraction also matched item/items lines. Those raw lines are preserved but excluded by the corrected literal call matcher; no test source was changed."
+    },
+    {
+      "command": "Select-String -Path src\\features\\system\\components\\activity-timeline\\helpers.test.ts -Pattern 'de-DE|fr-FR|en-US|uses selected locale'",
+      "exitCode": 0,
+      "kind": "Static parameterized source rows, not runtime-discovered cases"
+    }
+  ],
+  "runtimeAccounting": {
+    "status": "NOTRUN",
+    "discovered": 0,
+    "selected": 0,
+    "executed": 0,
+    "passed": 0,
+    "failedAssertions": 0,
+    "skipped": 0,
+    "unselected": 0,
+    "startupFailures": 2,
+    "exitCode": 1,
+    "explanation": "Zero discovered tests is NOT a passing run. Both recorded normal startup commands exited 1 before discovery. Planned filters and authored case names are not runtime discovery, execution, skip counts, or passing proof."
+  },
+  "plannedAccounting": {
+    "staticDeclarations": 28,
+    "authoredExpandedExpectedCases": 30,
+    "selectedDeclarations": 13,
+    "selectedExpandedExpectedCases": 15,
+    "deliberatelyUnselectedExpectedCases": 15,
+    "historicalPassingCasesReplayed": 0,
+    "selectedCaseStatus": "NOTRUN",
+    "unselectedCaseStatus": "NOTRUN; deliberately omitted from the requested affected-only selection"
+  },
+  "selectedCases": [
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx",
+      "suite": "ActivityFeed",
+      "line": 176,
+      "name": "wraps full source-authored titles and exposes record provenance outside the title link",
+      "contracts": ["full source title", "visible source_table/source_id provenance", "provenance outside link", "raw identity 1234567890"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx",
+      "suite": "ActivityFeed",
+      "line": 192,
+      "name": "retains all five category icons and labels with neutral theme-owned swatches",
+      "contracts": ["five icons and labels", "undefined category paint", "neutral swatch classes", "no inline style", "unknown status remains neutral"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx",
+      "suite": "ActivityFeed",
+      "line": 217,
+      "name": "uses the selected locale for both day headings and times without changing vehicle day keys",
+      "contracts": ["saved date locale adoption", "vehicle timezone day", "rerender locale reactivity", "unchanged occurred_at"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx",
+      "suite": "ActivityFeed",
+      "line": 235,
+      "name": "keeps invalid timestamps unknown and missing measurements absent rather than measured zero",
+      "contracts": ["unknown timestamp", "null versus measured zero", "visible raw record identity"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx",
+      "suite": "ActivityFeed",
+      "line": 246,
+      "name": "retains source order, SI zero and negative energy signs without mutating source records",
+      "contracts": ["source ordering", "SI zero", "negative sign", "record immutability", "timeline connector"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx",
+      "suite": "ActivityFeed",
+      "line": 262,
+      "name": "preserves domain status and severity mappings, keeping unknown values neutral",
+      "contracts": ["existing semantic status mappings", "existing severity mappings", "unknown values neutral"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\helpers.test.ts",
+      "suite": "groupActivityByDay",
+      "line": 78,
+      "nameTemplate": "uses selected locale %s for labels without shifting timezone-defined day keys",
+      "authoredExpandedExpectedNames": [
+        "uses selected locale de-DE for labels without shifting timezone-defined day keys",
+        "uses selected locale fr-FR for labels without shifting timezone-defined day keys",
+        "uses selected locale en-US for labels without shifting timezone-defined day keys"
+      ],
+      "parameters": [
+        ["de-DE", "31. Dez. 2025"],
+        ["fr-FR", "31 déc. 2025"],
+        ["en-US", "Dec 31, 2025"]
+      ],
+      "contracts": ["locale labels", "unchanged timezone-defined day key", "same frozen source object identity"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\helpers.test.ts",
+      "suite": "groupActivityByDay",
+      "line": 86,
+      "name": "keeps unknown and valid buckets in input order with selected locale",
+      "contracts": ["unknown placeholder", "source bucket ordering", "locale day labels"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx",
+      "suite": "ActivityOverview",
+      "line": 53,
+      "name": "formats both loaded-page ordinals and total with selected numeric preferences while retaining raw metrics",
+      "contracts": ["selected numeric formatting", "page start/end ordinals", "raw total/events/days/critical counts"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx",
+      "suite": "ActivityOverview",
+      "line": 63,
+      "name": "reacts to saved locale changes without refetching or rewriting counts",
+      "contracts": ["saved number locale reactivity", "unchanged raw count"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx",
+      "suite": "ActivityOverview",
+      "line": 72,
+      "name": "keeps empty-page zero ordinals and all category sections visible",
+      "contracts": ["empty page zero", "all five category sections", "overview and category shells"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx",
+      "suite": "ActivityOverview",
+      "line": 83,
+      "name": "retains page counts and source state through a refresh failure",
+      "contracts": ["retained availability", "formatted page coverage", "raw event count"],
+      "status": "NOTRUN"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx",
+      "suite": "ActivityOverview",
+      "line": 92,
+      "name": "keeps unavailable and loading sections with unknown raw counts rather than fabricated zero",
+      "contracts": ["unavailable/loading shells", "unknown raw counts", "no fabricated measured zero"],
+      "status": "NOTRUN"
+    }
+  ],
+  "deliberatelyUnselectedAuthoredNames": {
+    "ActivityFeed": [
+      "renders a skeleton while loading, not the empty/error states",
+      "renders the error state and wires the retry callback",
+      "renders the empty state when there are no items",
+      "groups items by day, showing a day header per calendar day",
+      "localizes a typed SI drive summary and semantic provenance",
+      "formats charging energy from canonical watt-hours at the render boundary",
+      "renders a severity badge only for items that carry one (alerts)",
+      "makes the row a navigable link when the item carries a safe path",
+      "renders a plain (non-link) row when the item has no path"
+    ],
+    "groupActivityByDay": [
+      "buckets items sharing a UTC calendar day together",
+      "preserves within-day and across-day order from the input list",
+      "produces a friendly long-form label for each day key",
+      "returns an empty array for an empty item list",
+      "falls back to a placeholder bucket for an unparsable occurred_at",
+      "groups by the requested IANA timezone rather than always UTC"
+    ]
+  },
+  "externalBlocker": {
+    "owner": "Parent serialized catalog integration",
+    "kind": "Generated catalog coherence only",
+    "rawMessage": "[i18n-split] generated locale files are invalid (locale-detail-errorBoundary.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-unreferenced.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-power-user.json, locale-driving-route-efficiency.json, locale-driving-trip-planner.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.",
+    "failedCommand": "C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+    "failedCommandExit": 1,
+    "normalConfigEntry": "web\\vite.config.ts: verifyEnglishCatalogSplit.buildStart",
+    "invalidGeneratedFilesCount": 25,
+    "requiredCorrection": "Parent must serialize the existing normal catalog generator/projection correction and ordinary --check against stable current source. The worker did not edit catalogs, request new canonical leaves, suppress checks, or alter configuration. Re-run only this exact affected normal Vitest selection after that prerequisite is corrected.",
+    "ownedBehavioralFailure": false,
+    "ownFailureFixNeed": null,
+    "ownFailureLimit": "No owned assertions executed; absence of an observed behavioral failure is not proof that these cases pass.",
+    "chargedAsSourceFailure": false
+  },
+  "preservation": {
+    "priorLog": "logs\\phase6-fix-activity-feed-provenance.log",
+    "priorLogSha256": "6fa8b26c1d473d83eb9bbea220dde9412fb395c18d171a0c30166e07dea318e5",
+    "status": "SOURCE_REGRESSION",
+    "rawExitCode": 1,
+    "diagnosticCount": 2,
+    "unresolvedCount": 1,
+    "baselineReset": false,
+    "rerun": false,
+    "diagnostics": [
+      {
+        "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx",
+        "category": "hooks",
+        "identity": "useDateFormat('vehicle') imported from @/hooks/useDateFormat, owner { formatTime, locale }",
+        "beforeCount": 0,
+        "afterCount": 1,
+        "rawReason": "Protected identity multiplicity changed; restore or obtain a scoped reviewed migration.",
+        "disposition": "Intentional requested ATL09 saved-date formatter caller adoption; raw diagnostic remains retained, not converted into a zero-exit preservation result."
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx",
+        "category": "reachability",
+        "identity": "Removed direct @/lib/dateFormat dependency targeting web\\src\\lib\\dateFormat.ts",
+        "rawReason": "Resolved local dependency removed/changed/missing",
+        "disposition": "Intentional requested ATL09 replacement by existing useDateFormat('vehicle'); helper continues to call the existing date formatter. Raw diagnostic is retained."
+      }
+    ],
+    "unresolvedIdentity": {
+      "file": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx",
+      "originalLine": 194,
+      "currentLine": 201,
+      "expression": "id: item.source_id",
+      "rawReason": "Computed object identity",
+      "status": "UNRESOLVED_RETAINED",
+      "disposition": "Still the same dynamic source_id expression, now placed in visible record metadata rather than a hover-only title. Authored finite synthetic raw-ID assertions are NOT a waiver for this source-scanner unknown; those assertions also remain NOTRUN."
+    },
+    "priorStructuralEvidence": {
+      "kind": "Historical unchanged-source evidence; not newly executed",
+      "sourceLinesBefore": 370,
+      "sourceLinesAfter": 372,
+      "GlassPanelBefore": 5,
+      "GlassPanelAfter": 5,
+      "TimelineItemBefore": 1,
+      "TimelineItemAfter": 1,
+      "SystemSummaryBriefBefore": 2,
+      "SystemSummaryBriefAfter": 2,
+      "QueryError": 1,
+      "Skeleton": 1,
+      "EmptyState": 1,
+      "ChartContainer": 0
+    },
+    "currentHashVerification": {
+      "sevenSourceAndFixtureFiles": 7,
+      "dependencyFiles": 10,
+      "mismatches": 0,
+      "exitCode": 0
+    }
+  },
+  "readOnlyFiles": [
+    {"path": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.tsx", "sha256Before": "49186f26966df17548fdf0b9b9657581180e06511f00fa59a099cf18ff767ece", "sha256After": "49186f26966df17548fdf0b9b9657581180e06511f00fa59a099cf18ff767ece", "bytes": 7809, "unchanged": true},
+    {"path": "web\\src\\features\\system\\components\\activity-timeline\\helpers.ts", "sha256Before": "aa03f6ee91c69a01fb1df8c90c8f694ec0e069f3549a0298dd0276368f4b4eb1", "sha256After": "aa03f6ee91c69a01fb1df8c90c8f694ec0e069f3549a0298dd0276368f4b4eb1", "bytes": 1176, "unchanged": true},
+    {"path": "web\\src\\features\\system\\components\\activity-timeline\\constants.ts", "sha256Before": "7e33311d8b0d1fdbed949b9817b3524faff4c0905db7ef83e921679545a4ddad", "sha256After": "7e33311d8b0d1fdbed949b9817b3524faff4c0905db7ef83e921679545a4ddad", "bytes": 1596, "unchanged": true},
+    {"path": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.tsx", "sha256Before": "876a99efb8b39c53fe074b5c8deeafb13403d49df5a6d4557de6f25073a21999", "sha256After": "876a99efb8b39c53fe074b5c8deeafb13403d49df5a6d4557de6f25073a21999", "bytes": 3815, "unchanged": true},
+    {"path": "web\\src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx", "sha256Before": "6dba94b6705690db62fb85a605ccd67e7aa6df43fe5bbffb2f9f260dcd5f9f58", "sha256After": "6dba94b6705690db62fb85a605ccd67e7aa6df43fe5bbffb2f9f260dcd5f9f58", "bytes": 11248, "unchanged": true},
+    {"path": "web\\src\\features\\system\\components\\activity-timeline\\helpers.test.ts", "sha256Before": "fe42e3c1ff6d6986455ec1d08cdc858fdd4cc6977752e800433fc4ead68f5880", "sha256After": "fe42e3c1ff6d6986455ec1d08cdc858fdd4cc6977752e800433fc4ead68f5880", "bytes": 3754, "unchanged": true},
+    {"path": "web\\src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx", "sha256Before": "d54c209a20a90d19231cd5b5d6747b7ffcb9d69ae5f97b25022af9c7fe4033b7", "sha256After": "d54c209a20a90d19231cd5b5d6747b7ffcb9d69ae5f97b25022af9c7fe4033b7", "bytes": 4996, "unchanged": true}
+  ],
+  "dependencies": [
+    {"path": "web\\vite.config.ts", "sha256": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58", "unchangedBeforeAfter": true},
+    {"path": "web\\package.json", "sha256": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a", "unchangedBeforeAfter": true},
+    {"path": "web\\package-lock.json", "sha256": "626f096dfdd962204bc6d88931f60469a57dd07f2a8f6b045744bd90f29910df", "unchangedBeforeAfter": true},
+    {"path": "web\\src\\test-setup.ts", "sha256": "fb61779479e36b97298928c7bcc0620e8ff2a509a0ea50350f9935d9f260517a", "unchangedBeforeAfter": true},
+    {"path": "web\\src\\components\\data-display\\TimelineItem.tsx", "sha256": "d6ec468f08b7c28b2fc0b1f3b88511b4d8ef99167acaaaed6be0d48d26d73fab", "unchangedBeforeAfter": true},
+    {"path": "web\\src\\hooks\\useDateFormat.ts", "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542", "unchangedBeforeAfter": true},
+    {"path": "web\\src\\hooks\\useNumberFormatting.ts", "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7", "unchangedBeforeAfter": true},
+    {"path": "web\\src\\lib\\dateFormat.ts", "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64", "unchangedBeforeAfter": true},
+    {"path": "web\\src\\lib\\numberFormat.ts", "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3", "unchangedBeforeAfter": true},
+    {"path": "web\\src\\types\\activity.ts", "sha256": "ffaab7cf9b1481c71c502fc2d5c7195d3301026ef58aae084155d2c7e9eb4a70", "unchangedBeforeAfter": true}
+  ],
+  "verificationLimits": {
+    "literalNpxTscNoEmit": "NOTRUN: read-only affected-proof assignment; no global suite replay",
+    "violationsAuditScript": "NOTRUN: includes a global compiler run; predecessor scoped lint/types/scans exits0 are retained historical evidence, not new results",
+    "build": "NOTRUN",
+    "apiHookRouteVerification": "NOTRUN: no API hook changes or API runtime proof requested",
+    "nativeContrast": "NOTRUN",
+    "browser": "NOTRUN",
+    "backendOrNativeIdentityProof": "NOTRUN",
+    "proofLimit": "Existing fixtures include mocked date/unit/i18n and overview-summary boundaries. Even a future scoped pass would not establish backend identity provenance, native contrast, shared formatter integration, or whole-page acceptance.",
+    "sourceScannerUnknownWaivedByFixtureProxy": false,
+    "testBodyChanges": false,
+    "newCasesAdded": false,
+    "configurationOrGuardBypass": false,
+    "catalogOrCanonicalEdits": false,
+    "queueEdits": false,
+    "directGitCommands": false,
+    "nestedAgents": false,
+    "install": false,
+    "serverBrowserOrDockerCommands": false
+  },
+  "continuation20261014T150741Z": {
+    "status": "BLOCKED_EXTERNAL_CATALOG_UNCHARGED",
+    "runtimeStatus": "NOTRUN",
+    "proofComplete": false,
+    "requestUTC": "2026-10-14T15:07:41.591Z",
+    "firstObservedUTC": "2026-10-14T15:07:53.4287587Z",
+    "returnDeadlineUTC": "2026-10-14T15:27:41.591Z",
+    "alreadyDoneCheck": "Retained receipt is proofComplete=false with discovered=executed=0; required runtime proof is genuinely missing.",
+    "sourceAssignmentCommit": "80c4fe5fa6e7cac032a0d15490bb34f8ef6da85f",
+    "identityLimit": "Assignment-provided commit identity only; no Git commands or independent commit inspection. All seven live source/fixture hashes and ten dependency hashes match the retained receipt before and after execution.",
+    "catalogPrerequisite": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "exitCode": 0,
+      "observedEndUTC": "2026-10-14T15:12:53.1643645Z",
+      "rawOutput": "[i18n-split] OK \u2014 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)",
+      "limit": "This successful read-only check authorized the exact pending selector only. It did not establish stable closure: the subsequent normal Vitest startup check failed. No cause for the intervening catalog inconsistency is inferred."
+    },
+    "execution": {
+      "cwd": "D:\\repos\\teslasync\\web",
+      "nodeVersion": "v26.8.1",
+      "nodePath": "C:\\Program Files\\nodejs\\node.exe",
+      "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx src\\features\\system\\components\\activity-timeline\\helpers.test.ts src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=C:\\Users\\AtulM\\.copilot\\session-state\\35e749c2-d945-43f5-919f-7699c8eb4e27\\files\\activity-feed-provenance-vitest.json --testNamePattern='wraps full source-authored titles|retains all five category icons|uses the selected locale for both day headings|keeps invalid timestamps unknown|retains source order, SI zero|preserves domain status and severity mappings|uses selected locale .* for labels without shifting|keeps unknown and valid buckets in input order|formats both loaded-page ordinals|reacts to saved locale changes|keeps empty-page zero ordinals|retains page counts and source state|keeps unavailable and loading sections'",
+      "environment": {
+        "VITE_GIT_SHA": "80c4fe5fa6e7cac032a0d15490bb34f8ef6da85f",
+        "reason": "Supply the assigned identity through the existing supported input so normal Vite identity resolution does not invoke Git; no configuration or catalog guard bypass."
+      },
+      "startUTC": "2026-10-14T15:13:19.1289011Z",
+      "endUTC": "2026-10-14T15:20:54.2332169Z",
+      "exitCode": 1,
+      "classification": "External generated-catalog startup failure before discovery or assertion execution",
+      "normalStartupAttemptsThisContinuation": 1,
+      "attemptCharge": 0,
+      "retry": false,
+      "retryReason": "No new catalog closure after the failed normal startup; repeating or bypassing the guard is not authorized.",
+      "freshVitestJson": null,
+      "freshVitestJsonAbsenceReason": "Requested JSON reporter artifact does not exist; startup failed before reporter initialization. No stale or fabricated results substituted."
+    },
+    "runtimeAccounting": {
+      "discovered": 0,
+      "selected": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "unselected": 0,
+      "startupFailures": 1,
+      "exitCode": 1,
+      "status": "NOTRUN",
+      "explanation": "No tests discovered or executed. Zero is not PASS; the expected authored selection is not a runtime count."
+    },
+    "plannedAccounting": {
+      "selectedDeclarations": 13,
+      "selectedExpandedExpectedCases": 15,
+      "deliberatelyUnselectedExpectedCases": 15,
+      "historicalPassingCasesReplayed": 0,
+      "caseAuthority": "Unchanged selectedCases and deliberatelyUnselectedAuthoredNames retained above; no added or altered test bodies."
+    },
+    "externalBlocker": {
+      "owner": "Serialized catalog integration",
+      "failedCommand": "C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+      "failedCommandExit": 1,
+      "normalConfigEntry": "web\\vite.config.ts: verifyEnglishCatalogSplit.buildStart",
+      "invalidGeneratedFilesCount": 60,
+      "rawEvidence": "Complete current invalid-file list and startup stack are appended in web\\logs\\phase6-proof-activity-feed-provenance.log at COMMAND_START_UTC=2026-10-14T15:13:19.1289011Z.",
+      "requiredCorrection": "Establish stable generated-catalog closure through the existing serialized owner, then execute only the same genuinely unexecuted affected selector. Do not edit canonical catalogs, fixtures, configuration, or guards in this proof item.",
+      "ownedBehavioralFailure": false,
+      "limit": "No assertions executed; no conclusion about owned behavior is possible."
+    },
+    "readOnlyVerification": {
+      "beforeObservedUTC": "2026-10-14T15:10:17.6764794Z",
+      "afterObservedUTC": "2026-10-14T15:21:15.6672977Z",
+      "sourceAndFixtureFiles": 7,
+      "dependencyFiles": 10,
+      "mismatches": 0,
+      "exitCode": 0,
+      "rawEvidence": "CONTINUATION_HASH_AFTER and CONTINUATION_DEPENDENCY_HASH_AFTER in the owned log, each with exact SHA256 and matchesRetained=True.",
+      "sourceChanges": false,
+      "fixtureChanges": false,
+      "catalogOrCanonicalChanges": false,
+      "configurationOrGuardBypass": false
+    },
+    "preservation": "Original raw exit 1, two intentional adoption deltas and one unresolved computed identity remain retained above; not rerun, reset, waived, or promoted by this startup failure.",
+    "verificationLimits": {
+      "typecheckBuildLintAndGlobalAudits": "NOTRUN: exact read-only unexecuted-proof scope, no source changes or full gates.",
+      "browserNativeContrastBackendAndWholePage": "NOTRUN",
+      "gitCommands": false,
+      "nestedAgents": false,
+      "installOrBrowserDownload": false,
+      "serverOrDockerCommands": false
+    },
+    "release": {
+      "sourceWriteClaims": "Never acquired; seven application source/test files remained read-only",
+      "commandRunning": false,
+      "nativeAcceptance": false,
+      "pageAcceptance": false,
+      "globalAcceptance": false,
+      "executionAndHashCaptureCompleteUTC": "2026-10-14T15:21:15.8346293Z"
+    }
+  },
+  "continuation20261014T152220Z": {
+    "status": "BLOCKED_EXTERNAL_CATALOG_UNCHARGED",
+    "runtimeStatus": "NOTRUN",
+    "proofComplete": false,
+    "requestUTC": "2026-10-14T15:22:20.775Z",
+    "firstObservedUTC": "2026-10-14T15:22:40.3710830Z",
+    "returnDeadlineUTC": "2026-10-14T15:42:20.775Z",
+    "alreadyDoneCheck": "Latest retained continuation remains proofComplete=false with zero discovered/executed covering tests.",
+    "sourceAssignmentCommit": "80c4fe5fa6e7cac032a0d15490bb34f8ef6da85f",
+    "identityLimit": "Assignment-provided commit identity only; no Git inspection. Seven source/fixture hashes and ten dependency hashes match retained pins before and after the prerequisite check.",
+    "catalogPrerequisite": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "nodeVersion": "v26.8.1",
+      "nodePath": "C:\\Program Files\\nodejs\\node.exe",
+      "startUTC": "2026-10-14T15:22:51.6264116Z",
+      "endUTC": "2026-10-14T15:28:40.3272022Z",
+      "exitCode": 1,
+      "invalidGeneratedFilesCount": 60,
+      "classification": "External catalog prerequisite failure; no new catalog closure established.",
+      "rawEvidence": "Exact invalid-file list and command timestamps appended in web\\logs\\phase6-proof-activity-feed-provenance.log.",
+      "retry": false,
+      "requiredCorrection": "Existing serialized catalog owner must establish stable normal generated-catalog closure before the unchanged affected selector is eligible. No canonical, generated catalog, fixture, source, configuration, or guard edits authorized here."
+    },
+    "runtimeAccounting": {
+      "status": "NOTRUN",
+      "vitestLaunches": 0,
+      "discovered": 0,
+      "selected": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "unselected": 0,
+      "startupFailures": 0,
+      "catalogPrerequisiteFailures": 1,
+      "attemptCharge": 0,
+      "normalStartupAttemptsAdded": 0,
+      "explanation": "Prerequisite exit 1 is not a Vitest launch or assertion failure. No unchanged historical passes replayed; zero execution is NOT PASS. Prior startup accounting and spent budgets remain unchanged."
+    },
+    "plannedAccounting": {
+      "selectedDeclarations": 13,
+      "selectedExpandedExpectedCases": 15,
+      "deliberatelyUnselectedExpectedCases": 15,
+      "historicalPassingCasesReplayed": 0,
+      "caseAuthority": "Existing selectedCases and deliberatelyUnselectedAuthoredNames above, read-only and unchanged."
+    },
+    "readOnlyVerification": {
+      "afterObservedUTC": "2026-10-14T15:29:01.7743124Z",
+      "sourceAndFixtureFiles": 7,
+      "dependencyFiles": 10,
+      "mismatches": 0,
+      "exitCode": 0,
+      "rawEvidence": "HASH_BEFORE/HASH_AFTER and DEPENDENCY_HASH_BEFORE/DEPENDENCY_HASH_AFTER in this continuation's owned log block.",
+      "sourceChanges": false,
+      "fixtureChanges": false,
+      "catalogOrCanonicalChanges": false,
+      "configurationOrGuardBypass": false
+    },
+    "preservation": "Original raw exit 1, two intentional caller-adoption deltas and one unresolved computed source identity retained unchanged. No scanner rerun, baseline reset, waiver or runtime approval.",
+    "verificationLimits": {
+      "typecheckBuildLintAndGlobalAudits": "NOTRUN: report-only exact proof scope; no global gates or unchanged passing checks replayed.",
+      "apiBrowserNativeContrastBackendAndWholePage": "NOTRUN",
+      "gitCommands": false,
+      "nestedAgents": false,
+      "installOrBrowserDownload": false,
+      "serverOrDockerCommands": false
+    },
+    "artifactValidation": {
+      "observedUTC": "2026-10-14T15:31:04.3692655Z",
+      "exitCode": 0,
+      "jsonParse": "PASS",
+      "invalidGeneratedFilesVerified": 60,
+      "rawHashRowsVerified": 34,
+      "issues": 0,
+      "meaning": "Report/log integrity only, not behavioral proof."
+    },
+    "release": {
+      "sourceWriteClaims": "Never acquired; all seven application source/test files remained read-only.",
+      "commandRunning": false,
+      "nativeAcceptance": false,
+      "pageAcceptance": false,
+      "globalAcceptance": false
+    }
+  },
+  "rawLog": {
+    "path": "web\\logs\\phase6-proof-activity-feed-provenance.log",
+    "sha256": "beb6ea6133cb2cb53b2ff3488932adcedb2bc034ab4dfc6b570afbc3ab0a6825"
+  },
+  "artifactValidation": {
+    "status": "PASS",
+    "exitCode": 0,
+    "startUTC": "2026-10-14T07:51:09.1307591Z",
+    "jsonParse": "PASS",
+    "selectedAuthoredExpected": 15,
+    "unselectedAuthoredExpected": 15,
+    "currentHashesVerified": 7,
+    "issues": 0,
+    "meaning": "Receipt integrity only; no behavioral tests executed"
+  },
+  "release": {
+    "sourceWriteClaims": "Never acquired; all seven application source/test files read-only",
+    "reportAndLogClaimsReleased": true,
+    "commandRunning": false,
+    "nativeAcceptance": false,
+    "pageAcceptance": false,
+    "globalAcceptance": false,
+    "releaseUTC": "2026-10-14T07:51:09.3137382Z"
+  }
+}

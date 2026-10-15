@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, FileJson, Zap } from 'lucide-react';
 
-import { Modal, Button, Select, Textarea, Text, HelperText, ErrorText } from '@/components/ui';
+import { Modal, Button, Select, Textarea, Text, HelperText, ErrorText, Icon } from '@/components/ui';
 import { Tabs } from '@/components/ui';
 import { useUpdateTOUSettings, useRefreshTeslaEnergySiteInfo } from '@/api/hooks/useEnergy';
 import type { TOUSettingsPayload, TOUPreset } from '@/types/energy';
@@ -247,7 +247,7 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
               onChange={(e) => setSelectedPreset(e.target.value)}
             />
             {selectedPreset && (
-              <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+              <div className="rounded-lg bg-[var(--surface-2)] border border-[var(--border-subtle)] p-3">
                 <Text as="p" variant="bodySm" className="mb-1">
                   {t('energy.tou.previewLabel', 'Preview')}
                 </Text>
@@ -283,20 +283,24 @@ export function TOUSettingsModal({ open, onClose, siteId }: TOUSettingsModalProp
           </ErrorText>
         )}
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
           <Button
             variant="ghost"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-10"
             onClick={handleClose}
             disabled={updateMutation.isPending}
           >
             {t('common.cancel', 'Cancel')}
           </Button>
           <Button
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-10"
+            icon={<Icon icon={Clock} />}
             onClick={handleSubmit}
             loading={updateMutation.isPending}
             disabled={updateMutation.isPending}
           >
-            <Clock className="h-4 w-4 mr-1.5" />
             {t('energy.tou.submit', 'Update Rate Plan')}
           </Button>
         </div>

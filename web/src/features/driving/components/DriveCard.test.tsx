@@ -25,8 +25,11 @@
  * identity) so every assertion reads the value straight back out of the chip.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { convertDistanceFromSI, convertSpeedFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 
 import type { Drive } from '@/types/driving';
 import { DriveCard, type DriveCardProps } from './DriveCard';
@@ -125,6 +128,47 @@ function costSpy() {
   return vi.fn((kwh: number) => `$${(kwh * 0.12).toFixed(2)}`);
 }
 
+it('updates numeric precision and locale live while preserving the canonical drive', () => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+  const drive = makeDrive({ avgSpeedMps: 25.125 });
+  const original = { ...drive };
+  const view = renderCard({ drive });
+  expect(screen.getByText('Avg 90.45 km/h')).toBeInTheDocument();
+  expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
+
+  try {
+    act(() => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(3);
+    });
+    expect(screen.getByText('Avg 90,450 km/h')).toBeInTheDocument();
+    expect(screen.getByText('150,000 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('50,000 km')).toBeInTheDocument();
+    view.rerender(
+      <MemoryRouter>
+        <DriveCard
+          {...view.props}
+          distanceUnit="mi"
+          speedUnit="mph"
+          efficiencyUnit="Wh/mi"
+          toDistanceDisplay={(meters) => convertDistanceFromSI(meters, 'mi')}
+          toSpeedDisplay={(mps) => convertSpeedFromSI(mps, 'mph')}
+          toEfficiencyDisplay={(whPerKm) => convertEfficiencyFromSI(whPerKm, 'mi')}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Avg 56,203 mph')).toBeInTheDocument();
+    expect(screen.getByText('31,069 mi')).toBeInTheDocument();
+    expect(screen.getByText('241,402 Wh/mi')).toBeInTheDocument();
+    expect(drive).toEqual(original);
+  } finally {
+    view.unmount();
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+  }
+});
+
 function renderCard(over: Partial<DriveCardProps> = {}) {
   const props: DriveCardProps = {
     drive: makeDrive(),
@@ -222,7 +266,7 @@ describe('DriveCard — primary line + status badge', () => {
     };
 
     const high = renderCard({ fsdInsight: base });
-    expect(within(high.container).getByText('FSD 72%')).toBeInTheDocument();
+    expect(within(high.container).getByText('FSD 72.00%')).toBeInTheDocument();
     high.unmount();
 
     const estimated = renderCard({
@@ -234,7 +278,7 @@ describe('DriveCard — primary line + status badge', () => {
     const ambiguous = renderCard({
       fsdInsight: { ...base, confidence: 'ambiguous', fsd_share_pct: 50 },
     });
-    expect(within(ambiguous.container).getByText(/FSD ~50%.*ambiguous/)).toBeInTheDocument();
+    expect(within(ambiguous.container).getByText(/FSD ~50\.00%.*ambiguous/)).toBeInTheDocument();
     ambiguous.unmount();
 
     renderCard({
@@ -259,14 +303,14 @@ describe('DriveCard — primary line + status badge', () => {
 describe('DriveCard — metric chips', () => {
   it('renders avg + max speed chips converted at the display edge', () => {
     renderCard();
-    expect(screen.getByText('Avg 90 km/h')).toBeInTheDocument(); // 25 m/s ×3.6
-    expect(screen.getByText('Max 144 km/h')).toBeInTheDocument(); // 40 m/s ×3.6
+    expect(screen.getByText('Avg 90.00 km/h')).toBeInTheDocument(); // 25 m/s ×3.6
+    expect(screen.getByText('Max 144.00 km/h')).toBeInTheDocument(); // 40 m/s ×3.6
   });
 
   it('derives avg speed from distance ÷ duration when avgSpeedMps is missing', () => {
     // 50 000 m / 1800 s = 27.78 m/s ×3.6 = 100 km/h.
     renderCard({ drive: makeDrive({ avgSpeedMps: null }) });
-    expect(screen.getByText('Avg 100 km/h')).toBeInTheDocument();
+    expect(screen.getByText('Avg 100.00 km/h')).toBeInTheDocument();
   });
 
   it('placeholders avg speed and drops the max chip when neither is derivable', () => {
@@ -279,7 +323,7 @@ describe('DriveCard — metric chips', () => {
 
   it('renders the battery delta with an accessible label, and hides it when a 0→0 drive completes', () => {
     const withBattery = renderCard();
-    expect(within(withBattery.container).getByLabelText('Battery 80% to 70%')).toBeInTheDocument();
+    expect(within(withBattery.container).getByLabelText('Battery 80.00% to 70.00%')).toBeInTheDocument();
     withBattery.unmount();
 
     // Both endpoints 0 on a completed drive ⇒ treated as "no battery data".
@@ -289,7 +333,7 @@ describe('DriveCard — metric chips', () => {
 
   it('renders measured Wh/km and omits the chip when measured energy is unavailable', () => {
     const graded = renderCard();
-    expect(within(graded.container).getByText('150 Wh/km')).toBeInTheDocument();
+    expect(within(graded.container).getByText('150.00 Wh/km')).toBeInTheDocument();
     graded.unmount();
 
     const ungraded = renderCard({
@@ -313,7 +357,7 @@ describe('DriveCard — metric chips', () => {
     renderCard();
     expect(screen.queryByText(/~\$/)).toBeNull();
     // …while the rest of the metrics row still renders.
-    expect(screen.getByText('150 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
   });
 });
 
@@ -372,10 +416,10 @@ describe('DriveCard — accessibility', () => {
     const { container } = renderCard({ formatEnergyCost: costSpy() });
 
     // Gauge (avg) + TrendingUp (max) live inside their InlineMetric chip.
-    const gauge = screen.getByText('Avg 90 km/h').parentElement?.querySelector('svg');
-    const trend = screen.getByText('Max 144 km/h').parentElement?.querySelector('svg');
+    const gauge = screen.getByText('Avg 90.00 km/h').parentElement?.querySelector('svg');
+    const trend = screen.getByText('Max 144.00 km/h').parentElement?.querySelector('svg');
     // Zap + DollarSign sit directly inside their chip span.
-    const zap = screen.getByText('150 Wh/km').querySelector('svg');
+    const zap = screen.getByText('150.00 Wh/km').querySelector('svg');
     const dollar = screen.getByText('~$0.90').querySelector('svg');
 
     for (const icon of [gauge, trend, zap, dollar]) {
@@ -443,8 +487,182 @@ describe('DriveCard — null safety + hardening', () => {
     // converter that yields 0 previously tripped the `{number && jsx}` footgun.
     renderCard({ toEfficiencyDisplay: () => 0 });
 
-    expect(screen.getByText('0 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
     // The bare "0" must never leak as its own text node.
     expect(screen.queryByText('0', { selector: 'span' })).toBeNull();
+  });
+});
+
+
+describe('DriveCard mobile preview preservation', () => {
+  const displayProps = {
+    toDistanceDisplay,
+    toSpeedDisplay,
+    toEfficiencyDisplay,
+    distanceUnit: 'km',
+    speedUnit: 'km/h',
+    efficiencyUnit: 'Wh/km',
+  } satisfies Omit<DriveCardProps, 'drive'>;
+
+  function RouteProbe() {
+    const { pathname } = useLocation();
+    return <output aria-label="Current route">{pathname}</output>;
+  }
+
+  it('allocates a nonshrinking mobile preview button and explicitly restores desktop density', () => {
+    renderCard({ onPreview: vi.fn() });
+    const preview = screen.getByRole('button', { name: 'Quick view drive' });
+
+    // Source sizing evidence only: jsdom does not establish native rectangles or edge hits.
+    expect(preview).toHaveClass(
+      'h-11', 'w-11', 'min-h-11', 'min-w-11', 'shrink-0', 'p-0',
+      'md:h-9', 'md:w-9', 'md:min-h-0', 'md:min-w-0',
+    );
+    expect(preview).not.toHaveClass('h-9');
+    expect(preview).not.toHaveClass('w-9');
+    expect(preview.tagName).toBe('BUTTON');
+    expect(preview).toHaveAttribute('type', 'button');
+    expect(preview).toHaveAttribute('title', 'Quick view drive');
+    expect(preview).toHaveClass('focus-visible:outline', 'focus-visible:outline-2');
+    expect(preview.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(preview.closest('a')).toBeNull();
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/drives/1');
+  });
+
+  it('previews the exact canonical drive without toggling selection or changing its metrics', () => {
+    const drive = Object.freeze(makeDrive({ id: 7 }));
+    const original = { ...drive };
+    const onPreview = vi.fn<(value: Drive) => void>();
+    const onToggleSelect = vi.fn<(id: number, selected: boolean) => void>();
+    const formatEnergyCost = costSpy();
+    renderCard({ drive, onPreview, onToggleSelect, selected: true, formatEnergyCost });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view drive' }));
+
+    expect(onPreview).toHaveBeenCalledTimes(1);
+    expect(onPreview.mock.calls[0][0]).toBe(drive);
+    expect(onToggleSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/drives/7');
+    expect(screen.getByText('50.00 km')).toBeInTheDocument();
+    expect(screen.getByText('Avg 90.00 km/h')).toBeInTheDocument();
+    expect(screen.getByText('Max 144.00 km/h')).toBeInTheDocument();
+    expect(screen.getByLabelText('Battery 80.00% to 70.00%')).toBeInTheDocument();
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('~$0.90')).toBeInTheDocument();
+    expect(formatEnergyCost).toHaveBeenCalledWith(7.5);
+    expect(drive).toEqual(original);
+  });
+
+  it('uses the latest preview callback and exact drive after memoized rerenders', () => {
+    const drive = makeDrive({ id: 7 });
+    const firstPreview = vi.fn<(value: Drive) => void>();
+    const latestPreview = vi.fn<(value: Drive) => void>();
+    const view = renderCard({ drive, onPreview: firstPreview });
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view drive' }));
+    expect(firstPreview).toHaveBeenCalledTimes(1);
+    expect(firstPreview.mock.calls[0][0]).toBe(drive);
+
+    view.rerender(
+      <MemoryRouter>
+        <DriveCard {...view.props} onPreview={latestPreview} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view drive' }));
+    expect(firstPreview).toHaveBeenCalledTimes(1);
+    expect(latestPreview).toHaveBeenCalledTimes(1);
+    expect(latestPreview.mock.calls[0][0]).toBe(drive);
+
+    const nextDrive = makeDrive({ id: 9, distanceM: 25_000 });
+    view.rerender(
+      <MemoryRouter>
+        <DriveCard {...view.props} drive={nextDrive} onPreview={latestPreview} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view drive' }));
+    expect(firstPreview).toHaveBeenCalledTimes(1);
+    expect(latestPreview).toHaveBeenCalledTimes(2);
+    expect(latestPreview.mock.calls[1][0]).toBe(nextDrive);
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/drives/9');
+    expect(screen.getByText('25.00 km')).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'Enter', keys: '{Enter}' },
+    { name: 'Space', keys: ' ' },
+  ])('preserves native $name preview activation and independent Enter detail navigation', async ({ keys }) => {
+    const user = userEvent.setup();
+    const drive = makeDrive({ id: 17 });
+    const onPreview = vi.fn<(value: Drive) => void>();
+    const onToggleSelect = vi.fn<(id: number, selected: boolean) => void>();
+    render(
+      <MemoryRouter initialEntries={['/drives']}>
+        <DriveCard {...displayProps} drive={drive} onPreview={onPreview} onToggleSelect={onToggleSelect} selected />
+        <RouteProbe />
+      </MemoryRouter>,
+    );
+
+    await user.tab();
+    expect(screen.getByRole('checkbox')).toHaveFocus();
+    await user.tab();
+    const detail = screen.getByRole('link');
+    expect(detail).toHaveFocus();
+    await user.tab();
+    const preview = screen.getByRole('button', { name: 'Quick view drive' });
+    expect(preview).toHaveFocus();
+    await user.keyboard(keys);
+
+    expect(onPreview).toHaveBeenCalledTimes(1);
+    expect(onPreview.mock.calls[0][0]).toBe(drive);
+    expect(onToggleSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(/^\/drives$/);
+    expect(preview).toHaveFocus();
+
+    await user.tab({ shift: true });
+    expect(detail).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent('/drives/17');
+    expect(onPreview).toHaveBeenCalledTimes(1);
+    expect(onToggleSelect).not.toHaveBeenCalled();
+  });
+
+  it('keeps keyboard selection independent from preview and detail navigation', async () => {
+    const user = userEvent.setup();
+    const drive = makeDrive({ id: 23 });
+    const onPreview = vi.fn<(value: Drive) => void>();
+    const onToggleSelect = vi.fn<(id: number, selected: boolean) => void>();
+    render(
+      <MemoryRouter initialEntries={['/drives']}>
+        <DriveCard {...displayProps} drive={drive} onPreview={onPreview} onToggleSelect={onToggleSelect} selected />
+        <RouteProbe />
+      </MemoryRouter>,
+    );
+
+    await user.tab();
+    const selection = screen.getByRole('checkbox');
+    expect(selection).toHaveFocus();
+    await user.keyboard(' ');
+    expect(onToggleSelect).toHaveBeenCalledExactlyOnceWith(23, false);
+    expect(onPreview).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(/^\/drives$/);
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/drives/23');
+    expect(selection).toHaveFocus();
+  });
+
+  it('omits an absent preview handler while keeping the detail link keyboard reachable', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/drives']}>
+        <DriveCard {...displayProps} drive={makeDrive({ id: 31 })} />
+        <RouteProbe />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Quick view drive' })).toBeNull();
+    await user.tab();
+    expect(screen.getByRole('link')).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent('/drives/31');
   });
 });

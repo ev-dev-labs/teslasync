@@ -2,13 +2,13 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
 
-import { GlassPanel } from '@/components/ui';
-import { PanelTitle } from '@/components/ui/Typography';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   ChartTooltip, ChartLegend, EmbeddedChart,
 } from '@/components/charts';
 import { getChartFontSize } from '@/lib/chartTypography';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import type { FeatureCompositionRow, FeatureFlagKind } from './parseFeatureFlags';
 
 interface FeatureConfigCompositionProps {
@@ -17,9 +17,6 @@ interface FeatureConfigCompositionProps {
   error: unknown;
   onRetry: () => void;
 }
-
-const ENABLED_COLOR = '#10b981';
-const DISABLED_COLOR = '#64748b';
 
 /**
  * Grouped bar chart breaking the enabled vs. disabled counts down by
@@ -33,6 +30,7 @@ export function FeatureConfigComposition({
   onRetry,
 }: FeatureConfigCompositionProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
 
   const kindLabel = useMemo<Record<FeatureFlagKind, string>>(
     () => ({
@@ -55,13 +53,13 @@ export function FeatureConfigComposition({
   return (
     <GlassPanel className="h-full p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('featureConfig.composition', 'Enabled vs Disabled by Type')}
+        <BarChart3 className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+        {t('featureConfig.composition', 'Enabled vs disabled by type')}
       </PanelTitle>
 
       <EmbeddedChart
         chartKey="admin-feature-config-composition"
-        title={t('featureConfig.composition', 'Enabled vs Disabled by Type')}
+        title={t('featureConfig.composition', 'Enabled vs disabled by type')}
         ariaLabel={t('featureConfig.compositionChartLabel', 'Enabled versus disabled feature counts grouped by feature type')}
         loading={isLoading}
         error={error instanceof Error ? error : error ? new Error(String(error)) : undefined}
@@ -86,16 +84,14 @@ export function FeatureConfigComposition({
               <Bar
                 dataKey="enabled"
                 name={t('featureConfig.enabled', 'Enabled')}
-                fill={ENABLED_COLOR}
-                fillOpacity={0.85}
+                fill={palette[0]}
                 radius={[4, 4, 0, 0]}
                 hide={hiddenSeries?.isHidden('enabled') ?? false}
               />
               <Bar
                 dataKey="disabled"
                 name={t('featureConfig.disabled', 'Disabled')}
-                fill={DISABLED_COLOR}
-                fillOpacity={0.7}
+                fill={palette[1]}
                 radius={[4, 4, 0, 0]}
                 hide={hiddenSeries?.isHidden('disabled') ?? false}
               />

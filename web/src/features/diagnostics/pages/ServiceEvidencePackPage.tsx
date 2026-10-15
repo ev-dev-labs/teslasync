@@ -1,22 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, ClipboardList, ListOrdered, PackageCheck } from 'lucide-react';
-
-import { PageContainer } from '@/components/layout';
-import { GlassPanel } from '@/components/ui';
-
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, QueryError } from '@/components/feedback';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSoftwareUpdates } from '@/api/hooks/useVehicleSystems';
+import { combineDataStates } from '@/api/dataState';
 
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
+import { ServiceEvidencePackSources } from '../components/service-evidence-pack/ServiceEvidencePackSources';
+import { ServiceEvidencePackSummary } from '../components/service-evidence-pack/ServiceEvidencePackSummary';
 import {
-  SignalWindowPicker,
   ServiceEvidenceInventoryTable,
   ServiceEvidencePrivacyPanel,
   ServiceEvidenceIntegrityPanel,
@@ -30,15 +27,6 @@ import {
   CryptoUnavailableError,
   type ServiceEvidencePackDocument,
 } from '../lib/serviceEvidencePack';
-import type { EvidenceQualityBand } from '../lib/rootCauseIntelligence';
-
-/** Mirrors `QualityBadge`'s semantics with the KPI band's `NeonColor` palette. */
-const QUALITY_COLOR: Record<EvidenceQualityBand, 'green' | 'cyan' | 'amber' | 'red'> = {
-  strong: 'green',
-  moderate: 'cyan',
-  weak: 'amber',
-  insufficient: 'red',
-};
 
 function downloadPack(doc: ServiceEvidencePackDocument): void {
   const blob = new Blob([toPrettyJson(doc)], { type: 'application/json' });
@@ -67,22 +55,46 @@ function downloadPack(doc: ServiceEvidencePackDocument): void {
  */
 export default function ServiceEvidencePackPage() {
   const { t } = useTranslation();
-  usePageTitle(t('serviceEvidencePack.title', 'Service Evidence Pack'));
+  usePageTitle(t('serviceEvidencePack.title', 'Service evidence pack'));
 
   const { vehicleId, vehicle } = useSelectedVehicle();
   const workspace = useRootCauseWorkspace(vehicleId);
   const updatesQuery = useSoftwareUpdates(vehicleId != null ? String(vehicleId) : '');
+  const signalsState = useDataState(workspace.signalsQuery, { provenance: 'historical' });
+  const updatesState = useDataState(updatesQuery, { provenance: 'historical' });
+  const availableHistories = workspace.evidenceBundle.data.filter(
+    ({ response }) => (response.data?.length ?? 0) > 0,
+  );
+  const bundleState = useDataState({
+    ...workspace.evidenceBundle,
+    data: availableHistories.length > 0 ? availableHistories : undefined,
+  }, { provenance: 'historical', partial: workspace.evidenceBundle.isError });
+  const evidenceState = {
+    ...bundleState,
+    ...(workspace.evidenceBundle.sources.length > 0
+      ? combineDataStates(workspace.evidenceBundle.sources.map(({ state }) => state))
+      : {}),
+  };
 
   const [pack, setPack] = useState<ServiceEvidencePackDocument | null>(null);
   const [packError, setPackError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const generation = useRef(0);
+  const pendingGeneration = useRef<number | null>(null);
 
   // A previously generated pack describes a point-in-time snapshot of a
   // specific vehicle + signal + window. Any of those three changing makes
   // it stale, so it must not linger as exportable without being regenerated.
-  useEffect(() => {
+  useLayoutEffect(() => {
+    generation.current += 1;
+    pendingGeneration.current = null;
     setPack(null);
     setPackError(null);
+    setGenerating(false);
+    return () => {
+      generation.current += 1;
+      pendingGeneration.current = null;
+    };
   }, [vehicleId, workspace.focalSignal, workspace.windowHours]);
 
   const liveCore = useMemo(
@@ -99,7 +111,9 @@ export default function ServiceEvidencePackPage() {
   const canGenerate = workspace.hasChosenSignal && workspace.isDefensible;
 
   const handleGenerate = useCallback(async () => {
-    if (vehicleId == null) return;
+    if (vehicleId == null || !canGenerate || pendingGeneration.current != null) return;
+    const attempt = ++generation.current;
+    pendingGeneration.current = attempt;
     setGenerating(true);
     setPackError(null);
     try {
@@ -109,20 +123,25 @@ export default function ServiceEvidencePackPage() {
         analysis: workspace.analysis,
         softwareUpdates: updatesQuery.data,
       });
-      setPack(doc);
+      if (generation.current === attempt) setPack(doc);
     } catch (err) {
-      setPackError(
-        err instanceof CryptoUnavailableError
-          ? t(
-              'serviceEvidencePack.errors.cryptoUnavailable',
-              'This session cannot compute a SHA-256 integrity digest — Web Crypto requires a secure context (HTTPS or localhost). Try again over HTTPS.',
-            )
-          : t('serviceEvidencePack.errors.generic', 'Something went wrong while generating the pack. Please try again.'),
-      );
+      if (generation.current === attempt) {
+        setPackError(
+          err instanceof CryptoUnavailableError
+            ? t(
+                'serviceEvidencePack.errors.cryptoUnavailable',
+                'This session cannot compute a SHA-256 integrity digest — Web Crypto requires a secure context (HTTPS or localhost). Try again over HTTPS.',
+              )
+            : t('serviceEvidencePack.errors.generic', 'Something went wrong while generating the pack. Please try again.'),
+        );
+      }
     } finally {
-      setGenerating(false);
+      if (generation.current === attempt) {
+        pendingGeneration.current = null;
+        setGenerating(false);
+      }
     }
-  }, [vehicleId, vehicle, workspace.windowHours, workspace.analysis, updatesQuery.data, t]);
+  }, [vehicleId, vehicle, workspace.windowHours, workspace.analysis, updatesQuery.data, canGenerate, t]);
 
   const handleDismissError = useCallback(() => setPackError(null), []);
   const handleExport = useCallback(() => {
@@ -130,112 +149,55 @@ export default function ServiceEvidencePackPage() {
   }, [pack]);
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('serviceEvidencePack.title', 'Service Evidence Pack')} />;
+    return <NoVehicleSelected pageTitle={t('serviceEvidencePack.title', 'Service evidence pack')} />;
   }
 
-  const isLoading = workspace.signalsQuery.isLoading || (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading);
-  const isError = workspace.signalsQuery.isError || workspace.evidenceBundle.isError;
-  const error = workspace.signalsQuery.error ?? workspace.evidenceBundle.error;
+  const isLoading = !evidenceState.hasData && (
+    (workspace.signalsQuery.isLoading && !signalsState.hasData) ||
+    (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading)
+  );
+  const error = evidenceState.fatalError ?? (!workspace.hasChosenSignal ? signalsState.fatalError : null);
+  const isError = !!error;
   const onRetry = () => {
     workspace.signalsQuery.refetch();
     workspace.evidenceBundle.refetch();
   };
 
-  const qualityLabel =
-    liveCore.quality.band === 'strong'
-      ? t('rootCauseIntelligence.quality.strong', 'Strong evidence')
-      : liveCore.quality.band === 'moderate'
-        ? t('rootCauseIntelligence.quality.moderate', 'Moderate evidence')
-        : liveCore.quality.band === 'weak'
-          ? t('rootCauseIntelligence.quality.weak', 'Weak evidence')
-          : t('rootCauseIntelligence.quality.insufficient', 'Insufficient evidence');
-
-  const corroborating = liveCore.signalEvidence.filter((s) => s.hasEvidence).length;
-  const packStatusLabel = pack
-    ? t('serviceEvidencePack.kpis.statusGenerated', 'Generated')
-    : canGenerate
-      ? t('serviceEvidencePack.kpis.statusReady', 'Ready')
-      : t('serviceEvidencePack.kpis.statusNotReady', 'Not ready');
-  const packStatusSubtitle = pack
-    ? t('serviceEvidencePack.kpis.statusDigest', 'Digest {{digest}}…', { digest: pack.integrity.digestHex.slice(0, 10) })
-    : canGenerate
-      ? t('serviceEvidencePack.kpis.statusReadyHint', 'Generate below to compute its digest')
-      : t('serviceEvidencePack.kpis.statusNotReadyHint', 'Needs stronger evidence first');
-
   return (
-    <PageContainer
-      title={t('serviceEvidencePack.title', 'Service Evidence Pack')}
+    <PageLayout
+      title={t('serviceEvidencePack.title', 'Service evidence pack')}
       subtitle={t(
         'serviceEvidencePack.subtitle',
         'A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.',
       )}
-      query={workspace.signalsQuery}
+      query={[workspace.signalsQuery, updatesQuery]}
     >
       {/* 1 — Focal signal + analysis window (shared with the Root-Cause page) */}
-      <FadeIn>
-        <SignalWindowPicker
-          catalog={workspace.catalog}
-          signalsLoading={workspace.signalsQuery.isLoading}
-          signalsError={workspace.signalsQuery.error}
-          onRetrySignals={() => workspace.signalsQuery.refetch()}
-          focalSignal={workspace.focalSignal}
-          onFocalSignalChange={workspace.setFocalSignal}
-          windowHours={workspace.windowHours}
-          onWindowHoursChange={workspace.setWindowHours}
-        />
-      </FadeIn>
+      <ServiceEvidencePackSources
+        workspace={workspace}
+        signalsState={signalsState}
+        evidenceState={evidenceState}
+        updatesState={updatesState}
+        onRetryUpdates={() => { void updatesQuery.refetch(); }}
+      />
 
       {/* 2 — KPI band */}
-      <FadeIn delay={0.1}>
-        <section
-          aria-label={t('serviceEvidencePack.kpis.sectionLabel', 'Service evidence pack metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={error} onRetry={onRetry} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={96} className="rounded-xl" />)
-          ) : (
-            <>
-              <MetricCard
-                label={t('rootCauseIntelligence.kpis.quality', 'Evidence Quality')}
-                value={workspace.hasChosenSignal ? qualityLabel : '—'}
-                subtitle={t('serviceEvidencePack.kpis.qualitySubtitle', 'Drives the export gate below')}
-                icon={<ShieldCheck className="h-5 w-5" />}
-                color={workspace.hasChosenSignal ? QUALITY_COLOR[liveCore.quality.band] : 'cyan'}
-              />
-              <MetricCard
-                label={t('serviceEvidencePack.kpis.signals', 'Signals in Pack')}
-                value={liveCore.signalEvidence.length}
-                subtitle={t('serviceEvidencePack.kpis.signalsSubtitle', '{{n}} corroborating', { n: corroborating })}
-                icon={<ClipboardList className="h-5 w-5" />}
-                color="blue"
-              />
-              <MetricCard
-                label={t('serviceEvidencePack.kpis.hypotheses', 'Ranked Hypotheses')}
-                value={liveCore.hypotheses.length}
-                subtitle={t('serviceEvidencePack.kpis.hypothesesSubtitle', 'Evidence-ranked, not diagnostic')}
-                icon={<ListOrdered className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('serviceEvidencePack.kpis.status', 'Pack Status')}
-                value={packStatusLabel}
-                subtitle={packStatusSubtitle}
-                icon={<PackageCheck className="h-5 w-5" />}
-                color={pack ? 'green' : canGenerate ? 'cyan' : 'amber'}
-              />
-            </>
-          )}
-        </section>
-      </FadeIn>
+      <ServiceEvidencePackSummary
+        workspace={workspace}
+        liveCore={liveCore}
+        pack={pack}
+        canGenerate={canGenerate}
+        evidenceState={evidenceState}
+        isLoading={isLoading}
+        error={error}
+        onRetry={onRetry}
+      />
 
       {/* 3 — Evidence inventory */}
-      <FadeIn delay={0.2}>
+      <FadeIn>
         <ServiceEvidenceInventoryTable
           signalEvidence={liveCore.signalEvidence}
+          sources={workspace.evidenceBundle.sources}
           hasChosenSignal={workspace.hasChosenSignal}
           isLoading={isLoading}
           isError={isError}
@@ -245,12 +207,12 @@ export default function ServiceEvidencePackPage() {
       </FadeIn>
 
       {/* 4 — Privacy manifest */}
-      <FadeIn delay={0.3}>
+      <FadeIn>
         <ServiceEvidencePrivacyPanel />
       </FadeIn>
 
       {/* 5 — Integrity & export */}
-      <FadeIn delay={0.4}>
+      <FadeIn>
         <ServiceEvidenceIntegrityPanel
           canGenerate={canGenerate}
           generating={generating}
@@ -263,9 +225,9 @@ export default function ServiceEvidencePackPage() {
       </FadeIn>
 
       {/* 6 — Pack preview */}
-      <FadeIn delay={0.5}>
+      <FadeIn>
         <ServiceEvidencePackPreview pack={pack} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

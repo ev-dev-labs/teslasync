@@ -1,0 +1,471 @@
+{
+  "item": "audit-page-076",
+  "phase": 0,
+  "page": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+  "routes": [
+    {
+      "path": "/benchmarks/privacy",
+      "file": "web\\src\\App.tsx",
+      "line": 758,
+      "detail": "SafeRoute mounts lazy PrivacyBenchmarks; lazy import is at line 224. Source mounting declaration only, not exercised navigation."
+    }
+  ],
+  "purpose": "Review and manage vehicle-specific opt-in private cohort benchmarking, privacy accounting, stable releases, noisy comparisons and revocation.",
+  "primaryGoal": "Make an informed participation decision, create or check a private release, interpret its limitations, and revoke future contributions with typed confirmation.",
+  "dataSources": [
+    {
+      "name": "Selected vehicle",
+      "hook": "useSelectedVehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 30,
+      "endpoint": "GET /api/v1/vehicles through useVehicles",
+      "endpointEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-79",
+      "behavior": "URL vehicle_id takes precedence over persisted selection and first fleet vehicle; known-vehicle validation and URL repair reside in the shared hook. Fleet loading and failure are not exposed by the page's chosen destructuring."
+    },
+    {
+      "name": "Privacy status",
+      "hook": "useBenchmarkPrivacyStatus",
+      "owner": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 77,
+      "endpoint": "GET /api/v1/benchmarks/privacy?vehicle_id=N",
+      "routeEvidence": "internal\\api\\router.go:3903-3905",
+      "behavior": "Enabled for truthy vehicle ID; status query key includes vehicle ID; ANALYTICS stale time and abort signal forwarding. deriveDataState feeds participation, budget and controls; missing opted_in is locally defaulted to false.",
+      "backendLimits": "Only route registration inspected; no handler, DB, differential-privacy guarantees, subject isolation or runtime response verified."
+    },
+    {
+      "name": "Historical releases",
+      "hook": "useBenchmarkReleases",
+      "owner": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 90,
+      "endpoint": "GET /api/v1/benchmarks/releases?vehicle_id=N&limit=12&offset=0",
+      "routeEvidence": "internal\\api\\router.go:3910",
+      "behavior": "Enabled only for selected vehicle and confirmed opted-in status; query key includes vehicle, limit and offset; abort signal and ANALYTICS stale time. Page chooses items[0], with historical provenance, and exposes no release-history paging UI.",
+      "backendLimits": "Ordering of items, window calculation, nullable payload conformity and stability/idempotency are unverified. Do not infer items[0] is newest from a backend implementation not read."
+    },
+    {
+      "name": "Opt in",
+      "hook": "useOptInBenchmarks",
+      "owner": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 119,
+      "endpoint": "PUT /api/v1/benchmarks/privacy/consent",
+      "request": "{ vehicle_id }",
+      "routeEvidence": "internal\\api\\router.go:3906-3907",
+      "behavior": "Successful response populates selected-vehicle status and invalidates benchmark root queries."
+    },
+    {
+      "name": "Create/check release",
+      "hook": "useCreateBenchmarkRelease",
+      "owner": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 134,
+      "endpoint": "POST /api/v1/benchmarks/releases",
+      "request": "Page supplies only vehicle_id; hook supports optional period_end but page supplies none.",
+      "routeEvidence": "internal\\api\\router.go:3911-3912",
+      "behavior": "Invalidates status and benchmark root after success. Stable-release reuse and last-three-completed-months statements are UI explanations, not independently proved server behavior."
+    },
+    {
+      "name": "Revoke participation",
+      "hook": "useRevokeBenchmarks",
+      "owner": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "file": "web\\src\\api\\hooks\\useBenchmarks.ts",
+      "line": 153,
+      "endpoint": "DELETE /api/v1/benchmarks/privacy/consent?vehicle_id=N",
+      "routeEvidence": "internal\\api\\router.go:3908-3909",
+      "behavior": "Removes benchmark root queries and invalidates selected status on success; typed localized REVOKE confirmation precedes mutation. No mutation executed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard / Grid",
+      "kind": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": [
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:57-68",
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:94",
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:121",
+        "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-14",
+        "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:16-63"
+      ],
+      "contract": "PageLayout delegates to PageContainer and keeps w-full/min-w-0 container; LayoutCard supplies named title, actions, description help and footer. Grid callers request one column then lg two columns, gap 4. Preserve independent sources and all section reachability.",
+      "limits": "Grid and PageContainer implementation not inspected; inherited retry chrome, sizing and runtime shell behavior unverified."
+    },
+    {
+      "name": "Seven benchmark sections and BenchmarkStatusContent",
+      "kind": "domain",
+      "owner": "web\\src\\features\\benchmarks\\components\\index.ts",
+      "evidence": [
+        "web\\src\\features\\benchmarks\\components\\index.ts:1-7",
+        "web\\src\\features\\benchmarks\\components\\BenchmarkStatusContent.tsx:15-29"
+      ],
+      "contract": "Reuse existing section components. BenchmarkStatusContent composes SourceContent with fatalError, loading and retry, plus StaleRefreshWarning. Keep status-backed sections separate from release-backed sections."
+    },
+    {
+      "name": "OperationalBrief / UsageCard",
+      "kind": "shared composite",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "evidence": [
+        "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx:133-157",
+        "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx:64-99",
+        "web\\src\\components\\data-display\\OperationalBrief.tsx:123-160",
+        "web\\src\\components\\data-display\\OperationalBrief.tsx:164-196",
+        "web\\src\\components\\data-display\\UsageCard.tsx:218-265"
+      ],
+      "contract": "OperationalBrief accepts typed metrics, compact, source-backed status, scope, freshness, provenance, narrative and loading; preserves details drawer and missing-value states. UsageCard budget takes headline/rightLabel/caption/pct/intent/ariaLabel, with unknown-budget emptyMessage. Calculations stay in feature adapters.",
+      "limits": "Drawer/focus, formatter implementation and complete shared-component internals not audited."
+    },
+    {
+      "name": "ChartCard / chart category",
+      "kind": "shared chart",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "evidence": [
+        "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx:36-69",
+        "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:13-44",
+        "web\\src\\components\\charts\\chartUtils.tsx:5",
+        "web\\src\\lib\\colors.ts:31-40"
+      ],
+      "contract": "Existing frame delegates to EmbeddedChart with ariaLabel, data/dataColumns, exportable, loading, empty and explicit 280px height. Metric labels and percentiles remain accessible/exportable through the frame. Static CHART_COLORS[0] resolves to Okabe-Ito blue, not the optional neon palette.",
+      "limits": "EmbeddedChart, real export interaction and accessible-data UI not executed or inspected deeply."
+    },
+    {
+      "name": "Button / Checkbox / ConfirmDialog / Table / typography / feedback / FadeIn",
+      "kind": "existing primitives",
+      "owner": "existing category barrels; no new primitive owner required",
+      "evidence": [
+        "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx:52-68",
+        "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx:38-76",
+        "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx:80-112",
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:83-133"
+      ],
+      "contract": "Keep labeled controls, localized error callouts, semantic row headers, action loading/disabled behavior, confirmation cancel and typed token, and shared entrance-motion policy.",
+      "limits": "No primitive implementations, real keyboard order, focus restoration, target sizes or reduced-motion runtime verified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx",
+      "line": 138,
+      "rule": "MDC-031 / mission visual hierarchy",
+      "detail": "Private comparisons and Privacy budget each repeat their LayoutCard title/description inside a compact OperationalBrief and add a second surface. Source-confirmed duplicated hierarchy, not proof of unacceptable rendered density.",
+      "fix": "Evaluate existing composed/embedded presentation with the shared owner; retain OperationalBrief metrics, drawer, provenance and full descriptions, not delete a summary to reduce noise.",
+      "owner": "integration",
+      "confidence": "medium",
+      "relatedEvidence": [
+        "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx:124-146",
+        "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx:64-70",
+        "web\\src\\components\\data-display\\OperationalBrief.tsx:123-147"
+      ]
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:94,121: paired sections stack below lg",
+      "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:12: full-width min-w-0 container",
+      "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:30-36: wrapping heading/actions and break-words",
+      "web\\src\\components\\data-display\\OperationalBrief.tsx:167-170: compact one/two/three/six-column reflow",
+      "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx:44: wrapLabel",
+      "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx:40,55-58: fixed 280px chart with four categorical labels"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+        "line": 58,
+        "rule": "MDC-043 / mission 15,27",
+        "detail": "Four translated X-axis labels have no page-specific mobile tick or wrapping policy; narrow-width clipping is a risk, not an observed failure.",
+        "fix": "Exercise 320/375/390/430px and long translations, using existing chart label/axis mechanisms if needed; preserve all four categories, 0-100 scale, full data table and export.",
+        "owner": "page",
+        "confidence": "low"
+      }
+    ],
+    "validation": "All required widths 320,375,390,430,768,1024,1280,1440,1920,2560, container widths, 200% text, RTL and long labels unverified."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx:52-68: labeled Checkbox and disabled/loading opt-in",
+      "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx:50-53,80-107: loading status label and semantic row headers",
+      "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx:47,57-76: decorative aria-hidden icon and typed ConfirmDialog",
+      "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx:44-52: named chart and data columns",
+      "web\\src\\features\\benchmarks\\components\\operationalbrief-all\\MetricComparisonDetails.tsx:27: decorative icon hidden"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+        "line": 65,
+        "rule": "MDC-042",
+        "detail": "Bar receives no explicit isAnimationActive or shared motion preference; default chart animation may remain even when shared FadeIn respects reduced motion. This is a source-level gap, not tested motion behavior.",
+        "fix": "Use the existing motion preference for chart-series animation, without introducing another animation policy or changing source values.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "validation": "Keyboard, focus/restore/Escape, screen-reader announcements, AA composed contrast, forced colors, 44px reachability and reduced-motion behavior unverified."
+  },
+  "states": {
+    "observedSourceBehavior": {
+      "noVehicle": "One Select a vehicle LayoutCard with /vehicles navigation; all seven domain sections are absent in this branch (page:70-80). Preserve the branch and navigation.",
+      "initialStatus": "deriveDataState initial; BenchmarkStatusContent renders loading for absent source data, wrapping consent, UsageCard and revoke. Budget OperationalBrief also uses initial loading.",
+      "optedOut": "Consent acknowledgement and opt-in shown; releases disabled; CohortEligibilityPanel explains consent; comparison metrics remain unknown and chart empty; revoke disabled.",
+      "loadingReleases": "Cohort skeleton, comparison OperationalBrief loading, ChartCard loading.",
+      "emptyRelease": "Cohort create action, unavailable metric summaries/empty explanation, no charted percentiles.",
+      "suppressed": "Cohort warning; per-metric suppressed descriptions; chart filters suppressed or missing percentiles. Suppression reasons remain present.",
+      "statusFailure": "Status-backed SourceContent fatal error and retry; other sections remain mounted.",
+      "releaseFailure": "Error forwarded to cohort callout; comparison status becomes release unavailable; chart only receives null release/loading, no source error.",
+      "staleOrOfflineRetained": "deriveDataState keeps payload for error/paused; status sections and metric comparison have StaleRefreshWarning; cohort/chart lack local DataState, while PageLayout receives both queries.",
+      "mutations": "Consent pending/error; create pending/error; revoke disabled pending, localized typed confirmation, cancel and close-on-confirm, with error callout after mutation."
+    },
+    "issues": [
+      {
+        "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+        "line": 100,
+        "rule": "MDC-026",
+        "detail": "Cohort receives optedIn=false while status is unresolved or failed; releases are disabled and it can report Consent required before participation is known. The default threshold 5 at line 102 can appear before accounting resolves. Chart receives no fatal/retained state at line 119 and can say empty on release failure.",
+        "fix": "Keep known false distinct from unknown and pass existing status/release DataState into affected sections; distinguish disabled, pending, fatal, empty and retained data without removing current content or introducing a second query engine.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+        "line": 123,
+        "rule": "MDC-020 / MDC-026",
+        "detail": "No-release EmptyState action only receives onCreate, not pending/disabled. Pending is used on the existing-release Button at line 116, but not on initial Create release. Repeated clicks appear possible while the create mutation is pending; actual duplicate requests not executed.",
+        "fix": "Compose the existing Button loading/disabled contract for initial create while preserving the same EmptyState explanation and action. Do not claim server idempotency.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\benchmarks\\components\\BenchmarkStatusContent.tsx",
+        "line": 20,
+        "rule": "MDC-026",
+        "detail": "All absent data without fatalError maps to loading, including paused initial requests. SourceContent receives no separate offline/unavailable classification here; StaleRefreshWarning may communicate some blocked state but its implementation was not inspected.",
+        "fix": "Use existing DataState blocked/unknown state presentation after checking SourceContent and warning contracts; preserve retry and retained values.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "All state cases source-only; no request or mutation performed."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\data-display\\UsageCard.tsx",
+      "line": 140,
+      "rule": "MDC-010 / MDC-012 / mission 5-7",
+      "detail": "Budget bar uses fixed bg-cyan-500/70 (or amber/red at warning thresholds) and its rail uses bg-white/[0.06] at line 248. This page consumes the budget branch. These are shared fixed-color saturation/white-overlay risks, not proof of fluorescent output or pure-white text. Page/domain source scan found no neon/glow/white tokens.",
+      "fix": "Shared owner should bind existing budget intents and rail to semantic theme tokens, preserving percentages, epsilon values, severity thresholds, accessible summary and over-budget semantics. Do not reset saved theme/chart choices.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 99,
+      "rule": "MDC-032 / MDC-046",
+      "detail": "Benchmarks prefix disables workspace vehicle control (scope computation at 156-166). Page mutations/read queries require a selected vehicle but page has no local selector or visible selected-vehicle identity. Desktop WorkspaceHeader only renders VehiclePicker when showVehicle (34,62-67); useSelectedVehicle can silently use persisted or first fleet vehicle. This is a source-confirmed scope/identity gap; mobile shell and real route behavior not exercised.",
+      "fix": "Integration owner should make a deliberate route-specific workspace scope decision and expose existing vehicle selection plus target identity, or preserve an appropriate existing local selector if header intentionally remains hidden. Never add a competing workspace store. Retain URL/store/first-vehicle precedence and authenticated consent boundaries.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+      "line": 31,
+      "rule": "MDC-046",
+      "detail": "Acknowledgement is page-local state with no reset/key on vehicleId change. If workspace or URL scope changes without remount, an acknowledgement from one vehicle can remain checked for another. This is a source risk; actual routing/remount behavior unverified.",
+      "fix": "Keep explicit acknowledgement tied to the current target vehicle when scope changes; preserve checkbox copy, opt-in request and existing cache invalidation.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Vehicle identity/selection and unknown-versus-opted-out semantics affect informed consent and recovery; resolve before cosmetic changes. Existing shared layout and domain decomposition already provide a strong reuse baseline.",
+    "order": [
+      "Integration vehicle scope/target identity",
+      "Independent initial/failure/offline and create-pending semantics",
+      "Acknowledgement scope and reduced-motion verification",
+      "Shared budget theme tokens and composed hierarchy review",
+      "Responsive, keyboard, contrast and real data acceptance"
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Benchmark route workspace vehicle ownership",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "getWorkspaceRouteScope('/benchmarks/privacy').vehicle; existing WorkspaceHeader VehiclePicker and selected-vehicle hook. Cover multi-vehicle, URL override, persisted/default vehicle, no-vehicle and mobile parity; no new selector/store API.",
+      "usedBy": [
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+        "web\\src\\components\\layout\\WorkspaceHeader.tsx"
+      ],
+      "dependsOn": [
+        "Integration route-scope decision",
+        "Existing useSelectedVehicle URL/store precedence",
+        "Verification of mobile shell scope consumer, not inspected here"
+      ],
+      "evidence": [
+        "web\\src\\lib\\workspaceScope.ts:99,156-166",
+        "web\\src\\components\\layout\\WorkspaceHeader.tsx:34,62-67",
+        "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx:30,47-54"
+      ]
+    },
+    {
+      "name": "UsageCard semantic budget colors",
+      "existingOwnerFile": "web\\src\\components\\data-display\\UsageCard.tsx",
+      "propsVariantsStates": "Preserve budget {headline,rightLabel,caption,pct,intent,ariaLabel}; normal/warn/danger and missing budget. Replace fixed rail/accent styling with existing semantic tokens; retain finite formatting and visual clamp.",
+      "usedBy": [
+        "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx"
+      ],
+      "dependsOn": [
+        "Existing semantic color tokens and composed light/dark/custom-theme contrast validation"
+      ],
+      "evidence": [
+        "web\\src\\components\\data-display\\UsageCard.tsx:139-149,218-265",
+        "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx:85-99"
+      ],
+      "limits": "Other UsageCard consumers are out of this one-page audit. Their coverage must be verified by the shared owner, not inferred from comments."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "detail": "Page uses existing layout, chart, stats, feedback, form and overlay mechanisms. No second query store, palette, date picker, raw control pipeline or formatting engine found in inspected feature files. Existing repeated outer/inner titles are composition duplication, not a new renderer.",
+    "retain": [
+      "BenchmarkStatusContent domain adapter, not a new shared source-state system",
+      "MetricComparisonDetails specialist metadata and uncertainty explanation",
+      "Current efficiency source-unit interpretation; no audit-authorized wire/model changes"
+    ],
+    "limits": "No whole-app competing implementation search performed."
+  },
+  "preservation": {
+    "sourceSHA256": "2290546ADAA7A150D2FA2DA4FAF447AD89C5B4D10B16939AD7D4733B4168DB68",
+    "currentLineCount": 139,
+    "featurePresentationLineCount": 1015,
+    "featurePresentationLineCountScope": "Page plus nine non-test TSX dependencies under benchmarks/components; barrel excluded. Counts: page139, chart79, status32, cohort143, consent82, methodology41, metrics170, budget102, controls81, metricDetails46.",
+    "sections": [
+      { "name": "Private participation", "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx", "line": 84 },
+      { "name": "Privacy budget", "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx", "line": 96 },
+      { "name": "Cohort eligibility", "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx", "line": 99 },
+      { "name": "Private comparisons", "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx", "line": 111 },
+      { "name": "Noise-adjusted performance percentiles", "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx", "line": 119 },
+      { "name": "Methodology & limits", "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx", "line": 123 },
+      { "name": "Privacy controls", "file": "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx", "line": 126 }
+    ],
+    "sectionCounts": {
+      "selectedVehicleDomainSections": 7,
+      "alternativeNoVehicleSection": 1,
+      "pageLayout": 1,
+      "pairedGrids": 2,
+      "fadeInWrappers": 7,
+      "domainLayoutCardCalls": 6,
+      "chartCardCalls": 1,
+      "featureOperationalBriefCalls": 2,
+      "pageGlassPanelOrChartContainerCalls": 0
+    },
+    "actions": [
+      "Go to vehicles navigation when selection absent",
+      "Check/uncheck informed consent acknowledgement",
+      "Opt in with pending/disabled and failure feedback",
+      "Create release from empty cohort",
+      "Check current source version from existing cohort",
+      "Chart export and accessible metric/percentile data through existing ChartCard",
+      "Review details and close drawer for comparisons and privacy accounting through OperationalBrief",
+      "Open revoke dialog; enter localized REVOKE token; cancel Keep participation or confirm Revoke & delete"
+    ],
+    "dataBehavior": [
+      "Selected vehicle precedence, vehicle-scoped query keys and mutation targets",
+      "Authenticated subject route middleware and rate-limited writes as declared by router, without inferring enforcement success",
+      "Consent-dependent releases, limit12 offset0 and existing first-item presentation",
+      "Abort signal forwarding, inherited query policies, cache population/removal and invalidation",
+      "Raw API release/status fields, all four metric identities and nullable values; no unknown-to-zero conversions",
+      "Efficiency source wh_per_km rendered as Wh per selected distance unit using existing convertDistanceToSI; existing operational adapter divides by1000 then restores in formatter. No guessed backend SI migration.",
+      "Epsilon spent/budget/remaining, 70/90 warning thresholds, finite checks and unknown-budget placeholder",
+      "Cohort family, five-year bucket, minimum threshold, suppression reasons and k metadata",
+      "Private IQR, target values, percentiles with100 meaning better, per-metric quality/direction, noisy cohort count and noise scale",
+      "Release ID, window, created timestamp, mechanism version, source scope and unavailable-time statements",
+      "Suppressed/null percentile chart exclusion and fixed0-100 axis",
+      "Four methodology steps and nonrepresentative/noncausal limitations",
+      "Revocation explanations retain distinction between future/clipped contributions and published aggregates/accounting",
+      "Localization, number/distance preferences, source trust and all independent sections in selected-vehicle mode"
+    ],
+    "hashVerification": "SHA-256 captured before report authoring; source changes prohibited."
+  },
+  "evidenceLimits": {
+    "scope": "One assigned page and its direct feature dependencies; bounded shared implementation excerpts, route declaration and hook contracts only.",
+    "runtime": "UNVERIFIED: no app/browser/server navigation, screenshots, network requests or production mutation.",
+    "visual": "UNVERIFIED: no effective color, saturation, contrast, glow appearance, viewport rendering, density or clipping measurement.",
+    "accessibility": "UNVERIFIED: keyboard, focus, screen readers, forced colors, touch reachability and actual reduced-motion behavior.",
+    "backend": "UNVERIFIED: handlers/repositories, response nullability/order, units outside hook declarations, privacy algorithm, deletion and idempotency. Router declarations are not backend acceptance.",
+    "validation": [
+      {
+        "command": "Get-FileHash web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx).Count",
+        "exitCode": 0,
+        "output": "2290546ADAA7A150D2FA2DA4FAF447AD89C5B4D10B16939AD7D4733B4168DB68; 139"
+      },
+      {
+        "command": "PowerShell source-pattern scan attempt",
+        "exitCode": 1,
+        "output": "ParserError: Unexpected token ']' in expression or statement.",
+        "detail": "Replaced with bounded Python read-only scan; failed attempt did not edit source."
+      },
+      {
+        "command": "Python via PowerShell here-string: page and benchmarks/components non-test *.tsx; per-line regex counts for inlineStyle, rawControls, directLibraries, oldApi, neonGlowWhite; file line counts",
+        "exitCode": 0,
+        "output": "inlineStyle: 0\nrawControls: 0\ndirectLibraries: 0\noldApi: 0\nneonGlowWhite: 0\nPrivacyBenchmarksPage.tsx:139\nBenchmarkPercentileChart.tsx:79\nBenchmarkStatusContent.tsx:32\nCohortEligibilityPanel.tsx:143\nConsentGate.tsx:82\nMethodologyPanel.tsx:41\nMetricComparisonGrid.tsx:170\nPrivacyBudgetPanel.tsx:102\nPrivacyControls.tsx:81\nMetricComparisonDetails.tsx:46",
+        "detail": "Source-token counts only; shared UsageCard findings excluded from these domain counts."
+      }
+    ],
+    "reportValidation": {
+      "command": "Python json.loads report; assert all 19 required contract keys; hashlib.sha256 source bytes compared to report; source splitlines count; Path.exists for every filesRead entry",
+      "exitCode": 0,
+      "output": "PASS: valid JSON; all 19 contract fields; unchanged page SHA-256; 139 lines; filesRead paths exist."
+    },
+    "notRun": [
+      "audit.sh was read, not executed: its step7 runs project-wide TypeScript, outside this Phase0 read-only assignment.",
+      "No TypeScript, full-repo lint/build, tests, agents, Git, history or deployment. Documentation-only report and heartbeat are the sole writes.",
+      "No current or historical runtime acceptance borrowed. Missing chartUtils.ts read was corrected to actual chartUtils.tsx."
+    ],
+    "assumptions": [
+      "Runtime issues are framed as source-confirmed wiring gaps or explicitly qualified risks.",
+      "Existing source behavior is a preservation baseline, not endorsement of ambiguous loading/consent semantics.",
+      "Shared changes are proposals for separately owned integration, not audit authorization to change source."
+    ],
+    "ownedFiles": [
+      "docs\\frontend-audits\\audit-page-076.json",
+      ".agent-status\\audit-page-076.txt"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\benchmarks\\pages\\PrivacyBenchmarksPage.tsx",
+    "web\\src\\features\\benchmarks\\components\\index.ts",
+    "web\\src\\features\\benchmarks\\components\\BenchmarkPercentileChart.tsx",
+    "web\\src\\features\\benchmarks\\components\\BenchmarkStatusContent.tsx",
+    "web\\src\\features\\benchmarks\\components\\CohortEligibilityPanel.tsx",
+    "web\\src\\features\\benchmarks\\components\\ConsentGate.tsx",
+    "web\\src\\features\\benchmarks\\components\\MethodologyPanel.tsx",
+    "web\\src\\features\\benchmarks\\components\\MetricComparisonGrid.tsx",
+    "web\\src\\features\\benchmarks\\components\\PrivacyBudgetPanel.tsx",
+    "web\\src\\features\\benchmarks\\components\\PrivacyControls.tsx",
+    "web\\src\\features\\benchmarks\\components\\operationalbrief-all\\MetricComparisonDetails.tsx",
+    "web\\src\\api\\hooks\\useBenchmarks.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\WorkspaceHeader.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\UsageCard.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\chartUtils.tsx",
+    "web\\src\\lib\\colors.ts"
+  ]
+}

@@ -1,0 +1,378 @@
+{
+  "item": "audit-page-233",
+  "page": "web\\src\\features\\vehicles\\pages\\PhysicsLedgerPage.tsx",
+  "routes": ["/tesla-physics/ledger"],
+  "purpose": "Explain measured versus predicted vehicle energy and force over a bounded historical window, including missing signals, contradictions, unknown intervals and session boundaries.",
+  "primaryGoal": "Inspect all eleven physics domains for the workspace-selected vehicle without mistaking unknown residuals or incomplete telemetry for measured zero or complete coverage.",
+  "dataSources": [
+    {
+      "hook": "usePhysicsLedger",
+      "file": "web\\src\\api\\hooks\\usePhysicsLedger.ts",
+      "line": 44,
+      "endpoint": "GET /api/v1/physics/ledger?end=<ISO>&start=<ISO>&vehicle_id=<selected>",
+      "routeEvidence": "internal\\api\\router.go:3515,3526",
+      "owner": "internal\\handler\\v1\\analysis\\physics_ledger_handler.go:17-30; internal/app/physicssvc.Service",
+      "behavior": "Vehicle-gated historical query; physicsLedgerKeys.window includes scope; AbortSignal forwarded to request. scopedPath emits snake_case vehicle_id/start/end. Handler validates positive vehicle and ordered dates, defaults to 24 hours, permits up to 366 days and delegates solving to the service. Root payload is returned; readPhysicsLedger also understands older wrapped responses. Service, database coverage and solver correctness not audited."
+    },
+    {
+      "hook": "useAnalysisWindow",
+      "file": "web\\src\\hooks\\useAnalysisWindow.ts",
+      "line": 4,
+      "endpoint": "No request; supplies ledger start/end",
+      "owner": "Existing analysis-window hook",
+      "behavior": "URL hours/start/end; presets 6 and 24 hours; default 24. Anchor captured once at mount. Valid explicit windows up to 24 hours accepted; invalid or longer URLs fall back to anchored preset. Choosing a preset updates hours/start/end and preserves other search parameters."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "endpoint": "useVehicles dependency; fleet endpoint not independently traced",
+      "owner": "Existing workspace selected-vehicle store/hook",
+      "behavior": "URL vehicle_id, stored selection and first-fleet fallback; known-fleet reconciliation. Page adds no local vehicle picker and returns NoVehicleSelected when effective ID is null."
+    },
+    {
+      "hook": "useDataState / useUnits / useNumberFormatting",
+      "file": "web\\src\\features\\vehicles\\pages\\PhysicsLedgerPage.tsx",
+      "line": 47,
+      "endpoint": "No additional ledger endpoint",
+      "owner": "Existing data-trust and display-formatting owners",
+      "behavior": "Historical trust state preserves returned data after refresh failure. Panels pass SI Wh, W, m, m/s, Celsius, kPa and seconds to display helpers; force remains N and mass kg. Raw arrays and cache values are not converted. Formatting implementations were not exhaustively traced."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": "PageLayout.tsx:9-15; PhysicsLedgerPage.tsx:55-69",
+      "contract": "Existing full-width min-w-0 container; title, subtitle, copyLink, query metadata and header actions retained."
+    },
+    {
+      "name": "VehicleEvidenceBrief / LedgerEvidenceBrief / OperationalBrief",
+      "owner": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+      "evidence": "VehicleEvidenceBrief.tsx:18-41; LedgerEvidenceBrief.tsx:8-25; web\\src\\components\\data-display\\OperationalBrief.tsx:119-202",
+      "contract": "Typed raw StatMetric bridge, source status/scope/provenance, freshness and Review details drawer. Domain briefs mark missing/unknown domains or truncation partial when transport status is ok."
+    },
+    {
+      "name": "Eleven ledger panels / PendingPanels / TermRow",
+      "owner": "web\\src\\features\\vehicles\\components\\physics-ledger\\LedgerPanels.ts",
+      "evidence": "PhysicsLedgerPage.tsx:133-147; PendingPanels.tsx:5-31; TermRow.tsx:20-37",
+      "contract": "Feature-owned domain composition; nullable nested domains retain titled shells, optional lists normalize safely, methods/missing signals remain attached to terms and unknown values are not zero-filled."
+    },
+    {
+      "name": "Table / DataTable",
+      "owner": "web\\src\\components\\ui\\Table.tsx; web\\src\\components\\ui\\DataTable.tsx",
+      "evidence": "Table.tsx:14-38; DataTable.tsx:185-189,714-725; EpochsPanel.tsx:53-60; UnknownPanel.tsx:45-53",
+      "contract": "Semantic accounting matrices use Table with row-header scopes. Persistent epochs/unknown table IDs, column preferences and unknown-table pagination remain DataTable-owned. Table confines horizontal overflow."
+    },
+    {
+      "name": "MotionCharts / AreaChartWrapper",
+      "owner": "web\\src\\features\\vehicles\\components\\physics-ledger\\MotionCharts.tsx; web\\src\\components\\charts\\AreaChartWrapper.tsx",
+      "evidence": "MotionCharts.tsx:10-39; AreaChartWrapper.tsx:89-98,143-155",
+      "contract": "Separate power/speed and optional force plots, at most 500 presentation samples, shared responsive SVG renderer and display-only axis/tooltip formatting."
+    },
+    {
+      "name": "Text, PanelTitle, Caption, Badge, Button, FadeIn, DataProvenanceBadge, QueryError, StaleRefreshWarning, NoVehicleSelected",
+      "owner": "Existing category barrels and onboarding prerequisite component",
+      "evidence": "PhysicsLedgerPage.tsx:50-100; NoVehicleSelected.tsx:45-79",
+      "contract": "Shared typography, semantic statuses, pressed preset buttons, retry, retained-data warning, navigation and prerequisite guidance. Shared control/focus/motion internals not exhaustively audited."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicles\\components\\physics-ledger\\ThermalPanel.tsx",
+      "line": 19,
+      "rule": "MDC-015 / mission sections 7-8",
+      "detail": "Thermal, range, tires and dynamics wrap a self-surfaced OperationalBrief in another GlassPanel with the same domain title and honesty text. Thermal repeats correlation below its brief; tires repeats imbalance below its brief.",
+      "fix": "Review existing brief/card composition with the shared owner; reduce repeated chrome using supported composition while preserving every metric, specialist explanation, status, scope and Review details action.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["ThermalPanel.tsx:20-41", "TiresPanel.tsx:21-40", "DynamicsPanel.tsx:20-33", "RangePanel.tsx:17-32", "OperationalBrief.tsx:119-149"]
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "PageLayout.tsx:11-12 retains full width, min-w-0 and allocated-container context.",
+      "PhysicsLedgerPage.tsx:60,81 uses wrapped metadata and preset controls.",
+      "MotionCharts.tsx:22 stacks plots until lg, then uses two columns.",
+      "OperationalBrief.tsx:169-192 wraps compact metrics with one/two/three/six columns and break-words.",
+      "Table.tsx:16-23 supplies bounded horizontal scrolling for accounting matrices."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\components\\physics-ledger\\EpochsPanel.tsx",
+        "line": 56,
+        "rule": "MDC-023 / MDC-043",
+        "detail": "mobileColumns excludes predicted energy and sample count; UnknownPanel excludes interval end. DataTable applies hidden md:table-cell to excluded keys. These callers supply neither mobilePresentation nor expanded full-detail content, so the excluded evidence is not rendered in the mobile table surface.",
+        "fix": "Use the existing opt-in DataTable mobile presentation/detail contract or a non-lossy scroll strategy; keep every column accessible, existing table IDs, row ordering, pagination and loaded-row export semantics.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["EpochsPanel.tsx:15-40,53-60", "UnknownPanel.tsx:17-25,45-53", "DataTable.tsx:185-189,714-725"]
+      }
+    ],
+    "unverified": "All ten mission viewport widths, long translations, 200% text, RTL, narrow shell containers and actual overflow remain unexercised."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "PhysicsLedgerPage.tsx:75-76 supplies visible hub navigation with focus styling.",
+      "PhysicsLedgerPage.tsx:81-93 labels the window group and uses aria-pressed.",
+      "DriveLedgerPanel.tsx:29-52 names its Table and places residual in tfoot; TermRow.tsx:21 supplies scope=row.",
+      "ChargeLedgerPanel.tsx:42-57 and ParkLedgerPanel.tsx:42-71 preserve named semantic matrices.",
+      "MotionCharts.tsx:23-26 labels chart groups; AreaChartWrapper.tsx:93-94 provides role=img and an accessible name.",
+      "OperationalBrief.tsx:119,166-183 supplies labeled section and metric-list semantics."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\charts\\AreaChartWrapper.tsx",
+        "line": 89,
+        "rule": "MDC-034 / MDC-040",
+        "detail": "The inspected chart wrapper exposes an image name and visual tooltip but no equivalent source-data table/text interaction. MotionCharts supplies numeric plots without a page-level accessible data alternative.",
+        "fix": "Coordinate with the existing chart owner on a keyboard-reachable numeric alternative retaining timestamp, power, speed, force and null gaps; reuse the existing chart/table pipeline rather than creating another chart library.",
+        "owner": "shared",
+        "confidence": "high",
+        "relatedEvidence": ["AreaChartWrapper.tsx:89-155", "MotionCharts.tsx:28-38"]
+      }
+    ],
+    "unverified": "Keyboard navigation, tooltip interaction, drawer focus/trapping/restoration, screen-reader output, actual contrast, forced colors, reduced motion and touch-target sizes were not exercised. The Area renderer does not explicitly set isAnimationActive; actual motion/preferences compatibility remains unknown, not a verified failure."
+  },
+  "states": {
+    "loading": "Initial state mounts twelve named PendingPanels shells with h-32 Skeleton and aria-busy.",
+    "empty": "Absent nested domains show titled domain-specific unknown/empty content; nullable arrays normalize with asList or Array.isArray. No selected vehicle uses existing onboarding guidance.",
+    "error": "fatalError renders QueryError/refetch; retained refresh failures keep the complete ledger and StaleRefreshWarning.",
+    "staleOffline": "Shared deriveDataState preserves payload and marks failed/paused refresh stale. Ledger transport trust is distinct from solver domain unknown flags.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\PhysicsLedgerPage.tsx",
+        "line": 147,
+        "rule": "MDC-026 / mission sections 23-25",
+        "detail": "A fatal request failure with no ledger renders QueryError and twelve PendingPanels empty messages claiming No ledger samples in this window. Failed acquisition does not establish an empty measurement result. An initially paused query also remains initial and shows loading skeletons.",
+        "fix": "Pass the existing source state to persistent shells and distinguish acquisition failure/paused prerequisite from successful no-evidence results; preserve QueryError retry, all twelve shells and retained-data rendering.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["PhysicsLedgerPage.tsx:98-103,146-147", "PendingPanels.tsx:20-29", "api\\dataState.ts:188-212"]
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\physics-ledger\\UnknownPanel.tsx",
+        "line": 40,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Null or absent unknown_intervals is normalized to an empty list and described as Full coverage: no gaps in this window. The same claim appears if the ledger is truncated, despite the explicit oldest-prefix warning. Empty supplied intervals alone do not establish complete requested-window coverage.",
+        "fix": "Retain null-versus-empty knowledge and truncation context; use a coverage-neutral no-returned-interval message unless the source explicitly establishes complete requested-window coverage. Do not synthesize zero hours or invent a backend completeness flag.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["UnknownPanel.tsx:15,31-42", "helpers.ts:20-22", "api\\types.ts:3937-3943", "PhysicsLedgerPage.test.tsx:361-384"]
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\PhysicsLedgerPage.tsx",
+        "line": 47,
+        "rule": "MDC-026",
+        "detail": "Top-level trust is derived only from query transport and never receives partial options. A truncated ledger therefore has an ok/Source returned summary alongside its sample-cap badge, while domain LedgerEvidenceBrief correctly downgrades truncation to partial.",
+        "fix": "Keep transport freshness and solver completeness distinct but consistently described using the current data-trust contract and explicit source evidence. Preserve contradictions and missing-signal badges; do not reinterpret individual unknown fields as total failure.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["PhysicsLedgerPage.tsx:104-131", "LedgerEvidenceBrief.tsx:17-21"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\components\\physics-ledger\\helpers.ts",
+      "line": 3,
+      "rule": "MDC-010 / MDC-011 / MDC-034",
+      "detail": "Three local fixed hex chart colors bypass the current chart palette/theme preference owner. These colors are not evidence of neon by themselves, but they cannot follow saved palettes and theme semantics.",
+      "fix": "Use the existing chart-palette owner at presentation time; keep power/speed/force series distinguishable and preserve explicit saved chart preferences. Do not invent a new palette or remove series.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["helpers.ts:3-7", "MotionCharts.tsx:7,15-18"]
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\components\\physics-ledger\\MarkersPanel.tsx",
+      "line": 21,
+      "rule": "MDC-013",
+      "detail": "Marker rows use raw text-sm and a raw muted span rather than role typography; most neighboring panels already use Text/Caption/PanelTitle.",
+      "fix": "Use existing typography roles with semantic element overrides; preserve ordered-list semantics, exact dates and source marker identities.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\PhysicsLedgerPage.tsx",
+      "line": 40,
+      "rule": "MDC-032",
+      "detail": "The dated ledger owns a separate 6/24-hour page selector via useAnalysisWindow; /tesla-physics/ledger is absent from RANGE_ENABLED_PATHS. Header range ownership is therefore disabled while the vehicle picker remains enabled. The local helper ignores workspace from/to state and anchors its fallback once per mount.",
+      "fix": "Coordinate a workspace-owner migration using existing useRangeState and route registration, passing both bounds through the existing typed hook. Preserve bookmarked hours/start/end interpretation, bounded solver semantics, copy-link behavior and the existing 6/24-hour investigations; do not silently broaden or lose specialist windows.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["PhysicsLedgerPage.tsx:35,40,46,81-95", "useAnalysisWindow.ts:6-30", "workspaceScope.ts:23-78,155-167", "physics_ledger_handler.go:25-30"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "Correct false coverage and failed-versus-empty claims first; preserve mobile evidence and reconcile workspace range ownership before cosmetic flattening. Palette and repeated chrome are secondary.",
+    "runtimeAcceptance": "unverified"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace-owned ledger analysis range",
+      "owner": "web\\src\\lib\\workspaceScope.ts; existing useRangeState owner",
+      "propsVariantsStates": "Register exact mounted route; shared range startInstant/endInstantExclusive and URL migration for hours/start/end; timezone, custom and rolling presets must remain explicit. Existing endpoint accepts start/end; inclusivity and service completeness require integration verification.",
+      "usedBy": ["/tesla-physics/ledger"],
+      "dependsOn": ["Integration review of bounded solver/date semantics and old bookmarked investigation windows"],
+      "disposition": "Integration-owned change; no shared source edited"
+    },
+    {
+      "name": "Nonvisual chart evidence alternative",
+      "owner": "web\\src\\components\\charts\\AreaChartWrapper.tsx",
+      "propsVariantsStates": "Existing data/xKey/series/formatters; accessible numeric alternative, null gaps, localized timestamp/units and keyboard interaction. Reduced-motion contract also needs source-owner verification.",
+      "usedBy": ["PhysicsLedgerPage dynamics MotionCharts", "PhysicsLedgerPage black-box MotionCharts"],
+      "dependsOn": ["Existing chart/table accessibility contract review"],
+      "disposition": "Shared owner review, not permission to introduce another renderer"
+    },
+    {
+      "name": "OperationalBrief embedded composition review",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "propsVariantsStates": "Retain compact metric list, status, narrative, scope, provenance, freshness and Review details drawer while allowing the existing parent panel to remain the sole surface/title owner if supported.",
+      "usedBy": ["DynamicsPanel", "ThermalPanel", "RangePanel", "TiresPanel"],
+      "dependsOn": ["Confirm supported existing composition before proposing any API extension"],
+      "disposition": "Review only; source demonstrates nested surfaces, not a requirement for a new component"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\hooks\\useAnalysisWindow.ts",
+      "line": 4,
+      "rule": "MDC-032",
+      "detail": "Page-owned URL window competes in responsibility with shared workspace range, although the header range is currently disabled here; this is not evidence of two visible date pickers.",
+      "fix": "Resolve with the existing workspace owner and preserve specialist investigation links; no second range engine.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "ee4d455b4fbe43853cc748d80a43650c0f14e64c06b162e37b06da69df18558b",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 151,
+    "rootPlusLedgerDirectoryLineCount": 874,
+    "rootPlusLedgerDirectoryAndTwoBriefAdaptersLineCount": 943,
+    "sectionCount": 12,
+    "sections": [
+      "Returned ledger evidence",
+      "Longitudinal dynamics",
+      "Drive energy ledger",
+      "Charge physics",
+      "Park / vampire physics",
+      "Thermal",
+      "Range disagreement",
+      "Tires",
+      "Firmware epochs",
+      "Unknown budget",
+      "Black box: last 90 s",
+      "Chapter markers"
+    ],
+    "sourceCounts": {
+      "rootGlassPanel": 0,
+      "ledgerDirectoryGlassPanelJSXOccurrences": 15,
+      "rootAndLedgerDirectoryChartContainer": 0,
+      "domainPanelCalls": 11,
+      "pendingSectionDefinitions": 12,
+      "motionChartSites": 2,
+      "accountingTableSites": 3,
+      "dataTableSites": 2
+    },
+    "countLimit": "Static occurrence counts include alternate empty/populated branches and a mapped PendingPanels template; not rendered panel counts. No modernization performed; future baseline must count extracted components, not enforce root-only length.",
+    "actions": [
+      "Page copy link",
+      "Navigate to /tesla-physics",
+      "Choose 6-hour or 24-hour URL-backed window",
+      "Retry failed ledger request",
+      "Review details in summary and four domain briefs",
+      "Existing DataTable preferences/controls and unknown-interval pagination",
+      "Pending-state Tesla physics navigation",
+      "NoVehicleSelected onboarding navigation"
+    ],
+    "dataBehavior": [
+      "Keep selected-vehicle scoping, disabled query without vehicle, cancellation, query keys and historical policy.",
+      "Keep all eleven nullable domains and twelve pending shells; arrays encoded null must never crash iteration.",
+      "Preserve raw SI wire/cache values and display-only energy, power, speed, distance, efficiency, pressure, temperature and duration conversion.",
+      "Preserve measured/predicted/session/reconcile energy, knownness-gated residual, every accounting term, method and missing-signal list.",
+      "Retain honesty text, contradictions, truncation/oldest-prefix warnings, missing signals, parked trust, plugging/dwell state, firmware correlations and markers.",
+      "Keep source timestamps, all chart series and null gaps; retain current bounded presentation sampling unless explicitly authorized.",
+      "Retain actual recorded zero distinct from unknown and retained data distinct from fatal failure.",
+      "Preserve epochs and unknown table IDs, row keys, all desktop/mobile evidence, row order and pagination."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only source inspection and scoped text/hash/count commands. Only owned JSON and heartbeat written.",
+    "runtime": "UNVERIFIED: no application, browser, endpoint request, test, TypeScript, lint or build exercised.",
+    "visualKeyboardContrastViewport": "UNVERIFIED: no screenshot, computed contrast, keyboard, screen reader or responsive acceptance.",
+    "tests": "PhysicsLedgerPage.test.tsx:254-399 inspected for intended contracts, including null handling, residuals and Review details. Tests were not executed and are not acceptance evidence.",
+    "backend": "Route and handler parameter/root-envelope behavior inspected. Service/solver/query coverage, end-bound inclusivity and actual returned fixtures remain unknown.",
+    "auditScript": "Skill audit.sh inspected but not executed: it unconditionally runs project TypeScript, contrary to the assignment's source-only Phase0 validation scope.",
+    "commands": [
+      {
+        "command": "Get-FileHash -Algorithm SHA256 web\\src\\features\\vehicles\\pages\\PhysicsLedgerPage.tsx; scoped Get-Content counts",
+        "exitCode": 0,
+        "output": "ROOT_SOURCE_SHA256=ee4d455b4fbe43853cc748d80a43650c0f14e64c06b162e37b06da69df18558b; ROOT_LINES=151"
+      },
+      {
+        "command": "Case-sensitive rg scoped to root, physics-ledger and two brief adapters: <(button|input|textarea|select|table)\\b",
+        "exitCode": 1,
+        "output": "No matches found. Earlier PowerShell case-insensitive Select-String matched four shared Table/DataTable names; these are not raw HTML violations."
+      },
+      {
+        "command": "Scoped Select-String counts for style=, direct recharts/react-leaflet/framer-motion imports and legacy relative api imports",
+        "exitCode": 0,
+        "output": "style= matching_lines=0; direct library imports matching_lines=0; legacy API imports matching_lines=0. These narrow patterns are not a whole engineering-compliance certificate."
+      }
+    ],
+    "scope": "Assigned mounted page and direct page-specific presentation/data dependencies only. No Git, queue, source/shared changes or production mutations."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-232.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicles\\pages\\PhysicsLedgerPage.tsx",
+    "web\\src\\features\\vehicles\\pages\\PhysicsLedgerPage.test.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\BlackBoxPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\ChargeLedgerPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\DriveLedgerPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\DynamicsPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\EpochsPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\LedgerPanels.ts",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\MarkersPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\MotionCharts.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\ParkLedgerPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\PendingPanels.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\RangePanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\TermRow.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\ThermalPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\TiresPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\UnknownPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\physics-ledger\\helpers.ts",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\LedgerEvidenceBrief.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\api\\hooks\\usePhysicsLedger.ts",
+    "web\\src\\api\\scope.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useAnalysisWindow.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\charts\\AreaChartWrapper.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\analysis\\physics_ledger_handler.go",
+    "internal\\handler\\v1\\analysis\\analysis_handler.go"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-233.json",
+    ".agent-status\\audit-page-233.txt"
+  ]
+}

@@ -8,6 +8,8 @@
  * classification logic lives in exactly one tested place.
  */
 import type { TeslaOrder } from '@/api/hooks/useUser';
+import type { TFunction } from 'i18next';
+import { neonColorMap } from '@/lib/tokens';
 
 /** Discriminates the render state of each self-sufficient page section. */
 export type OrderSectionStatus = 'loading' | 'error' | 'empty' | 'ready';
@@ -46,37 +48,37 @@ interface OrderBucketMeta {
 export const ORDER_BUCKET_META: Record<OrderStatusBucket, OrderBucketMeta> = {
   inProgress: {
     key: 'admin.teslaOrders.bucket.inProgress',
-    fallback: 'In Progress',
-    bar: 'bg-amber-500',
-    dot: 'bg-amber-400',
+    fallback: 'In progress',
+    bar: neonColorMap.amber.dot,
+    dot: neonColorMap.amber.dot,
     badge: 'warning',
   },
   ready: {
     key: 'admin.teslaOrders.bucket.ready',
-    fallback: 'Ready · In Transit',
-    bar: 'bg-sky-500',
-    dot: 'bg-sky-400',
+    fallback: 'Ready · in transit',
+    bar: neonColorMap.blue.dot,
+    dot: neonColorMap.blue.dot,
     badge: 'info',
   },
   delivered: {
     key: 'admin.teslaOrders.bucket.delivered',
     fallback: 'Delivered',
-    bar: 'bg-emerald-500',
-    dot: 'bg-emerald-400',
+    bar: neonColorMap.green.dot,
+    dot: neonColorMap.green.dot,
     badge: 'success',
   },
   cancelled: {
     key: 'admin.teslaOrders.bucket.cancelled',
     fallback: 'Cancelled',
-    bar: 'bg-rose-500',
-    dot: 'bg-rose-400',
+    bar: neonColorMap.red.dot,
+    dot: neonColorMap.red.dot,
     badge: 'danger',
   },
   other: {
     key: 'admin.teslaOrders.bucket.other',
     fallback: 'Other',
-    bar: 'bg-slate-500',
-    dot: 'bg-slate-400',
+    bar: neonColorMap.neutral.dot,
+    dot: neonColorMap.neutral.dot,
     badge: 'neutral',
   },
 };
@@ -116,13 +118,34 @@ export function orderStatusVariant(
   return ORDER_BUCKET_META[bucketOfStatus(status)].badge;
 }
 
-/** Human-friendly title-case rendering of a raw `SNAKE_CASE` status. */
-export function formatOrderStatus(status: string | null | undefined): string {
+const STATUS_LABELS: Record<string, { key: string; fallback: string }> = {
+  BOOKED: { key: 'admin.teslaOrders.status.booked', fallback: 'Booked' },
+  PENDING: { key: 'admin.teslaOrders.status.pending', fallback: 'Pending' },
+  ORDER_PLACED: { key: 'admin.teslaOrders.status.orderPlaced', fallback: 'Order placed' },
+  PREPARING: { key: 'admin.teslaOrders.status.preparing', fallback: 'Preparing' },
+  IN_PRODUCTION: { key: 'admin.teslaOrders.status.inProduction', fallback: 'In production' },
+  BUILD_SCHEDULED: { key: 'admin.teslaOrders.status.buildScheduled', fallback: 'Build scheduled' },
+  READY_FOR_DELIVERY: { key: 'admin.teslaOrders.status.readyForDelivery', fallback: 'Ready for delivery' },
+  IN_TRANSIT: { key: 'admin.teslaOrders.status.inTransit', fallback: 'In transit' },
+  TRANSPORT_SCHEDULED: { key: 'admin.teslaOrders.status.transportScheduled', fallback: 'Transport scheduled' },
+  DELIVERED: { key: 'admin.teslaOrders.bucket.delivered', fallback: 'Delivered' },
+  CANCELLED: { key: 'admin.teslaOrders.bucket.cancelled', fallback: 'Cancelled' },
+  CANCELED: { key: 'admin.teslaOrders.status.canceled', fallback: 'Canceled' },
+  ORDER_REJECTED: { key: 'admin.teslaOrders.status.orderRejected', fallback: 'Order rejected' },
+  DELIVERY_CANCELLED: { key: 'admin.teslaOrders.status.deliveryCancelled', fallback: 'Delivery cancelled' },
+};
+
+/** Localize recognized labels without rewriting unrecognized source text. */
+export function formatOrderStatus(
+  status: string | null | undefined,
+  t?: TFunction,
+): string {
   if (!status) return '—';
-  return status
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  const label = Object.prototype.hasOwnProperty.call(STATUS_LABELS, status.toUpperCase())
+    ? STATUS_LABELS[status.toUpperCase()]
+    : undefined;
+  if (!label) return status;
+  return t ? t(label.key, label.fallback) : label.fallback;
 }
 
 export interface OrderBucketCount {
@@ -144,8 +167,10 @@ export interface OrderStats {
   models: number;
   /** Orders that already have a VIN assigned. */
   withVin: number;
-  /** ISO date of the soonest upcoming delivery, or null when none. */
+  /** Soonest future non-cancelled delivery; null alone does not prove absence. */
   nextDelivery: string | null;
+  /** Missing or invalid delivery facts among non-cancelled orders. */
+  hasUnknownDelivery?: boolean;
 }
 
 const emptyBuckets = (): Record<OrderStatusBucket, number> => ({
@@ -167,15 +192,18 @@ export function computeOrderStats(
   let withVin = 0;
   let nextDelivery: string | null = null;
   let nextMs = Number.POSITIVE_INFINITY;
+  let hasUnknownDelivery = false;
   const now = Date.now();
 
   for (const order of list) {
-    byBucket[bucketOfStatus(order.status)] += 1;
+    const bucket = bucketOfStatus(order.status);
+    byBucket[bucket] += 1;
     if (order.model) modelSet.add(order.model);
     if (order.is_upgradable) upgradable += 1;
     if (order.vin) withVin += 1;
-    if (order.delivery_date) {
-      const ms = Date.parse(order.delivery_date);
+    if (bucket !== 'cancelled') {
+      const ms = order.delivery_date ? Date.parse(order.delivery_date) : Number.NaN;
+      if (Number.isNaN(ms)) hasUnknownDelivery = true;
       if (!Number.isNaN(ms) && ms >= now && ms < nextMs) {
         nextMs = ms;
         nextDelivery = order.delivery_date;
@@ -200,5 +228,6 @@ export function computeOrderStats(
     models: modelSet.size,
     withVin,
     nextDelivery,
+    hasUnknownDelivery,
   };
 }

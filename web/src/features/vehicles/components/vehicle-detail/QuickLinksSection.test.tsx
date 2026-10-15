@@ -68,13 +68,13 @@ function renderSection() {
 describe('QuickLinksSection — structure', () => {
   it('renders the "Quick Links" panel heading', () => {
     renderSection()
-    expect(screen.getByRole('heading', { name: 'Quick Links' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Quick links' })).toBeInTheDocument()
   })
 
   it('exposes a single navigation landmark named "Quick Links" that holds every card', () => {
     renderSection()
 
-    const navs = screen.getAllByRole('navigation', { name: 'Quick Links' })
+    const navs = screen.getAllByRole('navigation', { name: 'Quick links' })
     expect(navs).toHaveLength(1)
     // Every card link lives inside that landmark.
     expect(within(navs[0]).getAllByRole('link')).toHaveLength(LINKS.length)
@@ -155,7 +155,7 @@ describe('QuickLinksSection — navigation & i18n', () => {
     renderSection()
     // The English fallbacks render for the label AND the landmark name…
     expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: 'Quick Links' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Quick links' })).toBeInTheDocument()
     // …and the underlying i18n keys never leak into the UI.
     expect(screen.queryByText('nav.settings')).toBeNull()
     expect(screen.queryByText('vehicles.detail.quickLinks')).toBeNull()

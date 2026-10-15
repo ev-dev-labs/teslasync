@@ -1,5 +1,6 @@
 import type { BadgeProps } from '@/components/ui';
 import type { ExportJobSummary } from '@/api/hooks/useExports';
+import { gaugeTone } from '@/lib/tokens';
 
 /** Canonical status order used by the KPI band, the status breakdown, and any
  *  status-keyed iteration so every surface renders the same sequence. */
@@ -11,15 +12,14 @@ export const STATUS_ORDER: ExportJobSummary['status'][] = [
   'expired',
 ];
 
-/** Toned display colour per job status. Consumed by MetricBar (which takes a
- *  raw CSS colour string) and status dots. Kept as hex — MetricBar composes a
- *  dynamic gradient/glow from the value, so a token class won't work here. */
+/** Mode-aware semantic CSS colours for status dots and solid MetricBar fills,
+ *  matching the shared Badge status roles. */
 export const statusColor: Record<ExportJobSummary['status'], string> = {
-  ready: '#10b981',
-  processing: '#00f0ff',
-  queued: '#f59e0b',
-  failed: '#f43f5e',
-  expired: '#64748b',
+  ready: gaugeTone.success,
+  processing: gaugeTone.info,
+  queued: gaugeTone.info,
+  failed: gaugeTone.danger,
+  expired: gaugeTone.neutral,
 };
 
 /** Map a job status to a shared Badge variant so status is legible without

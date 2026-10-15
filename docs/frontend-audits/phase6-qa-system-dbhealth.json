@@ -1,0 +1,1285 @@
+{
+  "item": "phase6-qa-system-dbhealth",
+  "attempt": 1,
+  "actorId": "7a7c3459-c131-4cf1-9021-83c006bacbf2",
+  "status": "DONE",
+  "evidenceLevel": "ORIGINAL-FINDING DISPOSITION ONLY; accepted source corrections are not fresh test, browser, native, endpoint or page acceptance",
+  "createdAtUtc": "2026-10-14T02:46:14.3189033Z",
+  "route": "/db-health",
+  "writableFiles": [
+    "docs/frontend-audits/phase6-qa-system-dbhealth.json",
+    "web/logs/phase6-qa-system-dbhealth.log"
+  ],
+  "sourceWrites": [],
+  "clocks": {
+    "reservationUtc": "2026-10-14T02:29:12.925Z",
+    "note": "Preserved user clocks. Actor creation cannot be queried with available tools; no clock or helper-budget reset. Reservation is the conservative available start; earlier authoritative creation+20/25 still wins.",
+    "hardUtc": "2026-10-14T02:54:12.925Z",
+    "returnUtc": "2026-10-14T02:49:12.925Z",
+    "actualActorCreationUtc": null
+  },
+  "objectiveAlreadyMet": {
+    "result": false,
+    "checkedAtUtc": "2026-10-14T02:36:40.3132359Z",
+    "evidence": "Both exact authorized artifacts absent in initial Get-Item/views. Existing audit-page-187 and Phase5 accepted migration are historical/source receipts, not this Phase6 objective. Completed items preserved."
+  },
+  "governingReads": {
+    "design": "docs/frontend-design-contract.md core authority/architecture/tokens/interaction/state/numeric/localization/responsive/evidence sections1..625 plus relevant utilization addendum954..1012; unrelated historical appendices not read fully",
+    "inventory": "docs/frontend-inventory.md exact DBHealth row238 and linked audit-page-187 reviewed as historical only",
+    "queue": "migration-queue.md exact row235 plus actor map186, migration2243, historical icon1100/audit989 and narrow-owner searches. Queue changed line numbering from189 during parent edits; never edited by this worker.",
+    "mission": "docs/frontend-mission.md principles/architecture1..230 and QA/page/application DoD1416..1515; orchestrator seven-phase sequence governs",
+    "ancestorAgentes": "26 source ancestor directories checked for AGENTS.md; none found",
+    "instructions": [
+      "docs/CONTRIBUTING.md",
+      ".github/copilot-instructions.md applicable integrity/frontend/security/testing sections",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "orchestrator": "docs/orchestrator-loop.md read fully1..EOF",
+    "handoff": "docs/session-handoff.md current recovery1..95 and learned conventions2219..2255; targeted QA/DBHealth searches"
+  },
+  "coverage": [
+    {
+      "mechanism": "Six typed occurrences across independent4+1+1 storage/migration/pool banks. Null/invalid values flow to typed formatter; source-specific loading suppresses readings in briefs and drawers; zero bytes/count/pool usage preserved.",
+      "section": "Summary",
+      "source": "DBHealthSummary.tsx47..87"
+    },
+    {
+      "mechanism": "Top15 descending row counts independent of Size/Rows/Name detail sort; raw full names retained, visual ticks truncated only. Loading/fatal/empty/retained states and named fallback table preserved; scope and alternative locale gaps DBH-01/03.",
+      "section": "Rows chart",
+      "source": "DBHealthPage.tsx110..121,290..339"
+    },
+    {
+      "mechanism": "version field precedes currentVersion, missing dirty is unknown not Clean; positive pending badge, last5 entries reverse display, TimeStamp for appliedAt, explicit history/source empty; independent retry and retained warning. Missing pending/history capability remains unknown, not invented zero.",
+      "section": "Migration status",
+      "source": "DBHealthPage.tsx123..130,343..431"
+    },
+    {
+      "mechanism": "Stable system:db-health-tables ID; full5columns; size/rows/name sort with pressed buttons; shared value filters/search/pagination/persistence/export. Mobile roles do not delete vacuum/index fields: allColumns feeds Quick view and original column renders. Null bytes dash, valid zeroB preserved.",
+      "section": "Table directory",
+      "source": "DBHealthPage.tsx94..108,153..232,445..493"
+    },
+    {
+      "mechanism": "Six readings max/open/inUse/idle/waitCount/waitDurationMs; percentage needs finite numerator/positive denominator; named solid slim MetricBar; unknown reading has no value/fill, measured zero remains0. >=80danger context retained. Partial gate is conditionalC01.",
+      "section": "Connection pool",
+      "source": "DBHealthPage.tsx132..137,495..550"
+    },
+    {
+      "mechanism": "Header Refresh now fans to all3 refetches; busy ORs all3fetching flags. Individual fatal/stale/source-notice retries stay source-owned; three sort buttons expose aria-pressed and44px mobile minima;3brief Review details drawers and row Quick view/Close owned by existing components. Shared chart image export/menu source present; CSV not supplied by this caller. No action executed.",
+      "section": "Actions",
+      "source": "DBHealthPage.tsx87..91,241..254,449..468; shared support source inspected"
+    },
+    {
+      "mechanism": "No all-page loading/error/empty prop erases independent sections. FatalError only replaces affected source without retained data; refresh errors/paused retain data and timestamps/retries. Paused summary/source warnings neutral or stale, but shared source badge overstates offlineDBH-05. Unsupported nullable DTO fields and data:null response are conditional, not proven server behavior.",
+      "section": "Trust/null/loading/error/empty/paused/retained",
+      "source": "useDataState.ts and dataState.ts190..265; PageLayout/PageContainer/DataSourceNotice/StaleRefreshWarning"
+    },
+    {
+      "mechanism": "Three unprefixed typed request paths forward AbortSignal and preserve keys/polling. Raw bytes and dimensionless counts/percentages are kept; wait duration explicitly uses existing DTO milliseconds, no claimed wire-SI validation. Byte display uses inherited binaryB/KB/MB/GB (not a violation). Numeric formatter subscribes locale/precision; index/alternative/snapshot gapsDBH-02..04. TimeStamp consumes existing date/time preference hooks. DB-health is absent from range-enabled routes and explicitly vehicle-disabled; no duplicate page scope controls. Route lazy loader/path current evidenceE26..28.",
+      "section": "SI/time/preferences/workspace",
+      "source": "useAdmin.ts314..336; useNumberFormatting.ts; TimeStamp.tsx; workspaceScope.ts23..76,109..169"
+    },
+    {
+      "mechanism": "Allocated-width ResizeObserver selects existing adapter; all original fields reachable by named details action; panels stack belowxl, toolbars wrap, full chart identities exposed in fallback. Shared landmark/heading/focus/error-boundary owners retained. Canonical55literal keys and8dynamic status leaves present. Mocks do not establish cold-catalog/native correctness. Effective contrast/focus/touch/RTL/reflow not observed.",
+      "section": "Mobile/a11y/i18n",
+      "source": "DataTable.tsx506..522,1404..1455; MobileDataTableAdapter.tsx129..163; page+summary translation scan"
+    }
+  ],
+  "findings": [
+    {
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "dedup": "Known deferred richerrowchartcopy in completed phase5-page-system-dbhealth receipt, queue observed line2243. Report this remaining mechanism once; do not restart that completed migration.",
+      "id": "DBH-01",
+      "fix": "Disclose top-15-by-row-count scope and total table count using existing localized chart metadata/title; do not change series, ranking, complete detail table or endpoint.",
+      "sourceRepro": "UNEXECUTED: supply statistics for 16 named tables with distinct finite row counts. Trace descending row sort and slice(0,15); compare the Rows title/aria label against the 15-row fallback and 16-row detail table. No code or fixture was run.",
+      "citations": [
+        "E01",
+        "E02"
+      ],
+      "rule": "chart-subset-disclosure",
+      "classification": "source-confirmed",
+      "line": 115,
+      "severity": "low",
+      "mechanism": "The plotted/fallback data is capped at 15 rows but the visible title and accessible name only say Rows. The full detail table is still available; this is missing subset context, not loss of all table records.",
+      "owner": "One page+colocated-test presentation followup, shared with DBH-02/03; orchestrator must lease before writes."
+    },
+    {
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "dedup": "Exact current queue search found completed page/icon/audit objectives, not a separate active DBHealth index-format owner. Proposed only, not queued or assigned.",
+      "id": "DBH-02",
+      "fix": "Apply the existing fmtInt to known index counts in the column renderer, preserving dash for unknown and zero for measured zero.",
+      "sourceRepro": "UNEXECUTED: choose locale de-DE and an indexCount of 1234. Trace the desktop/raw detail render to 1234 and mobile card accessor to fmtInt(1234), which requests German integer formatting. This is a source derivation, not observed browser output.",
+      "citations": [
+        "E03",
+        "E04"
+      ],
+      "rule": "number-preference-bypass",
+      "classification": "source-confirmed",
+      "line": 206,
+      "severity": "low",
+      "mechanism": "The desktop index cell and mobile full-detail renderer emit raw indexCount, whereas the mobile card accessor formats it with fmtInt. Display surfaces therefore disagree on locale/grouping for the same count.",
+      "owner": "Same page+colocated-test presentation followup as DBH-01/03; no shared formatter change required."
+    },
+    {
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "dedup": "Adjacent to the retained richerrowchartcopy need; consolidate in the one narrow caller followup rather than overlapping page writers.",
+      "id": "DBH-03",
+      "fix": "Use the existing ChartDataColumn count kind or a preference-aware fmtInt format. Preserve raw chart values, null gaps and full table names.",
+      "sourceRepro": "UNEXECUTED: choose de-DE and a row count of 12345. Follow the rows dataColumn without kind or format into the shared fallback branch String(raw); the data alternative stays 12345 instead of the requested grouped integer representation.",
+      "citations": [
+        "E05",
+        "E06",
+        "E07"
+      ],
+      "rule": "number-preference-bypass",
+      "classification": "source-confirmed",
+      "line": 306,
+      "severity": "low",
+      "mechanism": "Rows fallback column omits kind:count and format. ChartContainer uses String(raw) without either, bypassing the locale-aware count formatter for the screen-reader data table. Full names remain intact; this is numeric alternative formatting, not identity truncation.",
+      "owner": "Same page+colocated-test presentation followup as DBH-01/02; do not patch shared ChartContainer for a supported caller omission."
+    },
+    {
+      "file": "web/src/features/system/components/statstrip-db-health/DBHealthSummary.tsx",
+      "dedup": "No exact DBHealthSummary followup in current queue searches; proposal only. Do not reopen historical shared OperationalBrief adoption.",
+      "id": "DBH-04",
+      "fix": "Keep observedAt as raw ISO metadata, but use an existing preference-aware formatter for the human-readable last-success description, retaining explicit independent-source provenance and unknown fallback.",
+      "sourceRepro": "UNEXECUTED: keep the three query dataUpdatedAt epochs fixed and change user display timezone/locale/clock preferences. Trace line46; it still produces UTC ISO strings ending Z for visible descriptions. No settings mutation or render was executed.",
+      "citations": [
+        "E08",
+        "E09"
+      ],
+      "rule": "time-preference-bypass",
+      "classification": "source-confirmed",
+      "line": 46,
+      "severity": "medium",
+      "mechanism": "All three visible last-success descriptions interpolate new Date(updatedAt).toISOString(). Unlike TimeStamp/useDateFormat elsewhere on the page, these displayed instants do not consume locale/timezone or 12/24-hour presentation preferences. Raw snapshot observation ISO is appropriate metadata and should remain unchanged.",
+      "owner": "DBHealthSummary.tsx and its existing colocated test only; any canonical copy need belongs to separately serialized catalog owner."
+    },
+    {
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "dedup": "phase3-data-source-notice and phase3-stale-refresh-warning are completed queue objectives; earlier paused-not-proof-of-offline fixtures concern other sources. No current exact shared badge fix found. Propose a new narrow root fix without restarting completed scopes.",
+      "id": "DBH-05",
+      "fix": "Use cause-neutral Refresh paused copy unless independently evidenced offline; retain data, source retry and existing state severity. Coordinate exact canonical/split copy with the orchestrator, not this audit.",
+      "sourceRepro": "UNEXECUTED: consider a retained DB query with fetchStatus paused, isError false, and online evidence true. resolveDataSourceStatus returns paused and the source badge still uses the canonical Paused offline string. Other queries/sections remain retained. No browser/offline or query execution was performed.",
+      "citations": [
+        "E10",
+        "E11",
+        "E12",
+        "E13",
+        "E22"
+      ],
+      "rule": "paused-not-offline",
+      "classification": "source-confirmed",
+      "line": 164,
+      "severity": "medium",
+      "mechanism": "DBHealth passes all three queries to PageLayout -> PageContainer -> DataSourceNotice. A paused fetchStatus alone selects the Paused offline badge; online evidence is only sent to the explanatory classifier, not this badge. Pause is not evidence that the device is offline.",
+      "owner": "Narrow shared DataSourceNotice plus matching declaration tests; catalog integration separately serialized. No DBHealth page patch needed."
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "citations": [
+        "E14"
+      ],
+      "owner": "Diagnostic DTO/capability integration first, then page+test if supported; retained Phase5 diagnosticDTO-nullability need, no backend changes.",
+      "classification": "conditional-payload",
+      "mechanism": "With maxOpen absent, the pool shell remains but all other usable pool readings are replaced by EmptyState. Current DTO declares maxOpen required; a partial/null wire response was not established in this audit.",
+      "sourceRepro": "UNEXECUTED: reason through {open:10,inUse:5,idle:5,waitCount:2,maxOpen:null}. The maxOpen gate fails. Only if this partial wire shape is supported should each independent reading remain visible.",
+      "line": 508,
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "C01"
+    },
+    {
+      "citations": [
+        "E15",
+        "E17"
+      ],
+      "owner": "One bounded page numeric-validity/DTO owner after supported wire shape is clarified.",
+      "classification": "conditional-malformed-numeric",
+      "mechanism": "Finite negative inUse is clamped to measured zero percent; nonfinite row/pool detail values pass null-only guards into fmtInt/fmtNumber, whose safeNumber falls back to zero. Numeric wire validity is not established; not a claim that real endpoints returned these values.",
+      "sourceRepro": "UNEXECUTED: reason through maxOpen25/inUse-1 and separately rowCountNaN. Derivation yields zero percentage or zero text despite invalid source. Do not mutate data or run helpers.",
+      "line": 136,
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "C02"
+    },
+    {
+      "citations": [
+        "E16"
+      ],
+      "owner": "Same narrow page validity owner as C02; do not create overlapping fixes.",
+      "classification": "conditional-malformed-numeric",
+      "mechanism": "largeTables completeness accepts finite negative sizes although tableSizeLabel treats them unknown. If sizes[-1,1] reach the page, large-table count is measured zero despite an invalid size field. No such payload observed.",
+      "sourceRepro": "UNEXECUTED: trace tables.every for sizes -1 and1, then filter >100*1024*1024. Both finite checks succeed and count0 is passed to the typed summary.",
+      "line": 145,
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "C03"
+    },
+    {
+      "citations": [
+        "E25"
+      ],
+      "owner": "Existing design/token decision then caller naming adoption; no scanner waiver or geometry redesign in QA.",
+      "classification": "retained-style-decision",
+      "mechanism": "Inherited max-h-[55vh] geometry is still an arbitrary class. It is not static var inline style and was already retained as a Phase5 naming need. No approved exact named replacement or rendered overflow result established here.",
+      "sourceRepro": "UNEXECUTED native candidate: inspect table scroll/toolbar/details at mission widths and200% text. Retain55vh until a source-equivalent naming decision is leased.",
+      "line": 492,
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "C04"
+    }
+  ],
+  "citations": [
+    {
+      "line": 115,
+      "snippet": ".slice(0, 15)",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E01"
+    },
+    {
+      "line": 301,
+      "snippet": "title={t('dbHealth.rows', 'Rows')}",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E02"
+    },
+    {
+      "line": 206,
+      "snippet": "{tbl.indexCount ?? '—'}",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E03"
+    },
+    {
+      "line": 229,
+      "snippet": "fmtInt(tbl.indexCount)",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E04"
+    },
+    {
+      "line": 306,
+      "snippet": "{ key: 'rows', label: t('dbHealth.col.rows', 'Rows') }",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E05"
+    },
+    {
+      "line": 929,
+      "snippet": "typeof raw === 'number' && col.kind != null",
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "id": "E06"
+    },
+    {
+      "line": 933,
+      "snippet": "String(raw)",
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "id": "E07"
+    },
+    {
+      "line": 46,
+      "snippet": "new Date(state.updatedAt).toISOString()",
+      "file": "web/src/features/system/components/statstrip-db-health/DBHealthSummary.tsx",
+      "id": "E08"
+    },
+    {
+      "line": 85,
+      "snippet": "description={periods[index].provenance}",
+      "file": "web/src/features/system/components/statstrip-db-health/DBHealthSummary.tsx",
+      "id": "E09"
+    },
+    {
+      "line": 82,
+      "snippet": "query.fetchStatus === 'paused'",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "id": "E10"
+    },
+    {
+      "line": 164,
+      "snippet": "t('dataSources.status.paused', 'Paused offline')",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "id": "E11"
+    },
+    {
+      "line": 256,
+      "snippet": "{config.label}",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "id": "E12"
+    },
+    {
+      "line": 923,
+      "snippet": "\"paused\": \"Paused offline\"",
+      "file": "web/src/i18n/en.json",
+      "id": "E13"
+    },
+    {
+      "line": 508,
+      "snippet": "pool?.maxOpen != null",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E14"
+    },
+    {
+      "line": 136,
+      "snippet": "Math.min(Math.max((pool.inUse / pool.maxOpen) * 100, 0), 100)",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E15"
+    },
+    {
+      "line": 145,
+      "snippet": "tables.every((tbl) => tbl.sizeBytes != null && Number.isFinite(tbl.sizeBytes))",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E16"
+    },
+    {
+      "line": 61,
+      "snippet": "safeNumber",
+      "file": "web/src/lib/numberFormat.ts",
+      "id": "E17"
+    },
+    {
+      "line": 45,
+      "snippet": "i18n stub",
+      "file": "web/src/features/system/pages/DBHealthPage.test.tsx",
+      "id": "E18"
+    },
+    {
+      "line": 551,
+      "snippet": "getAllByText('—')",
+      "file": "web/src/features/system/pages/DBHealthPage.test.tsx",
+      "id": "E19"
+    },
+    {
+      "line": 317,
+      "snippet": "fmtNumber(v)",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E20"
+    },
+    {
+      "line": 326,
+      "snippet": "<ChartTooltip />",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E21"
+    },
+    {
+      "line": 68,
+      "snippet": "paused query does not prove",
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "id": "E22"
+    },
+    {
+      "line": 148,
+      "snippet": "allColumns.filter",
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "id": "E23"
+    },
+    {
+      "line": 1408,
+      "snippet": "allColumns={columns}",
+      "file": "web/src/components/ui/DataTable.tsx",
+      "id": "E24"
+    },
+    {
+      "line": 492,
+      "snippet": "max-h-[55vh]",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "id": "E25"
+    },
+    {
+      "line": 112,
+      "snippet": "import('../features/system/pages/DBHealthPage')",
+      "file": "web/src/lib/routeLoaders.ts",
+      "id": "E26"
+    },
+    {
+      "line": 741,
+      "snippet": "path=\"db-health\"",
+      "file": "web/src/App.tsx",
+      "id": "E27"
+    },
+    {
+      "line": 117,
+      "snippet": "'/db-health'",
+      "file": "web/src/lib/workspaceScope.ts",
+      "id": "E28"
+    }
+  ],
+  "summary": {
+    "countsByRule": {
+      "time-preference-bypass": 1,
+      "number-preference-bypass": 2,
+      "paused-not-offline": 1,
+      "chart-subset-disclosure": 1
+    },
+    "sourceConfirmedCount": 5,
+    "priority": "Shared paused evidence wording and snapshot preference presentation, then one caller scope/count-format followup. No queue/source/test/catalog edits.",
+    "mostIssues": {
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "sourceConfirmed": 3
+    },
+    "conditionalCandidateCount": 4
+  },
+  "sourceSearches": {
+    "limits": "Regex counts are exact command matches only, not global zero-violation claims;10frontend rules reviewed in scoped source, backendrules11..14 NOTAPPLICABLE because no Go inspected.",
+    "exceptions": [
+      "Dynamic pool color ternary and dynamic MetricBar fill not static style violations",
+      "Recharts API margin/radius and shared raw HTML are building blocks",
+      "Raw index number/localization findings differ from English-text regex"
+    ],
+    "hardcodedJsxTextRegexMatches": 0,
+    "missingPageContainer": "PageLayout257 delegates to shared PageContainer; acceptable current design architecture, not a missing-wrapper violation",
+    "scope": [
+      "DBHealthPage.tsx",
+      "DBHealthSummary.tsx",
+      "sourceBriefStatus.ts",
+      "useAdmin.ts"
+    ],
+    "correctedCaseSensitiveMatches": {
+      "hidden-section": 0,
+      "direct-library-import": 0,
+      "static-inline-style": 0,
+      "old-api-import": 0,
+      "raw-html": 0,
+      "double-prefix": 0,
+      "fetch-useeffect": 0,
+      "camelcase-param": 0
+    }
+  },
+  "i18n": {
+    "missingLiteralKeys": 0,
+    "dynamicSourceStatusLeaves": 8,
+    "catalogWrites": [],
+    "canonicalFile": "web/src/i18n/en.json",
+    "coldRuntime": "NOTRUN",
+    "distinctLiteralPageSummaryKeys": 55,
+    "missingDynamicLeaves": 0,
+    "recheckedAtUtc": "2026-10-14T02:48:55.8051876Z",
+    "recheckedLiteralKeys": 55,
+    "recheckedMissingKeys": 0,
+    "recheckedPausedLeaf": "Paused offline"
+  },
+  "testDeclarations": [
+    {
+      "status": "NOTRUN",
+      "expectationLines": 115,
+      "declaredCases": 25,
+      "file": "web/src/features/system/pages/DBHealthPage.test.tsx",
+      "names": [
+        {
+          "declaration": "it('derives honest KPIs from the loaded tables, migration and pool payloads', () => {",
+          "line": 205
+        },
+        {
+          "declaration": "it('renders the chart region and the migration-status panel', () => {",
+          "line": 222
+        },
+        {
+          "declaration": "it('renders every table row + the connection-pool stats and usage bar', () => {",
+          "line": 241
+        },
+        {
+          "declaration": "it('re-orders the detail grid and toggles aria-pressed as the sort changes', () => {",
+          "line": 263
+        },
+        {
+          "declaration": "it('fans the header refresh button out to all three query refetch callbacks', () => {",
+          "line": 283
+        },
+        {
+          "declaration": "it('shows skeletons and no fabricated KPI numbers while stats load', () => {",
+          "line": 301
+        },
+        {
+          "declaration": "it('does not let pending statistics mask a successful migration or pool snapshot', () => {",
+          "line": 320
+        },
+        {
+          "declaration": "it('routes a failed stats query into both the chart and table sections with Retry', () => {",
+          "line": 333
+        },
+        {
+          "declaration": "it('surfaces a migration failure in its own panel and wires Retry to refetchMigration', () => {",
+          "line": 350
+        },
+        {
+          "declaration": "it('surfaces a pool failure in its own panel and wires Retry to refetchPool', () => {",
+          "line": 366
+        },
+        {
+          "declaration": "it('shows honest per-section empty states + zeroed KPIs when there are no tables', () => {",
+          "line": 381
+        },
+        {
+          "declaration": "it('shows the migration + pool \"unavailable\" placeholders when their data is missing', () => {",
+          "line": 398
+        },
+        {
+          "declaration": "it('shows the \"no history\" placeholder when a migration payload has zero entries', () => {",
+          "line": 408
+        },
+        {
+          "declaration": "it('keeps incomplete row totals and missing migration health unknown', () => {",
+          "line": 422
+        },
+        {
+          "declaration": "it('keeps missing pool readings unknown, without a fabricated zero fill', () => {",
+          "line": 435
+        },
+        {
+          "declaration": "it('flips the usage bar to the danger color once the pool is ≥80% busy', () => {",
+          "line": 451
+        },
+        {
+          "declaration": "it('marks only the failed retained source stale while preserving all six canonical tiles', () => {",
+          "line": 465
+        },
+        {
+          "declaration": "it('retains table details, migration evidence and pool metrics after refresh errors', () => {",
+          "line": 478
+        },
+        {
+          "declaration": "it('distinguishes a real zero pool reading from an unknown one', () => {",
+          "line": 494
+        },
+        {
+          "declaration": "it('honors the backend numeric `version` field over currentVersion, plus dirty + pending', () => {",
+          "line": 504
+        },
+        {
+          "declaration": "it('formats byte sizes across the KB / GB boundaries and dashes zero-byte tables', () => {",
+          "line": 529
+        },
+        {
+          "declaration": "it('keeps missing byte sizes after measured sizes without treating row counts as bytes', () => {",
+          "line": 554
+        },
+        {
+          "declaration": "it('retains full table identities in chart alternatives and names the persistent detail table', () => {",
+          "line": 571
+        },
+        {
+          "declaration": "it('reflects an independently refreshing pool source and preserves mobile-sized refresh and sort actions', () => {",
+          "line": 585
+        },
+        {
+          "declaration": "it('keeps indexes and vacuum evidence reachable through the narrow table detail action', () => {",
+          "line": 598
+        }
+      ]
+    },
+    {
+      "status": "NOTRUN",
+      "expectationLines": 25,
+      "declaredCases": 5,
+      "file": "web/src/features/system/components/statstrip-db-health/DBHealthSummary.test.tsx",
+      "names": [
+        {
+          "declaration": "it('renders exactly six typed tiles and preserves byte precision, zero counts and migration status context', () => {",
+          "line": 35
+        },
+        {
+          "declaration": "it('does not spread one source loading or refresh failure to the other sources', () => {",
+          "line": 50
+        },
+        {
+          "declaration": "it('retains DB-specific fixed precision below a kilobyte instead of generic raw-byte notation', () => {",
+          "line": 63
+        },
+        {
+          "declaration": "it('preserves zero bytes and zero pool usage but withholds absent statistics and migration health', () => {",
+          "line": 68
+        },
+        {
+          "declaration": "it('opens a real source review drawer while leaving the other independent briefs mounted', () => {",
+          "line": 82
+        }
+      ]
+    },
+    {
+      "status": "NOTRUN",
+      "expectationLines": 4,
+      "declaredCases": 2,
+      "file": "web/src/features/admin/components/statstrip-api-quality/sourceBriefStatus.test.ts",
+      "names": [
+        {
+          "declaration": "it('describes successful retrieval without inventing a healthy or scored domain posture', () => {",
+          "line": 6
+        },
+        {
+          "declaration": "it('keeps actual retained and fatal source states distinct', () => {",
+          "line": 10
+        }
+      ]
+    }
+  ],
+  "testTotals": {
+    "note": "Declarations only; no tests discovered by a runner, no historical pass imported as fresh acceptance.",
+    "expectationLines": 144,
+    "executed": 0,
+    "failed": null,
+    "skipped": null,
+    "declaredCases": 32,
+    "passed": null,
+    "status": "NOTRUN"
+  },
+  "testCoverageLimits": [
+    {
+      "citations": [
+        "E18"
+      ],
+      "note": "Page/summary declarations mock i18n and cannot validate actual canonical title, migration or large-table labels, RTL or cold namespace loading."
+    },
+    {
+      "citations": [
+        "E19"
+      ],
+      "note": "Zero-byte test expects any dash in a row whose lastVacuum is null; it does not specifically assert the size cell. Test title/comment still claims dash whereas current size renderer preserves0B. No test failure or pass asserted."
+    },
+    {
+      "note": "No inspected page/summary declaration covers initial/retained paused query, negative/nonfinite counts, partial maxOpen shape, user locale/timezone change, >15scope copy or real OS/browser accessibility. NOTRUN regardless of authored coverage."
+    }
+  ],
+  "nativeRuntime": {
+    "matrix": [
+      "320/375/390/430/768/1024/1280/1440/1920/2560 widths and narrow allocated containers",
+      "Dark/light/custom/forced-colors composed contrast",
+      "RTL/long translations/200%text/reflow",
+      "Keyboard/focus/restore/screen-reader/touch",
+      "Reduced-motion/low-bandwidth and retained/offline operation",
+      "Open table details, summary drawers, filters/pagination/chart export and bounded55vh scrolling"
+    ],
+    "db": "NOTRUN",
+    "repair": "NOTRUN",
+    "network": "NOTRUN",
+    "build": "NOTRUN",
+    "tests": "NOTRUN",
+    "server": "NOTRUN",
+    "lint": "NOTRUN",
+    "browser": "NOTRUN",
+    "api": "NOTRUN",
+    "compiler": "NOTRUN",
+    "retention": "NOTRUN",
+    "note": "No native locks, helper budget, runtime acceptance or endpoint result claimed.",
+    "sql": "NOTRUN",
+    "status": "NOTRUN"
+  },
+  "inputHashes": [
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "13CC9654FEF8540DDF86520E2FEF9813F6496F73D931F0470AD654B8ED6477F0",
+      "bytes": 23060,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/features/system/pages/DBHealthPage.tsx",
+      "afterSha256": "13CC9654FEF8540DDF86520E2FEF9813F6496F73D931F0470AD654B8ED6477F0"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "99A667BDAE2BA7803DF07F83674F57CFBCA0DED3FD927A0E0A68326221FEF75F",
+      "bytes": 26601,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/features/system/pages/DBHealthPage.test.tsx",
+      "afterSha256": "99A667BDAE2BA7803DF07F83674F57CFBCA0DED3FD927A0E0A68326221FEF75F"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "9D29B25F9109623B458D9EB0CAC2A455F7DFE7EB3BE8113D7AFCFD4AF3EFC0E7",
+      "bytes": 5583,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/features/system/components/statstrip-db-health/DBHealthSummary.tsx",
+      "afterSha256": "9D29B25F9109623B458D9EB0CAC2A455F7DFE7EB3BE8113D7AFCFD4AF3EFC0E7"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "8732D47BED79BCBAA9C518BD7EE00749D13D57B5FF172342F864DA8A24045657",
+      "bytes": 934,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/features/admin/components/statstrip-api-quality/sourceBriefStatus.ts",
+      "afterSha256": "8732D47BED79BCBAA9C518BD7EE00749D13D57B5FF172342F864DA8A24045657"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "483433A3C072FA6F1B32D61C1D807F5C1F2834463EFDB08D4B5747A0A9D82B6F",
+      "bytes": 14241,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/api/hooks/useAdmin.ts",
+      "afterSha256": "483433A3C072FA6F1B32D61C1D807F5C1F2834463EFDB08D4B5747A0A9D82B6F"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "bytes": 15482,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/api/dataState.ts",
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "bytes": 2035,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/hooks/useDataState.ts",
+      "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "bytes": 2095,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "afterSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "0992CBA0FA0D8A23EF4989C692CE7CBC168AB048285A52F36CB36C67A33361A5",
+      "bytes": 9782,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/types/admin.ts",
+      "afterSha256": "0992CBA0FA0D8A23EF4989C692CE7CBC168AB048285A52F36CB36C67A33361A5"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "3D4FB838CA18B7D4FA1254C9CC328A30C8E26C3D5BC06EB4D2FEC49282DE23FB",
+      "bytes": 2520,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/data-display/TimeStamp.tsx",
+      "afterSha256": "3D4FB838CA18B7D4FA1254C9CC328A30C8E26C3D5BC06EB4D2FEC49282DE23FB"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "A7681D29402E9C208E21C01F2D87D7BD5E4CEC18A59CC5C994511E6CF6E1F5FC",
+      "bytes": 4359,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/data-display/MetricBar.tsx",
+      "afterSha256": "A7681D29402E9C208E21C01F2D87D7BD5E4CEC18A59CC5C994511E6CF6E1F5FC"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "bytes": 77157,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/ui/DataTable.tsx",
+      "afterSha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "bytes": 4411,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/lib/workspaceScope.ts",
+      "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "bytes": 68125,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/App.tsx",
+      "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": false,
+      "beforeSha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "bytes": 1843667,
+      "afterObservedAtUtc": "2026-10-14T02:48:55.8051876Z",
+      "file": "web/src/i18n/en.json",
+      "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "concurrentDrift": "Observed changed between02:46:42 pin check and02:48:18 final check; writer unknown. Original before pin preserved. Current55literal keys and paused badge leaf re-inspected."
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "bytes": 6443,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/lib/numberFormat.ts",
+      "afterSha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "3B9EBC9538365FE381EF8969132361F28DA5501914A058A5D4EAC8E3AFC1B832",
+      "bytes": 3147,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/lib/metric-reference/types.ts",
+      "afterSha256": "3B9EBC9538365FE381EF8969132361F28DA5501914A058A5D4EAC8E3AFC1B832"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "bytes": 11591,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "afterSha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2",
+      "bytes": 6130,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/charts/ChartTooltip.tsx",
+      "afterSha256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "bytes": 41517,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "afterSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "bytes": 17825,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/api/client.ts",
+      "afterSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "FED2BB2DC9AE0876904B0D2881FB024EF149A11E5CEFBE3C83EAC3AD071CBD85",
+      "bytes": 5920,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/features/system/components/statstrip-db-health/DBHealthSummary.test.tsx",
+      "afterSha256": "FED2BB2DC9AE0876904B0D2881FB024EF149A11E5CEFBE3C83EAC3AD071CBD85"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "bytes": 1161,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "afterSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "bytes": 658,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "bytes": 9039,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "afterSha256": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "A5EA6977C603A5AF95150B655B403D36F0970BBD704231703FB136AD9E447A5A",
+      "bytes": 1157,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+      "afterSha256": "A5EA6977C603A5AF95150B655B403D36F0970BBD704231703FB136AD9E447A5A"
+    },
+    {
+      "inspection": "pin-only; content not inspected",
+      "unchanged": true,
+      "beforeSha256": "2F6DD2AC3E6492FA0DE6AB60CE1A0F5BF9B626551B1C3CAF876B58781E10F276",
+      "bytes": 1036,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/hooks/useProductPreferences.ts",
+      "afterSha256": "2F6DD2AC3E6492FA0DE6AB60CE1A0F5BF9B626551B1C3CAF876B58781E10F276"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "7B17F3C05AA1CB717D16C2CE9B91F9DFC037A3E0913B6B849A39D1C41AD50AFE",
+      "bytes": 702,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/data-display/stat-reference/useMetricPreferences.ts",
+      "afterSha256": "7B17F3C05AA1CB717D16C2CE9B91F9DFC037A3E0913B6B849A39D1C41AD50AFE"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "bytes": 31836,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/lib/routeRegistry.ts",
+      "afterSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "bytes": 4093,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "afterSha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "90C503942833B98E2A39D489EF6F33639AC170A207A72DFCEB9B8DD3C62165B7",
+      "bytes": 923,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/features/admin/components/statstrip-api-quality/sourceBriefStatus.test.ts",
+      "afterSha256": "90C503942833B98E2A39D489EF6F33639AC170A207A72DFCEB9B8DD3C62165B7"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "bytes": 10783,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "afterSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "bytes": 5230,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/hooks/useDateFormat.ts",
+      "afterSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "720DB3C19E020A343F8C3DF9A28D869D3A6C119AE5DDC7345DC86F7E4A5C1132",
+      "bytes": 1039,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/hooks/useTimeFormatPreference.ts",
+      "afterSha256": "720DB3C19E020A343F8C3DF9A28D869D3A6C119AE5DDC7345DC86F7E4A5C1132"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+      "bytes": 9480,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "afterSha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+      "bytes": 11545,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "afterSha256": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "bytes": 7868,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "afterSha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5"
+    },
+    {
+      "inspection": "pin-only; content not inspected",
+      "unchanged": true,
+      "beforeSha256": "A14C7F372539E027B6D18D891C5D253802AB10BCE864988F5F268C562E3C8365",
+      "bytes": 15947,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/lib/operationalMetrics.test.tsx",
+      "afterSha256": "A14C7F372539E027B6D18D891C5D253802AB10BCE864988F5F268C562E3C8365"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "bytes": 2801,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "afterSha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E"
+    },
+    {
+      "inspection": "source or declarations read; large shared files inspected in relevant ranges/searches only",
+      "unchanged": true,
+      "beforeSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "bytes": 11392,
+      "afterObservedAtUtc": "2026-10-14T02:46:14.3189033Z",
+      "file": "web/src/lib/routeLoaders.ts",
+      "afterSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58"
+    }
+  ],
+  "pinSummary": {
+    "contentInspectedFiles": 38,
+    "unchangedFiles": 39,
+    "capturedFiles": 40,
+    "driftFiles": 1,
+    "preliminaryReadLimit": "Page range1..240 and summary preliminary reads preceded baseline02:37:31.4722339Z; subsequently re-read under matching captured pins. Strict pre-first-read pin requirement not fully met; no backdated pin invented.",
+    "finalObservedAtUtc": "2026-10-14T02:48:55.8051876Z"
+  },
+  "limitations": [
+    "PARTIAL because strict before-first-read pinning was not met for2preliminary source views, and complete design-contract/handoff historical appendices were not read; relevant core and exact scope were reviewed.",
+    "Initial artifact/log Get-Item failures were expected absence, PowerShell process exit0; two out-of-range view requests failed and were replaced with valid ranges.",
+    "Initial case-insensitive raw-html/camelcase matches were false positives, corrected with explicit CaseSensitive checks; raw initial outputs preserved.",
+    "Source searches and shared-file views are scoped/range-based, not whole-repository audit or backend capability confirmation.",
+    "No Git read/edit/status, repository-wide change census, source fixes, tests or native execution authorized. Only40 pinned inputs verified unchanged; do not infer all concurrent working-tree files unchanged.",
+    "First artifact citation check exited1 with8 coordinate errors; corrected artifact-only coordinates then reran checks. No hidden check failure.",
+    "Final check exited1 on concurrent canonical en.json SHA256 drift. Before pin retained; after pin updated with drift flag,39other captured files unchanged. Current55literal keys/paused leaf and28citations rechecked without native execution. Whole-catalog stable-input closure is NOT met.",
+    "Bootstrap raw command2758 table exists in conversation, not fully reconstructed in log; later shell bodies/output receipts retained."
+  ],
+  "validation": {
+    "citations": "PASS 28 exact line/snippet checks",
+    "counts": "PASS5source-confirmed/4conditional/32declared/144expectation-lines",
+    "pins": "39 unchanged,1catalog drift; remaining source drift 0",
+    "status": "PARTIAL: artifact checks passed but canonical catalog drift prevents stable whole-input closure",
+    "json": "PASS",
+    "firstPass": {
+      "json": "PASS",
+      "counts": "PASS",
+      "note": "Coordinates corrected only in authorized artifact from actual search output. Initial failure preserved in log.",
+      "citationFailures": 8,
+      "pinDrift": 0,
+      "processExit": 1
+    },
+    "checkedAtUtc": "2026-10-14T02:48:55.8051876Z",
+    "finalAttemptFailure": {
+      "reason": "web/src/i18n/en.json changed after prior matching pin check; release not written by failed command.",
+      "processExit": 1,
+      "observedAtUtc": "2026-10-14T02:48:18.9259050Z"
+    }
+  },
+  "release": {
+    "note": "PARTIAL source-QA artifact/command release, no source/test/catalog/queue/Git writes; no runtime acceptance. Concurrent catalog drift explicitly retained.",
+    "released": true,
+    "artifactCommandReleaseUtc": "2026-10-14T02:48:56.4963800Z"
+  },
+  "commandLog": "web/logs/phase6-qa-system-dbhealth.log",
+  "dispositionContinuation": {
+    "status": "DONE",
+    "actorId": "7a7c3459-c131-4cf1-9021-83c006bacbf2",
+    "attempt": 1,
+    "queueSnapshotUtc": "2026-10-14T05:10:35.4696501Z",
+    "queueRow": "migration-queue.md:345",
+    "scope": "Continue the original findings through queue dispositions only. No repeat audit, source inspection campaign, original passing-check reruns, duplicate fixes or proof-worker interference.",
+    "clocks": {
+      "conservativeQueueStartUtc": "2026-10-14T05:06:00Z",
+      "returnByUtc": "2026-10-14T05:26:00Z",
+      "hardLimitUtc": "2026-10-14T05:31:00Z",
+      "note": "Exact current row controls this continuation. Earlier actual actor launch plus20/25 minutes still wins; no clock or attempt reset. The top-level original clocks remain historical evidence."
+    },
+    "originalReport": {
+      "actorId": "47d777f1-1cda-4bbd-aa29-bd7e51b16ae2",
+      "status": "PARTIAL",
+      "evidenceLevel": "SOURCE ONLY; concrete source reproductions UNEXECUTED",
+      "beforeContinuationSha256": "F92C8FA24F855BF9688BAA89B1F549194524ED580550D85497AF3E4A368440B2",
+      "beforeContinuationLogSha256": "E9A822771AA9109318018C511C83CD411FBDCBE5907220E8BDA0E1EDFF75C17F",
+      "artifactCommandReleaseUtc": "2026-10-14T02:48:56.4963800Z",
+      "interpretation": "All original findings, source coordinates, coverage, counts, searches, i18n observations, declarations, NOTRUN native matrix, hashes, drift, failed checks and release remain unchanged historical evidence. Their original timestamps are not renewed. DONE means this disposition artifact is complete, not that the original audit became a stable-input or application pass.",
+      "preservedLimitations": [
+        "The original before-first-read pin requirement was not fully met for two preliminary views.",
+        "Original canonical en.json drift remains one observed drift among40 captured inputs;39 were unchanged at that historical snapshot.",
+        "Original coordinate-check and final drift-check exit1 receipts remain preserved.",
+        "Original32 declared cases/144 expectation lines were not executed by the original QA worker.",
+        "Original runtime, browser, network, API, SQL, DB, retention, repair, tests, lint, compiler and build remain NOTRUN."
+      ]
+    },
+    "governingReads": [
+      "docs/orchestrator-loop.md:1..EOF, including strict priority and20/25-minute worker limits",
+      "migration-queue.md:345 and exact accepted correction/separate proof rows2564..2566,2585..2586,2593",
+      "docs/frontend-audits/phase6-qa-system-dbhealth.json:1..EOF",
+      "docs/session-handoff.md:1..115",
+      "docs/frontend-design-contract.md:1..140,419..532",
+      "docs/frontend-mission.md:1410..1518",
+      "docs/frontend-audits/audit-page-187.json:1..115, historical only",
+      ".github/instructions/react-frontend.instructions.md:1..220",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/observability.instructions.md",
+      "Existing exact QA/correction log tails; proof-source-notice-neutral-pause start receipt only"
+    ],
+    "alreadyDone": {
+      "sourceChangeNeeded": false,
+      "reason": "All five original source-confirmed findings are already represented by three accepted[x] correction items. Their source-ready receipts preserve the intended mechanisms; missing first runtime proofs already have three separate live-reserved items. No original confirmed finding remains unrepresented, so creating or reapplying a source fix would duplicate accepted work.",
+      "acceptanceLevel": "Accepted source correction only, based on queue and retained worker receipts; no fresh source audit or runtime acceptance."
+    },
+    "findingDispositions": [
+      {
+        "findingIds": ["DBH-01", "DBH-02", "DBH-03"],
+        "disposition": "ALREADY_DONE_SOURCE; SEPARATE_PROOF_OWNED",
+        "correctionItem": "phase6-fix-dbhealth-page-context",
+        "correctionQueueRow": "migration-queue.md:2564",
+        "correctionStatus": "[x]",
+        "correctionActorId": "8aebd803-ea79-4695-820e-1817d961b325",
+        "sourceOwnerFiles": [
+          "web/src/features/system/pages/DBHealthPage.tsx",
+          "web/src/features/system/pages/DBHealthPage.test.tsx"
+        ],
+        "receipt": "web/logs/phase6-fix-dbhealth-page-context.log",
+        "receiptReleaseUtc": "2026-10-14T04:45:02.9964864Z",
+        "resolvedMechanisms": [
+          "Explicit top15-by-row-count subset and complete returned-table scope without changing the series, ranking or endpoints.",
+          "Existing fmtInt for the index cell/detail presentation; unknown dash and measured zero retained.",
+          "Count-kind formatting for the accessible row alternative with raw values, null gaps and full identities preserved."
+        ],
+        "retainedEvidence": "31 authored cases preserve25 original plus6 additions. The retained correction receipt records a selected12-case normal Vitest startup exit1, discovery0/execution0/passes0, external locale-advanced-intelligence.json and usage-manifest.json guard failure. Static checks are historical, not repeated here.",
+        "proofItem": "phase6-proof-dbhealth-page-context",
+        "noDuplicateFix": true
+      },
+      {
+        "findingIds": ["DBH-04"],
+        "disposition": "ALREADY_DONE_SOURCE; SEPARATE_PROOF_OWNED",
+        "correctionItem": "phase6-fix-dbhealth-summary-dates",
+        "correctionQueueRow": "migration-queue.md:2565",
+        "correctionStatus": "[x]",
+        "correctionActorId": "eb007ee9-0d04-455e-9634-f577283ffe29",
+        "sourceOwnerFiles": [
+          "web/src/features/system/components/statstrip-db-health/DBHealthSummary.tsx",
+          "web/src/features/system/components/statstrip-db-health/DBHealthSummary.test.tsx"
+        ],
+        "receipt": "web/logs/phase6-fix-dbhealth-summary-dates.log",
+        "receiptReleaseUtc": "2026-10-14T04:45:55.4569514Z",
+        "resolvedMechanisms": [
+          "Human last-success descriptions use the existing date-preference owner; valid observedAt metadata stays raw ISO.",
+          "Each source retains its own timestamp or unknown, with no borrowed sibling time or now-as-success fallback.",
+          "Final invalid-date guard preserves metrics, independent source banks, actions and measured zero."
+        ],
+        "retainedEvidence": "15 authored cases include the5 original cases and preserve the prior11-case suite with4 additive invalid-timestamp cases. The correction receipt records normal runtime startup exit1/discovery0/execution0, before the final correction; final corrected cases are NOTRUN. Historical scoped lint/type/pattern receipts are not fresh full compiler or runtime passes.",
+        "proofItem": "phase6-proof-dbhealth-summary-dates",
+        "noDuplicateFix": true
+      },
+      {
+        "findingIds": ["DBH-05"],
+        "disposition": "ALREADY_DONE_SOURCE; SEPARATE_PROOF_OWNED",
+        "correctionItem": "phase6-fix-source-notice-neutral-pause",
+        "correctionQueueRow": "migration-queue.md:2566",
+        "correctionStatus": "[x]",
+        "correctionActorId": "d3dd99f4-d8c4-4f13-9112-5a274f4056e6",
+        "sourceOwnerFiles": [
+          "web/src/components/feedback/DataSourceNotice.tsx",
+          "web/src/components/feedback/DataSourceNotice.test.tsx"
+        ],
+        "receipt": "web/logs/phase6-fix-source-notice-neutral-pause.log",
+        "receiptReleaseUtc": "2026-10-14T04:46:25.1860510Z",
+        "resolvedMechanisms": [
+          "Cause-neutral Refresh paused badge when paused status alone supplies no offline evidence.",
+          "Independently evidenced offline explanation, retained data, retry, severity and public API preserved.",
+          "Canonical neutral-pause replacement is represented by the parent04:19 exact35-leaf catalog closure; the original Paused offline observation remains historical."
+        ],
+        "retainedEvidence": "35 authored cases remain NOTRUN in the correction receipt: normal startup exit1/discovery0/execution0, external advanced-intelligence/usage-manifest guard. A separate proof log begins at05:09:00.2228747Z under changed-catalog authorization; its command was NOT run by this worker and no outcome is imported.",
+        "proofItem": "phase6-proof-source-notice-neutral-pause",
+        "noDuplicateFix": true
+      }
+    ],
+    "separateProofOwners": [
+      {
+        "item": "phase6-proof-dbhealth-page-context",
+        "queueRow": "migration-queue.md:2585",
+        "queueStatusAtSnapshot": "[~]",
+        "actorId": "eda25c06-ddde-41ec-93e7-cf5adf57cb40",
+        "exclusiveFile": "web/src/features/system/pages/DBHealthPage.test.tsx",
+        "need": "First normal scoped runtime confirmation of the already accepted page-context corrections after changed catalog inputs; preserve original and genuine passing evidence."
+      },
+      {
+        "item": "phase6-proof-dbhealth-summary-dates",
+        "queueRow": "migration-queue.md:2593",
+        "queueStatusAtSnapshot": "[~]",
+        "actorId": "418591e3-a445-445c-8c9e-80a3c32ac0a5",
+        "exclusiveFile": "web/src/features/system/components/statstrip-db-health/DBHealthSummary.test.tsx",
+        "need": "Final corrected/new date-preference and invalid-timestamp cases only; production remains read-only and unchanged genuine passes are preserved."
+      },
+      {
+        "item": "phase6-proof-source-notice-neutral-pause",
+        "queueRow": "migration-queue.md:2586",
+        "queueStatusAtSnapshot": "[~]",
+        "actorId": "276d62c9-d7d6-463d-9ba8-ab48244b8389",
+        "exclusiveFile": "web/src/components/feedback/DataSourceNotice.test.tsx",
+        "need": "First normal scoped runtime confirmation of cause-neutral pause and independently evidenced offline behavior; no duplicate shared source or catalog fix."
+      }
+    ],
+    "proofOwnershipNote": "IDs and[~] claims are exact queue-snapshot evidence, not an independently polled lifecycle census. The user identifies these as separately active proof workers. This worker did not query, message, relaunch, edit, test or otherwise interfere with them; their subsequent results belong to their own intake.",
+    "unrepresentedConfirmedNeeds": [],
+    "conditionalDispositions": [
+      {
+        "candidateId": "C01",
+        "disposition": "CONDITIONAL_PAYLOAD; NOT_A_CONFIRMED_FIX",
+        "representation": "Diagnostic DTO/nullability capability need already retained in the accepted Phase5 DBHealth receipt; no standalone implementation owner assigned by this worker.",
+        "owner": "Orchestrator integration owner for supported diagnostic DTO/capability first; one exclusive DBHealth page/test owner only if a supported partial maxOpen payload is established.",
+        "condition": "Current original evidence declared maxOpen required and did not establish the hypothetical partial/null wire shape. Do not erase the existing gate or invent a backend capability from this report."
+      },
+      {
+        "candidateId": "C02",
+        "disposition": "CONDITIONAL_MALFORMED_NUMERIC; NOT_A_CONFIRMED_FIX",
+        "representation": "Original hypothetical candidate retained; no queue item or actor claimed.",
+        "owner": "One future exclusive DBHealth page/test numeric-validity owner shared withC03, after supported wire validity is clarified.",
+        "condition": "Negative inUse and nonfinite counts were source derivations only, not endpoint observations. No production payload, helper or fixture was executed here."
+      },
+      {
+        "candidateId": "C03",
+        "disposition": "CONDITIONAL_MALFORMED_NUMERIC; NOT_A_CONFIRMED_FIX",
+        "representation": "Original hypothetical candidate retained; no overlapping fix proposed.",
+        "owner": "Same conditional DBHealth page/test numeric-validity owner asC02.",
+        "condition": "Finite negative table sizes were hypothetical, not observed supported endpoint data; do not turn an unestablished large-table count case into a fresh confirmed need."
+      },
+      {
+        "candidateId": "C04",
+        "disposition": "RETAINED_STYLE_DECISION; NOT_A_CONFIRMED_RUNTIME_DEFECT",
+        "representation": "55vh geometry naming need already retained in the accepted Phase5 receipt; no exact replacement or independent new fix assigned.",
+        "owner": "Existing design/token naming decision owner, then one explicitly leased DBHealth caller adoption owner.",
+        "condition": "Preserve source-equivalent55vh geometry until an approved named token/replacement exists. Overflow, zoom and native reflow remain unobserved; no scanner waiver or geometry redesign."
+      }
+    ],
+    "needsSummary": {
+      "originalConfirmedFindings": 5,
+      "representedAcceptedSourceGroups": 3,
+      "unrepresentedConfirmedFindings": 0,
+      "existingSeparateProofItems": 3,
+      "conditionalCandidatesRetained": 4,
+      "newFixItemsRequested": 0,
+      "newCatalogNeedsRequested": 0,
+      "nativeAcceptance": "NOT_ESTABLISHED; preserve the original NOTRUN matrix and the Phase5 guarded capture exit2 mobile-coverage/resource limitation. A failed historical capture does not become a new native pass or a fresh operation here."
+    },
+    "executionRestrictions": {
+      "sourceWrites": [],
+      "catalogWrites": [],
+      "queueWrites": [],
+      "git": "NOTRUN",
+      "tests": "NOTRUN",
+      "lint": "NOTRUN",
+      "compiler": "NOTRUN",
+      "auditPasses": "NOTRUN",
+      "browser": "NOTRUN",
+      "network": "NOTRUN",
+      "dbSqlRepairRetention": "NOTRUN",
+      "serverHelpersInstallDocker": "NOTRUN",
+      "nestedAgents": "NOTRUN",
+      "artifactOnlyValidation": "JSON/shape preservation check only; no application, audit, source or runtime validation."
+    },
+    "artifactValidation": {
+      "jsonAndDispositionShape": "PASS at2026-10-14T05:13:30.3232276Z; three accepted source groups cover the five original confirmed findings, three separate proof owners, four conditional dispositions and zero unrepresented confirmed needs.",
+      "originalEvidenceShape": "PASS; original5 findings/4 conditional candidates/32 declarations/144 expectation lines/0executed/nativeNOTRUN and original coordinate/drift failures retained.",
+      "originalReportContentPreservation": "PASS at2026-10-14T05:14:52.7673297Z; remove only the appended dispositionContinuation and restore the three top-level continuation header fields, then encode the original CRLF representation: SHA256 exactlyF92C8FA24F855BF9688BAA89B1F549194524ED580550D85497AF3E4A368440B2.",
+      "originalLogBytePreservation": false,
+      "originalLogPreservationLimit": "The append tool normalized existing mixed line endings toLF. The original log pin is retained, and historical text/evidence was not intentionally altered, but byte-identical prefix preservation is not claimed. The current first2729561-byte check returned61DA224E24245662B1D5500322B4EF4FA90E212C98FED69303F8F7573DE88A3E rather than the original pin.",
+      "artifactCheckFailurePreserved": "One LF-only reconstruction boundary probe exited1 (Missing disposition boundary). The corrected CRLF-aware in-memory reconstruction exited0 and matched the original report hash; no source or application check was performed.",
+      "applicationAcceptance": "NOT_ESTABLISHED"
+    },
+    "release": {
+      "released": true,
+      "files": [
+        "docs/frontend-audits/phase6-qa-system-dbhealth.json",
+        "web/logs/phase6-qa-system-dbhealth.log"
+      ],
+      "note": "Exact report/log only. No source changes needed or made. All original evidence retained; accepted corrections and active proof claims respected. No commands or processes left running by this continuation."
+    }
+  }
+}

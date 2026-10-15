@@ -1,0 +1,338 @@
+{
+  "item": "audit-page-130",
+  "page": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+  "routes": [
+    {
+      "path": "/explore",
+      "evidence": ["web\\src\\App.tsx:339", "web\\src\\App.tsx:578", "web\\src\\lib\\routeRegistry.ts:128"],
+      "mount": "Lazy Explore import inside SafeRoute; source registration confirmed, browser reachability unverified."
+    }
+  ],
+  "purpose": "Feature-discovery hub derived from the existing shell navigation catalog, with descriptions, URL-driven search/category filtering and visibility-safe route suggestions.",
+  "primaryGoal": "Find and open an eligible TeslaSync destination without losing search, category, navigation, authentication or fleet-visibility behavior.",
+  "dataSources": [
+    {
+      "name": "Feature catalog",
+      "hook": null,
+      "endpoints": [],
+      "sourceOwner": "web\\src\\features\\explore\\featureCatalog.ts",
+      "sharedOwner": "web\\src\\components\\layout\\Layout.tsx",
+      "evidence": ["web\\src\\features\\explore\\featureCatalog.ts:25-47", "web\\src\\features\\explore\\featureCatalog.ts:305-373", "web\\src\\components\\layout\\Layout.tsx:183-521"],
+      "behavior": "Flatten navSections in source order; enrich descriptions; carry minVehicles/requiresAuth; search English and translated labels/sections plus English descriptions and paths; exact category-name search overrides token splitting; otherwise case-insensitive AND-token matching. Grouping preserves shell section order.",
+      "counts": "Bounded static scan of Layout.tsx lines 183-522 found 22 title declarations and 199 to declarations. These are source declaration counts, not mounted/eligible destination counts."
+    },
+    {
+      "name": "Fleet eligibility and vehicle counter",
+      "hook": "useVehicles",
+      "endpoints": ["/vehicles"],
+      "sourceOwner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "backendRouteEvidence": "internal\\api\\router.go:3319-3320",
+      "evidence": ["web\\src\\features\\explore\\pages\\ExplorePage.tsx:78-95", "web\\src\\api\\hooks\\useVehicles.ts:34-36", "web\\src\\api\\hooks\\useVehicles.ts:74-81", "web\\src\\api\\client.ts:93"],
+      "behavior": "Query key ['vehicles']; request forwards AbortSignal; FAST staleTime; safeArray selection. Returned list length gates destinations, not selected workspace vehicle or historical fleet total. Missing list uses zero only for conservative eligibility; metric rawValue stays undefined. Client prefixes /api/v1. Router registration is source evidence only; response completeness, permissions and pagination are unverified."
+    },
+    {
+      "name": "Authentication-mode eligibility",
+      "hook": "useIsForwardAuth -> useAuthMode",
+      "endpoints": ["/system/auth-mode"],
+      "sourceOwner": "web\\src\\api\\hooks\\useAuthMode.ts",
+      "backendRouteEvidence": "internal\\api\\router.go:4375",
+      "evidence": ["web\\src\\api\\hooks\\useAuthMode.ts:38-40", "web\\src\\api\\hooks\\useAuthMode.ts:50-51", "web\\src\\api\\hooks\\useAuthMode.ts:59-85", "web\\src\\features\\explore\\pages\\ExplorePage.tsx:82-95"],
+      "behavior": "Query key ['auth','mode']; five-minute staleTime; signal forwarded; no interval or focus refetch. Boolean true only for resolved forward_auth; missing/failed contract is false. Page does not expose underlying auth query trust state. No inference that this is authorization enforcement."
+    },
+    {
+      "name": "URL filters",
+      "hook": "useSearchParams",
+      "endpoints": [],
+      "sourceOwner": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+      "evidence": ["web\\src\\features\\explore\\pages\\ExplorePage.tsx:85-108", "web\\src\\features\\explore\\pages\\ExplorePage.tsx:117-129", "web\\src\\features\\explore\\pages\\ExplorePage.tsx:308-312"],
+      "behavior": "q and section round-trip through URL. Individual updates retain other parameters and replace history. Empty-result clear and suggestion pick intentionally clear all search parameters. No workspace date window."
+    },
+    {
+      "name": "Closest-route suggestions",
+      "hook": "closestRoutes inside useMemo",
+      "endpoints": [],
+      "sourceOwner": "web\\src\\lib\\closestRoute.ts",
+      "evidence": ["web\\src\\lib\\closestRoute.ts:22-42", "web\\src\\features\\explore\\pages\\ExplorePage.tsx:537-566", "web\\src\\lib\\routeRegistry.ts:128"],
+      "behavior": "Merge registry and catalog-label candidates, intersect with eligible catalog paths, de-duplicate by path, sort distance and retain at most five; hidden registry records excluded by engine. Source algorithm is inspected, not executed."
+    },
+    {
+      "name": "Trust and display formatting",
+      "hook": "useDataState; useOperationalMetrics",
+      "endpoints": [],
+      "sourceOwner": "web\\src\\hooks\\useDataState.ts; web\\src\\hooks\\useOperationalMetrics.tsx",
+      "evidence": ["web\\src\\hooks\\useDataState.ts:30-54", "web\\src\\api\\dataState.ts:178-270", "web\\src\\hooks\\useOperationalMetrics.tsx:1-23", "web\\src\\features\\explore\\pages\\ExplorePage.tsx:149-205"],
+      "behavior": "Existing trust adapter retains fleet payload on refresh failure/pause. Four dimensionless raw counts use existing formatter bridge and preferences; no unit conversion or measurement fabrication. Formatting bridge imports useUnits/useFormatting; their deeper queries are outside this bounded inspection, not asserted as absent."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "evidence": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:1-17", "contract": "PageContainer props forwarded; full-width min-w-0 container; shell owns header/navigation/workspace."},
+    {"name": "OperationalBrief", "kind": "composite", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "evidence": "web\\src\\components\\data-display\\OperationalBrief.tsx:26-61,118-191,234-303", "contract": "compact, metrics, statusLabel/statusTone, scope, freshness, provenance, attention; existing Review details drawer retains metric evidence, narrative and attention."},
+    {"name": "PillFilterBar", "kind": "composite", "owner": "web\\src\\components\\forms\\PillFilterBar.tsx", "evidence": "web\\src\\components\\forms\\PillFilterBar.tsx:25-49,125-192", "contract": "items key/label/count; activeKey/onChange; semanticMode=filters; scrollable=false; labelled pressed-button group and normal tab order."},
+    {"name": "Button", "kind": "primitive", "owner": "web\\src\\components\\ui\\Button.tsx", "evidence": "web\\src\\components\\ui\\Button.tsx:9-16,26-57,62-91", "contract": "Existing semantic variants, focus-ring tokens, wrapLabel, refs and native events; sm min-height 36px."},
+    {"name": "Input, GlassPanel, Badge, SectionTitle, Text, Caption", "kind": "primitives", "owner": "web\\src\\components\\ui", "evidence": "web\\src\\features\\explore\\pages\\ExplorePage.tsx:34-42,276-299,385-391,452-462", "contract": "Existing category imports; explicit explore-search identity/ref/name; neutral count badges; semantic typography. Implementations other than Button were not independently inspected."},
+    {"name": "StaleRefreshWarning", "kind": "feedback", "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "evidence": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:59-61,87-115", "contract": "Retained-data warning, polite status and existing retry; intentionally does not handle no-data initial failure."},
+    {"name": "FadeIn", "kind": "motion", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "evidence": "web\\src\\components\\motion\\FadeIn.tsx:23-39", "contract": "Existing motion preference; initial=false under reduction; bounded entrance delays; OS/low-bandwidth integration not exercised."},
+    {"name": "SectionFilter, SectionBand, FeatureCard, Highlight, EmptyResult", "kind": "page-local presentation", "owner": "web\\src\\features\\explore\\pages\\ExplorePage.tsx", "evidence": "web\\src\\features\\explore\\pages\\ExplorePage.tsx:337-623", "contract": "Typed local helpers, one exported page; native links preserve modified-click semantics; escaped search highlighting; visibility-safe suggestions."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+      "line": 92,
+      "rule": "MDC-002 / MDC-030 navigation ownership",
+      "detail": "Eligibility predicates duplicate the shell's private isVisibleNavItem logic at Layout.tsx:526-532. Catalog itself correctly reuses navSections.",
+      "fix": "If shell owner exposes a shared predicate, consume that exact existing policy; otherwise preserve both predicates and add parity coverage. Do not create a second registry.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+      "line": 431,
+      "rule": "MDC-002 / MDC-015 existing surface composition",
+      "detail": "Local navigation card owns border, background, radius, focus and hover chrome; suggestion buttons have another local border/background override at line 593. No second independently inspected production consumer proves a missing composite.",
+      "fix": "Reuse current tokens and shared primitives; keep feature-specific native-link semantics. Do not introduce a speculative shared FeatureCard from this one-page audit.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "evidence": ["web\\src\\features\\explore\\pages\\ExplorePage.tsx:64-66,358-359,446-462,590-597", "web\\src\\components\\forms\\PillFilterBar.tsx:169-181", "web\\src\\components\\data-display\\OperationalBrief.tsx:170-185"],
+    "currentStrategy": "Cards reflow 1/2/3/4/5 columns through sm/lg/2xl/3xl. Categories wrap rather than scroll; labels and paths break; card text stays visible. Brief stacks compact metrics at 1/sm2/md3/1920px6 columns. No intentional removal of sections on mobile.",
+    "issues": [
+      {
+        "file": "web\\src\\components\\forms\\PillFilterBar.tsx",
+        "line": 161,
+        "rule": "MDC-040 / MDC-043 mobile target reachability",
+        "detail": "Category buttons use size=sm with non-scrollable min-h-9 (36px), below the contract's stronger 44px mobile default. Clear and shared review/retry buttons also use sm. Actual target spacing and WCAG exception eligibility are unmeasured.",
+        "fix": "Verify target spacing at 320-430px and long labels; reuse an accepted shared size/density contract for 44px targets when required. Do not globally change Button sizing from the page.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "All ten mandated viewport widths, allocated-width behavior, 200% text, RTL and overflow are unverified."
+  },
+  "accessibility": {
+    "evidence": ["web\\src\\features\\explore\\pages\\ExplorePage.tsx:133-146,278-295,386-391,423-434,444-445", "web\\src\\components\\forms\\PillFilterBar.tsx:126-129,161-168", "web\\src\\components\\data-display\\OperationalBrief.tsx:118,152-160"],
+    "sourceStrengths": [
+      "Search has explicit identity, localized label, ref-based slash focus and decorative icon hiding.",
+      "Result bands have heading association; cards are native anchors in ul/li; modified clicks are not intercepted.",
+      "Category controls use pressed-filter semantics, not incorrect document tabs.",
+      "Result count is a status region; metric evidence is reachable through the existing drawer.",
+      "Search highlights escape regex input and do not inject HTML."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+        "line": 139,
+        "rule": "MDC-040 keyboard / MDC-024 overlay focus ownership",
+        "detail": "Document-level slash shortcut excludes input/textarea/contentEditable only; it does not check modifier keys, defaultPrevented, select targets or an active dialog. Source permits focus attempts behind the shared details drawer; actual trap behavior is unverified.",
+        "fix": "Preserve slash-to-search while respecting existing shortcut/overlay ownership, editable controls and handled/modifier events; test open drawer keyboard behavior before integration.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "Keyboard traversal, drawer trapping/restoration, screen-reader announcements, effective contrast and forced-colors behavior have not been exercised."
+  },
+  "states": {
+    "loading": "Fleet pending is explicit text/attention; local catalog remains usable. No global loading gate or fake vehicle zero metric. Auth pending is indistinguishable from open mode because page consumes only a boolean.",
+    "empty": "Resolved [] means zero returned vehicles and conservative eligibility. No-match result has explanation, optional up-to-five suggestions, command-palette guidance and clear action; a section-only miss currently describes an empty query.",
+    "error": "Fleet initial failure changes brief to Fleet unavailable, retains ungated catalog and hides vehicle-gated destinations. There is no initial-failure retry on this page.",
+    "staleOffline": "Retained fleet remains eligible during refresh error/pause; StaleRefreshWarning supplies a retry when state.retry exists. No maxAgeMs supplied, so no page-specific age-expiry policy is established.",
+    "partialUnknown": "Fleet missing raw metric is undefined with a missing reason; catalog counts remain local derived values. Auth error/offline/pending state is not surfaced. No server partial-list semantics are invented.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+        "line": 260,
+        "rule": "MDC-026 / mission section 24 actionable recovery",
+        "detail": "Only StaleRefreshWarning receives fleetState; that component returns null without retained data (StaleRefreshWarning.tsx:59). Initial failure attention explains missing fleet but provides no retry, although deriveDataState supplies retry at dataState.ts:200-219.",
+        "fix": "Add a source-scoped retry through existing OperationalBrief actions or existing feedback primitive when fatalError exists; preserve local catalog and independently usable search.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+        "line": 82,
+        "rule": "MDC-026 distinguish unavailable from open",
+        "detail": "useIsForwardAuth hides auth-required entries for resolved open mode and unavailable/loading mode alike. sourceStatus describes fleet only, so Catalog ready can coexist with unresolved auth eligibility.",
+        "fix": "Retain conservative auth gating; consume existing useAuthMode trust separately to explain pending/unavailable authentication-mode source and offer source-scoped recovery without replacing the catalog.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+        "line": 573,
+        "rule": "Mission section 23 explain empty state",
+        "detail": "A valid section with no searched matches or an unknown section URL can yield zero groups; empty title always attributes this to query and can show No features match \"\". Clear intentionally resets both filters.",
+        "fix": "Retain URL behavior and clear action; describe category-only and combined misses accurately using existing localization pipeline.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+      "line": 442,
+      "rule": "MDC-010 / MDC-012 / mission sections 5-7 restrained theme-aware surfaces",
+      "detail": "Icon tile uses bg-white/[0.04]; hover border at line 432 falls back to rgba(255,255,255,0.18). These are fixed-white surface/border remnants, not pure-white body text. Their effective light-theme contrast/intensity is unverified.",
+      "fix": "Use existing semantic surface and border-hover tokens while retaining hover/focus affordance and neutral icon treatment.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+      "line": 512,
+      "rule": "MDC-010 / MDC-011 / mission section 7 saturation budget",
+      "detail": "Every matched token uses theme-primary/25 background. This is meaningful search emphasis, not evidence of a neon class; intensity depends on saved custom theme. Selected category also uses shared primary Button; no screenshot proves over-saturation.",
+      "fix": "Review actual themes and dense multi-token results; if needed subdue through existing accepted semantic highlight/control tokens, preserving marks, selection cues and theme preferences.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\explore\\featureCatalog.ts",
+      "line": 25,
+      "rule": "MDC-002 category imports / MDC-030 shared navigation ownership",
+      "detail": "Feature data imports the concrete Layout module to obtain navSections. This is confirmed source coupling to shell implementation, not proof of a runtime chunk cycle.",
+      "fix": "Shared navigation owner may expose the same catalog and predicate through an existing appropriate public owner/barrel. Preserve item identities/order/gates; page writer must not edit shell or invent another catalog.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+      "line": 462,
+      "rule": "MDC-044 localization",
+      "detail": "Feature descriptions render directly from the English DESCRIPTIONS map; fallback Open ${item.label} is also English. Suggestion engine uses registry/catalog fallback labels and renders s.label directly at line 596. Search already supports translated labels/sections, which must survive.",
+      "fix": "Add description identity and canonical localized resources through designated catalog ownership; render translated descriptions/suggestion names while preserving source paths, English search compatibility and ranking policy.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+      "line": 175,
+      "rule": "MDC-044 / mission section 26 centralized date formatting",
+      "detail": "Freshness is displayed with Date.toISOString rather than the existing locale/timezone display policy. Timestamp represents fleet query last load, not vehicle telemetry freshness, and is correctly described as such.",
+      "fix": "Use the established formatting hook at display boundary, retain timestamp and query-load meaning, and keep unknown load time distinct.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "reason": "Discovery already uses shared layout/brief/filter/state mechanisms and restrained card styling. Prioritize initial source recovery, honest auth eligibility, localization and shortcut safety over further cosmetic redesign.",
+    "sequence": ["Resolve source recovery and trust", "Coordinate canonical catalog localization/shared navigation owner", "Replace fixed-white remnants with existing tokens", "Perform bounded viewport/keyboard/theme QA"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical catalog localization",
+      "existingOwnerFile": "web\\src\\features\\explore\\featureCatalog.ts",
+      "missingOwner": false,
+      "propsVariantsStates": "Stable descriptionKey and fallback per existing destination; canonical locale resources owned by designated catalog writer; translated description/suggestion label in ready and empty states; no new production catalog.",
+      "usedBy": ["Explore FeatureCard", "Explore search", "Explore EmptyResult suggestions"],
+      "dependsOn": ["Existing canonical nav item/section keys", "Canonical i18n catalog owner", "Preserve English AND-token/exact-section search behavior"],
+      "evidence": ["web\\src\\features\\explore\\featureCatalog.ts:56-299,321-323,356-373", "web\\src\\features\\explore\\pages\\ExplorePage.tsx:462,596"],
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "name": "Existing navigation ownership cleanup",
+      "existingOwnerFile": "web\\src\\components\\layout\\Layout.tsx",
+      "missingOwner": false,
+      "propsVariantsStates": "Expose existing navSections and identical eligibility predicate accepting entry, returned vehicle count and resolved forward-auth boolean; preserve unknown-source conservative false behavior, source order and all item metadata. Do not create a replacement registry.",
+      "usedBy": ["Explore catalog", "Layout navigation"],
+      "dependsOn": ["Shared shell owner assignment", "Category/public export owner", "Source and interaction parity coverage"],
+      "evidence": ["web\\src\\components\\layout\\Layout.tsx:183,526-532,1067-1071", "web\\src\\features\\explore\\featureCatalog.ts:25", "web\\src\\features\\explore\\pages\\ExplorePage.tsx:90-95"],
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": ["Explore duplicates shell eligibility predicates; feature descriptions enrich rather than replace navSections."],
+    "notEstablished": ["No competing query store, date picker, unit-conversion engine, theme provider or chart implementation found in inspected page.", "Local Highlight/FeatureCard do not justify a new global composite without independent-consumer evidence."],
+    "evidence": ["web\\src\\features\\explore\\pages\\ExplorePage.tsx:28-62,90-95,468-523", "web\\src\\features\\explore\\featureCatalog.ts:25,305-335"]
+  },
+  "preservation": {
+    "sourceSha256": "98629FDBECA0FB6AA890E98A3ACB0CD530FF8CB21295987A163FE427EDA977CC",
+    "hashAlgorithm": "SHA-256 raw source bytes",
+    "currentLineCount": 623,
+    "sectionNames": ["Feature overview operational brief", "Search and category filters", "Categorized feature-result bands", "No-match explanation/suggestions/clear alternative", "Operational brief details drawer"],
+    "sectionCounts": {
+      "topLevelAlwaysMountedContentRegions": 3,
+      "operationalBriefCallSites": 1,
+      "glassPanelCallSitesInPage": 2,
+      "chartContainerCallSitesInPage": 0,
+      "nativeSectionCallSitesInPage": 1,
+      "dynamicResultBands": "One per filtered eligible catalog group; zero for no-match alternative.",
+      "maximumSourceCatalogGroups": 22,
+      "maximumSourceCatalogEntries": 199,
+      "sharedDetailsDrawerCallSites": 1
+    },
+    "sectionEvidence": ["web\\src\\features\\explore\\pages\\ExplorePage.tsx:226-334,380-404,568-615", "web\\src\\components\\data-display\\OperationalBrief.tsx:234-303"],
+    "catalogCategories": ["Home", "Vehicles", "Driving", "Charging", "Battery", "Energy", "Cabin", "Service", "Reports", "Commands", "Automation", "Notifications", "Advanced intelligence", "Ownership intelligence", "Tesla physics", "Security", "Account", "Settings", "Integrations", "Data", "Diagnostics", "About"],
+    "actions": [
+      {"name": "Search by name/section/description/path; multi-token highlighting", "evidence": "web\\src\\features\\explore\\pages\\ExplorePage.tsx:97-100,117-122,278-295,477-523"},
+      {"name": "Select category or All with pressed state and counts", "evidence": "web\\src\\features\\explore\\pages\\ExplorePage.tsx:124-129,351-359"},
+      {"name": "Slash focuses search without taking over editable text", "evidence": "web\\src\\features\\explore\\pages\\ExplorePage.tsx:133-146"},
+      {"name": "Normal card click uses navigate; modified/middle click retains native destination", "evidence": "web\\src\\features\\explore\\pages\\ExplorePage.tsx:423-429"},
+      {"name": "Pick eligible nearest-route suggestion, clear URL search and navigate", "evidence": "web\\src\\features\\explore\\pages\\ExplorePage.tsx:308-310,538-566,589-592"},
+      {"name": "Clear no-match filter resets all URL search parameters", "evidence": "web\\src\\features\\explore\\pages\\ExplorePage.tsx:312,606-614"},
+      {"name": "Review details opens existing evidence/metrics/attention drawer; close stays shared", "evidence": "web\\src\\components\\data-display\\OperationalBrief.tsx:152-160,234-303"},
+      {"name": "Retained-source refresh when shared warning exposes retry", "evidence": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:98-111"}
+    ],
+    "dataBehavior": [
+      "Preserve all existing destinations, descriptions, labels/keys, section order, gates and native link destinations.",
+      "Features/categories count the eligible catalog before filtering; Showing counts search/category intersection; Vehicles is returned list length with unknown distinct from zero.",
+      "Preserve exact-section matching, case-insensitive AND tokens, translated and English label/section search, path and description matching.",
+      "Keep retained fleet eligibility during refresh failure/offline; keep conservative eligibility without a fleet/auth-mode result.",
+      "No date/workspace vehicle selector applies to this local catalog; do not add duplicate controls.",
+      "Preserve q/section parameter identities, replace-history policy, other-parameter retention on individual updates and all-parameter clearing on existing clear/suggestion actions.",
+      "Preserve safe escaped marks and registry/catalog merge, path de-duplication, gate intersection and five-suggestion cap.",
+      "Preserve query keys, AbortSignal, safeArray, inherited policies, raw counts, existing display preferences, document title and test IDs.",
+      "No exports, mutations, charts or vehicle telemetry sources exist in this inspected page; no new ones are proposed."
+    ]
+  },
+  "evidenceLimits": {
+    "scope": "Single assigned page and bounded page-specific imports/source contracts. Only report and heartbeat written.",
+    "mode": "Source-only Phase 0 audit; no browser, server, network requests, screenshots or rendered fixtures.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED; fixed-white remnants and accent risk are source findings, not measured contrast or screenshot conclusions.",
+    "keyboard": "UNVERIFIED; semantics and shortcut conditions inspected only.",
+    "viewport": "UNVERIFIED at 320/375/390/430/768/1024/1280/1440/1920/2560, RTL and 200% text.",
+    "backend": "Only exact relevant router registrations inspected by bounded search; no handler/repository/authentication/response/permission/pagination behavior inferred.",
+    "dependencies": "Shared public contracts were selectively read; Input/GlassPanel/Badge/Typography/Drawer implementations, formatting-hook internals and complete App/shell/client were not audited.",
+    "tests": "Existing Explore/catalog test source read for preservation context; not executed and not runtime proof. No TypeScript, lint, build or full-repository tests run.",
+    "skillLimit": "Scoped audit.sh inspected but not executed: it unconditionally runs project TypeScript. Assignment/design contract reserve heavy validation for orchestrator. Bounded read-only source pattern counts used instead.",
+    "sourcePatternCounts": {"inlineStyleAttributes": 0, "rawButtonInputTextareaSelectTable": 0, "directRechartsReactLeafletFramerMotionImports": 0, "textNeonShadowNeonGlowSaturateMatches": 0, "fixedWhiteSurfaceOrBorderMatches": 2},
+    "countMethod": "PowerShell regex scan of assigned page raw text; includes comments if matching and is not a semantic/global violations certification. Separate bounded Layout declaration scan lines 183-522 supplies static catalog counts.",
+    "sourceStability": "Page SHA-256 checked at audit and final validation; adjacent shared source can change concurrently. No Git operations.",
+    "governingEvidence": ["docs\\frontend-worker-conventions.md:43-76", "docs\\frontend-design-contract.md:23-37,40-69,171-207,348-354", "docs\\frontend-mission.md:19-109,295-354,528-574,705-776,919-977"],
+    "ownership": ["docs\\frontend-audits\\audit-page-130.json", ".agent-status\\audit-page-130.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\explore\\pages\\ExplorePage.tsx",
+    "web\\src\\features\\explore\\featureCatalog.ts",
+    "web\\src\\features\\explore\\pages\\ExplorePage.test.tsx",
+    "web\\src\\features\\explore\\__tests__\\featureCatalog.test.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\lib\\closestRoute.ts",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useAuthMode.ts",
+    "web\\src\\api\\client.ts",
+    "internal\\api\\router.go",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\components\\forms\\PillFilterBar.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\ui\\Button.tsx"
+  ]
+}

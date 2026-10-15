@@ -170,7 +170,7 @@ describe('LiveMotorStatus — render states', () => {
     // The panel title is always present regardless of state.
     expect(screen.getByText('Live Motor Status')).toBeInTheDocument();
     // A single animate-pulse bar stands in for the metric grid.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     // Neither the metrics nor the empty state may show while loading.
     expect(screen.queryByText('Shift State')).not.toBeInTheDocument();
     expect(screen.queryByText('No live motor telemetry yet')).not.toBeInTheDocument();
@@ -182,7 +182,7 @@ describe('LiveMotorStatus — render states', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('No live motor telemetry yet');
     // No skeleton, no metric cards in the empty branch.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByText('Power')).not.toBeInTheDocument();
   });
 
@@ -196,7 +196,7 @@ describe('LiveMotorStatus — render states', () => {
 
     // A present snapshot wins over `loading` — a refetch never blanks live data.
     expect(cardValue('Power')).toBe('42.50 kW');
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

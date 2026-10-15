@@ -1,10 +1,13 @@
 package vehicle
 
 import (
+	"context"
 	"math"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // These pure-Go tests cover computeStateSummary and the SQL-shape
@@ -315,7 +318,7 @@ func TestTimelineSelectSQL_Shape(t *testing.T) {
 		"vehicle_id = $1",
 		"fsm_name = 'vehicle'",
 		"ts >= $2",
-		"ts <= $3",
+		"ts < $3",
 		"ORDER BY ts ASC",
 		"trigger        AS trigger_field",
 		"details ->> trigger AS trigger_value",
@@ -326,6 +329,7 @@ func TestTimelineSelectSQL_Shape(t *testing.T) {
 		}
 	}
 	mustNotContain := []string{
+		"ts <= $3", // end-exclusive workspace windows
 		"fsm_type", // dropped by mig 000187 — would fail at runtime
 		"DESC",     // timeline order must remain ASC
 	}
@@ -333,6 +337,122 @@ func TestTimelineSelectSQL_Shape(t *testing.T) {
 		if strings.Contains(timelineSelectSQL, frag) {
 			t.Errorf("timelineSelectSQL must not contain %q (would either fail at runtime or violate Decision #1)\nfull SQL:\n%s", frag, timelineSelectSQL)
 		}
+	}
+}
+
+// The fake pins SQL and argument forwarding; it is not a PostgreSQL execution test.
+type timelineWindowPool struct {
+	t           *testing.T
+	start, end  time.Time
+	transitions []VehicleStateTransition
+}
+
+func (p *timelineWindowPool) Query(_ context.Context, sql string, args ...any) (pgx.Rows, error) {
+	p.t.Helper()
+	if sql != timelineSelectSQL || !strings.Contains(sql, "ts >= $2") ||
+		!strings.Contains(sql, "ts < $3") || strings.Contains(sql, "ts <= $3") {
+		p.t.Fatalf("unexpected timeline SQL: %s", sql)
+	}
+	if len(args) != 3 || args[0] != int64(42) || args[1] != p.start || args[2] != p.end {
+		p.t.Fatalf("query args = %v, want [42 %v %v]", args, p.start, p.end)
+	}
+	rows := &timelineWindowRows{}
+	for _, tr := range p.transitions {
+		if !tr.Ts.Before(p.start) && tr.Ts.Before(p.end) {
+			rows.transitions = append(rows.transitions, tr)
+		}
+	}
+	return rows, nil
+}
+
+func (p *timelineWindowPool) QueryRow(context.Context, string, ...any) pgx.Row {
+	p.t.Fatal("unexpected QueryRow")
+	return nil
+}
+
+type timelineWindowRows struct {
+	pgx.Rows
+	transitions []VehicleStateTransition
+	next        int
+}
+
+func (r *timelineWindowRows) Close()     {}
+func (r *timelineWindowRows) Err() error { return nil }
+func (r *timelineWindowRows) Next() bool {
+	if r.next == len(r.transitions) {
+		return false
+	}
+	r.next++
+	return true
+}
+func (r *timelineWindowRows) Scan(dest ...any) error {
+	tr := r.transitions[r.next-1]
+	*dest[0].(*time.Time) = tr.Ts
+	*dest[1].(**string) = tr.FromState
+	*dest[2].(*string) = tr.ToState
+	*dest[3].(**string) = tr.TriggerField
+	*dest[4].(**string) = tr.TriggerValue
+	return nil
+}
+
+func TestVehicleStatesRepo_HalfOpenWindows(t *testing.T) {
+	t.Parallel()
+	offset := time.FixedZone("UTC+0530", 5*60*60+30*60)
+	end := time.Date(2026, 10, 14, 10, 17, 23, 0, time.UTC)
+	cases := []struct {
+		name       string
+		start, end time.Time
+	}{
+		{"rolling_24h", end.Add(-24 * time.Hour), end},
+		{"custom_non_UTC", time.Date(2026, 10, 1, 0, 0, 0, 0, offset), time.Date(2026, 10, 3, 0, 0, 0, 0, offset)},
+		{"custom_DST_offset_change", time.Date(2026, 3, 8, 0, 0, 0, 0, time.FixedZone("PST", -8*60*60)), time.Date(2026, 3, 9, 0, 0, 0, 0, time.FixedZone("PDT", -7*60*60))},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			beforeEnd := c.end.Add(-time.Microsecond)
+			pool := &timelineWindowPool{
+				t: t, start: c.start, end: c.end,
+				transitions: []VehicleStateTransition{
+					mkTransition(c.start.Add(-time.Microsecond), "", "Before", "", ""),
+					mkTransition(c.start.UTC(), "", "Driving", "", ""),
+					mkTransition(beforeEnd.UTC(), "Driving", "Parked", "", ""),
+					mkTransition(c.end.UTC(), "Parked", "Charging", "", ""),
+					mkTransition(c.end.Add(time.Microsecond), "Charging", "Online", "", ""),
+				},
+			}
+			repo := &VehicleStatesRepo{pool: pool}
+			rows, err := repo.Timeline(context.Background(), 42, c.start, c.end)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 2 || !rows[0].Ts.Equal(c.start) || !rows[1].Ts.Equal(beforeEnd) {
+				t.Fatalf("timeline = %+v, want start and immediately before end only", rows)
+			}
+			summary, total, err := repo.Summary(context.Background(), 42, c.start, c.end)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !approxEqual(total, c.end.Sub(c.start).Seconds(), 1e-6) {
+				t.Fatalf("dwell = %v, want full window %v", total, c.end.Sub(c.start).Seconds())
+			}
+			if _, ok := findRow(summary, "Charging"); ok {
+				t.Fatalf("summary includes excluded upper-bound transition: %+v", summary)
+			}
+			pool.start, pool.end = c.end, c.end.Add(time.Microsecond)
+			adjacent, err := repo.Timeline(context.Background(), 42, pool.start, pool.end)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(adjacent) != 1 || !adjacent[0].Ts.Equal(c.end) {
+				t.Fatalf("adjacent timeline = %+v, want exact shared boundary once", adjacent)
+			}
+			pool.end = pool.start
+			empty, err := repo.Timeline(context.Background(), 42, pool.start, pool.end)
+			if err != nil || empty == nil || len(empty) != 0 {
+				t.Fatalf("zero-width timeline = %+v, %v; want non-nil empty slice", empty, err)
+			}
+		})
 	}
 }
 

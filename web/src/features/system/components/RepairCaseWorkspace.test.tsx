@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { RepairCase, RepairQuarantine } from '@/api/hooks/useDataRepair';
 import { ToastProvider } from '@/components/feedback/Toast';
@@ -233,17 +233,41 @@ describe('RepairCaseWorkspace', () => {
       }
       return Promise.resolve({});
     });
+
     await act(async () => {
       await client.invalidateQueries({ queryKey: ['data-repair', 'cases'] });
     });
 
     expect(screen.getByText('Case #7')).toBeInTheDocument();
-    const warning = await screen.findByTestId('repair-case-refresh-warning');
+    const warning = await screen.findByTestId('stale-refresh-warning');
     expect(warning).toHaveTextContent(
       'Repair cases could not refresh',
     );
-    expect(screen.getByRole('button', { name: /Repair cases could not refresh/i }))
-      .toBe(warning);
+    expect(within(warning).getByRole('button', { name: 'Refresh' })).toBeEnabled();
+    mockRequest.mockResolvedValue({ cases: [repairCase], has_more: false });
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+    expect(screen.getByText('Case #7')).toBeInTheDocument();
+  });
+
+  it('retains case statistics independently when their background refresh fails', async () => {
+    const { client } = renderWorkspace();
+    await screen.findByText('Case #7');
+    const metrics = screen.getByRole('region', { name: 'Repair case metrics' });
+    expect(within(metrics).getByText('Open cases')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(metrics).getAllByText(/^[01]$/).map((value) => value.textContent)).toEqual(['1', '0', '0', '1']);
+    });
+    const initialValues = within(metrics).getAllByText(/^[01]$/).map((value) => value.textContent);
+    mockRequest.mockImplementation((url: string) => {
+      if (url === '/data-repair/cases/stats?vehicle_id=3') return Promise.reject(new Error('statistics refresh'));
+      if (url.startsWith('/data-repair/cases?')) return Promise.resolve({ cases: [repairCase], has_more: false });
+      return Promise.resolve({});
+    });
+    await act(async () => { await client.invalidateQueries({ queryKey: ['data-repair', 'cases', 'stats'] }); });
+    expect(await screen.findByText('Retained metrics')).toBeInTheDocument();
+    expect(screen.getByText('Case #7')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText(/^[01]$/).map((value) => value.textContent)).toEqual(initialValues);
   });
 
   it('keeps cached quarantine rows visible after a background refresh fails', async () => {
@@ -262,9 +286,62 @@ describe('RepairCaseWorkspace', () => {
     });
 
     expect(screen.getByText('Drive #42')).toBeInTheDocument();
-    expect(await screen.findByTestId('repair-quarantine-refresh-warning')).toHaveTextContent(
+    expect(await screen.findByTestId('stale-refresh-warning')).toHaveTextContent(
       'Quarantine records could not refresh',
     );
+  });
+
+  it('does not infer empty cases or zero metrics while initial queries are paused', async () => {
+    onlineManager.setOnline(false);
+    try {
+      const { client } = renderWorkspace();
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+      expect(screen.getByText('The initial query is paused while the network is unavailable; no empty response is inferred.')).toBeInTheDocument();
+      expect(screen.queryByText('No repair cases match these filters.')).not.toBeInTheDocument();
+      expect(screen.queryByText('0 cases on this page')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('repair-case-queue-skeleton')).not.toBeInTheDocument();
+      expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText('—')).toHaveLength(4);
+      await act(async () => { onlineManager.setOnline(true); });
+      expect(await screen.findByText('Case #7')).toBeInTheDocument();
+      client.clear();
+    } finally {
+      onlineManager.setOnline(true);
+    }
+  });
+
+  it('shows active initial loading without asserting an empty response', () => {
+    mockRequest.mockImplementation(() => new Promise<never>(() => {}));
+    const { client } = renderWorkspace();
+    expect(screen.getByTestId('repair-case-queue-skeleton')).toBeInTheDocument();
+    expect(screen.getByText('Loading')).toBeInTheDocument();
+    expect(screen.queryByText('No repair cases match these filters.')).not.toBeInTheDocument();
+    client.clear();
+  });
+
+  it('preserves confirmed empty cases through a paused refresh and independent recovery', async () => {
+    mockRequest.mockImplementation((url: string) => Promise.resolve(
+      url.startsWith('/data-repair/cases?')
+        ? { cases: [], has_more: false }
+        : { open: 0, in_review: 0, quarantined: 0, last_scan_at: null },
+    ));
+    const { client } = renderWorkspace();
+    expect(await screen.findByText('No repair cases match these filters.')).toBeInTheDocument();
+    onlineManager.setOnline(false);
+    try {
+      act(() => { void client.invalidateQueries({ queryKey: ['data-repair', 'cases'] }); });
+      await waitFor(() => expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2));
+      for (const warning of screen.getAllByTestId('stale-refresh-warning')) {
+        expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+      }
+      expect(screen.getByText('0 cases on this page')).toBeInTheDocument();
+      expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText('0')).toHaveLength(4);
+      await act(async () => { onlineManager.setOnline(true); });
+      await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+      expect(screen.getByText('0 cases on this page')).toBeInTheDocument();
+      client.clear();
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 
   it('reports skipped bulk cases and keeps the selection for operator review', async () => {
@@ -364,5 +441,240 @@ describe('RepairCaseWorkspace', () => {
         }),
       );
     });
+  });
+});
+
+describe('RepairCaseWorkspace dismiss scope', () => {
+  const otherVehicleCase: RepairCase = {
+    ...repairCase,
+    id: 17,
+    fingerprint: 'drive:142:drive_open_charging_started',
+    session_id: 142,
+    vehicle_id: 4,
+  };
+
+  function renderScopedWorkspace(vehicleId?: number) {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>
+        <ToastProvider>{children}</ToastProvider>
+      </QueryClientProvider>
+    );
+    const view = render(<RepairCaseWorkspace vehicleId={vehicleId} canWrite />, { wrapper });
+    return { ...view, client };
+  }
+
+  beforeEach(() => {
+    mockRequest.mockReset();
+    mockRequest.mockImplementation((url: string) => {
+      if (url.startsWith('/data-repair/cases?')) {
+        const vehicleId = new URLSearchParams(url.split('?')[1]).get('vehicle_id');
+        const cases = vehicleId === '3'
+          ? [repairCase]
+          : vehicleId === '4'
+            ? [otherVehicleCase]
+            : [repairCase, otherVehicleCase];
+        return Promise.resolve({ cases, has_more: false });
+      }
+      if (url.startsWith('/data-repair/cases/stats')) {
+        return Promise.resolve({ open: 1, in_review: 0, quarantined: 0 });
+      }
+      if (url === '/data-repair/cases/bulk-transition') {
+        return Promise.resolve({ updated: 1, skipped: 0 });
+      }
+      return Promise.resolve({});
+    });
+  });
+
+  it('labels old-scope rows and metrics and blocks row writes while the new vehicle loads', async () => {
+    const { rerender } = renderScopedWorkspace(3);
+    await screen.findByText('Case #7');
+    mockRequest.mockImplementation(() => new Promise<never>(() => {}));
+
+    rerender(<RepairCaseWorkspace vehicleId={4} canWrite />);
+
+    expect(await screen.findByText(
+      'Retained source: /data-repair/cases?vehicle_id=3&status=open&limit=50',
+    )).toBeInTheDocument();
+    expect(screen.getByText('Retained source: /data-repair/cases/stats?vehicle_id=3'))
+      .toBeInTheDocument();
+    expect(screen.getByText('Case #7')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review case 7' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    expect(screen.getByRole('button', { name: 'Begin review' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Dismiss selected' })).toBeDisabled();
+    expect(mockRequest.mock.calls.every(([, options]) => !options.method)).toBe(true);
+  });
+
+  it('clears a populated dismiss confirmation and cannot submit old cases after a vehicle switch', async () => {
+    const { rerender } = renderScopedWorkspace(3);
+    expect(await screen.findByText('Case #7')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss selected' }));
+    const previousConfirmation = await screen.findByRole('dialog', {
+      name: 'Dismiss selected findings?',
+    });
+    fireEvent.change(within(previousConfirmation).getByRole('textbox', { name: 'Operator note' }), {
+      target: { value: 'Previous vehicle false positive' },
+    });
+    expect(within(previousConfirmation).getByRole('button', { name: 'Dismiss selected' }))
+      .toBeEnabled();
+
+    rerender(<RepairCaseWorkspace vehicleId={4} canWrite />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Dismiss selected findings?' }))
+        .not.toBeInTheDocument();
+    });
+    expect(await screen.findByText('Case #17')).toBeInTheDocument();
+    expect(screen.queryByText('Case #7')).not.toBeInTheDocument();
+    expect(mockRequest).not.toHaveBeenCalledWith(
+      '/data-repair/cases/bulk-transition',
+      expect.anything(),
+    );
+    expect(screen.getByRole('checkbox', { name: 'Select all rows' })).not.toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss selected' }));
+    const currentConfirmation = await screen.findByRole('dialog', {
+      name: 'Dismiss selected findings?',
+    });
+    const currentReason = within(currentConfirmation).getByRole('textbox', { name: 'Operator note' });
+    expect(currentReason).toHaveValue('');
+    const confirm = within(currentConfirmation).getByRole('button', { name: 'Dismiss selected' });
+    expect(confirm).toBeDisabled();
+    fireEvent.click(confirm);
+    expect(mockRequest).not.toHaveBeenCalledWith(
+      '/data-repair/cases/bulk-transition',
+      expect.anything(),
+    );
+
+    fireEvent.change(currentReason, { target: { value: '  Current vehicle false positive  ' } });
+    fireEvent.click(confirm);
+
+    await waitFor(() => {
+      expect(mockRequest).toHaveBeenCalledWith(
+        '/data-repair/cases/bulk-transition',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            case_ids: [17],
+            status: 'dismissed',
+            resolution_note: 'Current vehicle false positive',
+          }),
+        }),
+      );
+    });
+    expect(mockRequest.mock.calls.filter(([url]) => url === '/data-repair/cases/bulk-transition'))
+      .toHaveLength(1);
+  });
+
+  it('clears pending dismiss targets and reason in both directions between vehicle and fleet scope', async () => {
+    const { rerender } = renderScopedWorkspace(3);
+    await screen.findByText('Case #7');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss selected' }));
+    const vehicleConfirmation = await screen.findByRole('dialog', {
+      name: 'Dismiss selected findings?',
+    });
+    fireEvent.change(within(vehicleConfirmation).getByRole('textbox', { name: 'Operator note' }), {
+      target: { value: 'Vehicle-only false positive' },
+    });
+
+    rerender(<RepairCaseWorkspace canWrite />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Dismiss selected findings?' }))
+        .not.toBeInTheDocument();
+    });
+    await screen.findByText('Case #17');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss selected' }));
+    const fleetConfirmation = await screen.findByRole('dialog', {
+      name: 'Dismiss selected findings?',
+    });
+    const fleetReason = within(fleetConfirmation).getByRole('textbox', { name: 'Operator note' });
+    expect(fleetReason).toHaveValue('');
+    expect(within(fleetConfirmation).getByRole('button', { name: 'Dismiss selected' }))
+      .toBeDisabled();
+    fireEvent.change(fleetReason, { target: { value: 'Fleet-only false positive' } });
+
+    rerender(<RepairCaseWorkspace vehicleId={3} canWrite />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Dismiss selected findings?' }))
+        .not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('Case #17')).not.toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss selected' }));
+    const returnedConfirmation = await screen.findByRole('dialog', {
+      name: 'Dismiss selected findings?',
+    });
+    expect(within(returnedConfirmation).getByRole('textbox', { name: 'Operator note' }))
+      .toHaveValue('');
+    expect(within(returnedConfirmation).getByRole('button', { name: 'Dismiss selected' }))
+      .toBeDisabled();
+    expect(mockRequest).not.toHaveBeenCalledWith(
+      '/data-repair/cases/bulk-transition',
+      expect.anything(),
+    );
+  });
+
+  it('retains a genuine same-vehicle dismiss through rerender and refresh until explicit confirmation', async () => {
+    const { client, rerender } = renderScopedWorkspace(3);
+    await screen.findByText('Case #7');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all rows' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss selected' }));
+    const confirmation = await screen.findByRole('dialog', {
+      name: 'Dismiss selected findings?',
+    });
+    fireEvent.change(within(confirmation).getByRole('textbox', { name: 'Operator note' }), {
+      target: { value: '  Same vehicle false positive  ' },
+    });
+
+    rerender(<RepairCaseWorkspace vehicleId={3} canWrite />);
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['data-repair', 'cases'] });
+    });
+
+    const retainedConfirmation = screen.getByRole('dialog', { name: 'Dismiss selected findings?' });
+    expect(within(retainedConfirmation).getByRole('textbox', { name: 'Operator note' }))
+      .toHaveValue('  Same vehicle false positive  ');
+    expect(mockRequest).not.toHaveBeenCalledWith(
+      '/data-repair/cases/bulk-transition',
+      expect.anything(),
+    );
+    const confirm = within(retainedConfirmation).getByRole('button', { name: 'Dismiss selected' });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+
+    await waitFor(() => {
+      expect(mockRequest).toHaveBeenCalledWith(
+        '/data-repair/cases/bulk-transition',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            case_ids: [7],
+            status: 'dismissed',
+            resolution_note: 'Same vehicle false positive',
+          }),
+        }),
+      );
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Dismiss selected findings?' }))
+        .not.toBeInTheDocument();
+    });
+    expect(screen.getByRole('checkbox', { name: 'Select all rows' })).not.toBeChecked();
+    expect(mockRequest.mock.calls.filter(([url]) => url === '/data-repair/cases/bulk-transition'))
+      .toHaveLength(1);
   });
 });

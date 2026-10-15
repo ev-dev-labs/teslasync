@@ -4,8 +4,7 @@
  * Auth-gated section wrapper.
  *
  * Wrap any section that has no useful behaviour without an upstream
- * identity provider configured. In open mode (or while the
- * /system/auth-mode contract is loading) the wrapper renders a
+ * identity provider configured. In confirmed open mode the wrapper renders a
  * provider-agnostic empty state explaining what to configure; in
  * forward-auth mode (with the relevant capability flag true) the
  * children render unchanged.
@@ -31,7 +30,12 @@ import { LockKeyhole } from 'lucide-react';
 import { useAuthMode } from '@/api/hooks/useAuthMode';
 import { Heading, Text } from '@/components/ui/Typography';
 import { cn } from '@/lib/cn';
+import { isApiError } from '@/lib/resilience';
+import { useDataState } from '@/hooks/useDataState';
 import { PermissionGuidanceNotice } from './PermissionGuidanceNotice';
+import { QueryError } from './QueryError';
+import { Skeleton } from './Skeleton';
+import { StaleRefreshWarning } from './StaleRefreshWarning';
 import type { AuthModeCapabilities } from '@/api/types';
 
 /**
@@ -68,27 +72,37 @@ export function requiresAuthEmptyTestId(capability: RequiresAuthCapability): str
 
 export function RequiresAuth({ capability, feature, children, className }: RequiresAuthProps) {
   const { t } = useTranslation();
-  const { data, isLoading } = useAuthMode();
+  const query = useAuthMode();
+  const { data, error } = query;
+  const state = useDataState(query);
 
-  // While the contract resolves, render the placeholder rather than
-  // the children — flashing a fully-mounted section and then hiding
-  // it would tear down any in-progress queries the children kicked
-  // off, double-fetch when it remounts, and look broken.
-  if (isLoading || !data) {
+  // Retained capability flags cannot override an explicit auth denial.
+  const denied = isApiError(error) && (
+    error.status === 401 || error.status === 403 ||
+    error.code === 'PERMISSION_DENIED' || error.code === 'FORBIDDEN' ||
+    error.code === 'AUTH_MODE_OPEN'
+  );
+  if (state.fatalError || denied) {
     return (
-      <RequiresAuthPlaceholder
-        capability={capability}
-        feature={feature}
-        providerHint={undefined}
+      <QueryError
+        error={error}
+        onRetry={state.retry ?? undefined}
+        compact
         className={className}
-        t={t}
       />
+    );
+  }
+  if (!data) {
+    return (
+      <div role="status" aria-label={t('a11y.loading', 'Loading')} className={className}>
+        <Skeleton className="h-24 w-full" />
+      </div>
     );
   }
 
   // forward-auth mode + capability enabled → mount the section.
   if (data.mode === 'forward_auth' && data.capabilities[capability]) {
-    return <>{children}</>;
+    return <><StaleRefreshWarning state={state} label={feature} />{children}</>;
   }
 
   // Open mode, OR forward-auth mode where the operator has somehow
@@ -97,13 +111,16 @@ export function RequiresAuth({ capability, feature, children, className }: Requi
   // but we render the same placeholder so future per-capability
   // gating doesn't need a second branch here).
   return (
-    <RequiresAuthPlaceholder
-      capability={capability}
-      feature={feature}
-      providerHint={data.provider_hint}
-      className={className}
-      t={t}
-    />
+    <>
+      <StaleRefreshWarning state={state} label={feature} />
+      <RequiresAuthPlaceholder
+        capability={capability}
+        feature={feature}
+        providerHint={data.provider_hint}
+        className={className}
+        t={t}
+      />
+    </>
   );
 }
 

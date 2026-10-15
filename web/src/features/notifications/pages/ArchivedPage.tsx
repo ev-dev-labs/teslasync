@@ -1,7 +1,7 @@
 /**
  * ArchivedPage — Notifications inbox scoped to archived items only.
  *
- * Full-width modern-ui layout: an archived-backlog KPI band (`ArchivedSummary`)
+ * Data-first layout: a compact archived-backlog strip (`InboxSummary`)
  * over the shared `InboxBody` detail surface (`archived={true}` swaps the
  * bulk-action set from Archive to Restore). The KPI band reads the unfiltered
  * archived set so it stays a stable "backlog overview" while the list below
@@ -13,9 +13,11 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { typography } from '@/lib/tokens';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { BUTTON_BASE, BUTTON_VARIANTS, Button, Caption, Icon, Text } from '@/components/ui';
+import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import {
@@ -24,24 +26,34 @@ import {
   type NotificationFilters,
 } from '@/api/hooks/useNotifications';
 import { InboxBody } from '../components/InboxBody';
-import { ArchivedSummary } from '../components/ArchivedSummary';
+import { InboxSummary } from '../components/InboxSummary';
 
 export default function ArchivedPage() {
   const { t } = useTranslation();
   usePageTitle(t('notifications.archived.title', 'Archived notifications'));
 
-  const { data: vehicles = [] } = useVehicles();
-  const { data: rules = [] } = useAlertRules();
+  const vehiclesQuery = useVehicles();
+  const rulesQuery = useAlertRules();
+  const vehiclesState = useDataState({ ...vehiclesQuery, data: vehiclesQuery.data ?? undefined });
+  const rulesState = useDataState({ ...rulesQuery, data: rulesQuery.data ?? undefined });
+  const vehicles = vehiclesQuery.data ?? [];
+  const rules = rulesQuery.data ?? [];
+  const metadataSources = [
+    { id: 'vehicles', label: t('notifications.alertStudio.editor.vehiclesLabel', 'Vehicles'),
+      state: vehiclesState, fetching: vehiclesQuery.isFetching,
+      empty: t('vehicles.emptyTitle', 'No vehicles yet'), count: vehicles.length },
+    { id: 'rules', label: t('notifications.alertStudio.rules.title', 'Rules'),
+      state: rulesState, fetching: rulesQuery.isFetching,
+      empty: t('notifications.alertStudio.rules.emptyTitle', 'No alert rules yet'), count: rules.length },
+  ];
 
-  // Unfiltered archived backlog drives the KPI summary band. Passing the bare
-  // `{ archived: true }` key lets TanStack Query dedupe this with InboxBody's
-  // own default fetch whenever no filters are active — so the summary costs no
-  // extra request in the common case, yet always reflects the full backlog.
+  // This bounded, all-time sample is independent of the workspace-scoped
+  // server-paginated list. Keep its scope explicit instead of claiming a total.
   const archivedFilters = useMemo<NotificationFilters>(() => ({ archived: true }), []);
   const summaryQuery = useNotificationLogs(archivedFilters);
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('notifications.archived.title', 'Archived notifications')}
       subtitle={t(
         'notifications.archived.subtitle',
@@ -49,28 +61,64 @@ export default function ArchivedPage() {
       )}
       copyLink
       query={summaryQuery}
-      actions={
+      secondaryActions={
         <Link
           to="/notifications/inbox"
           className={cn(
-            'inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 py-2 transition-colors hover:bg-white/[0.04] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
-            typography.size.xs,
-            typography.weight.medium,
-            typography.color.secondary,
+            BUTTON_BASE,
+            BUTTON_VARIANTS.ghost,
+            'min-h-11 min-w-11 max-w-full px-3 py-2 md:min-h-9',
           )}
         >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          {t('notifications.archived.backToInbox', 'Back to inbox')}
+          <Icon icon={ArrowLeft} size="sm" className="rtl:rotate-180" />
+          <Text as="span" variant="bodySm" className="min-w-0 break-words">
+            {t('notifications.archived.backToInbox', 'Back to inbox')}
+          </Text>
         </Link>
       }
     >
       <FadeIn>
-        <ArchivedSummary query={summaryQuery} />
+        <InboxSummary query={summaryQuery} archived />
       </FadeIn>
-
-      <FadeIn delay={0.1}>
+      <FadeIn delay={0.05}>
+        <div className="min-w-0 space-y-3">
+          {metadataSources.filter(source => source.state.status !== 'ok' || source.count === 0).map(source => (
+            <section key={source.id} aria-label={source.label} className="min-w-0 space-y-2">
+              <Caption>{source.label}</Caption>
+              {source.state.fatalError ? (
+                <QueryError error={source.state.fatalError} onRetry={source.state.retry ?? undefined}
+                  resourceName={source.label} compact />
+              ) : !source.state.hasData ? (
+                <div role="status" aria-label={source.fetching && !source.state.isRefreshBlocked
+                  ? t('developerReference.layout.source.loading', 'Loading {{label}}', { label: source.label })
+                  : source.label} className="min-w-0 space-y-2">
+                  {source.fetching && !source.state.isRefreshBlocked ? (
+                    <Skeleton className="h-4 w-32 max-w-full" />
+                  ) : (
+                    <>
+                      <Caption>{source.state.isRefreshBlocked
+                        ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+                        : t('common.unknown', 'Unknown')}</Caption>
+                      {source.state.retry ? (
+                        <Button type="button" variant="secondary" size="sm" wrapLabel
+                          className="min-h-11 max-w-full md:min-h-9" onClick={source.state.retry}>
+                          {t('common.retry', 'Retry')}
+                        </Button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <StaleRefreshWarning state={source.state} label={source.label} />
+                  {source.state.status === 'ok' && source.count === 0 ? <Caption>{source.empty}</Caption> : null}
+                </>
+              )}
+            </section>
+          ))}
+        </div>
         <InboxBody archived={true} vehicles={vehicles} rules={rules} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

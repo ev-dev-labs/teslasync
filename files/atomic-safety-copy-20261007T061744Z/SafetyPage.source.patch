@@ -1,0 +1,22 @@
+diff --git a/web/src/features/settings/pages/SafetyPage.tsx b/web/src/features/settings/pages/SafetyPage.tsx
+index fabffc3667..eb13e3411b 100644
+--- a/web/src/features/settings/pages/SafetyPage.tsx
++++ b/web/src/features/settings/pages/SafetyPage.tsx
+@@ -259,7 +259,7 @@ export default function SafetyPage() {
+     <PageLayout
+       title={t('safetySettings.pageTitle', 'Safety settings')}
+       subtitle={t(
+-        'safetySettings.pageSubtitle',
++        'safetySettings.cardsPageSubtitle',
+         'Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links on each card to change a value.',
+       )}
+     >
+@@ -305,7 +305,7 @@ export default function SafetyPage() {
+               </Heading>
+               <Text variant="bodySm" as="p">
+                 {t(
+-                  'safetySettings.listing.subtitle',
++                  'safetySettings.listing.cardsSubtitle',
+                   'Each tile shows the current value on this install and links to the canonical Settings page where you can change it.',
+                 )}
+               </Text>

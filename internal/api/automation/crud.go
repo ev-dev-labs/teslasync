@@ -3,8 +3,10 @@ package automation
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -19,21 +21,63 @@ func newAutomationResponse(a *models.Automation) automationResponse {
 
 // List returns all automations. Supports ?enabled=true to filter.
 func (h *AutomationHandler) List(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "automation.List")
+	defer span.End()
 	enabledOnly := strings.EqualFold(r.URL.Query().Get("enabled"), "true")
-	fullList, err := h.repo.ListFull(r.Context())
+	fullList, err := h.repo.ListFull(ctx)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to list automations")
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to list automations")
 		writeError(w, http.StatusInternalServerError, "failed to list automations")
 		return
 	}
 
+	// Counts cover retained real execution history, not dry runs or undo records.
+	history := make(map[int64]automationResponse)
+	if h.db != nil && h.db.Pool != nil && len(fullList) > 0 {
+		ids := make([]int64, 0, len(fullList))
+		for i := range fullList {
+			ids = append(ids, fullList[i].Automation.ID)
+		}
+		rows, queryErr := h.db.Pool.Query(ctx, `
+			SELECT rules.id, COUNT(h.id),
+			       COUNT(h.id) FILTER (WHERE h.status IN ('failed', 'partial')),
+			       MAX(h.triggered_at)
+			FROM unnest($1::bigint[]) AS rules(id)
+			LEFT JOIN automation_history h ON h.automation_id = rules.id
+			  AND h.status NOT IN ('test', 'undo')
+			GROUP BY rules.id`, ids)
+		if queryErr == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var id, runs, failures int64
+				var last *time.Time
+				if queryErr = rows.Scan(&id, &runs, &failures, &last); queryErr != nil {
+					break
+				}
+				history[id] = automationResponse{ExecutionCount: &runs, FailureCount: &failures, LastTriggeredAt: last}
+			}
+			if queryErr == nil {
+				queryErr = rows.Err()
+			}
+		}
+		if queryErr != nil {
+			span.RecordError(queryErr)
+			log.Error().Err(queryErr).Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to aggregate automation list history")
+			writeError(w, http.StatusInternalServerError, "failed to aggregate automation history")
+			return
+		}
+	}
 	results := make([]automationResponse, 0, len(fullList))
 	for i := range fullList {
 		a := &fullList[i].Automation
 		if enabledOnly && !a.Enabled {
 			continue
 		}
-		results = append(results, newAutomationResponse(a))
+		response := history[a.ID]
+		response.Automation = a
+		// History does not record why a rule was disabled; do not infer that status.
+		results = append(results, response)
 	}
 	writeJSON(w, http.StatusOK, results)
 }

@@ -2,6 +2,8 @@ import type { CarbonQueryState } from './types';
 
 export interface CarbonQueryLike {
   data: unknown;
+  dataUpdatedAt?: number;
+  isStale?: boolean;
   isLoading: boolean;
   isPending: boolean;
   isSuccess: boolean;
@@ -20,6 +22,8 @@ export function carbonQueryState(
   return {
     enabled,
     hasData,
+    dataUpdatedAt: query.dataUpdatedAt,
+    isStale: query.isStale,
     isLoading:
       enabled
       && !hasData

@@ -1,5 +1,4 @@
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
 import { Badge, Text } from '@/components/ui';
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, seconds, unknown } from './PhysicsPageShell';
@@ -19,41 +18,43 @@ export default function PhysicsDictionarySection({ physics }: { physics: Physics
   const upperQuartile = ranked.length >= 4 ? ranked[Math.ceil(3 * (ranked.length - 1) / 4)] : null;
   return <>
     <Evidence title={physics.title} honesty={dictionary?.honesty}>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.unplug', 'Complete → unplug')} value={seconds(dictionary?.typical_complete_unplug_s, t)} color="amber" />
-        <MetricCard label={t('teslaOnly.parkDwell', 'Park confirm dwell')} value={seconds(dictionary?.park_confirm_dwell_s, t)} color="cyan" />
-        <MetricCard label={t('teslaOnly.unscheduled', 'Complete without schedule')} value={dictionary?.complete_without_schedule ?? unknown(t)} color="purple" />
-      </Grid>
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="neutral" size="sm">{t('teslaOnly.dictionarySamples', 'Returned etiquette dwell observations: {{count}}', { count: dwells.length })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.dictionaryMedian', 'Returned dwell median: {{value}}', { value: seconds(median, t) })}</Badge>
-        <Badge variant="neutral" size="sm">{t('teslaOnly.dictionaryDifference', 'Median difference from dictionary: {{value}}', { value: seconds(difference, t) })}</Badge>
-      </div>
+      <PhysicsEvidenceBrief physics={physics} id="physics-dictionary-summary" available={dictionary != null}
+        description={t('teslaOnly.dictionaryNote', 'Typical dwell is a median of observed Complete-to-Disconnected transitions, not a target or a penalty. Returned vault dwells may cover a different subset: compare rather than silently equate the two medians. No observed sample does not imply zero dwell.')}
+        metrics={[
+          { metricId: 'duration', occurrenceId: 'unplug', label: t('teslaOnly.unplug', 'Complete → unplug'), rawValue: dictionary?.typical_complete_unplug_s, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) } },
+          { metricId: 'duration', occurrenceId: 'park', label: t('teslaOnly.parkDwell', 'Park confirm dwell'), rawValue: dictionary?.park_confirm_dwell_s, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) } },
+          { metricId: 'count', occurrenceId: 'unscheduled', label: t('teslaOnly.unscheduled', 'Complete without schedule'), rawValue: dictionary?.complete_without_schedule },
+          { metricId: 'count', occurrenceId: 'dwells', label: t('teslaOnly.dictionarySamplesLabel', 'Returned etiquette dwell observations'), rawValue: report?.vault ? dwells.length : null, context: t('teslaOnly.dictionarySamples', 'Returned etiquette dwell observations: {{count}}', { count: dwells.length }) },
+          { metricId: 'duration', occurrenceId: 'median', label: t('teslaOnly.dictionaryMedianLabel', 'Returned dwell median'), rawValue: median, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) }, context: t('teslaOnly.dictionaryMedian', 'Returned dwell median: {{value}}', { value: seconds(median, t) }) },
+          { metricId: 'duration', occurrenceId: 'difference', label: t('teslaOnly.dictionaryDifferenceLabel', 'Median difference from dictionary'), rawValue: difference, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) }, context: t('teslaOnly.dictionaryDifference', 'Median difference from dictionary: {{value}}', { value: seconds(difference, t) }) },
+        ]} />
       <Text as="p" variant="bodySm">{t('teslaOnly.workbench.dwellBounds', 'Returned dwell bounds: {{shortest}} → {{longest}}', {
         shortest: ranked.length ? seconds(ranked[0], t) : unknown(t),
         longest: ranked.length ? seconds(ranked[ranked.length - 1], t) : unknown(t),
       })}</Text>
-      <Text as="p" variant="caption">{t('teslaOnly.dictionaryNote', 'Typical dwell is a median of observed Complete-to-Disconnected transitions, not a target or a penalty. Returned Vault dwells may cover a different subset: compare rather than silently equate the two medians. No observed sample does not imply zero dwell.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.dictionaryDistribution', 'Recorded etiquette dwell distribution')}>
+      <PhysicsEvidenceBrief physics={physics} id="physics-dictionary-distribution" available={report?.vault != null}
+        description={t('teslaOnly.dictionaryDistributionCaution', 'Counts describe the returned vault samples only. They may not be the source population for the dictionary median; without session timestamps they cannot establish trend or cause.')}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'short', label: t('teslaOnly.dictionaryWithinMinute', 'At most one minute'), rawValue: report?.vault ? short : null },
+          { metricId: 'count', occurrenceId: 'medium', label: t('teslaOnly.dictionaryOneToFive', 'Over one to five minutes'), rawValue: report?.vault ? medium : null },
+          { metricId: 'count', occurrenceId: 'long', label: t('teslaOnly.dictionaryOverFive', 'Over five minutes'), rawValue: report?.vault ? long : null },
+          { metricId: 'duration', occurrenceId: 'lower', label: t('teslaOnly.dictionaryLowerQuartile', 'Approximate lower quartile'), rawValue: lowerQuartile, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) }, context: t('teslaOnly.dictionaryQuartileCaution', 'Quartiles are nearest returned observations, not a confidence interval. With fewer than four usable dwells the middle-half bounds stay unknown.') },
+          { metricId: 'duration', occurrenceId: 'upper', label: t('teslaOnly.dictionaryUpperQuartile', 'Approximate upper quartile'), rawValue: upperQuartile, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) } },
+        ]} />
       {report?.vault ? <>
-        <Grid cols={{ default: 1, md: 3 }} gap={3}>
-          <MetricCard label={t('teslaOnly.dictionaryWithinMinute', 'At most one minute')} value={short} color="green" />
-          <MetricCard label={t('teslaOnly.dictionaryOneToFive', 'Over one to five minutes')} value={medium} color="cyan" />
-          <MetricCard label={t('teslaOnly.dictionaryOverFive', 'Over five minutes')} value={long} color="amber" />
-        </Grid>
         {ranked.length === 0 && <Text as="p" variant="bodySm">{t('teslaOnly.dictionaryNoDwell', 'No usable dwell observations returned; a typical duration cannot be inferred from this list.')}</Text>}
         {ranked.length !== dwells.length && <Badge variant="warning" size="sm">{t('teslaOnly.dictionaryInvalidDwell', '{{count}} negative or non-finite dwell readings excluded from the distribution', { count: dwells.length - ranked.length })}</Badge>}
         <Text as="p" variant="bodySm">{t('teslaOnly.dictionaryMiddleHalf', 'Approximate middle-half dwell bounds (at least four samples): {{from}} → {{to}}', {
           from: seconds(lowerQuartile, t), to: seconds(upperQuartile, t),
         })}</Text>
         <Text as="p" variant="caption">{t('teslaOnly.dictionaryQuartileCaution', 'Quartiles are nearest returned observations, not a confidence interval. With fewer than four usable dwells the middle-half bounds stay unknown.')}</Text>
-        <Text as="p" variant="caption">{t('teslaOnly.dictionaryDistributionCaution', 'Counts describe the returned Vault samples only. They may not be the source population for the Dictionary median; without session timestamps they cannot establish trend or cause.')}</Text>
-      </> : <Text as="p" variant="bodySm">{t('teslaOnly.dictionaryVaultUnavailable', 'Vault etiquette observations were not returned; Dictionary statistics cannot be cross-checked against individual dwells.')}</Text>}
+      </> : <Text as="p" variant="bodySm">{t('teslaOnly.dictionaryVaultUnavailable', 'Vault etiquette observations were not returned; dictionary statistics cannot be cross-checked against individual dwells.')}</Text>}
       <RawRows title={t('teslaOnly.vaultEtiquette', 'Supercharger etiquette dwells')} rows={dwells} t={t}
         tableId="physics:dictionary" keyExtractor={(r) => String(r.index)} columns={[
-          { key: 'dwell', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (r) => seconds(r.dwell, t) },
-          { key: 'index', header: t('teslaOnly.dictionaryIndex', 'Returned observation'), render: (r) => r.index + 1 },
+          { key: 'dwell', align: 'right', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (r) => seconds(r.dwell, t) },
+          { key: 'index', align: 'right', header: t('teslaOnly.dictionaryIndex', 'Returned observation'), render: (r) => r.index + 1 },
         ]} />
     </Evidence>
   </>;

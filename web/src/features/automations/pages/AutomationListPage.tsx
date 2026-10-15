@@ -1,47 +1,42 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { Pause, Play, Plus, Search, Trash2 } from 'lucide-react';
 
-import { Button, GlassPanel, Input, Select, type SelectOption } from '@/components/ui';
-import { BulkActionToolbar, MetricCard } from '@/components/data-display';
-import { PageContainer } from '@/components/layout';
+import { Button, GlassPanel, Icon, Input, Select, Text, type SelectOption } from '@/components/ui';
+import { BulkActionToolbar } from '@/components/data-display';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { OperationalWriteNotice, QueryError, Skeleton } from '@/components/feedback';
+import { AlertBanner, DataSourceNotice, OperationalWriteNotice, QueryError, StaleRefreshWarning } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
-import { useAutomations, useBulkAutomationsUpdate } from '@/api/hooks/useAutomations';
+import { useAutomationList, automationNumber, automationStatus, useBulkAutomationsUpdate, type AutomationBulkResult, type AutomationListItem } from '@/api/hooks/useAutomations';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import type { Automation } from '@/api/types';
-import { Icons } from '@/lib/icons';
-import { fmtInt } from '@/lib/numberFormat';
-
 import { AutomationListTable } from './AutomationListTable';
 import { AutomationStatusPanel } from './AutomationStatusPanel';
 import { RoutineWizard } from '../components/RoutineWizard';
+import { AutomationRulesBrief } from '../components/operationalbrief-all/AutomationRulesBrief';
 
 type RowKey = string | number;
 type StatusFilter = 'all' | 'active' | 'disabled' | 'auto-disabled';
 
-/**
- * AutomationListPage — the streamlined "manage many at once" view.
- *
- * A full-width, mobile-first bulk-management surface: a KPI band summarizes the
- * fleet of automations, a header toolbar filters by status/search, and a bento
- * pairs the selectable table (hero) with a status-breakdown context panel. The
- * card-based AutomationsListPage remains the rich single-item browse view; this
- * page is the bulk-control alternative for users with dozens of automations.
- */
 export default function AutomationListPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  usePageTitle(t('automationList.title', 'Automation Rules'));
+  usePageTitle(t('automationList.title', 'Automation rules'));
 
-  const automationsQuery = useAutomations();
-  const { data: rowsRaw, isLoading, error, refetch } = automationsQuery;
-  const automations: Automation[] = useMemo(() => rowsRaw ?? [], [rowsRaw]);
+  const automationsQuery = useAutomationList();
+  const { data: rowsRaw, refetch } = automationsQuery;
+  const automationsState = useDataState(automationsQuery);
+  const isLoading = !automationsState.hasData && !automationsState.fatalError && !automationsState.isRefreshBlocked && (automationsQuery.isLoading || automationsQuery.isFetching);
+  const error = automationsState.fatalError;
+  const automations: AutomationListItem[] = useMemo(() => rowsRaw ?? [], [rowsRaw]);
 
-  const { data: vehiclesRaw } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const vehiclesState = useDataState(vehiclesQuery);
+  const { data: vehiclesRaw } = vehiclesQuery;
   const vehicleLookup = useMemo(() => {
     const map = new Map<number, string>();
     for (const v of vehiclesRaw ?? []) map.set(v.id, v.display_name || v.vin);
@@ -50,11 +45,8 @@ export default function AutomationListPage() {
 
   const bulkUpdate = useBulkAutomationsUpdate();
   const operationalMode = useOperationalMode();
-
-  // ── Filters ────────────────────────────────────────────────────────────────
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
-
   const statusOptions = useMemo<SelectOption[]>(
     () => [
       { value: 'all', label: t('automationList.filter.all', 'All statuses') },
@@ -69,9 +61,7 @@ export default function AutomationListPage() {
     let result = automations;
     if (statusFilter !== 'all') {
       result = result.filter((a) => {
-        if (statusFilter === 'active') return a.enabled && !a.auto_disabled;
-        if (statusFilter === 'disabled') return !a.enabled && !a.auto_disabled;
-        return a.auto_disabled;
+        return automationStatus(a) === statusFilter;
       });
     }
     const q = search.trim().toLowerCase();
@@ -85,19 +75,22 @@ export default function AutomationListPage() {
     return result;
   }, [automations, statusFilter, search]);
 
-  // ── Summary stats (from the full, unfiltered set) ────────────────────────────
   const stats = useMemo(() => {
-    let active = 0;
-    let disabled = 0;
-    let autoDisabled = 0;
-    let totalRuns = 0;
-    let totalFailures = 0;
+    let active: number | undefined = 0;
+    let disabled: number | undefined = 0;
+    let autoDisabled: number | undefined = 0;
+    let totalRuns: number | undefined = 0;
+    let totalFailures: number | undefined = 0;
     for (const a of automations) {
-      if (a.auto_disabled) autoDisabled += 1;
-      else if (a.enabled) active += 1;
-      else disabled += 1;
-      totalRuns += a.execution_count ?? 0;
-      totalFailures += a.failure_count ?? 0;
+      const status = automationStatus(a);
+      if (status == null) active = disabled = autoDisabled = undefined;
+      else if (status === 'auto-disabled' && autoDisabled != null) autoDisabled += 1;
+      else if (status === 'active' && active != null) active += 1;
+      else if (status === 'disabled' && disabled != null) disabled += 1;
+      const runs = automationNumber(a.execution_count);
+      const failures = automationNumber(a.failure_count);
+      totalRuns = totalRuns != null && runs != null ? totalRuns + runs : undefined;
+      totalFailures = totalFailures != null && failures != null ? totalFailures + failures : undefined;
     }
     return {
       total: automations.length,
@@ -109,33 +102,37 @@ export default function AutomationListPage() {
     };
   }, [automations]);
 
-  // ── Selection (native DataTable multi-select, pruned to visible rows) ────────
   const [selectedKeys, setSelectedKeys] = useState<RowKey[]>([]);
-  const visibleIdSet = useMemo(() => new Set(filtered.map((a) => a.id)), [filtered]);
+  const [bulkFailures, setBulkFailures] = useState<AutomationBulkResult['failed']>([]);
+  const loadedIdSet = useMemo(() => new Set(automations.map((a) => a.id)), [automations]);
   const effectiveSelected = useMemo(
-    () => selectedKeys.filter((k) => visibleIdSet.has(Number(k))),
-    [selectedKeys, visibleIdSet],
+    () => selectedKeys.filter((k) => loadedIdSet.has(Number(k))),
+    [selectedKeys, loadedIdSet],
   );
+  const selectedReview = effectiveSelected.map((key) => {
+    const row = automations.find((a) => a.id === Number(key));
+    return `#${key}: ${row?.name ?? t('automationList.unnamed', 'Untitled automation')}`;
+  }).join('\n');
   const clearSelection = useCallback(() => setSelectedKeys([]), []);
-
   const runBulk = useCallback(
     async (ids: RowKey[], op: 'enable' | 'disable' | 'delete') => {
       try {
-        await bulkUpdate.mutateAsync({ ids: ids.map((i) => Number(i)), op });
-        // Only drop the selection once the server confirms the op — a failed
-        // mutation keeps the rows selected so the user can retry.
-        setSelectedKeys([]);
+        const submitted = new Set(ids.map(Number));
+        const result = await bulkUpdate.mutateAsync({ ids: [...submitted], op });
+        const failed = result.failed ?? [];
+        const failedIds = new Set(failed.map((failure) => failure.id));
+        setBulkFailures(failed);
+        // A partial HTTP-success is not confirmation for its failed IDs.
+        setSelectedKeys((current) => current.filter(
+          (key) => !submitted.has(Number(key)) || failedIds.has(Number(key)),
+        ));
       } catch {
-        // The bulk mutation hook already surfaces a toast on failure. Swallow
-        // the rejection here so the toolbar's fire-and-forget onClick never
-        // leaks an unhandled promise rejection.
+        // The hook owns failure toasts; keep selection without an unhandled rejection.
       }
     },
     [bulkUpdate],
   );
-
-  // ── Header toolbar (status filter + search + create) ─────────────────────────
-  const actions = (
+  const contextActions = (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
       <Select
         options={statusOptions}
@@ -150,29 +147,31 @@ export default function AutomationListPage() {
         onChange={(e) => setSearch(e.target.value)}
         placeholder={t('automationList.search', 'Search automations…')}
         aria-label={t('automationList.searchAria', 'Search automations')}
-        icon={<Icons.search className="h-4 w-4" aria-hidden="true" />}
+        icon={<Icon icon={Search} />}
         className="w-full sm:w-56"
       />
-      <Button
-        variant="primary"
-        icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
-        onClick={() => navigate('/automations/new')}
-        disabled={!operationalMode.canWrite}
-        title={operationalMode.writeBlockReason ?? undefined}
-      >
-        {t('automationList.new', 'New')}
-      </Button>
     </div>
   );
 
   return (
-    <PageContainer
-      title={t('automationList.title', 'Automation Rules')}
+    <PageLayout
+      title={t('automationList.title', 'Automation rules')}
       subtitle={t(
         'automationList.subtitle',
         'Bulk-manage automations. Click an automation to edit it in the builder.',
       )}
-      actions={actions}
+      contextActions={contextActions}
+      primaryAction={
+        <Button
+          variant="primary"
+          icon={<Icon icon={Plus} />}
+          onClick={() => navigate('/automations/new')}
+          disabled={!operationalMode.canWrite}
+          title={operationalMode.writeBlockReason ?? undefined}
+        >
+          {t('automationList.new', 'New')}
+        </Button>
+      }
       query={automationsQuery}
     >
       <OperationalWriteNotice
@@ -181,68 +180,67 @@ export default function AutomationListPage() {
           'Bulk automation controls are read-only',
         )}
       />
+      <StaleRefreshWarning state={automationsState} label={t('automationList.title', 'Automation rules')} />
+      <StaleRefreshWarning state={vehiclesState} label={t('nav.groups.vehicles', 'Vehicles')} />
+      {vehiclesState.isRefreshing && (
+        <Text role="status" aria-busy="true" color="secondary">
+          {t('nav.groups.vehicles', 'Vehicles')}: {t('freshness.updating', 'Updating…')}
+        </Text>
+      )}
+      {vehiclesState.fatalError && (
+        <QueryError
+          error={vehiclesState.fatalError}
+          resourceName={t('nav.groups.vehicles', 'Vehicles')}
+          onRetry={() => vehiclesQuery.refetch()}
+        />
+      )}
+      {!vehiclesState.hasData && !vehiclesState.fatalError && !vehiclesState.isRefreshBlocked && (vehiclesQuery.isLoading || vehiclesQuery.isFetching) && (
+        <Text role="status" color="secondary">{t('common.loading', 'Loading...')}</Text>
+      )}
+      {!vehiclesState.hasData && vehiclesState.isRefreshBlocked && !vehiclesState.fatalError && (
+        <DataSourceNotice sources={[{ id: 'automation-vehicles', label: t('nav.groups.vehicles', 'Vehicles'), query: vehiclesQuery }]} />
+      )}
+      {bulkFailures.length > 0 && (
+        <AlertBanner variant="warning" role="status" aria-live="polite"
+          title={t('common.error', 'Error')}>
+          <ul className="space-y-1">
+            {bulkFailures.map((failure) => (
+              <li key={failure.id}>
+                <Text as="span" color="secondary">#{failure.id}: {failure.reason}</Text>
+              </li>
+            ))}
+          </ul>
+        </AlertBanner>
+      )}
 
-      {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <section
-          aria-label={t('automationList.kpis', 'Automation summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6"
-        >
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-[76px] w-full rounded-xl" />
-            ))
-          ) : error ? (
+        <section aria-label={t('automationList.kpis', 'Automation summary')}>
+          <AutomationRulesBrief
+            bulk stats={stats} hasData={automationsState.hasData}
+            loading={isLoading}
+            retained={Boolean(automationsState.refreshError || automationsState.isRefreshBlocked)}
+          />
+          {error && (
             <QueryError
               error={error}
               onRetry={() => refetch()}
               className="col-span-2 lg:col-span-3 3xl:col-span-6"
             />
-          ) : (
-            <>
-              <MetricCard
-                label={t('automationList.kpi.total', 'Total')}
-                value={stats.total}
-                icon={<Icons.workflow className="h-5 w-5" />}
-              />
-              <MetricCard
-                label={t('automationList.kpi.active', 'Active')}
-                value={stats.active}
-                icon={<Icons.power className="h-5 w-5" />}
-                color="green"
-              />
-              <MetricCard
-                label={t('automationList.kpi.disabled', 'Disabled')}
-                value={stats.disabled}
-                icon={<Icons.pause className="h-5 w-5" />}
-              />
-              <MetricCard
-                label={t('automationList.kpi.autoDisabled', 'Auto-disabled')}
-                value={stats.autoDisabled}
-                icon={<Icons.securityOff className="h-5 w-5" />}
-                color="red"
-              />
-              <MetricCard
-                label={t('automationList.kpi.runs', 'Total runs')}
-                value={fmtInt(stats.totalRuns)}
-                icon={<Icons.play className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('automationList.kpi.failures', 'Failures')}
-                value={fmtInt(stats.totalFailures)}
-                icon={<Icons.warning className="h-5 w-5" />}
-                color="amber"
-              />
-            </>
           )}
         </section>
       </FadeIn>
 
-      {/* 2 — Bulk action bar (sticky; appears when rows are selected) */}
       <BulkActionToolbar
         selectedIds={effectiveSelected}
-        total={filtered.length}
+        total={automations.length}
+        selectionScope="loaded"
+        selectionSummary={
+          <span className="whitespace-pre-line">
+            {t('bulk.selected', { count: effectiveSelected.length, defaultValue: '{{count}} selected' })}
+            {' · '}{t('automations.brief.scope', 'All loaded rules · unfiltered')}
+            {'\n'}{selectedReview}
+          </span>
+        }
         onClear={clearSelection}
         itemNoun={{
           one: t('automationList.noun.one', 'automation'),
@@ -252,29 +250,42 @@ export default function AutomationListPage() {
           {
             id: 'enable',
             label: t('automationList.bulk.enable', 'Enable'),
-            icon: <Icons.play className="h-4 w-4" />,
+            icon: <Icon icon={Play} />,
             disabled: !operationalMode.canWrite,
+            disabledReason: operationalMode.writeBlockReason ?? undefined,
+            confirm: {
+              title: t('automationList.bulk.enable', 'Enable'),
+              description: selectedReview,
+              confirmLabel: t('automationList.bulk.enable', 'Enable'),
+            },
             onClick: (ids) => runBulk(ids, 'enable'),
           },
           {
             id: 'disable',
             label: t('automationList.bulk.disable', 'Disable'),
-            icon: <Icons.pause className="h-4 w-4" />,
+            icon: <Icon icon={Pause} />,
             disabled: !operationalMode.canWrite,
+            disabledReason: operationalMode.writeBlockReason ?? undefined,
+            confirm: {
+              title: t('automationList.bulk.disable', 'Disable'),
+              description: selectedReview,
+              confirmLabel: t('automationList.bulk.disable', 'Disable'),
+            },
             onClick: (ids) => runBulk(ids, 'disable'),
           },
           {
             id: 'delete',
             label: t('automationList.bulk.delete', 'Delete'),
             variant: 'danger',
-            icon: <Icons.delete className="h-4 w-4" />,
+            icon: <Icon icon={Trash2} />,
             disabled: !operationalMode.canWrite,
+            disabledReason: operationalMode.writeBlockReason ?? undefined,
             confirm: {
               title: t('automationList.bulk.deleteConfirm.title', 'Delete automations?'),
-              description: t(
+              description: `${t(
                 'automationList.bulk.deleteConfirm.body',
                 'Selected automations will stop running and be removed permanently. This cannot be undone.',
-              ),
+              )}\n\n${selectedReview}`,
               confirmLabel: t('common.delete', 'Delete'),
             },
             onClick: (ids) => runBulk(ids, 'delete'),
@@ -282,10 +293,9 @@ export default function AutomationListPage() {
         ]}
       />
 
-      {/* 3 — Bento: selectable table (hero) + status-breakdown context panel */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <div className="xl:col-span-2">
+          <div className="min-w-0 xl:col-span-2">
             <AutomationListTable
               automations={filtered}
               vehicleLookup={vehicleLookup}
@@ -295,13 +305,16 @@ export default function AutomationListPage() {
               error={error}
               onRetry={refetch}
               totalCount={automations.length}
+              hasData={automationsState.hasData}
+              dataState={automationsState}
             />
           </div>
           <AutomationStatusPanel
-            stats={stats}
+            stats={{ ...stats, total: automationsState.hasData ? stats.total : undefined }}
             isLoading={isLoading}
             error={error}
             onRetry={refetch}
+            dataState={automationsState}
           />
         </section>
       </FadeIn>
@@ -310,6 +323,6 @@ export default function AutomationListPage() {
           <RoutineWizard actionsDisabled={!operationalMode.canWrite} />
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

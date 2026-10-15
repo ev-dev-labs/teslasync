@@ -1,0 +1,63 @@
+{
+  "releasedUtc": "2026-10-07T06:34:26.326086+00:00",
+  "originalStartUtc": "2026-10-07T06:16:47.7503845Z",
+  "unchangedEarlierConservativeCapUtc": "2026-10-07T06:36:47.7503845Z",
+  "userAbsoluteCapUtc": "2026-10-07T06:37:00Z",
+  "priorHandoffUntouched": "files\\atomic-safety-copy-20261007T061744Z",
+  "sourceDeltaExactlyTwoApprovedFallbacks": true,
+  "originalTestsUnchanged": true,
+  "catalogCorrectionsParentOnly": [
+    {
+      "key": "safetySettings.listing.cardsSubtitle",
+      "english": "Each tile shows the current value on this install and links to its configuration documentation."
+    },
+    {
+      "key": "safetySettings.cardsPageSubtitle",
+      "english": "Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links on each card to review its configuration documentation."
+    }
+  ],
+  "inheritedCanonicalLeavesPreservedByTests": [
+    "safetySettings.listing.subtitle",
+    "safetySettings.pageSubtitle"
+  ],
+  "actualDocsDestinations": {
+    "Quiet hours": "/docs/notifications/quiet-hours.md",
+    "Quiet-hours window start": "/docs/notifications/quiet-hours.md",
+    "Quiet-hours window end": "/docs/notifications/quiet-hours.md",
+    "Alert digest mode": "/docs/notifications/digest.md",
+    "Critical-alert tab flash": "/docs/notifications/tab-signalling.md",
+    "Unread tab badge": "/docs/notifications/tab-signalling.md",
+    "API kill-switch": "/docs/operations/api-suspended.md"
+  },
+  "meaningDataActions": "Copy now correctly describes configuration documentation. All seven docs anchors, values, descriptions, badges, queries, retry actions, loading/error states and sections unchanged; no Settings edit link or mutation added.",
+  "authoredCases": 3,
+  "validationExecuted": false,
+  "technicalAcceptance": false,
+  "exclusivePairReleased": [
+    "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+    "web\\src\\features\\settings\\pages\\SafetyPage.catalogCopy.test.tsx"
+  ],
+  "noFurtherWrites": true,
+  "immutableFiles": [
+    {
+      "filename": "SafetyPage.after.tsx",
+      "sha256": "4c6d158aab0d5b126e702720462a880ffde552cf17d609282de0a065a26caf14"
+    },
+    {
+      "filename": "SafetyPage.before.tsx",
+      "sha256": "bd318f9c5e36f8fcd652a0bad2028a92caf7b0f2dddcfbe0cdaac65fd4715049"
+    },
+    {
+      "filename": "SafetyPage.catalogCopy.after.test.tsx",
+      "sha256": "8b0576432b6ba04f3a9c8e4b743cc736a9c1dd2d2c79689fc5e0a1e63c3f07c2"
+    },
+    {
+      "filename": "SafetyPage.catalogCopy.before.test.tsx",
+      "sha256": "992f7b637c3f2356184774b28b46ab075585c2e5db14739faab6b1560b8df489"
+    },
+    {
+      "filename": "SafetyPage.original-test.tsx",
+      "sha256": "bcbe326a0c09aca8082a999a98fc8e9308591e4ec0441a6e919fd9bd9464edcf"
+    }
+  ]
+}

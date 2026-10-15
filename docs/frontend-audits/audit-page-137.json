@@ -1,0 +1,363 @@
+{
+  "item": "audit-page-137",
+  "page": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+  "routes": ["/live"],
+  "purpose": "Selected-vehicle location overview combining the latest known position, recent trail, location presence, navigation links, replay and position history.",
+  "primaryGoal": "Understand where the selected vehicle was last observed and inspect or replay its recent GPS evidence without confusing retained historical coordinates with a current live fix.",
+  "dataSources": [
+    {
+      "name": "Fleet identity and workspace vehicle",
+      "hook": "useVehicles and useSelectedVehicle",
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwner": "web\\src\\api\\hooks\\useVehicles.ts:75; web\\src\\hooks\\useSelectedVehicle.ts:48",
+      "pageEvidence": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx:108-123",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "behavior": "Shared vehicles query, safeArray normalization and abort signal. Selection follows path/query/store/fleet fallback. Page does not render a competing vehicle picker."
+    },
+    {
+      "name": "Latest known position",
+      "hook": "Page-local useQuery; ['position-latest', selectedId]",
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/positions?limit=1",
+      "sourceOwner": "internal\\api\\vehicle\\handler.go:200-267",
+      "pageEvidence": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx:125-137",
+      "routeEvidence": "internal\\api\\router.go:3327-3332",
+      "behavior": "Enabled with selected vehicle; polls every 15 seconds. Backend reads a 30-day default signal timeline, reverses newest-first and limits after reversal. This is durable history, not a proven fresh live-state read. Page marks successful receipts live without observation-age cutoff."
+    },
+    {
+      "name": "Recent position history",
+      "hook": "Page-local useQuery; ['position-history', selectedId]",
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/positions?limit=50",
+      "sourceOwner": "internal\\api\\vehicle\\handler.go:200-267",
+      "pageEvidence": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx:139-150,172-200",
+      "routeEvidence": "internal\\api\\router.go:3332",
+      "behavior": "Separate non-interval query feeds trail, replay and table; history defaults to []; skips absent/zero-pair coordinates for map/replay and sorts replay ascending. No workspace date filter or full-result export is introduced by this page."
+    },
+    {
+      "name": "Location presence",
+      "hook": "Page-local useQuery; ['location-latest', selectedId]",
+      "endpoint": "GET /api/v1/location-snapshots/latest?vehicle_id={selectedId}",
+      "sourceOwner": "internal\\api\\locsnap\\handler.go:99-125",
+      "pageEvidence": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx:152-163,205-207",
+      "routeEvidence": "internal\\api\\router.go:4146-4148",
+      "behavior": "Reads live.LiveState and only projects present fields; no page-specific polling interval. Home/work are tri-state; missing HomeLink currently becomes false. Handler emits no timestamp/freshness envelope here."
+    },
+    {
+      "name": "Basemap provider",
+      "hook": "MapTileLayer useQuery; ['map-config']; getMapConfig",
+      "endpoint": "GET /api/v1/system/map-config",
+      "sourceOwner": "web\\src\\components\\maps\\MapTileLayer.tsx:57-85; web\\src\\api\\settings.ts:133",
+      "routeEvidence": "internal\\api\\router.go:4386",
+      "behavior": "Five-minute config cache, configured Azure/Google or free OSM/Esri/OpenTopoMap tiles. Low-bandwidth mode substitutes dark tiles and defers requests until gestures settle; attribution remains. Tile/config failure UI is not supplied by this component."
+    },
+    {
+      "name": "Global live-pipe health",
+      "hook": "LiveStaleDataBanner -> useLiveConnection",
+      "endpoint": "Not directly requested by this page; connection hook transport not traced",
+      "sourceOwner": "web\\src\\components\\feedback\\LiveStaleDataBanner.tsx:28-89",
+      "behavior": "Shows polite stale warning after a continuous two-minute reconnect/disconnect period. This describes pipe health, not the age of the position observation."
+    }
+  ],
+  "components": [
+    { "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-17", "kind": "layout", "components": ["PageLayout", "PageContainer"], "detail": "Existing width/container adapter and shell-owned header/actions; query and four dataSources forwarded." },
+    { "owner": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx:19-67", "kind": "feature composite", "components": ["MapsOperationalBrief", "OperationalBrief", "useOperationalMetrics"], "detail": "Five source-backed metrics, scope, receipt freshness, provenance and retained/unavailable/partial labels; optional retry not supplied by this page." },
+    { "owner": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx:13-26,84-92", "kind": "primitives and local renderer", "components": ["GlassPanel", "LayoutCard", "Badge", "Button", "Text", "TimeStamp", "DataTable", "StatusRow"], "detail": "Category-barrel imports; local non-exported StatusRow composes repeated presence/value rows." },
+    { "owner": "web\\src\\components\\maps\\index.ts:3-44", "kind": "map owner", "components": ["MapContainer", "Marker", "Popup", "Polyline", "MapTileLayer", "MapInvalidator", "MapLayerSwitcher", "vehicleIcon", "RoutePlayback"], "detail": "Shared Leaflet boundary; existing resizing observer, provider selection and playback retained." },
+    { "owner": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx:17-18,299-316,329-363,370-418,461-477,483-507", "kind": "feedback and motion", "components": ["Skeleton", "EmptyState", "QueryError", "AlertBanner", "LiveStaleDataBanner", "FadeIn", "NoVehicleSelected"], "detail": "Source-specific initial/error/empty branches, localized explanations and retries." },
+    { "owner": "web\\src\\components\\data-display\\PlaybackControls.tsx:18-66,91-113", "kind": "shared transport", "components": ["PlaybackControls", "PlaybackSpeedMenu", "TimelineScrubber"], "detail": "Replay play/pause/reset, speed and seek remain existing shared presentation. Global shortcut opt-in defaults false; scrubber internals were not inspected." }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+      "line": 127,
+      "rule": "MDC-002 / mission 33: query ownership",
+      "detail": "Local latest/history/location queries duplicate endpoint access already represented by useVehiclePositions at useVehicles.ts:291-297 and useLocationSnapshotLatest at :491-498. The latter uses numeric vehicle ID while this page uses string ID in a similarly named key. Shared positions key omits limit, so blindly replacing both local queries would alias limit=1 and limit=50.",
+      "fix": "Extend the existing domain hook contract to represent independent latest/history limits, cancellation and refresh policies while explicitly preserving existing cache identities and invalidations; do not create a second map data layer.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "Page:322-327 stacks the hero at small widths; xl makes map two of three columns. Map heights are 380/460/600px.",
+      "Page:423-452 quick links wrap labels and have min-h-11 targets.",
+      "Page:488-497 uses mobileColumns time/speed/heading with pagination and stable tableId.",
+      "RoutePlayback.tsx:341-343,420-435 keeps a fixed 360px requested map and shared transport beneath it; layer labels hide below sm."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+        "line": 491,
+        "rule": "MDC-023 / MDC-043: full mobile detail preservation",
+        "detail": "Latitude/longitude history columns are excluded from the mobile allow-list. DataTable.tsx:238-246,725 hides omitted cells below md. Page provides neither mobilePresentation nor expandable row details, so historical coordinates are not directly visible on small screens.",
+        "fix": "Use the existing DataTable mobile detail/card contract or accessible per-row expansion to keep all coordinates reachable; preserve tableId, ordering, pagination, timestamps and raw rows.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\maps\\MapLayerSwitcher.tsx",
+        "line": 61,
+        "rule": "MDC-040 / MDC-043: touch targets and narrow controls",
+        "detail": "Switcher uses px-2 py-1 text-xs and no explicit 44px minimum. Four emoji-only choices below sm are named but actual hit size, long-label fit, overlap with attribution and 320px/200%-text behavior remain unmeasured.",
+        "fix": "Extend the existing switcher using density-aware target sizing, visible focus and wrapping/compact layout; retain all four choices and aria-pressed.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "UNVERIFIED: no viewport, overflow, touch, zoom, RTL or resize interaction exercised."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Page:325-326 names the live map region; marker popup names the vehicle at :347.",
+      "StatusRow:88 hides decorative icons; labels and yes/no/unknown text accompany badge color.",
+      "MapLayerSwitcher.tsx:22-24,41-59 has labelled group, native buttons, localized names, type=button and aria-pressed.",
+      "RoutePlayback.tsx:342-350 associates a hidden route summary with a labelled application region; map animation flags and FitTrail consult reduced motion.",
+      "LiveStaleDataBanner.tsx:79-81 uses role=status and polite announcement."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+        "line": 338,
+        "rule": "MDC-040 / MDC-042: map motion and nonvisual equivalence",
+        "detail": "Hero MapContainer does not pass reduced-motion flags or a route summary, unlike shared RoutePlayback. Live coordinates and history provide text alternatives, but mobile omits row coordinates. Leaflet defaults and map keyboard reachability are not verified.",
+        "fix": "Compose the existing useMotionPreference and route-summary mechanisms without replacing Leaflet or deleting trail/navigation. Validate keyboard entry/exit, popup focus and actual reduced-motion pan/zoom.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "UNVERIFIED: keyboard, screen reader, focus visibility/order, effective text/UI contrast, forced colors, target dimensions and animation behavior."
+  },
+  "states": {
+    "loading": "Page:289 suppresses page only while fleet initially loads with no independent data; map, location, replay and table use contextual skeletons (:329-330,370-371,461-462,483-484).",
+    "empty": "NoVehicleSelected guard :277-279 waits for resolved nonfailed fleet; GPS/no location :356-363 and :417-418; insufficient replay :472-476; empty history explanation :500-507. Sections stay mounted after ordinary data resolution.",
+    "failure": "fatalError only drives per-source QueryError with retry (:333,373,464,486). Page-level fleet fatal error is gated on no independent retained sources (:290).",
+    "retainedPartialOffline": "deriveDataState preserves retained values and PageContainer renders DataSourceNotice. Four page descriptors :292-297 keep independent source recovery. Brief :24-33 labels retained/partial/unavailable. LiveStaleDataBanner describes global transport outage, not GPS freshness.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+        "line": 207,
+        "rule": "MDC-025 / MDC-026: unknown is not false",
+        "detail": "homelink_nearby ?? false renders No (:397-403) when the backend omits this field, while home/work correctly use triLabel. Latest handler only emits existing signals, so absent HomeLink is a real possible shape.",
+        "fix": "Use the same boolean/undefined tri-state label and neutral unknown treatment; retain true and measured false distinctly.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+        "line": 135,
+        "rule": "MDC-026 / MDC-045: source provenance and observation freshness",
+        "detail": "Latest position is durable history with up to 30-day lookback but is marked live on every successful poll. deriveDataState receives no maxAgeMs and measures receipt time, not created_at. Healthy SSE and fresh HTTP receipt cannot prove recent GPS evidence. LocationDetails also lacks exposed observation timestamps.",
+        "fix": "Label latest-known historical position honestly and distinguish observation from receipt age using existing trust mechanisms. Coordinate a typed source freshness contract before claiming live GPS. Keep old genuine coordinates visible.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+        "line": 135,
+        "rule": "MDC-026: resolved empty versus initial",
+        "detail": "A successful empty latest array becomes null and then undefined for deriveDataState, which returns initial rather than unavailable. Empty history [] counts as retained data and ok without unavailable annotation. Map/table empty UI exists, but source and brief trust labels can disagree with it.",
+        "fix": "Represent resolved emptiness explicitly through the existing unavailable contract, without fabricating measurements or losing retained-data/error behavior.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+      "line": 350,
+      "rule": "MDC-010 / MDC-034 / mission 5: neon map line",
+      "detail": "Hero trail hardcodes electric cyan #00f0ff, independently of theme/chart palettes.",
+      "fix": "Use the existing restrained map/chart semantic accent while preserving route contrast, weight, opacity and every point; do not overwrite saved theme/chart choices.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\maps\\vehicleIcon.ts",
+      "line": 8,
+      "rule": "MDC-010 / MDC-012 / MDC-042: neon, glow, pure-white decoration",
+      "detail": "Default marker #00f0ff; :48 pulses indefinitely; :52 uses border:2px solid white and :53 adds colored glow. These are inherited shared decoration, not page CSS. Global OS reduced-motion override exists at index.css:1404-1414; low-bandwidth marker pulse suppression was not established.",
+      "fix": "Extend existing safe marker factory with subdued theme-aware accent/border and non-glowing default; preserve sanitizeColor, anchor geometry, visibility and caller-provided semantic/custom colors. Remove ambient pulse or honor existing motion policy.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\maps\\RoutePlayback.tsx",
+      "line": 177,
+      "rule": "MDC-010 / MDC-015 / MDC-034: independent decorative palette and surfaces",
+      "detail": "Replay defaults use hardcoded cyan/blue colors; :375-389 uses fixed start/end semantic hues; :405 adds backdrop blur and shadow-lg; :421 uses border-white/[0.06]. Replay GlassPanel is nested inside page LayoutCard (:460), adding stacked surface chrome.",
+      "fix": "Reuse existing semantic map palette and surface/border tokens; consider an opt-in embedded/unframed variant of the existing replay renderer. Keep start/end distinction, controls, map, overlays and default compatibility.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+      "line": 408,
+      "rule": "MDC-010 / MDC-016: decorative icon emphasis",
+      "detail": "Odometer icon has an unconditional purple-400 accent. Presence icons also use fixed emerald/cyan shades; text and badges carry their semantic meaning. No page fixed-white body text or glowing card class was found.",
+      "fix": "Use muted icon tokens for nonsignal decoration and semantic tokens for measured state; check composed contrast instead of declaring every saturated icon a failure.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+      "line": 129,
+      "rule": "MDC-002 / MDC-046: cancellable domain reads",
+      "detail": "All three local queryFns omit TanStack signal forwarding. Latest polling uses fixed 15_000 rather than the existing refresh policy. Shared useVehicles forwards signal; positions/location hooks also already do.",
+      "fix": "Integrate with the existing hook/query-policy owners, retaining query keys, disabled prerequisites, latest/history separation and established refresh behavior; verify hidden/offline/low-bandwidth policy explicitly.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\maps\\RoutePlayback.tsx",
+      "line": 411,
+      "rule": "MDC-045: SI-only source, display-only conversion",
+      "detail": "Page passes PositionRecord.speed unchanged at :194, but replay chip prints raw fmtNumber(cp.speed) plus literal km/h. Page's other speed displays call useUnits.formatSpeed. Backend maps VehicleSpeed to a misleading speed_mph name and aliases that value to speed; no conversion occurs in the inspected handler. Exact runtime value/unit was not established.",
+      "fix": "Confirm canonical VehicleSpeed semantics with SI/data owner, type PlaybackPoint.speed accordingly and format through existing useUnits at display boundary. Do not add a legacy converter or mutate wire/cache values.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+      "line": 65,
+      "rule": "Mission 34 / MDC-045: actual response shape",
+      "detail": "PositionRecord.id is declared number while backend sets id to fmt.Sprintf(timestamp) at vehicle/handler.go:260. vehicle_id is declared required but not assigned in the inspected Positions response loop. LocationSnapshot requires id/created_at/active_route although Latest projects only available mapped signals and does not emit these fields. Optional odometer is not in the position mapping; UI properly formats missing value as unknown.",
+      "fix": "Align shared typed response contracts to actual endpoints and optional measurements before hook adoption; preserve stable row identity and null handling. Keep unsupported odometer displayed as unknown rather than inventing zero.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+      "line": 429,
+      "rule": "MDC-030 / MDC-046: native navigation semantics",
+      "detail": "Quick links use window.location.hash assignments rather than existing router links/navigation. Routes/actions are preserved source strings; hash-router compatibility, back behavior and modifier-click are not exercised.",
+      "fix": "Compose existing router-aware link/button pattern while retaining exact destinations and accessible names; confirm router mode before changing behavior.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve source-trust, missing-boolean and replay-unit risks before cosmetic modernization. Preserve the substantial existing operational brief, hero/context, replay and table implementation.",
+    "order": ["typed SI and observation freshness integration", "tri-state and resolved-empty correctness", "mobile detail and control reachability", "shared marker/replay palette and surface restraint", "runtime acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing vehicle position/location query contract integration",
+      "owner": "integration",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useVehicles.ts",
+      "propsVariantsStates": "Retain independent latest limit=1 and history limit=50 reads, vehicle identity and query-key migration/invalidation compatibility; cancellation signal; polling policy; typed optional fields/string position ID; unavailable versus initial; receipt versus observation timestamps and retained/fatal/refresh errors.",
+      "usedBy": ["MapOverviewPage /live latest map and brief", "MapOverviewPage /live history trail/replay/table", "MapOverviewPage /live location details"],
+      "dependsOn": ["internal\\api\\vehicle\\handler.go Positions response/source semantics", "internal\\api\\locsnap\\handler.go Latest projection", "web\\src\\api\\dataState.ts", "existing query/refresh policy owner"]
+    },
+    {
+      "name": "Existing map marker presentation contract",
+      "owner": "shared",
+      "existingOwnerFile": "web\\src\\components\\maps\\vehicleIcon.ts",
+      "propsVariantsStates": "Safe caller color support, restrained default/border, no ambient glow, reduced-motion and low-bandwidth handling, unchanged marker dimensions/anchors and popup behavior.",
+      "usedBy": ["MapOverviewPage /live hero vehicle marker"],
+      "dependsOn": ["existing theme/tokens owner", "existing useMotionPreference policy", "sanitizeColor compatibility"]
+    },
+    {
+      "name": "Existing RoutePlayback display and embedding contract",
+      "owner": "shared",
+      "existingOwnerFile": "web\\src\\components\\maps\\RoutePlayback.tsx",
+      "propsVariantsStates": "Explicit SI speed interpretation with useUnits display conversion; current points, optional speed/soc/power, height, layer/style/color options, autoPlay and onPositionChange preserved; opt-in unframed embedding if justified; localized units, semantic endpoints and reduced-motion behavior.",
+      "usedBy": ["MapOverviewPage /live recent replay"],
+      "dependsOn": ["confirmed VehicleSpeed SI semantics", "web\\src\\hooks\\useUnits.ts contract (import/use inspected through page only)", "PlaybackControls", "existing theme/map palette owner"]
+    },
+    {
+      "name": "Existing map layer switcher target/focus contract",
+      "owner": "shared",
+      "existingOwnerFile": "web\\src\\components\\maps\\MapLayerSwitcher.tsx",
+      "propsVariantsStates": "current/onChange unchanged; dark/satellite/streets/terrain; labelled pressed states, density-aware minimum target, visible focus, compact and long-label layouts, forced-colors retention.",
+      "usedBy": ["MapOverviewPage /live URL-backed hero layers", "RoutePlayback /live independent replay layers"],
+      "dependsOn": ["existing Button/tokens/density contract", "mobile/open-state keyboard and viewport QA"]
+    }
+  ],
+  "competingImplementations": [
+    { "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx", "line": 127, "rule": "MDC-002", "detail": "Page-local position/location query access competes with existing domain hooks; reuse with explicit contract extension rather than new hook families.", "fix": "See deduplicated query integration requirement.", "owner": "integration", "confidence": "high" },
+    { "file": "web\\src\\components\\maps\\RoutePlayback.tsx", "line": 187, "rule": "MDC-034 / MDC-046", "detail": "Hero URL layer and replay local layer state are independently scoped existing controls, not proven duplicates. Replay starts dark independently of URL layer.", "fix": "Preserve both scopes and defaults unless an explicit product contract changes them; do not consolidate and lose independent replay selection.", "owner": "page", "confidence": "high" },
+    { "file": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx", "line": 9, "rule": "MDC-002 / MDC-031", "detail": "Already uses canonical PageLayout, LayoutCard and OperationalBrief pipeline. No replacement card/layout/theme/stat engine is needed.", "fix": "Reuse current category exports and improve owners only where concrete gaps are documented.", "owner": "page", "confidence": "high" }
+  ],
+  "preservation": {
+    "sourceHash": "E09B138FE0807F0A679AC43DC153BE1F61E6F6A393FF25420872F75CBCED6ACD",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 513,
+    "sectionCount": 6,
+    "sections": [
+      { "name": "Vehicle status operational brief", "line": 310, "count": 1, "metrics": ["speed", "heading", "latitude", "longitude", "last updated"], "metricCount": 5 },
+      { "name": "Live location hero map", "line": 324, "count": 1 },
+      { "name": "Location details", "line": 369, "count": 1, "rows": ["At home", "At work", "HomeLink nearby", "Odometer"], "rowCount": 4 },
+      { "name": "Quick links", "line": 423, "count": 1, "actionCount": 3 },
+      { "name": "Recent route playback", "line": 460, "count": 1 },
+      { "name": "Recent location history", "line": 482, "count": 1, "columnCount": 5 }
+    ],
+    "containerCounts": { "GlassPanel": 1, "LayoutCard": 4, "MapsOperationalBrief": 1, "ChartContainer": 0, "FadeIn": 4 },
+    "actions": [
+      "Header-owned selected-vehicle filtering and URL/store precedence",
+      "Hero layer URL parameter: layer=dark|satellite|streets|terrain, default dark",
+      "Map pan, zoom/scroll-wheel and vehicle popup",
+      "Source retries and independent recovery through DataSourceNotice/QueryError",
+      "Navigation route #/maps/navigation-route",
+      "Geofences #/maps/geofences",
+      "Locations #/maps/locations",
+      "Replay play/pause/reset, seek and speed 1/10/25/50/100x",
+      "Independent replay layer switching",
+      "Recent history pagination and shared table persistence; tableId maps:overview-history"
+    ],
+    "dataBehavior": [
+      "Never drop genuine retained coordinates/history on refresh failure.",
+      "Keep separate latest-one and recent-50 sources; history is not promised to refresh every 15 seconds.",
+      "Keep newest-first table/trail and ascending timestamp replay.",
+      "Keep no GPS, insufficient replay, empty fleet/history and per-source error explanations.",
+      "Keep home/work unknown separate from measured false; correct missing HomeLink without deleting status row.",
+      "Keep source speed/heading/coordinates/timestamp and optional odometer/battery/power; no SI wire/cache conversion.",
+      "Preserve all five history columns on desktop and make omitted mobile detail reachable.",
+      "Retain configured basemap providers, attribution, low-bandwidth substitution and tile resize observation.",
+      "Keep all six content sections; no single data gate or cosmetic reduction.",
+      "Do not invent a date filter, realtime transport, full-result export or live GPS guarantee not supplied by the current page."
+    ]
+  },
+  "evidenceLimits": {
+    "assessment": "SOURCE-ONLY Phase 0 audit; runtime unverified.",
+    "unverified": ["Actual mounted route interaction", "Backend request/response execution and numeric unit values", "Tile/network failure and offline recovery", "Visual theme rendering and effective contrast", "Ten target viewports and container widths", "Keyboard, focus, screen reader and touch interactions", "Reduced motion/low bandwidth/forced colors in browser", "i18n catalog key presence", "Production build, lint, tests and TypeScript"],
+    "scope": "Only assigned page and directly relevant presentation/data owners inspected. Router declarations confirm /live lazy mount and API path spelling, not current server availability. No source edits, Git, nested agents, production actions or browser actions.",
+    "commands": [
+      { "command": "Get-FileHash 'web\\src\\features\\maps\\pages\\MapOverviewPage.tsx' -Algorithm SHA256", "exitCode": 0, "output": "E09B138FE0807F0A679AC43DC153BE1F61E6F6A393FF25420872F75CBCED6ACD; same hash on second read" },
+      { "command": "(Get-Content 'web\\src\\features\\maps\\pages\\MapOverviewPage.tsx').Count", "exitCode": 0, "output": "513" },
+      { "command": "Case-sensitive Select-String on the assigned page for style={{, raw interactive HTML, direct recharts/react-leaflet/framer-motion imports, noise markers and section components", "exitCode": 0, "output": "style={{: 0; raw button/input/textarea/select/table: 0; direct chart/map/motion library imports: 0; text-white|text-neon|glow|#00f0ff: 1; GlassPanel: 1; LayoutCard: 4; MapsOperationalBrief: 1. Earlier case-insensitive probe matched component names; corrected counts above are authoritative." }
+    ],
+    "notRun": "The audit skill script includes project TypeScript; it was inspected but not run because this assignment forbids full-project gates. Focused source scans are not a clean runtime/typecheck certificate. No historical acceptance borrowed."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx",
+    "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx",
+    "web\\src\\components\\maps\\index.ts",
+    "web\\src\\components\\maps\\MapLayerSwitcher.tsx",
+    "web\\src\\components\\maps\\MapTileLayer.tsx",
+    "web\\src\\components\\maps\\vehicleIcon.ts",
+    "web\\src\\components\\maps\\RoutePlayback.tsx",
+    "web\\src\\components\\data-display\\PlaybackControls.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\feedback\\LiveStaleDataBanner.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\index.css",
+    "internal\\api\\router.go",
+    "internal\\api\\vehicle\\handler.go",
+    "internal\\api\\locsnap\\handler.go"
+  ]
+}

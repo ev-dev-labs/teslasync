@@ -17,8 +17,6 @@ import {
   Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { fmtInt } from '@/lib/numberFormat';
-
 import {
   MIN_BASE_ARRIVALS,
   MIN_BASE_CLUSTER_VISITS,
@@ -28,6 +26,7 @@ import {
 } from '../../lib/explorer';
 import { ExplorerSectionBody } from './ExplorerSectionBody';
 import type { ExplorerSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ExplorerMethodologyProps {
   summary: ExplorerSummary;
@@ -40,9 +39,11 @@ export function ExplorerMethodology({
   state,
   className,
 }: ExplorerMethodologyProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const methods = [
     {
+      id: 'clustering',
       icon: <Grid3X3 className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'explorer.method.clustering',
@@ -50,6 +51,7 @@ export function ExplorerMethodology({
       ),
     },
     {
+      id: 'base',
       icon: <Radar className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'explorer.method.base',
@@ -57,6 +59,7 @@ export function ExplorerMethodology({
       ),
     },
     {
+      id: 'new-repeat',
       icon: <Route className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'explorer.method.newRepeat',
@@ -64,6 +67,7 @@ export function ExplorerMethodology({
       ),
     },
     {
+      id: 'distance',
       icon: <Ruler className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'explorer.method.distance',
@@ -71,6 +75,7 @@ export function ExplorerMethodology({
       ),
     },
     {
+      id: 'timestamps',
       icon: <CalendarClock className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'explorer.method.timestamps',
@@ -78,6 +83,7 @@ export function ExplorerMethodology({
       ),
     },
     {
+      id: 'window',
       icon: <Database className="h-4 w-4" aria-hidden="true" />,
       text: summary.historyCapReached
         ? t(
@@ -108,7 +114,7 @@ export function ExplorerMethodology({
       <GlassPanel className={cn('p-5 sm:p-6')}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <PanelTitle className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-purple-300" aria-hidden="true" />
+            <Database className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
             {t('explorer.method.title', 'Methodology & limits')}
           </PanelTitle>
           <Badge
@@ -127,11 +133,8 @@ export function ExplorerMethodology({
           <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
             <ul className="space-y-3">
               {methods.map((method) => (
-                <li
-                  key={method.text}
-                  className="flex items-start gap-2"
-                >
-                  <span className="mt-0.5 shrink-0 text-cyan-300">
+                <li key={method.id} className="flex items-start gap-2">
+                  <span className="mt-0.5 shrink-0 text-[var(--text-muted)]">
                     {method.icon}
                   </span>
                   <Text as="span" variant="bodySm">{method.text}</Text>

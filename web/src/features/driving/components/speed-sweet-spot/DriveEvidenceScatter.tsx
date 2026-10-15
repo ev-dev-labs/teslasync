@@ -14,16 +14,22 @@ import {
 } from './DriveEvidencePlot';
 import type { SpeedSweetSpotSectionState } from './types';
 import { useSpeedSweetSpotDisplay } from './useSpeedSweetSpotDisplay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DriveEvidenceScatterProps {
   summary: SweetSpotResult;
   state: SpeedSweetSpotSectionState;
+  resolved: boolean;
+  retained: boolean;
 }
 
 export function DriveEvidenceScatter({
   summary,
   state,
+  resolved,
+  retained,
 }: DriveEvidenceScatterProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const {
     convertDistance,
@@ -83,7 +89,7 @@ export function DriveEvidenceScatter({
           'Drive-level whole-drive evidence',
         )}
         subtitle={
-          summary.driveEvidenceCapped
+          resolved && state.error == null && summary.driveEvidenceCapped
             ? t(
                 'sweetSpot.scatter.cappedSubtitle',
                 '{{shown}} evenly sampled points from {{total}} eligible drives; every eligible drive still feeds the aggregates.',
@@ -95,7 +101,7 @@ export function DriveEvidenceScatter({
             : t(
                 'sweetSpot.scatter.subtitle',
                 '{{shown}} eligible drives; marker size follows distance and each point is one whole drive.',
-                { shown: summary.driveEvidence.length },
+                { shown: resolved && state.error == null ? summary.driveEvidence.length : '—' },
               )
         }
         ariaLabel={t(
@@ -103,23 +109,30 @@ export function DriveEvidenceScatter({
           'Scatter plot of whole-drive average speed against drive consumption with distance represented by marker size',
         )}
         action={
+          <div className="flex flex-wrap items-center gap-2">
+          {retained && <Badge variant="warning" dot>{t('driving.brief.retained', 'Retained source')}</Badge>}
           <Badge
-            variant={summary.driveEvidenceCapped ? 'warning' : 'neutral'}
+            variant={resolved && state.error == null && summary.driveEvidenceCapped ? 'warning' : 'neutral'}
             dot
           >
-            {summary.driveEvidenceCapped
+            {!resolved || state.error != null
+              ? t('driving.brief.unavailable', 'Source unavailable')
+              : summary.driveEvidenceCapped
               ? t('sweetSpot.scatter.sampled', 'Visual sample')
               : t('sweetSpot.scatter.allPoints', 'All eligible points')}
           </Badge>
+          </div>
         }
         chartKey="speed-sweet-spot-drive-evidence"
         loading={state.isLoading}
+        error={state.error}
+        onRetry={state.onRetry}
         empty={false}
         height={390}
-        exportable={!state.error && !state.isLoading && rows.length > 0}
+        exportable={Boolean(resolved) && !state.error && !state.isLoading && rows.length > 0}
         exportFilename="speed-sweet-spot-drive-evidence"
         exportData={rows}
-        data={state.error ? [] : rows}
+        data={!resolved || state.error ? [] : rows}
         dataColumns={[
           { key: 'driveId', label: t('sweetSpot.scatter.drive', 'Drive') },
           { key: 'date', label: t('sweetSpot.scatter.date', 'Date') },
@@ -140,6 +153,8 @@ export function DriveEvidenceScatter({
             <div className="flex h-full items-center justify-center">
               <QueryError error={state.error} onRetry={state.onRetry} />
             </div>
+          ) : !resolved ? (
+            <EmptyState className="h-full" message={t('driving.brief.unavailable', 'Source unavailable')} />
           ) : rows.length === 0 ? (
             <EmptyState /* no-action: the plot appears when eligible drives are returned. */
               className="h-full"

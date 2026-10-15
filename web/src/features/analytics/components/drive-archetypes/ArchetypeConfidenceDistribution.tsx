@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
   ChartTooltip,
   CHART_COLORS,
   ResponsiveContainer,
@@ -14,17 +13,22 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
+import { ChartCard } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
-import { fmtInt, fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type { ArchetypeSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeConfidenceDistribution({
   summary,
   state,
 }: ArchetypeSectionProps) {
+  const { fmtInt, fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(() => {
+    if (summary.status !== 'clustered') return [];
+
     const bins = [
       { label: t('archetypes.confidence.binBoundary', '< 0.10'), min: 0, max: 0.1 },
       { label: t('archetypes.confidence.binLow', '0.10–0.24'), min: 0.1, max: 0.25 },
@@ -47,7 +51,7 @@ export function ArchetypeConfidenceDistribution({
             : 0,
       };
     });
-  }, [summary.assignments, t]);
+  }, [summary.assignments, summary.status, t]);
   const ambiguous = summary.clusters.reduce(
     (total, cluster) => total + cluster.ambiguousAssignments,
     0,
@@ -55,7 +59,8 @@ export function ArchetypeConfidenceDistribution({
 
   return (
     <section data-testid="drive-archetypes-confidence">
-      <ChartContainer
+      <ChartCard
+        size="standard"
         title={t('archetypes.confidence.title', 'Assignment confidence and margin distribution')}
         subtitle={t(
           'archetypes.confidence.subtitle',
@@ -70,14 +75,14 @@ export function ArchetypeConfidenceDistribution({
           'Low margin indicates boundary ambiguity; margin is not a probability or correctness score.',
         )}
         height={360}
-        exportable={summary.assignments.length > 0}
+        exportable={rows.length > 0 && summary.assignments.length > 0}
         exportFilename="drive-archetype-assignment-margins"
         exportData={rows}
         data={rows}
         dataColumns={[
           { key: 'margin', label: t('archetypes.confidence.marginBand', 'Margin band') },
           { key: 'count', label: t('archetypes.common.drives', 'Drives'), format: (value) => fmtInt(value) },
-          { key: 'share', label: t('archetypes.confidence.share', 'Assignment share (%)'), format: (value) => fmtNumber(value, 1) },
+          { key: 'share', label: t('archetypes.confidence.share', 'Assignment share (%)'), format: (value) => fmtNumber(value) },
         ]}
       >
         <ArchetypeSectionBody
@@ -115,12 +120,11 @@ export function ArchetypeConfidenceDistribution({
                 summary.analyzedDrives > 0
                   ? (ambiguous / summary.analyzedDrives) * 100
                   : 0,
-                1,
               )}
             </Badge>
           </div>
         </ArchetypeSectionBody>
-      </ChartContainer>
+      </ChartCard>
     </section>
   );
 }

@@ -56,6 +56,7 @@ type IngestXRayResponse struct {
 	Bucket           string                      `json:"bucket"`
 	LastSeenAt       *string                     `json:"last_seen_at,omitempty"`
 	FreshnessSeconds *int64                      `json:"freshness_seconds,omitempty"`
+	// TotalSamples covers all fields in the window, including fields omitted by limit.
 	TotalSamples     int64                       `json:"total_samples"`
 	Fields           []dbobs.IngestXRayFieldStat `json:"fields"`
 	Buckets          []dbobs.IngestXRayBucket    `json:"buckets"`
@@ -142,8 +143,9 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var total int64
-	for _, fs := range fields {
-		total += fs.SampleCount
+	// Buckets aggregate the full window; fields contains only the capped ranking.
+	for _, bucket := range buckets {
+		total += bucket.Count
 	}
 
 	resp := IngestXRayResponse{

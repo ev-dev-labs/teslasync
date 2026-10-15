@@ -23,8 +23,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
 vi.mock('@/api/client', async () => {
@@ -63,23 +63,26 @@ vi.mock('react-i18next', async () => {
 import { request, ApiError } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { TOTPEnrollmentSection } from './TOTPEnrollmentSection'
+import { totpKeys } from '@/api/hooks/useTOTP'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
-function renderSection() {
+function renderSection(props: { capability?: boolean; liveReady?: boolean } = {}) {
   const qc = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
       mutations: { retry: false },
     },
   })
-  return render(
+  const section = (nextProps: typeof props) => (
     <QueryClientProvider client={qc}>
       <ToastProvider>
-        <TOTPEnrollmentSection />
+        <TOTPEnrollmentSection {...nextProps} />
       </ToastProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
+  const result = render(section(props))
+  return { ...result, qc, rerenderSection: (nextProps: typeof props) => result.rerender(section(nextProps)) }
 }
 
 beforeEach(() => {
@@ -313,7 +316,161 @@ describe('TOTPEnrollmentSection — forward-auth + active', () => {
     expect(screen.getByTestId('totp-regenerate')).toBeTruthy()
     expect(screen.getByTestId('totp-backup-remaining').textContent).toContain('7')
   })
+})
 
+describe('TOTPEnrollmentSection — live command readiness', () => {
+      it('keeps an idle initial read retryable without showing a busy skeleton or open-mode advice', async () => {
+        mockedRequest.mockImplementation(() => new Promise(() => {}))
+        const { qc } = renderSection()
+        act(() => {
+          qc.getQueryCache().find({ queryKey: totpKeys.status })?.setState({ fetchStatus: 'idle' })
+        })
+
+        expect(await screen.findByRole('button', { name: 'Retry' })).toBeEnabled()
+        expect(screen.getByRole('status')).not.toHaveAttribute('aria-busy', 'true')
+        expect(screen.queryByTestId('totp-section-open-mode')).toBeNull()
+        expect(screen.queryByTestId('totp-enroll')).toBeNull()
+        expect(screen.queryByText('Refresh paused')).toBeNull()
+
+        mockedRequest.mockResolvedValue({ mode: 'session', activated: false, backup_codes_remaining: 0 })
+        fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+        expect(await screen.findByTestId('totp-enroll')).toBeEnabled()
+      })
+
+      it('distinguishes active loading from a paused read without inventing open mode', async () => {
+        mockedRequest.mockImplementation(() => new Promise(() => {}))
+        const { qc } = renderSection()
+        expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true')
+
+        act(() => {
+          qc.getQueryCache().find({ queryKey: totpKeys.status })?.setState({ fetchStatus: 'paused' })
+        })
+        expect(await screen.findByText('Refresh paused')).toBeInTheDocument()
+        expect(screen.queryByTestId('totp-section-open-mode')).toBeNull()
+        expect(screen.queryByTestId('totp-enroll')).toBeNull()
+        expect(screen.getByRole('status')).not.toHaveAttribute('aria-busy', 'true')
+
+        act(() => {
+          qc.setQueryData(totpKeys.status, { mode: 'session', activated: false, backup_codes_remaining: 0 })
+          qc.getQueryCache().find({ queryKey: totpKeys.status })?.setState({ fetchStatus: 'idle' })
+        })
+        expect(await screen.findByTestId('totp-enroll')).toBeEnabled()
+      })
+
+      it('treats successful not-enrolled and zero backup codes as real status', async () => {
+        mockedRequest.mockResolvedValue({ mode: 'session', activated: false, backup_codes_remaining: 0 })
+        const { qc } = renderSection()
+        expect(await screen.findByTestId('totp-enroll')).toBeEnabled()
+        act(() => {
+          qc.setQueryData(totpKeys.status, { mode: 'session', activated: true, backup_codes_remaining: 0 })
+        })
+        expect(await screen.findByTestId('totp-backup-remaining')).toHaveTextContent('0')
+        expect(screen.getByTestId('totp-regenerate')).toBeEnabled()
+      })
+
+      it('preserves retained status through refresh failure and enables commands only after recovery', async () => {
+        mockedRequest.mockResolvedValue({
+          mode: 'session', activated: true, last_used_at: '2024-06-01T12:00:00Z', backup_codes_remaining: 7,
+        })
+        const { qc } = renderSection()
+        await screen.findByTestId('totp-disable')
+        mockedRequest.mockRejectedValue(new ApiError('status refresh failed', 503))
+        await act(async () => {
+          await qc.refetchQueries({ queryKey: totpKeys.status })
+        })
+        expect(await screen.findByTestId('totp-commands-blocked')).toHaveTextContent(/successful live status check/)
+        expect(screen.getByTestId('totp-status-pill')).toHaveTextContent('Active')
+        expect(screen.getByTestId('totp-backup-remaining')).toHaveTextContent('7')
+        expect(screen.getByTestId('totp-disable')).toBeDisabled()
+        expect(screen.getByTestId('totp-regenerate')).toBeDisabled()
+        fireEvent.click(screen.getByTestId('totp-regenerate'))
+        expect(mockedRequest.mock.calls.every(([path]) => path === '/auth/totp')).toBe(true)
+
+        mockedRequest.mockResolvedValue({ mode: 'session', activated: true, backup_codes_remaining: 0 })
+        fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+        await waitFor(() => expect(screen.getByTestId('totp-disable')).toBeEnabled())
+        expect(screen.queryByTestId('totp-commands-blocked')).toBeNull()
+        expect(screen.getByTestId('totp-backup-remaining')).toHaveTextContent('0')
+      })
+
+      it.each([{ capability: false }, { liveReady: false }])('blocks commands for %j without losing retained status', async (props) => {
+        mockedRequest.mockResolvedValue({ mode: 'session', activated: false, backup_codes_remaining: 0 })
+        const { rerenderSection } = renderSection(props)
+        expect(await screen.findByTestId('totp-enroll')).toBeDisabled()
+        expect(screen.getByTestId('totp-status-pill')).toHaveTextContent('Not enrolled')
+        fireEvent.click(screen.getByTestId('totp-enroll'))
+        expect(mockedRequest).toHaveBeenCalledTimes(1)
+        rerenderSection({ capability: true, liveReady: true })
+        expect(screen.getByTestId('totp-enroll')).toBeEnabled()
+      })
+
+      it('does not queue an offline credential command and recovers when online', async () => {
+        mockedRequest.mockResolvedValue({ mode: 'session', activated: false })
+        renderSection()
+        const enroll = await screen.findByTestId('totp-enroll')
+        try {
+          act(() => onlineManager.setOnline(false))
+          fireEvent.click(enroll)
+          expect(mockedRequest).toHaveBeenCalledTimes(1)
+          expect(await screen.findByTestId('totp-commands-blocked')).toBeInTheDocument()
+        } finally {
+          act(() => onlineManager.setOnline(true))
+        }
+        await waitFor(() => expect(screen.getByTestId('totp-enroll')).toBeEnabled())
+        expect(mockedRequest).toHaveBeenCalledTimes(1)
+      })
+
+      it('rechecks a disable confirmation after readiness changes and preserves its typed draft', async () => {
+        mockedRequest.mockResolvedValue({ mode: 'session', activated: true, backup_codes_remaining: 7 })
+        const { rerenderSection } = renderSection()
+        fireEvent.click(await screen.findByTestId('totp-disable'))
+        fireEvent.change(await screen.findByPlaceholderText('DISABLE'), { target: { value: 'DISABLE' } })
+        rerenderSection({ liveReady: false })
+        const dialog = screen.getByRole('dialog')
+        expect(dialog).toHaveTextContent(/successful live status check/)
+        expect(screen.getByPlaceholderText('DISABLE')).toHaveValue('DISABLE')
+        const confirm = within(dialog).getByRole('button', { name: 'Disable', exact: true })
+        expect(confirm).toBeDisabled()
+        fireEvent.click(confirm)
+        expect(mockedRequest).toHaveBeenCalledTimes(1)
+        rerenderSection({ liveReady: true })
+        expect(screen.getByPlaceholderText('DISABLE')).toHaveValue('DISABLE')
+        expect(screen.getByTestId('totp-disable')).toBeEnabled()
+      })
+
+      it('rechecks an open enrollment at submission, retaining its draft until live recovery', async () => {
+        mockedRequest.mockImplementation(async (path: string) => {
+          if (path === '/auth/totp') return { mode: 'session', activated: false }
+          if (path === '/auth/totp/enroll') return {
+            secret: 'TEST-SECRET', otpauth_uri: 'otpauth://test',
+            qr_data_uri: 'data:image/png;base64,iVBORw0KGgo=',
+            backup_codes: ['AAAA-AAAA'], expires_at: new Date(Date.now() + 60_000).toISOString(),
+          }
+          if (path === '/auth/totp/verify') return { activated: true }
+          throw new Error(`unexpected request to ${path}`)
+        })
+        const { qc } = renderSection()
+        fireEvent.click(await screen.findByTestId('totp-enroll'))
+        fireEvent.change(await screen.findByTestId('totp-verify-input'), { target: { value: '123456' } })
+        await waitFor(() => expect(screen.getByTestId('totp-enroll')).toBeEnabled())
+
+        // Change the cache before observer notification to exercise the submission recheck.
+        qc.getQueryCache().find({ queryKey: totpKeys.status })?.setState({ fetchStatus: 'paused' })
+        fireEvent.keyDown(screen.getByTestId('totp-verify-input'), { key: 'Enter' })
+        expect(mockedRequest.mock.calls.some(([path]) => path === '/auth/totp/verify')).toBe(false)
+        expect(await screen.findByTestId('totp-verify-error')).toHaveTextContent(/successful live status check/)
+        expect(screen.getByTestId('totp-secret')).toHaveTextContent('TEST-SECRET')
+        expect(screen.getByTestId('totp-verify-input')).toHaveValue('123456')
+
+        await act(async () => {
+          await qc.refetchQueries({ queryKey: totpKeys.status })
+        })
+        fireEvent.click(screen.getByTestId('totp-verify-submit'))
+        expect(await screen.findByTestId('totp-backup-modal')).toBeInTheDocument()
+      })
+    })
+
+describe('TOTPEnrollmentSection — disable confirmation', () => {
   it('Disable click opens the typed-confirmation ConfirmDialog', async () => {
     mockedRequest.mockImplementation(async (path: string) => {
       if (path === '/auth/totp') {

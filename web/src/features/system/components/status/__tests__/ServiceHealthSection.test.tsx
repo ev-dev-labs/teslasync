@@ -92,7 +92,7 @@ function renderSection() {
 }
 
 function header(): HTMLElement {
-  return screen.getByRole('button', { name: /Service Health/i })
+  return screen.getByRole('button', { name: /Service health/i })
 }
 
 /** Resolve a MetricCard's inner column from its label so its value can be
@@ -158,11 +158,11 @@ describe('ServiceHealthSection', () => {
     const { container } = renderSection()
 
     // Nothing renders in the collapsed body yet.
-    expect(container.querySelector('.animate-pulse')).toBeNull()
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull()
 
     fireEvent.click(header())
 
-    await waitFor(() => expect(container.querySelector('.animate-pulse')).not.toBeNull())
+    await waitFor(() => expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull())
     expect(screen.queryByText('Mode')).not.toBeInTheDocument()
   })
 
@@ -192,9 +192,9 @@ describe('ServiceHealthSection', () => {
     // Metric values scoped to their own card.
     expect(within(metricCard('Mode')).getByText('fleet_telemetry')).toBeInTheDocument()
     // 1 of 2 vehicles is streaming.
-    expect(within(metricCard('Vehicles Connected')).getByText('1')).toBeInTheDocument()
-    expect(within(metricCard('Total Signals')).getByText('1,000,000')).toBeInTheDocument()
-    expect(within(metricCard('Avg Signals/s')).getByText('12.5')).toBeInTheDocument()
+    expect(within(metricCard('Vehicles connected')).getByText('1')).toBeInTheDocument()
+    expect(within(metricCard('Total signals')).getByText('1,000,000')).toBeInTheDocument()
+    expect(within(metricCard('Avg signals/s')).getByText('12.5')).toBeInTheDocument()
 
     // The vehicle table renders both rows with formatted cells.
     const table = screen.getByRole('table')
@@ -214,8 +214,8 @@ describe('ServiceHealthSection', () => {
 
     expect(await screen.findByText('Mode')).toBeInTheDocument()
     // Panel is never hidden — the metric cards still render...
-    expect(screen.getByText('Total Signals')).toBeInTheDocument()
-    expect(within(metricCard('Vehicles Connected')).getByText('0')).toBeInTheDocument()
+    expect(screen.getByText('Total signals')).toBeInTheDocument()
+    expect(within(metricCard('Vehicles connected')).getByText('0')).toBeInTheDocument()
     // ...and the table surfaces its empty message instead of rows.
     expect(screen.getByText('No vehicles connected')).toBeInTheDocument()
   })
@@ -238,9 +238,9 @@ describe('ServiceHealthSection', () => {
     renderSection()
     fireEvent.click(header())
 
-    expect(await screen.findByText('Total Signals')).toBeInTheDocument()
-    expect(within(metricCard('Total Signals')).getByText('0')).toBeInTheDocument()
-    expect(within(metricCard('Avg Signals/s')).getByText('0')).toBeInTheDocument()
+    expect(await screen.findByText('Total signals')).toBeInTheDocument()
+    expect(within(metricCard('Total signals')).getByText('0')).toBeInTheDocument()
+    expect(within(metricCard('Avg signals/s')).getByText('0')).toBeInTheDocument()
   })
 
   it('surfaces a retryable error on a cold failure, then recovers when retried', async () => {

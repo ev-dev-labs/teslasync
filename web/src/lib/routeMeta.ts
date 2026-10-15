@@ -113,6 +113,9 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/tesla-api-usage': '/system-status',
 
   // ── Administration & developer surfaces ────────────────────────────────
+  '/dev/grid-states': '/dev-tools',
+  '/dev/layout': '/dev-tools',
+  '/dev/stats': '/dev-tools',
   '/admin/audit-log': '/dev-tools',
   '/admin/data-quality': '/dev-tools',
   '/admin/disk-forecast': '/dev-tools',

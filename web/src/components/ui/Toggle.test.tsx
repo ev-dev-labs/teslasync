@@ -38,6 +38,12 @@ function getThumb(sw: HTMLElement): HTMLElement {
   return thumb as HTMLElement;
 }
 
+function getTrack(sw: HTMLElement): HTMLElement {
+  const track = sw.firstElementChild;
+  if (!(track instanceof HTMLElement)) throw new Error('switch track not found');
+  return track;
+}
+
 describe('Toggle — role + checked state', () => {
   it('renders a role="switch" button reflecting the unchecked state', () => {
     render(<Toggle checked={false} onChange={() => {}} aria-label="Sync" />);
@@ -252,8 +258,8 @@ describe('Toggle — size variants', () => {
   it('applies md track + thumb sizing by default', () => {
     render(<Toggle checked={false} onChange={() => {}} aria-label="Sync" />);
     const sw = screen.getByRole('switch');
-    expect(sw.className).toContain('h-6');
-    expect(sw.className).toContain('w-11');
+    expect(getTrack(sw).className).toContain('h-6');
+    expect(getTrack(sw).className).toContain('w-11');
     expect(getThumb(sw).className).toContain('h-5');
     expect(getThumb(sw).className).toContain('w-5');
   });
@@ -261,21 +267,21 @@ describe('Toggle — size variants', () => {
   it('applies sm track + thumb sizing when size="sm"', () => {
     render(<Toggle checked={false} onChange={() => {}} aria-label="Sync" size="sm" />);
     const sw = screen.getByRole('switch');
-    expect(sw.className).toContain('h-5');
-    expect(sw.className).toContain('w-9');
+    expect(getTrack(sw).className).toContain('h-5');
+    expect(getTrack(sw).className).toContain('w-9');
     expect(getThumb(sw).className).toContain('h-3.5');
     expect(getThumb(sw).className).toContain('w-3.5');
   });
 });
 
 describe('Toggle — visual state', () => {
-  it('uses the on (cyan) track when checked and the off (gray) track when unchecked', () => {
+  it('uses the semantic on track when checked and the neutral off track when unchecked', () => {
     const { rerender } = render(
       <Toggle checked={false} onChange={() => {}} aria-label="Sync" />,
     );
-    expect(screen.getByRole('switch').className).toContain('bg-[var(--control-track-off)]');
+    expect(getTrack(screen.getByRole('switch')).className).toContain('bg-[var(--control-track-off)]');
     rerender(<Toggle checked onChange={() => {}} aria-label="Sync" />);
-    expect(screen.getByRole('switch').className).toContain('bg-cyan-500');
+    expect(getTrack(screen.getByRole('switch')).className).toContain('bg-[var(--semantic-info)]');
   });
 
   it('rests the thumb at the start when off and translates it fully when on (md)', () => {
@@ -283,14 +289,50 @@ describe('Toggle — visual state', () => {
       <Toggle checked={false} onChange={() => {}} aria-label="Sync" />,
     );
     let thumb = getThumb(screen.getByRole('switch'));
-    expect(thumb.className).toContain('translate-x-[3px]');
+    expect(thumb.className).toContain('translate-x-0');
     expect(thumb.className).not.toContain('translate-x-5');
 
     rerender(<Toggle checked onChange={() => {}} aria-label="Sync" />);
     thumb = getThumb(screen.getByRole('switch'));
     // tailwind-merge collapses the resting offset into the checked travel.
     expect(thumb.className).toContain('translate-x-5');
-    expect(thumb.className).not.toContain('translate-x-[3px]');
+    expect(thumb.className).not.toContain('translate-x-0');
+  });
+
+  describe('Toggle — restrained responsive presentation', () => {
+    it.each(['sm', 'md'] as const)('keeps a reachable mobile target without enlarging the %s track', (size) => {
+      render(<Toggle checked={false} onChange={() => {}} aria-label="Sync" size={size} />);
+      const sw = screen.getByRole('switch');
+      expect(sw).toHaveClass('h-11', 'min-w-11', 'md:h-6', 'md:min-w-0');
+      expect(getTrack(sw)).toHaveClass(size === 'sm' ? 'h-5' : 'h-6');
+      expect(sw).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2', 'focus-visible:outline-[var(--focus-ring)]');
+      expect(getTrack(sw)).toHaveClass('motion-reduce:transition-none', 'ease-standard');
+      expect(getThumb(sw)).toHaveClass('motion-reduce:transition-none', 'ease-standard');
+    });
+
+    it('preserves focus, implicit association and wrapping across a translated long-label rerender', () => {
+      const { rerender } = render(<Toggle checked={false} onChange={() => {}} label="Sync" />);
+      const sw = screen.getByRole('switch');
+      const labelId = sw.getAttribute('aria-labelledby');
+      sw.focus();
+      const label = 'Synchronisierung für sämtliche Fahrzeuge und Benachrichtigungen '.repeat(4);
+      rerender(<Toggle checked onChange={() => {}} label={label} />);
+      expect(screen.getByRole('switch', { name: label.trim() })).toBe(sw);
+      expect(sw).toHaveAttribute('aria-labelledby', labelId);
+      expect(document.activeElement).toBe(sw);
+      expect(screen.getByText(label.trim())).toHaveClass('min-w-0', 'break-words');
+    });
+
+    it('toggles once when the nested track or thumb is clicked', () => {
+      const onChange = vi.fn();
+      render(<Toggle checked={false} onChange={onChange} label="Sync" />);
+      const sw = screen.getByRole('switch');
+      fireEvent.click(getTrack(sw));
+      expect(onChange).toHaveBeenCalledTimes(1);
+      fireEvent.click(getThumb(sw));
+      expect(onChange).toHaveBeenCalledTimes(2);
+      expect(onChange).toHaveBeenLastCalledWith(true);
+    });
   });
 
   it('marks the thumb decoration aria-hidden so screen readers ignore it', () => {

@@ -5,7 +5,7 @@
  * (Drivetrain / Climate / Security / Tire Pressure / Media / Navigation) that
  * each accept an optional data object and a set of unit converters. The panels
  * must NEVER hide themselves — when their data is `undefined` they render a
- * skeleton, and every value degrades to an em dash rather than crashing on a
+ * static skeleton, and every value degrades to an em dash rather than crashing on a
  * `null`. These tests drive the single public export through every panel and
  * every meaningful branch:
  *
@@ -133,11 +133,11 @@ describe('LiveTelemetry', () => {
   it('renders the section title and all six telemetry panel headings', () => {
     renderLive();
 
-    expect(screen.getByRole('heading', { name: /Live Telemetry/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Live telemetry/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Drivetrain' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Climate' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Tire Pressure' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Tire pressure' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Media' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Navigation' })).toBeInTheDocument();
   });
@@ -148,11 +148,27 @@ describe('LiveTelemetry', () => {
     // Sections stay visible even with no data.
     expect(screen.getByRole('heading', { name: 'Drivetrain' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Climate' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Tire pressure' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Media' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Navigation' })).toBeInTheDocument();
 
-    // Skeleton placeholders are present, and no concrete value / progressbar
+    // Static placeholders belong to each source, and no concrete value / progressbar
     // leaks through the loading state.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(screen.queryByText('320 Nm')).toBeNull();
+    expect(container.querySelectorAll('.bg-\\[var\\(--skeleton-bg\\)\\]')).toHaveLength(24);
+    for (const name of ['Drivetrain', 'Climate', 'Security', 'Tire pressure', 'Media', 'Navigation']) {
+      const panel = screen.getByRole('heading', { name }).parentElement;
+      expect(panel).toBeInTheDocument();
+      const placeholders = panel?.querySelectorAll('.bg-\\[var\\(--skeleton-bg\\)\\]') ?? [];
+      expect(placeholders).toHaveLength(4);
+      for (const placeholder of placeholders) {
+        expect(placeholder).toHaveClass('h-5 w-full rounded bg-[var(--skeleton-bg)]');
+        expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+        expect(placeholder).not.toHaveAttribute('role');
+      }
+    }
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
+    expect(screen.queryByText('320.00 Nm')).toBeNull();
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
 
@@ -160,25 +176,33 @@ describe('LiveTelemetry', () => {
   it('renders drivetrain metrics with units and a gear badge', () => {
     renderLive({ motorData: motor });
 
-    expect(screen.getByText('320 Nm')).toBeInTheDocument();
-    expect(screen.getByText('45°C')).toBeInTheDocument();
+    expect(screen.getByText('320.00 Nm')).toBeInTheDocument();
+    expect(screen.getByText('45.00°C')).toBeInTheDocument();
     expect(screen.getByText('0.50g')).toBeInTheDocument();
 
     const gear = screen.getByText('D');
-    expect(gear.className).toContain('green'); // success variant
+    expect(gear).toHaveClass('border border-[var(--semantic-success-border)] bg-[var(--semantic-success-bg)] text-[var(--semantic-success)]');
+    expect(gear).not.toHaveClass('text-[var(--semantic-danger)]');
   });
 
   it('maps gear values to badge variants (D→success, R→danger, P→neutral)', () => {
     renderLive({ motorData: { ...motor, gear: 'D' } });
-    expect(screen.getByText('D').className).toContain('green');
+    expect(BADGE_VARIANTS.success).toBe('border border-[var(--semantic-success-border)] bg-[var(--semantic-success-bg)] text-[var(--semantic-success)]');
+    expect(BADGE_VARIANTS.danger).toBe('border border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)] text-[var(--semantic-danger)]');
+    expect(BADGE_VARIANTS.neutral).toBe('border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-secondary)]');
+    expect(screen.getByText('D')).toHaveClass(BADGE_VARIANTS.success);
+    expect(screen.getByText('D')).not.toHaveClass('text-[var(--semantic-danger)]');
     cleanup();
 
     renderLive({ motorData: { ...motor, gear: 'R' } });
-    expect(screen.getByText('R').className).toContain('red');
+    expect(screen.getByText('R')).toHaveClass(BADGE_VARIANTS.danger);
+    expect(screen.getByText('R')).not.toHaveClass('text-[var(--semantic-success)]');
     cleanup();
 
     renderLive({ motorData: { ...motor, gear: 'P' } });
-    expect(screen.getByText('P').className).toContain(BADGE_VARIANTS.neutral);
+    expect(screen.getByText('P')).toHaveClass(BADGE_VARIANTS.neutral);
+    expect(screen.getByText('P')).not.toHaveClass('text-[var(--semantic-success)]');
+    expect(screen.getByText('P')).not.toHaveClass('text-[var(--semantic-danger)]');
   });
 
   it('falls back to an em dash for every missing drivetrain value', () => {
@@ -194,7 +218,7 @@ describe('LiveTelemetry', () => {
 
     // torque, motor temp, gear, g-force → four dashes.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
-    expect(screen.queryByText('320 Nm')).toBeNull();
+    expect(screen.queryByText('320.00 Nm')).toBeNull();
     // No gear badge is rendered when the gear is null.
     expect(screen.queryByText('D')).toBeNull();
   });
@@ -212,9 +236,9 @@ describe('LiveTelemetry', () => {
     const toF = vi.fn((c: number) => c * (9 / 5) + 32);
     renderLive({ climateData: climate, toTemperatureDisplay: toF, tempUnit: '°F' });
 
-    expect(screen.getByText('70°F')).toBeInTheDocument(); // 21°C
-    expect(screen.getByText('59°F')).toBeInTheDocument(); // 15°C
-    expect(screen.getByText('2.5 kW')).toBeInTheDocument();
+    expect(screen.getByText('69.80°F')).toBeInTheDocument(); // 21°C
+    expect(screen.getByText('59.00°F')).toBeInTheDocument(); // 15°C
+    expect(screen.getByText('2.50 kW')).toBeInTheDocument();
     expect(toF).toHaveBeenCalledWith(21);
     expect(toF).toHaveBeenCalledWith(15);
   });
@@ -244,7 +268,7 @@ describe('LiveTelemetry', () => {
       climateData: { ...climate, defrost_mode: 'Front', battery_heater_on: true },
     });
     expect(screen.getByText('Defrost')).toBeInTheDocument();
-    expect(screen.getByText('Bat Heater')).toBeInTheDocument();
+    expect(screen.getByText('Bat heater')).toBeInTheDocument();
     cleanup();
 
     renderLive({
@@ -260,7 +284,7 @@ describe('LiveTelemetry', () => {
     expect(screen.getByText(/Locked$/)).toBeInTheDocument();
     expect(screen.getByText(/Active$/)).toBeInTheDocument(); // sentry on
     // Doors + windows both report "All Closed".
-    expect(screen.getAllByText('All Closed')).toHaveLength(2);
+    expect(screen.getAllByText('All closed')).toHaveLength(2);
   });
 
   it('counts open doors and windows and reflects unlocked / sentry-off state', () => {
@@ -286,10 +310,10 @@ describe('LiveTelemetry', () => {
   it('renders four in-range tires with an all-normal badge', () => {
     renderLive({ tireData: tires });
 
-    expect(screen.getByText('2.3')).toBeInTheDocument();
-    expect(screen.getByText('2.8')).toBeInTheDocument();
+    expect(screen.getByText('2.30')).toBeInTheDocument();
+    expect(screen.getByText('2.80')).toBeInTheDocument();
     expect(screen.getAllByText('bar')).toHaveLength(4); // unit under each tile
-    expect(screen.getByText('All Normal')).toBeInTheDocument();
+    expect(screen.getByText('All normal')).toBeInTheDocument();
   });
 
   it('colours low pressure, flags a warning, and dashes a missing tire', () => {
@@ -297,7 +321,7 @@ describe('LiveTelemetry', () => {
       tireData: { front_left: 1.9, front_right: 2.5, rear_left: null, rear_right: 2.5 },
     });
 
-    const low = screen.getByText('1.9');
+    const low = screen.getByText('1.90');
     expect(low.className).toContain('rose'); // danger threshold colour
     expect(screen.getByText('—')).toBeInTheDocument(); // null tire
     expect(screen.getByText('Warning')).toBeInTheDocument();
@@ -318,7 +342,8 @@ describe('LiveTelemetry', () => {
 
     expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
     expect(screen.getByText('Queen')).toBeInTheDocument();
-    expect(screen.getByText('Playing').className).toContain('green');
+    expect(screen.getByText('Playing')).toHaveClass('border border-[var(--semantic-success-border)] bg-[var(--semantic-success-bg)] text-[var(--semantic-success)]');
+    expect(screen.getByText('Playing')).not.toHaveClass('text-[var(--semantic-warning)]');
     expect(screen.getByText('5/10')).toBeInTheDocument();
 
     const volume = screen.getByRole('progressbar', { name: 'Volume' });
@@ -346,11 +371,15 @@ describe('LiveTelemetry', () => {
 
   it('maps playback status to badge variants and guards divide-by-zero on volume', () => {
     renderLive({ mediaData: { ...media, playback_status: 'Paused' } });
-    expect(screen.getByText('Paused').className).toContain('yellow'); // warning
+    expect(BADGE_VARIANTS.warning).toBe('border border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)] text-[var(--semantic-warning)]');
+    expect(screen.getByText('Paused')).toHaveClass(BADGE_VARIANTS.warning);
+    expect(screen.getByText('Paused')).not.toHaveClass('text-[var(--semantic-success)]');
     cleanup();
 
     renderLive({ mediaData: { ...media, playback_status: 'Stopped' } });
-    expect(screen.getByText('Stopped').className).toContain(BADGE_VARIANTS.neutral); // neutral
+    expect(screen.getByText('Stopped')).toHaveClass(BADGE_VARIANTS.neutral);
+    expect(screen.getByText('Stopped')).not.toHaveClass('text-[var(--semantic-warning)]');
+    expect(screen.getByText('Stopped')).not.toHaveClass('text-[var(--semantic-success)]');
     cleanup();
 
     renderLive({ mediaData: { ...media, audio_volume: 5, audio_volume_max: 0 } });
@@ -365,8 +394,8 @@ describe('LiveTelemetry', () => {
     renderLive({ locationData: location, toDistanceDisplay: toDist });
 
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
-    expect(screen.getByText('12.0 km')).toBeInTheDocument();
-    expect(screen.getByText('18 min')).toBeInTheDocument();
+    expect(screen.getByText('12.00 km')).toBeInTheDocument();
+    expect(screen.getByText('18.00 min')).toBeInTheDocument();
     expect(screen.getByText(/Home$/)).toBeInTheDocument(); // "🏠 Home" chip
     expect(toDist).toHaveBeenCalledWith(12);
   });

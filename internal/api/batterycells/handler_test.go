@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -186,5 +188,95 @@ func TestBatteryCells_PropagatesError(t *testing.T) {
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestBatteryCells_SignalAvailability(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     signal.SignalValue
+		available bool
+		want      float64
+	}{
+		{"missing", nil, false, 0},
+		{"invalid envelope", map[string]any{"value": 0, "invalid": true}, false, 0},
+		{"malformed", "not a number", false, 0},
+		{"nan", math.NaN(), false, 0},
+		{"infinite", math.Inf(1), false, 0},
+		{"measured zero", float64(0), true, 0},
+		{"signed", -12.5, true, -12.5},
+		{"fractional", 0.25, true, 0.25},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &Handler{state: &fakeStateReader{
+				signalAtFn: func(_ context.Context, _ int64, name string, _ time.Time) (signal.SignalValue, error) {
+					if name == "ModuleTempMin" || name == "PackVoltage" {
+						return tt.input, nil
+					}
+					if name == "ModuleTempMax" {
+						return 0.5, nil
+					}
+					return nil, nil
+				},
+			}}
+			rec := httptest.NewRecorder()
+			h.Get(rec, newBatteryCellsRequest(t, "42"))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+			}
+			var body struct {
+				Status             string          `json:"status"`
+				PackVoltage        float64         `json:"pack_voltage"`
+				MinTemperature     float64         `json:"min_temperature"`
+				TempSpread         float64         `json:"temp_spread"`
+				SignalAvailability map[string]bool `json:"signal_availability"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if body.Status != "no_data" || body.PackVoltage != tt.want || body.MinTemperature != tt.want {
+				t.Fatalf("raw values not preserved: %+v", body)
+			}
+			for _, field := range []string{"pack_voltage", "min_temperature", "avg_temperature", "temp_spread"} {
+				if got, exists := body.SignalAvailability[field]; !exists || got != tt.available {
+					t.Errorf("availability[%s]=%v exists=%v want=%v", field, got, exists, tt.available)
+				}
+			}
+			if !body.SignalAvailability["max_temperature"] || body.SignalAvailability["imbalance_mv"] {
+				t.Errorf("independent extrema availability: %+v", body.SignalAvailability)
+			}
+			if body.TempSpread != round2(0.5-tt.want) {
+				t.Errorf("temp_spread=%v want=%v", body.TempSpread, round2(0.5-tt.want))
+			}
+		})
+	}
+}
+
+func TestBatteryCells_VoltageAvailabilityRequiresBothExtrema(t *testing.T) {
+	for _, hasMin := range []bool{false, true} {
+		t.Run(strconv.FormatBool(hasMin), func(t *testing.T) {
+			h := &Handler{state: &fakeStateReader{
+				signalAtFn: func(_ context.Context, _ int64, name string, _ time.Time) (signal.SignalValue, error) {
+					if name == "BrickVoltageMax" || (name == "BrickVoltageMin" && hasMin) {
+						return 0.0, nil
+					}
+					return nil, nil
+				},
+			}}
+			rec := httptest.NewRecorder()
+			h.Get(rec, newBatteryCellsRequest(t, "42"))
+			var body struct {
+				Imbalance          float64         `json:"imbalance_mv"`
+				SignalAvailability map[string]bool `json:"signal_availability"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if body.Imbalance != 0 || body.SignalAvailability["imbalance_mv"] != hasMin ||
+				body.SignalAvailability["avg_voltage"] != hasMin || !body.SignalAvailability["max_voltage"] {
+				t.Fatalf("zero extrema availability incorrect: %+v", body)
+			}
+		})
 	}
 }

@@ -87,7 +87,7 @@ function makeQuery(data: FleetAnalytics | undefined, isLoading = false): FleetAn
   } as unknown as FleetAnalyticsQuery;
 }
 
-const ALL_LABELS = ['Distance', 'Drives', 'Energy', 'Efficiency', 'Gas Savings', 'CO₂ Saved'];
+const ALL_LABELS = ['Distance', 'Drives', 'Energy', 'Efficiency', 'Gas savings', 'CO₂ saved'];
 
 beforeEach(() => {
   h.distance.current = 'km';
@@ -97,15 +97,32 @@ beforeEach(() => {
 describe('HeroGauges', () => {
   describe('loading', () => {
     it('renders a skeleton band (no KPI data, no currency call) while the query loads', () => {
-      const { container } = render(<HeroGauges query={makeQuery(undefined, true)} />);
+      const { container } = render(<HeroGauges query={makeQuery(makeData(), true)} />);
 
-      // Two shimmer bars per tile × six tiles.
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(6);
+      // Two static, decorative value slots per tile × six tiles.
+      expect(container.querySelectorAll('[aria-hidden="true"] > [aria-hidden="true"].rounded').length).toBeGreaterThanOrEqual(6);
       // No real labels or values leak through during the first load.
       expect(screen.queryByText('Distance')).not.toBeInTheDocument();
       expect(screen.queryByText(DASH)).not.toBeInTheDocument();
       // The expensive currency derive is never computed on the loading path.
       expect(h.formatCurrency).not.toHaveBeenCalled();
+      const grid = container.querySelector('.grid');
+      expect(grid).toHaveAttribute('aria-hidden', 'true');
+      expect(grid?.children).toHaveLength(6);
+      expect(container.querySelector('.animate-pulse')).toBeNull();
+      for (const tile of Array.from(grid?.children ?? [])) {
+        expect(tile).toHaveAttribute('aria-hidden', 'true');
+        const placeholders = tile.querySelectorAll('[aria-hidden="true"].rounded');
+        expect(placeholders).toHaveLength(2);
+        expect(placeholders[0]).toHaveStyle({ width: '60%', height: '12px' });
+        expect(placeholders[1]).toHaveStyle({ width: '40%', height: '24px' });
+      }
+      for (const label of ALL_LABELS) {
+        expect(screen.queryByText(label)).not.toBeInTheDocument();
+      }
+      for (const value of ['2,000.00', '128', '250.00', '150.00', '$200.00', '240.00']) {
+        expect(screen.queryByText(value)).not.toBeInTheDocument();
+      }
     });
   });
 
@@ -120,28 +137,28 @@ describe('HeroGauges', () => {
         expect(screen.getByText(label)).toBeInTheDocument();
       }
 
-      // Distance: SI helper leaves 2000 km unchanged → "2,000.0" + km subtitle.
-      expect(screen.getByText('2,000.0')).toBeInTheDocument();
+      // Distance: SI helper leaves 2000 km unchanged.
+      expect(screen.getByText('2,000.00')).toBeInTheDocument();
       expect(screen.getByText('km')).toBeInTheDocument();
 
       // Drives: integer formatting, no fractional precision.
       expect(screen.getByText('128')).toBeInTheDocument();
 
       // Energy in kWh.
-      expect(screen.getByText('250.0')).toBeInTheDocument();
+      expect(screen.getByText('250.00')).toBeInTheDocument();
       expect(screen.getByText('kWh')).toBeInTheDocument();
 
       // Efficiency stays Wh/km when the distance unit is km.
-      expect(screen.getByText('150.0')).toBeInTheDocument();
+      expect(screen.getByText('150.00')).toBeInTheDocument();
       expect(screen.getByText('Wh/km')).toBeInTheDocument();
 
       // CO₂: 2000 km * 0.12 = 240 kg.
-      expect(screen.getByText('240')).toBeInTheDocument();
+      expect(screen.getByText('240.00')).toBeInTheDocument();
       expect(screen.getByText('kg')).toBeInTheDocument();
 
-      // Gas savings: 2000*0.085*1.5 - 55 = 200, currency-formatted at 0 dp.
-      expect(h.formatCurrency).toHaveBeenCalledWith(200, 0);
-      expect(screen.getByText('$200')).toBeInTheDocument();
+      // Gas savings: 2000*0.085*1.5 - 55 = 200, Settings precision.
+      expect(h.formatCurrency).toHaveBeenCalledWith(200);
+      expect(screen.getByText('$200.00')).toBeInTheDocument();
     });
   });
 
@@ -152,18 +169,18 @@ describe('HeroGauges', () => {
 
       // Distance routes through the SI meter helper → miles, a different figure
       // from the km reading (proves the conversion actually happened).
-      const expectedMi = fmtNumber(convertDistanceFromSI(2_000_000, 'mi'), 1);
+      const expectedMi = fmtNumber(convertDistanceFromSI(2_000_000, 'mi'));
       expect(screen.getByText(expectedMi)).toBeInTheDocument();
-      expect(screen.queryByText('2,000.0')).not.toBeInTheDocument();
+      expect(screen.queryByText('2,000.00')).not.toBeInTheDocument();
       expect(screen.getByText('mi')).toBeInTheDocument();
 
-      // Efficiency scales by 1.609344 → 150 * 1.609344 = 241.4016 → "241.4".
-      expect(screen.getByText('241.4')).toBeInTheDocument();
+      // Efficiency scales by 1.609344 → 150 * 1.609344 = 241.4016.
+      expect(screen.getByText('241.40')).toBeInTheDocument();
       expect(screen.getByText('Wh/mi')).toBeInTheDocument();
 
       // Gas savings + CO₂ are KM-anchored, so they don't move with display unit.
-      expect(h.formatCurrency).toHaveBeenCalledWith(200, 0);
-      expect(screen.getByText('240')).toBeInTheDocument();
+      expect(h.formatCurrency).toHaveBeenCalledWith(200);
+      expect(screen.getByText('240.00')).toBeInTheDocument();
     });
   });
 
@@ -172,8 +189,8 @@ describe('HeroGauges', () => {
       // Electricity cost outruns the gas-equivalent: 255 - 999 = -744 → max(…,0).
       render(<HeroGauges query={makeQuery(makeData({ total_cost: 999 }))} />);
 
-      expect(h.formatCurrency).toHaveBeenCalledWith(0, 0);
-      expect(screen.getByText('$0')).toBeInTheDocument();
+      expect(h.formatCurrency).toHaveBeenCalledWith(0);
+      expect(screen.getByText('$0.00')).toBeInTheDocument();
     });
   });
 
@@ -185,9 +202,9 @@ describe('HeroGauges', () => {
       expect(screen.getAllByText(DASH)).toHaveLength(6);
 
       // The previous behaviour painted "0.0"/"0"/"$0" as if it were real data.
-      expect(screen.queryByText('0.0')).not.toBeInTheDocument();
+      expect(screen.queryByText('0.00')).not.toBeInTheDocument();
       expect(screen.queryByText('0')).not.toBeInTheDocument();
-      expect(screen.queryByText('$0')).not.toBeInTheDocument();
+      expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
 
       // Currency isn't even computed when there is no payload.
       expect(h.formatCurrency).not.toHaveBeenCalled();
@@ -205,11 +222,11 @@ describe('HeroGauges', () => {
         <HeroGauges query={makeQuery(makeData({ total_distance_km: NaN }))} />,
       );
 
-      // safe(NaN) → 0, so distance collapses to "0.0" and no tile reads "NaN".
+      // safe(NaN) → 0, so distance and its derived CO₂ both resolve to zero.
       expect(container.textContent).not.toContain('NaN');
-      expect(screen.getByText('0.0')).toBeInTheDocument();
+      expect(screen.getAllByText('0.00')).toHaveLength(2);
       // Gas savings (max(0 - 55, 0)) also resolve cleanly to $0.
-      expect(h.formatCurrency).toHaveBeenCalledWith(0, 0);
+      expect(h.formatCurrency).toHaveBeenCalledWith(0);
     });
   });
 });

@@ -1,5 +1,6 @@
 import { memo, type ReactNode } from 'react'
-import { fmtNumber } from '../../lib/numberFormat'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { Text } from '../ui/Typography'
 import { formatDateTime } from '../../lib/dateFormat'
 
 interface TooltipPayload {
@@ -48,7 +49,7 @@ export interface ChartTooltipProps {
   ) => ReactNode
   /** IANA timezone for ISO timestamp labels (defaults to the browser zone). */
   timezone?: string
-  /** Fraction digits for the default numeric formatter (0–20, defaults to 1). */
+  /** Fraction digits for the default numeric formatter (0–20, defaults to settings). */
   precision?: number
 }
 
@@ -85,10 +86,11 @@ function defaultValueFormatter(
   _name: string,
   unit: string | undefined,
   precision: number | undefined,
+  fmtNumber: ReturnType<typeof useNumberFormatting>['fmtNumber'],
 ): ReactNode {
   const formatted =
     typeof value === 'number'
-      ? precision == null
+      ? !Number.isFinite(value) ? '—' : precision == null
         ? fmtNumber(value)
         : fmtNumber(value, Math.max(0, Math.min(20, precision)))
       : value == null
@@ -97,7 +99,7 @@ function defaultValueFormatter(
   return (
     <>
       {formatted}
-      {unit && <span className="ml-0.5 opacity-60">{unit}</span>}
+      {unit && <Text size="xs" color="secondary" className="ms-0.5">{unit}</Text>}
     </>
   )
 }
@@ -122,6 +124,7 @@ export function ChartTooltipBase({
   timezone,
   precision,
 }: ChartTooltipProps) {
+  const { fmtNumber } = useNumberFormatting()
   if (!active || !payload?.length) return null
   const displayLabel = labelFormatter
     ? labelFormatter(label, payload)
@@ -131,11 +134,11 @@ export function ChartTooltipBase({
     <div
       role="tooltip"
       aria-live="polite"
-      className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-4 py-3 text-xs shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-xl"
+      className="min-w-0 max-w-tooltip-viewport rounded-panel border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-4 py-3 shadow-e2"
     >
-      <p className="mb-1.5 font-medium text-[var(--text-secondary)]">
+      <Text as="p" size="xs" weight="medium" color="secondary" className="mb-2 break-words">
         {displayLabel}
-      </p>
+      </Text>
       {payload.map((p, i) => {
         const defaultName = String(p.name ?? p.dataKey ?? '')
         let displayName: ReactNode = defaultName
@@ -152,20 +155,20 @@ export function ChartTooltipBase({
             displayValue = formatted
           }
         } else {
-          displayValue = defaultValueFormatter(p.value, defaultName, p.unit, precision)
+          displayValue = defaultValueFormatter(p.value, defaultName, p.unit, precision, fmtNumber)
         }
 
         return (
-          <div key={`${defaultName}-${i}`} className="flex items-center gap-2 py-0.5">
+          <div key={`${defaultName}-${i}`} className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 py-0.5">
             <span
               aria-hidden="true"
-              className="inline-block h-2.5 w-2.5 rounded-full"
+              className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
               style={{ backgroundColor: p.color || p.fill }}
             />
-            <span className="text-[var(--text-secondary)]">{displayName}:</span>
-            <span className="font-mono font-semibold text-[var(--text-primary)]">
+            <Text size="xs" color="secondary" className="min-w-0 break-words">{displayName}:</Text>
+            <Text size="xs" weight="medium" color="primary" mono className="min-w-0 break-words tabular-nums">
               {displayValue}
-            </span>
+            </Text>
           </div>
         )
       })}

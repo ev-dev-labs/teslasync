@@ -7,8 +7,9 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { cleanNil } from '@/lib/cleanNil';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import type { MotorData, ClimateData, SecurityData, TirePressureData, MediaData, LocationData } from '../types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface LiveTelemetryProps {
   motorData: MotorData | undefined;
@@ -45,8 +46,8 @@ export function LiveTelemetry({
       {/* Section divider */}
       <div className="flex items-center gap-3 mb-4">
         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--glass-border)] to-transparent" />
-        <h3 className="section-title flex items-center gap-2 text-sm uppercase tracking-widest text-[var(--text-secondary)]">
-          <Cog className="h-4 w-4 text-cyan-300" /> {t('telemetry.title', 'Live Telemetry')}
+        <h3 className="section-title flex items-center gap-2 text-sm tracking-widest text-[var(--text-secondary)]">
+          <Cog className="h-4 w-4 text-cyan-300" /> {t('telemetry.title', 'Live telemetry')}
         </h3>
         <div className="h-px flex-1 bg-gradient-to-r from-[var(--glass-border)] via-[var(--glass-border)] to-transparent" />
       </div>
@@ -78,16 +79,17 @@ export function LiveTelemetry({
 function DrivetrainPanel({ data, toTemperatureDisplay, tempUnit }: {
   data: MotorData | undefined; toTemperatureDisplay: (c: number) => number; tempUnit: string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   return (
     <GlassPanel hover glow="purple" className="p-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+      <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
         <Cog className="h-3.5 w-3.5 text-purple-300" /> {t('telemetry.drivetrain', 'Drivetrain')}
       </h4>
       {data ? (
         <div className="space-y-2.5">
-          <TelemetryRow label={t('telemetry.torque', 'Torque')} value={data.di_torque != null ? `${data.di_torque} Nm` : '—'} />
-          <TelemetryRow label={t('telemetry.motorTemp', 'Motor Temp')} value={data.di_stator_temp != null ? `${fmtInt(toTemperatureDisplay(data.di_stator_temp))}${tempUnit}` : '—'} />
+          <TelemetryRow label={t('telemetry.torque', 'Torque')} value={data.di_torque != null ? `${fmtNumber(data.di_torque)} Nm` : '—'} />
+          <TelemetryRow label={t('telemetry.motorTemp', 'Motor temp')} value={data.di_stator_temp != null ? `${fmtNumber(toTemperatureDisplay(data.di_stator_temp))}${tempUnit}` : '—'} />
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.gear', 'Gear')}</span>
             {cleanNil(data.gear) ? (
@@ -97,9 +99,9 @@ function DrivetrainPanel({ data, toTemperatureDisplay, tempUnit }: {
             ) : <span className="text-sm text-[var(--text-muted)]">—</span>}
           </div>
           <TelemetryRow
-            label={t('telemetry.gforce', 'G-Force')}
+            label={t('telemetry.gforce', 'G-force')}
             value={data.lateral_accel != null || data.longitudinal_accel != null
-              ? `${fmtNumber(Math.max(Math.abs(data.lateral_accel ?? 0), Math.abs(data.longitudinal_accel ?? 0)), 2)}g`
+              ? `${fmtNumber(Math.max(Math.abs(data.lateral_accel ?? 0), Math.abs(data.longitudinal_accel ?? 0)))}g`
               : '—'}
           />
         </div>
@@ -112,18 +114,19 @@ function DrivetrainPanel({ data, toTemperatureDisplay, tempUnit }: {
 function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
   data: ClimateData | undefined; toTemperatureDisplay: (c: number) => number; tempUnit: string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const fanSpeed = data?.hvac_fan_speed ?? 0;
   return (
     <GlassPanel hover glow="cyan" className="p-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+      <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
         <Thermometer className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.climate', 'Climate')}
       </h4>
       {data ? (
         <div className="space-y-2.5">
-          <TelemetryRow label={t('telemetry.cabin', 'Cabin')} value={data.inside_temp != null ? `${fmtInt(toTemperatureDisplay(data.inside_temp))}${tempUnit}` : '—'} />
-          <TelemetryRow label={t('telemetry.outside', 'Outside')} value={data.outside_temp != null ? `${fmtInt(toTemperatureDisplay(data.outside_temp))}${tempUnit}` : '—'} />
-          <TelemetryRow label={t('telemetry.hvac', 'HVAC Power')} value={data.hvac_power != null ? `${fmtNumber(data.hvac_power, 1)} kW` : '—'} />
+          <TelemetryRow label={t('telemetry.cabin', 'Cabin')} value={data.inside_temp != null ? `${fmtNumber(toTemperatureDisplay(data.inside_temp))}${tempUnit}` : '—'} />
+          <TelemetryRow label={t('telemetry.outside', 'Outside')} value={data.outside_temp != null ? `${fmtNumber(toTemperatureDisplay(data.outside_temp))}${tempUnit}` : '—'} />
+          <TelemetryRow label={t('telemetry.hvac', 'HVAC power')} value={data.hvac_power != null ? `${fmtNumber(data.hvac_power)} kW` : '—'} />
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.fan', 'Fan')}</span>
@@ -154,7 +157,7 @@ function ClimatePanel({ data, toTemperatureDisplay, tempUnit }: {
             )}
             {data.battery_heater_on && (
               <span className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">
-                <Zap className="h-2.5 w-2.5" /> {t('telemetry.batHeater', 'Bat Heater')}
+                <Zap className="h-2.5 w-2.5" /> {t('telemetry.batHeater', 'Bat heater')}
               </span>
             )}
             {(!data.defrost_mode || data.defrost_mode === 'Off') && !data.battery_heater_on && (
@@ -174,7 +177,7 @@ function SecurityPanel({ data }: { data: SecurityData | undefined }) {
   if (!data) {
     return (
       <GlassPanel hover glow="green" className="p-4">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+        <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
           <Shield className="h-3.5 w-3.5 text-emerald-300" /> {t('telemetry.security', 'Security')}
         </h4>
         <SkeletonRows />
@@ -194,7 +197,7 @@ function SecurityPanel({ data }: { data: SecurityData | undefined }) {
 
   return (
     <GlassPanel hover glow="green" className="p-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+      <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
         <Shield className="h-3.5 w-3.5 text-emerald-300" /> {t('telemetry.security', 'Security')}
       </h4>
       <div className="space-y-2.5">
@@ -213,13 +216,13 @@ function SecurityPanel({ data }: { data: SecurityData | undefined }) {
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.doors', 'Doors')}</span>
           <Badge variant={openDoors.length === 0 ? 'success' : 'warning'}>
-            {openDoors.length === 0 ? t('telemetry.allClosed', 'All Closed') : `${openDoors.length} ${t('telemetry.open', 'Open')}`}
+            {openDoors.length === 0 ? t('telemetry.allClosed', 'All closed') : `${openDoors.length} ${t('telemetry.open', 'Open')}`}
           </Badge>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs text-[var(--text-secondary)]">{t('telemetry.windows', 'Windows')}</span>
           <Badge variant={openWindows.length === 0 ? 'success' : 'warning'}>
-            {openWindows.length === 0 ? t('telemetry.allClosed', 'All Closed') : `${openWindows.length} ${t('telemetry.open', 'Open')}`}
+            {openWindows.length === 0 ? t('telemetry.allClosed', 'All closed') : `${openWindows.length} ${t('telemetry.open', 'Open')}`}
           </Badge>
         </div>
       </div>
@@ -231,13 +234,14 @@ function SecurityPanel({ data }: { data: SecurityData | undefined }) {
 function TirePressurePanel({ data, toPressureDisplay, pressureUnit }: {
   data: TirePressureData | undefined; toPressureDisplay: (bar: number) => number; pressureUnit: string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
 
   if (!data) {
     return (
       <GlassPanel hover glow="cyan" className="p-4">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-          <CircleDot className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.tirePressure', 'Tire Pressure')}
+        <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+          <CircleDot className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.tirePressure', 'Tire pressure')}
         </h4>
         <SkeletonRows />
       </GlassPanel>
@@ -265,16 +269,16 @@ function TirePressurePanel({ data, toPressureDisplay, pressureUnit }: {
 
   return (
     <GlassPanel hover glow="cyan" className="p-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
-        <CircleDot className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.tirePressure', 'Tire Pressure')}
+      <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+        <CircleDot className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.tirePressure', 'Tire pressure')}
       </h4>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2">
           {tires.map((tire) => (
             <div key={tire.label} className="text-center p-2 rounded-lg bg-white/[0.03] border border-white/[0.04]">
-              <p className="text-2xs text-[var(--text-muted)] uppercase">{tire.label}</p>
+              <p className="text-2xs text-[var(--text-muted)]">{tire.label}</p>
               <p className={`text-sm font-bold ${getPressureColor(tire.value)}`}>
-                {tire.value != null ? fmtNumber(toPressureDisplay(tire.value), 1) : '—'}
+                {tire.value != null ? fmtNumber(toPressureDisplay(tire.value)) : '—'}
               </p>
               <p className="text-2xs text-[var(--text-muted)]">{pressureUnit}</p>
             </div>
@@ -283,7 +287,7 @@ function TirePressurePanel({ data, toPressureDisplay, pressureUnit }: {
         <div className="text-center">
           <Badge variant={allNormal ? 'success' : 'warning'}>
             <ShieldCheck className="h-2.5 w-2.5" />
-            {allNormal ? t('telemetry.allNormal', 'All Normal') : t('telemetry.warning', 'Warning')}
+            {allNormal ? t('telemetry.allNormal', 'All normal') : t('telemetry.warning', 'Warning')}
           </Badge>
         </div>
       </div>
@@ -299,7 +303,7 @@ function MediaPanel({ data }: { data: MediaData | undefined }) {
   const volumePct = volume != null && volumeMax ? clampPct((volume / volumeMax) * 100) : 0;
   return (
     <GlassPanel hover glow="purple" className="p-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+      <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
         <Headphones className="h-3.5 w-3.5 text-purple-300" /> {t('telemetry.media', 'Media')}
       </h4>
       {data ? (
@@ -353,10 +357,11 @@ function MediaPanel({ data }: { data: MediaData | undefined }) {
 function NavigationPanel({ data, toDistanceDisplay, distanceUnit }: {
   data: LocationData | undefined; toDistanceDisplay: (km: number) => number; distanceUnit: string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   return (
     <GlassPanel hover glow="cyan" className="p-4">
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
+      <h4 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] flex items-center gap-1.5 mb-3">
         <Navigation2 className="h-3.5 w-3.5 text-cyan-300" /> {t('telemetry.navigation', 'Navigation')}
       </h4>
       {data ? (
@@ -365,12 +370,12 @@ function NavigationPanel({ data, toDistanceDisplay, distanceUnit }: {
           <TelemetryRow
             label={t('telemetry.distance', 'Distance')}
             value={data.miles_to_arrival != null
-              ? `${fmtNumber(toDistanceDisplay(data.miles_to_arrival), 1)} ${distanceUnit}`
+              ? `${fmtNumber(toDistanceDisplay(data.miles_to_arrival))} ${distanceUnit}`
               : '—'}
           />
           <TelemetryRow
             label={t('telemetry.eta', 'ETA')}
-            value={data.minutes_to_arrival != null ? `${fmtInt(data.minutes_to_arrival)} min` : '—'}
+            value={data.minutes_to_arrival != null ? `${fmtNumber(data.minutes_to_arrival)} min` : '—'}
           />
           <div className="flex items-center gap-2 flex-wrap">
             {data.located_at_home && (

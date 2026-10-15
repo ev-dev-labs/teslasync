@@ -1,21 +1,20 @@
-import { useCallback, useMemo } from 'react';
+import { cloneElement, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cog } from 'lucide-react';
-import {
-  ComposedChart, Line, XAxis, YAxis, Tooltip, ReferenceArea,
-  ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm,
-  chartAnimation, fmt,
-  ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow,
-} from '@/components/charts';
+import { ComposedChart, Line, XAxis, YAxis, Tooltip, ReferenceArea, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartLegend, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
 import { useMotorHistory } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+import { useDataState } from '@/hooks/useDataState';
+import { knownNumber } from '@/api/dataState';
+import { EmptyState, Skeleton } from '@/components/feedback';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartDatum extends ChartDataRow {
   time: string;
@@ -36,15 +35,14 @@ function buildChartData(
     .filter((d) => d.ts || d.created_at)
     .map((d) => {
       const ts = d.ts || d.created_at || '';
-      const raw = d as unknown as Record<string, number | string | null | undefined>;
       const statorRaw = d.di_stator_temp ?? d.motor_temp_c_front ?? null;
       return {
         time: ts,
         torque: d.di_torque ?? null,
         statorTemp: statorRaw != null ? toTemperatureDisplay(statorRaw) : null,
         gear: d.gear ?? d.shift_state ?? null,
-        lateralG: (raw.lateral_accel as number | null) ?? null,
-        longitudinalG: (raw.longitudinal_accel as number | null) ?? null,
+        lateralG: 'lateral_accel' in d ? knownNumber(d.lateral_accel) : null,
+        longitudinalG: 'longitudinal_accel' in d ? knownNumber(d.longitudinal_accel) : null,
       };
     })
     .sort((a, b) => a.time.localeCompare(b.time));
@@ -54,6 +52,8 @@ function buildChartData(
 const DANGER_TEMP_C = 100;
 
 export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber: fmt } = useNumberFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDateTime: formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
@@ -69,6 +69,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   const tempUnit = unitPrefs.temperature;
 
+  const query = useMotorHistory(vid, 200);
   const {
     data,
     isLoading,
@@ -77,7 +78,11 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = useMotorHistory(vid, 200);
+  } = query;
+  const trust = useDataState({
+    ...query,
+    data: data ?? (isLoading || isError ? undefined : []),
+  }, { provenance: 'historical', unavailable: data?.length === 0 });
 
   const chartData = useMemo(
     () => buildChartData(data, toTemperatureDisplay),
@@ -114,25 +119,44 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
     return Math.ceil(max);
   }, [chartData, dangerThreshold]);
 
-  const stats: ChartSummaryStat[] = hasData
-    ? [
+  const torqueLabels = useMemo(
+    () => [0, ...chartData.map((entry) => entry.torque)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => `${fmt(value)}`),
+    [chartData, fmt],
+  );
+  const temperatureLabels = useMemo(
+    () => [0, tempMax, ...chartData.map((entry) => entry.statorTemp)]
+      .filter((value): value is number => value != null && Number.isFinite(value))
+      .map((value) => `${fmt(value)}°`),
+    [chartData, tempMax, fmt],
+  );
+  const torqueAxisWidth = useMeasuredAxisWidth({
+    labels: torqueLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
+  const temperatureAxisWidth = useMeasuredAxisWidth({
+    labels: temperatureLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
+  });
+
+  const stats: ChartSummaryStat[] = [
         {
           label: t('widget.motorHistory.torque', 'Torque'),
-          value: latestTorque != null ? fmtNumber(latestTorque, 0) : '—',
+          value: latestTorque != null ? fmtNumber(latestTorque) : '—',
           unit: 'Nm',
         },
         {
           label: t('widget.motorHistory.statorTemp', 'Stator'),
-          value: latestStatorTemp != null ? fmtNumber(latestStatorTemp, 0) : '—',
+          value: latestStatorTemp != null ? fmtNumber(latestStatorTemp) : '—',
           unit: tempUnit,
         },
-      ]
-    : [];
+      ];
 
   const tick = isWide ? axisTick : axisTickSm;
 
   const shellProps = {
     loading: isLoading,
+    dataState: trust,
+    loadingContent: <Skeleton className="h-32 w-full" />,
     updatedAt: dataUpdatedAt,
     isFetching,
     isStale,
@@ -142,33 +166,34 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
 
   if (isCompact) {
     return (
-      <WidgetShell {...shellProps}>
+      <WidgetShell title={t('widget.motorHistory.title', 'Motor history')} {...shellProps}>
         <WidgetChartSummary
           compact
-          isEmpty={!hasData}
           emptyMessage={t('widget.motorHistory.noData', 'No motor history')}
           emptyIcon={<Cog className="h-5 w-5" />}
           stats={stats}
           chart={null}
         />
+        {!hasData && <EmptyState message={t('widget.motorHistory.noData', 'No motor history')}
+          action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} />}
       </WidgetShell>
     );
   }
 
   return (
     <WidgetShell
-      title={t('widget.motorHistory.title', 'Motor History')}
-      icon={<Cog className="h-3.5 w-3.5 text-neon-cyan" />}
+      title={t('widget.motorHistory.title', 'Motor history')}
+      icon={<Cog className="h-3.5 w-3.5" />}
       {...shellProps}
     >
       <WidgetChartSummary
-        isEmpty={!hasData}
         emptyMessage={t('widget.motorHistory.noData', 'No motor history')}
         emptyIcon={<Cog className="h-5 w-5" />}
         stats={stats}
         chart={
-          <EmbeddedChart
-            title={t('widget.motorHistory.title', 'Motor History')}
+          !hasData ? <EmptyState message={t('widget.motorHistory.noData', 'No motor history')}
+            action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }} /> : <EmbeddedChart
+            title={t('widget.motorHistory.title', 'Motor history')}
             ariaLabel={t(
               'widget.motorHistory.chartAria',
               'Motor torque, stator temperature, and acceleration history',
@@ -180,13 +205,14 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
               { key: 'statorTemp', label: `${t('widget.motorHistory.statorTemp', 'Stator')} (${tempUnit})` },
               { key: 'lateralG', label: t('widget.motorHistory.lateralG', 'Lateral G') },
               { key: 'longitudinalG', label: t('widget.motorHistory.longG', 'Long. G') },
+              { key: 'gear', label: t('widget.motorPerformance.gear', 'Gear') },
             ]}
             chartKey="dashboard-motor-history"
           >
             {({ hiddenSeries }) => (
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={chartMargin} {...chartAnimation}>
-              {chartGrid}
+                <ComposedChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+              {cloneElement(chartGrid, { yAxisId: 'torque' })}
               <XAxis
                 dataKey="time"
                 tick={tick}
@@ -200,9 +226,9 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                width={40}
-                tickFormatter={(v: number) => `${fmt(v, 0)}`}
-                label={isWide ? { value: 'Nm', angle: -90, position: 'insideLeft', fill: 'rgba(255,255,255,0.4)', fontSize: 10 } : undefined}
+                width={torqueAxisWidth}
+                tickFormatter={(v: number) => `${fmt(v)}`}
+                label={isWide ? { value: 'Nm', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 10 } : undefined}
               />
               {/* Right Y-axis — Stator temp */}
               <YAxis
@@ -211,26 +237,27 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                width={40}
+                width={temperatureAxisWidth}
                 domain={[0, tempMax]}
-                tickFormatter={(v: number) => `${fmt(v, 0)}°`}
-                label={isWide ? { value: tempUnit, angle: 90, position: 'insideRight', fill: 'rgba(255,255,255,0.4)', fontSize: 10 } : undefined}
+                tickFormatter={(v: number) => `${fmt(v)}°`}
+                label={isWide ? { value: tempUnit, angle: 90, position: 'insideRight', fill: 'var(--text-muted)', fontSize: 10 } : undefined}
               />
+              {isWide && <YAxis yAxisId="acceleration" hide domain={['auto', 'auto']} />}
               <Tooltip
                 content={<ChartTooltip />}
                 labelFormatter={(v: string) => formatTime(v)}
                 formatter={(value: number, name: string) => {
-                  if (name === 'torque') {
-                    return [`${fmtNumber(value, 0)} Nm`, t('widget.motorHistory.torque', 'Torque')];
+                  if (name === 'torque' || name === t('widget.motorHistory.torque', 'Torque')) {
+                    return [`${fmtNumber(value)} Nm`, t('widget.motorHistory.torque', 'Torque')];
                   }
-                  if (name === 'statorTemp') {
-                    return [`${fmtNumber(value, 0)}${tempUnit}`, t('widget.motorHistory.statorTemp', 'Stator')];
+                  if (name === 'statorTemp' || name === t('widget.motorHistory.statorTemp', 'Stator')) {
+                    return [`${fmtNumber(value)}${tempUnit}`, t('widget.motorHistory.statorTemp', 'Stator')];
                   }
-                  if (name === 'lateralG') {
-                    return [`${fmtNumber(value, 2)} g`, t('widget.motorHistory.lateralG', 'Lateral G')];
+                  if (name === 'lateralG' || name === t('widget.motorHistory.lateralG', 'Lateral G')) {
+                    return [`${fmtNumber(value)} g`, t('widget.motorHistory.lateralG', 'Lateral G')];
                   }
-                  if (name === 'longitudinalG') {
-                    return [`${fmtNumber(value, 2)} g`, t('widget.motorHistory.longG', 'Long. G')];
+                  if (name === 'longitudinalG' || name === t('widget.motorHistory.longG', 'Long. G')) {
+                    return [`${fmtNumber(value)} g`, t('widget.motorHistory.longG', 'Long. G')];
                   }
                   return [String(value), name];
                 }}
@@ -253,7 +280,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 strokeWidth={2}
                 dot={false}
                 connectNulls={false}
-                name="torque"
+                name={t('widget.motorHistory.torque', 'Torque')}
                 hide={hiddenSeries?.isHidden('torque')}
               />
               {/* Stator temp line — orange */}
@@ -265,13 +292,13 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 strokeWidth={2}
                 dot={false}
                 connectNulls={false}
-                name="statorTemp"
+                name={t('widget.motorHistory.statorTemp', 'Stator')}
                 hide={hiddenSeries?.isHidden('statorTemp')}
               />
               {/* Wide mode: g-force overlays */}
               {isWide && (
                 <Line
-                  yAxisId="torque"
+                  yAxisId="acceleration"
                   type="monotone"
                   dataKey="lateralG"
                   stroke="#a78bfa"
@@ -279,7 +306,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                   strokeDasharray="4 2"
                   dot={false}
                   connectNulls={false}
-                  name="lateralG"
+                  name={t('widget.motorHistory.lateralG', 'Lateral G')}
                   hide={hiddenSeries?.isHidden('lateralG')}
                 />
               )}
@@ -293,7 +320,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                   strokeDasharray="4 2"
                   dot={false}
                   connectNulls={false}
-                  name="longitudinalG"
+                  name={t('widget.motorHistory.longG', 'Long. G')}
                   hide={hiddenSeries?.isHidden('longitudinalG')}
                 />
               )}

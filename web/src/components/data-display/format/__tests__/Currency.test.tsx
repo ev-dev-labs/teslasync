@@ -70,7 +70,7 @@ describe('Currency — symbol source', () => {
 });
 
 describe('Currency — value formatting', () => {
-  it('defaults to 2 decimal places', () => {
+  it('defaults to settings precision (2 in this fixture)', () => {
     const { container } = render(<Currency value={5} />);
     expect(container.textContent).toBe('$5.00');
   });
@@ -97,8 +97,8 @@ describe('Currency — value formatting', () => {
     const { container } = render(<Currency value={1234.5} precision={2} />);
     // de-DE groups with "." and uses "," for the decimal → "$1.234,50".
     expect(normalize(container.textContent)).toBe('$1.234,50');
-    // The canonical hover title stays locale-agnostic (dot decimal, no grouping).
-    expect(span(container)?.getAttribute('title')).toBe('$1234.50');
+    // Hover titles use the same locale and precision as the visible amount.
+    expect(span(container)?.getAttribute('title')).toBe('$1.234,50');
   });
 });
 
@@ -160,7 +160,7 @@ describe('Currency — precision safety (hardening)', () => {
     expect(span(container)?.getAttribute('title')).toBe('$12');
   });
 
-  it('falls back to 2 decimals for a non-finite precision instead of crashing', () => {
+  it('falls back to settings for a non-finite precision instead of crashing', () => {
     expect(() => render(<Currency value={5} precision={NaN} />)).not.toThrow();
     const { container } = render(<Currency value={5} precision={NaN} />);
     expect(container.textContent).toBe('$5.00');
@@ -174,11 +174,11 @@ describe('Currency — precision safety (hardening)', () => {
 });
 
 describe('Currency — canonical title & DOM', () => {
-  it('exposes the canonical value via title without locale grouping', () => {
+  it('uses the formatted display value in the title', () => {
     const { container } = render(<Currency value={1234.5} precision={2} />);
-    // Display carries locale grouping; the hover title is the raw fixed value.
+    // Display and hover title both carry locale grouping.
     expect(container.textContent).toBe('$1,234.50');
-    expect(span(container)?.getAttribute('title')).toBe('$1234.50');
+    expect(span(container)?.getAttribute('title')).toBe('$1,234.50');
   });
 
   it('renders a single <span> carrying the value and title', () => {

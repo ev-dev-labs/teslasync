@@ -972,6 +972,12 @@ export function renderShareCardSvg(
     })
     : '';
   const footer = metadata.footer ?? 'TeslaSync';
+  const description = [
+    subtitle,
+    metadata.disclosure,
+    ...shown.map((line) => `${line.label}: ${line.value}`),
+    footer,
+  ].filter(Boolean).join('. ');
   const titleFit = title.length > 36
     ? ` textLength="${width - 96}" lengthAdjust="spacingAndGlyphs"`
     : '';
@@ -979,7 +985,7 @@ export function renderShareCardSvg(
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-labelledby="share-card-title share-card-description">`,
     `<title id="share-card-title">${escapeXml(title)}</title>`,
-    `<desc id="share-card-description">${escapeXml([subtitle, metadata.disclosure].filter(Boolean).join('. '))}</desc>`,
+    `<desc id="share-card-description">${escapeXml(description)}</desc>`,
     `<rect width="${width}" height="${height}" rx="24" fill="${selectedTheme.bg}"/>`,
     `<rect x="1.5" y="1.5" width="${width - 3}" height="${height - 3}" rx="22.5" fill="none" stroke="${selectedTheme.accent}" stroke-opacity="0.35" stroke-width="3"/>`,
     `<circle cx="${width - 84}" cy="84" r="120" fill="${selectedTheme.soft}" opacity="0.08"/>`,

@@ -92,6 +92,8 @@ export function RuntimeHealthBanner() {
           <Button
             size="sm"
             variant="outline"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9"
             icon={<Gauge className="h-4 w-4" />}
             onClick={() => navigate('/system-status')}
           >
@@ -100,6 +102,8 @@ export function RuntimeHealthBanner() {
           <Button
             size="sm"
             variant="outline"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9"
             icon={<Bell className="h-4 w-4" />}
             onClick={() => navigate('/notifications/channels')}
           >

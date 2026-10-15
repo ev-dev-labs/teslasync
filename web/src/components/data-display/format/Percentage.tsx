@@ -1,4 +1,4 @@
-import { fmtNumber } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PercentageProps {
   /** Already a percentage value, e.g. SoC of 85 → "85%". */
@@ -11,6 +11,7 @@ interface PercentageProps {
 
 /** Percentage renderer that accepts either a percentage or a 0–1 ratio. */
 export function Percentage({ value, ratio, precision, className }: PercentageProps) {
+  const { fmtPercent } = useNumberFormatting();
   let v: number | null = null;
   if (value != null && Number.isFinite(value)) {
     v = value;
@@ -23,8 +24,8 @@ export function Percentage({ value, ratio, precision, className }: PercentagePro
   }
 
   return (
-    <span className={className} title={`${v.toFixed(3)}%`}>
-      {fmtNumber(v, precision)}%
+    <span className={className} title={fmtPercent(v, precision)}>
+      {fmtPercent(v, precision)}
     </span>
   );
 }

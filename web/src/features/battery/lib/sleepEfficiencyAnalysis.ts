@@ -20,6 +20,38 @@ export const DEFAULT_SLEEP_RANGE_DAYS = 30;
 export const SLEEP_STATE_DIRECTORY_CAP = 50;
 export const SLEEP_EVENT_DIRECTORY_CAP = 50;
 
+/** Absolute rounding allowances, not filters or permission to rewrite readings. */
+export const SLEEP_MEASUREMENT_TOLERANCES = {
+  durationHours: 1 / 60,
+  batteryPoints: 0.1,
+  drainRatePointsPerHour: 0.01,
+  efficiencyPoints: 0.1,
+} as const;
+
+export interface SleepMeasurement {
+  status: 'measured' | 'missing' | 'invalid';
+  value: number | null;
+}
+
+export interface SleepEventMeasurements {
+  sourceIndex: number;
+  /** Independent reported readings; zero and signed readings remain measured. */
+  reported: {
+    durationHours: SleepMeasurement;
+    batteryLost: SleepMeasurement;
+    drainRate: SleepMeasurement;
+    startBattery: SleepMeasurement;
+    endBattery: SleepMeasurement;
+  };
+  /** Timestamp/end-point identities, never substitutes for reported readings. */
+  derived: {
+    durationHours: number | null;
+    batteryLost: number | null;
+    drainRate: number | null;
+  };
+  contradictions: readonly ('duration' | 'battery_loss' | 'drain_rate')[];
+}
+
 export type SleepStateRowCategory =
   | 'included'
   | 'missing_state'
@@ -89,15 +121,21 @@ export interface SleepStateEvidence {
   known: boolean;
   count: number;
   countShare: number | null;
+  /** Valid duration contribution; zero when durationAvailable is false. */
   totalMinutes: number;
+  durationAvailable: boolean;
   durationShare: number | null;
   sourceIndex: number;
 }
 
 export interface SleepStateAccounting {
+  /** A supplied empty array is authoritative; absent or malformed collections are not. */
+  collectionPresent: boolean;
   returnedRows: number;
   includedRows: number;
   excludedRows: number;
+  durationIncludedRows: number;
+  durationExcludedRows: number;
   categories: Record<SleepStateRowCategory, number>;
   directoryCap: number;
   displayedRows: number;
@@ -119,6 +157,8 @@ export interface SleepTransitionAnalysis {
 
 export interface SleepDwellAnalysis {
   available: boolean;
+  includedRows: number;
+  excludedRows: number;
   totalMinutes: number;
   asleepMinutes: number;
   recomputedEfficiencyPct: number | null;
@@ -126,6 +166,8 @@ export interface SleepDwellAnalysis {
   reportedFieldValid: boolean;
   reportedDifferencePoints: number | null;
   timeToSleepAvgMin: number | null;
+  reportedMeasurement: SleepMeasurement;
+  efficiencyContradiction: boolean;
 }
 
 export interface SleepSentryEvidenceGroup {
@@ -137,6 +179,21 @@ export interface SleepSentryEvidenceGroup {
   avgBatteryLost: number | null;
   avgTempC: number | null;
   sourceIndex: number | null;
+  /** Group averages are independent; mean(loss)/mean(duration) is not mean(rate). */
+  measurements: {
+    count: SleepMeasurement;
+    drainRate: SleepMeasurement;
+    durationHours: SleepMeasurement;
+    batteryLost: SleepMeasurement;
+    temperatureC: SleepMeasurement;
+  };
+}
+
+export interface SleepSentryRowEvidence {
+  sourceIndex: number;
+  mode: 'on' | 'off' | null;
+  category: 'included' | 'invalid_mode' | 'missing_count' | 'invalid_count' | 'zero_count' | 'duplicate_mode';
+  measurements: SleepSentryEvidenceGroup['measurements'];
 }
 
 export interface SleepCapacityContext {
@@ -153,8 +210,11 @@ export interface SleepCapacityContext {
 
 export interface SleepSentryProjection {
   available: boolean;
+  /** Signed net battery change extrapolation, not measured consumption or savings. */
+  basis: 'signed_net_rate_730_hours';
   onMonthlyKwh: number | null;
   onMonthlyCost: number | null;
+  /** Nonnegative excess: max(0, Sentry-on minus Sentry-off drain rate). */
   extraDrainRate: number | null;
   extraMonthlyKwh: number | null;
   extraMonthlyCost: number | null;
@@ -165,8 +225,20 @@ export interface SleepSentryAnalysis {
   off: SleepSentryEvidenceGroup;
   hasAnyEvidence: boolean;
   comparisonAvailable: boolean;
+  /** Signed Sentry-on minus Sentry-off drain rate, independent of capacity. */
+  drainRateDifference: number | null;
   context: SleepCapacityContext;
   projection: SleepSentryProjection;
+  provenance: {
+    rows: readonly SleepSentryRowEvidence[];
+    duplicatePolicy: 'first_count_bearing_group_wins';
+    /** The payload does not identify sample- versus duration-weighted averages. */
+    averageWeighting: 'unknown';
+    /** Neither count * mean(duration) nor recent events proves group exposure. */
+    groupExposureHours: 'unknown';
+    comparisonBasis: 'observational_group_averages';
+    causalEffectEstablished: false;
+  };
 }
 
 export type SleepEventRecency =
@@ -206,10 +278,14 @@ export interface SleepEventAccounting {
 export interface SleepEventAggregates {
   available: boolean;
   count: number;
+  /** Sum of reported event durations; overlapping exposure is not deduplicated. */
   totalDurationHours: number | null;
   medianDurationHours: number | null;
+  /** Signed sum, not gross consumption or whole-period loss; rows may overlap. */
   totalBatteryLost: number | null;
+  /** Each accepted event has one vote, not a duration-weighted rate. */
   medianDrainRate: number | null;
+  /** Fraction of accepted event rows, not fraction of exposed time. */
   sentryShare: number | null;
   temperatureCoverage: number | null;
   last24HoursCount: number;
@@ -224,6 +300,18 @@ export interface SleepEventAnalysis {
   accounting: SleepEventAccounting;
   aggregates: SleepEventAggregates;
   reportedTotalEvents: number | null;
+  measurements: readonly SleepEventMeasurements[];
+  exposure: {
+    /** Union of accepted timestamp intervals, not summed reported durations. */
+    uniqueHours: number | null;
+    overlapHours: number | null;
+    overlappingRows: number;
+    requestedHours: number | null;
+    coveredRequestedHours: number | null;
+    requestedCoverage: number | null;
+    /** Recent events cannot establish complete backend-period coverage. */
+    completePeriodCoverage: 'unknown';
+  };
 }
 
 export interface SleepAvailabilityRow {
@@ -243,6 +331,7 @@ export interface SleepEvidenceBreadth {
 
 export interface SleepSourceCoverage {
   hasResponse: boolean;
+  hasEvidence: boolean;
   vehicleId: number | null;
   backendPeriodDays: number | null;
   frozenNowMs: number | null;
@@ -274,6 +363,27 @@ interface ParsedEventRow {
 
 function finiteNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function signedNumber(value: unknown): number | null {
+  const number = finiteNumber(value);
+  return number != null && Math.abs(number) <= Number.MAX_SAFE_INTEGER ? number : null;
+}
+
+function signedPercentage(value: unknown): number | null {
+  const number = finiteNumber(value);
+  return number != null && Math.abs(number) <= 100 ? number : null;
+}
+
+function measurement(
+  value: unknown,
+  validate: (value: unknown) => number | null,
+): SleepMeasurement {
+  const parsed = validate(value);
+  return {
+    status: value == null ? 'missing' : parsed == null ? 'invalid' : 'measured',
+    value: parsed,
+  };
 }
 
 function nonnegativeNumber(value: unknown): number | null {
@@ -313,7 +423,7 @@ function safeSum(values: readonly number[]): number | null {
   let total = 0;
   for (const value of values) {
     const next = total + value;
-    if (!Number.isFinite(next) || next > Number.MAX_SAFE_INTEGER) return null;
+    if (!Number.isFinite(next) || Math.abs(next) > Number.MAX_SAFE_INTEGER) return null;
     total = next;
   }
   return total;
@@ -421,16 +531,14 @@ function parseStateRow(
   if (count == null) return { evidence: null, category: 'invalid_count' };
 
   const totalMinutes = nonnegativeNumber(row.total_minutes);
-  if (totalMinutes == null) {
-    return { evidence: null, category: 'invalid_minutes' };
-  }
 
   return {
     evidence: {
       state,
       known: KNOWN_STATES.has(state),
       count,
-      totalMinutes,
+      totalMinutes: totalMinutes ?? 0,
+      durationAvailable: totalMinutes != null,
       sourceIndex,
     },
     category: null,
@@ -439,6 +547,7 @@ function parseStateRow(
 
 function buildStateAnalysis(
   rows: readonly SleepStateDistributionRow[],
+  collectionPresent: boolean,
 ): {
   accounting: SleepStateAccounting;
   transitions: SleepTransitionAnalysis;
@@ -484,21 +593,23 @@ function buildStateAnalysis(
       !Number.isFinite(nextMinutes)
       || nextMinutes > Number.MAX_SAFE_INTEGER
     ) {
-      categories.invalid_minutes += 1;
-      return;
+      evidence.totalMinutes = 0;
+      evidence.durationAvailable = false;
     }
     seen.add(evidence.state);
     runningCount = nextCount;
-    runningMinutes = nextMinutes;
+    if (evidence.durationAvailable) runningMinutes = nextMinutes;
     included.push(evidence);
-    categories.included += 1;
+    categories[evidence.durationAvailable ? 'included' : 'invalid_minutes'] += 1;
   });
 
   const states: SleepStateEvidence[] = included.map((row) => ({
     ...row,
     countShare: runningCount > 0 ? row.count / runningCount : null,
     durationShare:
-      runningMinutes > 0 ? row.totalMinutes / runningMinutes : null,
+      row.durationAvailable && runningMinutes > 0
+        ? row.totalMinutes / runningMinutes
+        : null,
   }));
   const represented = states.filter((row) => row.count > 0);
   const asleep = states.find((row) => row.state === 'asleep');
@@ -521,9 +632,12 @@ function buildStateAnalysis(
   const directory = states.slice(0, SLEEP_STATE_DIRECTORY_CAP);
   return {
     accounting: {
+      collectionPresent,
       returnedRows: rows.length,
-      includedRows: categories.included,
-      excludedRows: rows.length - categories.included,
+      includedRows: included.length,
+      excludedRows: rows.length - included.length,
+      durationIncludedRows: categories.included,
+      durationExcludedRows: rows.length - categories.included,
       categories,
       directoryCap: SLEEP_STATE_DIRECTORY_CAP,
       displayedRows: directory.length,
@@ -563,6 +677,41 @@ function eventId(value: unknown): string | null {
   return id != null ? String(id) : null;
 }
 
+function eventMeasurements(event: SleepDrainEvent, sourceIndex: number): SleepEventMeasurements {
+  const reported = {
+    durationHours: measurement(event?.duration_hours, positiveNumber),
+    batteryLost: measurement(event?.battery_lost, signedPercentage),
+    drainRate: measurement(event?.drain_rate, signedNumber),
+    startBattery: measurement(event?.start_battery, percentage),
+    endBattery: measurement(event?.end_battery, percentage),
+  };
+  const start = parseTimestamp(event?.start_date);
+  const end = parseTimestamp(event?.end_date);
+  const durationHours = start != null && end != null && end > start
+    ? (end - start) / 3_600_000 : null;
+  const batteryLost = reported.startBattery.value != null && reported.endBattery.value != null
+    ? reported.startBattery.value - reported.endBattery.value : null;
+  const drainRate = durationHours != null && batteryLost != null
+    ? signedNumber(batteryLost / durationHours) : null;
+  const contradictions: Array<'duration' | 'battery_loss' | 'drain_rate'> = [];
+  const differs = (a: number | null, b: number | null, tolerance: number) =>
+    a != null && b != null && Math.abs(a - b) > tolerance + Number.EPSILON * Math.max(1, Math.abs(a), Math.abs(b)) * 4;
+  if (differs(reported.durationHours.value, durationHours, SLEEP_MEASUREMENT_TOLERANCES.durationHours)) {
+    contradictions.push('duration');
+  }
+  if (differs(reported.batteryLost.value, batteryLost, SLEEP_MEASUREMENT_TOLERANCES.batteryPoints)) {
+    contradictions.push('battery_loss');
+  }
+  // Check the reported rate against its reported numerator/denominator.
+  // End-point disagreement is disclosed separately rather than compounded.
+  const reportedRate = reported.batteryLost.value != null && reported.durationHours.value != null
+    ? signedNumber(reported.batteryLost.value / reported.durationHours.value) : null;
+  if (differs(reported.drainRate.value, reportedRate, SLEEP_MEASUREMENT_TOLERANCES.drainRatePointsPerHour)) {
+    contradictions.push('drain_rate');
+  }
+  return { sourceIndex, reported, derived: { durationHours, batteryLost, drainRate }, contradictions };
+}
+
 function parseEventRow(
   event: SleepDrainEvent,
   sourceIndex: number,
@@ -570,7 +719,7 @@ function parseEventRow(
 ): ParsedEventRow {
   const startMs = parseTimestamp(event?.start_date);
   const endMs = parseTimestamp(event?.end_date);
-  if (startMs == null || endMs == null || endMs < startMs) {
+  if (startMs == null || endMs == null || endMs <= startMs) {
     return { event: null, category: 'invalid_timestamp' };
   }
   if (
@@ -586,8 +735,8 @@ function parseEventRow(
   }
 
   const id = eventId(event.id);
-  const batteryLost = percentage(event.battery_lost);
-  const drainRate = nonnegativeNumber(event.drain_rate);
+  const batteryLost = signedPercentage(event.battery_lost);
+  const drainRate = signedNumber(event.drain_rate);
   const startBattery = percentage(event.start_battery);
   const endBattery = percentage(event.end_battery);
   if (
@@ -635,6 +784,7 @@ function buildEventAnalysis(
   rows: readonly SleepDrainEvent[],
   frozenNowMs: number | null,
   reportedTotalEventsValue: unknown,
+  range: SleepRangeAnalysis,
 ): SleepEventAnalysis {
   const categories: Record<SleepEventRowCategory, number> = {
     included: 0,
@@ -678,6 +828,30 @@ function buildEventAnalysis(
     (event) => event.outsideTempC != null,
   ).length;
   const count = events.length;
+  const requestedHours = range.inclusiveDays != null ? range.inclusiveDays * 24 : null;
+  const unionHours = (intervals: readonly { startMs: number; endMs: number }[]) => {
+    let end = -Infinity;
+    let totalMs = 0;
+    for (const interval of [...intervals].sort((a, b) => a.startMs - b.startMs)) {
+      totalMs += Math.max(0, interval.endMs - Math.max(end, interval.startMs));
+      end = Math.max(end, interval.endMs);
+    }
+    return totalMs / 3_600_000;
+  };
+  const uniqueHours = count > 0 ? unionHours(events) : null;
+  const summedTimestampHours = safeSum(events.map(row => (row.endMs - row.startMs) / 3_600_000));
+  let latestEnd = -Infinity;
+  let overlappingRows = 0;
+  for (const row of [...events].sort((a, b) => a.startMs - b.startMs || a.sourceIndex - b.sourceIndex)) {
+    if (row.startMs < latestEnd) overlappingRows += 1;
+    latestEnd = Math.max(latestEnd, row.endMs);
+  }
+  const coveredRequestedHours = range.status === 'valid' && range.startMs != null && range.endMs != null && count > 0
+    ? unionHours(events.map(row => ({
+        startMs: Math.max(row.startMs, range.startMs ?? row.startMs),
+        endMs: Math.min(row.endMs, (range.endMs ?? row.endMs) + DAY_MS),
+      })).filter(row => row.endMs > row.startMs))
+    : null;
 
   return {
     events,
@@ -695,9 +869,9 @@ function buildEventAnalysis(
     aggregates: {
       available: count > 0,
       count,
-      totalDurationHours: safeSum(durationValues),
+      totalDurationHours: count > 0 ? safeSum(durationValues) : null,
       medianDurationHours: median(durationValues),
-      totalBatteryLost: safeSum(batteryValues),
+      totalBatteryLost: count > 0 ? safeSum(batteryValues) : null,
       medianDrainRate: median(drainValues),
       sentryShare:
         count > 0
@@ -716,16 +890,29 @@ function buildEventAnalysis(
       ).length,
     },
     reportedTotalEvents: nonnegativeInteger(reportedTotalEventsValue),
+    measurements: rows.map(eventMeasurements),
+    exposure: {
+      uniqueHours,
+      overlapHours: uniqueHours != null && summedTimestampHours != null
+        ? Math.max(0, summedTimestampHours - uniqueHours) : null,
+      overlappingRows,
+      requestedHours,
+      coveredRequestedHours,
+      requestedCoverage: coveredRequestedHours != null && requestedHours != null
+        ? coveredRequestedHours / requestedHours : null,
+      completePeriodCoverage: 'unknown',
+    },
   };
 }
 
-function sentryMetric(
-  value: unknown,
-  allowNegative = false,
-): number | null {
-  const number = finiteNumber(value);
-  if (number == null || number > Number.MAX_SAFE_INTEGER) return null;
-  return allowNegative || number >= 0 ? number : null;
+function sentryMeasurements(row: SleepSentryGroup | undefined): SleepSentryEvidenceGroup['measurements'] {
+  return {
+    count: measurement(row?.count, nonnegativeInteger),
+    drainRate: measurement(row?.avg_drain_rate, signedNumber),
+    durationHours: measurement(row?.avg_duration_hours, nonnegativeNumber),
+    batteryLost: measurement(row?.avg_battery_lost, signedPercentage),
+    temperatureC: measurement(row?.avg_temp, signedNumber),
+  };
 }
 
 function buildSentryGroup(
@@ -747,18 +934,21 @@ function buildSentryGroup(
       avgBatteryLost: null,
       avgTempC: null,
       sourceIndex: null,
+      measurements: sentryMeasurements(undefined),
     };
   }
   const row = rows[sourceIndex];
+  const measurements = sentryMeasurements(row);
   return {
     mode: sentryMode ? 'on' : 'off',
     available: true,
     count: positiveInteger(row?.count),
-    avgDrainRate: sentryMetric(row?.avg_drain_rate),
-    avgDurationHours: sentryMetric(row?.avg_duration_hours),
-    avgBatteryLost: sentryMetric(row?.avg_battery_lost),
-    avgTempC: sentryMetric(row?.avg_temp, true),
+    avgDrainRate: measurements.drainRate.value,
+    avgDurationHours: measurements.durationHours.value,
+    avgBatteryLost: measurements.batteryLost.value,
+    avgTempC: measurements.temperatureC.value,
     sourceIndex,
+    measurements,
   };
 }
 
@@ -798,21 +988,26 @@ function buildSentryAnalysis(
     && off.avgDrainRate != null;
   const projectionAvailable =
     ratesAvailable && batteryCapacityWh != null;
+  const drainRateDifference =
+    ratesAvailable && on.avgDrainRate != null && off.avgDrainRate != null
+      ? on.avgDrainRate - off.avgDrainRate
+      : null;
+  const extraDrainRate =
+    drainRateDifference != null ? Math.max(0, drainRateDifference) : null;
 
   let onMonthlyKwh: number | null = null;
-  let extraDrainRate: number | null = null;
   let extraMonthlyKwh: number | null = null;
   if (
     projectionAvailable
     && on.avgDrainRate != null
     && off.avgDrainRate != null
     && batteryCapacityWh != null
+    && extraDrainRate != null
   ) {
     onMonthlyKwh =
       (on.avgDrainRate / 100)
       * (batteryCapacityWh / 1_000)
       * SENTRY_HOURS_PER_MONTH;
-    extraDrainRate = Math.max(0, on.avgDrainRate - off.avgDrainRate);
     extraMonthlyKwh =
       (extraDrainRate / 100)
       * (batteryCapacityWh / 1_000)
@@ -824,9 +1019,31 @@ function buildSentryAnalysis(
     off,
     hasAnyEvidence: on.available || off.available,
     comparisonAvailable,
+    drainRateDifference,
     context,
+    provenance: {
+      rows: rows.map((row, sourceIndex): SleepSentryRowEvidence => {
+        const mode = typeof row?.sentry_mode === 'boolean'
+          ? row.sentry_mode ? 'on' : 'off' : null;
+        const measurements = sentryMeasurements(row);
+        const count = measurements.count;
+        const category = mode == null ? 'invalid_mode'
+          : count.status === 'missing' ? 'missing_count'
+          : count.status === 'invalid' ? 'invalid_count'
+          : count.value === 0 ? 'zero_count'
+          : sourceIndex === (mode === 'on' ? on : off).sourceIndex ? 'included'
+          : 'duplicate_mode';
+        return { sourceIndex, mode, category, measurements };
+      }),
+      duplicatePolicy: 'first_count_bearing_group_wins',
+      averageWeighting: 'unknown',
+      groupExposureHours: 'unknown',
+      comparisonBasis: 'observational_group_averages',
+      causalEffectEstablished: false,
+    },
     projection: {
       available: projectionAvailable,
+      basis: 'signed_net_rate_730_hours',
       onMonthlyKwh,
       onMonthlyCost:
         onMonthlyKwh != null && baseCostPerKwh != null
@@ -876,7 +1093,11 @@ function buildAvailability(
             'no_valid_transition_rows',
           );
   const dwellRow = dwell.available
-    ? availabilityRow('state_dwell', 'available', 'positive_dwell_minutes')
+    ? availabilityRow(
+        'state_dwell',
+        dwell.excludedRows > 0 ? 'partial' : 'available',
+        'positive_dwell_minutes',
+      )
     : availabilityRow(
         'state_dwell',
         'unavailable',
@@ -885,7 +1106,7 @@ function buildAvailability(
   const efficiencyRow = dwell.available
     ? availabilityRow(
         'sleep_efficiency',
-        'available',
+        dwell.excludedRows > 0 ? 'partial' : 'available',
         'duration_ratio_derived',
       )
     : availabilityRow(
@@ -1002,24 +1223,29 @@ export function analyzeSleepEfficiency(
     ? data.recent_events
     : [];
 
-  const state = buildStateAnalysis(stateRows);
+  const state = buildStateAnalysis(stateRows, Array.isArray(data?.state_distribution));
   const dwellAvailable =
     state.totalMinutes > 0
     && state.transitions.states.some((row) => row.totalMinutes > 0);
   const reportedField = percentage(data?.sleep_efficiency_pct);
-  const recomputedEfficiencyPct = dwellAvailable
+  const asleepState = state.transitions.states.find(row => row.state === 'asleep');
+  const recomputedEfficiencyPct = dwellAvailable && (asleepState == null || asleepState.durationAvailable)
     ? (state.asleepMinutes / state.totalMinutes) * 100
     : null;
-  const reportedEfficiencyPct =
-    dwellAvailable && reportedField != null ? reportedField : null;
+  const reportedEfficiencyPct = reportedField;
   const timeToSleepAvgMin = positiveNumber(data?.time_to_sleep_avg_min);
   const dwell: SleepDwellAnalysis = {
     available: dwellAvailable,
+    includedRows: state.accounting.durationIncludedRows,
+    excludedRows: state.accounting.durationExcludedRows,
     totalMinutes: state.totalMinutes,
     asleepMinutes: state.asleepMinutes,
     recomputedEfficiencyPct,
     reportedEfficiencyPct,
     reportedFieldValid: reportedField != null,
+    reportedMeasurement: measurement(data?.sleep_efficiency_pct, percentage),
+    efficiencyContradiction: reportedField != null && recomputedEfficiencyPct != null
+      && Math.abs(reportedField - recomputedEfficiencyPct) > SLEEP_MEASUREMENT_TOLERANCES.efficiencyPoints,
     reportedDifferencePoints:
       reportedEfficiencyPct != null && recomputedEfficiencyPct != null
         ? reportedEfficiencyPct - recomputedEfficiencyPct
@@ -1033,6 +1259,7 @@ export function analyzeSleepEfficiency(
     eventRows,
     frozenNowMs,
     data?.total_events,
+    range,
   );
   const availability = buildAvailability(
     state.accounting,
@@ -1046,6 +1273,17 @@ export function analyzeSleepEfficiency(
     range,
     source: {
       hasResponse: data != null,
+      // Successful empty responses and exclusion accounting do not establish
+      // readings. Valid zero-count rows and count-bearing zero rates do.
+      hasEvidence: data != null && (
+        state.accounting.includedRows > 0
+        || dwell.available
+        || timeToSleepAvgMin != null
+        || sentry.hasAnyEvidence
+        || events.accounting.includedRows > 0
+        || sentry.context.batteryCapacityWh != null
+        || sentry.context.baseCostPerKwh != null
+      ),
       vehicleId: positiveInteger(data?.vehicle_id),
       backendPeriodDays: positiveInteger(data?.period_days),
       frozenNowMs,

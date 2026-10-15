@@ -143,7 +143,7 @@ describe('WorkspaceContextControl', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Last 7 days' }));
     fireEvent.click(screen.getByRole('button', { name: 'Spacious' }));
     expect(screen.getByRole('button', { name: 'Spacious' })).toHaveAttribute('aria-pressed', 'true');
-    const callbacks = mocks.saveSettings.mock.calls.at(-1)?.[1] as { onError: () => void };
+    const callbacks = mocks.saveSettings.mock.calls[mocks.saveSettings.mock.calls.length - 1]?.[1] as { onError: () => void };
     act(() => callbacks.onError());
     expect(screen.getByRole('button', { name: 'Comfortable' })).toHaveAttribute('aria-pressed', 'true');
   });
@@ -383,5 +383,66 @@ describe('WorkspaceContextControl', () => {
     expect(
       screen.getByText('Comparison active: previous matching period'),
     ).toBeInTheDocument();
+  });
+
+  it('uses restrained selected surfaces and reachable wrapping controls', () => {
+    render(<WorkspaceContextControl />);
+    const trigger = screen.getByRole('button', { name: 'Analysis window: Last 7 days' });
+    expect(trigger).toHaveClass('min-h-11');
+    fireEvent.click(trigger);
+    for (const name of ['7 days', 'Comfortable']) {
+      const selected = screen.getByRole('button', { name });
+      expect(selected).toHaveAttribute('aria-pressed', 'true');
+      expect(selected).toHaveClass('border-[var(--border-strong)]', 'bg-[var(--surface-3)]', 'whitespace-normal');
+      expect(selected).not.toHaveClass('shadow-e1', 'border-[var(--theme-primary)]');
+    }
+    const close = screen.getByRole('button', { name: 'Close view settings' });
+    expect(close).toHaveClass('min-h-11', 'min-w-11');
+    fireEvent.click(close);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('keeps hidden command ownership without rendering another selector', () => {
+    render(<WorkspaceContextControl hidden />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    act(() => {
+      window.dispatchEvent(new CustomEvent(WORKSPACE_RANGE_EVENT, { detail: { preset: '24h' } }));
+    });
+    expect(mocks.setPreset).toHaveBeenCalledExactlyOnceWith('24h');
+  });
+
+  it('does not apply an incomplete custom date range', () => {
+    render(<WorkspaceContextControl />);
+    fireEvent.click(screen.getByRole('button', { name: 'Analysis window: Last 7 days' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Custom' }));
+    fireEvent.change(screen.getByLabelText('End date'), { target: { value: '' } });
+    const apply = screen.getByRole('button', { name: 'Apply custom range' });
+    expect(apply).toBeDisabled();
+    fireEvent.click(apply);
+    expect(mocks.setRange).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'View settings' })).toBeInTheDocument();
+  });
+
+  it.each(['header', 'status'] as const)('preserves named geometry, scrolling, layer and Escape dismissal in RTL for %s', (variant) => {
+    const { container } = render(
+      <div dir="rtl"><WorkspaceContextControl variant={variant} /></div>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Analysis window: Last 7 days' });
+    expect(container.firstChild).toHaveAttribute('dir', 'rtl');
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: 'View settings' });
+    expect(dialog).toHaveClass('w-workspace-context', 'max-h-workspace-context', 'overflow-y-auto');
+    expect(dialog).toHaveStyle({ zIndex: '70' });
+    expect(screen.getByRole('group', { name: 'Date range' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Display density' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'View settings' })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    expect(mocks.setPreset).not.toHaveBeenCalled();
+    expect(mocks.setRange).not.toHaveBeenCalled();
+    expect(mocks.saveSettings).not.toHaveBeenCalled();
   });
 });

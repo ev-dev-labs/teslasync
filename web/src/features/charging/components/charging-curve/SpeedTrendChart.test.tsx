@@ -10,7 +10,7 @@
  *     renders from the `data`/`dataColumns` props (this is where the whole
  *     aggregation is observable: month bucketing, ascending sort, W→kW
  *     conversion, DC/AC classification, averaging + 0.1 rounding, and the
- *     zero-fill for a month that has no sessions of one kind),
+ *     unavailable subgroup for a month that has no samples of one kind),
  *   - the empty branch (the hardening: `sessions` null / undefined / [] must show
  *     an EmptyState, never a blank panel — and never throw on `.length`), and
  *   - the legend, whose swatches must follow the active `useChartPalette()` colour
@@ -65,6 +65,7 @@ vi.mock('@/hooks/useChartExport', () => ({
 }));
 
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [], isLoading: false }),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
@@ -177,8 +178,8 @@ describe('SpeedTrendChart — monthly aggregation (via accessible fallback table
     // Two month buckets, January before March.
     expect(rows).toHaveLength(2);
     expect(rows[0]).toEqual(['2026-01', '135', '7']);
-    // March has no AC session → the AC average zero-fills rather than dropping the row.
-    expect(rows[1]).toEqual(['2026-03', '100', '0']);
+    // March has no AC sample, not a measured zero.
+    expect(rows[1]).toEqual(['2026-03', '100', '—']);
   });
 
   it('averages within a month and rounds the kW to one decimal place', () => {
@@ -192,19 +193,49 @@ describe('SpeedTrendChart — monthly aggregation (via accessible fallback table
     // (150 + 145) / 2 = 147.5 kW, printed with the single-decimal rounding.
     const rows = readTableRows();
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toEqual(['2026-02', '147.5', '0']);
+    expect(rows[0]).toEqual(['2026-02', '147.5', '—']);
   });
 
-  it('coerces a null peak_power_w to 0 kW instead of crashing (null safety)', () => {
+  it('shows an empty chart when all peak powers are unavailable', () => {
     const sessions = [
-      // DC by charger_type, but peak power is unknown → contributes 0 kW.
+      // DC by charger_type, but peak power is unknown.
       makeSession({ started_at: '2026-04-01T10:00:00Z', charger_type: 'Tesla', peak_power_w: null }),
     ];
 
     renderChart(sessions);
 
-    const rows = readTableRows();
-    expect(rows[0]).toEqual(['2026-04', '0', '0']);
+    expect(screen.getByText('No data available')).toBeInTheDocument();
+  });
+
+  it('excludes missing and invalid powers from each subgroup denominator', () => {
+    renderChart([
+      makeSession({ charger_type: 'Tesla', peak_power_w: 120_000 }),
+      ...[null, undefined, NaN, Infinity, -Infinity].map(peak_power_w =>
+        makeSession({ charger_type: 'Tesla', peak_power_w }),
+      ),
+      makeSession({ charger_type: 'AC', peak_power_w: null }),
+    ]);
+    expect(readTableRows()).toEqual([['2026-01', '120', '—']]);
+  });
+
+  it('preserves measured zero, signed power and fractional mean rounding', () => {
+    renderChart([
+      makeSession({ charger_type: 'Tesla', peak_power_w: 0 }),
+      makeSession({ charger_type: 'Tesla', peak_power_w: -1_250 }),
+      makeSession({ charger_type: 'Tesla', peak_power_w: 2_000 }),
+      makeSession({ charger_type: 'AC', peak_power_w: 0 }),
+    ]);
+    expect(readTableRows()).toEqual([['2026-01', '0.3', '0']]);
+  });
+
+  it('does not create phantom month buckets for invalid dates', () => {
+    renderChart([
+      makeSession(),
+      ...['', 'not-a-date', '2026-13-01T10:00:00Z', '2026-01-invalid'].map(started_at =>
+        makeSession({ started_at }),
+      ),
+    ]);
+    expect(readTableRows()).toEqual([['2026-01', '150', '—']]);
   });
 });
 

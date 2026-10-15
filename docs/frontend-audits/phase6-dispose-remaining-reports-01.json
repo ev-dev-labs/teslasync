@@ -1,0 +1,544 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-dispose-remaining-reports-01",
+  "status": "DRAIN_ONLY_DISPOSITION_DELIVERED_NOT_APPLICATION_ACCEPTANCE",
+  "assignmentUTC": "2026-10-14T12:28:06.933Z",
+  "returnDeadlineUTC": "2026-10-14T12:48:06.933Z",
+  "authority": {
+    "workerContract": "docs\\orchestrator-loop.md",
+    "queueReadOnly": "migration-queue.md",
+    "dispatchReadOnly": "C:\\Users\\AtulM\\.copilot\\session-state\\52d6bc50-50e0-4562-abde-3a8441085408\\files\\tick-resume-dispatch.json",
+    "assignmentSelector": "batch[id=phase6-dispose-remaining-reports-01].reports",
+    "priorAcceptedMaps": [
+      {"file": "docs\\frontend-audits\\phase6-confirmed-fix-owner-map.json", "sha256": "9f0a3438efb9f7aa38d54fe22a923616d86312e9eb7e7aff5eca9574e4ba4e77"},
+      {"file": "docs\\frontend-audits\\phase6-confirmed-fix-owner-map-next.json", "sha256": "f8ba24d2a7eb48bef45740c0550b59036f7da40a5d764c969d235985cf4d5950"}
+    ],
+    "queueSnapshotSha256": "d7228ca62be3847a27085945a12439b2ba8bd6efcd355f24799aaa8796ff389e",
+    "writableFiles": ["docs\\frontend-audits\\phase6-dispose-remaining-reports-01.json", "web\\logs\\phase6-dispose-remaining-reports-01.log"],
+    "parentOnlyOperations": ["merge nine disposition chunks", "adjudicate and grant exact files", "register queue items", "create root work-items.json"],
+    "queueWrites": 0,
+    "rootWorkItemsWrites": 0,
+    "dispatchAuthorized": false,
+    "drainOnly": true
+  },
+  "method": {
+    "kind": "EXISTING_QA_REPORT_DISPOSITION_NOT_NEW_AUDITS",
+    "sourceOrFixtureInvestigation": "NOTRUN_PROHIBITED",
+    "compilerApplicationTestsBrowserApiNative": "NOTRUN_PROHIBITED",
+    "gitCatalogConfigInstallsSubagentsServersDocker": "NOTRUN_PROHIBITED",
+    "newFindings": 0,
+    "pathRule": "Every proposed path is relative to repository root and named in an assigned report or existing canonical owner metadata. Path spelling is normalized only; no source/test existence, current correctness or pass is inferred.",
+    "originalRecordRetention": "The 21 hash-pinned reports remain byte-authoritative and unmodified. reportDisposition is an overlay, not a replacement of original records. Each original finding is located by its exact report filename, original findingField and ID; array order remains the original order. Candidate arrays, checks, evidence, commands, dates, source pins, original failures, NOTRUN values, preservation, safety, authority and release records are retained at originalRecordsPointer, including fields not repeated here.",
+    "candidateRule": "All 91 original candidates remain unpromoted. A shared confirmed mechanism in another report does not turn a candidate into another confirmed finding.",
+    "ownerRule": "Only actual corrective objectives are owners. Historical source migration, QA delivery and fixture-only completion are not corrective or native acceptance. Completed roots are reused, never redispatched.",
+    "claimRule": "All fixItems are proposals or blocked acceptance needs, not grants or new queue entries. Parent must reconcile actual live writers; queue markers alone are not lifecycle evidence.",
+    "testRule": "Listed covering tests are exact report/queue-mentioned files, not fresh executions. Where none is established, exact test ownership is an explicit dispatch blocker rather than a guessed filename.",
+    "retryRule": "Existing failed attempts, original clocks and exhausted one-rescue budgets remain unchanged. No proposed item renews an old failure budget. External startup failures and zero discovery remain NOTPASS."
+  },
+  "counts": {
+    "assignedReports": 21,
+    "processedReports": 21,
+    "chunkRemainder": 0,
+    "rawOriginalConfirmedFindings": 143,
+    "rawOriginalCandidates": 91,
+    "confirmedFindingsAfterDedup": "Not a new defect count; original 143 records are mapped below to shared corrective objectives, accepted roots and blockers.",
+    "canonicalRemainderBeforeChunk": 189,
+    "canonicalRemainderAfterThisChunkOnly": 168,
+    "remainderMeaning": "168 untouched report filenames in the prior-next-map inventory after removing exactly these 21, not 168 defects. Other eight concurrent chunks are parent-owned and not accounted as completed here.",
+    "fixItems": 39,
+    "proposedSourceCorrectionGroups": 37,
+    "blockedOwnerAdjudicationItems": 1,
+    "remainingAcceptanceGrantItems": 1,
+    "originalFindingsExistingOwnerOnly": 35,
+    "originalFindingsExistingOwnerAndRemainingProposal": 7,
+    "originalFindingsProposalOnly": 101,
+    "newQueueItems": 0
+  },
+  "canonicalOwners": {
+    "phase6-fix-fleet-api-export-values": {"queueStatus": "[x]", "objective": "F1 access/auto-poll CSV/JSON export fidelity", "acceptance": "Source/scoped receipt only; native NOTRUN."},
+    "phase6-fix-fleet-api-catalog-contracts": {"queueStatus": "[x]", "objective": "F2 localized category region and F3 grouping/sort mobile allocation", "acceptance": "Accepted 12-case scoped receipt, not native geometry."},
+    "phase6-fix-fleet-api-resume-mobile-target": {"queueStatus": "[x]", "objective": "F3 polling Resume mobile caller allocation", "acceptance": "Source/scoped receipt only, actual geometry NOTRUN."},
+    "phase6-fix-nested-api-errors": {"queueStatus": "[x]", "objective": "SD-01 and SR005 nested/flat error normalization in both transport paths", "acceptance": "Retained production plus additive scoped proof; no mounted/native approval."},
+    "phase6-fix-schema-details-parity": {"queueStatus": "[x]", "objective": "SD-02 evidence-derived drawer attention and narrative", "acceptance": "No-change source intake; native NOTRUN."},
+    "phase6-fix-schema-copy-feedback-targets": {"queueStatus": "[x]", "objective": "SD-03 clipboard failure feedback and SD-04 mobile allocation", "acceptance": "Retained scoped proof; external global setup diagnostic and native geometry remain."},
+    "phase6-fix-table-filtered-empty-copy": {"queueStatus": "[x]", "objective": "Loaded nonempty table filtered to zero has distinct no-match state", "acceptance": "Reuse for XRAY-06 and SQ-005; no caller workaround or repeated shared correction."},
+    "phase6-fix-relative-future-dates": {"queueStatus": "[x]", "objective": "Future/past relative-date semantics and locale-aware supported formatter", "acceptance": "Retain actual 23-case receipt; caller omission of saved formatter options is separate."},
+    "phase6-fix-selection-prerequisite-trust": {"queueStatus": "[x]", "objective": "Expose existing vehiclesState prerequisite source trust", "acceptance": "Source accepted; original normal runtime was catalog-blocked with zero discovery. Caller adoption is not thereby accepted."},
+    "phase6-proof-selection-prerequisite-trust": {"queueStatus": "[ ]", "objective": "Already-owned remaining exact selection-hook runtime proof", "acceptance": "Continue this existing proof only; do not duplicate it or reset its history."},
+    "phase6-fix-gdpr-manifest-contract": {"queueStatus": "[x]", "objective": "F01/F02/F03 canonical manifest DTO, encoded metadata identity and polling contract", "acceptance": "Producer contract supersedes historical job-status assumptions."},
+    "phase6-fix-gdpr-page-trust-expiry": {"queueStatus": "[x]", "objective": "F04/F13 paused-first-load and actual expiry eligibility", "acceptance": "Source correction, not new native/export permission."},
+    "phase6-fix-gdpr-details-semantics": {"queueStatus": "[x]", "objective": "F08/F09/F10 definition semantics, copy recovery and typography imports", "acceptance": "Existing owner retained."},
+    "phase6-fix-gdpr-lifecycle-contract": {"queueStatus": "[x]", "objective": "F07/F10/F12 chronological lifecycle and restrained display", "acceptance": "Existing owner retained."},
+    "phase6-fix-gdpr-lookup-contract": {"queueStatus": "[x]", "objective": "F03 copy and F10/F12 lookup presentation", "acceptance": "Existing owner retained."},
+    "phase6-fix-gdpr-download-contract": {"queueStatus": "[x]", "objective": "F11/F14/F10 truthful download copy and shared semantic chrome", "acceptance": "No real download/export/erase authority inferred."},
+    "phase6-fix-gdpr-status-catalog": {"queueStatus": "[-]", "objective": "F05 obsolete producer-dependent job status leaves", "acceptance": "Explicitly excluded after canonical manifest producer has no artifact.status. Do not resurrect five phantom keys or its obsolete fixture."},
+    "phase6-fix-admin-manifest-dlq-caller-catalog": {"queueStatus": "[x]", "objective": "Actual manifest/DLQ caller copy, not obsolete job status leaves", "acceptance": "Preserve accepted copy rather than broad recataloging."},
+    "phase6-fix-advanced-evidence-date-preferences": {"queueStatus": "[x]", "objective": "EvidencePanel and AnalysisBrief saved locale/timezone dates", "acceptance": "23-case source/date receipt; all six matching original reports deduplicated, no rerun."},
+    "phase6-fix-behavioral-evidence-source-trust": {"queueStatus": "[x]", "objective": "BS001 existing EvidencePanel query/source trust and sentinel caller", "acceptance": "Source-only intake with retained external zero-discovery history; not blanket native approval."},
+    "phase6-fix-charging-forensics-evidence-source": {"queueStatus": "[x]", "objective": "CF-01 real query trust adoption at existing charging caller", "acceptance": "Do not reopen EvidencePanel trust root."},
+    "phase6-proof-charging-forensics-evidence-source": {"queueStatus": "[x]", "objective": "Original caller runtime proof", "acceptance": "19 unique cumulative cases in current receipt; not native acceptance or a fresh unchanged rerun."},
+    "phase6-fix-insight-panel-retained-empty": {"queueStatus": "[x]", "objective": "CS-01 retained-empty object-envelope presentation", "acceptance": "24-case receipt retained; separately reported original contradictory oracle debt is not silently waived."},
+    "phase6-fix-evidence-plural-catalog": {"queueStatus": "[x]", "objective": "CF-07 and BS004 singular/other sampleLine leaves with formattedCount", "acceptance": "Two exact leaves and generated projection accepted; no new copy campaign."},
+    "phase6-fix-charging-forensics-mobile-sample-count": {"queueStatus": "[x]", "objective": "Mobile sampleLine formattedCount/reactivity/unknown adoption", "acceptance": "19 original actual passes, not 20; seven new regressions remained catalog-blocked NOTRUN."},
+    "phase6-proof-charging-forensics-mobile-sample-count": {"queueStatus": "[ ]", "objective": "Existing remaining exact affected runtime proof", "acceptance": "Do not create a second proof or rerun unchanged historical passes."},
+    "phase6-fix-causal-window-field-validation": {"queueStatus": "[x]", "objective": "CE003 field-specific window errors, focus and bounds", "acceptance": "Retain 55-pass/1-fail then 7-pass/49-unselected chronology, not a fresh 56-pass claim."},
+    "phase6-fix-causal-live-write-guard": {"queueStatus": "[x]", "objective": "CE004 persisted estimate requiresLiveMode", "acceptance": "Retain source and coupled original-fixture repairs; latest external guard zero discovery is not pass."},
+    "phase6-fix-causal-journey-hint-catalog": {"queueStatus": "[x]", "objective": "CE003 existing exact validation hint copy", "acceptance": "Not permission for unrelated enum/copy leaves."},
+    "phase6-fix-secret-rotation-derivation-owner": {"queueStatus": "[x]", "objective": "Unknown-age versus measured-zero oldest selection only", "acceptance": "Different from SR001 certificate-expiry ranking. Do not reopen or expand its accepted correction."},
+    "phase6-fix-secret-rotation-unknown-urgency": {"queueStatus": "[x]", "objective": "Unknown threshold urgency/fill only", "acceptance": "Different from SR001 age-versus-expiry horizon semantics."},
+    "phase6-fix-secret-rotation-brief-trust": {"queueStatus": "[x]", "objective": "Canonical brief trust/provenance surfaces", "acceptance": "Different from SR002 cause wording and SR003 cold-paused details. Historical 7 discovered/3 passed/4 failed remains."}
+  },
+  "reportDisposition": [
+    {
+      "file": "phase6-qa-admin-feedback-queue.json", "sha256": "49df9658b57b16d00ed4a68fd1f42e1b1eba59eab1a91942e5022a8b06865980",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 7,
+      "findings": {"FQ001": ["phase6-dispose-01-feedback-page"], "FQ002": ["phase6-dispose-01-feedback-page"], "FQ003": ["phase6-dispose-01-feedback-page"], "FQ004": ["phase6-dispose-01-feedback-hook", "phase6-dispose-01-feedback-page"], "FQ005": ["phase6-dispose-01-feedback-triage"], "FQ006": ["phase6-dispose-01-table-disclosure-names"], "FQ007": ["phase6-dispose-01-feedback-optional-dto"]},
+      "candidateField": "candidatesNotNativeFailures", "rawCandidateCount": 7, "candidateIds": ["C01", "C02", "C03", "C04", "C05", "C06", "C07"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-feedback-queue.json#"
+    },
+    {
+      "file": "phase6-qa-admin-fleet-api.json", "sha256": "cfd6f16810e9b1df8ed9ccbbd41aa87b16d3ede48a76a3b28a8cd0d5b5bcf5a5",
+      "findingField": "findings", "rawConfirmedCount": 3,
+      "findings": {"F1": ["phase6-fix-fleet-api-export-values"], "F2": ["phase6-fix-fleet-api-catalog-contracts"], "F3": ["phase6-fix-fleet-api-catalog-contracts", "phase6-fix-fleet-api-resume-mobile-target"]},
+      "candidateField": "candidates", "rawCandidateCount": 4, "candidateIds": ["C1", "C2", "C3", "C4"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-fleet-api.json#"
+    },
+    {
+      "file": "phase6-qa-admin-fleet-telemetry-coverage.json", "sha256": "ff0f7d84cb608d580e06c07106c3a5a204b7bf26a3f8eb8bf5b1108923c57789",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 8,
+      "findings": {"F01": ["phase6-dispose-01-coverage-opaque-dictionaries"], "F02": ["phase6-dispose-01-coverage-presentation"], "F03": ["phase6-dispose-01-coverage-presentation"], "F04": ["phase6-dispose-01-coverage-presentation", "phase6-dispose-01-canonical-copy"], "F05": ["phase6-dispose-01-canonical-copy"], "F06": ["phase6-dispose-01-coverage-presentation", "phase6-dispose-01-canonical-copy"], "F07": ["phase6-dispose-01-fetch-timestamp-preferences"], "F08": ["phase6-dispose-01-coverage-presentation"]},
+      "candidateField": "candidates", "rawCandidateCount": 3, "candidateIds": ["U01", "U02", "U03"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-fleet-telemetry-coverage.json#"
+    },
+    {
+      "file": "phase6-qa-admin-gas-price-auto-poll.json", "sha256": "43402b27b683e4c863b458bf218a6fc471ae08902a71139c462b5ebc7c6453c4",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 11,
+      "findings": {"GAS-01": ["phase6-dispose-01-gas-hook-lifecycle"], "GAS-02": ["phase6-dispose-01-gas-hook-lifecycle"], "GAS-03": ["phase6-dispose-01-gas-display-denomination"], "GAS-04": ["phase6-dispose-01-gas-display-denomination"], "GAS-05": ["phase6-dispose-01-gas-worker-contract", "phase6-dispose-01-gas-display-denomination"], "GAS-06": ["phase6-dispose-01-gas-hook-lifecycle", "phase6-dispose-01-gas-display-denomination"], "GAS-07": ["phase6-dispose-01-gas-display-denomination"], "GAS-08": ["phase6-dispose-01-workspace-global-scope"], "GAS-09": ["phase6-dispose-01-gas-worker-contract"], "GAS-10": ["phase6-dispose-01-gas-hook-lifecycle"], "GAS-11": ["phase6-dispose-01-gas-display-denomination"]},
+      "candidateField": "candidates", "rawCandidateCount": 3, "candidateIds": ["GAS-C01", "GAS-C02", "GAS-C03"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-gas-price-auto-poll.json#"
+    },
+    {
+      "file": "phase6-qa-admin-gdprexport.json", "sha256": "b0ae95126fb26f90f0c552ed6b94a655c518fa9864c0a95340832d103942c355",
+      "findingField": "confirmedSourceIssues", "rawConfirmedCount": 14,
+      "findings": {"F01": ["phase6-fix-gdpr-manifest-contract"], "F02": ["phase6-fix-gdpr-manifest-contract"], "F03": ["phase6-fix-gdpr-manifest-contract", "phase6-fix-gdpr-lookup-contract"], "F04": ["phase6-fix-gdpr-page-trust-expiry"], "F05": ["phase6-fix-gdpr-status-catalog", "phase6-fix-admin-manifest-dlq-caller-catalog"], "F06": ["phase6-fix-relative-future-dates"], "F07": ["phase6-fix-gdpr-lifecycle-contract"], "F08": ["phase6-fix-gdpr-details-semantics"], "F09": ["phase6-fix-gdpr-details-semantics"], "F10": ["phase6-fix-gdpr-details-semantics", "phase6-fix-gdpr-lifecycle-contract", "phase6-fix-gdpr-lookup-contract", "phase6-fix-gdpr-download-contract"], "F11": ["phase6-fix-gdpr-download-contract"], "F12": ["phase6-fix-gdpr-lifecycle-contract", "phase6-fix-gdpr-lookup-contract"], "F13": ["phase6-fix-gdpr-page-trust-expiry"], "F14": ["phase6-fix-gdpr-download-contract"]},
+      "candidateField": "candidatesNotPromotedToConfirmedRuntimeDefects", "rawCandidateCount": 6, "candidateIds": ["C01", "C02", "C03", "C04", "C05", "C06"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-gdprexport.json#"
+    },
+    {
+      "file": "phase6-qa-admin-ingest-xray.json", "sha256": "5cd989d26cb38b810f36ade170d15a90fa5aea7c867ebb50e279f93c82e966fc",
+      "findingField": "confirmedFindings", "rawConfirmedCount": 7,
+      "findings": {"XRAY-01": ["phase6-dispose-01-ingest-contract"], "XRAY-02": ["phase6-dispose-01-ingest-contract"], "XRAY-03": ["phase6-dispose-01-ingest-presentation"], "XRAY-04": ["phase6-fix-selection-prerequisite-trust", "phase6-proof-selection-prerequisite-trust", "phase6-dispose-01-ingest-presentation"], "XRAY-05": ["phase6-dispose-01-ingest-presentation"], "XRAY-06": ["phase6-fix-table-filtered-empty-copy"], "XRAY-07": ["phase6-dispose-01-canonical-copy", "phase6-dispose-01-ingest-presentation"]},
+      "candidateField": "candidates", "rawCandidateCount": 6, "candidateIds": ["C-01", "C-02", "C-03", "C-04", "C-05", "C-06"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-ingest-xray.json#"
+    },
+    {
+      "file": "phase6-qa-admin-live-signal-inspector.json", "sha256": "b2a22fb91d0ca5f06e05f605e21ed1184e2269a272431d0ab07fce5e5fadf930",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 6,
+      "findings": {"LSI-01": ["phase6-dispose-01-live-signal-presentation"], "LSI-02": ["phase6-fix-selection-prerequisite-trust", "phase6-proof-selection-prerequisite-trust", "phase6-dispose-01-live-signal-presentation"], "LSI-03": ["phase6-dispose-01-live-signal-presentation"], "LSI-04": ["phase6-dispose-01-live-signal-presentation"], "LSI-05": ["phase6-dispose-01-canonical-copy"], "LSI-06": ["phase6-dispose-01-live-source-provenance"]},
+      "candidateField": "candidatesNotConfirmed", "rawCandidateCount": 5, "candidateIds": ["C-01", "C-02", "C-03", "C-04", "C-05"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-live-signal-inspector.json#"
+    },
+    {
+      "file": "phase6-qa-admin-redis-signal-viewer.json", "sha256": "5544fc1fd0c9b0686bd487dce669eec76124e4422fc471bbb7c59ea7d74aad6b",
+      "findingField": "findings", "rawConfirmedCount": 11,
+      "findings": {"F01": ["phase6-dispose-01-redis-presentation"], "F02": ["phase6-dispose-01-redis-presentation"], "F03": ["phase6-fix-selection-prerequisite-trust", "phase6-proof-selection-prerequisite-trust", "phase6-dispose-01-redis-presentation"], "F04": ["phase6-dispose-01-redis-client-boundary"], "F05": ["phase6-dispose-01-redis-client-boundary"], "F06": ["phase6-dispose-01-redis-diagnostic-contract"], "F07": ["phase6-dispose-01-redis-diagnostic-contract"], "F08": ["phase6-dispose-01-redis-client-boundary", "phase6-dispose-01-redis-presentation"], "F09": ["phase6-dispose-01-redis-presentation"], "F10": ["phase6-dispose-01-redis-presentation"], "F11": ["phase6-dispose-01-redis-diagnostic-contract"]},
+      "candidateField": "candidates", "rawCandidateCount": 6, "candidateIds": ["C01", "C02", "C03", "C04", "C05", "C06"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-redis-signal-viewer.json#"
+    },
+    {
+      "file": "phase6-qa-admin-schema-drift.json", "sha256": "7ef4e35a412ce5d82357a5c45ad71e6767c8029e4eb4e2c4d6f4443d87ca8066",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 4,
+      "findings": {"SD-01": ["phase6-fix-nested-api-errors"], "SD-02": ["phase6-fix-schema-details-parity"], "SD-03": ["phase6-fix-schema-copy-feedback-targets"], "SD-04": ["phase6-fix-schema-copy-feedback-targets"]},
+      "candidateField": "candidates", "rawCandidateCount": 6, "candidateIds": ["C-01", "C-02", "C-03", "C-04", "C-05", "C-06"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-schema-drift.json#"
+    },
+    {
+      "file": "phase6-qa-admin-secret-rotation.json", "sha256": "c245e97e9d748bee3c24d38910bd76c0e4025165b950ac4647135b39eb505838",
+      "findingField": "confirmedFindings", "rawConfirmedCount": 8,
+      "findings": {"SR001": ["phase6-dispose-01-secret-rotation-semantics"], "SR002": ["phase6-dispose-01-secret-rotation-semantics", "phase6-dispose-01-canonical-copy"], "SR003": ["phase6-dispose-01-secret-rotation-semantics"], "SR004": ["phase6-dispose-01-secret-rotation-semantics", "phase6-fix-nested-api-errors"], "SR005": ["phase6-fix-nested-api-errors"], "SR006": ["phase6-dispose-01-canonical-copy"], "SR007": ["phase6-dispose-01-secret-rotation-semantics"], "SR008": ["phase6-fix-relative-future-dates", "phase6-dispose-01-secret-rotation-semantics"]},
+      "candidateField": "candidates", "rawCandidateCount": 5, "candidateIds": ["C01", "C02", "C03", "C04", "C05"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-secret-rotation.json#"
+    },
+    {
+      "file": "phase6-qa-admin-security-access.json", "sha256": "fbc2b443880a53d134c700069e380ae0374940d060809b16a4270a7a83d5e389",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 7,
+      "findings": {"Q001": ["phase6-dispose-01-security-evidence-presentation"], "Q002": ["phase6-dispose-01-security-evidence-presentation"], "Q003": ["phase6-dispose-01-security-evidence-presentation"], "Q004": ["phase6-dispose-01-security-evidence-presentation"], "Q005": ["phase6-dispose-01-security-evidence-presentation"], "Q006": ["phase6-dispose-01-vehicle-twin-tooltips"], "Q007": ["phase6-dispose-01-security-evidence-presentation"]},
+      "candidateField": "candidates", "rawCandidateCount": 4, "candidateIds": ["C001", "C002", "C003", "C004"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-security-access.json#"
+    },
+    {
+      "file": "phase6-qa-admin-slow-queries.json", "sha256": "a3217555d6f3c5cf49d3d1ed470535df174a91ec85a56db4fab00933146d383e",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 6,
+      "findings": {"SQ-001": ["phase6-dispose-01-slow-query-evidence"], "SQ-002": ["phase6-dispose-01-slow-query-evidence"], "SQ-003": ["phase6-dispose-01-slow-query-evidence"], "SQ-004": ["phase6-dispose-01-canonical-copy"], "SQ-005": ["phase6-fix-table-filtered-empty-copy"], "SQ-006": ["phase6-dispose-01-slow-query-evidence"]},
+      "candidateField": "candidates", "rawCandidateCount": 4, "candidateIds": ["SQ-C01", "SQ-C02", "SQ-C03", "SQ-C04"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-slow-queries.json#"
+    },
+    {
+      "file": "phase6-qa-admin-tesla-feature-flags.json", "sha256": "ca5439010019da3cc56edd2ab5b02834b7628701f83ebdcf6a7b783e47336468",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 7,
+      "findings": {"TFF-01": ["phase6-dispose-01-tesla-feature-presentation"], "TFF-02": ["phase6-dispose-01-tesla-feature-presentation"], "TFF-03": ["phase6-dispose-01-user-refresh-boundaries", "phase6-dispose-01-tesla-feature-presentation"], "TFF-04": ["phase6-dispose-01-user-refresh-boundaries"], "TFF-05": ["phase6-dispose-01-tesla-feature-presentation"], "TFF-06": ["phase6-dispose-01-tesla-feature-presentation"], "TFF-07": ["phase6-dispose-01-tesla-feature-presentation"]},
+      "candidateField": "candidates", "rawCandidateCount": 2, "candidateIds": ["TFF-C01", "TFF-C02"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-tesla-feature-flags.json#"
+    },
+    {
+      "file": "phase6-qa-admin-tesla-orders.json", "sha256": "db35022df4210736788e9358c824ac5e64b85a16eb536bf5648b206f3e758717",
+      "findingField": "confirmed_source_findings", "rawConfirmedCount": 6,
+      "findings": {"F1": ["phase6-dispose-01-tesla-order-presentation"], "F2": ["phase6-dispose-01-tesla-order-presentation"], "F3": ["phase6-dispose-01-tesla-order-presentation"], "F4": ["phase6-dispose-01-tesla-order-presentation"], "F5": ["phase6-dispose-01-tesla-order-presentation"], "F6": ["phase6-dispose-01-tesla-order-presentation"]},
+      "candidateField": "candidates", "rawCandidateCount": 6, "candidateIds": ["C1", "C2", "C3", "C4", "C5", "C6"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-tesla-orders.json#"
+    },
+    {
+      "file": "phase6-qa-admin-tesla-region.json", "sha256": "e58d7ca8f723b64f553f94b00464a28899749f0aa65094de41b7034a690c2cd3",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 9,
+      "findings": {"TR001": ["phase6-dispose-01-tesla-region-presentation"], "TR002": ["phase6-dispose-01-tesla-region-presentation"], "TR003": ["phase6-dispose-01-tesla-region-presentation"], "TR004": ["phase6-dispose-01-tesla-region-presentation"], "TR005": ["phase6-dispose-01-tesla-region-presentation"], "TR006": ["phase6-dispose-01-tesla-region-presentation"], "TR007": ["phase6-dispose-01-workspace-global-scope"], "TR008": ["phase6-dispose-01-user-refresh-boundaries"], "TR009": ["phase6-dispose-01-user-refresh-boundaries", "phase6-dispose-01-tesla-region-presentation"]},
+      "candidateField": "candidates", "rawCandidateCount": 4, "candidateIds": ["C01", "C02", "C03", "C04"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-tesla-region.json#"
+    },
+    {
+      "file": "phase6-qa-admin-vehicle-cost.json", "sha256": "543ced08603408d3646ad35c9ac81f7e6738bbe34d95e85309433f46df9164b2",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 6,
+      "findings": {"F01": ["phase6-dispose-01-vehicle-cost-integration"], "F02": ["phase6-dispose-01-vehicle-cost-integration"], "F03": ["phase6-dispose-01-vehicle-cost-integration", "phase6-dispose-01-workspace-global-scope"], "F04": ["phase6-dispose-01-canonical-copy"], "F05": ["phase6-fix-relative-future-dates", "phase6-dispose-01-vehicle-cost-integration"], "F06": ["phase6-dispose-01-vehicle-cost-integration"]},
+      "candidateField": "candidates", "rawCandidateCount": 5, "candidateIds": ["C01", "C02", "C03", "C04", "C05"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-admin-vehicle-cost.json#"
+    },
+    {
+      "file": "phase6-qa-advanced-behavioral-sentinel.json", "sha256": "a843ead8ce1e296e92ca7505b1e0b7776386eb6d79b88ec37e33b991512bccf6",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 4,
+      "findings": {"BS001": ["phase6-fix-behavioral-evidence-source-trust"], "BS002": ["phase6-fix-advanced-evidence-date-preferences"], "BS003": ["phase6-dispose-01-evidence-known-labels"], "BS004": ["phase6-fix-evidence-plural-catalog", "phase6-dispose-01-evidence-count-adjudication"]},
+      "candidateField": "candidates", "rawCandidateCount": 2, "candidateIds": ["BS-C01", "BS-C02"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-advanced-behavioral-sentinel.json#"
+    },
+    {
+      "file": "phase6-qa-advanced-causal-experimentation.json", "sha256": "ed5ea86d84e26fa5435826f7ee210edfba9342a9c90cd92028412185c3ab1b87",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 4,
+      "findings": {"CE001": ["phase6-fix-advanced-evidence-date-preferences"], "CE002": ["phase6-dispose-01-causal-known-state-labels", "phase6-dispose-01-evidence-known-labels"], "CE003": ["phase6-fix-causal-window-field-validation", "phase6-fix-causal-journey-hint-catalog"], "CE004": ["phase6-fix-causal-live-write-guard"]},
+      "candidateField": "candidates", "rawCandidateCount": 2, "candidateIds": ["C01", "C02"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-advanced-causal-experimentation.json#"
+    },
+    {
+      "file": "phase6-qa-advanced-charging-forensics.json", "sha256": "903433fe7b6ddaed8871e73a2b7d902a2454ec9d5a90afcf98235ba745e1977f",
+      "findingField": "confirmedIssues", "rawConfirmedCount": 7,
+      "findings": {"CF-01": ["phase6-fix-charging-forensics-evidence-source", "phase6-fix-behavioral-evidence-source-trust", "phase6-proof-charging-forensics-evidence-source"], "CF-02": ["phase6-fix-advanced-evidence-date-preferences"], "CF-03": ["phase6-dispose-01-forensics-record-and-export"], "CF-04": ["phase6-dispose-01-forensics-record-and-export"], "CF-05": ["phase6-dispose-01-forensics-export-completeness"], "CF-06": ["phase6-dispose-01-forensics-currency-contract"], "CF-07": ["phase6-fix-evidence-plural-catalog", "phase6-fix-charging-forensics-mobile-sample-count", "phase6-proof-charging-forensics-mobile-sample-count"]},
+      "candidateField": "candidates", "rawCandidateCount": 4, "candidateIds": ["C-01", "C-02", "C-03", "C-04"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-proof-charging-forensics-mobile-sample-count", "phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-advanced-charging-forensics.json#"
+    },
+    {
+      "file": "phase6-qa-advanced-charging-site-twin.json", "sha256": "7ea4a6e9cda2521d5994ddfcade26706dc00970e3d4dd7055293741947eabcd4",
+      "findingField": "confirmedSourceFindings", "rawConfirmedCount": 4,
+      "findings": {"ST-001": ["phase6-dispose-01-site-twin-submitted-snapshot"], "ST-002": ["phase6-fix-advanced-evidence-date-preferences"], "ST-003": ["phase6-dispose-01-evidence-known-labels"], "ST-004": ["phase6-dispose-01-evidence-count-adjudication", "phase6-dispose-01-analysis-brief-count"]},
+      "candidateField": "candidates", "rawCandidateCount": 4, "candidateIds": ["ST-C01", "ST-C02", "ST-C03", "ST-C04"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-advanced-charging-site-twin.json#"
+    },
+    {
+      "file": "phase6-qa-advanced-component-survival.json", "sha256": "18604490ea53aa5e1d077a8af4bff7d2450a56bc8919caf16a827dd85dc1846f",
+      "findingField": "confirmedFindings", "rawConfirmedCount": 4,
+      "findings": {"CS-01": ["phase6-fix-insight-panel-retained-empty"], "CS-02": ["phase6-fix-advanced-evidence-date-preferences"], "CS-03": ["phase6-dispose-01-survival-horizon-and-labels"], "CS-04": ["phase6-dispose-01-survival-horizon-and-labels", "phase6-dispose-01-evidence-known-labels"]},
+      "candidateField": "unpromotedCandidates", "rawCandidateCount": 3, "candidateIds": ["CS-C01", "CS-C02", "CS-C03"],
+      "native": "NOTRUN", "remainingAcceptance": ["phase6-dispose-01-remaining-acceptance-grants"], "originalRecordsPointer": "docs\\frontend-audits\\phase6-qa-advanced-component-survival.json#"
+    }
+  ],
+  "fixItems": [
+    {
+      "id": "phase6-dispose-01-feedback-page",
+      "task": "Proposed correction, NOT runnable until parent grants the exact pair and confirms writer release. Preserve phase6-qa-admin-feedback-queue.json confirmedIssues FQ001/FQ002/FQ003 and the page-affordance portion of FQ004. Clamp/recover offset after total shrinks without hiding Previous; distinguish cold paused/unresolved from authoritative empty; interlock row and bulk status mutations against the same records; expose existing live-only/read-only reasons after the hook correction. Preserve selected/expanded rows, filters, all sections, raw DTOs, retry and retained data. Add only affected cases in the already reported page test; no real feedback writes, API/browser, catalog edits or whole-page remigration. Keep original source evidence and test failures.",
+      "files": ["web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx", "web\\src\\features\\admin\\pages\\FeedbackQueuePage.test.tsx"],
+      "dependsOn": ["phase6-dispose-01-feedback-hook"],
+      "blockedBy": ["Parent exact exclusive grant; no write authority supplied by this disposition."]
+    },
+    {
+      "id": "phase6-dispose-01-feedback-hook",
+      "task": "For phase6-qa-admin-feedback-queue.json confirmedIssues FQ004, opt existing single/bulk PATCH calls into the existing requiresLiveMode boundary. Preserve mutation identities, status payloads, invalidation, transport defaults and no-reconnect-queue behavior. Do not broaden client/offline policy or change backend rules. This is distinct from historical feedback QA. Parent must identify and grant the exact covering hook test before dispatch; no test filename is established in the report. No real PATCH or catalog changes.",
+      "files": ["web\\src\\api\\hooks\\useFeedback.ts"], "dependsOn": [],
+      "blockedBy": ["Exact covering hook test path/grant unknown."]
+    },
+    {
+      "id": "phase6-dispose-01-feedback-triage",
+      "task": "For phase6-qa-admin-feedback-queue.json confirmedIssues FQ005, propagate the existing placeholder/updating eligibility interlock from FeedbackExpansion to AIFeedbackQueueTriage so retained old-row IDs cannot start a new draft POST. Preserve advisor output, pending state, source identity and existing opt-in behavior; do not infer that manual controls disable AI. Use existing feature-card eligibility capabilities only. Parent must grant exact AI/expansion covering tests; do not run a real AI draft request.",
+      "files": ["web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx", "web\\src\\components\\ai\\AIFeedbackQueueTriage.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact covering tests and AI permission/eligibility representation grant unknown."]
+    },
+    {
+      "id": "phase6-dispose-01-table-disclosure-names",
+      "task": "For phase6-qa-admin-feedback-queue.json confirmedIssues FQ006, correct the existing shared DataTable disclosure accessible name to include its supplied rowLabel, preserving expand/collapse action semantics, localized labels, row IDs and disclosure behavior. This is NOT phase6-fix-table-filtered-empty-copy, which owns a different accepted mechanism. Parent must serialize this shared root across all chunks and identify exact covering tests; no guessed test or new table implementation.",
+      "files": ["web\\src\\components\\ui\\DataTable.tsx"], "dependsOn": [],
+      "blockedBy": ["Shared DataTable root serialization and exact disclosure-name test grant unknown."]
+    },
+    {
+      "id": "phase6-dispose-01-feedback-optional-dto",
+      "task": "For phase6-qa-admin-feedback-queue.json confirmedIssues FQ007, align only FeedbackEntry's already reported omitempty fields with the actual omitted-or-present contract, including triaged_at. Preserve raw JSON names, valid values and existing nullable cases; do not modify backend storage, resurrect legacy fields or assume nil serializes null. api/types.ts is parent-owned shared scope. Require exact type-contract covering ownership and consumer compatibility grant before any edit.",
+      "files": ["web\\src\\api\\types.ts"], "dependsOn": [],
+      "blockedBy": ["Parent shared-type authority and exact covering contract test unknown; cross-chunk serialization required."]
+    },
+    {
+      "id": "phase6-dispose-01-coverage-opaque-dictionaries",
+      "task": "For phase6-qa-admin-fleet-telemetry-coverage.json confirmedIssues F01, protect opaque destination dictionary identities at the existing typed coverage hook boundary without globally deleting dual-shape camelCaseKeys behavior. Prevent signal_log/drive_telemetry/unit_history aliases becoming extra destinations/counts while retaining legitimate fan-out and raw identity. Preserve original real-client-boundary evidence and add a specifically granted covering boundary regression. Do not reconfigure telemetry, edit routing or treat 13 prior mocked tests as boundary proof.",
+      "files": ["web\\src\\api\\hooks\\useFleetTelemetry.ts"], "dependsOn": [],
+      "blockedBy": ["Exact real-client-boundary test path/grant unknown; broader opaque-map root overlaps other chunks/candidates and must be parent-adjudicated."]
+    },
+    {
+      "id": "phase6-dispose-01-coverage-presentation",
+      "task": "For phase6-qa-admin-fleet-telemetry-coverage.json confirmedIssues F02/F03/F04/F06/F08, preserve every field, stable category table identity and all section shells. Make column/dual-write evidence mobile-reachable through existing detail/scroll support; distinguish unresolved/paused initial source from true empty; describe subscribed as configured desired policy, not observed ingestion; explain dash as absent per-field column without claiming signal_log; give the existing filter a persistent localized visible label. Use existing trust/components only. Preserve generated-package provenance and no-runtime-telemetry authority. Page test is reported; exact category covering grant and exact changed canonical legend leaf ownership remain blockers, not guessed edits.",
+      "files": ["web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.tsx", "web\\src\\features\\admin\\components\\continuation-admin-3\\CoverageCategory.tsx", "web\\src\\features\\admin\\pages\\FleetTelemetryCoveragePage.test.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact category test and existing legend-copy keys/projection grants unknown; canonical changes parent-serialized separately."]
+    },
+    {
+      "id": "phase6-dispose-01-fetch-timestamp-preferences",
+      "task": "For phase6-qa-admin-fleet-telemetry-coverage.json confirmedIssues F07, adopt existing saved locale/timezone/clock preferences for sourceMetadata fetch timestamp and its explicit coverage caller. Preserve last-success timestamp, unknown handling and the distinction between receipt time and signal observation time. Do not change dateFormat or invent freshness metadata. This is not the accepted maps brief or EvidencePanel date correction. Parent must grant the shared consumer interface and exact covering test; other consumers remain unknown rather than implicitly authorized.",
+      "files": ["web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\CoverageOperationalBrief.tsx"], "dependsOn": [],
+      "blockedBy": ["Other sourceMetadata consumers/formatter interface and exact test grants unknown; cross-chunk shared-root serialization."]
+    },
+    {
+      "id": "phase6-dispose-01-gas-hook-lifecycle",
+      "task": "For phase6-qa-admin-gas-price-auto-poll.json confirmedIssues GAS-01/GAS-02/GAS-06/GAS-10, report manual POST acknowledgement as triggered, never completed; refresh history only from evidenced completion/advanced successful poll or an explicitly authorized bounded policy; disclose newest-50 loaded history unless a separately granted full pagination contract is implemented; opt all three gas mutations into existing requiresLiveMode with page/config affordances. Preserve independent retained/error states and raw prices. Do not infer background success from HTTP acknowledgement or silently run provider polling. Parent must grant exact hook/config tests; the reported page test alone is not complete boundary proof.",
+      "files": ["web\\src\\api\\hooks\\useSettings.ts", "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.tsx", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasConfiguration.tsx", "web\\src\\features\\admin\\pages\\GasPriceAutoPollPage.test.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact hook/config covering tests; completion/pagination representation decision; shared useSettings root serialization."]
+    },
+    {
+      "id": "phase6-dispose-01-gas-display-denomination",
+      "task": "For phase6-qa-admin-gas-price-auto-poll.json confirmedIssues GAS-03/GAS-04/GAS-05/GAS-06/GAS-07/GAS-11, preserve row volume denomination and source USD currency without silently relabeling by saved symbol or joining incompatible gallon/liter values. The summary must use the price snapshot's evidenced source unit, not current settings defaults; unknown source unit remains unknown until the producer supplies it. Keep all history fields mobile-reachable, declare loaded chart/history scope and replace literal chart font sizes with existing preference-aware roles. Preserve SI/raw prices and accessible alternatives. Parent must grant exact component tests and decide display normalization without inventing FX or a new unit API.",
+      "files": ["web\\src\\features\\admin\\components\\continuation-admin-2\\GasTrendChart.tsx", "web\\src\\features\\admin\\components\\continuation-admin-2\\GasHistoryTable.tsx", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\GasPriceBrief.tsx"], "dependsOn": ["phase6-dispose-01-gas-worker-contract"],
+      "blockedBy": ["Source-denomination producer contract, exact component tests and approved display-only unit representation unknown."]
+    },
+    {
+      "id": "phase6-dispose-01-gas-worker-contract",
+      "task": "BLOCKED producer proposal for phase6-qa-admin-gas-price-auto-poll.json confirmedIssues GAS-09 and GAS-05: the existing worker loop must safely apply validated interval changes to the running ticker, and status must preserve the actual successful price's source denomination atomically. Preserve signed/raw values, Stop/Resume scheduling and background failure evidence. Do not add competing frontend timers or pretend an editable interval changes execution cadence. The report names worker, handler and frontend DTO; exact existing worker test, status serialization seam and permission to extend that representation are not established. Parent must grant those explicitly before implementation; no live polling or provider calls.",
+      "files": ["internal\\worker\\gas_price_worker.go", "internal\\api\\gasprice\\handler.go", "web\\src\\api\\types.ts"], "dependsOn": [],
+      "blockedBy": ["Existing worker/status tests unknown; source-unit status schema decision and shared-type grant unknown; overlaps feedback DTO root."]
+    },
+    {
+      "id": "phase6-dispose-01-workspace-global-scope",
+      "task": "One parent-serialized workspaceScope proposal for phase6-qa-admin-gas-price-auto-poll.json confirmedIssues GAS-08, phase6-qa-admin-tesla-region.json confirmedIssues TR007 and phase6-qa-admin-vehicle-cost.json confirmedIssues F03. Mark actual global /gas-price and /tesla-region routes vehicle-disabled without inventing vehicle-scoped endpoints. Vehicle-cost range registration must accompany a granted server contract supporting both bounds, not hide the local picker before the producer works. Preserve existing workspace routes and the completed inbox/dashboard correction. Parent must reconcile the current admin-audit/workspace owner and all other chunks; exact covering route tests are not established here.",
+      "files": ["web\\src\\lib\\workspaceScope.ts"], "dependsOn": [],
+      "blockedBy": ["Shared workspace writer serialization and exact covering test grant; vehicle-cost consumer activation requires actual both-bound producer capability."]
+    },
+    {
+      "id": "phase6-dispose-01-ingest-contract",
+      "task": "For phase6-qa-admin-ingest-xray.json confirmedFindings XRAY-01/XRAY-02, reconcile only the existing routed DTO and summary to actual now/window_start/optional last_seen_at/freshness_seconds and truthful full-window versus capped-field aggregation. Do not invent generated_at/unique_fields metadata or sum a limited field list as total samples; preserve source freshness distinct from HTTP receipt and existing bucket rows. The report identifies exact backend repo/handler/type/domain files and hook/page tests. Parent must serialize shared admin-diagnostics with the existing next12 flag owner and grant exact backend/type covering tests before editing. No telemetry routing or runtime DB investigation.",
+      "files": ["internal\\api\\ingestxray\\handler.go", "internal\\database\\observability\\ingest_xray_repo.go", "web\\src\\types\\admin-diagnostics.ts", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts", "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\IngestOperationalBrief.tsx", "web\\src\\api\\hooks\\useIngestXRay.test.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact backend/type tests and aggregate representation decision unknown; shared DTO owner serialization."]
+    },
+    {
+      "id": "phase6-dispose-01-ingest-presentation",
+      "task": "For phase6-qa-admin-ingest-xray.json confirmedFindings XRAY-03/XRAY-04/XRAY-05 and the human kind fallback portion of XRAY-07, retain Kind and controls in existing mobile detail, consume the already exposed vehiclesState prerequisite without redoing selection root, and preserve missing/nonfinite count as unknown rather than measured zero. Reuse existing formatters/localized fallback ownership, preserving valid zero, raw kinds, rows and all sections. XRAY-06 belongs to the accepted shared table filtered-empty correction and is not another caller patch. Parent grants exact component tests/copy fallback contract; the reported existing page test is listed, not executed.",
+      "files": ["web\\src\\features\\admin\\pages\\IngestXRayPage.tsx", "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx", "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx", "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx", "web\\src\\features\\admin\\pages\\IngestXRayPage.test.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact component tests and human fallback copy key unknown; accepted selection capability exists but its pending proof is not falsely counted as pass."]
+    },
+    {
+      "id": "phase6-dispose-01-live-signal-presentation",
+      "task": "For phase6-qa-admin-live-signal-inspector.json confirmedIssues LSI-01/LSI-02/LSI-03/LSI-04, distinguish initial paused source from empty Redis snapshot, adopt already exposed fleet prerequisite trust/retry, preserve every row kind/source/time on mobile, and treat reported Go year-1 timestamp sentinel as unknown rather than an ancient Last update. Preserve valid zero, raw signal identities, retained snapshots, SSE/retry and all panels. Do not rerun selection root or alter shared TimeStamp globally. Parent must grant exact domain tests in addition to the reported page test; no live vehicle/browser/API calls.",
+      "files": ["web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx", "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx", "web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts", "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.test.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact domain sentinel/mobile/source-state tests require parent grant."]
+    },
+    {
+      "id": "phase6-dispose-01-live-source-provenance",
+      "task": "BLOCKED representation/authority need for phase6-qa-admin-live-signal-inspector.json confirmedIssues LSI-06. Existing distributed fresh Redis reads are not proof of in-process L1 origin. Correct the existing handler/domain/source-badge contract or explicitly use truthful freshness/L1-equivalent wording without asserting physical provenance. Preserve L1/L2 layered architecture, raw source evidence and signed/zero readings; do not invent per-signal provenance that the producer cannot supply. Parent must adjudicate exact representation, shared badge consumers, copy keys and backend/UI tests before any runnable source task.",
+      "files": ["internal\\api\\signalinspect\\handler.go", "web\\src\\features\\admin\\components\\operationalbrief-h-q\\liveSignalMetrics.ts", "web\\src\\components\\data-display\\SourceLayerBadge.tsx"], "dependsOn": [],
+      "blockedBy": ["Actual per-signal origin is unavailable in current reported producer; representation/permission/test/copy seams unknown and cross-chunk source-badge overlap possible."]
+    },
+    {
+      "id": "phase6-dispose-01-redis-presentation",
+      "task": "For phase6-qa-admin-redis-signal-viewer.json findings F01/F02/F03/F08/F09/F10, keep snapshot and independent key-query loading/fatal/retained/paused/retry states separate, adopt existing fleet prerequisite trust, display compound/null/array values without lossy String coercion, use one semantic docs link instead of nested anchor/button, and use existing localized Vehicle fallback and formatted counts. Preserve every raw cache value/row/diagnostic and valid zero. No live Redis or real identities. F03 shared selection correction is already owned; only caller adoption is missing. Parent must grant exact diagnostic/component tests.",
+      "files": ["web\\src\\features\\admin\\pages\\RedisSignalViewerPage.tsx", "web\\src\\features\\admin\\components\\RedisDiagnosticEmptyState.tsx", "web\\src\\features\\admin\\pages\\RedisSignalViewerPage.test.tsx"], "dependsOn": ["phase6-dispose-01-redis-client-boundary"],
+      "blockedBy": ["Exact independent-query/compound diagnostic tests and safe generic-value display representation grant unknown."]
+    },
+    {
+      "id": "phase6-dispose-01-redis-client-boundary",
+      "task": "For phase6-qa-admin-redis-signal-viewer.json findings F04/F05 and DTO portion of F08, pass QueryFunctionContext AbortSignal through existing signal/key helpers to request, align omitted optional metadata with actual omitempty contract, and represent existing object/array/null values without dishonest scalar-only casts. Preserve query-key separation, cache values, defaults and cancellation semantics. Do not rewrite shared transport or coerce wire payloads. Parent must identify exact helper/hook tests; none is established by this report.",
+      "files": ["web\\src\\api\\hooks\\useRedisSignals.ts", "web\\src\\api\\devtools.ts"], "dependsOn": [],
+      "blockedBy": ["Exact helper/hook tests and generic-value DTO/display interface approval unknown; shared devtools boundary must be parent-serialized."]
+    },
+    {
+      "id": "phase6-dispose-01-redis-diagnostic-contract",
+      "task": "BLOCKED producer contract proposal for phase6-qa-admin-redis-signal-viewer.json findings F06/F07/F11. Preserve unavailable HLEN/nil-L1 counts as unknown, classify canonical int32/int64/float32 numeric values consistently, and expose sufficient per-row freshness/legacy provenance or explicitly withhold diagnostics that require it. A recent maximum cache timestamp cannot certify every row. Do not bypass signal.Store/L1, make Redis block ingest, or invent timestamp evidence. The reported handler is the exact source seam; parent must grant existing backend tests and approve optional count/per-row representation plus required consumers before implementation.",
+      "files": ["internal\\api\\devtools\\handler.go"], "dependsOn": [],
+      "blockedBy": ["Exact backend tests and unknown-count/per-row wire representation/consumer grants unknown."]
+    },
+    {
+      "id": "phase6-dispose-01-secret-rotation-semantics",
+      "task": "For phase6-qa-admin-secret-rotation.json confirmedFindings SR001/SR002/SR003/SR004/SR007/SR008, distinguish certificate days-until-expiry ranking/fill from age-threshold kinds, label future critical attention truthfully rather than overdue rotation, propagate cold-paused source trust into every existing detail/chart/outlook shell, require SUBSYSTEM_NOT_CONFIGURED rather than any 503 for unsupported classification, use category imports, and bind existing localized relative-time capability at the detail caller. Preserve all raw credentials metadata/severities/counts, valid zero, signed expiry and deterministic order. Do not redo accepted oldest/unknown-threshold/palette roots or nested-error transport. Existing component/controller tests are known from canonical queue and need exact exclusive regrant; no secrets, rotation, native capture or catalog edits.",
+      "files": ["web\\src\\features\\admin\\hooks\\useSecretRotationPage.ts", "web\\src\\features\\admin\\pages\\SecretRotationPage.tsx", "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationOutlook.tsx", "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationDetails.tsx", "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationCharts.tsx", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\SecretRotationOperationalBrief.tsx", "web\\src\\features\\admin\\hooks\\useSecretRotationPage.test.ts", "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationOutlook.test.tsx", "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationDetails.test.tsx", "web\\src\\features\\admin\\components\\structural-closure\\secret-rotation\\SecretRotationCharts.test.tsx", "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\SecretRotationOperationalBrief.test.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact new objective/regrant without renewing old budgets; page covering test and cause-specific canonical copy keys unknown."]
+    },
+    {
+      "id": "phase6-dispose-01-security-evidence-presentation",
+      "task": "For phase6-qa-admin-security-access.json confirmedIssues Q001/Q002/Q003/Q004/Q005/Q007, preserve tri-state missing security readings rather than measured unlocked/open/disabled, derive Live display from actual trust not truthiness, select the actual latest lock transition for reported ascending history, expose every historical door/window field on mobile, bucket and label Sentry days using saved workspace calendar semantics, and propagate cold-paused history trust across all panels. Preserve valid false/zero, order, exports/range and raw observations; no invented created_at or live commands. Parent grants exact domain helper/chart/table/source-state tests; use reported page test without replacing original assertions.",
+      "files": ["web\\src\\features\\admin\\pages\\SecurityAccessPage.tsx", "web\\src\\features\\admin\\components\\security-access\\helpers.ts", "web\\src\\features\\admin\\components\\security-access\\SecurityStatusCards.tsx", "web\\src\\features\\admin\\components\\security-access\\LiveVehicleState.tsx", "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx", "web\\src\\features\\admin\\components\\security-access\\EventTimeline.tsx", "web\\src\\features\\admin\\components\\security-access\\SentryModeChart.tsx", "web\\src\\features\\admin\\pages\\SecurityAccessPage.test.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact domain tests and trustworthy Live/unknown observation representation grant; no real security/vehicle data authority."]
+    },
+    {
+      "id": "phase6-dispose-01-vehicle-twin-tooltips",
+      "task": "For phase6-qa-admin-security-access.json confirmedIssues Q006, localize the existing shared VehicleTwin Sentry and lock visible tooltip payloads with already available suitable keys while retaining raw signal states, button names and interactive behavior. Do not duplicate the twin at the page or translate arbitrary vehicle data. Parent alone grants shared implementation and exact existing tooltip tests; no canonical campaign or native inference.",
+      "files": ["web\\src\\components\\vehicles\\VehicleTwin.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact shared twin tests and cross-chunk writer release unknown."]
+    },
+    {
+      "id": "phase6-dispose-01-slow-query-evidence",
+      "task": "For phase6-qa-admin-slow-queries.json confirmedIssues SQ-001/SQ-002/SQ-003/SQ-006, preserve absent buffer counters/cache ratios as unknown, keep empty-list maxima distinct from measured zero, expose all query metrics on mobile and propagate genuinely configured-missing state into analysis/details without ordinary empty claims. Preserve valid zero counts, fingerprints, filters/order/paging/export and panel shells. SQ-005 is already corrected by the existing shared filtered-empty owner; no duplicate caller workaround. The named existing domain/controller/summary/analysis sources need exact tests explicitly identified before dispatch; no SQL/API/native execution.",
+      "files": ["web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\helpers.ts", "web\\src\\features\\admin\\hooks\\useSlowQueriesPage.ts", "web\\src\\features\\admin\\components\\structural-closure\\slow-queries\\SlowQueriesDetails.tsx", "web\\src\\features\\admin\\components\\continuation-admin-1\\SlowQueryAnalysis.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact covering tests and the summary component's exact filename/grant are not established by selected finding evidence; do not guess its path."]
+    },
+    {
+      "id": "phase6-dispose-01-user-refresh-boundaries",
+      "task": "Consolidate one useUser.ts correction for phase6-qa-admin-tesla-feature-flags.json confirmedIssues TFF-03/TFF-04 and phase6-qa-admin-tesla-region.json confirmedIssues TR008/TR009. Existing region/feature-config refreshes must opt into requiresLiveMode and use accepted toast.featureConfigRefreshed/featureConfigFailed and toast.regionRefreshed/regionFailed keys rather than nonexistent toast.user.*. Preserve profile/order/account contracts and existing accepted profile-live-write objective; no new canonical keys or global offline policy. Parent grants exact hook tests and serializes all shared useUser owners; page affordances remain their respective page tasks.",
+      "files": ["web\\src\\api\\hooks\\useUser.ts"], "dependsOn": [],
+      "blockedBy": ["Exact refresh hook tests and exclusive shared-file grant unknown; cross-chunk shared root."]
+    },
+    {
+      "id": "phase6-dispose-01-tesla-feature-presentation",
+      "task": "For phase6-qa-admin-tesla-feature-flags.json confirmedIssues TFF-01/TFF-02/TFF-03 page affordance/TFF-05/TFF-06/TFF-07, preserve every flag type/details on mobile; bind distribution timestamp to saved date preferences; use category typography imports and existing preference-aware solid palette roles; propagate initial paused trust to all three views; expose live-only refresh reason after the hook contract. Preserve all raw flag keys, composition, existing summary and sections. This is TeslaFeatureFlags, NOT the separately owned next12 FeatureFlagsPage objective. Parent must identify exact existing component/page tests; do not guess them or create another flags system.",
+      "files": ["web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx", "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigTable.tsx", "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigDistribution.tsx", "web\\src\\features\\admin\\components\\tesla-feature-flags\\FeatureConfigComposition.tsx"], "dependsOn": ["phase6-dispose-01-user-refresh-boundaries"],
+      "blockedBy": ["Exact page/component tests and existing saved-chart role adoption contract unknown."]
+    },
+    {
+      "id": "phase6-dispose-01-tesla-order-presentation",
+      "task": "For phase6-qa-admin-tesla-orders.json confirmed_source_findings F1/F2/F3/F4/F5/F6, keep unknown delivery distinct from none scheduled, exclude cancelled rows from next-delivery selection, localize known status labels without mutating raw status, search displayed status phrases, wire existing load announcement to actual loading transition, and give OrdersTable a localized accessible name. Preserve orders, dates, views, filters, exports and all unknown/retained states. Candidates C1-C6 remain unpromoted, including unknown lifecycle-token policy and mobile geometry. Parent grants exact existing tests and any proven missing copy leaves; no Tesla refresh/API/browser operations.",
+      "files": ["web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx", "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts", "web\\src\\features\\admin\\components\\tesla-orders\\DeliveryOutlookPanel.tsx", "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx", "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact existing tests and missing-known-status copy keys unknown; no assumed date-only or future-status policy."]
+    },
+    {
+      "id": "phase6-dispose-01-tesla-region-presentation",
+      "task": "For phase6-qa-admin-tesla-region.json confirmedIssues TR001/TR002/TR003/TR004/TR005/TR006 and TR009 page affordance, keep paused first load distinct from no configured region, interlock empty/header refresh together, expose copy failure recovery, allocate existing copy mobile targets, do not label HTTP as secure, and restrict datacenter inference to documented Fleet API host identity rather than any .eu./.na./.cn. substring. Preserve raw region/URL and unknowns, all endpoint/brief sections and retries. Parent grants exact page/details/helper tests and approved host representation; existing toast and guard correction stays at the consolidated hook. No account refresh or real URLs/credentials/native capture.",
+      "files": ["web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx", "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx", "web\\src\\features\\admin\\components\\tesla-region\\RegionEndpointPanel.tsx", "web\\src\\features\\admin\\components\\tesla-region\\helpers.ts", "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx"], "dependsOn": ["phase6-dispose-01-user-refresh-boundaries"],
+      "blockedBy": ["Exact existing tests; allowed-host/security display representation and any existing-copy changes require explicit grant."]
+    },
+    {
+      "id": "phase6-dispose-01-vehicle-cost-integration",
+      "task": "BLOCKED coordinated proposal for phase6-qa-admin-vehicle-cost.json confirmedIssues F01/F02/F03/F05/F06: retain missing/nonfinite rank/table counters as unknown, all row metrics mobile-reachable, saved localized relative date and caller-only refresh target. Replace local windowDays only when existing workspace range and typed endpoint filter both bounds over full server results with rolling/timezone semantics, preserving fleet-wide scope and 1/7/30/90/default30 intent. Source paths are report-named; exact repository/query seam and existing tests are not. Parent must grant those, coordinate workspaceScope and canonical choices, and preserve existing GDPR useOperatorConfidence correction. No loaded-page-only filtering, control-only removal or invented server capability.",
+      "files": ["web\\src\\features\\admin\\pages\\VehicleCostPage.tsx", "web\\src\\features\\admin\\components\\vehicle-cost\\helpers.ts", "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx", "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx", "web\\src\\features\\admin\\components\\vehicle-cost\\constants.ts", "web\\src\\api\\hooks\\useOperatorConfidence.ts", "internal\\handler\\v1\\admin_observability_handler.go"], "dependsOn": ["phase6-dispose-01-workspace-global-scope"],
+      "blockedBy": ["Exact backend query/repository seam and tests unknown; both-bound producer representation and source/copy grants required before activation."]
+    },
+    {
+      "id": "phase6-dispose-01-evidence-known-labels",
+      "task": "One shared correction for phase6-qa-advanced-behavioral-sentinel.json confirmedIssues BS003 and phase6-qa-advanced-charging-site-twin.json confirmedSourceFindings ST-003, with the EvidencePanel quality portions of causal CE002 and survival CS-04. Display known sufficient/limited/insufficient and recognized severities using existing suitable canonical labels while retaining raw tokens for variant/cache/wire and safe unknown fallback. Reuse existing advancedIntelligence.brief.quality keys established by ST-003; do not translate arbitrary evidence prose or reopen accepted shared dates/trust/plural. Parent grants exact existing label tests and serializes EvidencePanel with other chunks.",
+      "files": ["web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact covering label tests and unknown-severity policy/copy grant; parent must confirm actual current corrective owners across chunks."]
+    },
+    {
+      "id": "phase6-dispose-01-evidence-count-adjudication",
+      "task": "BLOCKED owner/proof adjudication, NOT a runnable assumed repair. phase6-qa-advanced-behavioral-sentinel.json confirmedIssues BS004 and phase6-qa-advanced-charging-site-twin.json confirmedSourceFindings ST-004 report raw EvidencePanel sample interpolation. The actual phase6-fix-evidence-plural-catalog owns accepted singular/other leaves, and phase6-fix-charging-forensics-mobile-sample-count's current queue receipt explicitly distinguishes its mobile omission from formatter-capable shared EvidencePanel. Preserve both historical findings; parent must resolve the precise existing shared formattedCount source/proof owner before proposing any further edit. Do not rerun or duplicate accepted shared capability, guess a test or promote ST/BS native NOTRUN into current failure.",
+      "files": [], "dependsOn": [],
+      "blockedBy": ["Exact existing EvidencePanel formatted-count corrective/proof ownership is not established by named accepted roots; historical finding versus current capability conflict requires parent adjudication."]
+    },
+    {
+      "id": "phase6-dispose-01-analysis-brief-count",
+      "task": "For only the AnalysisBrief portion of phase6-qa-advanced-charging-site-twin.json confirmedSourceFindings ST-004, preserve numeric count for plural selection and interpolate a separate existing fmtInt display count, keeping null distinct from measured zero. This is distinct from accepted EvidencePanel sampleLine plural and shared date corrections. The report names AnalysisBrief and evidenceSamples interpolation, not a complete writable canonical contract. Parent must grant exact numeric/interpolation tests and key ownership before editing. Do not change wire counts or add a competing formatter.",
+      "files": ["web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact numeric/interpolation test and existing evidenceSamples canonical leaf/projection grants unknown; parent serializes shared AnalysisBrief."]
+    },
+    {
+      "id": "phase6-dispose-01-causal-known-state-labels",
+      "task": "For phase6-qa-advanced-causal-experimentation.json confirmedIssues CE002, localize known experiment state badges using existing domain keys/safe unknown fallback and adopt shared quality label capability where genuinely applicable. Preserve raw non_causal/state tokens, observational estimate semantics, immutable confirmation, field validation and accepted requiresLiveMode guard. Reuse existing reported CausalExperimentationPage.test.tsx with only affected label cases; preserve original identities and failure chronology. Parent grants exact missing canonical leaves if any; no arbitrary server prose translation or repeated CE003/CE004 remigration.",
+      "files": ["web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx", "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.test.tsx"], "dependsOn": [],
+      "blockedBy": ["Exact known-state key/fallback authority and any canonical-copy grant not established."]
+    },
+    {
+      "id": "phase6-dispose-01-forensics-record-and-export",
+      "task": "For phase6-qa-advanced-charging-forensics.json confirmedIssues CF-03/CF-04, reuse the existing full record detail renderer on desktop as well as mobile, retaining ended_at, currency, record-associated evidence/limitations and all nine columns. Export the existing SI/minor-unit schema with record/disclosure fields; preserve typed JSON nulls and separate CSV serialization instead of coercing nullable values to empty strings. Preserve session identity, all raw reconciliation values, all sections and accepted query/date/plural corrections. The existing page test is reported; exact export adapter covering test/serialization grant remains unknown. No real export/download/native data.",
+      "files": ["web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx", "web\\src\\features\\advanced-intelligence\\chargingForensicsExport.ts", "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.test.tsx"], "dependsOn": ["phase6-dispose-01-forensics-export-completeness"],
+      "blockedBy": ["Exact adapter tests and CSV/JSON contract grant; parent serializes existing page sample-count proof before granting writes."]
+    },
+    {
+      "id": "phase6-dispose-01-forensics-export-completeness",
+      "task": "For phase6-qa-advanced-charging-forensics.json confirmedIssues CF-05, expose actual completion or limit-reached outcome when fetchAllChargingForensics stops at offset 10000; prevent callers advertising the accumulated partial packet as full. Preserve real rows, paging, cancellation and existing endpoint bounds. This is distinct from accepted causal guard in the same useAdvancedIntelligence.ts. Parent must grant exact export-hook boundary tests and completion representation before consumer changes; no unlimited fetch, live request or guessed test path.",
+      "files": ["web\\src\\api\\hooks\\useAdvancedIntelligence.ts"], "dependsOn": [],
+      "blockedBy": ["Exact export-hook tests and completion/error representation grant unknown; cross-chunk shared hook serialization."]
+    },
+    {
+      "id": "phase6-dispose-01-forensics-currency-contract",
+      "task": "BLOCKED producer/denomination authority for phase6-qa-advanced-charging-forensics.json confirmedIssues CF-06: existing source_repository.go multiplies cost_decimal by 100 while display interprets recorded_cost_minor using actual currency exponent. Resolve zero/two/three-digit ISO-currency agreement at the existing producer with explicit no-conversion policy, preserving negative/zero amounts and currency. Do not hardcode display USD, silently relabel units, change unrelated energy SI fields or invent denomination evidence. Parent must grant existing backend tests, source representation/rounding policy and exact downstream type/copy seams before implementation; no DB/API/runtime inquiry in this disposition.",
+      "files": ["internal\\database\\advancedintelligence\\source_repository.go"], "dependsOn": [],
+      "blockedBy": ["Existing backend test paths, currency exponent/rounding authority and any downstream representation grants unknown."]
+    },
+    {
+      "id": "phase6-dispose-01-site-twin-submitted-snapshot",
+      "task": "For phase6-qa-advanced-charging-site-twin.json confirmedSourceFindings ST-001, expose or compare the already published useRetainedMutation input snapshot so unsubmitted draft changes cannot appear to explain retained output. Preserve all submitted/draft SI values, outputs, warnings, retained errors and explicit review/submit behavior; never fire an automatic second request or discard retained result. Use the report-named existing page/test pair with exact parent grant, preserving assertions and affected synthetic cases. No speculative mutation-helper rewrite or actual simulation/network operation.",
+      "files": ["web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.tsx", "web\\src\\features\\advanced-intelligence\\pages\\ChargingSiteTwinPage.test.tsx"], "dependsOn": [],
+      "blockedBy": ["Parent exact exclusive grant and submitted-versus-draft localized copy ownership."]
+    },
+    {
+      "id": "phase6-dispose-01-survival-horizon-and-labels",
+      "task": "BLOCKED source-contract/display proposal for phase6-qa-advanced-component-survival.json confirmedFindings CS-03/CS-04: disclose that the reported probability producer uses a 365-day horizon rather than equating it with Result generated, and localize recognized quality/component/risk identifiers without changing raw tokens. Preserve uncertainty, P10/P50/P90 horizons, SI/raw values and no causal claim. Existing probability wire has no horizon field; parent must authorize whether fixed truthful disclosure or an explicitly owned producer contract is appropriate, identify exact page tests and grant only proven missing canonical leaves. Do not invent a horizon API, translate arbitrary server narrative or reopen accepted dates/retained-empty.",
+      "files": ["web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx"], "dependsOn": [],
+      "blockedBy": ["Probability-horizon representation/authority and exact page tests/copy keys unknown; existing producer/type paths are evidence only, not automatic write grants."]
+    },
+    {
+      "id": "phase6-dispose-01-canonical-copy",
+      "task": "BLOCKED parent-only serialized canonical intake, not a source worker or translation campaign. Preserve exact original finding provenance: phase6-qa-admin-fleet-telemetry-coverage.json confirmedIssues F05 missingKeys five leaves, F04/F06 existing legend corrections; phase6-qa-admin-ingest-xray.json confirmedFindings XRAY-07 missingKeys twenty duration leaves; phase6-qa-admin-live-signal-inspector.json confirmedIssues LSI-05 missingKeys eleven kind/source leaves; phase6-qa-admin-secret-rotation.json confirmedFindings SR006 missingKeys six credential-kind leaves and SR002 cause wording; phase6-qa-admin-slow-queries.json confirmedIssues SQ-004 missingKeys four order leaves; phase6-qa-admin-vehicle-cost.json confirmedIssues F04 four exact admin.vehicleCost.window1d/window7d/window30d/window90d leaves, conditional on preserving those callers after range integration. These 50 historical proven-missing leaves are not evidence they remain absent today. Parent must deduplicate all nine chunks and accepted current catalog closures, confirm actual caller semantics and exact normal projection/test grants, and serialize changes without baseline/guard bypass. Do not repeat accepted evidence sample plurals, add obsolete GDPR statuses or nonexistent toast.user keys. Unestablished legend/cause/label/interpolation keys remain blockers, never invented.",
+      "files": ["web\\src\\i18n\\en.json"], "dependsOn": [],
+      "blockedBy": ["Parent canonical lease/current corrective-owner reconciliation; exact generated projection/usage-manifest and covering validation grant not inferred from a directory; exact legend/cause and other copy representation unresolved."],
+      "historicalMissingLeafCount": 50,
+      "exactLeafProvenance": [
+        {"report": "phase6-qa-admin-fleet-telemetry-coverage.json", "field": "confirmedIssues", "finding": "F05", "valueField": "missingKeys", "count": 5},
+        {"report": "phase6-qa-admin-ingest-xray.json", "field": "confirmedFindings", "finding": "XRAY-07", "valueField": "missingKeys", "count": 20},
+        {"report": "phase6-qa-admin-live-signal-inspector.json", "field": "confirmedIssues", "finding": "LSI-05", "valueField": "missingKeys", "count": 11},
+        {"report": "phase6-qa-admin-secret-rotation.json", "field": "confirmedFindings", "finding": "SR006", "valueField": "missingKeys", "count": 6},
+        {"report": "phase6-qa-admin-slow-queries.json", "field": "confirmedIssues", "finding": "SQ-004", "valueField": "missingKeys", "count": 4},
+        {"report": "phase6-qa-admin-vehicle-cost.json", "field": "confirmedIssues", "finding": "F04", "keys": ["admin.vehicleCost.window1d", "admin.vehicleCost.window7d", "admin.vehicleCost.window30d", "admin.vehicleCost.window90d"], "count": 4}
+      ]
+    },
+    {
+      "id": "phase6-dispose-01-remaining-acceptance-grants",
+      "task": "BLOCKED remaining acceptance/permission export, NOT a defect or 21 new audits. Preserve all 21 reportDisposition originalRecordsPointer roots, every original checks/candidates/native matrix/NOTRUN command/source pin/evidence timestamp/authority/safety record, and their exact original IDs. Parent alone may grant individually remaining affected synthetic read-only native checks after actual source receipts and safe browser/screenshot/fixture permissions exist; do not redispatch historical source QA, rerun unchanged genuine passes, use real VINs/credentials/security/feedback/secret/query data, trigger Tesla refreshes, draft AI, gas polling, exports/downloads/erase, MQTT or business writes. Existing phase6-proof-selection-prerequisite-trust and phase6-proof-charging-forensics-mobile-sample-count already own their remaining exact runtime proof and must not be duplicated. Retain external catalog startup/discovery-zero limitations, prior secret-brief 3-pass/4-fail and original InsightPanel oracle debt without declaring fresh source failures or relaxing exhausted rescue budgets. Exact additional proof/native artifact files and safe fixtures are unknown: no runnable guessed edits and no source/native/application approval from this report.",
+      "files": [], "dependsOn": [],
+      "blockedBy": ["Exact remaining affected selector/receipt owners for unrepresented acceptance; safe synthetic fixtures, native locks, browser/API permissions and output artifact grants unknown."],
+      "kind": "REMAINING_ACCEPTANCE_AND_AUTHORITY_NOT_SOURCE_DEFECT",
+      "existingRemainingProofOwners": ["phase6-proof-selection-prerequisite-trust", "phase6-proof-charging-forensics-mobile-sample-count"]
+    }
+  ],
+  "crossChunkSharedRoots": [
+    {"file": "web\\src\\components\\ui\\DataTable.tsx", "proposal": "phase6-dispose-01-table-disclosure-names", "existingDistinctRoot": "phase6-fix-table-filtered-empty-copy", "action": "Parent serializes exact different mechanisms; no global mobile-size change."},
+    {"file": "web\\src\\api\\types.ts", "proposals": ["phase6-dispose-01-feedback-optional-dto", "phase6-dispose-01-gas-worker-contract"], "action": "Same chunk shared file: merge exact DTO objectives or serialize; never simultaneous grants."},
+    {"file": "web\\src\\lib\\workspaceScope.ts", "proposal": "phase6-dispose-01-workspace-global-scope", "currentDistinctOwner": "phase6-fix-admin-audit-workspace-range-registration", "action": "Consolidated gas/region/vehicle-cost needs; parent reconciles actual current writer and all chunks."},
+    {"file": "web\\src\\types\\admin-diagnostics.ts", "proposal": "phase6-dispose-01-ingest-contract", "currentDistinctOwner": "phase6-fix-next12-feature-flags-value-feedback-and-editor-contract", "action": "Parent shared-type serialization; current [~] marker is not actor release."},
+    {"file": "web\\src\\api\\hooks\\useUser.ts", "proposal": "phase6-dispose-01-user-refresh-boundaries", "action": "Single region/feature-refresh correction, retain other completed profile/order/account owners; check cross-chunk objectives."},
+    {"file": "web\\src\\api\\hooks\\useSettings.ts", "proposal": "phase6-dispose-01-gas-hook-lifecycle", "action": "Parent serializes gas subset with other settings hooks/copy; do not expand to shared app settings."},
+    {"file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts", "proposal": "phase6-dispose-01-forensics-export-completeness", "existingDistinctRoot": "phase6-fix-causal-live-write-guard", "action": "Parent serializes exporter completion only; accepted guard remains."},
+    {"file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "proposal": "phase6-dispose-01-evidence-known-labels", "action": "Consolidate known-label overlap across chunk; dates/trust/plurals already owned; count source remains explicit adjudication blocker."},
+    {"file": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx", "proposal": "phase6-dispose-01-analysis-brief-count", "action": "Parent consolidates count interpolation and any cross-chunk label consumer changes; dates already accepted."},
+    {"file": "web\\src\\i18n\\en.json", "proposal": "phase6-dispose-01-canonical-copy", "action": "One parent serialized all-nine intake; known source findings are not current catalog absence proof or automatic projection grant."},
+    {"file": "web\\src\\components\\data-display\\SourceLayerBadge.tsx", "proposal": "phase6-dispose-01-live-source-provenance", "action": "Unknown origin representation and consumers must be parent-adjudicated, not globally relabeled on assumptions."},
+    {"file": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts", "proposal": "phase6-dispose-01-fetch-timestamp-preferences", "action": "Shared helper consumers unknown; no transitive file grants."}
+  ],
+  "unknownSeams": [
+    "All fixItems.blockedBy values are hard missing permission/representation/test seams, not implicit dispatch permission.",
+    "Feedback hook, AI eligibility, shared disclosure/type tests are not named by original report; do not invent contract filenames.",
+    "Coverage opaque maps need exact real-client boundary ownership; LSI candidate C-05 remains candidate, not a promoted duplicate F01.",
+    "Gas background completion, atomic source denomination and running worker test seam require actual representation/authority grants.",
+    "Ingest admin-diagnostics overlaps the existing next12 claim; no invented generated_at/unique_fields metadata.",
+    "Accepted fleet prerequisite root only exposes capability; the three report-named page adoptions remain exact separate corrections.",
+    "Distributed freshness does not reveal L1 physical origin; no per-row origin inferred from timestamps.",
+    "Redis best-effort counts/compound values/per-row freshness need explicit producer and consumer contracts.",
+    "Slow-query summary exact source filename and covering tests are not granted by the known helper/controller names.",
+    "Vehicle-cost full-range query/repository and both-bound representation are unknown; local-window removal/copy deletion cannot precede capability.",
+    "EvidencePanel formatted-count historical finding conflicts with current formatter-capable metadata; adjudicate exact existing owner/proof before editing.",
+    "AnalysisBrief count interpolation copy and survival probability horizon wire/display policy need exact grants, not guessed fields.",
+    "Native geometry, forced colors, keyboard/screen-reader, motion, RTL, zoom, contrast, safe fixture and actual browser ownership remain NOTRUN/unknown, not source defects."
+  ],
+  "verification": {
+    "kind": "ARTIFACT_SELECTION_JSON_COUNTS_PROVENANCE_AND_REFERENCES_ONLY",
+    "status": "PASS_ARTIFACT_SHAPE_ONLY",
+    "checkedUTC": "2026-10-14T12:46:36.803547Z",
+    "checks": 598,
+    "failures": 0,
+    "exit": 0,
+    "checkedProperties": ["Exact ordered 21 dispatch filenames", "21 original report hashes", "143 original finding IDs/field order and raw counts", "91 original candidate IDs/order and raw counts", "All finding targets resolve to canonical owners or fixItems", "Canonical corrective owner IDs and queue statuses", "39 unique complete task/files/dependsOn exports with explicit blockers", "Proposed paths occur in original report strings or canonical queue metadata; Windows relative spelling only", "Exact 168 untouched inventory remainder after this chunk", "50 original copy-leaf provenance count"],
+    "sourceNativeApplicationAcceptance": "NOT_ESTABLISHED",
+    "productionSourceExistenceVerification": "NOTRUN_PROHIBITED",
+    "compiler": "NOTRUN_PROHIBITED",
+    "tests": "NOTRUN_PROHIBITED",
+    "routeApiBrowserNative": "NOTRUN_PROHIBITED",
+    "reportMutations": 0,
+    "sourceTestWrites": 0,
+    "queueRegistration": "NONE_PARENT_ONLY",
+    "rawCommandFailuresRetained": ["PowerShell empty-pipe ParserError during metadata extraction; no write.", "Python TypeError on scalar confirmedIssueCount during first compact report extraction; extraction corrected without source reads.", "Oversized terminal output not used as a source pass; bounded exact report projections subsequently read.", "First artifact check EXIT=1: 39 actual fixItems versus incorrectly transcribed 36 corrected. 61 path-provenance false negatives came from JSON-escaped backslashes in the checker, not from source existence; corrected recursive original-string extraction required."]
+  },
+  "release": {
+    "claimReleaseUTC": "2026-10-14T12:46:36.803547Z",
+    "reportAndIgnoredLogClaimsReleased": true,
+    "clockMeaning": "Observed UTC of completed final bounded artifact check; this final metadata/log stamping is the sole subsequent delivery write, followed immediately by return with no additional investigations, commands or post-return writes.",
+    "returnBeforeOriginal20MinuteDeadline": true,
+    "sourceTestNativeClaimsAcquired": 0,
+    "postReturnWrites": "NONE",
+    "deadlineReset": false
+  }
+}

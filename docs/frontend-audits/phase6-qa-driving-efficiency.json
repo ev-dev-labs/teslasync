@@ -1,0 +1,1180 @@
+{
+  "item": "phase6-qa-driving-efficiency",
+  "attempt": 1,
+  "status": "DONE_REPORT_ONLY",
+  "kind": "source-only-QA",
+  "page": "web/src/features/driving/pages/EfficiencyPage.tsx",
+  "routes": [
+    "/efficiency"
+  ],
+  "snapshotUTC": "2026-10-14T01:09:14.4021265Z",
+  "dependencySnapshotUTC": "2026-10-14T01:12:22.2614488Z",
+  "reservation": {
+    "reservedUTC": "2026-10-14T01:04:13.296Z",
+    "returnUTC": "2026-10-14T01:24:13.296Z",
+    "hardUTC": "2026-10-14T01:29:13.296Z",
+    "firstCommandUTC": "2026-10-14T01:06:40.3432852Z",
+    "clockNotReset": true
+  },
+  "firstExistingReportCheck": {
+    "reportAbsent": true,
+    "logAbsent": true,
+    "method": "Exact functions.view calls before any writes",
+    "sourceNoChange": true,
+    "reason": "Accepted migration preserved; new report, not source remigration."
+  },
+  "authority": {
+    "queueFile": "migration-queue.md",
+    "snapshotUTC": "2026-10-14T01:12:22.2614488Z",
+    "sha256": "752F2F9E6AF525E538E9CA211E122E72F175CCD6A383D9C96DE4BAD78C3F7B38",
+    "qaLine": 397,
+    "qaStatus": "[~]",
+    "dependency": "phase5-page-driving-efficiency",
+    "dependencyLine": 1861,
+    "dependencyStatus": "[x]",
+    "acceptedCommit": "5410fcb23569616a576ef6c535b842419f482a9e",
+    "acceptedScope": "Historical source-only; historical Vitest startup1, zero discovery/execution/pass. Not fresh test/native/page acceptance.",
+    "lineDrift": "Concurrent parent queue edits shifted observed QA395->397/dependency1859->1861; citations belong to snapshot, queue unchanged by worker.",
+    "currentHandoff": "docs/session-handoff.md:5-45, New-machine recovery00:44Z",
+    "closedPhasesPreserved": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "phase6": "unfinished",
+    "phase7": "NOTRUN"
+  },
+  "instructionsRead": [
+    "docs/orchestrator-loop.md FULL",
+    "docs/frontend-design-contract.md FULL through final dialog return-target addendum; all truncated reads continued",
+    "docs/session-handoff.md current section and visible historical context",
+    "docs/frontend-mission.md principles/relevant state/domain sections/43-45",
+    "docs/frontend-worker-conventions.md",
+    ".github/copilot-instructions.md:1-180",
+    ".github/instructions/frontend-si-cutover.instructions.md FULL",
+    ".github/instructions/react-frontend.instructions.md FULL",
+    ".github/instructions/observability.instructions.md FULL",
+    ".github/instructions/unit-conversion.instructions.md FULL; legacy dual-unit examples superseded by current SI/design contract",
+    "docs/CONTRIBUTING.md:1-180",
+    "docs/I18N_GUIDELINES.md:1-160",
+    "docs/frontend-inventory.md:166",
+    "docs/frontend-audits/audit-page-115.json:1-160,205-330 HISTORICAL"
+  ],
+  "purpose": "Interpret lifetime consumption and independently bounded drive relationships without conflating intensity/economy, population, physical signs or source trust.",
+  "routeEvidence": [
+    "web/src/App.tsx:125,676 lazy Efficiency/SafeRoute mount",
+    "web/src/lib/routeLoaders.ts:43 current page import",
+    "web/src/lib/routeRegistry.ts:121 /efficiency",
+    "web/src/lib/workspaceScope.ts:44,155-167 range=true vehicle=true"
+  ],
+  "workspace": {
+    "vehicle": "Page:30-35 passes same selected ID to both queries; useSelectedVehicle.ts:62-75 URL/store/fleet reconciliation, unknown fleet IDs rejected once resolved.",
+    "range": "Page:32,35 uses both instants; useRangeState.ts:301-318 header owner ignores page persistKey; 656-669 rolling/calendar timezone-aware instants.",
+    "savedViews": "useSavedViewUrl.ts:33-46 canonicalizes query encoding and applies whole query via router; no apply/mutation executed.",
+    "router": "internal/api/router.go:3506-3508 mounts /drives list and /stats. SQL bounds, units, ordering, authorization not independently inspected/exercised.",
+    "duplicateLocalPickers": false
+  },
+  "dataSources": [
+    {
+      "name": "Lifetime summary",
+      "hook": "useDrivingStats(vehicleIdStr)",
+      "pageLines": [
+        34
+      ],
+      "hookFile": "web/src/api/hooks/useDriving.ts",
+      "hookLines": [
+        222,
+        223,
+        226,
+        231,
+        233,
+        234
+      ],
+      "endpoint": "GET /drives/stats?vehicle_id=<selected>",
+      "policy": "Lifetime source intentionally independent of workspace dates; vehicle-keyed/enabled, retry:false, AbortSignal, raw response. Do not silently replace by workspace totals.",
+      "unitEvidence": "Frontend DrivingStats names km/kmh/Whkm/s/Wh/kg; regenRatio comment0-1. Actual producer units/ratio population unknown (C001)."
+    },
+    {
+      "name": "Bounded observations",
+      "hook": "useDriveCalendarHistory(vehicleIdStr,startInstant,endInstantExclusive)",
+      "pageLines": [
+        35,
+        47,
+        48,
+        49
+      ],
+      "hookFile": "web/src/api/hooks/useDriving.ts",
+      "hookLines": [
+        161,
+        163,
+        164,
+        170,
+        172,
+        178,
+        179,
+        183,
+        188,
+        190,
+        193
+      ],
+      "endpoint": "GET /drives?vehicle_id=<selected>&start=<inclusive>&end=<exclusive>&limit=1000&offset=<page>",
+      "policy": "Both bounds in key and every request; pages until short terminal page; rejects invalid envelope/oversize/duplicate or unsafe IDs; signal preserved, moderate staleTime/TanStack defaults. No current default50-row limitation.",
+      "unitEvidence": "Drive type:9,22,25 SI meters/Wh/mps; Celsius field; converted copies only at presentation, cache not rewritten."
+    }
+  ],
+  "preservation": {
+    "pageSHA256": "3061F73672080967C72242EBE79843D67532AB755BFECDA1AB20E38CE1B0E7B1",
+    "pageLines": 127,
+    "productionScopeFiles": 14,
+    "pageAndProductionScopeLines": 825,
+    "pageAndTsxPresentationLines": 575,
+    "directTsxPresentationFiles": 9,
+    "directTsxPresentationLines": 448,
+    "helperTypeBarrelFiles": 4,
+    "helperTypeBarrelLines": 250,
+    "scope": "Page + 13 consumed production dependencies. Excludes tests/fixtures/receipt helpers/unmounted EfficiencyStats. Pinned shared dependencies excluded from825.",
+    "historicalPageLines": 120,
+    "originalByteComparison": "NOTRUN; historical accepted120 context only, no regenerated baseline",
+    "sectionCount": 4,
+    "sectionBoundaries": 8,
+    "cardGridGroups": 3,
+    "cardGridItems": 7,
+    "charts": 4,
+    "chartImplementationFiles": 3,
+    "overviewGauge": 1,
+    "overviewBars": 4,
+    "kpiOccurrences": 8,
+    "insightOccurrences": 6,
+    "tableColumns": 6,
+    "glossaryTerms": 3,
+    "exports": [
+      "efficiencyColor",
+      "getEfficiency"
+    ],
+    "kpis": [
+      "Consumption",
+      "Reciprocal distance/kWh",
+      "Average speed",
+      "Top speed",
+      "CO2 savings",
+      "Distance",
+      "Estimated cost/km",
+      "Drives analyzed"
+    ],
+    "insights": [
+      "Regen energy",
+      "Regen ratio",
+      "CO2 savings",
+      "Distance",
+      "Top speed",
+      "Estimated cost/km"
+    ]
+  },
+  "actions": {
+    "declaredFamilies": 7,
+    "inventory": [
+      {
+        "name": "Saved views",
+        "evidence": "EfficiencyPage.tsx:74-77/useSavedViewUrl.ts:33-46",
+        "preserve": "route/currentQuery/onApply and existing save/manage/apply menu; not exercised"
+      },
+      {
+        "name": "Source recovery",
+        "evidence": "EfficiencySource.tsx:22-39/EfficiencyChart.tsx:28-34/DataSourceNotice.tsx:249-280",
+        "preserve": "Independent retry and shared retry-unavailable; no retry executed"
+      },
+      {
+        "name": "Chart toolbar/export",
+        "evidence": "EfficiencyChart.tsx:19,31-34/ChartContainer.tsx:483-489",
+        "preserve": "toolbar/exportable true, existing unavailable policy; EmbeddedChart.tsx:24 fullscreen defaultfalse, not invented enabled fullscreen"
+      },
+      {
+        "name": "Trend annotation actions",
+        "evidence": "EfficiencyTrend.tsx:23-24/ChartContainer.tsx:635-670",
+        "preserve": "selected vehicle, scope efficiency, efficiency-daily-trend identity and existing guards/lifecycle; no writes"
+      },
+      {
+        "name": "Table pagination/row details/Close",
+        "evidence": "EfficiencyTemperatureTable.tsx:39-64/MobileDataTableAdapter.tsx:119-151",
+        "preserve": "stable tableId, six fields via real allColumns modal"
+      },
+      {
+        "name": "Glossary help",
+        "evidence": "EfficiencyEvidenceBrief.tsx:61-69",
+        "preserve": "efficiency/rated_range/phantom_drain"
+      },
+      {
+        "name": "Actionable empty guidance",
+        "evidence": "EfficiencyEvidenceBrief.tsx:57-58",
+        "preserve": "analytics.efficiency existing guidance/actions"
+      }
+    ],
+    "runtime": "NOTRUN"
+  },
+  "numericalReview": {
+    "intensity": "drivesAggregation.ts:41-67 finite distance>=1000m and finite positive energy; Wh/(distanceM/1000). Zero/null/nonfinite/nonpositive energy excluded by existing eligibility, not abs/clamped or rewritten.",
+    "reciprocal": "Brief:18-25/table:29 positive finite intensity required for1000/intensity. Nonpositive reciprocal unknown; finite lifetime zero consumption stays measured zero, missing never silently zero.",
+    "populations": "model.ts:128-139,149-169 arithmetic mean of eligible drive intensities=sumEff/count, NOT pooled energy/sumDistance. Temperature distance sums eligible distances; average speed unknown if any contributing speed missing. No silent distance-weighting change.",
+    "thresholds": "Raw Wh/km boundaries140/170/200/240 and gauge300; eligibility1000m. Existing speed bins use display units0-30/30-60/60-90/90-120/120+ (upper999); temperature physical boundariesCelsius0/10/20/30 with Fahrenheit labels.",
+    "trend": "First30 eligible drives reversed; one point per drive. Visual minimum3; scatters4. Actual shared figcaption data table stays available for any nonempty supplied data even below plot minimum.",
+    "signs": "Negative signed energy is not negative distance. Preserve signs/policy; no blanket abs/clamp, guessed gross/net semantics or speculative required DTO errors.",
+    "units": "Hooks return raw/cache unchanged. useUnits/useNumberFormatting preferences feed derived display copies/generic formatter. formatMetric.ts:92-100 handles rawWh/m efficiency correctly; current summary unit bridge remains producer-unknown C001."
+  },
+  "states": {
+    "loading": "Source:25 skeleton only without retained data; Chart:26/34 and Brief:48 use own loading. No fabricated measurements.",
+    "initialPaused": "DataState:203-221 has initial/no-data/isRefreshBlocked; global notice distinguishes paused, but Brief can defaultReturned(F007) and notice badge asserts offline(F010). No invented fatal error.",
+    "fatal": "Source:22-24 and Chart:24-25,34 source-local error/retry; eight boundaries preserve independent neighbors.",
+    "retained": "DataState keeps payload on refresh failure/paused; StaleRefreshWarning beside body; brief retained stale/refreshError. Neither source blanks neighbor.",
+    "empty": "Successful empty history unavailable; table shell retained. Null stats marked unavailable. Missing numerics dash, no silentzero. Chart plot minima do not erase supplied fallback table.",
+    "partial": "Inspectors mark missing/nonfinite observations; missing temperature-bucket speed stays unknown; not promoted into hypothetical required-field fatal DTO errors.",
+    "retry": "Current refetch forwarded at source/notice; no retry invoked",
+    "runtime": "NOTRUN"
+  },
+  "findings": [
+    {
+      "id": "F001",
+      "rule": "display-unit-threshold-drift",
+      "priority": "P1",
+      "file": "web/src/features/driving/components/efficiency-modernization/EfficiencySpeedDistribution.tsx",
+      "line": 31,
+      "related": [
+        "model.ts:14-19,136-140",
+        "unitConversion.ts:256-261"
+      ],
+      "detail": "Color Wh/km thresholds receive rounded display avgEff. Same130Wh/km becomes about209Wh/mi and changes color solely with preference; rounding shifts boundaries. Dimensional reasoning, not actual drive/test data.",
+      "fix": "Keep unrounded raw mean for classification; convert only displayed value, preserve boundaries/export.",
+      "owner": "feature adapter",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F002",
+      "rule": "display-unit-denominator-drift",
+      "priority": "P1",
+      "file": "web/src/features/driving/components/efficiency-modernization/EfficiencyOverview.tsx",
+      "line": 42,
+      "related": [
+        "model.ts:57-65"
+      ],
+      "detail": "Speed numerator converted to chosen display unit; max remains150. Same physical speed changes bar fraction under mph preference.",
+      "fix": "Confirm physical ceiling then convert numerator and max consistently; no guessed producer units/raw rewrite.",
+      "owner": "feature presenter/domain",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F003",
+      "rule": "estimate-provenance-currency",
+      "priority": "P1",
+      "file": "web/src/features/driving/components/efficiency-modernization/metrics.ts",
+      "line": 17,
+      "related": [
+        "EfficiencyEvidenceBrief.tsx:43-47",
+        "useOperationalMetrics.tsx:16-20"
+      ],
+      "detail": "Two cost/km estimates use undisclosed fixed0.12/kWh; literal dollar preferences override existing currency fallback. Historical aggregate caption does not disclose inferred rate/currency origin.",
+      "fix": "Preserve estimates pending business confirmation; disclose rate/inferred provenance. Never relabel assumed dollars or invent FX; honor compatible settings via existing owner only after semantics verified.",
+      "owner": "feature cost adapter/settings/catalog",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F004",
+      "rule": "restrained-token-palette",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/efficiency-modernization/model.ts",
+      "line": 15,
+      "related": [
+        "model.ts:15-19",
+        "EfficiencyOverview.tsx:37,42,47,52",
+        "EfficiencyTrend.tsx:27,33",
+        "EfficiencyScatter.tsx:38"
+      ],
+      "detail": "Fluorescent green/cyan ramp and fixed saturated bars/trend/scatter bypass restrained preference/token owners.12 source lines/13 hex occurrences, one deduplicated mechanism.",
+      "fix": "Reuse current semantic/chart palette owners; preserve series/domain boundaries/preferences/helper/assertion intent. No new palette engine.",
+      "owner": "direct presenters",
+      "confidence": "confirmed declarations; contrast NOTRUN"
+    },
+    {
+      "id": "F005",
+      "rule": "chart-typography-token-bypass",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/efficiency-modernization/EfficiencyTrend.tsx",
+      "line": 29,
+      "related": [
+        "EfficiencyTrend.tsx:29-30",
+        "EfficiencySpeedDistribution.tsx:27-28",
+        "EfficiencyScatter.tsx:34,36"
+      ],
+      "detail": "Six source ticks hardcode9/10px outside chart/font policy; scatter twice gives8 rendered axis sites. Not a measured WCAG/contrast failure.",
+      "fix": "Existing chart typography at display boundary; preserve series and later validate scaling/RTL/contrast.",
+      "owner": "three chart presenters",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "F006",
+      "rule": "population-sampling-disclosure",
+      "priority": "P1",
+      "file": "web/src/features/driving/components/efficiency-modernization/EfficiencyTrend.tsx",
+      "line": 14,
+      "related": [
+        "model.ts:103-109",
+        "EfficiencyTrend.tsx:13-24",
+        "ChartContainer.tsx:514-528,835-850"
+      ],
+      "detail": "Daily Efficiency fronts one point per drive, first30 reversed, not per-day grouping. No sampling metadata/count disclosure although bounded history can contain more than30 eligible observations.",
+      "fix": "Keep existing observations/order/cap; truthfully label per-drive subset and disclose counts via current metadata/context, not guessed daily aggregates.",
+      "owner": "trend/model disclosure",
+      "confidence": "confirmed source; producer ordering unverified"
+    },
+    {
+      "id": "F007",
+      "rule": "initial-paused-brief-trust",
+      "priority": "P1",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/EfficiencyEvidenceBrief.tsx",
+      "line": 48,
+      "related": [
+        "EfficiencyEvidenceBrief.tsx:49-53",
+        "DrivingSummaryBrief.tsx:38-46",
+        "api/dataState.ts:203-221"
+      ],
+      "detail": "No-data paused/disabled initial has isLoading=false/no fatal/no retained/no unavailable override; brief defaultsReturned evidence despite unresolved source.",
+      "fix": "Set explicit statusLabel from existing source.hasData/status/isRefreshBlocked at adapter; distinguish prerequisite/paused without fabricated error/offline/zero. Existing props suffice.",
+      "owner": "EfficiencyEvidenceBrief",
+      "confidence": "confirmed branch"
+    },
+    {
+      "id": "F008",
+      "rule": "i18n-fragment-concatenation",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/efficiency-modernization/EfficiencyTemperatureTable.tsx",
+      "line": 19,
+      "related": [
+        "EfficiencyTemperatureTable.tsx:21",
+        "EfficiencySpeedDistribution.tsx:30"
+      ],
+      "detail": "Three visible labels concatenate translatedAvg/Total with units outside whole-message interpolation. Plain unit symbols/ranges are not hardcoded English violations.",
+      "fix": "Reuse exact whole-message keys; any absent label needs serialized catalog confirmation/lease. No missing-key claim inferred.",
+      "owner": "two presenters/conditional catalog",
+      "confidence": "confirmed three sites"
+    },
+    {
+      "id": "F009",
+      "rule": "category-import-bypass",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/efficiency-modernization/EfficiencyOverview.tsx",
+      "line": 4,
+      "related": [
+        "EfficiencyTemperatureTable.tsx:3",
+        "EfficiencyChart.tsx:5",
+        "components/layout/index.ts:11-12"
+      ],
+      "detail": "Two LayoutCard imports and useCardPlacement use layout/layout-reference despite existing category exports. containerPolicy absent from inspected category; no speculative mapping.",
+      "fix": "Adopt actual category LayoutCard/useCardPlacement exports only; keep policy import unless separately established. Type-only stat-reference is not vendor import.",
+      "owner": "three presenters",
+      "confidence": "confirmed exports"
+    },
+    {
+      "id": "F010",
+      "rule": "paused-not-proven-offline",
+      "priority": "P1",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "line": 164,
+      "related": [
+        "DataSourceNotice.tsx:82,133,256-267",
+        "EfficiencyPage.tsx:64-73",
+        "PageContainer.tsx:253"
+      ],
+      "detail": "Every paused fetch gets Paused offline badge. online evidence feeds classification but not unconditional badge; query pause alone does not prove connectivity/device cause. Actually reached by this page's dataSources.",
+      "fix": "Shared notice/copy owner uses cause-neutral paused unless independent evidence; preserve retry/retention/severity, no local provider.",
+      "owner": "existing shared notice/catalog",
+      "confidence": "confirmed branch"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C001",
+      "file": "web/src/features/driving/components/efficiency-modernization/model.ts",
+      "line": 62,
+      "rule": "producer-unit-population-contract",
+      "detail": "Comment claims verified legacy summaryunits; frontend names/router do not establish actual producer units, aggregate energy/distance population or ratio numerator/signs.",
+      "needs": "Narrow authorized actual Stats producer/serialization source contract before change.",
+      "promoted": false
+    },
+    {
+      "id": "C002",
+      "file": "web/src/features/driving/components/efficiency-modernization/model.ts",
+      "line": 93,
+      "rule": "unknown-date-range-admission",
+      "detail": "Unknown dates admitted locally, but current server query sends both bounds; no actual unknown-date result or server scope leak observed. Not a required-DTO error.",
+      "needs": "Producer range/date/coverage policy; retain original behavior pending proof.",
+      "promoted": false
+    },
+    {
+      "id": "C003",
+      "file": "web/src/features/driving/components/efficiency-modernization/EfficiencyTemperatureTable.tsx",
+      "line": 57,
+      "rule": "composed-mobile-a11y",
+      "detail": "Three mobile summary fields hidden; actual allColumns Quick view/modal preserves all6 in source. Reachability/focus/targets/overflow/contrast unmeasured, not confirmed loss.",
+      "needs": "Authorized mission-width/theme/RTL/200%text/forcedcolor/keyboard/modal evidence.",
+      "promoted": false
+    },
+    {
+      "id": "C004",
+      "file": "web/src/lib/drivesAggregation.ts",
+      "line": 58,
+      "rule": "signed-zero-energy-policy",
+      "detail": "Nonpositive energy and short distance excluded intentionally. Not proof to abs/clamp legitimate signed energy or change eligibility; reciprocal nonpositive undefined, lifetime zero consumption otherwise retained.",
+      "needs": "Actual producer gross/net/sign semantics and approved eligibility/coverage decision.",
+      "promoted": false
+    },
+    {
+      "id": "C005",
+      "file": "web/src/features/driving/components/efficiency-modernization/model.ts",
+      "line": 104,
+      "rule": "chart-precision-order-timezone",
+      "detail": "Derived numbers integer-rounded independently of decimalprecision; first30/reverse assumes ordering; dates use existing formatter. May be intentional presentation; no actual regression/raw-cache rewrite proven.",
+      "needs": "Confirm display/order/date policy before changing model; current formatters only.",
+      "promoted": false
+    }
+  ],
+  "preciseNeeds": [
+    {
+      "name": "Preference-invariant thresholds/denominator",
+      "findings": [
+        "F001",
+        "F002"
+      ],
+      "owners": [
+        "efficiency-modernization/model.ts",
+        "EfficiencySpeedDistribution.tsx",
+        "EfficiencyOverview.tsx"
+      ],
+      "scope": "Separate exclusive source/matching-test lease; preserve helper/bounds/eligibility, no page remigration"
+    },
+    {
+      "name": "Estimate/population provenance",
+      "findings": [
+        "F003",
+        "F006"
+      ],
+      "owners": [
+        "metrics.ts",
+        "EfficiencyEvidenceBrief.tsx",
+        "EfficiencyTrend.tsx"
+      ],
+      "scope": "Business semantics first; keep two estimates and30 drive points; current metadata/context; copy need conditional"
+    },
+    {
+      "name": "Retained presenter noise/type/labels/imports",
+      "findings": [
+        "F004",
+        "F005",
+        "F008",
+        "F009"
+      ],
+      "owners": [
+        "model.ts",
+        "EfficiencyOverview.tsx",
+        "EfficiencyTrend.tsx",
+        "EfficiencyScatter.tsx",
+        "EfficiencySpeedDistribution.tsx",
+        "EfficiencyTemperatureTable.tsx",
+        "EfficiencyChart.tsx"
+      ],
+      "scope": "Extend retained accepted-page child need via atomic slices, current tokens/exports, original assertions; no shared config/engine"
+    },
+    {
+      "name": "Truthful initial/paused labels",
+      "findings": [
+        "F007",
+        "F010"
+      ],
+      "owners": [
+        "EfficiencyEvidenceBrief.tsx",
+        "web/src/components/feedback/DataSourceNotice.tsx"
+      ],
+      "scope": "Independent feature/shared roots; parent deduplicates globalnotice once across QA. Existing props/trust, separate conditional canonical copy lease"
+    }
+  ],
+  "queueDedup": {
+    "snapshotUTC": "2026-10-14T01:12:22.2614488Z",
+    "preciseChildNoticeMatches": 2,
+    "closedMatches": [
+      {
+        "line": 1025,
+        "item": "phase3-data-source-notice",
+        "status": "[x]",
+        "disposition": "Closed shared source, not authority to reopen"
+      },
+      {
+        "line": 1473,
+        "item": "phase3-suite939-file-018",
+        "status": "[x]",
+        "disposition": "Closed test-only Efficiency fixture repair, not source repair"
+      }
+    ],
+    "acceptedPageLine": 1861,
+    "activePreciseChildRepairFound": false,
+    "newQueueWrites": 0,
+    "needsProposalsOnly": true,
+    "instruction": "Parent deduplicates sharedcause root with other reports; do not redispatch[x]/remigrate. Old audit default50/safeArray findings superseded at this page by current validating bounded history; not promoted."
+  },
+  "responsiveAccessibility": {
+    "declarations": [
+      "Four min-w-0 sections, wrapping actions, third/half CardGrid placement",
+      "Chart height via actual placement/containerPolicy, canonical ChartCard->EmbeddedChart->ChartContainer",
+      "Four localized chart ariaLabels/dataColumns; stable figcaption table for supplied observations, even below visual minimum",
+      "Table mobile range/count/intensity; actual allColumns details/Quickview/Close with44-min declarations",
+      "Shared semantic retry/controls and PageLayout->PageContainer focusheading; no raw forbidden controls; no page decorative entrances"
+    ],
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "verifiedViewports": [],
+    "browserMobileNativeKeyboardFocusContrast": "NOTRUN"
+  },
+  "summary": {
+    "confirmedFindings": 10,
+    "unpromotedCandidates": 5,
+    "countUnit": "Deduplicated mechanisms, not regex lines/source occurrences",
+    "priority": "P1 numerical/provenance/trust, then P2 palette/type/i18n/imports; acceptance remains open",
+    "byRule": {
+      "category-import-bypass": 1,
+      "chart-typography-token-bypass": 1,
+      "display-unit-denominator-drift": 1,
+      "display-unit-threshold-drift": 1,
+      "estimate-provenance-currency": 1,
+      "i18n-fragment-concatenation": 1,
+      "initial-paused-brief-trust": 1,
+      "paused-not-proven-offline": 1,
+      "population-sampling-disclosure": 1,
+      "restrained-token-palette": 1
+    },
+    "primaryFindingFiles": [
+      {
+        "file": "web/src/features/driving/components/efficiency-modernization/EfficiencyOverview.tsx",
+        "primaryFindings": 2,
+        "findingIds": [
+          "F002",
+          "F009"
+        ]
+      },
+      {
+        "file": "web/src/features/driving/components/efficiency-modernization/EfficiencyTrend.tsx",
+        "primaryFindings": 2,
+        "findingIds": [
+          "F005",
+          "F006"
+        ]
+      },
+      {
+        "file": "web/src/components/feedback/DataSourceNotice.tsx",
+        "primaryFindings": 1,
+        "findingIds": [
+          "F010"
+        ]
+      },
+      {
+        "file": "web/src/features/driving/components/efficiency-modernization/EfficiencySpeedDistribution.tsx",
+        "primaryFindings": 1,
+        "findingIds": [
+          "F001"
+        ]
+      },
+      {
+        "file": "web/src/features/driving/components/efficiency-modernization/EfficiencyTemperatureTable.tsx",
+        "primaryFindings": 1,
+        "findingIds": [
+          "F008"
+        ]
+      },
+      {
+        "file": "web/src/features/driving/components/efficiency-modernization/metrics.ts",
+        "primaryFindings": 1,
+        "findingIds": [
+          "F003"
+        ]
+      },
+      {
+        "file": "web/src/features/driving/components/efficiency-modernization/model.ts",
+        "primaryFindings": 1,
+        "findingIds": [
+          "F004"
+        ]
+      },
+      {
+        "file": "web/src/features/driving/components/operationalbrief-a-m/EfficiencyEvidenceBrief.tsx",
+        "primaryFindings": 1,
+        "findingIds": [
+          "F007"
+        ]
+      }
+    ],
+    "commandAttempts": 14,
+    "commandFailures": 3,
+    "commandSuccesses": 11,
+    "freshTestsStatus": "NOTRUN; no discovered/executed/passed counts claimed"
+  },
+  "evidenceLimits": [
+    "Source-only snapshot, not fixes or whole-page/application acceptance",
+    "No actual drive/location/identity/device/API/mutation/browser/screenshots/tests/lint/build/globalTSC/Git/subagents/installs/servers/Docker/helpers/extensions/heartbeats",
+    "No producer unit guesses, blanket abs/clamp or promoted hypothetical requiredDTO errors",
+    "Shared dependencies read relevant ranges only; whole-byte hashes do not imply full dependency/backend audit",
+    "Regex candidates not full parser/catalog validation; catalogs/config/tests unchanged; catalog generation NOTRUN",
+    "Historical acceptance/checks stay historical; native/runtime/page acceptance NOTRUN",
+    "Parent5173 not contacted or started; no browsergrant/lock; if later authorized installed Edge channel msedge only, no downloads"
+  ],
+  "checksNotRun": {
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "pageAcceptance": "NOTRUN",
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "TypeScript": "NOTRUN",
+    "browserScreenshots": "NOTRUN",
+    "API": "NOTRUN",
+    "producerContract": "NOTRUN",
+    "backendAudit": "NOTRUN"
+  },
+  "log": {
+    "path": "web/logs/phase6-qa-driving-efficiency.log",
+    "ignored": "Root .gitignore inspected; logs declaration covers authorized web/logs. Git check-ignore prohibited/NOTRUN.",
+    "policy": "Raw outputs appended via native Add-Content, no shell redirection/tee/helper. Failed tool errors transcribed honestly."
+  },
+  "release": {
+    "files": [
+      "docs/frontend-audits/phase6-qa-driving-efficiency.json",
+      "web/logs/phase6-qa-driving-efficiency.log"
+    ],
+    "sourceWriteAuthority": "none; source/tests/backend/catalog/config/queue/handoff remained read-only",
+    "commandsRunning": false,
+    "browserLockHeld": false,
+    "reportLogCommandAuthorityReleased": true,
+    "effective": "At completion of command14 and following terminal DONE; both authorized files and command authority released, no post-return writes",
+    "finalizedUTC": "2026-10-14T01:21:33.4554200Z"
+  },
+  "integrity": {
+    "finalJsonParse": "VERIFIED_NATIVE_CONVERTFROMJSON",
+    "finalSourcePinCheck": "VERIFIED41_MATCHED",
+    "pinVerificationUTC": "2026-10-14T01:20:41.5191408Z",
+    "pinCount": 41,
+    "changedPinCount": 0,
+    "finalCheckUTC": "2026-10-14T01:21:33.4554200Z"
+  },
+  "sourcePins": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx",
+      "sha256": "3061F73672080967C72242EBE79843D67532AB755BFECDA1AB20E38CE1B0E7B1",
+      "lines": 127
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyEvidenceBrief.tsx",
+      "sha256": "E8C9D75F08E5FFAAA29303A318B3B92393B95AEFE7C1720655302352C7D82EF7",
+      "lines": 70
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+      "sha256": "29B6C288C2DAE77B345B0985764480AB7CF99F828D42BEB4BA5DB63CCA422E93",
+      "lines": 53
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "sha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "lines": 454
+    },
+    {
+      "file": "web\\src\\api\\dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lines": 434
+    },
+    {
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "lines": 65
+    },
+    {
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "lines": 194
+    },
+    {
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "lines": 174
+    },
+    {
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "sha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "lines": 694
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lines": 168
+    },
+    {
+      "file": "web\\src\\lib\\drivesAggregation.ts",
+      "sha256": "5FCF90610A780F412B01E76B8E4EF7BFE620B2538F3BF14A8FB07DF8058AA0A6",
+      "lines": 511
+    },
+    {
+      "file": "web\\src\\lib\\metric-reference\\formatMetric.ts",
+      "sha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "lines": 137
+    },
+    {
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "lines": 115
+    },
+    {
+      "file": "web\\src\\components\\ui\\MobileDataTableAdapter.tsx",
+      "sha256": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "lines": 165
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "lines": 17
+    },
+    {
+      "file": "internal\\api\\router.go",
+      "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "lines": 5363
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx",
+      "sha256": "955370BE9DDB9329FB1A25304E76C96507276FD517004A2C19BB02732AA30B8A",
+      "lines": 42
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx",
+      "sha256": "F62B0BBF33C77824E2D865C39ECEAB2FDEF1E5AC76DB144BF723E5963B752B90",
+      "lines": 59
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyScatter.tsx",
+      "sha256": "2D47EB1CBC387D442B0DD73BB76F929E589B8B9587BBEB91A8F37D3225E07EDE",
+      "lines": 42
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySource.tsx",
+      "sha256": "B287408094E4EC4581F12873FC8C15E167649AE6916F5CC08EFAE1EE5EC910F0",
+      "lines": 40
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySpeedDistribution.tsx",
+      "sha256": "C60EFF4884684985A7C8DE671CE0DC771ABA93FBA7F009184E051C3211005D7C",
+      "lines": 36
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTemperatureTable.tsx",
+      "sha256": "38B780C0FE4FCB831D4BC71AEE43D8A02511D601D1AF1957DE74035BE408F7CB",
+      "lines": 68
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx",
+      "sha256": "F50EEB23308C0754706FE28BD389BFEDB735155A2AB5C216D3ADA320F4BA9169",
+      "lines": 38
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\index.ts",
+      "sha256": "9D96BC80FCF5084B5544243512A19D825A96400D311B15CB9619C061897A9328",
+      "lines": 8
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\metrics.ts",
+      "sha256": "FCDC9431C911CC4F225193F6ADA1DC4EB504878C66C27611D8BD6055411A6E9E",
+      "lines": 50
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts",
+      "sha256": "0B62B36C66B09BE2AD9C28DBDD622E9EBA9E437517BD9FAC5FB1E749E2985918",
+      "lines": 171
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\types.ts",
+      "sha256": "848398E611B55A4ED3FD68631E7C79A298C0690770E4E643CE55A416716EBAF1",
+      "lines": 21
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "lines": 919
+    },
+    {
+      "file": "web\\src\\lib\\routeRegistry.ts",
+      "sha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "lines": 289
+    },
+    {
+      "file": "web\\src\\lib\\routeLoaders.ts",
+      "sha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "lines": 127
+    },
+    {
+      "file": "web\\src\\types\\driving.ts",
+      "sha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "lines": 411
+    },
+    {
+      "file": "web\\src\\hooks\\useOperationalMetrics.tsx",
+      "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "lines": 24
+    },
+    {
+      "file": "web\\src\\hooks\\useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "lines": 47
+    },
+    {
+      "file": "web\\src\\lib\\unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "lines": 500
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "lines": 259
+    },
+    {
+      "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "lines": 1006
+    },
+    {
+      "file": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "sha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "lines": 42
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "sha256": "896C670550E1D719C8ABBDF1709E92F8712FFACC18525A3470436EDB873D1B67",
+      "lines": 48
+    },
+    {
+      "file": "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+      "sha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+      "lines": 291
+    },
+    {
+      "file": "web\\src\\components\\layout\\index.ts",
+      "sha256": "16105443F3F6C85FC73AE940F65F8B61F751A1FB30E77369B229D24EC7DFC642",
+      "lines": 27
+    },
+    {
+      "file": "web\\src\\hooks\\useSavedViewUrl.ts",
+      "sha256": "50640771B85C0CCEDB524ADF2DF98F07A306576E914736A71BA72792AB60F644",
+      "lines": 51
+    }
+  ],
+  "sections": [
+    {
+      "file": "web/src/features/driving/pages/EfficiencyPage.tsx",
+      "line": 81,
+      "source": "<section aria-label={t('efficiency.section.kpis', 'Key metrics')} className=\"min-w-0\">"
+    },
+    {
+      "file": "web/src/features/driving/pages/EfficiencyPage.tsx",
+      "line": 87,
+      "source": "<section aria-label={t('efficiency.section.overview', 'Overview and trend')} className=\"min-w-0 space-y-3\">"
+    },
+    {
+      "file": "web/src/features/driving/pages/EfficiencyPage.tsx",
+      "line": 99,
+      "source": "<section aria-label={t('efficiency.section.analysis', 'Speed and temperature analysis')} className=\"min-w-0 space-y-3\">"
+    },
+    {
+      "file": "web/src/features/driving/pages/EfficiencyPage.tsx",
+      "line": 114,
+      "source": "<section aria-label={t('efficiency.section.breakdown', 'Breakdown and insights')} className=\"min-w-0 space-y-3\">"
+    }
+  ],
+  "boundedGuidelineScan": {
+    "commandNumber": 4,
+    "command": "Select-String -Path (explicit productionScopePaths) -Pattern each pattern; emit matching line coordinates and counts",
+    "productionScopePaths": [
+      "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx",
+      "web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyEvidenceBrief.tsx",
+      "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyScatter.tsx",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySource.tsx",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySpeedDistribution.tsx",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTemperatureTable.tsx",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\index.ts",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\metrics.ts",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\types.ts"
+    ],
+    "patterns": {
+      "static-inline-style-candidate": "style\\s*=\\s*\\{\\{",
+      "raw-html": "<(?:button|input|textarea|select|table)(?=[\\s>])",
+      "direct-library-import": "from\\s+['\\\"](?:recharts|react-leaflet|framer-motion)['\\\"]",
+      "old-api-import": "from\\s+['\\\"](?:\\.\\./)+api['\\\"]",
+      "double-prefix": "/api/v1/",
+      "camelcase-param-candidate": "[?&][a-z]+[A-Z][A-Za-z]*=",
+      "hidden-section-candidate": "&&\\s*<(?:GlassPanel|section|LayoutCard|ChartCard|PageLayout)",
+      "hardcoded-string-candidate": ">\\s*[A-Za-z][A-Za-z ]+\\s*</",
+      "missing-page-container-candidate": "PageLayout|PageContainer",
+      "fetch-useeffect-candidate": "\\bfetch\\s*\\(|\\buseEffect\\b",
+      "visual-literal": "#[0-9a-fA-F]{3,8}|fontSize|areaGradient",
+      "numeric-mechanism": "Math\\.round|slice\\(|efficiencyColor\\(|max=\\{150\\}|0\\.12|currency:|isRefreshBlocked|!state.hasData|!source.state.hasData"
+    },
+    "matchingLineCounts": {
+      "static-inline-style-candidate": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param-candidate": 0,
+      "hidden-section-candidate": 0,
+      "hardcoded-string-candidate": 0,
+      "missing-page-container-candidate": 3,
+      "fetch-useeffect-candidate": 0,
+      "visual-literal": 19,
+      "numeric-mechanism": 20
+    },
+    "numericExit": 0,
+    "rawOutput": [
+      "COMMAND 4: bounded current presentation grep, counts are matching lines not accepted violations",
+      "UTC=2026-10-14T01:08:48.9812029Z",
+      "RULE=static-inline-style-candidate MATCHING_LINES=0",
+      "RULE=raw-html MATCHING_LINES=0",
+      "RULE=direct-library-import MATCHING_LINES=0",
+      "RULE=old-api-import MATCHING_LINES=0",
+      "RULE=double-prefix MATCHING_LINES=0",
+      "RULE=camelcase-param-candidate MATCHING_LINES=0",
+      "RULE=hidden-section-candidate MATCHING_LINES=0",
+      "RULE=hardcoded-string-candidate MATCHING_LINES=0",
+      "RULE=missing-page-container-candidate MATCHING_LINES=3",
+      "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx:5:import { PageLayout, CardGrid } from '@/components/layout';",
+      "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx:69:<PageLayout",
+      "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx:125:</PageLayout>",
+      "RULE=fetch-useeffect-candidate MATCHING_LINES=0",
+      "RULE=visual-literal MATCHING_LINES=19",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx:37:max={toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM)} color=\"#00f0ff\"",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx:42:value={toStatsSpeedDisplay(stats.avgSpeedKmh)} max={150} color=\"#10b981\"",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx:47:value={stats.regenRatio * 100} max={100} color=\"#a855f7\"",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx:52:value={stats.totalDurationS} max={Math.max(stats.totalDurationS, 36000)} color=\"#f59e0b\"",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyScatter.tsx:34:tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyScatter.tsx:36:tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyScatter.tsx:38:<Scatter data={data} fill={isSpeed ? '#f59e0b' : '#a855f7'} fillOpacity={0.6} />",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySpeedDistribution.tsx:27:<XAxis dataKey=\"range\" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySpeedDistribution.tsx:28:<YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx:3:ChartTooltip, renderAnnotationLines, AREA_DEFAULTS, areaGradient,",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx:27:{areaGradient('effGrad', '#00f0ff')}",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx:29:<XAxis dataKey=\"date\" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx:30:<YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx:33:<Area {...AREA_DEFAULTS} dataKey=\"efficiency\" stroke=\"#00f0ff\" fill=\"url(#effGrad)\" name={efficiencyUnit} />",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:15:if (wh < 140) return '#39ff14';",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:16:if (wh < 170) return '#10b981';",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:17:if (wh < 200) return '#00f0ff';",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:18:if (wh < 240) return '#f59e0b';",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:19:return '#ef4444';",
+      "RULE=numeric-mechanism MATCHING_LINES=20",
+      "web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyEvidenceBrief.tsx:47:preferences={{ units: props.units.unitPrefs, currency: { kind: 'symbol', value: '$' } }}",
+      "web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyEvidenceBrief.tsx:48:loading={props.source.loading && !state.hasData}",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx:26:const loading = !source.state.hasData && source.loading;",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx:35:empty={props.empty || (!source.state.hasData && !loading)}",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx:38:: !source.state.hasData && !loading",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx:27:max={Math.round(toEfficiencyDisplay(EFFICIENCY_GAUGE_MAX_WH_PER_KM))}",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx:29:color={efficiencyColor(stats.avgEfficiencyWhKm)} className=\"max-w-xs\" />",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx:42:value={toStatsSpeedDisplay(stats.avgSpeedKmh)} max={150} color=\"#10b981\"",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySource.tsx:25:if (!state.hasData && loading) return <Skeleton height={220} />;",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySource.tsx:34:{!state.hasData && !loading",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySpeedDistribution.tsx:31:{speedDist.map((entry, i) => <Cell key={i} fill={efficiencyColor(entry.avgEff)} fillOpacity={0.7} />)}",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\metrics.ts:17:? (intensity / 1000) * 0.12 : null;",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:14:export function efficiencyColor(wh: number): string {",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:104:.slice(0, 30).reverse().map(d => ({",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:106:efficiency: Math.round(toEfficiencyDisplay(getEfficiency(d)!)),",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:112:speed: Math.round(toSpeedDisplay(d.avgSpeedMps!)),",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:113:efficiency: Math.round(toEfficiencyDisplay(getEfficiency(d)!)),",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:118:temp: Math.round(toTemperatureDisplay(d.outsideTempAvgC!)),",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:119:efficiency: Math.round(toEfficiencyDisplay(getEfficiency(d)!)),",
+      "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:138:avgEff: Math.round(toEfficiencyDisplay(b.totalEff / b.count)),",
+      "SCANNED_PRODUCTION_FILES=14",
+      "EXIT=0"
+    ],
+    "exceptions": [
+      "PageLayout wraps PageContainer, actual shared source inspected",
+      "Recharts tick/color API props are not static-inline-style violations",
+      "Dynamic/computed inline styles are not static violations",
+      "Plain unit symbols/technical identifiers/ranges are not untranslated English"
+    ],
+    "limitations": "Matching lines, not full AST/catalog validation; no whole-app clean claim",
+    "hookScan": {
+      "commandNumber": 9,
+      "ranges": "useDriving.ts161-192 and222-236",
+      "nativeCommand": "(Get-Content useDriving.ts)[160..191]+[221..235] | Select-String -Pattern each hook pattern",
+      "rawCounts": [
+        "HOOK_PATTERN[/api/v1/]=0",
+        "HOOK_PATTERN[[?&][a-z]+[A-Z][A-Za-z]*=]=0",
+        "HOOK_PATTERN[fetch\\s*\\(]=0",
+        "HOOK_PATTERN[from\\s+['\\\"](?:\\.\\./)+api['\\\"]]=0",
+        "HOOK_PATTERN[/api/v1/]=0",
+        "HOOK_PATTERN[[?&][a-z]+[A-Z][A-Za-z]*=]=0",
+        "HOOK_PATTERN[fetch\\s*\\(]=0",
+        "HOOK_PATTERN[from\\s+['\\\"](?:\\.\\./)+api['\\\"]]=0"
+      ],
+      "numericExit": 0
+    },
+    "backendRules": "Only router mount source read. SQL/fmt/panic/context backend sweep NOTRUN; no zero-violation claim"
+  },
+  "rawBoundedScanCommands": [
+    {
+      "number": 1,
+      "command": "UTC/exact-report-absence; Select-String migration-queue -Pattern phase6-qa-driving-efficiency,EfficiencyPage,efficiency,frontend-si,observability,unknown.*zero; Get-ChildItem instruction paths; Select-String .gitignore -Pattern logs,web/",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 1",
+      "failure": null
+    },
+    {
+      "number": 2,
+      "command": "Select-String migration-queue -Pattern exact QA row,EfficiencyPage file,phase6 efficiency items; Get-ChildItem driving Efficiency paths; Select-String .gitignore logs",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 2",
+      "failure": null
+    },
+    {
+      "number": 3,
+      "command": "Select-String per-path hook/router/range/selection/formatMetric/mobile/StaleRefreshWarning/PageLayout patterns; each expanded path/line/count in log",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 3",
+      "failure": null
+    },
+    {
+      "number": 4,
+      "command": "Select-String14 productionScopePaths -Pattern boundedGuidelineScan.patterns; exact rawOutput embedded in JSON",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 4",
+      "failure": null
+    },
+    {
+      "number": 5,
+      "command": "Get-FileHash SHA256/Get-Content line counts27 read sources; bounded queue palette/trust/child dedup regex (17 candidate rows)",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 5",
+      "failure": null
+    },
+    {
+      "number": 6,
+      "command": "Original route/type/frame/queue scan: invalid PowerShell $n: interpolation; parser failure before execution",
+      "numericExit": 1,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 6",
+      "failure": "ParserError: colon after $n invalid; no checks executed"
+    },
+    {
+      "number": 7,
+      "command": "Corrected command6 ${n}; Select-String exact route/type/metric/frame/converter paths plus queue file-column matches",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 7",
+      "failure": null
+    },
+    {
+      "number": 8,
+      "command": "Select-String guessed route glob $routeFiles.FullName: null Path; stopped before checks",
+      "numericExit": 1,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 8",
+      "failure": "Cannot bind Path because route glob returned no files; no remaining checks executed"
+    },
+    {
+      "number": 9,
+      "command": "Corrected exact App/routeLoaders/ChartCard/DataSourceNotice/label/inventory probes; page SimpleMatch section counts; precise child scope regex; two hook ranges",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 9",
+      "failure": null
+    },
+    {
+      "number": 10,
+      "command": "Get-Content logged counts; queue file-column ownership; layout category exports;13 additional hash/line pins and queue snapshot",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 10",
+      "failure": null
+    },
+    {
+      "number": 11,
+      "command": "Intended oversized report-construction command failed at OS filename/extension length before shell execution",
+      "numericExit": 1,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 11",
+      "failure": "The filename or extension is too long. (os error206); shell did not start"
+    },
+    {
+      "number": 12,
+      "command": "Compact native JSON construction/ConvertFrom-Json;41 source pins and exact section lines; write only authorized report/log",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 12",
+      "failure": null
+    },
+    {
+      "number": 13,
+      "command": "Get-FileHash/Get-Content compare41 pins; validate14file/825line accounting; attach raw bounded scans/command receipts; native JSON serialize",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND 13",
+      "failure": null
+    },
+    {
+      "number": 14,
+      "command": "Get-Content report -Raw | ConvertFrom-Json; assert counts; Get-FileHash/Get-Content compare41 source pins; finalize integrity/release; serialize then re-read final JSON; append final raw log closure",
+      "numericExit": 0,
+      "rawOutputLocation": "web/logs/phase6-qa-driving-efficiency.log COMMAND14",
+      "failure": null
+    }
+  ],
+  "filesRead": [
+    "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\drivesAggregation.ts",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ui\\MobileDataTableAdapter.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyScatter.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySource.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySpeedDistribution.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTemperatureTable.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\index.ts",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\metrics.ts",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\types.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\lib\\routeLoaders.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\hooks\\useSavedViewUrl.ts"
+  ]
+}

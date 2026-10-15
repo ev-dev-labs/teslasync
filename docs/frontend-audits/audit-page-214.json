@@ -1,0 +1,250 @@
+{
+  "item": "audit-page-214",
+  "page": "web\\src\\features\\trips\\pages\\TripDetailPage.tsx",
+  "routes": ["/trips/:id"],
+  "purpose": "Inspect one stored trip, its aggregate driving/charging totals, individual drive distances, metadata and ordered drive breakdown; optionally request a propose-only AI name.",
+  "primaryGoal": "Understand the real trip and its constituent drives, retaining historical source trust, units, sorting/filtering/pagination, exports and recovery without inventing a map, telemetry or replay source.",
+  "dataSources": [
+    {
+      "name": "Stored trip detail",
+      "hook": "useTrip(id ?? '')",
+      "file": "web\\src\\api\\hooks\\useTrips.ts",
+      "line": 53,
+      "endpoint": "GET /api/v1/trips/{trip_id}",
+      "sourceOwner": "internal\\api\\tripsdetail\\handler.go",
+      "evidence": ["web\\src\\features\\trips\\pages\\TripDetailPage.tsx:18-26", "web\\src\\api\\hooks\\useTrips.ts:53-62", "internal\\api\\router.go:4212-4221", "internal\\api\\tripsdetail\\handler.go:43-89,93-160"],
+      "behavior": "Query key ['trips', id]; enabled for nonempty id; URL encodes the segment and forwards AbortSignal. Page derives historical DataState, separates fatal failure from retained refresh failure, and passes the query to shared freshness/source notices. Handler validates positive integer IDs and returns 400/404/500 with genuine source failure. DTO preserves nullable individual SI measurements and emits drives as [] rather than null.",
+      "units": "Raw total_distance_m/distance_m metres; total_energy_wh/energy_used_wh watt-hours; total_duration_s/duration_s seconds. Frontend uses useUnits, useFormatting and shared duration formatting only at display boundaries."
+    },
+    {
+      "name": "Trip aggregates and drive order",
+      "file": "internal\\database\\trip\\detail_repo.go",
+      "line": 115,
+      "sourceOwner": "internal\\database\\trip\\detail_repo.go",
+      "evidence": ["internal\\database\\trip\\detail_repo.go:33-43,97-170,178-240"],
+      "behavior": "Two parameterized reads: trips/trip_drives/drives aggregates plus per-drive projection ordered by trip_drives.position. SUM coalesces missing drive measurements to zero in totals. Charge count and cost are vehicle-scoped overlapping charging-session window aggregates, not direct trip-charge membership. Open-trip aggregation uses NOW internally; wire end_date remains null. Backend comments claiming km/kWh conversion are stale: inspected handler emits SI unchanged.",
+      "runtimeVerified": false
+    },
+    {
+      "name": "AI propose-only trip name",
+      "hook": "useAiStream({url, body:{}, onEvent:NO_OP, scopeKey:canonicalTripId})",
+      "file": "web\\src\\components\\ai\\AIAutoTripNameSuggestion.tsx",
+      "line": 42,
+      "endpoint": "POST /api/v1/ai/trips/{tripID}/name/draft",
+      "sourceOwner": "internal\\api\\ai_routes.go",
+      "evidence": ["web\\src\\components\\ai\\AIAutoTripNameSuggestion.tsx:26-90", "web\\src\\hooks\\useAiStream.ts:230,334-347,417", "internal\\api\\ai_routes.go:1241-1260", "internal\\api\\router.go:1487-1508,5069", "web\\src\\components\\ai\\withAiFeature.tsx:33-63"],
+      "behavior": "AI visibility is governed by the existing auto-trip-naming feature gate. Undefined/blank/'0' ids disable request action; other IDs are trimmed and encoded. Stream identity changes abort prior-trip requests and clear previous output. The feature renders accumulated text and privacy-safe evidence; no mutation/save callback is supplied. Source route explicitly proposes only; actual provider availability and generated grounding were not exercised."
+    },
+    {
+      "name": "Trip DTO and record identity",
+      "file": "web\\src\\api\\types.ts",
+      "line": 1639,
+      "sourceOwner": "internal\\api\\tripsdetail\\handler.go",
+      "evidence": ["web\\src\\api\\types.ts:1639-1665", "internal\\api\\tripsdetail\\handler.go:59-89,124-145", "web\\src\\features\\trips\\components\\TripOverviewPanel.tsx:38-65"],
+      "behavior": "Detail carries id, vehicle id, dates, total SI measurements, monetary cost, counts and per-drive fields. created_at is an alias of trip start time, not an audit creation timestamp. notes is consulted by the UI but is absent from this inspected DTO; preserve reachable notes if supplied without claiming current server notes support."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "evidence": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-17", "web\\src\\components\\layout\\PageContainer.tsx:118-171,253", "web\\src\\features\\trips\\pages\\TripDetailPage.tsx:47-54"], "contract": "Existing shell width, header, breadcrumbs, route focus target, freshness and per-source notice; detail scope is record ID, not a second local vehicle/range picker."},
+    {"name": "TripKpiBand / TripOperationalBrief / OperationalBrief", "kind": "domain/shared composite", "owner": "web\\src\\features\\trips\\components\\TripKpiBand.tsx", "evidence": ["web\\src\\features\\trips\\components\\TripKpiBand.tsx:31-97", "web\\src\\features\\trips\\components\\operationalbrief-all\\TripOperationalBrief.tsx:11-34", "web\\src\\components\\data-display\\OperationalBrief.tsx:99,119,159,225,235-237"], "contract": "Six source-backed metrics: distance, energy, derived efficiency, duration, drives with charge context, cost. Scope/provenance/freshness/status and existing Review details drawer remain; useOperationalMetrics receives numeric raw sources."},
+    {"name": "TripDrivesChart / ChartCard / EmbeddedChart / ChartContainer", "kind": "domain/chart composite", "owner": "web\\src\\features\\trips\\components\\TripDrivesChart.tsx", "evidence": ["web\\src\\features\\trips\\components\\TripDrivesChart.tsx:29-108", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:13-47", "web\\src\\components\\charts\\EmbeddedChart.tsx:19-41", "web\\src\\components\\charts\\ChartContainer.tsx:417-428,629-637"], "contract": "Horizontal bars, source drive order, shared tooltip/axes/grid, adaptive bounded height, loading/empty/error, actual fallback rows/columns and PNG/SVG/copy-image export. No exportData means no chart CSV; EmbeddedChart defaults fullscreen false."},
+    {"name": "TripOverviewPanel / LayoutCard / KVList / DateTime", "kind": "metadata", "owner": "web\\src\\features\\trips\\components\\TripOverviewPanel.tsx", "evidence": ["web\\src\\features\\trips\\components\\TripOverviewPanel.tsx:22-67"], "contract": "ID, name, vehicle, start/end, in-progress state, duration, drive/charge counts, Created and meaningful notes; responsive key/value layout plus scoped skeleton/error/empty."},
+    {"name": "TripDrivesTable / DataTable / useSortToggle / RouteDisplay", "kind": "domain/table composite", "owner": "web\\src\\features\\trips\\components\\TripDrivesTable.tsx", "evidence": ["web\\src\\features\\trips\\components\\TripDrivesTable.tsx:28-147", "web\\src\\components\\ui\\DataTable.tsx:715-725,825-837,856-925"], "contract": "Route, started time, distance, energy, duration; stable trip table ID, raw-SI value filters, chronological API order until sort requested, sortable numeric/date fields, pagination, persisted column controls, inherited loaded matching-row CSV/JSON exports and shared sort announcements."},
+    {"name": "AIAutoTripNameSuggestion / AIFeatureCard / AiOutputPanel / withAiFeature", "kind": "shared AI feature", "owner": "web\\src\\components\\ai\\AIAutoTripNameSuggestion.tsx", "evidence": ["web\\src\\components\\ai\\AIAutoTripNameSuggestion.tsx:60-90", "web\\src\\components\\ai\\AIFeatureCard.tsx:282-345", "web\\src\\components\\ai\\AiOutputPanel.tsx:75-132"], "contract": "Existing feature gating, Ask Helix accessible name, disabled/busy action, streaming/output/empty/error with evidence trail; no automatic persistence."},
+    {"name": "DataSourceNotice / DataState / FadeIn / QueryError / Skeleton / EmptyState", "kind": "trust/feedback/motion", "owner": "web\\src\\components\\feedback\\DataSourceNotice.tsx", "evidence": ["web\\src\\components\\feedback\\DataSourceNotice.tsx:72-114,117-190", "web\\src\\api\\dataState.ts:191-270", "web\\src\\components\\motion\\FadeIn.tsx:24-38"], "contract": "Retained historical payload, fatal versus refresh error, paused/offline retry and non-destructive status. FadeIn respects reduced-motion preference."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\trips\\components\\TripDrivesTable.tsx", "line": 125, "rule": "MDC-002 existing recovery reuse", "detail": "Three domain sections repeat the same QueryError resource/list/retry composition. They already reuse shared primitives, and separate section recovery is intentional; no independent competing error system is evidenced.", "fix": "Keep section-specific loading/error/empty behavior; only compose further if broader confirmed callers need it, not to shrink the page.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "verifiedAtRuntime": false,
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "sourceBehavior": [
+      {"file": "web\\src\\features\\trips\\pages\\TripDetailPage.tsx", "line": 65, "detail": "Chart and overview stack below xl; xl uses a three-column grid with chart spanning two. All feature bands remain mounted."},
+      {"file": "web\\src\\features\\trips\\pages\\TripDetailPage.tsx", "line": 49, "detail": "Metadata identity has max-w-full and overflow-wrap:anywhere; shared layout is min-w-0 and full allocated width."},
+      {"file": "web\\src\\features\\trips\\components\\TripDrivesChart.tsx", "line": 73, "detail": "Chart height scales with drive count, bounded 220–520px, with 72px category axis and ResponsiveContainer."},
+      {"file": "web\\src\\components\\ai\\AIFeatureCard.tsx", "line": 320, "detail": "AI header/title/actions wrap with min-w-0 and break-words rather than a fixed-width action row."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\trips\\components\\TripDrivesTable.tsx", "line": 139, "rule": "MDC-001/MDC-043 no mobile information loss", "detail": "mobileColumns allows only route, started_at and distance_m. DataTable's mobile class hides energy and duration under md; the page supplies neither mobilePresentation nor row expansion. Column controls exist, but the inspected mobileSet still hides disallowed columns, so complete mobile access is not proven.", "fix": "Adopt existing DataTable mobilePresentation with complete route/date/distance/energy/duration detail and equivalent filters/sort/export, or an explicit reachable details path. Do not delete secondary measurements.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\trips\\components\\TripDrivesChart.tsx", "line": 73, "rule": "mission 15/27 dense-chart reachability", "detail": "A large drive count is compressed into a fixed 520px maximum with a 72px categorical axis and 10px axis ticks. This may skip labels or crowd bars on narrow allocations; actual overlap/overflow is unverified.", "fix": "Test long trip counts/localized labels at narrow allocations; retain every drive in accessible rows/table/export and use bounded scrolling or existing responsive chart controls if needed.", "owner": "page", "confidence": "medium"}
+    ]
+  },
+  "accessibility": {
+    "runtimeKeyboardContrastAndAssistiveTechnologyVerified": false,
+    "positiveEvidence": [
+      "KPI section has localized aria-label (TripKpiBand.tsx:89); role-based Text/KVList/DateTime are used.",
+      "Chart has localized ariaLabel plus actual data/dataColumns for shared screen-reader/forced-colors fallback (TripDrivesChart.tsx:47-58,80-88; ChartContainer.tsx:171-186,445-452).",
+      "DataTable exposes a stable table identity, shared sort announcement and pagination rather than raw controls (TripDrivesTable.tsx:137-146; DataTable.tsx:825-837,917-925).",
+      "AI action supplies a contextual accessible name and disabled/busy semantics; output error is role=alert (AIFeatureCard.tsx:304-311; AiOutputPanel.tsx:95).",
+      "Shared PageContainer supplies programmatic route heading focus; FadeIn uses shared motion preference (PageContainer.tsx:176-190; FadeIn.tsx:24-38)."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\trips\\components\\TripDrivesChart.tsx", "line": 91, "rule": "MDC-042 motion preference", "detail": "chartAnimation contains static 800ms/ease-out only and is spread on BarChart, not the Bar series. The actual animated Bar has no isAnimationActive preference guard; shared chartAnimationProps already exists for Bar. Recharts runtime motion was not exercised.", "fix": "Apply existing chartAnimationProps to Bar or the accepted shared series-motion contract, preserving all geometry/data; do not rely on CSS to stop JS animation.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\trips\\pages\\TripDetailPage.tsx", "line": 47, "rule": "MDC-040 asynchronous announcement", "detail": "Page supplies query and dataSources but no loading/busy/error props. PageContainer's load announcer reads loading/error, not query, and aria-busy reads loading/busy. Child skeletons/source notices exist, but equivalent page load completion announcements are unverified.", "fix": "Wire non-destructive busy/announcement state or an existing scoped announcer while leaving section-level states and retained content intact.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\components\\ai\\AiOutputPanel.tsx", "line": 125, "rule": "mission 30 accessible streaming output", "detail": "Successful streamed name text is plain prose without a local live region. Errors are announced; action busy is exposed. Whether the evidence/thinking descendants provide equivalent completion announcements was not inspected.", "fix": "Shared AI owner should validate and, if necessary, add concise preference-aware completion announcements without announcing every token or duplicating error announcements.", "owner": "shared", "confidence": "medium"}
+    ]
+  },
+  "states": {
+    "runtimeVerified": false,
+    "inventory": [
+      {"name": "Initial loading", "evidence": "TripDetailPage.tsx:22-25; TripDrivesChart.tsx:81; TripOverviewPanel.tsx:23-24; TripDrivesTable.tsx:132-133", "behavior": "Contextual chart loading, overview/table skeletons, loading trip brief; headers and AI section are independently present subject to feature gate."},
+      {"name": "Fatal error / missing record / invalid id", "evidence": "TripDetailPage.tsx:24-26; TripDrivesChart.tsx:60-71; TripOverviewPanel.tsx:25-30; TripDrivesTable.tsx:125-131; handler.go:94-113", "behavior": "Independent QueryErrors offer refetch and /trips recovery. Server distinguishes 400/404/500; no fabricated record is supplied."},
+      {"name": "Empty record or drives", "evidence": "TripOverviewPanel.tsx:32-36; TripDrivesChart.tsx:82; TripDrivesTable.tsx:145", "behavior": "Metadata explicitly says Trip not found for absent data; chart and table expose their own empty state. Disabled missing-ID query differs from a confirmed server 404."},
+      {"name": "Retained refresh failure", "evidence": "TripDetailPage.tsx:22-25,51-52; dataState.ts:225-249; DataSourceNotice.tsx:76-114", "behavior": "fatalError remains null with retained data; detail/overview/chart/table remain visible while brief/source notice report stale/refreshFailed and offer retry."},
+      {"name": "Offline/paused", "evidence": "DataSourceNotice.tsx:77-78,87,99-114,157-159,188-190; dataState.ts:247-249", "behavior": "Shared notice exposes paused offline or retained source status; exact paused-with-retained-data presentation requires runtime verification."},
+      {"name": "Open trip", "evidence": "TripOverviewPanel.tsx:46-52; TripKpiBand.tsx:61-62; handler.go:68-71", "behavior": "Null end_date means In progress; stored record start and current aggregate window remain separate."},
+      {"name": "AI off/idle/loading/done/error", "evidence": "withAiFeature.tsx:46-48; AIAutoTripNameSuggestion.tsx:26-58; AIFeatureCard.tsx:258-311; AiOutputPanel.tsx:77-128", "behavior": "Off mode removes AI UI only. Bad placeholder IDs disable action; streaming disables another request; completed text/evidence remains; silent completion has explicit no-output copy; errors alert and can be regenerated."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\trips\\components\\TripDrivesChart.tsx", "line": 43, "rule": "MDC-026 unknown is not measured zero", "detail": "Per-drive distance_m is nullable in both DTO and TypeScript. safeNumber turns missing/nonfinite values into zero, so accessible chart/export rows represent unavailable distance as numeric zero. Table filters retain null. This is an existing trust discrepancy, not permission to alter raw cache values.", "fix": "Keep missing measurements null in presentation data and give the accessible/export representation an explicit unavailable value; retain all drive identities/order and distinguish a real zero bar.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\trips\\components\\TripKpiBand.tsx", "line": 31, "rule": "MDC-026 nonnegative display policy preservation", "detail": "safeMetric clamps negative/nonfinite totals to zero. Duration rawValue is null unless positive, so valid duration zero is presented as missing. The brief explicitly documents the current clamp policy; backend also coalesces missing drive totals to zero.", "fix": "Preserve and document existing clamp behavior during modernization; coordinate explicit source availability/invalid metadata with the data owner before changing interpretation. Test zero, null, invalid and positive separately; do not rewrite raw SI values.", "owner": "integration", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\trips\\components\\TripDrivesChart.tsx", "line": 93, "rule": "MDC-010/MDC-034; mission 27 restrained charts", "detail": "ChartGradient hardcodes electric cyan #00f0ff with opacity 0.8, then applies its gradient to all distance bars. This is source-confirmed neon/saturated decoration despite no neon-class regex match. No rendered glow or contrast failure is claimed.", "fix": "Use the current semantic/chart palette with a subdued single-series solid or restrained existing fill, preserving distance comparison, tooltip, accessibility and exports.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\components\\ai\\AIFeatureCard.tsx", "line": 302, "rule": "MDC-010 shared intensity budget", "detail": "AI CTA and badge use fixed cyan border/background/text/focus accents. They are toned and theme-branched, not pure-white or proven glow, but add a second attention-heavy accent alongside the electric chart.", "fix": "Shared AI owner should apply existing semantic action/badge tokens and preserve branded identity, visible focus, busy state and names; do not invent a page-local AI visual system.", "owner": "shared", "confidence": "medium"},
+    {"file": "web\\src\\components\\ai\\AiOutputPanel.tsx", "line": 91, "rule": "MDC-012 theme-aware surface", "detail": "Output panel uses bg-white/[0.02] rather than a semantic surface. This is low-alpha fixed-white decoration, not pure-white body text. Feature sources contain no direct text-white/#fff or glow classes in the executed bounded scan.", "fix": "Resolve the existing shared output surface through current theme tokens, retaining output/evidence/error/empty states; measure composed contrast in both themes.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\components\\TripDrivesTable.tsx", "line": 77, "rule": "MDC-013 typography roles", "detail": "Started DateTime adds text-sm although its variant already owns formatting, and duration mixes Text size/color with role variants used elsewhere. This is source inconsistency, not a measured readability failure.", "fix": "Prefer existing typography role contracts while preserving date/duration precision and display preferences; avoid cosmetic shrinkage of dense mobile measurements.", "owner": "page", "confidence": "medium"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\components\\ai\\AIAutoTripNameSuggestion.tsx", "line": 69, "rule": "MDC-001 real action preservation; mission 3", "detail": "Description instructs users to click Save, but this component passes only start/text/state/error to the shared card and supplies no save/confirm UI or callback. AiOutputPanel is a prose/evidence renderer, and backend route says persistence is out of scope. Current source does not establish a working Save action.", "fix": "Track the mismatch with the AI/trip integration owner. Preserve propose-only generation and truthful output; do not claim save persistence or implement an invented mutation in presentation work.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\components\\TripOverviewPanel.tsx", "line": 61, "rule": "MDC-026 metadata provenance", "detail": "Created renders created_at as if it were a creation audit date, but handler derives it from StartedAt because the schema has no audit column. Notes is conditionally rendered but absent from this DTO. These are real source-contract limitations.", "fix": "Retain metadata and optional meaningful notes; clarify the created_at alias with the data owner rather than fabricating creation history or notes storage.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\components\\TripDrivesTable.tsx", "line": 61, "rule": "MDC-070 export completeness", "detail": "The computed route column renders RouteDisplay but supplies no exportValue. DataTable's fallback tries extracted rendered text, then row[column.key]; there is no route property in TripDriveSummary. CSV/JSON route serialization therefore needs explicit verification. Numeric JSON keys preserve raw SI while CSV prefers display text; no exportRawRows is supplied.", "fix": "Supply source-backed route export values using start_place/end_place and preserve current loaded matching-row scope, raw SI JSON, display preferences and CSV behavior. Verify exact downloaded content; do not add a fake full-range export.", "owner": "page", "confidence": "medium"},
+    {"file": "web\\src\\features\\trips\\pages\\TripDetailPage.tsx", "line": 29, "rule": "MDC-044 consistent record identity", "detail": "trip.name ?? fallback treats empty/whitespace names as valid identity, while overview uses trim and displays an em dash. A blank server name can leave metadata/breadcrumb/tab identity blank despite a loaded trip.", "fix": "Reuse a consistent nonblank name predicate for the displayed trip identity, preserving real names and Trip #id fallback.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\trips\\components\\TripKpiBand.tsx", "line": 3, "rule": "MDC-002 category contracts", "detail": "Feature imports StatMetric through an implementation-specific stat-reference path. TripOperationalBrief also imports its props type from a concrete shared module. These are type-only couplings, not runtime competing renderers.", "fix": "Consume accepted category type exports when available; coordinate missing public type exports with the shared owner without adding a replacement library.", "owner": "shared", "confidence": "medium"}
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Protect mobile access and null-vs-zero trust/export semantics first; then resolve AI Save claim and metadata provenance. Visual modernization must remove the electric cyan while preserving every source/action.",
+    "order": ["mobile full-drive detail parity", "missing-data chart/export semantics", "AI proposal/save truthfulness", "source metadata/identity consistency", "motion and announcement wiring", "restrained palette and shared surfaces"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing DataTable mobile detail and export contracts",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": ["mobilePresentation", "mobileColumns", "Column.exportValue", "enableValueFilters", "sortKey/sortDir/onSort", "pagination", "tableId", "CSV/JSON matching-loaded-row scope"],
+      "usedBy": ["web\\src\\features\\trips\\components\\TripDrivesTable.tsx"],
+      "dependsOn": ["existing mobile-grid-reference implementation", "accepted DataTable public contract", "page-supplied complete TripDriveSummary fields"],
+      "requirement": "Prefer page adoption of current APIs; a new shared API is not established as necessary. Shared owner needed only if full mobile column reachability or source-backed export is unsupported. Do not create a second table/mobile renderer."
+    },
+    {
+      "name": "AI feature presentation and truthful proposal lifecycle",
+      "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "propsVariantsStates": ["canStart", "stream state/text/error/activity/usage/start", "button accessible name/busy/disabled", "idle/streaming/done/error", "feature off gate", "semantic action/badge/output surface", "completion announcement"],
+      "usedBy": ["web\\src\\components\\ai\\AIAutoTripNameSuggestion.tsx", "web\\src\\features\\trips\\pages\\TripDetailPage.tsx"],
+      "dependsOn": ["web\\src\\components\\ai\\AiOutputPanel.tsx", "web\\src\\components\\ai\\withAiFeature.tsx", "web\\src\\hooks\\useAiStream.ts", "existing theme and motion contracts", "integration owner for absent Save action"],
+      "requirement": "Shared semantic styling and announcement validation belong to AI owners, not this page. Preserve propose-only behavior and privacy-safe evidence; backend persistence remains unresolved rather than inferred."
+    },
+    {
+      "name": "Existing chart and layout contracts, no new implementation",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "propsVariantsStates": ["data/dataColumns", "ariaLabel/ariaDescription", "exportable/exportFilename/exportData", "loading/empty/error", "EmbeddedChart fullscreen default false", "chartAnimationProps on animated series"],
+      "usedBy": ["web\\src\\features\\trips\\components\\TripDrivesChart.tsx"],
+      "dependsOn": ["web\\src\\components\\layout\\layout-reference\\ChartCard.tsx", "web\\src\\components\\charts\\EmbeddedChart.tsx", "web\\src\\components\\charts\\chartDefaults.tsx"],
+      "requirement": "Current contracts support palette, motion, accessibility and image export needs. Page adoption should preserve capabilities; no new chart library, theme engine or fullscreen action is required."
+    }
+  ],
+  "competingImplementations": {
+    "found": false,
+    "evidence": "Page composes existing layout, operational brief, chart, table, formatting, feedback and AI owners. Local safeMetric is an explicit existing policy, not a second formatter. Type-only concrete imports and stale backend comments are coupling/documentation risks, not proof of duplicate implementations.",
+    "scope": "Bounded assigned page/dependencies only; no whole-repository duplicate audit."
+  },
+  "preservation": {
+    "sourceHash": "08b7f693be26dde6c330c223f12c798c51e983cf816a45ed1ee2432211c988cd",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact root-relative page file bytes, not a feature concatenation.",
+    "currentLineCount": 96,
+    "featurePresentationLineCount": 556,
+    "lineCounts": {"TripDetailPage.tsx": 96, "TripKpiBand.tsx": 98, "TripDrivesChart.tsx": 109, "TripOverviewPanel.tsx": 69, "TripDrivesTable.tsx": 149, "operationalbrief-all\\TripOperationalBrief.tsx": 35},
+    "sections": [
+      {"name": "Page identity/header/breadcrumbs/source notice", "count": 1, "evidence": "TripDetailPage.tsx:29-54"},
+      {"name": "Feature-gated AI trip-name proposal", "count": 1, "evidence": "TripDetailPage.tsx:57-58"},
+      {"name": "Trip totals brief", "count": 1, "metricCount": 6, "evidence": "TripDetailPage.tsx:61; TripKpiBand.tsx:64-94"},
+      {"name": "Distance by Drive chart", "count": 1, "evidence": "TripDetailPage.tsx:67-73"},
+      {"name": "Overview metadata", "count": 1, "fieldCount": 9, "optionalFieldCount": 1, "evidence": "TripOverviewPanel.tsx:41-65"},
+      {"name": "Drives in this trip", "count": 1, "columnCount": 5, "evidence": "TripDrivesTable.tsx:59-147"}
+    ],
+    "sectionCount": 6,
+    "sourceComponentCounts": {"pageFadeIn": 4, "featureSectionOpeningTags": 2, "featureLayoutCardOpeningTags": 3, "featureChartCardOpeningTags": 1, "featureGlassPanelOpeningTags": 0, "featureChartContainerOpeningTags": 0},
+    "countInterpretation": "Feature totals include page plus five inspected feature components. ChartCard and LayoutCard in the chart are alternative normal/fatal-error branches; shared OperationalBrief and AI card host additional surfaces not counted as feature-source tags. Zero direct GlassPanel/ChartContainer tags does not mean sections were deleted.",
+    "actions": [
+      {"name": "Historical source retry/recovery", "evidence": "TripDetailPage.tsx:26; TripDrivesChart.tsx:62-68; TripOverviewPanel.tsx:26-30; TripDrivesTable.tsx:126-130", "preserve": "Separate section feedback shares refetch; /trips recovery remains."},
+      {"name": "Retained/offline source retry", "evidence": "TripDetailPage.tsx:51-52; DataSourceNotice.tsx:65-69,188-190", "preserve": "Nonfatal shared notice and retained historical content."},
+      {"name": "Review brief details / close drawer", "evidence": "OperationalBrief.tsx:99,159,235-237", "preserve": "Real raw-derived metrics, source scope, provenance, status and freshness."},
+      {"name": "Chart tooltip and image export", "evidence": "TripDrivesChart.tsx:83-88,98; ChartContainer.tsx:629-637", "preserve": "PNG, SVG and copy image with existing filename; no CSV without exportData; fullscreen is not enabled."},
+      {"name": "Drive sorting/filtering/pagination/column controls/export", "evidence": "TripDrivesTable.tsx:36-56,70-111,137-146; DataTable.tsx:856-925", "preserve": "Initial API order; sortable started/distance/energy/duration; raw-SI value filters; persisted table ID; all matching loaded rows CSV/JSON, not only current page."},
+      {"name": "Ask Helix name proposal", "evidence": "AIAutoTripNameSuggestion.tsx:42-82; AIFeatureCard.tsx:282-311", "preserve": "Feature gating, scope cancellation, busy/disabled, output/evidence/error/empty; no auto-save or invented persistence."}
+    ],
+    "detailTelemetryMapReplay": {
+      "detail": "Present: trip overview, aggregate brief and individual drive table/chart.",
+      "telemetry": "No telemetry hook/panel/action in assigned page or its inspected feature components.",
+      "map": "No map/polyline component/action. Handler explicitly omits route_polyline because no per-trip source exists (handler.go:72-74). RouteDisplay is textual places, not a map.",
+      "replay": "App.tsx:642 registers replay at /drives/:id/replay, separate from this trip detail. This table has no row navigation/replay link callback; do not claim an existing replay action or silently remove adjacent route capabilities.",
+      "preserveRule": "Keep every evidenced action and specialist value. Missing map/telemetry/replay entrypoints are explicit source limits requiring separate authorized work, not permission to fabricate them or audit unrelated pages."
+    },
+    "dataBehavior": [
+      "Preserve root record-ID scope and query key, cancellation, enablement, inherited caching/retry, raw snake_case SI wire/cache values and display preferences.",
+      "Preserve per-drive nullability and trip_drives.position order; do not confuse loaded filtered rows with server total or chart full record.",
+      "Preserve charge/cost overlap aggregation, open-trip null end, total SI units and created_at alias truth; no fabricated charging association, trip polyline or telemetry.",
+      "Retain all six KPI metrics, counts/context, metadata and meaningful notes, independent chart/table/overview states and source trust.",
+      "Preserve existing nonnegative KPI clamp policy while documenting limitations; do not migrate units/backend math during presentation audit.",
+      "Keep table raw SI filter and JSON semantics separate from CSV display text; verify computed RouteDisplay export.",
+      "No source edits, route/settings changes, production request or mutation; no claimed runtime acceptance."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only bounded source inspection, scoped source regex counts and exact root SHA-256. Only owned report and heartbeat written.",
+    "runtime": "Unverified: no browser/app mount/live API/viewport/screenshot/keyboard/screen reader/contrast measurement or production action.",
+    "tests": "Not run. No TypeScript, full-repository lint/build, source changes, Git or nested agents. Skill script inspected but not executed because it unconditionally invokes full frontend TypeScript; scoped regex counts executed instead.",
+    "routeEvidence": "App.tsx:65,677 confirms lazy TripDetail mount at trips/:id under SafeRoute; runtime reachability/authentication/record existence not exercised.",
+    "visualLimits": "No measured glow or contrast failure. Feature scan found zero inline styles/raw controls/direct library imports/text-white-or-hex-white/neon-or-glow classes. Explicit electric cyan gradient and shared low-alpha white surface remain source-evidenced separately.",
+    "commandReceipts": [
+      {"command": "Get-FileHash web\\src\\features\\trips\\pages\\TripDetailPage.tsx -Algorithm SHA256", "exitCode": 0, "output": "08B7F693BE26DDE6C330C223F12C798C51E983CF816A45ED1EE2432211C988CD"},
+      {"command": "Scoped Get-Content/[regex]::Matches scan over page, TripKpiBand, TripDrivesChart, TripOverviewPanel, TripDrivesTable and TripOperationalBrief", "exitCode": 0, "output": "LINES=96,98,109,69,149,35; total=556. Per-file directLibraries=0, inlineStyle=0, rawControls=0, whiteText=0, neonGlow=0. sections=1,1,0,0,0,0; layoutCards=0,0,1,1,1,0; chartCards=0,0,1,0,0,0; glassPanels=0,0,0,0,0,0; chartContainers=0,0,0,0,0,0."}
+    ],
+    "scopeLimits": "filesRead includes actual ranges/targeted matches, not claims of full-file/full-repository semantic review. One mistaken DataSourceNotice path and one nonexistent chartStyles path produced no evidence; corrected existing files were inspected. No historical acceptance borrowed. Shared dependencies may change concurrently.",
+    "historicalAcceptanceUsed": false,
+    "sourceEdits": false,
+    "gitUsed": false,
+    "nestedAgentsUsed": false
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-audits\\audit-page-100.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\trips\\pages\\TripDetailPage.tsx",
+    "web\\src\\features\\trips\\components\\TripKpiBand.tsx",
+    "web\\src\\features\\trips\\components\\TripDrivesChart.tsx",
+    "web\\src\\features\\trips\\components\\TripOverviewPanel.tsx",
+    "web\\src\\features\\trips\\components\\TripDrivesTable.tsx",
+    "web\\src\\features\\trips\\components\\operationalbrief-all\\TripOperationalBrief.tsx",
+    "web\\src\\api\\hooks\\useTrips.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\chartDefaults.tsx",
+    "web\\src\\components\\charts\\chartUtils.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\ai\\AIAutoTripNameSuggestion.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\hooks\\useAiStream.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\tripsdetail\\handler.go",
+    "internal\\database\\trip\\detail_repo.go"
+  ]
+}

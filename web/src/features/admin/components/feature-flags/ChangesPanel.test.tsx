@@ -183,8 +183,8 @@ describe('ChangesPanel', () => {
       ],
     })
 
-    expect(screen.getByText('set').className).toContain('bg-green-100')
-    expect(screen.getByText('delete').className).toContain('bg-red-100')
+    expect(screen.getByText('set').className).toContain('bg-[var(--semantic-success-bg)]')
+    expect(screen.getByText('delete').className).toContain('bg-[var(--semantic-danger-bg)]')
     expect(screen.getByText('archive').className).toContain(BADGE_VARIANTS.neutral)
   })
 

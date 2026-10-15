@@ -5,13 +5,15 @@ import { RefreshCw } from 'lucide-react';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { FadeIn } from '@/components/motion';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import {
   convertTempFromSI,
   type TemperatureUnitPref,
@@ -37,24 +39,30 @@ import {
   type TemperatureDeltaFormatter,
 } from '../components/preconditioning-effectiveness';
 import { summarizePreconditioningEffectiveness } from '../lib/preconditioningEffectiveness';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function convertDeltaC(valueC: number, unit: TemperatureUnitPref): number {
   return convertTempFromSI(valueC, unit) - convertTempFromSI(0, unit);
 }
 
 export default function PreconditioningEffectivenessPage() {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(
     t(
       'preconditioningEffectiveness.title',
-      'Preconditioning Effectiveness',
+      'Preconditioning effectiveness',
     ),
   );
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
   const { unitPrefs, formatDuration } = useUnits();
-  const climateQuery = useClimateHistory(vehicleIdStr);
-  const drivesQuery = useDriveHistory(vehicleIdStr || undefined, 1000);
+  const { startInstant, endInstantExclusive } = useRangeState();
+  const window = { start: startInstant, end: endInstantExclusive };
+  const climateQuery = useClimateHistory(vehicleIdStr, window);
+  const drivesQuery = useDriveHistory(vehicleIdStr || undefined, 1000, window);
+  const climateSource = deriveDataState(climateQuery, { provenance: 'historical' });
+  const drivesSource = deriveDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
     () => summarizePreconditioningEffectiveness(
       climateQuery.data ?? [],
@@ -82,6 +90,7 @@ export default function PreconditioningEffectivenessPage() {
         hasData: climateHasData,
         isLoading:
           !climateHasData
+          && climateQuery.fetchStatus !== 'paused'
           && (
             climateQuery.isLoading
             || (
@@ -91,22 +100,17 @@ export default function PreconditioningEffectivenessPage() {
           ),
         isResolved: climateQuery.isSuccess || climateHasData,
         isFetching: climateQuery.isFetching,
-        isPaused:
-          !climateHasData && climateQuery.fetchStatus === 'paused',
-        error:
-          climateQuery.isError && !climateHasData
-            ? climateQuery.error
-            : null,
-        refreshError:
-          climateQuery.isError && climateHasData
-            ? climateQuery.error
-            : null,
+        // A paused refresh still retains historical evidence; it is not a fresh load.
+        isPaused: climateQuery.fetchStatus === 'paused',
+        error: climateSource.fatalError,
+        refreshError: climateSource.refreshError,
         onRetry: retryClimate,
       },
       drives: {
         hasData: drivesHaveData,
         isLoading:
           !drivesHaveData
+          && drivesQuery.fetchStatus !== 'paused'
           && (
             drivesQuery.isLoading
             || (
@@ -116,37 +120,30 @@ export default function PreconditioningEffectivenessPage() {
           ),
         isResolved: drivesQuery.isSuccess || drivesHaveData,
         isFetching: drivesQuery.isFetching,
-        isPaused:
-          !drivesHaveData && drivesQuery.fetchStatus === 'paused',
-        error:
-          drivesQuery.isError && !drivesHaveData
-            ? drivesQuery.error
-            : null,
-        refreshError:
-          drivesQuery.isError && drivesHaveData
-            ? drivesQuery.error
-            : null,
+        isPaused: drivesQuery.fetchStatus === 'paused',
+        error: drivesSource.fatalError,
+        refreshError: drivesSource.refreshError,
         onRetry: retryDrives,
       },
       onRefresh: refreshAll,
     }),
     [
       climateHasData,
-      climateQuery.error,
       climateQuery.fetchStatus,
-      climateQuery.isError,
       climateQuery.isFetching,
       climateQuery.isLoading,
       climateQuery.isPending,
       climateQuery.isSuccess,
+      climateSource.fatalError,
+      climateSource.refreshError,
       drivesHaveData,
-      drivesQuery.error,
       drivesQuery.fetchStatus,
-      drivesQuery.isError,
       drivesQuery.isFetching,
       drivesQuery.isLoading,
       drivesQuery.isPending,
       drivesQuery.isSuccess,
+      drivesSource.fatalError,
+      drivesSource.refreshError,
       refreshAll,
       retryClimate,
       retryDrives,
@@ -169,32 +166,36 @@ export default function PreconditioningEffectivenessPage() {
       const prefix = options?.signed && value > 0 ? '+' : '';
       return `${prefix}${fmtNumber(value, precision)} ${unitPrefs.temperature}`;
     },
-    [convertDelta, unitPrefs.precision, unitPrefs.temperature],
+    [convertDelta, unitPrefs.precision, unitPrefs.temperature, fmtNumber],
   );
   const locale = unitPrefs.locale ?? 'en-US';
   const refreshing = climateQuery.isFetching || drivesQuery.isFetching;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t(
         'preconditioningEffectiveness.title',
-        'Preconditioning Effectiveness',
+        'Preconditioning effectiveness',
       )}
       subtitle={t(
         'preconditioningEffectiveness.subtitle',
         'Observational pre-drive cabin readiness with explicit source, exclusion, support, and uncertainty accounting',
       )}
       query={[climateQuery, drivesQuery]}
-      actions={(
+      announce={false}
+      busy={refreshing && vehicleId != null}
+      secondaryActions={(
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="secondary"
             size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
             onClick={refreshAll}
             disabled={vehicleId == null}
             loading={refreshing && vehicleId != null}
-            icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icon icon={RefreshCw} />}
           >
             {t(
               'preconditioningEffectiveness.actions.refresh',
@@ -297,6 +298,6 @@ export default function PreconditioningEffectivenessPage() {
       <FadeIn delay={0.16}>
         <PreconditioningMethodology summary={summary} state={queryState} />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

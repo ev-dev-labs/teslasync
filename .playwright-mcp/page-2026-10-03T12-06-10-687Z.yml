@@ -1,0 +1,335 @@
+- generic [ref=f31e1]:
+  - generic [ref=f31e2]:
+    - status [ref=f31e3]
+    - link "Skip to main content" [ref=f31e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - generic [ref=f31e5]:
+      - status [ref=f31e6]
+      - alert [ref=f31e7]
+      - banner "Site header" [ref=f31e851]:
+        - button "Open sidebar" [ref=f31e852] [cursor=pointer]
+        - generic [ref=f31e854]: TeslaSync
+        - button "Notifications" [ref=f31e861] [cursor=pointer]
+        - button "Open theme picker" [expanded] [active] [ref=f31e866] [cursor=pointer]
+      - generic [ref=f31e205]:
+        - status [ref=f31e254]:
+          - generic [ref=f31e874]:
+            - generic [ref=f31e875]:
+              - text: Sample data present
+              - generic [ref=f31e876]: · Not live
+            - button "Details" [ref=f31e877] [cursor=pointer]
+        - main [ref=f31e256]:
+          - generic [ref=f31e257]:
+            - navigation "Breadcrumb" [ref=f31e880]:
+              - link "Dashboard" [ref=f31e881] [cursor=pointer]:
+                - /url: /
+              - generic [ref=f31e887]: Battery
+              - generic [ref=f31e890]: Battery health
+            - status [ref=f31e351]:
+              - generic [ref=f31e356]:
+                - paragraph [ref=f31e357]: Install TeslaSync
+                - paragraph [ref=f31e358]: Add to home screen for native experience
+              - button "Install" [ref=f31e359] [cursor=pointer]
+              - button "Dismiss install prompt" [ref=f31e360] [cursor=pointer]
+            - generic [ref=f31e364]:
+              - generic [ref=f31e369]:
+                - heading "Battery health" [level=1] [ref=f31e370]
+                - generic [ref=f31e371]:
+                  - 'button "More info: Battery health" [ref=f31e372] [cursor=pointer]'
+                  - tooltip "Degradation tracking, prediction, charging habits & longevity insights"
+              - generic [ref=f31e375]:
+                - region [ref=f31e376]:
+                  - generic [ref=f31e378]:
+                    - generic [ref=f31e379]:
+                      - generic [ref=f31e380]:
+                        - generic [ref=f31e381]:
+                          - generic [ref=f31e382]: Battery posture
+                          - generic [ref=f31e383]: Not measured
+                          - generic [ref=f31e385]: Lifetime model
+                          - generic [ref=f31e386]:
+                            - generic "Estimated" [ref=f31e387]
+                            - 'button "Refresh data · Up to date · 1m ago · Source: Battery analytics" [ref=f31e891] [cursor=pointer]':
+                              - generic [ref=f31e398]: 1m ago
+                        - heading "Long-term pack health remains measurable and actionable" [level=3] [ref=f31e399]
+                        - paragraph [ref=f31e400]: Health, degradation, range confidence, charging stress, thermal impact, and cycle exposure are summarized before the deeper evidence.
+                      - button "Review details" [ref=f31e402] [cursor=pointer]
+                    - list [ref=f31e405]:
+                      - listitem [ref=f31e406]:
+                        - generic [ref=f31e407]:
+                          - generic [ref=f31e408]: Pack score
+                          - generic [ref=f31e409]: —
+                        - paragraph [ref=f31e410]: Current modeled health relative to the original usable pack.
+                      - listitem [ref=f31e411]:
+                        - generic [ref=f31e412]:
+                          - generic [ref=f31e413]: Degradation pace
+                          - generic [ref=f31e414]: —
+                        - paragraph [ref=f31e415]: Annualized capacity change inferred from available history.
+                      - listitem [ref=f31e416]:
+                        - generic [ref=f31e417]:
+                          - generic [ref=f31e418]: Range confidence
+                          - generic [ref=f31e419]: Limited
+                        - paragraph [ref=f31e420]: Only 0 usable range samples are available; treat projections as directional.
+                      - listitem [ref=f31e421]:
+                        - generic [ref=f31e422]:
+                          - generic [ref=f31e423]: Charging stress
+                          - generic [ref=f31e424]: Medium
+                        - paragraph [ref=f31e425]: 31.3% fast-charge sessions; 5.1% average depth of discharge.
+                      - listitem [ref=f31e426]:
+                        - generic [ref=f31e427]:
+                          - generic [ref=f31e428]: Thermal impact
+                          - generic [ref=f31e429]: —
+                        - paragraph [ref=f31e430]: More temperature history is required to estimate thermal exposure.
+                      - listitem [ref=f31e431]:
+                        - generic [ref=f31e432]:
+                          - generic [ref=f31e433]: Cycle exposure
+                          - generic [ref=f31e434]: "11.0"
+                        - paragraph [ref=f31e435]: Equivalent full cycles accumulated across charging activity.
+                    - generic [ref=f31e439]:
+                      - paragraph [ref=f31e440]: "Signal: Good charging habits"
+                      - paragraph [ref=f31e441]: Most charges are slow/AC — ideal for battery longevity.
+                - generic [ref=f31e442]:
+                  - paragraph [ref=f31e443]:
+                    - generic [ref=f31e444]: "Terms on this page:"
+                    - generic [ref=f31e445]:
+                      - term [ref=f31e446]: State of health (SoH)
+                      - generic [ref=f31e447]:
+                        - button "What is State of health (SoH)?" [ref=f31e448] [cursor=pointer]
+                        - tooltip "State of health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%. Estimated from observed full-charge capacity over time. It is an estimate with a real error bar, which is why the trend matters more than any single value."
+                    - generic [ref=f31e452]:
+                      - term [ref=f31e453]: Degradation
+                      - generic [ref=f31e454]:
+                        - button "What is Degradation?" [ref=f31e455] [cursor=pointer]
+                        - 'tooltip "Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput). Derived from many observed charges over weeks. A single reading is noise: temperature, recent fast charging and a resting pack all shift the estimate by more than a year of real loss."'
+                    - generic [ref=f31e459]:
+                      - term [ref=f31e460]: State of charge (SOC)
+                      - generic [ref=f31e461]:
+                        - button "What is State of charge (SOC)?" [ref=f31e462] [cursor=pointer]
+                        - tooltip "The percentage of usable energy currently left in the battery, where 100% is a full charge of the pack as it exists today — not as it was when new. Reported directly by the vehicle. The displayed value already excludes the buffer the car reserves below 0%, so a car at 0% is not an empty pack."
+                    - generic [ref=f31e466]:
+                      - term [ref=f31e467]: Rated range
+                      - generic [ref=f31e468]:
+                        - button "What is Rated range?" [ref=f31e469] [cursor=pointer]
+                        - 'tooltip "A rating, not a prediction: the current state of charge multiplied by a fixed EPA-derived distance per percent. It ignores weather, speed, terrain and load. Reported by the vehicle. Because the multiplier is fixed, rated range moves only when state of charge or the pack’s estimated capacity moves — real trips almost always use more."'
+                  - region "Battery health summary metrics" [ref=f31e473]:
+                    - generic [ref=f31e476]:
+                      - paragraph [ref=f31e477]:
+                        - generic [ref=f31e478]: State of health
+                      - paragraph [ref=f31e479]: —
+                    - generic [ref=f31e486]:
+                      - paragraph [ref=f31e487]:
+                        - generic [ref=f31e488]: Current capacity
+                      - paragraph [ref=f31e489]: —
+                    - generic [ref=f31e496]:
+                      - paragraph [ref=f31e497]:
+                        - generic [ref=f31e498]: Original capacity
+                      - paragraph [ref=f31e499]: 75.0 kWh
+                    - generic [ref=f31e506]:
+                      - paragraph [ref=f31e507]:
+                        - generic [ref=f31e508]: Degradation rate
+                      - paragraph [ref=f31e509]: —
+                    - generic [ref=f31e517]:
+                      - paragraph [ref=f31e518]:
+                        - generic [ref=f31e519]: Total cycles
+                      - paragraph [ref=f31e520]: "11.0"
+                    - generic [ref=f31e530]:
+                      - paragraph [ref=f31e531]:
+                        - generic [ref=f31e532]: Battery age
+                      - paragraph [ref=f31e533]: —
+                    - generic [ref=f31e541]:
+                      - paragraph [ref=f31e542]:
+                        - generic [ref=f31e543]: Full charge complete
+                      - paragraph [ref=f31e544]: —
+                - region "Health score and capacity" [ref=f31e551]:
+                  - generic [ref=f31e552]:
+                    - heading "Health Overview" [level=3] [ref=f31e553]
+                    - generic [ref=f31e556]:
+                      - generic [ref=f31e557]:
+                        - generic [ref=f31e558]: Capacity measurements are not available yet; battery health cannot be assessed.
+                        - generic [ref=f31e559]: Not measured
+                      - generic [ref=f31e560]: "Capacity: —"
+                      - generic [ref=f31e561]: "Degradation: —"
+                      - meter "Cycles" [ref=f31e562]:
+                        - generic [ref=f31e563]: "Cycles: 11. Scale 0 to 1,500"
+                        - generic [ref=f31e564]: "11"
+                        - generic [ref=f31e568]:
+                          - generic [ref=f31e569]: Cycles
+                          - generic [ref=f31e570]: 0 – 1,500
+                      - generic [ref=f31e571]:
+                        - paragraph [ref=f31e572]: —
+                        - generic [ref=f31e573]: Years to 80%
+                        - generic [ref=f31e574]: warranty threshold
+                  - generic [ref=f31e575]:
+                    - heading "Capacity & Wear" [level=3] [ref=f31e576]
+                    - generic [ref=f31e580]:
+                      - generic [ref=f31e581]:
+                        - generic [ref=f31e582]: "Current capacity: —"
+                        - paragraph [ref=f31e583]: — / 75.0 kWh
+                      - generic [ref=f31e584]:
+                        - generic [ref=f31e585]: "Degradation: —"
+                        - paragraph [ref=f31e586]: —
+                      - generic [ref=f31e587]:
+                        - progressbar "Charge cycles" [ref=f31e588]:
+                          - generic [ref=f31e589]:
+                            - generic [ref=f31e590]: Charge cycles
+                            - generic [ref=f31e591]: "11.0"
+                        - paragraph [ref=f31e594]: "Tesla warranty: 1,500 cycles / 70%"
+                - region "Capacity and range trends" [ref=f31e597]:
+                  - figure [ref=f31e598]:
+                    - generic [ref=f31e601]:
+                      - heading "Capacity trend & prediction" [level=3] [ref=f31e602]
+                      - paragraph [ref=f31e603]: Dashed = projected
+                    - status [ref=f31e605]:
+                      - paragraph [ref=f31e606]: Not enough snapshots for trend analysis
+                      - paragraph [ref=f31e607]: No chartable observations are available for the current selection yet.
+                    - paragraph [ref=f31e609]: "Chart: Capacity trend & prediction"
+                  - figure [ref=f31e610]:
+                    - generic [ref=f31e611]:
+                      - heading "Estimated range over time" [level=3] [ref=f31e614]
+                      - generic [ref=f31e615]:
+                        - button "Add annotation" [ref=f31e616] [cursor=pointer]
+                        - button "Hide annotations" [ref=f31e618] [cursor=pointer]
+                    - status [ref=f31e623]:
+                      - paragraph [ref=f31e624]: No range data yet
+                      - paragraph [ref=f31e625]: No chartable observations are available for the current selection yet.
+                    - paragraph [ref=f31e627]: "Chart: Estimated range over time"
+                - region "Thermal monitoring and capacity comparison" [ref=f31e629]:
+                  - generic [ref=f31e630]:
+                    - heading "Thermal monitoring" [level=3] [ref=f31e631]
+                    - generic [ref=f31e634]:
+                      - generic [ref=f31e637]:
+                        - paragraph [ref=f31e638]:
+                          - generic [ref=f31e639]: Module temp (max)
+                        - paragraph [ref=f31e640]: —
+                      - generic [ref=f31e650]:
+                        - paragraph [ref=f31e651]:
+                          - generic [ref=f31e652]: Module temp (min)
+                        - paragraph [ref=f31e653]: —
+                      - generic [ref=f31e663]:
+                        - paragraph [ref=f31e664]:
+                          - generic [ref=f31e665]: Battery heater
+                        - paragraph [ref=f31e666]: —
+                      - generic [ref=f31e673]:
+                        - paragraph [ref=f31e674]:
+                          - generic [ref=f31e675]: Temperature spread
+                        - paragraph [ref=f31e676]: —
+                  - generic [ref=f31e681]:
+                    - 'heading "Capacity & range: new vs now" [level=3] [ref=f31e682]'
+                    - generic [ref=f31e685]:
+                      - generic [ref=f31e686]:
+                        - generic [ref=f31e687]: Capacity when new
+                        - paragraph [ref=f31e688]: 75.0 kWh
+                      - generic [ref=f31e689]:
+                        - generic [ref=f31e690]: Capacity now
+                        - paragraph [ref=f31e691]: —
+                      - generic [ref=f31e692]:
+                        - generic [ref=f31e693]: Range when new
+                        - paragraph [ref=f31e694]: — km
+                      - generic [ref=f31e695]:
+                        - generic [ref=f31e696]: Range now
+                        - paragraph [ref=f31e697]: — km
+                - region "Smart insights" [ref=f31e699]:
+                  - heading "Smart insights" [level=2] [ref=f31e700]
+                  - generic [ref=f31e710]:
+                    - paragraph [ref=f31e711]: Good charging habits
+                    - paragraph [ref=f31e712]: Most charges are slow/AC — ideal for battery longevity.
+                - generic [ref=f31e714]:
+                  - status "Loading chart" [ref=f31e715]
+                  - status "Loading chart" [ref=f31e717]
+                - region "Related pages and recommendations" [ref=f31e720]:
+                  - generic [ref=f31e721]:
+                    - heading "Explore More" [level=3] [ref=f31e722]
+                    - navigation "Explore More" [ref=f31e725]:
+                      - link [ref=f31e726] [cursor=pointer]:
+                        - /url: /battery-cells
+                        - button "Battery Cells" [ref=f31e727]
+                      - link [ref=f31e730] [cursor=pointer]:
+                        - /url: /battery-degradation
+                        - button "Degradation" [ref=f31e731]
+                      - link [ref=f31e734] [cursor=pointer]:
+                        - /url: /energy-flow
+                        - button "Energy Flow" [ref=f31e735]
+                      - link [ref=f31e738] [cursor=pointer]:
+                        - /url: /projected-range
+                        - button "Projected Range" [ref=f31e739]
+                      - link [ref=f31e742] [cursor=pointer]:
+                        - /url: /vampire-drain
+                        - button "Vampire Drain" [ref=f31e743]
+                      - link [ref=f31e746] [cursor=pointer]:
+                        - /url: /sleep-efficiency
+                        - button "Sleep Efficiency" [ref=f31e747]
+                  - generic [ref=f31e750]:
+                    - generic [ref=f31e751]: Recommendations
+                    - list [ref=f31e755]:
+                      - listitem [ref=f31e756]:
+                        - generic [ref=f31e759]: Reduce fast charging frequency to slow degradation.
+      - navigation "Quick navigation" [ref=f31e892]:
+        - link "Home" [ref=f31e893] [cursor=pointer]:
+          - /url: /
+        - link "Drives" [ref=f31e900] [cursor=pointer]:
+          - /url: /drives
+        - link "Charging" [ref=f31e906] [cursor=pointer]:
+          - /url: /charging
+        - link "Battery" [ref=f31e912] [cursor=pointer]:
+          - /url: /battery
+        - link "Map" [ref=f31e918] [cursor=pointer]:
+          - /url: /live
+        - link "More" [ref=f31e927] [cursor=pointer]:
+          - /url: /explore
+      - contentinfo "Application status" [ref=f31e289]:
+        - generic [ref=f31e290]:
+          - generic [ref=f31e291]:
+            - 'link "API connection status: Online (8ms)" [ref=f31e932] [cursor=pointer]':
+              - /url: /system-status
+            - tooltip "API connection · Online · 8ms"
+          - generic [ref=f31e299]:
+            - 'link "Live telemetry status: Live" [ref=f31e300] [cursor=pointer]':
+              - /url: /signal-diff
+            - tooltip "Live telemetry stream · Last message 20s ago"
+          - generic [ref=f31e308]:
+            - link "Telemetry honesty meter" [ref=f31e309] [cursor=pointer]:
+              - /url: /
+            - tooltip "Live 0 · Stale 0 · Guessed 2 · Missing 0 · Stream live"
+          - generic [ref=f31e315]:
+            - button "Current data with live actions available." [ref=f31e316] [cursor=pointer]
+            - tooltip "Current data with live actions available."
+        - generic [ref=f31e322]:
+          - generic [ref=f31e323]:
+            - button "Open recently viewed pages, 10 saved" [ref=f31e324] [cursor=pointer]
+            - tooltip "Recently viewed pages - 10 pages"
+          - generic [ref=f31e933]:
+            - button "Open more status options. Update or release notes available" [ref=f31e934] [cursor=pointer]
+            - tooltip "Update or release notes available"
+          - generic [ref=f31e344]:
+            - button "Open Helix chat" [ref=f31e345] [cursor=pointer]
+            - tooltip "Open Helix chat"
+      - status "Application status announcements" [ref=f31e349]: "Telemetry honesty: guessed"
+  - dialog "Open theme picker" [ref=f31e940]:
+    - generic [ref=f31e941]:
+      - generic [ref=f31e942]:
+        - paragraph [ref=f31e944]: Display mode
+        - generic [ref=f31e946]:
+          - paragraph [ref=f31e947]:
+            - text: Core
+            - generic [ref=f31e948]: (3)
+          - generic [ref=f31e949]:
+            - button [ref=f31e950] [cursor=pointer]:
+              - paragraph [ref=f31e956]: Dark
+            - button [pressed] [ref=f31e962] [cursor=pointer]:
+              - paragraph [ref=f31e972]: Light
+            - button [ref=f31e981] [cursor=pointer]:
+              - paragraph [ref=f31e987]: Auto (System)
+        - button "Browse all 141 modes" [ref=f31e993] [cursor=pointer]
+      - generic [ref=f31e994]:
+        - paragraph [ref=f31e995]: Accent color
+        - generic [ref=f31e996]:
+          - button [pressed] [ref=f31e997] [cursor=pointer]:
+            - paragraph [ref=f31e999]: Signal Blue
+          - button [ref=f31e1004] [cursor=pointer]:
+            - paragraph [ref=f31e1006]: Tesla Red
+          - button [ref=f31e1007] [cursor=pointer]:
+            - paragraph [ref=f31e1009]: Matrix Green
+          - button [ref=f31e1010] [cursor=pointer]:
+            - paragraph [ref=f31e1012]: Royal Purple
+          - button [ref=f31e1013] [cursor=pointer]:
+            - paragraph [ref=f31e1015]: Solar Amber
+    - button "Customize…" [ref=f31e1017] [cursor=pointer]

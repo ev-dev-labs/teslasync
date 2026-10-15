@@ -73,6 +73,7 @@ func (a *App) Run(ctx context.Context) error {
 		GasPriceWorker:    a.GasPriceWorker,
 		PollEngine:        a.PollEngine,
 		SignalStore:       a.SignalStore,
+		LiveSignalStore:   a.LiveSignalStore,
 		CacheStore:        a.Cache,
 		DataRepairScanner: a.DataRepairScanner,
 		LivenessChecks: []apirouter.LivenessCheck{

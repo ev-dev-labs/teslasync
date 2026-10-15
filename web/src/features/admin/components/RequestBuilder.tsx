@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send, AlertTriangle } from 'lucide-react';
 import { GlassPanel, Button as UiButton, Input as UiInput, Textarea as UiTextarea, Text, HelperText } from '@/components/ui';
-import { MethodBadge, type ParsedEndpoint } from './EndpointSidebar';
+import { MethodBadge } from './EndpointSidebar';
+import { parameterMismatch, schemaMismatch, type PlaygroundEndpoint } from './continuation-admin-1/playgroundSpec';
 
 interface RequestBuilderProps {
-  endpoint: ParsedEndpoint;
+  endpoint: PlaygroundEndpoint;
   onSend: (url: string, method: string, body?: string, headers?: Record<string, string>) => void;
   loading: boolean;
 }
@@ -16,6 +17,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
   const [body, setBody] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const bodyId = useId();
 
   // Reset state when endpoint changes
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
     setParams(defaults);
     setConfirmOpen(false);
 
-    if (endpoint.requestBody?.example) {
+    if (endpoint.requestBody?.example !== undefined) {
       setBody(JSON.stringify(endpoint.requestBody.example, null, 2));
     } else if (endpoint.requestBody) {
       setBody('{\n  \n}');
@@ -38,16 +40,12 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
   // Build final URL with path and query params
   const buildUrl = useCallback(() => {
     const parameters = endpoint.parameters ?? [];
-    let url = endpoint.path;
-    parameters
-      .filter(p => p.in === 'path')
-      .forEach(p => {
-        const value = params[p.name];
-        // Use a replacer *function* so a user-supplied value containing
-        // `$&`, `$1`, `$'` … is inserted verbatim rather than being
-        // interpreted as a String.prototype.replace substitution pattern.
-        url = url.replace(`{${p.name}}`, () => (value ? value : `{${p.name}}`));
-      });
+    // Replace templates once, never rescan inserted values. `$` and `&` are
+    // legal path-segment characters; retain the existing literal-dollar preview.
+    const url = endpoint.path.replace(/\{([^{}]+)\}/g, (placeholder, name: string) => {
+      const value = parameters.some(p => p.in === 'path' && p.name === name) ? params[name] : undefined;
+      return value ? encodeURIComponent(value).replace(/%24/g, '$').replace(/%26/g, '&') : placeholder;
+    });
 
     const queryParts = parameters
       .filter(p => p.in === 'query' && params[p.name])
@@ -59,6 +57,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
   const isDestructive = endpoint.method !== 'GET';
 
   const handleSend = () => {
+    if (loading) return;
     if (isDestructive && !confirmOpen) {
       setConfirmOpen(true);
       return;
@@ -81,6 +80,24 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
     () => (endpoint.parameters ?? []).filter(p => p.in === 'query'),
     [endpoint.parameters],
   );
+  const mismatchText = (constraint: string | undefined) => constraint === undefined ? undefined
+    : constraint === 'required' ? t('playground.validation.required', 'Required by the API specification.')
+    : t('playground.validation.schemaMismatch', 'Does not match the API specification ({{constraint}}).', { constraint });
+  const schemaHint = (schema: Record<string, unknown> | undefined) => schema && Object.keys(schema).length > 0
+    ? t('playground.validation.schemaHint', 'API specification: {{schema}}', { schema: JSON.stringify(schema) }) : undefined;
+  let bodyError: string | undefined;
+  if (endpoint.requestBody) {
+    if (!body.trim()) {
+      bodyError = endpoint.requestBody.required ? mismatchText('required') : undefined;
+    } else if (endpoint.requestBody.contentType === 'application/json' || endpoint.requestBody.contentType.endsWith('+json')) {
+      try {
+        const value: unknown = JSON.parse(body);
+        bodyError = mismatchText(schemaMismatch(value, endpoint.requestBody.schema ?? {}));
+      } catch {
+        bodyError = t('playground.validation.invalidJson', 'Invalid JSON. The original text can still be sent for diagnostic inspection.');
+      }
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -133,7 +150,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Path parameters */}
       {pathParams.length > 0 && (
         <GlassPanel className="p-4 space-y-3">
-          <Text as="h4" size="xs" weight="semibold" color="muted" className="uppercase tracking-wider">
+          <Text as="h4" size="xs" weight="semibold" color="muted" className="tracking-wider">
             {t('playground.pathParams', 'Path Parameters')}
           </Text>
           {pathParams.map(p => (
@@ -143,6 +160,9 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
               </label>
               <UiInput
                 id={`req-path-${p.name}`}
+                required
+                error={mismatchText(parameterMismatch(params[p.name] ?? '', p))}
+                hint={schemaHint(p.schema)}
                 value={params[p.name] ?? ''}
                 onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
                 placeholder={p.description || p.type}
@@ -156,7 +176,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Query parameters */}
       {queryParams.length > 0 && (
         <GlassPanel className="p-4 space-y-3">
-          <Text as="h4" size="xs" weight="semibold" color="muted" className="uppercase tracking-wider">
+          <Text as="h4" size="xs" weight="semibold" color="muted" className="tracking-wider">
             {t('playground.queryParams', 'Query Parameters')}
           </Text>
           {queryParams.map(p => (
@@ -167,6 +187,9 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
               </label>
               <UiInput
                 id={`req-query-${p.name}`}
+                required={p.required}
+                error={mismatchText(parameterMismatch(params[p.name] ?? '', p))}
+                hint={schemaHint(p.schema)}
                 value={params[p.name] ?? ''}
                 onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
                 placeholder={p.description || `${p.type}${p.default != null ? ` (default: ${p.default})` : ''}`}
@@ -180,26 +203,31 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Request body */}
       {endpoint.requestBody && (
         <GlassPanel className="p-4">
-          <Text as="h4" size="xs" weight="semibold" color="muted" className="mb-2 uppercase tracking-wider">
-            {t('playground.requestBody', 'Request Body')}
-            <Text weight="regular" color="muted" className="ml-2">
-              {endpoint.requestBody.contentType}
-            </Text>
+          <Text as="p" variant="caption" className="mb-2">
+            {endpoint.requestBody.contentType}
           </Text>
           <UiTextarea
+            id={bodyId}
+            label={t('playground.requestBody', 'Request body')}
+            required={endpoint.requestBody.required}
+            error={bodyError}
+            hint={schemaHint(endpoint.requestBody.schema)}
             value={body}
             onChange={e => setBody(e.target.value)}
             rows={8}
             className="!font-mono !text-xs"
             placeholder='{ "key": "value" }'
           />
+          <HelperText className="mt-2">
+            {t('playground.validation.advisory', 'Validation feedback is advisory. Send remains available to inspect raw HTTP errors; non-GET requests still require confirmation.')}
+          </HelperText>
         </GlassPanel>
       )}
 
       {/* API Key header (optional) */}
       <GlassPanel className="p-4">
-        <Text as="h4" size="xs" weight="semibold" color="muted" className="mb-2 uppercase tracking-wider">
-          {t('playground.authHeader', 'Authentication (Optional)')}
+        <Text as="h4" size="xs" weight="semibold" color="muted" className="mb-2 tracking-wider">
+          {t('playground.authHeader', 'Authentication (optional)')}
         </Text>
         <div className="flex items-center gap-3">
           <label htmlFor="api-key-input" className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">X-API-Key</label>

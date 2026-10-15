@@ -243,9 +243,9 @@ describe('VehicleHeroCardWidget — full view', () => {
 
     // Battery / range / cabin, SI-converted for the km + °C preference.
     expect(screen.getByText('Battery')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
-    expect(screen.getByText('300 km')).toBeInTheDocument();
-    expect(screen.getByText('22°C')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
+    expect(screen.getByText('300.00 km')).toBeInTheDocument();
+    expect(screen.getByText('22.00°C')).toBeInTheDocument();
   });
 
   it('drops the trim from the subtitle when it is absent', () => {
@@ -272,8 +272,8 @@ describe('VehicleHeroCardWidget — full view', () => {
       state: makeStateQuery({ data: { state: makeState({ ideal_range: RANGE_100MI_M }) } }),
     });
 
-    expect(screen.getByText('100 mi')).toBeInTheDocument();
-    expect(screen.queryByText('100 km')).toBeNull();
+    expect(screen.getByText('100.00 mi')).toBeInTheDocument();
+    expect(screen.queryByText('100.00 km')).toBeNull();
   });
 
   it('converts the SI-Celsius cabin temp to °F when that is the preference', () => {
@@ -283,8 +283,8 @@ describe('VehicleHeroCardWidget — full view', () => {
     });
 
     // 22 °C → 71.6 °F → rounds to 72, tagged with the Fahrenheit unit only.
-    expect(screen.getByText('72°F')).toBeInTheDocument();
-    expect(screen.queryByText('22°C')).toBeNull();
+    expect(screen.getByText('71.60°F')).toBeInTheDocument();
+    expect(screen.queryByText('22.00°C')).toBeNull();
   });
 
   it('shows a real finite-zero range as "0 <unit>" rather than an em-dash', () => {
@@ -292,16 +292,16 @@ describe('VehicleHeroCardWidget — full view', () => {
       state: makeStateQuery({ data: { state: makeState({ ideal_range: 0, battery_level: 10 }) } }),
     });
 
-    expect(screen.getByText('0 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
   });
 
   it('renders an em-dash placeholder for every metric when the state is absent (null-safety)', () => {
     // Vehicle known, but its state snapshot has not landed → the query resolves
     // with no `state`. Battery, range and cabin each render the em-dash and the
-    // status falls back to "offline"; nothing throws on the missing readings.
+    // status remains unknown; missing telemetry is not proof of being offline.
     renderWidget(FULL, { state: makeStateQuery({ data: undefined }) });
 
-    expect(screen.getByText('offline')).toBeInTheDocument();
+    expect(screen.getByText('unknown')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(3);
   });
 });
@@ -321,7 +321,7 @@ describe('VehicleHeroCardWidget — battery colour classifier', () => {
       state: makeStateQuery({ data: { state: makeState({ battery_level: level }) } }),
     });
 
-    expect(screen.getByText(`${level}%`).className).toContain(cls);
+    expect(screen.getByText(`${level}.00%`).closest('[data-print-card]')?.className).toContain(cls);
   });
 });
 
@@ -334,7 +334,7 @@ describe('VehicleHeroCardWidget — charging banner', () => {
     });
 
     expect(screen.getByText('Charging')).toBeInTheDocument();
-    expect(screen.getByText('11.0 kW')).toBeInTheDocument();
+    expect(screen.getByText('11.00 kW')).toBeInTheDocument();
     // The decorative bolt glyph must not be announced by screen readers.
     expect(screen.getByText('⚡').getAttribute('aria-hidden')).toBe('true');
   });
@@ -367,8 +367,8 @@ describe('VehicleHeroCardWidget — size variants', () => {
     });
 
     expect(screen.getByText('Outside')).toBeInTheDocument();
-    expect(screen.getByText('10°C')).toBeInTheDocument();
-    expect(screen.getByText('22°C')).toBeInTheDocument();
+    expect(screen.getByText('10.00°C')).toBeInTheDocument();
+    expect(screen.getByText('22.00°C')).toBeInTheDocument();
   });
 
   it('omits the Outside metric on a plain (non-wide, non-tall) full tile', () => {
@@ -379,16 +379,15 @@ describe('VehicleHeroCardWidget — size variants', () => {
     expect(screen.queryByText('Outside')).toBeNull();
   });
 
-  it('adds an Outside + Ideal row when the tile is tall (rows >= 2) but not wide', () => {
+  it('adds Outside without repeating the ideal range when the tile is tall', () => {
     renderWidget(TALL, {
       state: makeStateQuery({ data: { state: makeState({ ideal_range: RANGE_300KM_M, outside_temp: 10 }) } }),
     });
 
     expect(screen.getByText('Range')).toBeInTheDocument();
     expect(screen.getByText('Outside')).toBeInTheDocument();
-    expect(screen.getByText('Ideal')).toBeInTheDocument();
-    // The ideal range echoes the top-grid range value, so it appears twice.
-    expect(screen.getAllByText('300 km')).toHaveLength(2);
+    expect(screen.queryByText('Ideal')).toBeNull();
+    expect(screen.getAllByText('300.00 km')).toHaveLength(1);
   });
 });
 
@@ -402,7 +401,7 @@ describe('VehicleHeroCardWidget — compact view', () => {
     });
 
     expect(screen.getByText('online')).toBeInTheDocument();
-    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.getByText('Compact Car')).toBeInTheDocument();
     // A 1×1 tile suppresses the header title entirely.
     expect(screen.queryByText('Vehicle')).toBeNull();
@@ -412,13 +411,26 @@ describe('VehicleHeroCardWidget — compact view', () => {
     renderWidget(COMPACT, { state: makeStateQuery({ data: undefined }) });
 
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('offline')).toBeInTheDocument();
+    expect(screen.getByText('unknown')).toBeInTheDocument();
   });
 });
 
 // ── Empty / loading / error lifecycle ────────────────────────────────────────
 
 describe('VehicleHeroCardWidget — lifecycle states', () => {
+  it('retains vehicle identity and measurements after a failed cached refresh', () => {
+    renderWidget(FULL, {
+      state: makeStateQuery({
+        data: { state: makeState({ battery_level: 80 }) },
+        isError: true,
+        error: new Error('refresh unavailable'),
+      }),
+    });
+    expect(screen.getByText('My Tesla')).toBeInTheDocument();
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('shows the accessible empty state when the fleet is genuinely empty', () => {
     renderWidget(FULL, {
       vehicles: makeVehiclesQuery({ data: [] }),
@@ -432,10 +444,18 @@ describe('VehicleHeroCardWidget — lifecycle states', () => {
   });
 
   it('renders only a skeleton while the selected vehicle state is loading', () => {
-    const { container } = renderWidget(FULL, { state: makeStateQuery({ isLoading: true }) });
+    const { container } = renderWidget(FULL, { state: makeStateQuery({ isLoading: true, data: undefined }) });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Vehicle')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
+    expect(screen.queryByText('Vehicle')).toBeInTheDocument();
+    expect(screen.queryByText('No vehicle data')).toBeNull();
+  });
+
+  it('does not replace cached metrics with a skeleton while refetching', () => {
+    renderWidget(FULL, {
+      state: makeStateQuery({ isLoading: true, isFetching: true, data: { state: makeState({ battery_level: 80 }) } }),
+    });
+    expect(screen.getByText('80.00%')).toBeInTheDocument();
     expect(screen.queryByText('No vehicle data')).toBeNull();
   });
 
@@ -449,7 +469,7 @@ describe('VehicleHeroCardWidget — lifecycle states', () => {
       state: makeStateQuery({ isLoading: false, data: undefined }),
     });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('No vehicle data')).toBeNull();
   });
 
@@ -461,7 +481,7 @@ describe('VehicleHeroCardWidget — lifecycle states', () => {
     // jsdom reports navigator.onLine === true → QueryError's alert branch.
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The error branch replaces the widget body — the title is suppressed.
-    expect(screen.queryByText('Vehicle')).toBeNull();
+    expect(screen.queryByText('Vehicle')).toBeInTheDocument();
   });
 
   it('surfaces a fleet-load failure as an alert, never the misleading empty state', () => {

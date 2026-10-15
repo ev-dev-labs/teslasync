@@ -26,8 +26,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 vi.mock('@/api/client', () => ({
@@ -84,7 +85,7 @@ const baseSettings: Partial<AppSettings> = {
   ai_features_archived: undefined,
 }
 
-function renderPanel(initial: Partial<AppSettings> = baseSettings) {
+function renderPanel(initial: Partial<AppSettings> | null = baseSettings) {
   const qc = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity },
@@ -93,7 +94,7 @@ function renderPanel(initial: Partial<AppSettings> = baseSettings) {
   })
   // Seed the cache so the AISettings component sees data on first
   // render — avoids a flaky "wait for query to resolve" loop.
-  qc.setQueryData(['settings'], initial)
+  if (initial) qc.setQueryData(['settings'], initial)
   // Usage hooks are covered by their own tests; these settings tests
   // should not return undefined from unrelated usage queries.
   qc.setQueryData(aiUsageKeys.today(), {
@@ -102,13 +103,16 @@ function renderPanel(initial: Partial<AppSettings> = baseSettings) {
   })
   qc.setQueryData(aiUsageKeys.byFeature(), { since: '2026-09-18T00:00:00Z', rows: [] })
   qc.setQueryData(aiUsageKeys.recent(50), { limit: 50, rows: [] })
-  return render(
+  const rendered = render(
+    <MemoryRouter>
     <QueryClientProvider client={qc}>
       <ToastProvider>
         <AISettings />
       </ToastProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
+    </MemoryRouter>,
   )
+  return { ...rendered, client: qc }
 }
 
 beforeEach(() => {
@@ -116,6 +120,82 @@ beforeEach(() => {
 })
 
 describe('AISettings — §I1 default-off rendering', () => {
+  it('locks writes during active initial loading and unlocks successful empty/zero settings', async () => {
+    let resolveRead!: (value: Partial<AppSettings>) => void
+    mockedRequest.mockImplementation(() => new Promise<Partial<AppSettings>>(resolve => { resolveRead = resolve }))
+    renderPanel(null)
+    expect(screen.getByTestId('ai-settings-save')).toBeDisabled()
+    expect(screen.getByTestId('ai-mode-cloud')).toBeDisabled()
+    expect(screen.getByTestId('helix-status-strip')).not.toHaveTextContent('Off (default)')
+    await act(async () => { resolveRead({ ...baseSettings, ai_features_archived: {} }) })
+    await waitFor(() => expect(screen.getByTestId('ai-settings-save')).toBeEnabled())
+    expect(screen.getByTestId('ai-mode-off')).toBeChecked()
+    expect(screen.getByTestId('helix-status-strip')).toHaveTextContent('0')
+    expect(screen.queryByTestId('ai-restore-panel')).toBeNull()
+  })
+
+  it('keeps paused-without-data distinct from loading and prevents writes until recovery', async () => {
+    onlineManager.setOnline(false)
+    try {
+      mockedRequest.mockResolvedValue(baseSettings)
+      renderPanel(null)
+      expect(await screen.findByText('Refresh paused')).toBeInTheDocument()
+      expect(screen.getByTestId('ai-settings-save')).toBeDisabled()
+      expect(screen.getByTestId('ai-mode-local')).toBeDisabled()
+      expect(mockedRequest).not.toHaveBeenCalled()
+      await act(async () => { onlineManager.setOnline(true) })
+      await waitFor(() => expect(screen.getByTestId('ai-settings-save')).toBeEnabled())
+      expect(screen.queryByText('Refresh paused')).toBeNull()
+    } finally {
+      onlineManager.setOnline(true)
+    }
+  })
+
+  it('keeps the opt-in surface mounted on a failed first read without exposing credentials or making writes', async () => {
+    mockedRequest.mockRejectedValue(new ApiError('Read unavailable', 500))
+    renderPanel(null)
+    expect(await screen.findByText('Server error')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-mode-off')).toBeChecked()
+    expect(screen.queryByTestId('ai-provider-api-key')).toBeNull()
+    expect(screen.queryByTestId('ai-feature-toggle-list')).toBeNull()
+    expect(mockedRequest.mock.calls.some(call => ['POST', 'PUT', 'DELETE'].includes(
+      (call[1] as RequestInit | undefined)?.method ?? 'GET',
+    ))).toBe(false)
+  })
+
+  it('retains a configured provider form after a settings refresh failure without auto-saving', async () => {
+    const { client } = renderPanel({
+      ...baseSettings,
+      ai_mode: 'cloud',
+      ai_provider_config: {
+        default: 'openai',
+        openai: { base_url: 'https://api.example.test', model: 'fixture-model', api_key: 'fixture-key' },
+      },
+    })
+    await waitFor(() => expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('fixture-key'))
+    fireEvent.change(screen.getByTestId('ai-provider-model'), { target: { value: 'unsaved-model' } })
+    mockedRequest.mockRejectedValue(new ApiError('Refresh unavailable', 500))
+    await act(async () => { await client.refetchQueries({ queryKey: ['settings'], exact: true }) })
+    await waitFor(() => expect(client.getQueryState(['settings'])?.status).toBe('error'))
+    expect(await screen.findByText('Data may be stale')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-mode-cloud')).toBeChecked()
+    expect(screen.getByTestId('ai-provider-api-key')).toHaveAttribute('type', 'password')
+    expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('fixture-key')
+    expect(screen.getByTestId('ai-settings-save')).toBeEnabled()
+    expect(mockedRequest.mock.calls.some(call => ['POST', 'PUT', 'DELETE'].includes(
+      (call[1] as RequestInit | undefined)?.method ?? 'GET',
+    ))).toBe(false)
+    mockedRequest.mockResolvedValue({
+      ...baseSettings, ai_mode: 'cloud',
+      ai_provider_config: {
+        default: 'openai',
+        openai: { base_url: 'https://api.example.test', model: 'refreshed-model', api_key: 'fixture-key' },
+      },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(screen.queryByText('Data may be stale')).toBeNull())
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('unsaved-model')
+  })
   it('does not query usage or mount the cap bar before an off-mode user saves the opt-in', async () => {
     renderPanel({ ...baseSettings, ai_cost_cap_cents: 1000 })
     fireEvent.click(screen.getByTestId('ai-mode-cloud'))
@@ -167,6 +247,82 @@ describe('AISettings — §I9 API key never displayed in off mode', () => {
   })
 })
 
+describe('AISettings — saved enforcement and unsaved preview', () => {
+  it('keeps a reached saved cap until a successful save updates the settings', async () => {
+    const saved = { ...baseSettings, ai_mode: 'cloud' as const, ai_cost_cap_cents: 1000 }
+    const { client } = renderPanel(saved)
+    act(() => {
+      client.setQueryData(aiUsageKeys.today(), {
+        user_subject: 'settings-test', call_count: 3, input_tokens: 10,
+        output_tokens: 20, cost_micro_cents: 10_000_000, error_count: 0, avg_latency_ms: 10,
+      })
+    })
+    await waitFor(() => expect(screen.getByTestId('ai-cost-cap-spend-bar')).toHaveAttribute('data-spend-level', 'critical'))
+    fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '20' } })
+    expect(screen.getByTestId('ai-provider-cost-cap')).toHaveValue(20)
+    expect(screen.getByTestId('ai-settings-unsaved')).toHaveTextContent('You have unsaved settings.')
+    expect(screen.getByTestId('ai-cost-cap-spend-bar')).toHaveAttribute('data-spend-level', 'critical')
+    expect(screen.getByTestId('ai-feature-spend-panel')).toHaveTextContent('The daily cap applies')
+
+    fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '0' } })
+    expect(screen.getByTestId('ai-cost-cap-spend-bar')).toHaveAttribute('data-spend-level', 'critical')
+    expect(screen.getByTestId('ai-feature-spend-panel')).not.toHaveTextContent('No daily spend cap is set')
+
+    fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '20' } })
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path === '/settings' && init?.method === 'PUT') {
+        return { ...saved, ...JSON.parse(String(init.body)) }
+      }
+      if (path === '/settings') return { ...saved, ai_cost_cap_cents: 2000 }
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    fireEvent.click(screen.getByTestId('ai-settings-save'))
+    await waitFor(() => expect(screen.getByTestId('ai-cost-cap-spend-bar')).toHaveAttribute('data-spend-level', 'ok'))
+    expect(screen.queryByTestId('ai-settings-unsaved')).toBeNull()
+  })
+
+  it.each(['local', 'off'] as const)('retains saved cloud enforcement when the unsaved mode is %s', (draftMode) => {
+    renderPanel({ ...baseSettings, ai_mode: 'cloud', ai_cost_cap_cents: 1000 })
+    fireEvent.click(screen.getByTestId(`ai-mode-${draftMode}`))
+    expect(screen.getByTestId('ai-settings-panel')).toHaveAttribute('data-ai-mode', draftMode)
+    expect(screen.getByTestId('helix-status-strip')).toHaveTextContent('Cloud')
+    expect(screen.getByTestId('ai-settings-unsaved')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-cost-cap-spend-bar')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-feature-spend-panel')).toHaveTextContent('The daily cap applies')
+    expect(screen.queryByText('Helix is off. Your app works fully without it. Enable a mode above to opt in.')).toBeNull()
+  })
+
+  it('does not present an unsaved cloud cap as active for saved local mode', () => {
+    renderPanel({ ...baseSettings, ai_mode: 'local', ai_cost_cap_cents: 0 })
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '10' } })
+    expect(screen.getByTestId('helix-status-strip')).toHaveTextContent('Local-only')
+    expect(screen.getByTestId('ai-settings-unsaved')).toBeInTheDocument()
+    expect(screen.queryByTestId('ai-cost-cap-spend-bar')).toBeNull()
+    expect(screen.getByTestId('ai-feature-spend-panel')).toHaveTextContent('No daily spend cap is set')
+  })
+
+  it('preserves populated audited feature spend while the cap preview changes', async () => {
+    const { client } = renderPanel({ ...baseSettings, ai_mode: 'cloud', ai_cost_cap_cents: 1000 })
+    act(() => {
+      client.setQueryData(aiUsageKeys.byFeature(), {
+        since: '2026-09-18T00:00:00Z',
+        rows: [{
+          feature_id: 'chatbot-llm', call_count: 3, input_tokens: 100,
+          output_tokens: 200, cost_micro_cents: 2_000_000,
+          last_call_at: '2026-09-18T12:00:00Z',
+        }],
+      })
+    })
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1))
+    const populatedRow = screen.getByRole('listitem').textContent
+    fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '0' } })
+    expect(screen.getByRole('listitem').textContent).toBe(populatedRow)
+    expect(screen.getByTestId('ai-feature-spend-panel')).toHaveTextContent('The daily cap applies')
+    expect(screen.queryByText('No audited Helix calls in the last 7 days.')).toBeNull()
+  })
+})
+
 describe('AISettings — §I7 per-feature toggles generated from registry', () => {
   it('renders one toggle row per AI_FEATURE_IDS entry', () => {
     renderPanel({ ...baseSettings, ai_mode: 'local' })
@@ -193,6 +349,58 @@ describe('AISettings — §I7 per-feature toggles generated from registry', () =
 })
 
 describe('AISettings — §I7 archive restore is explicit, never silent', () => {
+  it('keeps confirmation pending, retains the archive and draft on failure, and dismisses only after retry succeeds', async () => {
+    const initial = {
+      ...baseSettings,
+      ai_mode: 'local' as const,
+      ai_features_archived: { 'chatbot-llm': true },
+    }
+    let rejectSave!: (error: Error) => void
+    let resolveSave!: (value: Partial<AppSettings>) => void
+    let attempts = 0
+    mockedRequest.mockImplementation((path: string, init?: RequestInit) => {
+      if (path === '/settings' && init?.method === 'PUT') {
+        attempts++
+        return new Promise<Partial<AppSettings>>((resolve, reject) => {
+          resolveSave = resolve
+          rejectSave = reject
+        })
+      }
+      if (path === '/settings') return Promise.resolve(initial)
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    const { client } = renderPanel(initial)
+    fireEvent.change(screen.getByTestId('ai-provider-model'), { target: { value: 'draft-model' } })
+    fireEvent.click(screen.getByTestId('ai-restore-confirm'))
+    await waitFor(() => expect(attempts).toBe(1))
+    expect(screen.getByTestId('ai-restore-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-restore-confirm')).toBeDisabled()
+    expect(screen.getByTestId('ai-restore-decline')).toBeDisabled()
+    expect(screen.getByTestId('ai-settings-save')).toBeDisabled()
+    expect(screen.getByTestId('ai-mode-off')).toBeDisabled()
+    expect(screen.getByTestId('ai-restore-pending')).toHaveTextContent('Saving')
+    fireEvent.click(screen.getByTestId('ai-restore-confirm'))
+    expect(attempts).toBe(1)
+
+    await act(async () => { rejectSave(new ApiError('Save unavailable', 500)) })
+    await waitFor(() => expect(screen.getByTestId('ai-restore-confirm')).toBeEnabled())
+    expect(screen.getByTestId('ai-restore-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('draft-model')
+    expect(screen.getByTestId('ai-feature-toggle-chatbot-llm')).toBeChecked()
+    expect(client.getQueryData(['settings'])).toMatchObject({ ai_features_archived: { 'chatbot-llm': true } })
+    expect(screen.getByText('Server error')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('ai-restore-confirm'))
+    await waitFor(() => expect(attempts).toBe(2))
+    const saved = { ...initial, ai_features: { 'chatbot-llm': true }, ai_features_archived: {} }
+    mockedRequest.mockResolvedValue(saved)
+    await act(async () => { resolveSave(saved) })
+    await waitFor(() => expect(screen.queryByTestId('ai-restore-panel')).toBeNull())
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('draft-model')
+    expect(screen.queryByText('Server error')).toBeNull()
+    expect(screen.getByTestId('ai-settings-save')).toBeEnabled()
+  })
+
   it('shows the restore panel when archive is present and mode is non-off', () => {
     renderPanel({
       ...baseSettings,
@@ -316,6 +524,103 @@ describe('AISettings — validate endpoint exercised end-to-end', () => {
 })
 
 describe('AISettings — F1↔F2 provider config schema (namespaced shape)', () => {
+  it('selects a saved mode-compatible provider for review and preserves edits to both providers', async () => {
+    let saved: Partial<AppSettings> | undefined
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path === '/settings' && init?.method === 'PUT') {
+        saved = JSON.parse(String(init.body))
+        return saved
+      }
+      if (path === '/settings') return saved
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    const openai = { model: 'cloud-model', api_key: 'saved-key', extra: 'preserved' }
+    const ollama = { base_url: 'http://localhost:11434', model: 'local-model' }
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'local',
+      ai_provider_config: { default: 'ollama', ollama, openai },
+    })
+    fireEvent.change(screen.getByTestId('ai-provider-model'), { target: { value: 'edited-local' } })
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    expect(screen.getByTestId('ai-provider-select')).toHaveValue('openai')
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('cloud-model')
+    expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('')
+    fireEvent.change(screen.getByTestId('ai-provider-model'), { target: { value: 'edited-cloud' } })
+    fireEvent.change(screen.getByTestId('ai-provider-api-key'), { target: { value: 'typed-key' } })
+    fireEvent.click(screen.getByTestId('ai-mode-local'))
+    expect(screen.getByTestId('ai-provider-select')).toHaveValue('ollama')
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('edited-local')
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('edited-cloud')
+    expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('typed-key')
+    expect(mockedRequest).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByTestId('ai-settings-save'))
+    await waitFor(() => expect(saved?.ai_provider_config).toEqual({
+      default: 'openai',
+      ollama: { ...ollama, model: 'edited-local' },
+      openai: { ...openai, base_url: '', model: 'edited-cloud', api_key: 'typed-key' },
+    }))
+  })
+
+  it('selects a compatible default on opt-in without saving automatically', () => {
+    renderPanel()
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    expect(screen.getByTestId('ai-provider-select')).toHaveValue('openai')
+    expect(screen.getByTestId('ai-provider-model')).toHaveValue('')
+    expect(screen.getByTestId('ai-provider-api-key')).toHaveValue('')
+    expect(mockedRequest).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByTestId('ai-mode-local'))
+    expect(screen.getByTestId('ai-provider-select')).toHaveValue('ollama')
+  })
+
+  it('restores archived features with the reviewed compatible provider when changing mode', async () => {
+    let saved: Partial<AppSettings> | undefined
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path === '/settings' && init?.method === 'PUT') {
+        saved = JSON.parse(String(init.body))
+        return saved
+      }
+      if (path === '/settings') return saved
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    const ollama = { model: 'local-model', base_url: 'http://localhost:11434' }
+    const google = { model: 'cloud-model', api_key: 'saved-key' }
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'local',
+      ai_features_archived: { 'chatbot-llm': true },
+      ai_provider_config: { default: 'ollama', ollama, google },
+    })
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    expect(screen.getByTestId('ai-provider-select')).toHaveValue('google')
+    fireEvent.click(screen.getByTestId('ai-restore-confirm'))
+    await waitFor(() => expect(saved).toMatchObject({
+      ai_mode: 'cloud',
+      ai_features: { 'chatbot-llm': true },
+      ai_provider_config: { default: 'google', ollama, google },
+    }))
+  })
+
+  it('requires a compatible selection before saving an inconsistent loaded configuration', () => {
+    renderPanel({
+      ...baseSettings,
+      ai_mode: 'local',
+      ai_provider_config: { default: 'openai', openai: { model: 'cloud-model' } },
+      ai_features_archived: { 'chatbot-llm': true },
+    })
+    expect(screen.getByTestId('ai-settings-save')).toBeDisabled()
+    expect(screen.getByTestId('ai-restore-confirm')).toBeDisabled()
+    expect(screen.getByTestId('ai-provider-incompatible')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('ai-settings-save'))
+    expect(mockedRequest).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByTestId('ai-provider-select'), { target: { value: 'ollama' } })
+    expect(screen.getByTestId('ai-settings-save')).toBeEnabled()
+    expect(screen.getByTestId('ai-restore-confirm')).toBeEnabled()
+    fireEvent.click(screen.getByTestId('ai-mode-off'))
+    expect(screen.getByTestId('ai-settings-save')).toBeEnabled()
+  })
+
   it.each([
     { oldFlavor: 'openai', effectiveModel: 'old-deployment' },
     { oldFlavor: 'foundry', effectiveModel: 'visible-model' },

@@ -1,0 +1,2560 @@
+{
+  "item": "phase6-qa-driving-departure-forecast",
+  "attempt": 1,
+  "actor": "a96a890c-cc4a-4e1c-924f-75df0f1fe737",
+  "page": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+  "routes": [
+    "/departure-forecast"
+  ],
+  "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+  "status": "SOURCE_ONLY_QA_DELIVERY_WITH_FINDINGS",
+  "nativePageApplicationAcceptance": "NOT RUN / NOT PASS",
+  "existingReportCheck": {
+    "existsAtFirstCheck": false,
+    "command": 1,
+    "numericExit": 0,
+    "sourceNoChange": true,
+    "reason": "Accepted source preserved; no restart/remigration."
+  },
+  "authority": {
+    "currentQueueRows": [
+      {
+        "line": 388,
+        "raw": "| [~] | 6 | phase6-qa-driving-departure-forecast | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-driving-departure-forecast.json | phase5-page-driving-departure-forecast | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=a96a890c-cc4a-4e1c-924f-75df0f1fe737; LastConsumed=-1 | - |CurrentacceptedDepartureForecastPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Forecast/sourcewindow/businessdates/timezones/scopes/unknownzero/SI/preferences/trust/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by a96a890c-cc4a-4e1c-924f-75df0f1fe737, no browser lock. |"
+      },
+      {
+        "line": 1852,
+        "raw": "| [x] | 5 | phase5-page-driving-departure-forecast | original-page-migration | web\\src\\features\\driving\\pages\\DepartureForecastPage.tsx; web\\src\\features\\driving\\pages\\DepartureForecastPage.test.tsx | - | 1 | 2026-10-12T14:32:17.5562819Z | 716e6217b9022d85a57b43cd04ec21e1e8b00775 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/departure-forecast; audit=docs\\frontend-audits\\audit-page-105.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Genuinely unstarted third-wave page/test source claim after exact caller fixture correction and normal i18n check0. Prior completed/zero-turn objectives not redispatched. Actual agent launch ID follows; held delivery claims excluded. Actual third-wave source agent=e3f7ef57-eab4-4740-8e28-d4921ea0c9dc; no source/QA result inferred from launch. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; No-change pair;163root/2243composed/9sections/13originalcases/51assertions retained; lint0/style0; testsNOTRUN;2masked viewportPNG incomplete, no native acceptance; commit=716e6217b9022d85a57b43cd04ec21e1e8b00775; no-source-commit. |"
+      }
+    ],
+    "queueSHA256": "cc82e491ac168af3c270b5c859878df6ee6c1724be765147a36a8561921bf7ed",
+    "dependency": "phase5-page-driving-departure-forecast",
+    "acceptedCommit": "716e6217b9022d85a57b43cd04ec21e1e8b00775",
+    "dependencyAcceptance": "SOURCE ONLY",
+    "orchestratorRead": "FULL 1-296",
+    "designContractRead": "FULL 1-2539",
+    "handoffRead": "Current latest new-machine section and bounded older context 1-160",
+    "missionRead": "43-45 in 1410-1530",
+    "closedPhases": "Preserved; no native/page/application gate cleared."
+  },
+  "timing": {
+    "reservationUTC": "2026-10-14T01:00:00.625Z",
+    "firstCommandUTC": "2026-10-14T01:02:16.1406173Z",
+    "returnByUTC": "2026-10-14T01:20:00.625Z",
+    "hardByUTC": "2026-10-14T01:25:00.625Z",
+    "commandLimit": 15,
+    "targetMinutes": 10
+  },
+  "writeScope": [
+    "docs/frontend-audits/phase6-qa-driving-departure-forecast.json",
+    "web/logs/phase6-qa-driving-departure-forecast.log"
+  ],
+  "preservation": {
+    "pageSHA256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b",
+    "pageLines": 163,
+    "mountedPresentationFiles": 16,
+    "mountedPresentationLines": 2080,
+    "pagePlusPresentationLines": 2243,
+    "historicalAudit105ComposedLines": 2243,
+    "retainedRatio": 1.0,
+    "departureDirectoryAllLines": 2436,
+    "modelLines": 975,
+    "sectionCount": 9,
+    "sections": [
+      {
+        "name": "Forecast evidence",
+        "component": "DepartureEvidenceBrief",
+        "mount": {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 87,
+          "code": "<DepartureEvidenceBrief",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        "counts": {
+          "metrics": 6
+        },
+        "sourcePreserved": true,
+        "runtime": "NOT RUN"
+      },
+      {
+        "name": "Next-24 local-hour likelihood",
+        "component": "DepartureForecastNext24Chart",
+        "mount": {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 96,
+          "code": "<DepartureForecastNext24Chart",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        "counts": {
+          "series": 2,
+          "outerEvidenceColumns": 6,
+          "innerEvidenceColumns": 3
+        },
+        "sourcePreserved": true,
+        "runtime": "NOT RUN"
+      },
+      {
+        "name": "Ranked supported windows",
+        "component": "DepartureForecastRankedWindows",
+        "mount": {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 106,
+          "code": "<DepartureForecastRankedWindows",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        "counts": {
+          "maximumWindows": 5
+        },
+        "sourcePreserved": true,
+        "runtime": "NOT RUN"
+      },
+      {
+        "name": "Weekday routines",
+        "component": "DepartureForecastWeekdayRoutines",
+        "mount": {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 112,
+          "code": "<DepartureForecastWeekdayRoutines",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        "counts": {
+          "weekdays": 7
+        },
+        "sourcePreserved": true,
+        "runtime": "NOT RUN"
+      },
+      {
+        "name": "Weekday-hour profile",
+        "component": "DepartureForecastHeatmap",
+        "mount": {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 122,
+          "code": "<DepartureForecastHeatmap",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        "counts": {
+          "cells": 168,
+          "columns": 6
+        },
+        "sourcePreserved": true,
+        "runtime": "NOT RUN"
+      },
+      {
+        "name": "Historical local-hour/dayparts",
+        "component": "DepartureForecastHourDistribution",
+        "mount": {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 131,
+          "code": "<DepartureForecastHourDistribution",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        "counts": {
+          "hours": 24,
+          "dayparts": 4
+        },
+        "sourcePreserved": true,
+        "runtime": "NOT RUN"
+      },
+      {
+        "name": "Weekly cadence",
+        "component": "DepartureForecastWeeklyTrend",
+        "mount": {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 137,
+          "code": "<DepartureForecastWeeklyTrend",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        "counts": {
+          "series": 2,
+          "columns": 3
+        },
+        "sourcePreserved": true,
+        "runtime": "NOT RUN"
+      },
+      {
+        "name": "Evidence quality/accounting",
+        "component": "DepartureForecastEvidenceQuality",
+        "mount": {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 147,
+          "code": "<DepartureForecastEvidenceQuality",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        "counts": {
+          "groups": 3,
+          "metrics": 22,
+          "groupSizes": [
+            6,
+            8,
+            8
+          ]
+        },
+        "sourcePreserved": true,
+        "runtime": "NOT RUN"
+      },
+      {
+        "name": "Methodology/limitations",
+        "component": "DepartureForecastMethodology",
+        "mount": {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 155,
+          "code": "<DepartureForecastMethodology",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        "counts": {
+          "explanations": 6
+        },
+        "sourcePreserved": true,
+        "runtime": "NOT RUN"
+      }
+    ],
+    "featureFrameCounts": {
+      "GlassPanel": 4,
+      "ChartContainer": 4,
+      "EmbeddedChart": 1
+    },
+    "countsLimit": "Shared OperationalBrief section/panel does not add a tenth business section; unmounted KpiBand/KpiCards excluded from mounted counts. No current test/preservation CLI run.",
+    "actionCount": 14,
+    "actions": [
+      {
+        "id": "workspace-vehicle",
+        "evidence": {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 36,
+          "code": "const { vehicleId } = useSelectedVehicle();",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "fatal-retry",
+        "evidence": {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+          "line": 69,
+          "code": "<QueryError error={state.error} onRetry={state.onRetry} />",
+          "sha256": "f8c520e7e9073ad92aca7be0723a9db6d6afe106c0c2ff4e67f4d94a8ddd4bb7"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "retained-retry",
+        "evidence": {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+          "line": 93,
+          "code": "onClick={state.onRetry}",
+          "sha256": "f8c520e7e9073ad92aca7be0723a9db6d6afe106c0c2ff4e67f4d94a8ddd4bb7"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "retained-paused-refresh",
+        "evidence": {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 102,
+          "code": "onClick={state.retry}",
+          "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "review-details",
+        "evidence": {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "line": 166,
+          "code": "onClick={() => setDetailsOpen(true)}",
+          "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "close-details",
+        "evidence": {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "line": 248,
+          "code": "onClose={() => setDetailsOpen(false)}",
+          "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "DepartureForecastNext24Chart-image-export",
+        "evidence": {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+          "line": 86,
+          "code": "exportable={ready}",
+          "sha256": "9e7da020eaede730e40c40f9dfec2e9df0b2779626e0884d6f874c968ac72908"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "DepartureForecastHeatmap-image-export",
+        "evidence": {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+          "line": 64,
+          "code": "exportable={ready}",
+          "sha256": "ea097432273b451f3411d1035f66db29412350e0155f0ff0bbdb0bdae86230c1"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "DepartureForecastHourDistribution-image-export",
+        "evidence": {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+          "line": 80,
+          "code": "exportable={ready}",
+          "sha256": "2a240ef4a3635f06c8f508f290fa7af06421bd2b514030e4795e2a3c139f98cb"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "DepartureForecastWeeklyTrend-image-export",
+        "evidence": {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+          "line": 86,
+          "code": "exportable={ready}",
+          "sha256": "21208582cdf5fd83c5c5e36369344bcf2dd54976fdb6157d6119875fec0cb4ea"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "next24-likelihood",
+        "evidence": {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+          "line": 131,
+          "code": "hide={hs?.isHidden('likelihood') ?? false}",
+          "sha256": "10cc17a51018e05786c8d07da76b6841784d7ebb781a4046e68959f4e32b2922"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "next24-cumulative",
+        "evidence": {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+          "line": 154,
+          "code": "hide={hs?.isHidden('cumulative') ?? false}",
+          "sha256": "10cc17a51018e05786c8d07da76b6841784d7ebb781a4046e68959f4e32b2922"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "weekly-departures",
+        "evidence": {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+          "line": 160,
+          "code": "hiddenSeries?.isHidden('departures') ?? false",
+          "sha256": "21208582cdf5fd83c5c5e36369344bcf2dd54976fdb6157d6119875fec0cb4ea"
+        },
+        "runtime": "NOT RUN"
+      },
+      {
+        "id": "weekly-activeDays",
+        "evidence": {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+          "line": 172,
+          "code": "hiddenSeries?.isHidden('activeDays') ?? false",
+          "sha256": "21208582cdf5fd83c5c5e36369344bcf2dd54976fdb6157d6119875fec0cb4ea"
+        },
+        "runtime": "NOT RUN"
+      }
+    ],
+    "affordances": [
+      "Contained complete heatmap scroll; SR/forced-colors chart fallback tables.",
+      "Four image export menus offer shared PNG/SVG/copy-image; no exportData supplied so no CSV action claimed.",
+      "No page fullscreen/annotation/vehicle mutation action supplied."
+    ]
+  },
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr, 1000)",
+      "evidence": {
+        "file": "web/src/api/hooks/useDriving.ts",
+        "line": 143,
+        "code": "export function useDriveHistory(vehicleId?: string, limit = 1000) {",
+        "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392"
+      },
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected id>&limit=1000",
+      "router": {
+        "file": "internal/api/router.go",
+        "line": 3507,
+        "code": "r.Get(\"/\", driveHandler.ListByVehicle)",
+        "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c"
+      },
+      "handler": {
+        "file": "internal/api/drives/listing.go",
+        "line": 44,
+        "code": "drives, err := h.driveRepo.GetByVehicle(ctx, vehicleID, limit, offset, startTime, endTime)",
+        "sha256": "da0d6486c0f98e9f911825ce2e7bcaee8e9ac4a6993ea77eda90f0a789cd53c1"
+      },
+      "policy": "Vehicle/history/limit key, enabled selected vehicle, encoded snake_case ID, AbortSignal, MODERATE staleTime, safeArray, no polling/pagination/bounds."
+    },
+    {
+      "model": "forecastDepartures",
+      "input": "Only recorded Drive.startTs, frozen injected clock and explicit effective timezone; each start is one event. No identity/destination/weather/SOC/vehicle command.",
+      "window": "Fixed 120-day absolute lookback; 24 real upcoming local-hour boundaries, Gamma-Poisson modeled likelihood, supported-only peaks/ranking, descriptive support, illustrative marker not automation."
+    }
+  ],
+  "scopeAndData": {
+    "workspaceVehicle": true,
+    "workspaceRange": false,
+    "rangeException": "Accepted audit105 explicitly preserves independent fixed training window and frozen clock. No second picker/inert range control or workspace retraining. Both server bounds NOT SENT by history hook; acknowledged contract, not full-range coverage. Backend ListByVehicle accepts bounds, but no new bounds policy authorized.",
+    "ownership": "Header/mobile drawer owns vehicle; ID participates in history key/URL, no keepPreviousData in inspected hook. Ancillary vehicle/settings reads not mounted/exercised.",
+    "dates": "Explicit zone weekday/hour buckets; Monday business-date keys and UTC date-key arithmetic; source real boundaries handle DST/half-hour offsets, unexecuted.",
+    "denominator": "Elapsed calendar opportunity inferred, not verified continuous observation: DF08. Cap limits returned evidence, not lifetime guarantees.",
+    "unknownZero": "Unknown summary null before resolution; [] gives measured returned-row zero but no inferred peak/horizon/marker. Invalid/future/outside-window row accounting explicit; unsupported days/cells distinct; thin evidence suppresses marker.",
+    "rawSIPhysicalSigns": "Typed Drive meters/seconds/mps/watts/Wh remain raw. Model reads startTs only; no displayed physical distance/speed/temp/power/currency or sign conversion. Internal epoch ms/minutes are calendar model values, not altered API SI. No legacy converter introduced.",
+    "preferences": "Precision hook retained; locale bypass DF04. Effective zone provenance DF06. Intl time cycle follows locale; no independent 12/24h setting verified, so no invented violation.",
+    "forecastVsObserved": "Historical starts distinguished from inferred Poisson likelihood and descriptive support; not calibrated probability/confidence; one inner accessible name mismatch grouped DF01. Frozen as-of qualification DF05."
+  },
+  "states": {
+    "noVehicle": "Persistent shells/select-vehicle status; query disabled.",
+    "initial": "Null summary, skeletons, one loading status; frame metadata mismatch DF02.",
+    "initialPaused": "DF03, not an authoritative empty or offline fact.",
+    "fatal": "Central QueryError retry; section shells/methodology preserved.",
+    "retainedFailure": "Payload kept; central warning/retry and retained brief label.",
+    "retainedPaused": "Shared nonblocking warning/refresh; no verified vehicle offline claim.",
+    "empty": "Resolved [] gives row-zero accounting, unavailable forecast, passive empty body; quality allowEmpty and methodology visible.",
+    "noQualified": "Distinct invalid/future/outside-window explanation.",
+    "retry": "Same history refetch key, no mutation. Actual recovery NOT RUN."
+  },
+  "confirmedRootCount": 8,
+  "confirmedRoots": [
+    {
+      "id": "DF01",
+      "rule": "competing-chart-controller-and-model-terminology",
+      "priority": "P1",
+      "confidence": "high",
+      "classification": "confirmed source mechanism; no runtime incident",
+      "evidence": [
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+          "line": 85,
+          "code": "chartKey=\"departure-forecast-next-24\"",
+          "sha256": "9e7da020eaede730e40c40f9dfec2e9df0b2779626e0884d6f874c968ac72908"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+          "line": 87,
+          "code": "chartKey=\"departure-forecast-24h\"",
+          "sha256": "10cc17a51018e05786c8d07da76b6841784d7ebb781a4046e68959f4e32b2922"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+          "line": 94,
+          "code": "const hs = contextSeries ?? externalHiddenSeries ?? null;",
+          "sha256": "10cc17a51018e05786c8d07da76b6841784d7ebb781a4046e68959f4e32b2922"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+          "line": 61,
+          "code": "'Departure likelihood and cumulative probability forecast for the next 24 hours',",
+          "sha256": "10cc17a51018e05786c8d07da76b6841784d7ebb781a4046e68959f4e32b2922"
+        }
+      ],
+      "detail": "Outer and inner canonical frames have competing URL legend identities; inner context wins over externally passed state. Outer fallback has six evidence columns, inner three. Inner accessible name says cumulative probability while outer disclaims calibration.",
+      "fix": "Use one existing frame/controller; preserve both saved identities by an explicit compatibility decision, both series and all six columns. Keep modeled-likelihood terminology.",
+      "existingOwnerFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx"
+      ],
+      "historicalAudit105Overlap": true,
+      "exactExistingQueueRepairItem": null
+    },
+    {
+      "id": "DF02",
+      "rule": "chart-frame-source-state-fidelity",
+      "priority": "P1",
+      "confidence": "high",
+      "classification": "confirmed source mechanism; no runtime incident",
+      "evidence": [
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+          "line": 67,
+          "code": "<ChartContainer",
+          "sha256": "9e7da020eaede730e40c40f9dfec2e9df0b2779626e0884d6f874c968ac72908"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+          "line": 46,
+          "code": "<ChartContainer",
+          "sha256": "ea097432273b451f3411d1035f66db29412350e0155f0ff0bbdb0bdae86230c1"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+          "line": 62,
+          "code": "<ChartContainer",
+          "sha256": "2a240ef4a3635f06c8f508f290fa7af06421bd2b514030e4795e2a3c139f98cb"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+          "line": 67,
+          "code": "<ChartContainer",
+          "sha256": "21208582cdf5fd83c5c5e36369344bcf2dd54976fdb6157d6119875fec0cb4ea"
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "line": 547,
+          "code": "data-chart-state={loading ? 'loading' : error ? 'error' : empty ? 'empty' : 'ready'}",
+          "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694"
+        }
+      ],
+      "detail": "Four wrappers gate child/data/export readiness but omit frame loading/error/empty props; frames emit ready/no aria-busy during loading/fatal/empty content. This is source metadata mismatch, not missing panels.",
+      "fix": "Wire existing frame state API with passive placeholders; preserve shells, retained data, one central actionable status and no repeated live alerts/retries.",
+      "existingOwnerFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx"
+      ],
+      "historicalAudit105Overlap": true,
+      "exactExistingQueueRepairItem": null
+    },
+    {
+      "id": "DF03",
+      "rule": "initial-paused-source-undisclosed",
+      "priority": "P1",
+      "confidence": "high",
+      "classification": "confirmed source mechanism; no runtime incident",
+      "evidence": [
+        {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 62,
+          "code": "isLoading:",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+          "line": 38,
+          "code": "if (state.isLoading) {",
+          "sha256": "f8c520e7e9073ad92aca7be0723a9db6d6afe106c0c2ff4e67f4d94a8ddd4bb7"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 59,
+          "code": "if (!state.hasData) return null;",
+          "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 214,
+          "code": "isRefreshBlocked: isPaused,",
+          "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761"
+        }
+      ],
+      "detail": "Initial paused query is DataState initial plus isRefreshBlocked. Page reports loading; shared pause notice returns null without data. No initial-pause explanation/recovery reaches the user; no empty/offline fact established.",
+      "fix": "Forward initial paused/deferred state into the existing local status contract, distinguish retained pause, provide truthful recovery without claiming device offline.",
+      "existingOwnerFiles": [
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx"
+      ],
+      "historicalAudit105Overlap": false,
+      "exactExistingQueueRepairItem": null
+    },
+    {
+      "id": "DF04",
+      "rule": "effective-locale-preference-bypass",
+      "priority": "P1",
+      "confidence": "high",
+      "classification": "confirmed source mechanism; no runtime incident",
+      "evidence": [
+        {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 71,
+          "code": "const locale = i18n.language;",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        {
+          "file": "web/src/hooks/useNumberFormatting.ts",
+          "line": 29,
+          "code": "formatNumber(value, decimals ?? preferences.precision, locale ?? preferences.locale)",
+          "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7"
+        },
+        {
+          "file": "web/src/hooks/useSettings.ts",
+          "line": 108,
+          "code": "const locale = resolveLocale(s.locale)",
+          "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3"
+        }
+      ],
+      "detail": "Explicit translation language overrides effective settings locale for decimals/dates while fmtInt uses settings bridge. Independent saved numeric/date locale cannot consistently govern the page.",
+      "fix": "Use existing effective locale/date owner while retaining explicit model timezone and raw values; do not invent independent hour-cycle settings.",
+      "existingOwnerFiles": [
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/departure-forecast/labels.ts"
+      ],
+      "historicalAudit105Overlap": false,
+      "exactExistingQueueRepairItem": null
+    },
+    {
+      "id": "DF05",
+      "rule": "frozen-model-as-of-undisclosed",
+      "priority": "P1",
+      "confidence": "high",
+      "classification": "confirmed source mechanism; no runtime incident",
+      "evidence": [
+        {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 44,
+          "code": "const [nowMs] = useState(() => Date.now());",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        {
+          "file": "web/src/features/driving/lib/departureForecast.ts",
+          "line": 461,
+          "code": "} else if (ms > nowMs) {",
+          "sha256": "d03fd55dc6a8fd15934b3653aee534abbcda805d59c670c3ea49b59929f3411d"
+        },
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+          "line": 67,
+          "code": "scope={t('departure.brief.window', 'Next 24 hours · {{timezone}}; history coverage is limited to returned rows', { timezone: timeZone })}",
+          "sha256": "963ca070385bd90342479cf554ee7ed0b74fc9f6a0ece08c9a6903acbd6c80d9"
+        }
+      ],
+      "detail": "Accepted frozen clock persists through refetch and vehicle changes. In-X/Next-24-hours labels remain anchored to old mount instant; subsequently started drives classify future. No visible model-as-of disclosure; successful fetch freshness is not model freshness.",
+      "fix": "Preserve frozen-clock invariant; disclose real model anchor and snapshot-relative meaning. Any rebase/polling policy needs separate authorization, not remigration.",
+      "existingOwnerFiles": [
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx"
+      ],
+      "historicalAudit105Overlap": false,
+      "exactExistingQueueRepairItem": null
+    },
+    {
+      "id": "DF06",
+      "rule": "timezone-fallback-provenance-mislabel",
+      "priority": "P1",
+      "confidence": "high",
+      "classification": "confirmed source mechanism; no runtime incident",
+      "evidence": [
+        {
+          "file": "web/src/lib/timezone.ts",
+          "line": 37,
+          "code": "if (!vehicleTz || vehicleTz === 'UTC') return userTz;",
+          "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02"
+        },
+        {
+          "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+          "line": 37,
+          "code": "const timeZone = useTimezone('vehicle');",
+          "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+          "line": 63,
+          "code": "'Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the selected vehicle timezone: {{timeZone}}.',",
+          "sha256": "a668b106103f3d4f238f002fb558f390a8d97f51f15ed50a4864db70f1bc116c"
+        }
+      ],
+      "detail": "Vehicle-mode hook can return user/browser fallback for missing/UTC metadata; model normalizes invalid zones to UTC. UI nevertheless claims selected-vehicle zone. Effective fallback is not verified vehicle provenance.",
+      "fix": "Disclose effective model zone and metadata/fallback provenance; preserve shared default/UTC behavior and DST/business dates. No silent shared timezone repair.",
+      "existingOwnerFiles": [
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx"
+      ],
+      "historicalAudit105Overlap": false,
+      "exactExistingQueueRepairItem": null
+    },
+    {
+      "id": "DF07",
+      "rule": "fixed-palette-and-decorative-hue-bypass",
+      "priority": "P2",
+      "confidence": "high",
+      "classification": "confirmed source mechanism; no runtime incident",
+      "evidence": [
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 24,
+          "code": "return 'border-cyan-300/40 bg-cyan-400/30 text-[var(--text-primary)]';",
+          "sha256": "033b8336edcddaad9807571f1db29f4fa406e70b046de708c690fd5e0e48689a"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 27,
+          "code": "return 'border-cyan-300/30 bg-cyan-400/20 text-[var(--text-primary)]';",
+          "sha256": "033b8336edcddaad9807571f1db29f4fa406e70b046de708c690fd5e0e48689a"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 30,
+          "code": "return 'border-cyan-300/20 bg-cyan-400/10 text-[var(--text-secondary)]';",
+          "sha256": "033b8336edcddaad9807571f1db29f4fa406e70b046de708c690fd5e0e48689a"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 32,
+          "code": "return 'border-cyan-300/10 bg-cyan-400/5 text-[var(--text-secondary)]';",
+          "sha256": "033b8336edcddaad9807571f1db29f4fa406e70b046de708c690fd5e0e48689a"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+          "line": 118,
+          "code": "<div className=\"mb-2 flex items-center gap-2 text-cyan-300\">",
+          "sha256": "a668b106103f3d4f238f002fb558f390a8d97f51f15ed50a4864db70f1bc116c"
+        }
+      ],
+      "detail": "Four heatmap intensity bands use fixed cyan paints outside existing theme/semantic roles; explanatory icons/titles repeat decorative cyan. Confirmed token/hierarchy bypass, not measured neon/contrast failure.",
+      "fix": "Adopt existing reviewed restrained roles at these presenters; preserve intensity ordering/counts/unsupported states and saved chart choices. No new palette/token system.",
+      "existingOwnerFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx"
+      ],
+      "historicalAudit105Overlap": true,
+      "exactExistingQueueRepairItem": null
+    },
+    {
+      "id": "DF08",
+      "rule": "elapsed-denominator-presented-as-observed-coverage",
+      "priority": "P1",
+      "confidence": "high",
+      "classification": "confirmed source mechanism; no runtime incident",
+      "evidence": [
+        {
+          "file": "web/src/features/driving/lib/departureForecast.ts",
+          "line": 553,
+          "code": "const occurrences = countOccurrences(earliestMs, nowMs, timeZone);",
+          "sha256": "d03fd55dc6a8fd15934b3653aee534abbcda805d59c670c3ea49b59929f3411d"
+        },
+        {
+          "file": "web/src/features/driving/lib/departureForecast.ts",
+          "line": 584,
+          "code": "earliestMs == null ? 0 : Math.max(0, (nowMs - earliestMs) / MS_PER_DAY);",
+          "sha256": "d03fd55dc6a8fd15934b3653aee534abbcda805d59c670c3ea49b59929f3411d"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+          "line": 84,
+          "code": "'{{relative}} · {{departures}} departures across {{occurrences}} observed cell occurrences',",
+          "sha256": "cbd72a4a949ae72d0e2a6df94e641f6dc2c6fecc0a1d285e9f754bf1b35ef644"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+          "line": 66,
+          "code": "label: t('departure.quality.spanDays', 'Observed span (days)'),",
+          "sha256": "8e7e817c05ebcaa7bd42d1b14a43e221fb19f33a39371cb34de818ab1463ebd2"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+          "line": 74,
+          "code": "'Monday-based local weeks include zero-event weeks inside the observed returned span.',",
+          "sha256": "21208582cdf5fd83c5c5e36369344bcf2dd54976fdb6157d6119875fec0cb4ea"
+        }
+      ],
+      "detail": "Denominator/span enumerate elapsed calendar boundaries from first included start to frozen clock. Starts provide no continuous telemetry/no-drive-interval coverage. Observed wording overstates provenance; cap disclaimer does not prove exposure coverage.",
+      "fix": "Qualify as model-assumed elapsed calendar opportunity over returned history. Preserve formulas/counts/real zero events/date buckets; do not fabricate coverage metadata or retrain.",
+      "existingOwnerFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx"
+      ],
+      "historicalAudit105Overlap": false,
+      "exactExistingQueueRepairItem": null
+    }
+  ],
+  "unpromotedCandidateCount": 6,
+  "unpromotedCandidates": [
+    {
+      "id": "C01",
+      "evidence": {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "line": 62,
+        "code": "className=\"flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3\"",
+        "sha256": "cbd72a4a949ae72d0e2a6df94e641f6dc2c6fecc0a1d285e9f754bf1b35ef644"
+      },
+      "detail": "Unwrapped ranked rows: long locale/RTL/320px/200% text clipping risk, not observed.",
+      "promoted": false,
+      "requiredEvidence": "Separately authorized bounded owner/design or mounted proof; not this source-only item."
+    },
+    {
+      "id": "C02",
+      "evidence": {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "line": 52,
+        "code": "className=\"min-w-[58rem]\"",
+        "sha256": "033b8336edcddaad9807571f1db29f4fa406e70b046de708c690fd5e0e48689a"
+      },
+      "detail": "Three arbitrary geometry sites preserve contained 168-cell scroll. Native title/aria-hidden grid versus hidden fallback needs mounted keyboard/touch equivalence and existing design naming decision; no guessed token.",
+      "promoted": false,
+      "requiredEvidence": "Separately authorized bounded owner/design or mounted proof; not this source-only item."
+    },
+    {
+      "id": "C03",
+      "evidence": {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "line": 92,
+        "code": "size=\"sm\"",
+        "sha256": "f8c520e7e9073ad92aca7be0723a9db6d6afe106c0c2ff4e67f4d94a8ddd4bb7"
+      },
+      "detail": "Retry sm/h-9 lacks explicit mobile44 override; actual target/spacing acceptance NOT RUN, no global Button resize.",
+      "promoted": false,
+      "requiredEvidence": "Separately authorized bounded owner/design or mounted proof; not this source-only item."
+    },
+    {
+      "id": "C04",
+      "evidence": {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "line": 22,
+        "code": "<dl className=\"grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6\">",
+        "sha256": "14e9d73ef462d0c7b8196e31280cd5d0251b54f79e60c4cffc0e90ef7964f074"
+      },
+      "detail": "22 preformatted specialist entries need exact numeric-API mapping decision; no data loss or unsupported stat promotion asserted.",
+      "promoted": false,
+      "requiredEvidence": "Separately authorized bounded owner/design or mounted proof; not this source-only item."
+    },
+    {
+      "id": "C05",
+      "evidence": {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "line": 138,
+        "code": "? CHART_COLORS[3]",
+        "sha256": "10cc17a51018e05786c8d07da76b6841784d7ebb781a4046e68959f4e32b2922"
+      },
+      "detail": "Saved chart-palette composition and plot/table percentage rounding need owner/mounted preference review; no runtime failure or contrast defect promoted.",
+      "promoted": false,
+      "requiredEvidence": "Separately authorized bounded owner/design or mounted proof; not this source-only item."
+    },
+    {
+      "id": "C06",
+      "evidence": {
+        "file": "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "line": 10,
+        "code": "type Props = ComponentProps<typeof DepartureForecastKpiBand>;",
+        "sha256": "963ca070385bd90342479cf554ee7ed0b74fc9f6a0ece08c9a6903acbd6c80d9"
+      },
+      "detail": "Active props derive from alternate unmounted KpiBand; review exact references/types, no simultaneous duplicate mounting or removal authorized.",
+      "promoted": false,
+      "requiredEvidence": "Separately authorized bounded owner/design or mounted proof; not this source-only item."
+    }
+  ],
+  "deduplication": {
+    "queueSnapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+    "exactDepartureRepairRows": 0,
+    "historicalOverlapRoots": [
+      "DF01",
+      "DF02",
+      "DF07"
+    ],
+    "nearestOtherPageRows": [
+      "phase6-fix-advanced-evidence-date-preferences",
+      "phase6-fix-charger-health-presentation",
+      "phase6-action-history-retained-trust",
+      "phase6-drivetrain-thermal-source-trust",
+      "phase6-drivetrain-source-trust-wiring"
+    ],
+    "decision": "No canonical non-QA row names departure page/presenters. Similar other-page repairs own different files; no redispatch or broadened claim. Historical findings carried once, no new runtime incidents/candidate promotions/queue writes."
+  },
+  "requiredExistingOwnerNeeds": [
+    {
+      "rootId": "DF01",
+      "priority": "P1",
+      "existingOwnerFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx"
+      ],
+      "change": "Use one existing frame/controller; preserve both saved identities by an explicit compatibility decision, both series and all six columns. Keep modeled-likelihood terminology.",
+      "assignment": "Parent must reserve exact narrow source and covering-test lease before action; none granted here.",
+      "sharedAPIExpansionRequired": false,
+      "catalog": "No copy edit here; needed qualified copy requires separate serialized exact keys/projections ownership."
+    },
+    {
+      "rootId": "DF02",
+      "priority": "P1",
+      "existingOwnerFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx"
+      ],
+      "change": "Wire existing frame state API with passive placeholders; preserve shells, retained data, one central actionable status and no repeated live alerts/retries.",
+      "assignment": "Parent must reserve exact narrow source and covering-test lease before action; none granted here.",
+      "sharedAPIExpansionRequired": false,
+      "catalog": "No copy edit here; needed qualified copy requires separate serialized exact keys/projections ownership."
+    },
+    {
+      "rootId": "DF03",
+      "priority": "P1",
+      "existingOwnerFiles": [
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx"
+      ],
+      "change": "Forward initial paused/deferred state into the existing local status contract, distinguish retained pause, provide truthful recovery without claiming device offline.",
+      "assignment": "Parent must reserve exact narrow source and covering-test lease before action; none granted here.",
+      "sharedAPIExpansionRequired": false,
+      "catalog": "No copy edit here; needed qualified copy requires separate serialized exact keys/projections ownership."
+    },
+    {
+      "rootId": "DF04",
+      "priority": "P1",
+      "existingOwnerFiles": [
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/departure-forecast/labels.ts"
+      ],
+      "change": "Use existing effective locale/date owner while retaining explicit model timezone and raw values; do not invent independent hour-cycle settings.",
+      "assignment": "Parent must reserve exact narrow source and covering-test lease before action; none granted here.",
+      "sharedAPIExpansionRequired": false,
+      "catalog": "No copy edit here; needed qualified copy requires separate serialized exact keys/projections ownership."
+    },
+    {
+      "rootId": "DF05",
+      "priority": "P1",
+      "existingOwnerFiles": [
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx"
+      ],
+      "change": "Preserve frozen-clock invariant; disclose real model anchor and snapshot-relative meaning. Any rebase/polling policy needs separate authorization, not remigration.",
+      "assignment": "Parent must reserve exact narrow source and covering-test lease before action; none granted here.",
+      "sharedAPIExpansionRequired": false,
+      "catalog": "No copy edit here; needed qualified copy requires separate serialized exact keys/projections ownership."
+    },
+    {
+      "rootId": "DF06",
+      "priority": "P1",
+      "existingOwnerFiles": [
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx"
+      ],
+      "change": "Disclose effective model zone and metadata/fallback provenance; preserve shared default/UTC behavior and DST/business dates. No silent shared timezone repair.",
+      "assignment": "Parent must reserve exact narrow source and covering-test lease before action; none granted here.",
+      "sharedAPIExpansionRequired": false,
+      "catalog": "No copy edit here; needed qualified copy requires separate serialized exact keys/projections ownership."
+    },
+    {
+      "rootId": "DF07",
+      "priority": "P2",
+      "existingOwnerFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx"
+      ],
+      "change": "Adopt existing reviewed restrained roles at these presenters; preserve intensity ordering/counts/unsupported states and saved chart choices. No new palette/token system.",
+      "assignment": "Parent must reserve exact narrow source and covering-test lease before action; none granted here.",
+      "sharedAPIExpansionRequired": false,
+      "catalog": "No copy edit here; needed qualified copy requires separate serialized exact keys/projections ownership."
+    },
+    {
+      "rootId": "DF08",
+      "priority": "P1",
+      "existingOwnerFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx"
+      ],
+      "change": "Qualify as model-assumed elapsed calendar opportunity over returned history. Preserve formulas/counts/real zero events/date buckets; do not fabricate coverage metadata or retrain.",
+      "assignment": "Parent must reserve exact narrow source and covering-test lease before action; none granted here.",
+      "sharedAPIExpansionRequired": false,
+      "catalog": "No copy edit here; needed qualified copy requires separate serialized exact keys/projections ownership."
+    }
+  ],
+  "boundedScans": [
+    {
+      "check": "static-inline-style",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "style\\s*=\\s*\\{\\{",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 0,
+      "rawMatches": []
+    },
+    {
+      "check": "raw-html",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "<\\s*(button|input|textarea|select|table)(\\s|>)",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 0,
+      "rawMatches": []
+    },
+    {
+      "check": "direct-library-import",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "from\\s+['\\\"](recharts|react-leaflet|framer-motion)['\\\"]",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 0,
+      "rawMatches": []
+    },
+    {
+      "check": "old-api-import",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "from\\s+['\\\"]\\.\\./(\\.\\./)?api['\\\"]",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 0,
+      "rawMatches": []
+    },
+    {
+      "check": "double-prefix",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "/api/v1/",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 0,
+      "rawMatches": []
+    },
+    {
+      "check": "camelcase-param",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "[?&][a-z]+[A-Z][A-Za-z]*=",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 0,
+      "rawMatches": []
+    },
+    {
+      "check": "hidden-section-candidate",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "\\{[\\w.]+\\s*&&\\s*<",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 0,
+      "rawMatches": []
+    },
+    {
+      "check": "hardcoded-string-candidate",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": ">\\s*[A-Za-z][A-Za-z ]+\\s*<",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 2,
+      "rawMatches": [
+        {
+          "file": "web/src/features/driving/lib/departureForecast.ts",
+          "line": 426,
+          "code": "return Array.from({ length: 7 }, () => new Array<number>(24).fill(0));"
+        },
+        {
+          "file": "web/src/features/driving/lib/departureForecast.ts",
+          "line": 825,
+          "code": "const activeDays = Array.from({ length: 7 }, () => new Set<string>());"
+        }
+      ]
+    },
+    {
+      "check": "fetch-useeffect-candidate",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "\\b(fetch|useEffect)\\s*\\(",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 0,
+      "rawMatches": []
+    },
+    {
+      "check": "category-import-candidate",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "@/components/[^'\\\"]+/",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 2,
+      "rawMatches": [
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+          "line": 3,
+          "code": "import type { StatMetric } from '@/components/data-display/stat-reference';"
+        },
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+          "line": 4,
+          "code": "import type { StatMetric } from '@/components/data-display/stat-reference';"
+        }
+      ]
+    },
+    {
+      "check": "arbitrary-geometry-candidate",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "(min-w|grid-cols)-\\[[^\\]]+\\]",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 3,
+      "rawMatches": [
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 52,
+          "code": "className=\"min-w-[58rem]\""
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 56,
+          "code": "<div className=\"grid grid-cols-[5rem_repeat(24,minmax(2rem,1fr))] gap-1\">"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 76,
+          "code": "'grid grid-cols-[5rem_repeat(24,minmax(2rem,1fr))] gap-1',"
+        }
+      ]
+    },
+    {
+      "check": "fixed-cyan-candidate",
+      "rawCommand": "Select-String -LiteralPath $files -Pattern $patterns[$k]",
+      "expandedPattern": "(text|bg|border)-cyan-",
+      "scopeFiles": [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "web/src/features/driving/components/departure-forecast/index.ts",
+        "web/src/features/driving/components/departure-forecast/labels.ts",
+        "web/src/features/driving/components/departure-forecast/types.ts",
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "web/src/features/driving/lib/departureForecast.ts"
+      ],
+      "numericExit": 0,
+      "matchingLines": 10,
+      "rawMatches": [
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+          "line": 29,
+          "code": "<ShieldCheck className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 24,
+          "code": "return 'border-cyan-300/40 bg-cyan-400/30 text-[var(--text-primary)]';"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 27,
+          "code": "return 'border-cyan-300/30 bg-cyan-400/20 text-[var(--text-primary)]';"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 30,
+          "code": "return 'border-cyan-300/20 bg-cyan-400/10 text-[var(--text-secondary)]';"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+          "line": 32,
+          "code": "return 'border-cyan-300/10 bg-cyan-400/5 text-[var(--text-secondary)]';"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+          "line": 34,
+          "code": "<Gauge className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+          "line": 101,
+          "code": "className=\"h-4 w-4 text-cyan-300\""
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+          "line": 118,
+          "code": "<div className=\"mb-2 flex items-center gap-2 text-cyan-300\">"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+          "line": 37,
+          "code": "<ListOrdered className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        },
+        {
+          "file": "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+          "line": 36,
+          "code": "className=\"h-4 w-4 text-cyan-300\""
+        }
+      ]
+    }
+  ],
+  "scanDisposition": {
+    "scopeFiles": 23,
+    "literalSearchLimits": "Pattern matching is not AST or runtime proof; counts are matching lines, not root totals. No whole-repository clean claim.",
+    "hardcodedCandidates": "2 TS generic declarations Array<number>/Set<string>, not user-visible English.",
+    "categoryCandidates": "2 erased StatMetric type imports from existing category subbarrel; no runtime direct vendor import.",
+    "fixedCyan": "10 matching lines, 1 unmounted KpiBand, 9 mounted; grouped one DF07 root.",
+    "geometry": "3 sites retained as C02, no invented mapping.",
+    "missingPageContainer": "PageLayout delegates existing PageContainer; acceptable wrapper.",
+    "backendRules11To14": "Only necessary ListByVehicle handler read: r.Context span/defer End/ctx repository propagation; no println/panic/interpolated SQL there. No broad backend audit or execution."
+  },
+  "i18n": {
+    "uniqueLiteralKeys": 193,
+    "missingCanonicalKeys": 0,
+    "missingKeys": [],
+    "receipt": "Command6 partial output and command9 source read; no generator/guard/plural/translation/runtime certification."
+  },
+  "commandResults": [
+    {
+      "ordinal": 1,
+      "numericExit": 0,
+      "rawCommandOrPurpose": "Existing report absent; exact queue/instruction/mission probes."
+    },
+    {
+      "ordinal": 2,
+      "numericExit": 0,
+      "rawCommandOrPurpose": "Exact accepted dependency/root probes; guessed routes.ts missing produced nonterminating error, not successful path validation."
+    },
+    {
+      "ordinal": 3,
+      "numericExit": 0,
+      "rawCommandOrPurpose": "Bounded SHA256/line counts and source-owner Select-String/.gitignore reads."
+    },
+    {
+      "ordinal": 4,
+      "numericExit": 1,
+      "rawCommandOrPurpose": "ParserError unexpected ] before scan; no execution/writes."
+    },
+    {
+      "ordinal": 5,
+      "numericExit": 0,
+      "rawCommandOrPurpose": "Corrected bounded Select-String patterns; actual counts/lines in raw log."
+    },
+    {
+      "ordinal": 6,
+      "numericExit": 1,
+      "rawCommandOrPurpose": "Catalog/count checks completed before queue cp1252 UnicodeDecodeError; not whole-command success."
+    },
+    {
+      "ordinal": 7,
+      "numericExit": 1,
+      "rawCommandOrPurpose": "UTF-8 queue rows/authority hashes completed before stdout cp1252 UnicodeEncodeError printing inventory arrow; footer/route registry not executed."
+    },
+    {
+      "ordinal": 8,
+      "numericExit": 1,
+      "rawCommandOrPurpose": "Command could not launch: OS error 206 filename or extension too long; no report written."
+    },
+    {
+      "ordinal": 9,
+      "numericExit": 0,
+      "rawCommandOrPurpose": "Compact python -X utf8 source-only report generation; final validation pending command 10."
+    },
+    {
+      "ordinal": 10,
+      "numericExit": 0,
+      "rawCommandOrPurpose": "python -X utf8 -; json.loads, exact item/count assertions, SHA256 of 65 pinned files, 61 exact line/code assertions, current item/dependency row checks, final reparse and release."
+    }
+  ],
+  "commandLog": "web/logs/phase6-qa-driving-departure-forecast.log",
+  "notRun": {
+    "browser": "NOT RUN",
+    "screenshots": "NOT RUN",
+    "device": "NOT RUN",
+    "actualAPI": "NOT RUN",
+    "actualIdentityLocationVehicleData": "NOT RUN",
+    "mutations": "NOT RUN",
+    "tests": "NOT RUN",
+    "lint": "NOT RUN",
+    "build": "NOT RUN",
+    "globalTypeScript": "NOT RUN",
+    "Git": "NOT RUN",
+    "subagents": "NOT RUN",
+    "installs": "NOT RUN",
+    "servers": "NOT RUN",
+    "Docker": "NOT RUN",
+    "customHelpersOrExtensions": "NOT RUN",
+    "heartbeats": "NOT RUN",
+    "nativePageAcceptance": "NOT RUN",
+    "applicationAcceptance": "NOT RUN"
+  },
+  "testCounts": {
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "status": "NOT RUN, not a zero-test pass",
+    "historicalOnly": "Dependency cites 13 cases/51 assertions, not rerun/freshly counted."
+  },
+  "mobileAccessibility": {
+    "declaration": "All mission widths 320/375/390/430/768/1024/1280/1440/1920/2560, narrow allocated containers, themes/custom/forced-colors, RTL/long labels/200% text, keyboard/touch/focus/contrast/reduced-motion/low-bandwidth: NOT RUN.",
+    "source": "Paired grids stack to xl, weekdays sm, methodology md/xl, all heatmap cells in contained scroll; semantic Button/ol/ul/dl and shared figure/table/drawer. No measured mobile PASS.",
+    "browserOwnership": "Parent shared5173 only; no server probe/start and no browser lock held. Edge channel msedge only if later explicitly authorized; no downloads."
+  },
+  "sourcePins": [
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+      "sha256": "14e9d73ef462d0c7b8196e31280cd5d0251b54f79e60c4cffc0e90ef7964f074",
+      "lineCount": 39,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+      "sha256": "8e7e817c05ebcaa7bd42d1b14a43e221fb19f33a39371cb34de818ab1463ebd2",
+      "lineCount": 188,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+      "sha256": "dc395f378cf0400c6dc84b9a73cd53f8442021dd5ba083635fb11dbabbd0d912",
+      "lineCount": 75,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+      "sha256": "ea097432273b451f3411d1035f66db29412350e0155f0ff0bbdb0bdae86230c1",
+      "lineCount": 117,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+      "sha256": "033b8336edcddaad9807571f1db29f4fa406e70b046de708c690fd5e0e48689a",
+      "lineCount": 162,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+      "sha256": "2a240ef4a3635f06c8f508f290fa7af06421bd2b514030e4795e2a3c139f98cb",
+      "lineCount": 195,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+      "sha256": "c6821b275a7cf743378ec5750adb1aa82d76e4f81f106d311e3c7329cfe987a3",
+      "lineCount": 47,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+      "sha256": "71a43ade4a396ddaa9fc88c1ee540e161a11a770d9b8edcf3dae5c2e20c068c0",
+      "lineCount": 239,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+      "sha256": "a668b106103f3d4f238f002fb558f390a8d97f51f15ed50a4864db70f1bc116c",
+      "lineCount": 139,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+      "sha256": "9e7da020eaede730e40c40f9dfec2e9df0b2779626e0884d6f874c968ac72908",
+      "lineCount": 147,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+      "sha256": "10cc17a51018e05786c8d07da76b6841784d7ebb781a4046e68959f4e32b2922",
+      "lineCount": 162,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+      "sha256": "f8c520e7e9073ad92aca7be0723a9db6d6afe106c0c2ff4e67f4d94a8ddd4bb7",
+      "lineCount": 155,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+      "sha256": "cbd72a4a949ae72d0e2a6df94e641f6dc2c6fecc0a1d285e9f754bf1b35ef644",
+      "lineCount": 134,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+      "sha256": "7c6f290dd9169f20e334513c018bba6662505908543907cff24dbb06c5c989c3",
+      "lineCount": 120,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+      "sha256": "bab19f19395b5241c089b2bf1462402becd3cf2d8f2a7996f28c035c2e68fe7f",
+      "lineCount": 120,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+      "sha256": "21208582cdf5fd83c5c5e36369344bcf2dd54976fdb6157d6119875fec0cb4ea",
+      "lineCount": 200,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/index.ts",
+      "sha256": "253465de5f7b3ce675e438af4650c6e24326678b0af2274f5569b33d611d8893",
+      "lineCount": 23,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/labels.ts",
+      "sha256": "d380b503909b6e70f45da38fa2458f3bb03822e57898e75af03326f22bf23777",
+      "lineCount": 166,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/departure-forecast/types.ts",
+      "sha256": "668a668cae4f70847d4ec712bfec41998a85ea84a8ee5c58c3baebe6cb02a35b",
+      "lineCount": 8,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+      "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b",
+      "lineCount": 163,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+      "sha256": "963ca070385bd90342479cf554ee7ed0b74fc9f6a0ece08c9a6903acbd6c80d9",
+      "lineCount": 74,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+      "lineCount": 53,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/features/driving/lib/departureForecast.ts",
+      "sha256": "d03fd55dc6a8fd15934b3653aee534abbcda805d59c670c3ea49b59929f3411d",
+      "lineCount": 975,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "lineCount": 454,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lineCount": 458,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/types/driving.ts",
+      "sha256": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+      "lineCount": 411,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lineCount": 174,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lineCount": 65,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lineCount": 434,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/lib/timezone.ts",
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+      "lineCount": 51,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lineCount": 168,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "lineCount": 146,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lineCount": 148,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lineCount": 47,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lineCount": 462,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/lib/constants.ts",
+      "sha256": "76641391606b3616c45c2f0c1ea9bda0b130f4e190d6218e771ae1aeb64501e3",
+      "lineCount": 191,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "lineCount": 439,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/hooks/useHiddenSeries.ts",
+      "sha256": "a7cfecebbb60e53783e13dbfabcca5ca685b06f72ab6684fe3b6f712409d876e",
+      "lineCount": 88,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lineCount": 17,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lineCount": 259,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lineCount": 1006,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "lineCount": 42,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/components/charts/ChartHiddenSeriesContext.tsx",
+      "sha256": "1daecf7d4cfcc161a3a698ec68ba8971c6d06ba1231025a5a5e7528cd36f7594",
+      "lineCount": 58,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lineCount": 115,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lineCount": 93,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "lineCount": 321,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lineCount": 919,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "lineCount": 289,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "internal/api/router.go",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lineCount": 5363,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "internal/api/drives/listing.go",
+      "sha256": "da0d6486c0f98e9f911825ce2e7bcaee8e9ac4a6993ea77eda90f0a789cd53c1",
+      "lineCount": 606,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "migration-queue.md",
+      "sha256": "cc82e491ac168af3c270b5c859878df6ee6c1724be765147a36a8561921bf7ed",
+      "lineCount": 2043,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "docs/orchestrator-loop.md",
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "lineCount": 296,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "lineCount": 2539,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "full"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "lineCount": 2460,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "lineCount": 1593,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "lineCount": 152,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "lineCount": 1460,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-105.json",
+      "sha256": "2faf04ec01cc3f04d156df017470670eae63df61855440c9ee300cb9d3044ad6",
+      "lineCount": 359,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "lineCount": 707,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "lineCount": 94,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "lineCount": 629,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": ".github/instructions/observability.instructions.md",
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "lineCount": 45,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "lineCount": 221,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "lineCount": 38994,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    },
+    {
+      "file": ".gitignore",
+      "sha256": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+      "lineCount": 130,
+      "snapshotUTC": "2026-10-14T01:13:35.925027+00:00",
+      "coverage": "bounded ranges/matches, not whole-file audit"
+    }
+  ],
+  "filesRead": [
+    "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+    "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+    "web/src/features/driving/components/departure-forecast/index.ts",
+    "web/src/features/driving/components/departure-forecast/labels.ts",
+    "web/src/features/driving/components/departure-forecast/types.ts",
+    "web/src/features/driving/pages/DepartureForecastPage.tsx",
+    "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+    "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+    "web/src/features/driving/lib/departureForecast.ts",
+    "web/src/api/hooks/useDriving.ts",
+    "web/src/api/client.ts",
+    "web/src/types/driving.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/api/dataState.ts",
+    "web/src/lib/timezone.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/hooks/useSettings.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/constants.ts",
+    "web/src/lib/tokens.ts",
+    "web/src/hooks/useHiddenSeries.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/charts/EmbeddedChart.tsx",
+    "web/src/components/charts/ChartHiddenSeriesContext.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/App.tsx",
+    "web/src/lib/routeRegistry.ts",
+    "internal/api/router.go",
+    "internal/api/drives/listing.go",
+    "migration-queue.md",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/session-handoff.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-audits/audit-page-105.json",
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "web/src/i18n/en.json",
+    ".gitignore"
+  ],
+  "evidenceLimits": [
+    "Source only; no actual API/browser/device/identity/location/vehicle data, mutation or runtime incident.",
+    "No baseline regeneration/preservation CLI; current composed count equals historical source count, not mounted behavior proof.",
+    "Literal grep cannot certify dynamic strings/imports; general zero-violation/TypeScript passes not claimed.",
+    "Parent queue concurrently changes; authority hashes observational, not locks.",
+    "Repository ordering/completeness and ancillary reads not fully traced or exercised.",
+    "Accepted frozen clock and independent training window preserved, no invented calibration/coverage/source timezone.",
+    "Four failed command attempts retained honestly; successful partial output never converts failed whole command to PASS."
+  ],
+  "release": {
+    "status": "RELEASED at final command completion/terminal return",
+    "UTC": "2026-10-14T01:14:51.083854Z",
+    "reportWriteClaim": "RELEASED after final reparse",
+    "ignoredLogClaim": "RELEASED after this transcript is closed",
+    "commandClaim": "RELEASED; no background checks/services started or retained",
+    "sourceTestsCatalogBackendConfigQueueHandoff": "READ ONLY; no write claims held",
+    "browserLock": "NONE",
+    "postReturnWrites": false,
+    "acceptance": "Source-only delivery, NOT native/page/application PASS"
+  },
+  "currentPinVerification": {
+    "UTC": "2026-10-14T01:14:51.083854Z",
+    "numericExit": 0,
+    "fileCount": 65,
+    "linePinCount": 61,
+    "applicationSourceDrift": [],
+    "concurrentAuthorityDrift": [],
+    "currentPins": [
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetricGroup.tsx",
+        "sha256": "14e9d73ef462d0c7b8196e31280cd5d0251b54f79e60c4cffc0e90ef7964f074",
+        "lineCount": 39,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceMetrics.tsx",
+        "sha256": "8e7e817c05ebcaa7bd42d1b14a43e221fb19f33a39371cb34de818ab1463ebd2",
+        "lineCount": 188,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastEvidenceQuality.tsx",
+        "sha256": "dc395f378cf0400c6dc84b9a73cd53f8442021dd5ba083635fb11dbabbd0d912",
+        "lineCount": 75,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmap.tsx",
+        "sha256": "ea097432273b451f3411d1035f66db29412350e0155f0ff0bbdb0bdae86230c1",
+        "lineCount": 117,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHeatmapGrid.tsx",
+        "sha256": "033b8336edcddaad9807571f1db29f4fa406e70b046de708c690fd5e0e48689a",
+        "lineCount": 162,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastHourDistribution.tsx",
+        "sha256": "2a240ef4a3635f06c8f508f290fa7af06421bd2b514030e4795e2a3c139f98cb",
+        "lineCount": 195,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastKpiBand.tsx",
+        "sha256": "c6821b275a7cf743378ec5750adb1aa82d76e4f81f106d311e3c7329cfe987a3",
+        "lineCount": 47,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastKpiCards.tsx",
+        "sha256": "71a43ade4a396ddaa9fc88c1ee540e161a11a770d9b8edcf3dae5c2e20c068c0",
+        "lineCount": 239,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        "sha256": "a668b106103f3d4f238f002fb558f390a8d97f51f15ed50a4864db70f1bc116c",
+        "lineCount": 139,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        "sha256": "9e7da020eaede730e40c40f9dfec2e9df0b2779626e0884d6f874c968ac72908",
+        "lineCount": 147,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot.tsx",
+        "sha256": "10cc17a51018e05786c8d07da76b6841784d7ebb781a4046e68959f4e32b2922",
+        "lineCount": 162,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastQueryStatus.tsx",
+        "sha256": "f8c520e7e9073ad92aca7be0723a9db6d6afe106c0c2ff4e67f4d94a8ddd4bb7",
+        "lineCount": 155,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastRankedWindows.tsx",
+        "sha256": "cbd72a4a949ae72d0e2a6df94e641f6dc2c6fecc0a1d285e9f754bf1b35ef644",
+        "lineCount": 134,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastSectionBody.tsx",
+        "sha256": "7c6f290dd9169f20e334513c018bba6662505908543907cff24dbb06c5c989c3",
+        "lineCount": 120,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastWeekdayRoutines.tsx",
+        "sha256": "bab19f19395b5241c089b2bf1462402becd3cf2d8f2a7996f28c035c2e68fe7f",
+        "lineCount": 120,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        "sha256": "21208582cdf5fd83c5c5e36369344bcf2dd54976fdb6157d6119875fec0cb4ea",
+        "lineCount": 200,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/index.ts",
+        "sha256": "253465de5f7b3ce675e438af4650c6e24326678b0af2274f5569b33d611d8893",
+        "lineCount": 23,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/labels.ts",
+        "sha256": "d380b503909b6e70f45da38fa2458f3bb03822e57898e75af03326f22bf23777",
+        "lineCount": 166,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/departure-forecast/types.ts",
+        "sha256": "668a668cae4f70847d4ec712bfec41998a85ea84a8ee5c58c3baebe6cb02a35b",
+        "lineCount": 8,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        "sha256": "00a963fd6ba1efc96def6a66098b2495b6121351d6471b52a0b7ea64cf7a6b6b",
+        "lineCount": 163,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        "sha256": "963ca070385bd90342479cf554ee7ed0b74fc9f6a0ece08c9a6903acbd6c80d9",
+        "lineCount": 74,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+        "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+        "lineCount": 53,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/features/driving/lib/departureForecast.ts",
+        "sha256": "d03fd55dc6a8fd15934b3653aee534abbcda805d59c670c3ea49b59929f3411d",
+        "lineCount": 975,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/api/hooks/useDriving.ts",
+        "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+        "lineCount": 454,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "lineCount": 458,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/types/driving.ts",
+        "sha256": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+        "lineCount": 411,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "lineCount": 174,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "lineCount": 65,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "lineCount": 434,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/lib/timezone.ts",
+        "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+        "lineCount": 51,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "lineCount": 168,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/hooks/useSettings.ts",
+        "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+        "lineCount": 146,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/hooks/useDateFormat.ts",
+        "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "lineCount": 148,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "lineCount": 47,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "lineCount": 462,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/lib/constants.ts",
+        "sha256": "76641391606b3616c45c2f0c1ea9bda0b130f4e190d6218e771ae1aeb64501e3",
+        "lineCount": 191,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/lib/tokens.ts",
+        "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+        "lineCount": 439,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/hooks/useHiddenSeries.ts",
+        "sha256": "a7cfecebbb60e53783e13dbfabcca5ca685b06f72ab6684fe3b6f712409d876e",
+        "lineCount": 88,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "lineCount": 17,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "lineCount": 259,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/components/charts/ChartContainer.tsx",
+        "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+        "lineCount": 1006,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/components/charts/EmbeddedChart.tsx",
+        "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+        "lineCount": 42,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/components/charts/ChartHiddenSeriesContext.tsx",
+        "sha256": "1daecf7d4cfcc161a3a698ec68ba8971c6d06ba1231025a5a5e7528cd36f7594",
+        "lineCount": 58,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+        "lineCount": 115,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "lineCount": 93,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+        "lineCount": 321,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/App.tsx",
+        "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "lineCount": 919,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/lib/routeRegistry.ts",
+        "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+        "lineCount": 289,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "internal/api/router.go",
+        "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+        "lineCount": 5363,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "internal/api/drives/listing.go",
+        "sha256": "da0d6486c0f98e9f911825ce2e7bcaee8e9ac4a6993ea77eda90f0a789cd53c1",
+        "lineCount": 606,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "migration-queue.md",
+        "sha256": "cc82e491ac168af3c270b5c859878df6ee6c1724be765147a36a8561921bf7ed",
+        "lineCount": 2043,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "docs/orchestrator-loop.md",
+        "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+        "lineCount": 296,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "docs/frontend-design-contract.md",
+        "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+        "lineCount": 2539,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "docs/session-handoff.md",
+        "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+        "lineCount": 2460,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "docs/frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "lineCount": 1593,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "docs/frontend-worker-conventions.md",
+        "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+        "lineCount": 152,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "docs/frontend-inventory.md",
+        "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+        "lineCount": 1460,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "docs/frontend-audits/audit-page-105.json",
+        "sha256": "2faf04ec01cc3f04d156df017470670eae63df61855440c9ee300cb9d3044ad6",
+        "lineCount": 359,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": ".github/copilot-instructions.md",
+        "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+        "lineCount": 707,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": ".github/instructions/frontend-si-cutover.instructions.md",
+        "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+        "lineCount": 94,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": ".github/instructions/react-frontend.instructions.md",
+        "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+        "lineCount": 629,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": ".github/instructions/observability.instructions.md",
+        "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+        "lineCount": 45,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": ".github/instructions/unit-conversion.instructions.md",
+        "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+        "lineCount": 221,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+        "lineCount": 38994,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      },
+      {
+        "file": ".gitignore",
+        "sha256": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+        "lineCount": 130,
+        "snapshotUTC": "2026-10-14T01:14:51.083854Z"
+      }
+    ],
+    "currentQueueItemRow": "| [~] | 6 | phase6-qa-driving-departure-forecast | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-driving-departure-forecast.json | phase5-page-driving-departure-forecast | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=a96a890c-cc4a-4e1c-924f-75df0f1fe737; LastConsumed=-1 | - |CurrentacceptedDepartureForecastPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Forecast/sourcewindow/businessdates/timezones/scopes/unknownzero/SI/preferences/trust/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by a96a890c-cc4a-4e1c-924f-75df0f1fe737, no browser lock. |",
+    "acceptedDependencyCurrentRow": "| [x] | 5 | phase5-page-driving-departure-forecast | original-page-migration | web\\src\\features\\driving\\pages\\DepartureForecastPage.tsx; web\\src\\features\\driving\\pages\\DepartureForecastPage.test.tsx | - | 1 | 2026-10-12T14:32:17.5562819Z | 716e6217b9022d85a57b43cd04ec21e1e8b00775 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/departure-forecast; audit=docs\\frontend-audits\\audit-page-105.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Genuinely unstarted third-wave page/test source claim after exact caller fixture correction and normal i18n check0. Prior completed/zero-turn objectives not redispatched. Actual agent launch ID follows; held delivery claims excluded. Actual third-wave source agent=e3f7ef57-eab4-4740-8e28-d4921ea0c9dc; no source/QA result inferred from launch. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; No-change pair;163root/2243composed/9sections/13originalcases/51assertions retained; lint0/style0; testsNOTRUN;2masked viewportPNG incomplete, no native acceptance; commit=716e6217b9022d85a57b43cd04ec21e1e8b00775; no-source-commit. |",
+    "firstPagePinMatched": true
+  },
+  "commandSummary": {
+    "executed": 10,
+    "numericExitZero": 6,
+    "numericExitNonzero": 4,
+    "failedOrdinals": [
+      4,
+      6,
+      7,
+      8
+    ],
+    "recovered": "All failures retained in log/report; failed partial runs not passes.",
+    "limit": 15
+  },
+  "summary": {
+    "rootCountsByRule": {
+      "competing-chart-controller-and-model-terminology": 1,
+      "chart-frame-source-state-fidelity": 1,
+      "initial-paused-source-undisclosed": 1,
+      "effective-locale-preference-bypass": 1,
+      "frozen-model-as-of-undisclosed": 1,
+      "timezone-fallback-provenance-mislabel": 1,
+      "fixed-palette-and-decorative-hue-bypass": 1,
+      "elapsed-denominator-presented-as-observed-coverage": 1
+    },
+    "priorityRootCounts": {
+      "P1": 7,
+      "P2": 1
+    },
+    "filesWithMostConfirmedRootOwnership": [
+      [
+        "web/src/features/driving/pages/DepartureForecastPage.tsx",
+        4
+      ],
+      [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastMethodology.tsx",
+        4
+      ],
+      [
+        "web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx",
+        3
+      ],
+      [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastNext24Chart.tsx",
+        2
+      ],
+      [
+        "web/src/features/driving/components/departure-forecast/DepartureForecastWeeklyTrend.tsx",
+        2
+      ]
+    ],
+    "priorityFixes": [
+      "DF01 single logical chart owner/terminology",
+      "DF02/DF03 truthful source states including initial pause",
+      "DF04/DF05/DF06/DF08 locale and as-of/timezone/denominator provenance",
+      "DF07 restrained token adoption"
+    ],
+    "noCandidatePromotion": true
+  }
+}

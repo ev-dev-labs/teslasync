@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Binary, Gauge, Repeat, Waypoints } from 'lucide-react';
+import { Binary, Repeat, Waypoints } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { GlassPanel, Card, Icon, PanelTitle, Text, Badge, Select, HelpTooltip } from '@/components/ui';
 
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -18,16 +19,22 @@ import {
 import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
-import { chartTokens } from '@/lib/tokens';
+import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
+
+import { chartTokens, typography } from '@/lib/tokens';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 
 import { summarizeSignalEntropy } from '../lib/signalEntropy';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const HOURS = 48;
 
 export default function SignalEntropyPage() {
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
+  const { formatDateTime, tz } = useDateFormat();
   const { t } = useTranslation();
-  usePageTitle(t('signalEntropy.title', 'Signal Entropy'));
+  usePageTitle(t('signalEntropy.title', 'Signal entropy'));
 
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
@@ -36,6 +43,8 @@ export default function SignalEntropyPage() {
 
   const signalsQuery = useSignals(id);
   const historyQuery = useSignalAnalysisHistory(id, signalName, HOURS);
+  const catalogState = useDataState(signalsQuery);
+  const historyState = useDataState(historyQuery, { provenance: 'historical' });
   const chosen = signalName !== '';
   const dataSources = useMemo(
     () => [
@@ -67,7 +76,7 @@ export default function SignalEntropyPage() {
   const rollingSeries = useMemo(
     () =>
       summary.rolling.map((p) => ({
-        time: new Date(p.ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+        time: new Date(p.ms).toISOString(),
         bits: p.bits,
       })),
     [summary.rolling],
@@ -76,26 +85,66 @@ export default function SignalEntropyPage() {
   const binSeries = useMemo(
     () =>
       summary.bins.map((b, i) => ({
-        bin: `${fmtNumber(b.lo, 1)}–${fmtNumber(b.hi, 1)}`,
+        bin: `${fmtNumber(b.lo)}–${fmtNumber(b.hi)}`,
+        lo: b.lo,
+        hi: b.hi,
         key: i,
         count: b.count,
       })),
-    [summary.bins],
+    [summary.bins, fmtNumber],
   );
-
-  if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalEntropy.title', 'Signal Entropy')} />;
-  }
 
   const historyHasData = historyQuery.data !== undefined;
   const isLoading = chosen && !historyHasData && historyQuery.isLoading;
-  const isError = chosen && historyQuery.isError && !historyHasData;
-  const error = historyQuery.error;
+  const isError = chosen && historyState.fatalError != null;
+  const error = historyState.fatalError;
   const hasData = chosen && summary.samples > 0;
+  const noSamplesMessage = !chosen
+    ? t('signalEntropy.pickOne', 'Choose a signal above to compute its entropy.')
+    : !historyHasData
+      ? t('operationalSummary.unknown', 'Source values unknown')
+      : (historyQuery.data?.data ?? []).length === 0
+        ? t('signalHistory.emptyTitle', 'No signal samples')
+        : t('signalStats.emptyMessage', 'No aggregate statistics are available.');
+  const noSamplesDescription = chosen
+    ? t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')
+    : undefined;
+  const axisTick = {
+    fill: chartTokens.axisStroke,
+    fontSize: getChartFontSize(),
+    fontFamily: getChartFontFamily(),
+  };
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'number', occurrenceId: 'entropy', rawValue: hasData ? summary.entropyBits : null,
+      label: t('signalEntropy.entropy', 'Shannon entropy'),
+      display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: 'bits' }) },
+      description: t('help.signalEntropy.entropy', 'How surprised you should be by the next sample given everything seen so far. Normalized entropy divides by the ceiling for however many bins were actually populated, so a signal using 2 of 8 requested bins is judged against a 2-state ceiling, not an 8-state one it never approached.'),
+      context: t('signalEntropy.normalized', '{{n}} normalized', { n: hasData ? fmtPercent(summary.normalizedEntropy * 100) : '—' }) },
+    { metricId: 'number', occurrenceId: 'effective-states', rawValue: hasData ? summary.effectiveStates : null,
+      label: t('signalEntropy.effectiveStates', 'Effective states'),
+      display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: '' }) },
+      description: hasData
+        ? t('signalEntropy.effectiveBins', '{{n}} of {{r}} bins populated', { n: summary.effectiveBins, r: summary.requestedBins })
+        : t('operationalSummary.unknown', 'Source values unknown') },
+    { metricId: 'percent', occurrenceId: 'dominant-state', rawValue: hasData ? summary.dominantBinFraction * 100 : null,
+      label: t('signalEntropy.stuck', 'Dominant-state fraction'),
+      display: { formatter: (raw) => ({ value: fmtPercent(raw), unit: '' }) },
+      description: t('signalEntropy.stuckHint', 'occupancy of the single most common bin') },
+    { metricId: 'percent', occurrenceId: 'change-rate', rawValue: hasData ? summary.changeRate * 100 : null,
+      label: t('signalEntropy.changeRate', 'Change rate'),
+      display: { formatter: (raw) => ({ value: fmtPercent(raw), unit: '' }) },
+      description: hasData
+        ? t('signalEntropy.changeRateHint', '{{n}} samples analyzed', { n: summary.samples })
+        : t('operationalSummary.unknown', 'Source values unknown') },
+  ];
+
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('signalEntropy.title', 'Signal entropy')} />;
+  }
 
   return (
-    <PageContainer
-      title={t('signalEntropy.title', 'Signal Entropy')}
+    <PageLayout
+      title={t('signalEntropy.title', 'Signal entropy')}
       subtitle={t(
         'signalEntropy.subtitle',
         'Quantile-bins a numeric signal and measures how much genuine information it carries, in bits — distinct from gap detection or cross-signal correlation',
@@ -107,8 +156,8 @@ export default function SignalEntropyPage() {
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Binary className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalEntropy.pick', 'Choose a Signal')}
+            <Icon icon={Binary} className={typography.color.muted} />
+            {t('signalEntropy.pick', 'Choose a signal')}
             <HelpTooltip
               size="sm"
               i18nKey="help.signalEntropy.pick"
@@ -116,8 +165,8 @@ export default function SignalEntropyPage() {
               ariaLabel={t('help.signalEntropy.iconLabel', 'More info about signal selection')}
             />
           </PanelTitle>
-          {signalsQuery.isError ? (
-            <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
+          {catalogState.fatalError ? (
+            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
           ) : signalsQuery.isLoading ? (
             <Skeleton height={80} />
           ) : options.length === 0 ? (
@@ -139,117 +188,79 @@ export default function SignalEntropyPage() {
 
       {/* 2 — KPI band */}
       <FadeIn delay={0.1}>
-        <section
-          aria-label={t('signalEntropy.kpis', 'Entropy metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={error} onRetry={() => historyQuery.refetch()} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={96} className="rounded-xl" />)
-          ) : (
-            <>
-              <MetricCard
-                label={t('signalEntropy.entropy', 'Shannon Entropy')}
-                value={hasData ? `${fmtNumber(summary.entropyBits, 2)} bits` : '—'}
-                subtitle={t('signalEntropy.normalized', '{{n}} normalized', { n: hasData ? fmtPercent(summary.normalizedEntropy * 100, 0) : '—' })}
-                icon={<Binary className="h-5 w-5" />}
-                color={hasData && summary.normalizedEntropy >= 0.6 ? 'green' : 'cyan'}
-                help={{
-                  i18nKey: 'help.signalEntropy.entropy',
-                  defaultValue: 'How surprised you should be by the next sample given everything seen so far. Normalized entropy divides by the ceiling for however many bins were actually populated, so a signal using 2 of 8 requested bins is judged against a 2-state ceiling, not an 8-state one it never approached.',
-                }}
-              />
-              <MetricCard
-                label={t('signalEntropy.effectiveStates', 'Effective States')}
-                value={hasData ? fmtNumber(summary.effectiveStates, 2) : '—'}
-                subtitle={t('signalEntropy.effectiveBins', '{{n}} of {{r}} bins populated', { n: summary.effectiveBins, r: summary.requestedBins })}
-                icon={<Gauge className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('signalEntropy.stuck', 'Dominant-State Fraction')}
-                value={hasData ? fmtPercent(summary.dominantBinFraction * 100, 0) : '—'}
-                subtitle={t('signalEntropy.stuckHint', 'occupancy of the single most common bin')}
-                icon={<Repeat className="h-5 w-5" />}
-                color={hasData && summary.dominantBinFraction >= 0.9 ? 'amber' : 'blue'}
-              />
-              <MetricCard
-                label={t('signalEntropy.changeRate', 'Change Rate')}
-                value={hasData ? fmtPercent(summary.changeRate * 100, 0) : '—'}
-                subtitle={t('signalEntropy.changeRateHint', '{{n}} samples analyzed', { n: summary.samples })}
-                icon={<Waypoints className="h-5 w-5" />}
-                color="cyan"
-              />
-            </>
-          )}
-        </section>
+        <TelemetrySummaryBrief title={t('signalEntropy.kpis', 'Entropy metrics')}
+          metrics={metrics} testId="signal-entropy-summary" loading={isLoading}
+          unavailable={isError} unknown={!hasData} sourceStatus={historyState.status}
+          retained={historyHasData && (historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null)}
+          scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HOURS, signal: signalName || '—' })}
+          sourceBounds={signalName ? [{ signal: signalName, from: historyQuery.data?.from, to: historyQuery.data?.to }] : []}
+          provenance={t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')}
+          description={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
+        {isError && <QueryError error={error} onRetry={() => historyQuery.refetch()} />}
       </FadeIn>
 
       {/* 3 — Rolling information density */}
       <FadeIn delay={0.2}>
-        {!isLoading && !isError && rollingSeries.length === 0 ? (
-          <GlassPanel className="p-4 sm:p-5">
-            <EmptyState /* no-action: the rolling series appears once enough samples exist for at least one window. */
-              icon={<Binary className="h-8 w-8" />}
-              message={
-                chosen
-                  ? t('signalEntropy.notEnough', 'Not enough samples yet for a rolling entropy window on this signal.')
-                  : t('signalEntropy.pickOne', 'Choose a signal above to compute its entropy.')
-              }
-            />
-          </GlassPanel>
-        ) : (
-          // chart-legend-audit:skip single series (one rolling-entropy line, no sibling series to toggle)
+        {/* chart-legend-audit:skip single series (one rolling-entropy line, no sibling series to toggle) */}
           <ChartContainer
-            title={t('signalEntropy.rolling', 'Rolling Information Density')}
+            title={t('signalEntropy.rolling', 'Rolling information density')}
             subtitle={t('signalEntropy.rollingHint', 'Entropy recomputed over a sliding window using the same global bin edges, so spikes reflect genuinely eventful stretches')}
             ariaLabel={t('signalEntropy.rollingAria', 'Line chart of rolling Shannon entropy in bits over time for the selected signal')}
             loading={isLoading}
+            error={isError ? error : null}
+            onRetry={() => historyQuery.refetch()}
             empty={rollingSeries.length === 0}
+            emptyMessage={hasData
+              ? t('signalEntropy.notEnough', 'Not enough samples yet for a rolling entropy window on this signal.')
+              : noSamplesMessage}
+            emptyDescription={noSamplesDescription}
+            emptyIcon={<Binary className="h-8 w-8" aria-hidden="true" />}
+            metadata={{ unitLabel: 'bits', rangeLabel: tz }}
             height={300}
             data={rollingSeries}
             dataColumns={[
-              { key: 'time', label: t('signalEntropy.col.time', 'Time') },
+              { key: 'time', label: t('signalEntropy.col.time', 'Time'),
+                format: (value) => typeof value === 'string' ? formatDateTime(value) : '—' },
               { key: 'bits', label: t('signalEntropy.col.bits', 'Entropy (bits)') },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rollingSeries}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} minTickGap={40} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} unit=" bits" />
-                <Tooltip content={<ChartTooltip />} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                <XAxis dataKey="time" tick={axisTick} minTickGap={40} tickFormatter={(value) => formatDateTime(value)} />
+                <YAxis tick={axisTick} unit=" bits" />
+                <Tooltip content={<ChartTooltip timezone={tz} labelFormatter={(label) => typeof label === 'string' ? formatDateTime(label) : '—'} />} />
                 <Line type="monotone" dataKey="bits" name={t('signalEntropy.col.bits', 'Entropy (bits)')} stroke={chartTokens.series[0]} strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
-        )}
       </FadeIn>
 
       {/* 4 — Bin distribution */}
       <FadeIn delay={0.3}>
         {/* chart-legend-audit:skip single series (one bar series across bin categories, not stacked/grouped series) */}
         <ChartContainer
-          title={t('signalEntropy.distribution', 'Quantile Bin Distribution')}
+          title={t('signalEntropy.distribution', 'Quantile bin distribution')}
           subtitle={t('signalEntropy.distributionHint', 'Sample counts per equal-frequency bin — a lopsided distribution here explains a low entropy score')}
           ariaLabel={t('signalEntropy.distributionAria', 'Bar chart of sample counts across quantile bins for the selected signal')}
           loading={isLoading}
+          error={isError ? error : null}
+          onRetry={() => historyQuery.refetch()}
           empty={binSeries.length === 0}
+          emptyMessage={noSamplesMessage}
+          emptyDescription={noSamplesDescription}
           height={260}
           data={binSeries}
           dataColumns={[
             { key: 'bin', label: t('signalEntropy.col.bin', 'Bin range') },
-            { key: 'count', label: t('signalEntropy.col.count', 'Samples') },
+            { key: 'count', label: t('signalEntropy.col.count', 'Samples'), kind: 'count' },
           ]}
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={binSeries}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis dataKey="bin" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} minTickGap={20} />
-              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+              <XAxis dataKey="bin" tick={axisTick} minTickGap={20} />
+              <YAxis tick={axisTick} />
               <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="count" name={t('signalEntropy.col.count', 'Samples')} fill={chartTokens.series[1]} radius={[4, 4, 0, 0]} />
             </BarChart>
@@ -261,17 +272,22 @@ export default function SignalEntropyPage() {
       <FadeIn delay={0.4}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Repeat className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalEntropy.reading', 'Reading the Result')}
+            <Icon icon={Repeat} className={typography.color.muted} />
+            {t('signalEntropy.reading', 'Reading the result')}
           </PanelTitle>
-          {!hasData ? (
+          {isLoading ? (
+            <Skeleton height={80} />
+          ) : isError ? (
+            <QueryError error={error} onRetry={() => historyQuery.refetch()} />
+          ) : !hasData ? (
             <EmptyState /* no-action: the interpretation follows from the entropy computed above. */
               icon={<Binary className="h-8 w-8" />}
-              message={t('signalEntropy.noReading', 'Pick a signal to see how its entropy should be read.')}
+              message={chosen ? noSamplesMessage : t('signalEntropy.noReading', 'Pick a signal to see how its entropy should be read.')}
+              description={noSamplesDescription}
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <Card padding="sm" className="shadow-none">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant={summary.dominantBinFraction >= 0.9 ? 'warning' : 'success'}>
                     {summary.dominantBinFraction >= 0.9
@@ -284,24 +300,27 @@ export default function SignalEntropyPage() {
                     ? t('signalEntropy.parkedText', 'This signal spends almost all of its time in a single quantile bin — most samples are telling you the same thing over and over.')
                     : t('signalEntropy.activeText', 'This signal spreads its samples across multiple bins, so each new reading is genuinely informative rather than decoration on a fixed state.')}
                 </Text>
-              </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              </Card>
+              <Card padding="sm" className="shadow-none">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant="info">{t('signalEntropy.range', 'Observed range')}</Badge>
                 </div>
                 <Text variant="body">
                   {t('signalEntropy.rangeText', '{{min}} to {{max}} across {{n}} samples in the last {{h}}h window', {
-                    min: fmtNumber(summary.minValue ?? 0, 2),
-                    max: fmtNumber(summary.maxValue ?? 0, 2),
+                    min: summary.minValue == null ? '—' : fmtNumber(summary.minValue),
+                    max: summary.maxValue == null ? '—' : fmtNumber(summary.maxValue),
                     n: summary.samples,
                     h: HOURS,
                   })}
                 </Text>
-              </div>
+                <Text variant="bodySm" className="mt-2">
+                  {t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')}
+                </Text>
+              </Card>
             </div>
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

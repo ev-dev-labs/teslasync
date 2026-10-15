@@ -1,0 +1,2765 @@
+{
+  "item": "phase6-qa-settings-fleet-setup",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_ONLY_WITH_NEEDS",
+  "baseline_utc": "2026-10-14T01:56:36.037656+00:00",
+  "source_test_sha256_before": [
+    {
+      "path": "web/src/features/settings/pages/FleetSetupPage.tsx",
+      "sha256": "ea41518486117d30eda98ac10fe95cb7b100f398933a5a32e616acd4dd8e23d0",
+      "bytes": 5453
+    },
+    {
+      "path": "web/src/features/settings/pages/FleetSetupPage.test.tsx",
+      "sha256": "15178cd7c5643b811a3a5a177b2a11ae49bb1376b35fc8856ddef495893cc988",
+      "bytes": 16235
+    },
+    {
+      "path": "web/src/features/settings/components/TeslaAccountSection.tsx",
+      "sha256": "1d8b188af4e6bd78c1c6609ae5025288562ce45b602673cf19875373d1259684",
+      "bytes": 9739
+    },
+    {
+      "path": "web/src/features/settings/components/TeslaAccountSection.test.tsx",
+      "sha256": "c67c8d609febb9bf55c17ec173863ef61dfc59fa2c2485d4ec2911b5244f91cd",
+      "bytes": 21427
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupGuide.test.tsx",
+      "sha256": "84dda53923ca3c3d016f83831a4358a818c1d163a2e8021c6e20368e8411c42c",
+      "bytes": 1929
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupGuide.tsx",
+      "sha256": "6ebaa9b307fb717660ad52853b7a66a65148e57b2bcb9ab254b4005a0a6b8852",
+      "bytes": 2963
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupKpiBand.tsx",
+      "sha256": "abde0d699ca233fb83d09a72661c3f2adec55d9d53c2bb5c8009937048d729fe",
+      "bytes": 6598
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.test.tsx",
+      "sha256": "cc16b421450efffc16760418f613747c5731f11b82fe0ba16f159c1d7c34a01c",
+      "bytes": 4692
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.tsx",
+      "sha256": "146df9718945051728f68da60579bbc7b73984ff6a341697a10583ba81d0259c",
+      "bytes": 4495
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupReadiness.tsx",
+      "sha256": "3285cd95cad419a9d187a817ac679876d61cf45fc767b029f322f8f933bc074b",
+      "bytes": 4322
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupStreamingPanel.tsx",
+      "sha256": "6e6fe640ded5a18ac02891932a078555bce22ae8b6bab003a45191fed88d243d",
+      "bytes": 4020
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+      "sha256": "de60637399d183599b5a9df697006983c7da224ed5f4cc3ccfe7fcd90244bc77",
+      "bytes": 14539
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/index.ts",
+      "sha256": "3a3bca3149ffe15dd5367cb3a6c3078dbf730045053c699ca36042abfdd72fe5",
+      "bytes": 366
+    },
+    {
+      "path": "web/src/api/hooks/useFleetSetup.ts",
+      "sha256": "cb6ad8211ca20cceb2affec3180d9a5ca35abb0d7490d20c5b4a673aa2cc6799",
+      "bytes": 9306
+    },
+    {
+      "path": "web/src/api/hooks/useOnboarding.ts",
+      "sha256": "59ff1acad2ca5f291f13686cb831109c4850775912a8d7ee34ef10e51e9bdb4e",
+      "bytes": 4617
+    },
+    {
+      "path": "web/src/api/hooks/useSettings.ts",
+      "sha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "bytes": 13356
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes": 15482
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411
+    },
+    {
+      "path": "web/src/api/hooks/useFleetSetup.test.tsx",
+      "sha256": "2de07e49ea25ddb9d60f0d82199d38dafb7f1393054d1e7c81594990386d31b8",
+      "bytes": 7024
+    },
+    {
+      "path": "web/src/api/hooks/useOnboarding.test.tsx",
+      "sha256": "e9d1c25fcb0435f90895742fc31e613a73cff03d2d805eaf04b086f85a24f1be",
+      "bytes": 9892
+    },
+    {
+      "path": "web/src/components/ui/SignalConfigModal.tsx",
+      "sha256": "0f18bf36849ac8830f5141e89ce229e6e2afe1fdebb6741741368ffab147a2e5",
+      "bytes": 18365
+    },
+    {
+      "path": "web/src/features/onboarding/components/Stepper.tsx",
+      "sha256": "b3ea5a17ba4086492cd1577a9643faced9c3ef3d9a2d1761c108cb49e2e6a5a3",
+      "bytes": 7009
+    },
+    {
+      "path": "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx",
+      "sha256": "9075a1bb2c766e225462ee1eaab67e67293f1b97d052e58c1a48e12eb3a07595",
+      "bytes": 1701
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "bytes": 3322
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "bytes": 70205
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "bytes": 17825
+    },
+    {
+      "path": "web/src/api/queryPolicy.ts",
+      "sha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "bytes": 11340
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "bytes": 5230
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytes": 5174
+    },
+    {
+      "path": "web/src/hooks/useConfirm.ts",
+      "sha256": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "bytes": 3898
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "bytes": 4093
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "bytes": 18863
+    },
+    {
+      "path": "web/src/lib/operationalMode.ts",
+      "sha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "bytes": 2495
+    },
+    {
+      "path": "web/src/components/ui/SignalConfigModal.test.tsx",
+      "sha256": "9c1cfe5342d573a0fbfa4fa444607397be065b11fba43f700ea8122c53da23cc",
+      "bytes": 15689
+    },
+    {
+      "path": "web/src/components/ui/__tests__/SignalConfigModal.viewport.test.tsx",
+      "sha256": "b8a4cd4731ea048f0227efd4597c9a297366126c30fbb194ec82b83b14e73b06",
+      "bytes": 4513
+    },
+    {
+      "path": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "bytes": 68125
+    },
+    {
+      "path": "web/src/components/ui/index.ts",
+      "sha256": "ccd21278bae4721a793be4de5085af906f0a1a063670c182ce2e31b62dc3e329",
+      "bytes": 4328
+    },
+    {
+      "path": "web/src/components/feedback/index.ts",
+      "sha256": "9b5476cf4a88198e3852a4fff7c05db65c90bbf8f2bf094d4ddcf2b2d32dd02f",
+      "bytes": 4578
+    },
+    {
+      "path": "web/src/features/admin/components/devtools/constants.ts",
+      "sha256": "9c8697bf05075b4a43b18db18a73c340d15a8c4ab6c049cb1d1a82d8ccb13d3d",
+      "bytes": 12876
+    }
+  ],
+  "guideline_grep": [
+    {
+      "rule": "static-inline-style",
+      "raw_matches": 0,
+      "matches": []
+    },
+    {
+      "rule": "raw-html",
+      "raw_matches": 0,
+      "matches": []
+    },
+    {
+      "rule": "direct-library-import",
+      "raw_matches": 0,
+      "matches": []
+    },
+    {
+      "rule": "old-api-import",
+      "raw_matches": 0,
+      "matches": []
+    },
+    {
+      "rule": "double-prefix",
+      "raw_matches": 0,
+      "matches": []
+    },
+    {
+      "rule": "camelcase-param",
+      "raw_matches": 0,
+      "matches": []
+    },
+    {
+      "rule": "hidden-section",
+      "raw_matches": 0,
+      "matches": []
+    },
+    {
+      "rule": "hardcoded-string",
+      "raw_matches": 3,
+      "matches": [
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 338,
+          "text": "placeholder=\"telemetry.example.com\""
+        },
+        {
+          "file": "web/src/api/hooks/useFleetSetup.ts",
+          "line": 95,
+          "text": "queryFn: ({ signal }) => request<unknown>('/dev-tools/fleet-api-info', { signal }),"
+        },
+        {
+          "file": "web/src/api/hooks/useOnboarding.ts",
+          "line": 121,
+          "text": "queryFn: ({ signal }) => request<OnboardingStatus>('/onboarding/status', { signal }),"
+        }
+      ]
+    },
+    {
+      "rule": "missing-page-container",
+      "raw_matches": 1,
+      "matches": [
+        {
+          "file": "web/src/features/settings/pages/FleetSetupPage.tsx",
+          "line": 46,
+          "text": "<PageLayout"
+        }
+      ]
+    },
+    {
+      "rule": "fetch-useeffect",
+      "raw_matches": 2,
+      "matches": [
+        {
+          "file": "web/src/features/settings/components/TeslaAccountSection.tsx",
+          "line": 37,
+          "text": "useEffect(() => {"
+        },
+        {
+          "file": "web/src/features/settings/components/TeslaAccountSection.tsx",
+          "line": 51,
+          "text": "useEffect(() => {"
+        }
+      ]
+    }
+  ],
+  "existing_test_declarations": [
+    {
+      "path": "web/src/features/settings/pages/FleetSetupPage.test.tsx",
+      "authored_declarations": 10,
+      "parameterized_declarations": 0,
+      "declarations": [
+        {
+          "line": 138,
+          "declaration": "it('renders KPI, Tesla connect, subscribe, stream, and domain panels', async () => {"
+        },
+        {
+          "line": 159,
+          "declaration": "it('opens the Fleet Telemetry Signal Configuration picker', async () => {"
+        },
+        {
+          "line": 168,
+          "declaration": "it('keeps resolved sources visible while partner-key status is still loading', async () => {"
+        },
+        {
+          "line": 182,
+          "declaration": "it('distinguishes independent initial failures from missing keys, tokens and a waiting stream', async () => {"
+        },
+        {
+          "line": 211,
+          "declaration": "it('does not describe failed VIN config and error reads as empty successful responses', async () => {"
+        },
+        {
+          "line": 234,
+          "declaration": "it('retains measured readiness and streaming details after background source failures', async () => {"
+        },
+        {
+          "line": 251,
+          "declaration": "it('still shows every section when Tesla is disconnected', async () => {"
+        },
+        {
+          "line": 290,
+          "declaration": "it('includes an independently failed account read in header freshness without hiding setup sections', async () => {"
+        },
+        {
+          "line": 307,
+          "declaration": "it('keeps the retained token check and retries only its failed read', async () => {"
+        },
+        {
+          "line": 329,
+          "declaration": "it('distinguishes paused token refresh from a failed read without claiming the device is offline', async () => {"
+        }
+      ],
+      "runtime_discovery": "NOTRUN",
+      "execution": "NOTRUN"
+    },
+    {
+      "path": "web/src/features/settings/components/TeslaAccountSection.test.tsx",
+      "authored_declarations": 32,
+      "parameterized_declarations": 0,
+      "declarations": [
+        {
+          "line": 142,
+          "declaration": "it('shows a source failure and read-only retry instead of inventing disconnected status', () => {"
+        },
+        {
+          "line": 155,
+          "declaration": "it('preserves the connected state and existing controls after a retained refresh failure', () => {"
+        },
+        {
+          "line": 165,
+          "declaration": "it('always renders the panel heading and subtitle', () => {"
+        },
+        {
+          "line": 173,
+          "declaration": "it('exposes the connection state as an aria-live status region', () => {"
+        },
+        {
+          "line": 188,
+          "declaration": "it('keeps connection status unknown and only the connect action while auth is loading', () => {"
+        },
+        {
+          "line": 200,
+          "declaration": "it('renders the connect-only layout when the account is explicitly unauthenticated', () => {"
+        },
+        {
+          "line": 215,
+          "declaration": "it('renders the full authenticated action set and hides the connect CTA', () => {"
+        },
+        {
+          "line": 229,
+          "declaration": "it('renders the token-expiry line but no soft-warning pill when expiry is far out', () => {"
+        },
+        {
+          "line": 237,
+          "declaration": "it('surfaces the \"expires in Nd\" pill when the token expires within 7 days', () => {"
+        },
+        {
+          "line": 248,
+          "declaration": "it('suppresses the pill once the token is already past its expiry', () => {"
+        },
+        {
+          "line": 256,
+          "declaration": "it('does not crash or show a pill for an unparseable expires_at', () => {"
+        },
+        {
+          "line": 267,
+          "declaration": "it('omits the token-expiry line entirely when no expires_at is present', () => {"
+        },
+        {
+          "line": 292,
+          "declaration": "it('redirects the tab to the returned auth_url on a successful connect', () => {"
+        },
+        {
+          "line": 305,
+          "declaration": "it('does NOT navigate when the success payload lacks an auth_url', () => {"
+        },
+        {
+          "line": 319,
+          "declaration": "it('routes the Re-authorize button through the same auth-URL handoff', () => {"
+        },
+        {
+          "line": 329,
+          "declaration": "it('shows the connect button in a loading state while the auth URL is pending', () => {"
+        },
+        {
+          "line": 343,
+          "declaration": "it('invokes the refresh mutation with success + error callbacks', () => {"
+        },
+        {
+          "line": 360,
+          "declaration": "it('shows a success toast when the refresh resolves', async () => {"
+        },
+        {
+          "line": 371,
+          "declaration": "it('shows an error toast carrying the failure message when the refresh rejects', async () => {"
+        },
+        {
+          "line": 383,
+          "declaration": "it('disables the refresh button while a refresh is in flight', () => {"
+        },
+        {
+          "line": 395,
+          "declaration": "it('invokes the sync mutation with an error callback on click', () => {"
+        },
+        {
+          "line": 408,
+          "declaration": "it('surfaces an error toast with the failure message when the sync rejects', async () => {"
+        },
+        {
+          "line": 420,
+          "declaration": "it('renders the synced-count summary after a successful sync', () => {"
+        },
+        {
+          "line": 426,
+          "declaration": "it('falls back to zero (no crash) when a successful sync returns no body', () => {"
+        },
+        {
+          "line": 434,
+          "declaration": "it('disables the sync button while a sync is in flight', () => {"
+        },
+        {
+          "line": 446,
+          "declaration": "it('opens a confirmation dialog before disconnecting', async () => {"
+        },
+        {
+          "line": 459,
+          "declaration": "it('runs the disconnect mutation and toasts success once confirmed', async () => {"
+        },
+        {
+          "line": 474,
+          "declaration": "it('does not disconnect when the confirmation is cancelled', async () => {"
+        },
+        {
+          "line": 491,
+          "declaration": "it('flips the pill to \"Disconnected\" when a token-expired event fires', () => {"
+        },
+        {
+          "line": 507,
+          "declaration": "it('restores the connected pill when a recovered event follows', () => {"
+        },
+        {
+          "line": 522,
+          "declaration": "it('emits a recovery event only on the unauthenticated → authenticated edge', () => {"
+        },
+        {
+          "line": 540,
+          "declaration": "it('does not emit recovery on the first successful load (undefined → authenticated)', () => {"
+        }
+      ],
+      "runtime_discovery": "NOTRUN",
+      "execution": "NOTRUN"
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupGuide.test.tsx",
+      "authored_declarations": 1,
+      "parameterized_declarations": 0,
+      "declarations": [
+        {
+          "line": 18,
+          "declaration": "it('preserves the Tesla order, every prerequisite explanation and a heading-named passive list', () => {"
+        }
+      ],
+      "runtime_discovery": "NOTRUN",
+      "execution": "NOTRUN"
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.test.tsx",
+      "authored_declarations": 5,
+      "parameterized_declarations": 0,
+      "declarations": [
+        {
+          "line": 28,
+          "declaration": "it('keeps exact step identities, destinations and token-dependent subscribe disablement', () => {"
+        },
+        {
+          "line": 58,
+          "declaration": "it('uses a valid token to enable subscription without changing caller-prepared completion', () => {"
+        },
+        {
+          "line": 70,
+          "declaration": "it('keeps only streaming current when subscribed evidence exists but health is stale', () => {"
+        },
+        {
+          "line": 88,
+          "declaration": "it('keeps the connect row current even when later anchors are independently complete', () => {"
+        },
+        {
+          "line": 98,
+          "declaration": "it('renders all four completed LI rows without any action when every anchor is satisfied', () => {"
+        }
+      ],
+      "runtime_discovery": "NOTRUN",
+      "execution": "NOTRUN"
+    },
+    {
+      "path": "web/src/api/hooks/useFleetSetup.test.tsx",
+      "authored_declarations": 11,
+      "parameterized_declarations": 0,
+      "declarations": [
+        {
+          "line": 59,
+          "declaration": "it('reads snake_case first and falls back to camelCase aliases', () => {"
+        },
+        {
+          "line": 76,
+          "declaration": "it('treats authenticated as a token alias used by older payloads', () => {"
+        },
+        {
+          "line": 82,
+          "declaration": "it('defaults missing fields without throwing', () => {"
+        },
+        {
+          "line": 93,
+          "declaration": "it('reads nested Tesla response.config.hostname', () => {"
+        },
+        {
+          "line": 101,
+          "declaration": "it('returns empty hostname when Tesla has no config', () => {"
+        },
+        {
+          "line": 107,
+          "declaration": "it('GETs /dev-tools/fleet-api-info without an /api/v1 prefix', async () => {"
+        },
+        {
+          "line": 126,
+          "declaration": "it('POSTs vins only when host/port/ca are blank so the server fills defaults', async () => {"
+        },
+        {
+          "line": 147,
+          "declaration": "it('POSTs fields and field_intervals when the picker supplies them', async () => {"
+        },
+        {
+          "line": 174,
+          "declaration": "it('reads Tesla response.errors envelopes', () => {"
+        },
+        {
+          "line": 192,
+          "declaration": "it('returns [] when Tesla reports no errors', () => {"
+        },
+        {
+          "line": 198,
+          "declaration": "it('DELETEs fleet-telemetry-config with snake_case vin', async () => {"
+        }
+      ],
+      "runtime_discovery": "NOTRUN",
+      "execution": "NOTRUN"
+    },
+    {
+      "path": "web/src/api/hooks/useOnboarding.test.tsx",
+      "authored_declarations": 21,
+      "parameterized_declarations": 0,
+      "declarations": [
+        {
+          "line": 10,
+          "declaration": "//     it (AND of the three anchors) only when it is absent."
+        },
+        {
+          "line": 78,
+          "declaration": "it('exports a stable readonly status key tuple', () => {"
+        },
+        {
+          "line": 84,
+          "declaration": "it('is the documented 30s cadence', () => {"
+        },
+        {
+          "line": 90,
+          "declaration": "it('passes a complete payload through and prefers the backend is_complete', () => {"
+        },
+        {
+          "line": 94,
+          "declaration": "it('keeps is_complete=true from the backend even if anchors disagree', () => {"
+        },
+        {
+          "line": 108,
+          "declaration": "it('prefers durable setup_complete over a conflicting compatibility alias', () => {"
+        },
+        {
+          "line": 123,
+          "declaration": "it('recomputes setup completion from the three anchors for a legacy payload', () => {"
+        },
+        {
+          "line": 136,
+          "declaration": "it('recomputes is_complete=false when a vehicle is missing and flag omitted', () => {"
+        },
+        {
+          "line": 145,
+          "declaration": "it('defaults every anchor pessimistically for a partial payload', () => {"
+        },
+        {
+          "line": 158,
+          "declaration": "it('returns an all-false status for undefined input', () => {"
+        },
+        {
+          "line": 171,
+          "declaration": "it('returns an all-false status for null input', () => {"
+        },
+        {
+          "line": 184,
+          "declaration": "it('keeps a configured installation complete when live telemetry is stale', () => {"
+        },
+        {
+          "line": 204,
+          "declaration": "it('stops polling once setup is complete', () => {"
+        },
+        {
+          "line": 208,
+          "declaration": "it('keeps polling at the 30s cadence while incomplete', () => {"
+        },
+        {
+          "line": 219,
+          "declaration": "it('keeps polling for an undefined payload (loading / error)', () => {"
+        },
+        {
+          "line": 223,
+          "declaration": "it('stops polling when all anchors are set but the flag was omitted', () => {"
+        },
+        {
+          "line": 235,
+          "declaration": "it('resolves the normalised status payload', async () => {"
+        },
+        {
+          "line": 243,
+          "declaration": "it('calls request() against /onboarding/status with an AbortSignal', async () => {"
+        },
+        {
+          "line": 256,
+          "declaration": "it('normalises a partial backend payload into a pessimistic status', async () => {"
+        },
+        {
+          "line": 274,
+          "declaration": "it('continues polling after setup when requested by a runtime-health consumer', async () => {"
+        },
+        {
+          "line": 285,
+          "declaration": "it('surfaces transport failures as ApiError so the gate stays pessimistic', async () => {"
+        }
+      ],
+      "runtime_discovery": "NOTRUN",
+      "execution": "NOTRUN"
+    },
+    {
+      "path": "web/src/components/ui/SignalConfigModal.test.tsx",
+      "authored_declarations": 19,
+      "parameterized_declarations": 1,
+      "declarations": [
+        {
+          "line": 87,
+          "declaration": "it.each<[string, number[], boolean[]]>(["
+        },
+        {
+          "line": 114,
+          "declaration": "it('retains every sampling option including the measured zero cadence', () => {"
+        },
+        {
+          "line": 123,
+          "declaration": "it('keeps hidden selections and in-progress changes through parent rerenders', () => {"
+        },
+        {
+          "line": 133,
+          "declaration": "it('renders nothing while closed', () => {"
+        },
+        {
+          "line": 140,
+          "declaration": "it('renders a labelled modal with the summary and every category + signal', () => {"
+        },
+        {
+          "line": 159,
+          "declaration": "it('toggles an individual signal via its accessible checkbox and updates the summary', () => {"
+        },
+        {
+          "line": 173,
+          "declaration": "it('selects and deselects everything with the master toggle', () => {"
+        },
+        {
+          "line": 187,
+          "declaration": "it('applies the master interval to every signal', () => {"
+        },
+        {
+          "line": 202,
+          "declaration": "it('toggles a whole category with the category checkbox', () => {"
+        },
+        {
+          "line": 218,
+          "declaration": "it('applies a per-category interval only to that category', () => {"
+        },
+        {
+          "line": 232,
+          "declaration": "it('changes a single signal interval without affecting its siblings', () => {"
+        },
+        {
+          "line": 241,
+          "declaration": "it('filters by search and shows a contextual empty state when nothing matches', () => {"
+        },
+        {
+          "line": 255,
+          "declaration": "it('shows an empty state when there are no signals to configure', () => {"
+        },
+        {
+          "line": 263,
+          "declaration": "it('applies a named preset — selecting all signals and rewriting intervals', () => {"
+        },
+        {
+          "line": 275,
+          "declaration": "it('collapses a category to hide its signal rows', () => {"
+        },
+        {
+          "line": 289,
+          "declaration": "it('submits the selected signals with their intervals and then closes', () => {"
+        },
+        {
+          "line": 298,
+          "declaration": "it('disables submit when nothing is selected and Cancel just closes', () => {"
+        },
+        {
+          "line": 308,
+          "declaration": "it('re-seeds from the latest props and clears the search when reopened', () => {"
+        },
+        {
+          "line": 328,
+          "declaration": "it('is null-safe when categories/initialSelected are undefined', () => {"
+        }
+      ],
+      "runtime_discovery": "NOTRUN",
+      "execution": "NOTRUN"
+    },
+    {
+      "path": "web/src/components/ui/__tests__/SignalConfigModal.viewport.test.tsx",
+      "authored_declarations": 4,
+      "parameterized_declarations": 0,
+      "declarations": [
+        {
+          "line": 38,
+          "declaration": "it('keeps long configuration names and actions in the shared scroll-body/footer slots', () => {"
+        },
+        {
+          "line": 70,
+          "declaration": "it('renders inside the shared <Modal> (role=\"dialog\" present)', () => {"
+        },
+        {
+          "line": 90,
+          "declaration": "it('uses Modal\\'s built-in title (no hand-rolled header)', () => {"
+        },
+        {
+          "line": 107,
+          "declaration": "it('renders nothing when open=false', () => {"
+        }
+      ],
+      "runtime_discovery": "NOTRUN",
+      "execution": "NOTRUN"
+    }
+  ],
+  "hardcoded_modal_literal_sites": [
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 15,
+      "property": "desc",
+      "literal": "Real-time"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 16,
+      "property": "desc",
+      "literal": "Fast"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 17,
+      "property": "desc",
+      "literal": "Medium"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 18,
+      "property": "desc",
+      "literal": "Default"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 19,
+      "property": "desc",
+      "literal": "Slow"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 20,
+      "property": "desc",
+      "literal": "1 min"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 21,
+      "property": "desc",
+      "literal": "Rare"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 22,
+      "property": "desc",
+      "literal": "15 min"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 23,
+      "property": "desc",
+      "literal": "1 hour"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 24,
+      "property": "desc",
+      "literal": "Daily"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 36,
+      "property": "name",
+      "literal": "⚡ Real-time Driving"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 36,
+      "property": "desc",
+      "literal": "Driving signals at 1s, battery at 10s, config at 24h"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 45,
+      "property": "name",
+      "literal": "⚖️ Balanced"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 45,
+      "property": "desc",
+      "literal": "All signals at 10s — good balance of data and battery"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 48,
+      "property": "name",
+      "literal": "🔋 Low Power"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 48,
+      "property": "desc",
+      "literal": "All signals at 60s — minimal battery impact"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 51,
+      "property": "name",
+      "literal": "🏎️ Track Mode"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 51,
+      "property": "desc",
+      "literal": "Driving & powertrain at 1s, everything else at 30s"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 59,
+      "property": "name",
+      "literal": "💰 Cost Saver"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 59,
+      "property": "desc",
+      "literal": "Essential signals only at 5–15min, non-essentials off"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 67,
+      "property": "name",
+      "literal": "😴 Sleep Watch"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 67,
+      "property": "desc",
+      "literal": "Security & location at 60s, charging at 1min, rest off"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 75,
+      "property": "name",
+      "literal": "🔧 Diagnostics"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 75,
+      "property": "desc",
+      "literal": "Powertrain/tires/climate at 5s, driving at 10s"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 84,
+      "property": "name",
+      "literal": "🗺️ Trip Logger"
+    },
+    {
+      "file": "web/src/components/ui/SignalConfigModal.tsx",
+      "line": 84,
+      "property": "desc",
+      "literal": "Location at 1s, driving at 5s — optimized for routes"
+    }
+  ],
+  "schema_version": 1,
+  "phase": 6,
+  "route": "/settings/fleet-setup",
+  "report_written_utc": "2026-10-14T02:05:08.518645+00:00",
+  "release_requested_utc": "2026-10-14T02:05:08.518645+00:00",
+  "scope": {
+    "mode": "READONLY source/test audit; only exact report/log writable",
+    "writable_files": [
+      "docs/frontend-audits/phase6-qa-settings-fleet-setup.json",
+      "web/logs/phase6-qa-settings-fleet-setup.log"
+    ],
+    "actual_start_utc": "2026-10-14T01:54:57.6828957Z",
+    "reserved_return_utc": "2026-10-14T02:07:59.989Z",
+    "reserved_hard_utc": "2026-10-14T02:12:59.989Z",
+    "prohibited_actions_performed": false,
+    "source_test_edits": false,
+    "git_edits": false,
+    "subagents": false,
+    "extra_files_written": false
+  },
+  "authority": {
+    "orchestrator_read": "docs/orchestrator-loop.md fully, 1-296",
+    "design_contract_read": "docs/frontend-design-contract.md fully, 1-2539 via bounded ranges",
+    "mission_read": [
+      "0-3",
+      "14-26",
+      "30-37",
+      "43-45"
+    ],
+    "inventory_read": "Fleet Setup row222/G168-G171/crosswalk1326-1329; audit-page-171 retained historical source evidence",
+    "handoff_read": "current new-machine and relevant conventions 1-180; historical receipts not rerun",
+    "instructions_read": [
+      ".github/copilot-instructions.md applicable frontend/integrity sections",
+      ".github/instructions/react-frontend.instructions.md full",
+      ".github/instructions/frontend-si-cutover.instructions.md full",
+      ".github/instructions/unit-conversion.instructions.md relevant historical sections; current SI contract takes precedence"
+    ],
+    "queue_exact": {
+      "line": 66,
+      "status": "[~]",
+      "attempt": 1,
+      "depends_on": "phase5-page-settings-fleet-setup",
+      "files": [
+        "docs/frontend-audits/phase6-qa-settings-fleet-setup.json",
+        "web/logs/phase6-qa-settings-fleet-setup.log"
+      ],
+      "note": "source-only; no enrollment/configuration/certificate/device/network actions"
+    },
+    "dependency_acceptance": "phase5-page-settings-fleet-setup [x], queue2006, ee61e6ea151e8dea7411e4936da246dde889e4c4; source-only historical10 cases not rerun",
+    "prior_claims": "audit-page-171 and phase3-signal-config-modal done; do not redispatch completed objectives. No exact active repair owner for reported mechanisms found in bounded queue owner crosswalk."
+  },
+  "confirmed_issues": [
+    {
+      "id": "FS001",
+      "rule": "unknown-progress-truth",
+      "priority": "P1",
+      "title": "Progress treats unresolved setup checks as definitive incomplete steps",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/features/settings/pages/FleetSetupPage.tsx",
+          "line": 98,
+          "source_excerpt": [
+            {
+              "line": 98,
+              "text": "              authenticated={auth.data?.authenticated === true}"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.tsx",
+          "line": 93,
+          "end_line": 112,
+          "source_excerpt": [
+            {
+              "line": 93,
+              "text": "  const { t } = useTranslation('settings')"
+            },
+            {
+              "line": 94,
+              "text": "  const tokenValid = apiInfo?.has_valid_token === true"
+            },
+            {
+              "line": 95,
+              "text": "  const subscribed ="
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/onboarding/components/Stepper.tsx",
+          "line": 88,
+          "end_line": 99,
+          "source_excerpt": [
+            {
+              "line": 88,
+              "text": "  // instead of re-scanning the whole list inside every row (previously an"
+            },
+            {
+              "line": 89,
+              "text": "  // O(n²) pass). `-1` means every step is done — no current, no CTA."
+            },
+            {
+              "line": 90,
+              "text": "  const currentIndex = useMemo(() => items.findIndex((s) => !s.done), [items]);"
+            }
+          ]
+        }
+      ],
+      "mechanism": "Root coerces auth.data?.authenticated === true to boolean. Token, subscribed and streaming become false when corresponding payload is undefined. doneCount and Stepper then announce 0/4, In progress and Not started with an enabled Connect CTA, including initial/paused/fatal reads. No query state reaches progress.",
+      "safe_repro_specification_not_run": "In an authorized future fixture, supply undefined auth/api/onboarding with initial, fatal and paused query states separately; inspect four progress rows, count and CTA. Do not call OAuth.",
+      "fix_need": "Thread existing source knowledge/loading/fatal/retained/paused annotations into local progress adapter; keep all steps and recovery links. Do not decode unknown as negative.",
+      "existing_test_coverage_limit": "Page loading/fatal tests cover other panels, not progress truth. Progress tests accept booleans only.",
+      "native_or_backend_effect": "NOTRUN / not established",
+      "exact_anchor": {
+        "file": "web/src/features/settings/pages/FleetSetupPage.tsx",
+        "line": 98,
+        "text": "              authenticated={auth.data?.authenticated === true}"
+      }
+    },
+    {
+      "id": "FS002",
+      "rule": "scope-identity-truth",
+      "priority": "P1",
+      "title": "Subscription and streaming completion use fleet-wide history, not selected VIN configuration",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.tsx",
+          "line": 95,
+          "end_line": 98,
+          "source_excerpt": [
+            {
+              "line": 95,
+              "text": "  const subscribed ="
+            },
+            {
+              "line": 96,
+              "text": "    Boolean(onboarding?.last_telemetry_at) || onboarding?.data_flowing === true"
+            },
+            {
+              "line": 97,
+              "text": "  const streaming = onboarding?.telemetry_health === 'healthy'"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/pages/FleetSetupPage.tsx",
+          "line": 97,
+          "end_line": 102,
+          "source_excerpt": [
+            {
+              "line": 97,
+              "text": "            <FleetSetupProgress"
+            },
+            {
+              "line": 98,
+              "text": "              authenticated={auth.data?.authenticated === true}"
+            },
+            {
+              "line": 99,
+              "text": "              apiInfo={apiInfo.data}"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 47,
+          "end_line": 57,
+          "source_excerpt": [
+            {
+              "line": 47,
+              "text": "  const [vin, setVin] = useState('')"
+            },
+            {
+              "line": 48,
+              "text": "  const [hostname, setHostname] = useState('')"
+            },
+            {
+              "line": 49,
+              "text": "  const [port, setPort] = useState('')"
+            }
+          ]
+        },
+        {
+          "file": "web/src/api/hooks/useOnboarding.ts",
+          "line": 34,
+          "end_line": 36,
+          "source_excerpt": [
+            {
+              "line": 34,
+              "text": "export const onboardingKeys = {"
+            },
+            {
+              "line": 35,
+              "text": "  status: ['onboarding', 'status'] as const,"
+            },
+            {
+              "line": 36,
+              "text": "};"
+            }
+          ]
+        }
+      ],
+      "mechanism": "Progress derives subscribed from any last_telemetry_at or data_flowing, streaming from telemetry_health. Its onboarding query key and endpoint have no VIN. Selected VIN and config live only inside subscription panel. It can mark subscription complete while selected VIN has no config.",
+      "safe_repro_specification_not_run": "Fixture fleet telemetry from VIN A, then locally select synthetic VIN B with an authoritative empty config; inspect progress without any subscribe/wake action.",
+      "fix_need": "Explicitly label fleet-level historical confirmation, or wire proven VIN config evidence through current hooks. Never claim selected-VIN streaming from fleet aggregates or invent a new backend capability.",
+      "existing_test_coverage_limit": "Current progress tests pin historical last-packet completion; no two-VIN scope test authored.",
+      "native_or_backend_effect": "NOTRUN / not established",
+      "exact_anchor": {
+        "file": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.tsx",
+        "line": 96,
+        "text": "    Boolean(onboarding?.last_telemetry_at) || onboarding?.data_flowing === true"
+      }
+    },
+    {
+      "id": "FS003",
+      "rule": "coupled-cache-invalidation",
+      "priority": "P1",
+      "title": "Auth changes leave Fleet token/account summary cached independently",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/api/hooks/useSettings.ts",
+          "line": 79,
+          "end_line": 103,
+          "source_excerpt": [
+            {
+              "line": 79,
+              "text": "  const { success, error } = useMutationToast();"
+            },
+            {
+              "line": 80,
+              "text": "  return useMutation({"
+            },
+            {
+              "line": 81,
+              "text": "    mutationFn: () => request<void>('/auth/refresh', { method: 'POST' }),"
+            }
+          ]
+        },
+        {
+          "file": "web/src/api/hooks/useFleetSetup.ts",
+          "line": 91,
+          "end_line": 99,
+          "source_excerpt": [
+            {
+              "line": 91,
+              "text": ""
+            },
+            {
+              "line": 92,
+              "text": "export function useFleetApiInfo() {"
+            },
+            {
+              "line": 93,
+              "text": "  return useQuery({"
+            }
+          ]
+        },
+        {
+          "file": "web/src/api/queryPolicy.ts",
+          "line": 164,
+          "end_line": 173,
+          "source_excerpt": [
+            {
+              "line": 164,
+              "text": "  reference: {"
+            },
+            {
+              "line": 165,
+              "text": "    staleTime: 30 * MINUTE,"
+            },
+            {
+              "line": 166,
+              "text": "    gcTime: 24 * HOUR,"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupKpiBand.tsx",
+          "line": 47,
+          "end_line": 50,
+          "source_excerpt": [
+            {
+              "line": 47,
+              "text": "  const connected = authenticated === true || apiInfo?.has_valid_token === true"
+            },
+            {
+              "line": 48,
+              "text": "  const connectionKnown = connected || (authenticated === false && apiInfo?.has_valid_token === false)"
+            },
+            {
+              "line": 49,
+              "text": "  const tokenValid = apiInfo?.has_valid_token === true"
+            }
+          ]
+        }
+      ],
+      "mechanism": "Refresh/disconnect successes invalidate only auth-status. Fleet API info uses separate fleet-setup/fleet-api-info key and reference policy (30-minute staleTime, no mount/focus/reconnect/interval refetch). KPI can retain Connected/Auto-refresh on after auth changes without being marked a failed refresh.",
+      "safe_repro_specification_not_run": "Future deferred mocked disconnect/refresh success with existing Fleet info cached true; assert precise invalidation/refetch and truthful KPI. No actual auth request.",
+      "fix_need": "Coordinate success-only invalidation/broadcast for existing Fleet API info key; preserve auth key and policies, no extra polling store.",
+      "existing_test_coverage_limit": "Fleet hook tests cover subscribe/unsubscribe VIN invalidations, not auth-to-Fleet coupling. Historical inventory G170/P317 already identified this mechanism.",
+      "native_or_backend_effect": "NOTRUN / not established"
+    },
+    {
+      "id": "FS004",
+      "rule": "malformed-source-truth",
+      "priority": "P1",
+      "title": "Malformed successful payloads are normalized to known missing/clean states",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/api/hooks/useFleetSetup.ts",
+          "line": 57,
+          "end_line": 59,
+          "source_excerpt": [
+            {
+              "line": 57,
+              "text": ""
+            },
+            {
+              "line": 58,
+              "text": "function asBool(value: unknown): boolean {"
+            },
+            {
+              "line": 59,
+              "text": "  return value === true;"
+            }
+          ]
+        },
+        {
+          "file": "web/src/api/hooks/useFleetSetup.ts",
+          "line": 70,
+          "end_line": 86,
+          "source_excerpt": [
+            {
+              "line": 70,
+              "text": "    client_id: asString(row.client_id ?? row.clientId),"
+            },
+            {
+              "line": 71,
+              "text": "    has_valid_token: asBool("
+            },
+            {
+              "line": 72,
+              "text": "      row.has_valid_token ?? row.hasValidToken ?? row.authenticated,"
+            }
+          ]
+        },
+        {
+          "file": "web/src/api/hooks/useFleetSetup.ts",
+          "line": 172,
+          "end_line": 181,
+          "source_excerpt": [
+            {
+              "line": 172,
+              "text": " * Tesla wraps fleet-telemetry-errors as `{response:{errors:[]}}`, a root"
+            },
+            {
+              "line": 173,
+              "text": " * `errors` array, or a bare array. Empty + parsed means the VIN is clean."
+            },
+            {
+              "line": 174,
+              "text": " */"
+            }
+          ]
+        },
+        {
+          "file": "web/src/api/hooks/useFleetSetup.ts",
+          "line": 132,
+          "end_line": 153,
+          "source_excerpt": [
+            {
+              "line": 132,
+              "text": " * Tesla's fleet_telemetry_config payload is nested under `response.config`"
+            },
+            {
+              "line": 133,
+              "text": " * (and camelCaseKeys may duplicate keys). Empty hostname means \"not subscribed\"."
+            },
+            {
+              "line": 134,
+              "text": " */"
+            }
+          ]
+        }
+      ],
+      "mechanism": "asBool returns false for missing/nonboolean values; public-key/token missing values become known negatives. telemetryErrorsFrom returns [] for invalid/unrecognized envelopes, indistinguishable from explicit errors:[]. Config summary loses unknown envelope to empty hostname/count. Query selects then appear successful.",
+      "safe_repro_specification_not_run": "Future pure fixture inputs null/{}/unexpected envelope versus explicit false and response.errors:[]; verify unknown parse states are distinct. Do not import/run hooks in this audit.",
+      "fix_need": "Pin supported frontend response envelopes and preserve parse-unavailable versus authoritative false/empty with current query trust APIs. Preserve onboarding gate pessimism separately; no speculative backend field.",
+      "existing_test_coverage_limit": "Existing fleet normalizer test explicitly expects null public-key input to yield configured:false and error-envelope config to yield empty hostname. No unknown-parse distinction test.",
+      "native_or_backend_effect": "NOTRUN / not established",
+      "exact_anchor": {
+        "file": "web/src/api/hooks/useFleetSetup.ts",
+        "line": 59,
+        "text": "  return value === true;"
+      }
+    },
+    {
+      "id": "FS005",
+      "rule": "sampling-option-preservation",
+      "priority": "P1",
+      "title": "First-selected zero/500ms cadence is silently omitted",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/components/ui/SignalConfigModal.tsx",
+          "line": 15,
+          "source_excerpt": [
+            {
+              "line": 15,
+              "text": "  { value: 0, label: '500ms', desc: 'Real-time' },"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 110,
+          "end_line": 123,
+          "source_excerpt": [
+            {
+              "line": 110,
+              "text": "            selectedSignals"
+            },
+            {
+              "line": 111,
+              "text": "              .filter((s) => s.interval !== masterInterval)"
+            },
+            {
+              "line": 112,
+              "text": "              .map((s) => [s.name, s.interval]),"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 119,
+          "end_line": 119,
+          "source_excerpt": [
+            {
+              "line": 119,
+              "text": "      ca: ca.trim() || undefined,"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 362,
+          "end_line": 362,
+          "source_excerpt": [
+            {
+              "line": 362,
+              "text": "        onSubmit={(signals) => {"
+            }
+          ]
+        },
+        {
+          "file": "web/src/api/hooks/useFleetSetup.ts",
+          "line": 261,
+          "end_line": 263,
+          "source_excerpt": [
+            {
+              "line": 261,
+              "text": "      });"
+            },
+            {
+              "line": 262,
+              "text": "    },"
+            },
+            {
+              "line": 263,
+              "text": "    networkMode: 'always',"
+            }
+          ]
+        }
+      ],
+      "mechanism": "Picker supports interval 0 labelled 500ms. Parent sets masterInterval from first returned field; fields matching master are excluded from field_intervals. masterInterval > 0 and hook input.interval_seconds > 0 omit zero. Thus first selected field interval 0 is not represented in final request body. The backend fallback meaning is not established.",
+      "safe_repro_specification_not_run": "Future payload-only fixture with first selected field interval:0 and second interval:10; compare request-body capture to picker choices, without sending any request.",
+      "fix_need": "Obtain actual protocol zero semantics before fixing serialization; preserve the offered choice or explicitly report unsupported capability. Do not reinterpret 0 as 0.5 or remove it silently.",
+      "existing_test_coverage_limit": "Shared modal test authors zero option and zero submission; hook tests only positive interval_seconds. No parent-to-request zero regression.",
+      "native_or_backend_effect": "NOTRUN / not established",
+      "exact_anchor": {
+        "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+        "line": 121,
+        "text": "      interval_seconds: masterInterval > 0 ? masterInterval : undefined,"
+      }
+    },
+    {
+      "id": "FS006",
+      "rule": "draft-cadence-preservation",
+      "priority": "P1",
+      "title": "Reopening signal picker destroys heterogeneous per-field intervals",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 357,
+          "end_line": 363,
+          "source_excerpt": [
+            {
+              "line": 357,
+              "text": "        open={signalModalOpen}"
+            },
+            {
+              "line": 358,
+              "text": "        onClose={() => setSignalModalOpen(false)}"
+            },
+            {
+              "line": 359,
+              "text": "        categories={TELEMETRY_FIELDS}"
+            }
+          ]
+        },
+        {
+          "file": "web/src/components/ui/SignalConfigModal.tsx",
+          "line": 123,
+          "end_line": 138,
+          "source_excerpt": [
+            {
+              "line": 123,
+              "text": "  interval: number,"
+            },
+            {
+              "line": 124,
+              "text": "): SignalConfig[] {"
+            },
+            {
+              "line": 125,
+              "text": "  const selected = initialSelected ?? []"
+            }
+          ]
+        },
+        {
+          "file": "web/src/components/ui/SignalConfigModal.tsx",
+          "line": 166,
+          "end_line": 173,
+          "source_excerpt": [
+            {
+              "line": 166,
+              "text": "  const query = search.trim().toLowerCase()"
+            },
+            {
+              "line": 167,
+              "text": "  const filtered = useMemo("
+            },
+            {
+              "line": 168,
+              "text": "    () => signals.filter(s => s.name.toLowerCase().includes(query)),"
+            }
+          ]
+        }
+      ],
+      "mechanism": "Caller stores {name,interval}[] but passes only initialSelected names and a single first-field interval. Shared seedSignals assigns that interval to every selected signal on reopen. Merely reopening and accepting rewrites all previous overrides.",
+      "safe_repro_specification_not_run": "Future local picker fixture: select field A at 1s, B at 60s, Apply, reopen and accept unchanged; compare stored draft. No configuration POST.",
+      "fix_need": "Extend existing picker compatibly to seed exact saved per-field cadences, then separately adopt in caller; preserve reopen search reset and in-progress rerender protections.",
+      "existing_test_coverage_limit": "Shared reopen test preserves names/single interval only; page test opens picker but never checks heterogeneous reopen.",
+      "native_or_backend_effect": "NOTRUN / not established",
+      "exact_anchor": {
+        "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+        "line": 360,
+        "text": "        initialSelected={selectedSignals.map((s) => s.name)}"
+      }
+    },
+    {
+      "id": "FS007",
+      "rule": "hidden-source-records",
+      "priority": "P2",
+      "title": "Telemetry error records beyond the first three are unreachable",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 299,
+          "end_line": 306,
+          "source_excerpt": [
+            {
+              "line": 299,
+              "text": "        >"
+            },
+            {
+              "line": 300,
+              "text": "        {"
+            },
+            {
+              "line": 301,
+              "text": "        teslaErrors.length > 0 ? ("
+            }
+          ]
+        }
+      ],
+      "mechanism": "teslaErrors.slice(0,3) renders only three warnings; no total, More control, expansion or link to remaining records exists in this panel.",
+      "safe_repro_specification_not_run": "Future source fixture four distinguishable error records; inspect fourth record reachability without querying Tesla.",
+      "fix_need": "Retain every loaded error record with bounded disclosure/pagination or complete contained list; do not silently sample diagnostics.",
+      "existing_test_coverage_limit": "No existing fourth-error reachability regression.",
+      "native_or_backend_effect": "NOTRUN / not established",
+      "exact_anchor": {
+        "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+        "line": 303,
+        "text": "            {teslaErrors.slice(0, 3).map((err, i) => ("
+      }
+    },
+    {
+      "id": "FS008",
+      "rule": "hardcoded-string",
+      "priority": "P2",
+      "title": "Shared picker displays untranslated interval/preset copy",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/components/ui/SignalConfigModal.tsx",
+          "line": 15,
+          "end_line": 24,
+          "source_excerpt": [
+            {
+              "line": 15,
+              "text": "  { value: 0, label: '500ms', desc: 'Real-time' },"
+            },
+            {
+              "line": 16,
+              "text": "  { value: 1, label: '1s', desc: 'Fast' },"
+            },
+            {
+              "line": 17,
+              "text": "  { value: 5, label: '5s', desc: 'Medium' },"
+            }
+          ]
+        },
+        {
+          "file": "web/src/components/ui/SignalConfigModal.tsx",
+          "line": 36,
+          "end_line": 90,
+          "source_excerpt": [
+            {
+              "line": 36,
+              "text": "  { name: '⚡ Real-time Driving', desc: 'Driving signals at 1s, battery at 10s, config at 24h',"
+            },
+            {
+              "line": 37,
+              "text": "    apply: (fields: SignalConfig[]) => fields.map(f => ({"
+            },
+            {
+              "line": 38,
+              "text": "      ...f,"
+            }
+          ]
+        },
+        {
+          "file": "web/src/components/ui/SignalConfigModal.tsx",
+          "line": 32,
+          "end_line": 33,
+          "source_excerpt": [
+            {
+              "line": 32,
+              "text": "const MASTER_INTERVAL_OPTIONS = INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: `${o.label} (${o.desc})` }))"
+            },
+            {
+              "line": 33,
+              "text": "const SIGNAL_INTERVAL_OPTIONS = INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label }))"
+            }
+          ]
+        },
+        {
+          "file": "web/src/components/ui/SignalConfigModal.tsx",
+          "line": 275,
+          "end_line": 278,
+          "source_excerpt": [
+            {
+              "line": 275,
+              "text": "            <Button key={p.name} type=\"button\" variant=\"outline\" size=\"sm\" wrapLabel onClick={() => applyPreset(p)} title={p.desc}"
+            },
+            {
+              "line": 276,
+              "text": "              className=\"min-h-11 md:min-h-9\">"
+            },
+            {
+              "line": 277,
+              "text": "              {p.name}"
+            }
+          ]
+        }
+      ],
+      "mechanism": "10 interval descriptions plus 8 preset names and 8 preset descriptions are literal English (26 exact literal sites recorded separately). Master options interpolate literal desc; preset buttons render p.name and title=p.desc without t(). Vendor signal identifiers are intentionally literal and excluded.",
+      "safe_repro_specification_not_run": "Future real non-English i18n render of the shared picker; inspect master options/preset labels and description help. No catalog writes here.",
+      "fix_need": "Localize display labels/help through canonical owner with exact keys; keep stable preset identity/calculations and vendor fields. Technical duration values remain raw protocol cadence.",
+      "existing_test_coverage_limit": "Current shared tests mock translation as English fallback, so they cannot prove non-English copy.",
+      "native_or_backend_effect": "NOTRUN / not established",
+      "exact_anchor": {
+        "file": "web/src/components/ui/SignalConfigModal.tsx",
+        "line": 277,
+        "text": "              {p.name}"
+      }
+    },
+    {
+      "id": "FS009",
+      "rule": "reduced-motion-navigation",
+      "priority": "P2",
+      "title": "Progress navigation forces smooth scrolling regardless of preferences",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.tsx",
+          "line": 19,
+          "end_line": 22,
+          "source_excerpt": [
+            {
+              "line": 19,
+              "text": "function scrollTo(id: string) {"
+            },
+            {
+              "line": 20,
+              "text": "  if (typeof document === 'undefined') return"
+            },
+            {
+              "line": 21,
+              "text": "  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+            }
+          ]
+        }
+      ],
+      "mechanism": "scrollIntoView always uses behavior:smooth and never consults current motion/low-bandwidth preference. Focus is not transferred by this handler; native focus effect remains unverified.",
+      "safe_repro_specification_not_run": "Future stubbed scroll call under reduced-motion and low-bandwidth preferences; assert auto/static navigation, then native focus separately. No DOM/browser actions executed here.",
+      "fix_need": "Use existing motion preference for scroll behavior and existing route/heading focus policy; retain all three target IDs.",
+      "existing_test_coverage_limit": "Progress test explicitly pins behavior:smooth for every destination; no reduced-motion case.",
+      "native_or_backend_effect": "NOTRUN / not established",
+      "exact_anchor": {
+        "file": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.tsx",
+        "line": 21,
+        "text": "  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+      }
+    },
+    {
+      "id": "FS010",
+      "rule": "ambient-progress-motion",
+      "priority": "P2",
+      "title": "Current step spins and announces in-progress when no operation is busy",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/features/onboarding/components/Stepper.tsx",
+          "line": 88,
+          "end_line": 99,
+          "source_excerpt": [
+            {
+              "line": 88,
+              "text": "  // instead of re-scanning the whole list inside every row (previously an"
+            },
+            {
+              "line": 89,
+              "text": "  // O(n²) pass). `-1` means every step is done — no current, no CTA."
+            },
+            {
+              "line": 90,
+              "text": "  const currentIndex = useMemo(() => items.findIndex((s) => !s.done), [items]);"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/onboarding/components/Stepper.tsx",
+          "line": 139,
+          "end_line": 147,
+          "source_excerpt": [
+            {
+              "line": 139,
+              "text": "              {!isLast && ("
+            },
+            {
+              "line": 140,
+              "text": "                <span"
+            },
+            {
+              "line": 141,
+              "text": "                  aria-hidden=\"true\""
+            }
+          ]
+        }
+      ],
+      "mechanism": "First !done step always shows Loader2 animate-spin and In progress, even when user must act and no operation is pending. motion-reduce CSS suppresses animation only for OS preference, not low bandwidth; no busy input drives this indicator.",
+      "safe_repro_specification_not_run": "Future render ordinary incomplete checklist with all mutation states idle; inspect current indicator, label and low-bandwidth behavior.",
+      "fix_need": "Keep current actionable state/first-CTA policy, but use static indicator unless real pending work exists; respect shared motion preference.",
+      "existing_test_coverage_limit": "Progress tests pin current step behavior, not idle-busy distinction. Historical P316/G169 proposed static current indicator; no current narrow queued repair found.",
+      "native_or_backend_effect": "NOTRUN / not established"
+    },
+    {
+      "id": "FS011",
+      "rule": "display-time-preferences",
+      "priority": "P2",
+      "title": "Account expiry and telemetry error timestamps bypass effective display preferences",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/TeslaAccountSection.tsx",
+          "line": 14,
+          "source_excerpt": [
+            {
+              "line": 14,
+              "text": "import { formatDateTime } from '@/lib/dateFormat'"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/TeslaAccountSection.tsx",
+          "line": 151,
+          "end_line": 153,
+          "source_excerpt": [
+            {
+              "line": 151,
+              "text": "              </div>"
+            },
+            {
+              "line": 152,
+              "text": "            </>"
+            },
+            {
+              "line": 153,
+              "text": "          ) : ("
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 307,
+          "end_line": 309,
+          "source_excerpt": [
+            {
+              "line": 307,
+              "text": "                title={err.code || t('fleetSetup.subscribe.errorUntitled', 'Tesla telemetry error')}"
+            },
+            {
+              "line": 308,
+              "text": "              >"
+            },
+            {
+              "line": 309,
+              "text": "                {[err.message, err.timestamp].filter(Boolean).join(' · ') ||"
+            }
+          ]
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 42,
+          "end_line": 61,
+          "source_excerpt": [
+            {
+              "line": 42,
+              "text": "}"
+            },
+            {
+              "line": 43,
+              "text": ""
+            },
+            {
+              "line": 44,
+              "text": "function intlLocale(opts?: FormatOptions): string | undefined {"
+            }
+          ]
+        }
+      ],
+      "mechanism": "Account calls bare lib formatDateTime without locale/timezone opts, so browser defaults apply rather than user preference. Error timestamp is joined raw with message. Streaming correctly uses useDateFormat; discrepancy exists within one page.",
+      "safe_repro_specification_not_run": "Future app locale/timezone different from browser; compare same synthetic instant in expiry, stream and error panels. Include invalid timestamp as unknown. No preference changes or mounted render performed.",
+      "fix_need": "Use current preference-bound formatter at display boundary, retaining raw timestamps and full error text. Do not alter SI/cache/wire values.",
+      "existing_test_coverage_limit": "Account expiry tests assert presence/invalid-date safety; page stubs only useDateFormat. No cross-source preference parity case.",
+      "native_or_backend_effect": "NOTRUN / not established"
+    },
+    {
+      "id": "FS012",
+      "rule": "mobile-target-declaration",
+      "priority": "P2",
+      "title": "Fleet actions declare smaller-than-required mobile minima",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 227,
+          "end_line": 283,
+          "source_excerpt": [
+            {
+              "line": 227,
+              "text": "          variant=\"secondary\""
+            },
+            {
+              "line": 228,
+              "text": "          wrapLabel"
+            },
+            {
+              "line": 229,
+              "text": "          icon={<SlidersHorizontal className=\"h-4 w-4\" />}"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/TeslaAccountSection.tsx",
+          "line": 175,
+          "end_line": 201,
+          "source_excerpt": [
+            {
+              "line": 175,
+              "text": "        <div className=\"flex flex-wrap gap-3\">"
+            },
+            {
+              "line": 176,
+              "text": "          {!auth?.authenticated ? ("
+            },
+            {
+              "line": 177,
+              "text": "            <Button variant=\"primary\" wrapLabel icon={<ExternalLink className=\"h-4 w-4\" />} onClick={handleLogin} loading={authUrlMut.isPending}>"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/onboarding/components/Stepper.tsx",
+          "line": 177,
+          "end_line": 182,
+          "source_excerpt": [
+            {
+              "line": 177,
+              "text": "          </li>"
+            },
+            {
+              "line": 178,
+              "text": "        );"
+            },
+            {
+              "line": 179,
+              "text": "      })}"
+            }
+          ]
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 37,
+          "end_line": 51,
+          "source_excerpt": [
+            {
+              "line": 37,
+              "text": "  md: 'h-10 px-4 text-sm',"
+            },
+            {
+              "line": 38,
+              "text": "  lg: 'h-12 px-6 text-base',"
+            },
+            {
+              "line": 39,
+              "text": "  // Density-aware sizing follows the user's `ui_density` setting via the"
+            }
+          ]
+        }
+      ],
+      "mechanism": "Account/subscription buttons use default md wrapLabel (min-h-10=2.5rem); Stepper uses sm wrapLabel (min-h-9=2.25rem). They do not declare mobile min-h-11. At 16px root declared minima are 40/36px, not required 44px. This is a source minimum guarantee gap, NOT a measured native rectangle or overlap claim.",
+      "safe_repro_specification_not_run": "Future same-root 320/375/390/430px fixtures with short labels and ordinary font size; measure all hit boxes and focus clipping.",
+      "fix_need": "Adopt explicit below-md min-h-11 (appropriate width) with intended desktop restoration at callers; preserve wrapping and density. Do not globally resize Button.",
+      "existing_test_coverage_limit": "Shared viewport test covers picker/footer only; no Fleet account/subscription/Stepper target measurements.",
+      "native_or_backend_effect": "NOTRUN / not established"
+    },
+    {
+      "id": "FS013",
+      "rule": "live-mode-mutation-guard",
+      "priority": "P1",
+      "title": "Auth writes lack explicit live-mode rejection and can pause for replay",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/api/hooks/useSettings.ts",
+          "line": 67,
+          "end_line": 104,
+          "source_excerpt": [
+            {
+              "line": 67,
+              "text": "  const { success, error } = useMutationToast();"
+            },
+            {
+              "line": 68,
+              "text": "  return useMutation({"
+            },
+            {
+              "line": 69,
+              "text": "    mutationFn: () => request<{ auth_url: string }>('/auth/url', { method: 'POST' }),"
+            }
+          ]
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 348,
+          "end_line": 358,
+          "source_excerpt": [
+            {
+              "line": 348,
+              "text": "export async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {"
+            },
+            {
+              "line": 349,
+              "text": "  const {"
+            },
+            {
+              "line": 350,
+              "text": "    responseType = 'json',"
+            }
+          ]
+        },
+        {
+          "file": "web/src/lib/operationalMode.ts",
+          "line": 64,
+          "end_line": 73,
+          "source_excerpt": [
+            {
+              "line": 64,
+              "text": "}"
+            },
+            {
+              "line": 65,
+              "text": ""
+            },
+            {
+              "line": 66,
+              "text": "export function assertOperationalWriteAllowed("
+            }
+          ]
+        }
+      ],
+      "mechanism": "Auth URL/refresh/disconnect POSTs omit requiresLiveMode; client defaults flag false and assertOperationalWriteAllowed returns early without it. Hooks also omit networkMode:always, so TanStack default online mutations can pause. Unlike subscribe/remove/wake/sync, these auth mutations have no explicit source-level historical/offline guard. No actual server effect or unauthorized enrollment demonstrated.",
+      "safe_repro_specification_not_run": "Future request/onlineManager fixture in as_of and offline modes, without executing callbacks against real APIs; prove pre-request rejection/no automatic replay for mutation classes requiring live operation.",
+      "fix_need": "Integration owner must reconcile auth recovery semantics with existing live-only/no-offline-queue contract, then use shared guard/policy rather than a local queue or bypass. Preserve sudo/challenge and intentional safe OAuth recovery distinctions.",
+      "existing_test_coverage_limit": "Account tests replace mutation hooks; no request-boundary live/as_of/offline auth proof. Existing subscribe/delete/wake/sync explicitly carry live flags.",
+      "native_or_backend_effect": "NOTRUN / not established"
+    },
+    {
+      "id": "FS014",
+      "rule": "category-barrel-import",
+      "priority": "P3",
+      "title": "Account feature bypasses the available feedback barrel",
+      "evidence_kind": "CONFIRMED_SOURCE_MECHANISM; not executed repro or native acceptance",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/TeslaAccountSection.tsx",
+          "line": 11,
+          "source_excerpt": [
+            {
+              "line": 11,
+              "text": "import { useToast } from '@/components/feedback/Toast'"
+            }
+          ]
+        },
+        {
+          "file": "web/src/components/feedback/index.ts",
+          "line": 72,
+          "source_excerpt": [
+            {
+              "line": 72,
+              "text": "export { ToastProvider, useToast, useOptionalToast, type ToastAction } from './Toast';"
+            }
+          ]
+        }
+      ],
+      "mechanism": "TeslaAccountSection imports useToast from concrete feedback/Toast, while category feedback/index.ts already exports useToast. Shared building blocks concrete imports remain expected.",
+      "safe_repro_specification_not_run": "Static import resolution only; no mounted repro needed.",
+      "fix_need": "Use available feedback barrel in separately owned account change; preserve toast/provider contract. SignalConfigModal UI barrel is absent and separately KEEP_UNKNOWN, not an assumed supported replacement.",
+      "existing_test_coverage_limit": "No fresh lint/build run; exact export line read.",
+      "native_or_backend_effect": "NOTRUN / not established"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupKpiBand.tsx",
+          "line": 95,
+          "end_line": 105,
+          "source_excerpt": [
+            {
+              "line": 95,
+              "text": "        color: 'purple',"
+            },
+            {
+              "line": 96,
+              "text": "        icon: <Radio className=\"h-5 w-5\" aria-hidden=\"true\" />,"
+            },
+            {
+              "line": 97,
+              "text": "      }"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupReadiness.tsx",
+          "line": 35,
+          "end_line": 75,
+          "source_excerpt": [
+            {
+              "line": 35,
+              "text": "  const configured = publicKey?.configured === true"
+            },
+            {
+              "line": 36,
+              "text": "  const dash = t('common.dash', '—')"
+            },
+            {
+              "line": 37,
+              "text": ""
+            }
+          ]
+        }
+      ],
+      "candidate": "configured:true becomes KPI Published, while readiness says Public key stored. Public URL/TLS/CA validity and enrollment readiness are not proven by these source fields.",
+      "confirmation_needed": "Exact backend configured semantics and authorized synthetic reachability evidence. No network/certificate actions here."
+    },
+    {
+      "id": "C02",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 78,
+          "end_line": 81,
+          "source_excerpt": [
+            {
+              "line": 78,
+              "text": ""
+            },
+            {
+              "line": 79,
+              "text": "  const busy = subscribe.isPending || unsubscribe.isPending || wake.isPending"
+            },
+            {
+              "line": 80,
+              "text": "  const canSubmit = connected && vin.trim().length > 0 && !busy"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 100,
+          "end_line": 105,
+          "source_excerpt": [
+            {
+              "line": 100,
+              "text": "    if (!canSubmit || vehicleId <= 0) return"
+            },
+            {
+              "line": 101,
+              "text": "    wake.mutate(vehicleId)"
+            },
+            {
+              "line": 102,
+              "text": "  }"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupReadiness.tsx",
+          "line": 112,
+          "end_line": 116,
+          "source_excerpt": [
+            {
+              "line": 112,
+              "text": "        to=\"/dev-tools?tab=fleet-api\""
+            },
+            {
+              "line": 113,
+              "text": "        className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-auto min-h-11 max-w-full whitespace-normal break-words px-4 py-2')}"
+            },
+            {
+              "line": 114,
+              "text": "      >"
+            }
+          ]
+        }
+      ],
+      "candidate": "Submit/wake gating checks auth, VIN, busy/vehicle ID, not token freshness, membership refresh, command capability or virtual-key readiness. Cannot infer backend authorization from button enablement.",
+      "confirmation_needed": "Existing server capability contract and fixture-only negative cases. Never try enrollment/device commands or invent a can_command field."
+    },
+    {
+      "id": "C03",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 83,
+          "end_line": 97,
+          "source_excerpt": [
+            {
+              "line": 83,
+              "text": "  async function handleRemove() {"
+            },
+            {
+              "line": 84,
+              "text": "    if (!canSubmit || !summary.hostname) return"
+            },
+            {
+              "line": 85,
+              "text": "    const ok = await confirmRemove({"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/TeslaAccountSection.tsx",
+          "line": 71,
+          "end_line": 84,
+          "source_excerpt": [
+            {
+              "line": 71,
+              "text": "  async function handleDisconnect() {"
+            },
+            {
+              "line": 72,
+              "text": "    const ok = await confirmDisconnect({"
+            },
+            {
+              "line": 73,
+              "text": "      title: t('tesla.disconnectTitle', 'Disconnect Tesla account?'),"
+            }
+          ]
+        }
+      ],
+      "candidate": "Confirmation text does not identify VIN/account; after awaiting confirmation, handlers do not recheck latest auth/busy/target authority. A closure retains the original target.",
+      "confirmation_needed": "Deferred mocked identity/capability-change race and native dialog authority/focus proof. No removal/disconnect execution in this audit."
+    },
+    {
+      "id": "C04",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+          "line": 103,
+          "end_line": 120,
+          "source_excerpt": [
+            {
+              "line": 103,
+              "text": ""
+            },
+            {
+              "line": 104,
+              "text": "  function handleSubscribe() {"
+            },
+            {
+              "line": 105,
+              "text": "    if (!canSubmit) return"
+            }
+          ]
+        }
+      ],
+      "candidate": "parseInt accepts prefixes such as 4443junk and positive ports beyond 65535; invalid entries may be silently omitted or forwarded. No field validation feedback is declared.",
+      "confirmation_needed": "Existing backend validation/default contract and future input-only tests; no config or certificate submission."
+    },
+    {
+      "id": "C05",
+      "sites": [
+        {
+          "file": "web/src/features/settings/components/TeslaAccountSection.tsx",
+          "line": 108,
+          "end_line": 112,
+          "source_excerpt": [
+            {
+              "line": 108,
+              "text": "            <HelperText>{t('tesla.subtitle', 'Connect your Tesla account to sync vehicles and data')}</HelperText>"
+            },
+            {
+              "line": 109,
+              "text": "          </div>"
+            },
+            {
+              "line": 110,
+              "text": "        </div>"
+            }
+          ]
+        },
+        {
+          "file": "web/src/features/settings/components/fleet-setup/FleetSetupReadiness.tsx",
+          "line": 77,
+          "end_line": 97,
+          "source_excerpt": [
+            {
+              "line": 77,
+              "text": "        items={["
+            },
+            {
+              "line": 78,
+              "text": "          {"
+            },
+            {
+              "line": 79,
+              "text": "            label: t('fleetSetup.readiness.wellKnown', 'Well-known path'),"
+            }
+          ]
+        }
+      ],
+      "candidate": "Decorative account Shield lacks explicit aria-hidden; long key/path/fingerprint values require composed wrapping/contrast/accessibility review. Absence of an attribute is not proof of actual screen-reader announcement or overflow.",
+      "confirmation_needed": "Authorized native accessibility tree, keyboard/focus, RTL/200% text and mission-width geometry; all NOTRUN here."
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "issues": [
+        "FS001",
+        "FS002",
+        "FS009"
+      ],
+      "owner": "local progress caller/adapter",
+      "files": [
+        "web/src/features/settings/pages/FleetSetupPage.tsx",
+        "web/src/features/settings/components/fleet-setup/FleetSetupProgress.tsx",
+        "web/src/features/settings/components/fleet-setup/FleetSetupProgress.test.tsx",
+        "web/src/features/settings/pages/FleetSetupPage.test.tsx"
+      ],
+      "need": "Truthful source-state/scope progress and preference-aware navigation. Preserve accepted page; no whole-page re-migration.",
+      "current_exact_queued_repair_owner": null,
+      "queue_disposition": "NEED only; not dispatched or claimed. Checked exact source files and mechanism names; completed phase3/phase5/audit rows remain closed. Parent alone deduplicates/reserves serial write scopes."
+    },
+    {
+      "id": "N02",
+      "issues": [
+        "FS003",
+        "FS013"
+      ],
+      "owner": "auth/Fleet query lifecycle integration",
+      "files": [
+        "web/src/api/hooks/useSettings.ts"
+      ],
+      "need": "Exact auth success invalidation and explicit live/offline policy; matching covering test must be separately reserved.",
+      "current_exact_queued_repair_owner": null,
+      "queue_disposition": "NEED only; not dispatched or claimed. Checked exact source files and mechanism names; completed phase3/phase5/audit rows remain closed. Parent alone deduplicates/reserves serial write scopes."
+    },
+    {
+      "id": "N03",
+      "issues": [
+        "FS004",
+        "FS005",
+        "FS006",
+        "FS007",
+        "FS011"
+      ],
+      "owner": "existing Fleet hook/subscription caller integration",
+      "files": [
+        "web/src/api/hooks/useFleetSetup.ts",
+        "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+        "web/src/api/hooks/useFleetSetup.test.tsx"
+      ],
+      "need": "Supported decode truth, complete errors, zero cadence/body contract, exact picker cadence adoption and date display. Serialize with N04 API acceptance; preserve wire/signal identity. Source fixture file ownership separately reserved.",
+      "current_exact_queued_repair_owner": null,
+      "queue_disposition": "NEED only; not dispatched or claimed. Checked exact source files and mechanism names; completed phase3/phase5/audit rows remain closed. Parent alone deduplicates/reserves serial write scopes."
+    },
+    {
+      "id": "N04",
+      "issues": [
+        "FS006",
+        "FS008"
+      ],
+      "owner": "existing shared SignalConfigModal API/copy adoption",
+      "files": [
+        "web/src/components/ui/SignalConfigModal.tsx",
+        "web/src/components/ui/SignalConfigModal.test.tsx",
+        "web/src/components/ui/__tests__/SignalConfigModal.viewport.test.tsx"
+      ],
+      "need": "Backward-compatible heterogeneous initial cadence and localized preset/interval display. No competing modal; no third generic presentation migration.",
+      "current_exact_queued_repair_owner": null,
+      "queue_disposition": "NEED only; not dispatched or claimed. Checked exact source files and mechanism names; completed phase3/phase5/audit rows remain closed. Parent alone deduplicates/reserves serial write scopes."
+    },
+    {
+      "id": "N05",
+      "issues": [
+        "FS010",
+        "FS012"
+      ],
+      "owner": "existing onboarding Stepper",
+      "files": [
+        "web/src/features/onboarding/components/Stepper.tsx"
+      ],
+      "need": "Static idle current-step semantics and explicit mobile target minima with matching test owner reservation; no new Stepper.",
+      "current_exact_queued_repair_owner": null,
+      "queue_disposition": "NEED only; not dispatched or claimed. Checked exact source files and mechanism names; completed phase3/phase5/audit rows remain closed. Parent alone deduplicates/reserves serial write scopes."
+    },
+    {
+      "id": "N06",
+      "issues": [
+        "FS011",
+        "FS012",
+        "FS014"
+      ],
+      "owner": "existing TeslaAccountSection caller",
+      "files": [
+        "web/src/features/settings/components/TeslaAccountSection.tsx",
+        "web/src/features/settings/components/TeslaAccountSection.test.tsx"
+      ],
+      "need": "Preference-bound expiry, explicit mobile minima and available feedback barrel; no auth semantics bypass.",
+      "current_exact_queued_repair_owner": null,
+      "queue_disposition": "NEED only; not dispatched or claimed. Checked exact source files and mechanism names; completed phase3/phase5/audit rows remain closed. Parent alone deduplicates/reserves serial write scopes."
+    },
+    {
+      "id": "N07",
+      "issues": [
+        "FS008"
+      ],
+      "owner": "orchestrator-serialized canonical catalog",
+      "files": [],
+      "need": "Approve exact localized display keys for the 26 literal sites, then ordinary generated artifacts. No catalog edits authorized here; vendor IDs/calculations unchanged.",
+      "current_exact_queued_repair_owner": null,
+      "queue_disposition": "NEED only; not dispatched or claimed. Checked exact source files and mechanism names; completed phase3/phase5/audit rows remain closed. Parent alone deduplicates/reserves serial write scopes."
+    },
+    {
+      "id": "N08",
+      "issues": [
+        "FS005",
+        "FS004"
+      ],
+      "owner": "existing endpoint/protocol authority",
+      "files": [],
+      "need": "Establish current zero-cadence/envelope/known-negative semantics before wire-shape changes. Source audit establishes omission/decoding, not backend failure; no endpoint actions.",
+      "current_exact_queued_repair_owner": null,
+      "queue_disposition": "NEED only; not dispatched or claimed. Checked exact source files and mechanism names; completed phase3/phase5/audit rows remain closed. Parent alone deduplicates/reserves serial write scopes."
+    },
+    {
+      "id": "N09",
+      "issues": [],
+      "owner": "separate authorized native/synthetic acceptance",
+      "files": [],
+      "need": "Mission widths, themes, RTL/scaling, keyboard/focus/forced-colors/motion, independent recovery and confirmation identity evidence after exact repairs. No real enrollment/config/certificate/device/network/API activity.",
+      "current_exact_queued_repair_owner": null,
+      "queue_disposition": "NEED only; not dispatched or claimed. Checked exact source files and mechanism names; completed phase3/phase5/audit rows remain closed. Parent alone deduplicates/reserves serial write scopes."
+    }
+  ],
+  "counts": {
+    "unit": "distinct confirmed mechanisms, not regex hits/literal occurrences",
+    "confirmed": 14,
+    "candidates": 5,
+    "needs": 9,
+    "confirmed_by_rule": {
+      "unknown-progress-truth": 1,
+      "scope-identity-truth": 1,
+      "coupled-cache-invalidation": 1,
+      "malformed-source-truth": 1,
+      "sampling-option-preservation": 1,
+      "draft-cadence-preservation": 1,
+      "hidden-source-records": 1,
+      "hardcoded-string": 1,
+      "reduced-motion-navigation": 1,
+      "ambient-progress-motion": 1,
+      "display-time-preferences": 1,
+      "mobile-target-declaration": 1,
+      "live-mode-mutation-guard": 1,
+      "category-barrel-import": 1
+    },
+    "confirmed_by_priority": {
+      "P1": 7,
+      "P2": 6,
+      "P3": 1
+    },
+    "hardcoded_literal_sites": 26,
+    "source_test_files_pinned": 40,
+    "authored_test_declarations": 103,
+    "test_files_read": 8,
+    "parameterized_declarations": 1,
+    "fresh_test_execution": "NOTRUN"
+  },
+  "source_test_sha256_after": [
+    {
+      "path": "web/src/features/settings/pages/FleetSetupPage.tsx",
+      "sha256": "ea41518486117d30eda98ac10fe95cb7b100f398933a5a32e616acd4dd8e23d0",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/pages/FleetSetupPage.test.tsx",
+      "sha256": "15178cd7c5643b811a3a5a177b2a11ae49bb1376b35fc8856ddef495893cc988",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/TeslaAccountSection.tsx",
+      "sha256": "1d8b188af4e6bd78c1c6609ae5025288562ce45b602673cf19875373d1259684",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/TeslaAccountSection.test.tsx",
+      "sha256": "c67c8d609febb9bf55c17ec173863ef61dfc59fa2c2485d4ec2911b5244f91cd",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupGuide.test.tsx",
+      "sha256": "84dda53923ca3c3d016f83831a4358a818c1d163a2e8021c6e20368e8411c42c",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupGuide.tsx",
+      "sha256": "6ebaa9b307fb717660ad52853b7a66a65148e57b2bcb9ab254b4005a0a6b8852",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupKpiBand.tsx",
+      "sha256": "abde0d699ca233fb83d09a72661c3f2adec55d9d53c2bb5c8009937048d729fe",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.test.tsx",
+      "sha256": "cc16b421450efffc16760418f613747c5731f11b82fe0ba16f159c1d7c34a01c",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupProgress.tsx",
+      "sha256": "146df9718945051728f68da60579bbc7b73984ff6a341697a10583ba81d0259c",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupReadiness.tsx",
+      "sha256": "3285cd95cad419a9d187a817ac679876d61cf45fc767b029f322f8f933bc074b",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupStreamingPanel.tsx",
+      "sha256": "6e6fe640ded5a18ac02891932a078555bce22ae8b6bab003a45191fed88d243d",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx",
+      "sha256": "de60637399d183599b5a9df697006983c7da224ed5f4cc3ccfe7fcd90244bc77",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/fleet-setup/index.ts",
+      "sha256": "3a3bca3149ffe15dd5367cb3a6c3078dbf730045053c699ca36042abfdd72fe5",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/hooks/useFleetSetup.ts",
+      "sha256": "cb6ad8211ca20cceb2affec3180d9a5ca35abb0d7490d20c5b4a673aa2cc6799",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/hooks/useOnboarding.ts",
+      "sha256": "59ff1acad2ca5f291f13686cb831109c4850775912a8d7ee34ef10e51e9bdb4e",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/hooks/useSettings.ts",
+      "sha256": "f48fa61c5c2759bd51a77b3648359ff25d7a4078b890515f1ec09b3cf3cbee00",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/hooks/useFleetSetup.test.tsx",
+      "sha256": "2de07e49ea25ddb9d60f0d82199d38dafb7f1393054d1e7c81594990386d31b8",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/hooks/useOnboarding.test.tsx",
+      "sha256": "e9d1c25fcb0435f90895742fc31e613a73cff03d2d805eaf04b086f85a24f1be",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ui/SignalConfigModal.tsx",
+      "sha256": "0f18bf36849ac8830f5141e89ce229e6e2afe1fdebb6741741368ffab147a2e5",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/onboarding/components/Stepper.tsx",
+      "sha256": "b3ea5a17ba4086492cd1577a9643faced9c3ef3d9a2d1761c108cb49e2e6a5a3",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx",
+      "sha256": "9075a1bb2c766e225462ee1eaab67e67293f1b97d052e58c1a48e12eb3a07595",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/api/queryPolicy.ts",
+      "sha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/hooks/useConfirm.ts",
+      "sha256": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/lib/operationalMode.ts",
+      "sha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ui/SignalConfigModal.test.tsx",
+      "sha256": "9c1cfe5342d573a0fbfa4fa444607397be065b11fba43f700ea8122c53da23cc",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ui/__tests__/SignalConfigModal.viewport.test.tsx",
+      "sha256": "b8a4cd4731ea048f0227efd4597c9a297366126c30fbb194ec82b83b14e73b06",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/ui/index.ts",
+      "sha256": "ccd21278bae4721a793be4de5085af906f0a1a063670c182ce2e31b62dc3e329",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/components/feedback/index.ts",
+      "sha256": "9b5476cf4a88198e3852a4fff7c05db65c90bbf8f2bf094d4ddcf2b2d32dd02f",
+      "matches_before": true
+    },
+    {
+      "path": "web/src/features/admin/components/devtools/constants.ts",
+      "sha256": "9c8697bf05075b4a43b18db18a73c340d15a8c4ab6c049cb1d1a82d8ccb13d3d",
+      "matches_before": true
+    }
+  ],
+  "pin_check": {
+    "checked_utc": "2026-10-14T02:08:03.437154+00:00",
+    "matched": 40,
+    "drift_count": 0,
+    "drifts": [],
+    "result": "PASS"
+  },
+  "source_acceptance_limits": {
+    "scope_identity": "Route registration App.tsx323/637 and /settings vehicle-disabled/range-disabled workspace scope read. Local VIN selection is configuration target, not duplicate workspace selector. Global onboarding/token/public-key reads are fleet-level; no VIN-specific streaming/capability proof.",
+    "SI": "No driving/temperature/energy measurement conversion in this workflow. Sampling intervals are raw protocol seconds/0 sentinel; preserve vendor fields, VINs, host, port and PEM input identities. No legacy converter calls found in reviewed render paths.",
+    "preferences": "No saved theme/density/chart/table/navigation/unit preference writes/reset found. Streaming binds locale/timezone; account/error display gap FS011. Native 12/24h and saved custom theme behavior unverified.",
+    "privacy": "Only source declarations and existing synthetic test values read; no real tokens/private keys/certificates/device credentials accessed or emitted. CA input is declaration only. No secret discovery, environment/credential reads or third-party sharing.",
+    "source_truth": "Public key stored/configured != network/certificate verification established here; auth/token/config/capability and fleet/VIN streaming remain distinct.",
+    "history": "Prior audit bugs that no longer apply (root query now includes auth; token StaleRefreshWarning distinguishes paused; picker uses shared Button/Modal with wrapping footer and break-all names) not repeated as current findings.",
+    "greps": "10 scoped frontend regex checks run on12 source files. Zero-match checks are raw scoped matches, not whole-project clean claims. Hardcoded grep produced hostname sample and two TypeScript angle-bracket false positives; semantic shared-modal scan additionally confirmed26 literals.",
+    "exceptions": [
+      "PageLayout actually delegates to PageContainer; not missing wrapper",
+      "Account useEffects mirror events/recovery, not fetch data",
+      "VIN-gated config/error bodies are target applicability, not hiding all page sections for null data",
+      "Raw native HTML within shared UI and concrete internal imports are building-block exceptions",
+      "SignalConfigModal is not exported by UI barrel; concrete import is KEEP_UNKNOWN until existing owner approves export, not an invented barrel mapping",
+      "No dynamic inline styles counted as violations"
+    ]
+  },
+  "NOTRUN": [
+    "Fresh tests/scoped or full (including passing reruns)",
+    "Lint/build/global TypeScript/npx tsc --noEmit",
+    "Browser/native render/screenshots/accessibility/keyboard/focus/geometry",
+    "API/network/HTTP/server readiness",
+    "Enrollment/OAuth/connect/re-authorize/refresh/disconnect",
+    "Configuration subscribe/remove/signal apply/certificate generation or validation",
+    "Device/wake/vehicle sync/command actions",
+    "Installs/servers/helpers/subagents",
+    "Backend execution/endpoint response validation/deployment"
+  ],
+  "runtime_acceptance": "NOT ACCEPTED; Phase6/native/page completion and Phase7 remain open",
+  "check_failures": [
+    {
+      "session": "1815",
+      "exit": 1,
+      "failure": "Windows stdout UnicodeEncodeError while printing Unicode queue; no baseline report completed"
+    },
+    {
+      "session": "1823",
+      "exit": 1,
+      "failure": "UnicodeEncodeError printing exact queue; read-only"
+    },
+    {
+      "session": "2028",
+      "exit": 1,
+      "failure": "UnicodeDecodeError cp1252 on SignalConfigModal source; no in-memory metadata persisted"
+    },
+    {
+      "session": "2171",
+      "exit": 1,
+      "failure": "AssertionError: Stepper citation end187 exceeds182; corrected to182"
+    },
+    {
+      "session": "2189",
+      "exit": 1,
+      "failure": "AssertionError: broad authenticated anchor matched57 and98; exact98 selected"
+    },
+    {
+      "session": "2201",
+      "exit": 1,
+      "failure": "AssertionError: p.name anchor matched key275 and text277; exact277 selected"
+    }
+  ],
+  "section_action_matrix": [
+    {
+      "section": "Header/freshness/copy-link",
+      "source": "web/src/features/settings/pages/FleetSetupPage.tsx:46-54",
+      "declarations": "PageLayout title/subtitle/copyLink; auth/api/public-key/onboarding query array; alias route retained. Copy-link/API/header actions NOTRUN."
+    },
+    {
+      "section": "Four status summary cells",
+      "source": "web/src/features/settings/pages/FleetSetupPage.tsx:56-69; web/src/features/settings/components/fleet-setup/FleetSetupKpiBand.tsx:45-167",
+      "declarations": "Independent sourceLoading; retained flag; unknown dash. Token/public-key/raw envelope and publication claims limited by FS003/FS004/C01."
+    },
+    {
+      "section": "Account + live progress",
+      "source": "web/src/features/settings/pages/FleetSetupPage.tsx:88-103",
+      "declarations": "Persistent shell, loading/fatal/retained account body and retry. Connect, refresh, sync, reauthorize, disconnect confirmation, expiry/recovery declarations retained. Progress trust/scope/motion gaps FS001/FS002/FS009."
+    },
+    {
+      "section": "Subscribe target/auth/vehicles",
+      "source": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx:39-81,144-178",
+      "declarations": "Independent auth/vehicle source bodies; VIN key/value preserved, local target intentionally allowed on settings route. unknown/paused auth actions limited; capability C02."
+    },
+    {
+      "section": "VIN configuration and Tesla errors",
+      "source": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx:182-215,294-324",
+      "declarations": "VIN-gated independent query/fatal retry/loading/retained bodies, authoritative config absent vs reads failed. All-record preservation FS007; malformed truth FS004."
+    },
+    {
+      "section": "Configuration actions/advanced form",
+      "source": "web/src/features/settings/components/fleet-setup/FleetSetupSubscribePanel.tsx:226-283,327-369",
+      "declarations": "Configure signals local draft; wake/subscribe/remove pending/busy; remove destructive confirmation. Optional host/port/CA and master/per-field settings retained; zero/reopen gaps FS005/FS006. Port/race/capability candidates C02-C04."
+    },
+    {
+      "section": "Static setup guide",
+      "source": "web/src/features/settings/components/fleet-setup/FleetSetupGuide.tsx:15-72",
+      "declarations": "All4 explanations and passive ordered list, useId heading label. No backend enrollment readiness claim established; no action executed."
+    },
+    {
+      "section": "Streaming confirmation",
+      "source": "web/src/features/settings/components/fleet-setup/FleetSetupStreamingPanel.tsx:21-117",
+      "declarations": "Persistent panel; SourceContent loading/fatal/empty/retained, healthy/stale/waiting body, last packet/vehicles seen, live-signals link. Health query polls30s after durable setup. Fleet-level, not selected-VIN evidence; missing vehicle count defaults0 in gate normalizer not verified measurement."
+    },
+    {
+      "section": "Domain/certificates/readiness",
+      "source": "web/src/features/settings/components/fleet-setup/FleetSetupReadiness.tsx:32-128",
+      "declarations": "Persistent public-key loading/fatal/empty/retained badge + retry, path/fingerprint/default-CA explanation, partner-vs-virtual key accordion, dev-tools native link. No generate/enroll/certificate/device action performed; C01 publication/capability unknown."
+    },
+    {
+      "section": "Open picker/shared interactions",
+      "source": "web/src/components/ui/SignalConfigModal.tsx:14-442",
+      "declarations": "All8 presets,10sampling options including0, search/no-match, master/category/per-field, disclosures, selection accounting, local onSubmit/Cancel, shared Modal footer/focus declarations. Source reflow fixes retained; native acceptance NOTRUN. FS006/FS008."
+    }
+  ],
+  "state_matrix": {
+    "initial": "All persistent panels present; independent loading adapters and per-cell KPI loading. Progress wrongly definitive FS001. No initial mounted proof.",
+    "fatal": "Only each source body is replaced, neighbor shells retained, retry callbacks declared. malformed2xx not fatal FS004.",
+    "retained": "deriveDataState retains payload on refresh error; account/config/errors/readiness/stream map stale to retained with retries; token root uses StaleRefreshWarning. No mounted recovery.",
+    "paused": "deriveDataState.isRefreshBlocked distinguishes paused; token warning explicitly consumes it. Other adapters compress paused/failed into generic retained notice and do not expose last-success time; candidate-level broader composed trust obligation, not fresh native pass. Initial paused progress FS001.",
+    "unknown": "No-data KPI dash, source empty/unavailable descriptions retained; step/count/decode gaps FS001/FS004; healthy stream missing count0 is gate default, not independently proven count.",
+    "authoritative_negative_empty": "Known disconnected account, no vehicles, no selected VIN, explicit missing config/key and waiting stream have explanatory paths. Only valid envelope emptiness may be claimed, FS004.",
+    "mutation": "Live-only flags for subscription/remove/wake/sync read, networkMode always for fleet/wake. Explicit dangerous confirm for remove/disconnect; no actual confirmation or mutation. Auth live guard gap FS013; no fake completion from request dispatch found in fleet mutation hooks; toasts/invalidation occur onSuccess."
+  },
+  "release_utc": "2026-10-14T02:08:03.437154+00:00",
+  "release": "RELEASE both exact writable artifacts; source/tests untouched; no active work/services",
+  "report_validation": {
+    "json_parse": "PASS final readback",
+    "source_test_pin_check": "PASS40/40 drift0",
+    "citation_ranges": "PASS; Stepper177-182 correction retained",
+    "checked_utc": "2026-10-14T02:08:03.437154+00:00"
+  },
+  "command_receipts": [
+    {
+      "sessions": [
+        "1736",
+        "1754",
+        "1755",
+        "1790"
+      ],
+      "commands": "Get-Date; git --no-pager status --short READONLY; Get-ChildItem; Get-Content; Select-String authority/queue/support discovery",
+      "exit": 0
+    },
+    {
+      "sessions": [
+        "1833",
+        "1870",
+        "1901",
+        "1916",
+        "1932",
+        "1945",
+        "2048",
+        "2148"
+      ],
+      "command": "python - inline bounded queue/grep/source/test declarations and SHA256 inspections; exact stage descriptors/raw output in log",
+      "exit": 0
+    },
+    {
+      "sessions": [
+        "1815",
+        "1823",
+        "2028",
+        "2171",
+        "2189",
+        "2201"
+      ],
+      "command": "python - failed encoding/citation inspections; errors preserved individually",
+      "exit": 1
+    }
+  ]
+}

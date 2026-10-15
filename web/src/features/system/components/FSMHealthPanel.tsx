@@ -1,13 +1,20 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, RotateCw, Timer } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text, MetricValue } from '@/components/ui';
 import { Grid } from '@/components/layout';
-import { fmtInt } from '@/lib/numberFormat';
+import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import type { DataState } from '@/api/dataState';
+import { severityTokens } from '@/lib/tokens';
+
 import type { FSMTransition } from '@/types/fsm';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FSMHealthPanelProps {
-  transitions: FSMTransition[];
+  transitions?: FSMTransition[];
+  /** Query trust is separate from the bounded rows used by these heuristics. */
+  sourceState?: DataState<unknown>;
+  isLoading?: boolean;
 }
 
 interface HealthAlert {
@@ -17,32 +24,24 @@ interface HealthAlert {
   count: number;
 }
 
-/** Sliding window in which repeated same-FSM transitions count as flapping. */
 const FLAP_WINDOW_MS = 60_000;
-/** More than this many same-FSM transitions inside the window = flapping. */
 const FLAP_THRESHOLD = 5;
-/** A session sitting in pending/active longer than this is considered stuck. */
 const STUCK_THRESHOLD_MS = 4 * 60 * 60 * 1000;
-/** Session FSMs whose latest state we watch for the "stuck" heuristic. */
 const SESSION_FSMS = new Set(['drive_session', 'charge_session']);
-/** Non-terminal states that indicate a session may be stuck. */
 const STUCK_STATES = new Set(['pending', 'active']);
 
-/** Epoch-ms for an ISO timestamp; NaN when the input is malformed. */
 function parseTs(ts: string): number {
   return new Date(ts).getTime();
 }
 
-export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
+export function FSMHealthPanel({ transitions, sourceState, isLoading = false }: FSMHealthPanelProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   const alerts = useMemo<HealthAlert[]>(() => {
     const list = transitions ?? [];
     const result: HealthAlert[] = [];
 
-    // ── Flap detection — reuse the single source of truth so the panel and
-    //    the debugger page's flap KPI can never disagree, and so the count
-    //    aggregates across *every* flapping FSM (not just the first one). ──
     const flapped = computeFlapIds(list);
     if (flapped.size > 0) {
       result.push({
@@ -57,8 +56,6 @@ export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
       });
     }
 
-    // ── Stuck detection: the latest state of each session-FSM instance sits
-    //    in pending/active for longer than the stuck threshold. ──
     const now = Date.now();
     const instanceLatest = new Map<string, { state: string; t: number }>();
     for (const tr of list) {
@@ -79,18 +76,17 @@ export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
       result.push({
         type: 'stuck',
         severity: 'warning',
-        message: t('fsm.health.stuck', '{{count}} session(s) stuck in pending/active for >4 hours', { count: stuckCount }),
+        message: t('fsm.health.loadedStuck', '{{count}} potentially stuck session(s): latest loaded state is pending/active for >4 hours', { count: stuckCount }),
         count: stuckCount,
       });
     }
 
-    // ── Recovery count: transitions to "recovered" state ──
     const recoveryCount = list.filter((tr) => tr.to_state === 'recovered').length;
     if (recoveryCount > 0) {
       result.push({
         type: 'recovery',
         severity: 'info',
-        message: t('fsm.health.recoveries', '{{count}} session(s) recovered after pod restart', { count: recoveryCount }),
+        message: t('fsm.health.loadedRecoveries', '{{count}} transitions to recovered in loaded rows; the recovery cause is not established', { count: recoveryCount }),
         count: recoveryCount,
       });
     }
@@ -98,47 +94,69 @@ export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
     return result;
   }, [transitions, t]);
 
-  if (alerts.length === 0) {
+  const hasEvidence = sourceState ? sourceState.hasData : (transitions?.length ?? 0) > 0;
+  const hasRows = (transitions?.length ?? 0) > 0;
+  const hasValidTimestamps = hasRows && (transitions ?? []).every((tr) => Number.isFinite(parseTs(tr.ts)));
+  const evidenceMessage = !hasEvidence
+    ? sourceState?.isRefreshBlocked
+      ? t('fsm.health.pausedEvidence', 'Transition evidence is paused; FSM health is unknown.')
+      : t('fsm.health.unknownEvidence', 'Transition evidence has not loaded; FSM health is unknown.')
+    : !hasRows
+      ? t('fsm.health.emptyEvidence', 'No transitions in the loaded result. This does not establish FSM health; try expanding the time range.')
+      : !hasValidTimestamps
+        ? t('fsm.health.invalidEvidence', 'Some loaded transitions have invalid timestamps; time-based FSM health is unknown.')
+        : t('fsm.health.loadedEvidence', 'Heuristics cover only loaded transition rows, not authoritative current FSM health.');
+
+  if (!hasEvidence) {
     return (
-      <GlassPanel className="p-4" data-testid="fsm-health-all-clear">
-        <div className="flex items-center gap-2 text-sm text-green-400" role="status">
-          <span className="h-2 w-2 rounded-full bg-green-400" aria-hidden="true" />
-          {t('fsm.health.allClear', 'All FSMs healthy — no flapping, stuck sessions, or recoveries detected')}
-        </div>
+      <GlassPanel className="p-4 space-y-3" data-testid="fsm-health-panel">
+        <PanelTitle as="h2">{t('fsm.health.title', 'FSM health')}</PanelTitle>
+        {sourceState?.fatalError ? (
+          <QueryError error={sourceState.fatalError} onRetry={sourceState.retry ?? undefined} />
+        ) : isLoading && !sourceState?.isRefreshBlocked ? (
+          <div role="status" aria-label={t('common.loading', 'Loading')}>
+            <Skeleton height={24} />
+          </div>
+        ) : (
+          <Text as="p" variant="bodySm" role="status">{evidenceMessage}</Text>
+        )}
       </GlassPanel>
     );
   }
 
   return (
-    <GlassPanel className="p-4" data-testid="fsm-health-panel">
-      <h2 className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-3">
-        {t('fsm.health.title', 'FSM Health')}
-      </h2>
-      <Grid cols={{ default: 1, md: alerts.length }} gap={3}>
+    <GlassPanel className="p-4 space-y-3" data-testid="fsm-health-panel">
+      <PanelTitle as="h2">{t('fsm.health.title', 'FSM health')}</PanelTitle>
+      {sourceState && <StaleRefreshWarning state={sourceState} />}
+      <Text as="p" variant="bodySm" role="status">{evidenceMessage}</Text>
+      {hasRows && hasValidTimestamps && alerts.length === 0 && (
+        <Text as="p" variant="bodySm" role="status" data-testid="fsm-health-all-clear">
+          {t('fsm.health.loadedClear', 'No flapping, potentially stuck sessions, or recovery transitions detected in loaded rows.')}
+        </Text>
+      )}
+      <Grid cols={{ default: 1, md: Math.max(1, alerts.length) }} gap={3}>
         {alerts.map((alert) => {
           const Icon = alert.type === 'flap' ? AlertTriangle : alert.type === 'stuck' ? Timer : RotateCw;
-          const borderColor = alert.severity === 'warning' ? 'border-amber-500/20' : 'border-blue-500/20';
-          const bgColor = alert.severity === 'warning' ? 'bg-amber-500/5' : 'bg-blue-500/5';
-          const textColor = alert.severity === 'warning' ? 'text-amber-400' : 'text-blue-400';
+          const tone = severityTokens[alert.severity === 'warning' ? 'warn' : 'info'];
           const title =
             alert.type === 'flap'
-              ? t('fsm.health.flapTitle', 'State Flapping')
+              ? t('fsm.health.flapTitle', 'State flapping')
               : alert.type === 'stuck'
-                ? t('fsm.health.stuckTitle', 'Stuck Sessions')
-                : t('fsm.health.recoveryTitle', 'Pod Recoveries');
+                ? t('fsm.health.stuckTitle', 'Stuck sessions')
+                : t('fsm.health.loadedRecoveryTitle', 'Recovery transitions');
           return (
             <div
               key={alert.type}
               role="status"
               data-testid={`fsm-health-alert-${alert.type}`}
-              className={`flex items-start gap-3 rounded-lg border p-3 ${borderColor} ${bgColor}`}
+              className={`flex items-start gap-3 rounded-lg border p-3 ${tone.border} ${tone.bg}`}
             >
-              <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${textColor}`} aria-hidden="true" />
+              <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${tone.fg}`} aria-hidden="true" />
               <div>
-                <span className={`text-xs font-medium ${textColor}`}>{title}</span>
-                <p className="text-xs text-[var(--text-secondary)] mt-0.5">{alert.message}</p>
+                <Text variant="label" className={tone.fg}>{title}</Text>
+                <Text as="p" variant="bodySm" className="mt-0.5">{alert.message}</Text>
               </div>
-              <span className={`ml-auto text-lg font-bold ${textColor}`} aria-hidden="true">{fmtInt(alert.count)}</span>
+              <MetricValue className={`ml-auto ${tone.fg}`} aria-hidden="true">{fmtInt(alert.count)}</MetricValue>
             </div>
           );
         })}
@@ -147,12 +165,7 @@ export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
   );
 }
 
-/**
- * Identify transition IDs that participate in "state flapping" — more than
- * FLAP_THRESHOLD transitions of the SAME FSM inside any FLAP_WINDOW_MS window.
- * Exported for the debugger page's flap KPI; {@link FSMHealthPanel} reuses it so
- * the detection logic lives in exactly one place.
- */
+/** Shared with the debugger KPI: same-FSM bursts above the sliding-window threshold. */
 export function computeFlapIds(transitions: FSMTransition[]): Set<number> {
   const flapped = new Set<number>();
 

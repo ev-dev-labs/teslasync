@@ -50,6 +50,10 @@ func (r *AutomationStepChildRepo) HydrateAutomations(ctx context.Context, automa
 		return err
 	}
 
+	return hydrateAutomationChildren(automations, triggers, conditions, actions)
+}
+
+func hydrateAutomationChildren(automations []*models.AutomationFull, triggers, conditions, actions map[int64]any) error {
 	for _, automation := range automations {
 		if automation == nil {
 			continue
@@ -71,9 +75,16 @@ func (r *AutomationStepChildRepo) HydrateAutomations(ctx context.Context, automa
 					automation.Conditions = append(automation.Conditions, child)
 				}
 			case models.AutomationStepKindActionCommand,
+				models.AutomationStepKindActionWait,
 				models.AutomationStepKindActionNotify,
 				models.AutomationStepKindActionSetSetting,
 				models.AutomationStepKindActionCallAutomation:
+				if step.Kind == models.AutomationStepKindActionWait {
+					wait, ok := actions[step.ID].(*models.AutomationStepActionWait)
+					if !ok || wait == nil || wait.DurationS < 1 || wait.DurationS > 3600 {
+						return fmt.Errorf("hydrate automation %d: missing or invalid typed wait child for step %d", automation.ID, step.ID)
+					}
+				}
 				if child, ok := actions[step.ID]; ok {
 					automation.Actions = append(automation.Actions, child)
 				}
@@ -278,7 +289,10 @@ func (r *AutomationStepChildRepo) loadActions(ctx context.Context, stepIDs []int
 		  FROM automation_step_action_set_setting     a WHERE step_id = ANY($1)
 		UNION ALL
 		SELECT step_id, 'call_automation'  AS kind, to_jsonb(a.*) AS payload
-		  FROM automation_step_action_call_automation a WHERE step_id = ANY($1)`
+		  FROM automation_step_action_call_automation a WHERE step_id = ANY($1)
+		UNION ALL
+		SELECT step_id, 'wait' AS kind, to_jsonb(a.*) AS payload
+		  FROM automation_step_action_wait a WHERE step_id = ANY($1)`
 
 	rows, err := r.db.Pool.Query(ctx, q, stepIDs)
 	if err != nil {
@@ -298,6 +312,12 @@ func (r *AutomationStepChildRepo) loadActions(ctx context.Context, stepIDs []int
 		}
 
 		switch kind {
+		case "wait":
+			a := &models.AutomationStepActionWait{}
+			if err := json.Unmarshal(payload, a); err != nil {
+				return nil, fmt.Errorf("automation-step-children-loader-action: decode wait step %d: %w", stepID, err)
+			}
+			out[stepID] = a
 		case "command":
 			a := &models.AutomationAction{}
 			if err := json.Unmarshal(payload, a); err != nil {

@@ -1,0 +1,4433 @@
+{
+  "item": "phase6-qa-system-chatbot",
+  "attempt": 1,
+  "status": "DONE",
+  "originalDeliveryStatus": "PARTIAL",
+  "reservation": "2026-10-14T02:29:12.925Z",
+  "return_deadline": "2026-10-14T02:49:12.925Z",
+  "hard_deadline": "2026-10-14T02:54:12.925Z",
+  "pins_before": [
+    {
+      "file": "internal/api/router.go",
+      "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "bytes": 260353,
+      "lines": 5363,
+      "captured_at": "2026-10-14T02:36:54.8383674Z"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "bytes": 17825,
+      "lines": 458,
+      "captured_at": "2026-10-14T02:36:54.8408584Z"
+    },
+    {
+      "file": "web/src/api/hooks/useChat.test.tsx",
+      "sha256": "BCBE103558C5E6C80532AE8E001C8F019A6232AB869F14649BD3D3DBEC7119B1",
+      "bytes": 13222,
+      "lines": 339,
+      "captured_at": "2026-10-14T02:36:54.8426632Z"
+    },
+    {
+      "file": "web/src/api/hooks/useChat.ts",
+      "sha256": "05508ACCBC5E2E717A67BD239A95874F18DCF4FC5D76DA7414C361509E729792",
+      "bytes": 4328,
+      "lines": 117,
+      "captured_at": "2026-10-14T02:36:54.8435933Z"
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "bytes": 120243,
+      "lines": 4194,
+      "captured_at": "2026-10-14T02:36:54.8671504Z"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "bytes": 68125,
+      "lines": 919,
+      "captured_at": "2026-10-14T02:36:54.8700983Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAlertMessageTemplateButton.tsx",
+      "sha256": "723AE166C17C43DE7E91F2E435E43D8647C09816580883D875C550F56950FDCD",
+      "bytes": 1301,
+      "lines": 23,
+      "captured_at": "2026-10-14T02:36:54.8707318Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAlertMessageTemplateSuggestion.test.tsx",
+      "sha256": "BFC9AAC3AC0F74EB252367B12FAB45D92BB35EDAEBC6C4DF48FB986AA6598A57",
+      "bytes": 11353,
+      "lines": 340,
+      "captured_at": "2026-10-14T02:36:54.8720988Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAlertMessageTemplateSuggestion.tsx",
+      "sha256": "5D0AC3622CFF10627F1CFE33E6794FECA2EC8751E84532801629CB538F9A1EFE",
+      "bytes": 8487,
+      "lines": 261,
+      "captured_at": "2026-10-14T02:36:54.8732809Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAlertPackBuilder.test.tsx",
+      "sha256": "FCE1D402E24116DE180F4C15A8117B7746358F7FE154BB95AD18FDDAB7547018",
+      "bytes": 3089,
+      "lines": 51,
+      "captured_at": "2026-10-14T02:36:54.8739562Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAlertPackBuilder.tsx",
+      "sha256": "33A88A3F9F8E92A08D1BBE6272C4A4A5ECB95F4161B6386DB087C6824840FCB5",
+      "bytes": 4430,
+      "lines": 81,
+      "captured_at": "2026-10-14T02:36:54.8745885Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAlertTuningSuggestions.test.tsx",
+      "sha256": "BFDB2CB04BCEED0C0DAF8EEA9B9EEF349A01B9DE20D78430C57C1E01E160E32D",
+      "bytes": 18285,
+      "lines": 530,
+      "captured_at": "2026-10-14T02:36:54.8933577Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAlertTuningSuggestions.tsx",
+      "sha256": "DD00CAE8694B400E31BD01F3493CFCD8596B6257441E30C95E8BC6D57D0F2993",
+      "bytes": 9807,
+      "lines": 261,
+      "captured_at": "2026-10-14T02:36:54.8946932Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAnomalyExplanations.test.tsx",
+      "sha256": "86940CACB24284E3172797A28EB16DAB34A67074D1020ADA2A76F55DBFB217BA",
+      "bytes": 14723,
+      "lines": 385,
+      "captured_at": "2026-10-14T02:36:54.9145293Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAnomalyExplanations.tsx",
+      "sha256": "674D96627709A199E9E517A6801FE36ACBAB03A42A7DA7AC56E493F71457D5B9",
+      "bytes": 2477,
+      "lines": 66,
+      "captured_at": "2026-10-14T02:36:54.916188Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAutoNameUnnamedLocations.tsx",
+      "sha256": "E0EFCA1E6725121A5F69104BA77CDCEDBD6333BFF784F40B6457F22F15FFE479",
+      "bytes": 8410,
+      "lines": 224,
+      "captured_at": "2026-10-14T02:36:54.9175095Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAutoTripNameSuggestion.test.tsx",
+      "sha256": "503A0CA00F753760D42BB3621C19407967F2E66B8D612FBB8A5C9F88C0D8E1AF",
+      "bytes": 13275,
+      "lines": 375,
+      "captured_at": "2026-10-14T02:36:54.9366356Z"
+    },
+    {
+      "file": "web/src/components/ai/AIAutoTripNameSuggestion.tsx",
+      "sha256": "D57F6CFAFAD7503075FF2299D90EAA090448F647A386EF12BE8A976731E02A89",
+      "bytes": 3330,
+      "lines": 78,
+      "captured_at": "2026-10-14T02:36:54.9375217Z"
+    },
+    {
+      "file": "web/src/components/ai/AIBatteryHealthForecastNarrative.test.tsx",
+      "sha256": "65A5C2018DFF541AB93EA361AE2DB52E7D36C324355A1B7AAEC14703425FFC1B",
+      "bytes": 11929,
+      "lines": 338,
+      "captured_at": "2026-10-14T02:36:54.9572967Z"
+    },
+    {
+      "file": "web/src/components/ai/AIBatteryHealthForecastNarrative.tsx",
+      "sha256": "CCC45AD59C75868F352AB96408E1AAA7F547D3038F1DDC3912DC45CDEB38826B",
+      "bytes": 4907,
+      "lines": 108,
+      "captured_at": "2026-10-14T02:36:54.9586808Z"
+    },
+    {
+      "file": "web/src/components/ai/AICabinTemperatureImpactNarrative.test.tsx",
+      "sha256": "282D6C923B56131BB206B92C24B07A5B4B24BF63AABF3B55EAA4E49A631548B5",
+      "bytes": 15229,
+      "lines": 421,
+      "captured_at": "2026-10-14T02:36:54.9775482Z"
+    },
+    {
+      "file": "web/src/components/ai/AICabinTemperatureImpactNarrative.tsx",
+      "sha256": "A4CD514A565C43FBA478DE186A4B275A4E0945B0ECCA952BF279D9A1BFEBF139",
+      "bytes": 5028,
+      "lines": 109,
+      "captured_at": "2026-10-14T02:36:54.9831979Z"
+    },
+    {
+      "file": "web/src/components/ai/AIChargingCurveFingerprintClustering.test.tsx",
+      "sha256": "068DBD01CC6766B9540198DBAB789D092DE89DAF94B779C93DC038B1C661F2C1",
+      "bytes": 15656,
+      "lines": 398,
+      "captured_at": "2026-10-14T02:36:55.0019832Z"
+    },
+    {
+      "file": "web/src/components/ai/AIChargingCurveFingerprintClustering.tsx",
+      "sha256": "955530C076B24D8A17E87B55F2E5B71651B410668654C384E385ACEB10CFEDA8",
+      "bytes": 6675,
+      "lines": 145,
+      "captured_at": "2026-10-14T02:36:55.0038193Z"
+    },
+    {
+      "file": "web/src/components/ai/AIChargingDiagnosis.test.tsx",
+      "sha256": "364917D7EA394F49929A21203145AC317C5F70C8072BC937A69B593D9B231ADF",
+      "bytes": 13459,
+      "lines": 374,
+      "captured_at": "2026-10-14T02:36:55.0209794Z"
+    },
+    {
+      "file": "web/src/components/ai/AIChargingDiagnosis.tsx",
+      "sha256": "4AD098990837887DEA06E71C9EE23229070AC679B49FC64F95D147CEEE0A8672",
+      "bytes": 3680,
+      "lines": 93,
+      "captured_at": "2026-10-14T02:36:55.0220802Z"
+    },
+    {
+      "file": "web/src/components/ai/AIChatbotIndicator.test.tsx",
+      "sha256": "38995BEEDB4DC4BDF8D3FB1D3B15B0CAC3A2B633BFC81860871619FEAA2BBF5C",
+      "bytes": 7062,
+      "lines": 192,
+      "captured_at": "2026-10-14T02:36:55.0383866Z"
+    },
+    {
+      "file": "web/src/components/ai/AIChatbotIndicator.tsx",
+      "sha256": "E4A2CD5CB28D967AAF53CF2715E44FAC6E2153BAF8CDDAE2377AEDB7E597DE30",
+      "bytes": 3091,
+      "lines": 71,
+      "captured_at": "2026-10-14T02:36:55.0396694Z"
+    },
+    {
+      "file": "web/src/components/ai/AICostForecastNarration.test.tsx",
+      "sha256": "800030F0FCC024A3E9823109EAE34E935F59E00F79A2B900292942AF8B05DE40",
+      "bytes": 14592,
+      "lines": 422,
+      "captured_at": "2026-10-14T02:36:55.0562583Z"
+    },
+    {
+      "file": "web/src/components/ai/AICostForecastNarration.tsx",
+      "sha256": "4AAC95B09653BE1A787AD3692955002529C2B4650D8008CFA57A4529CB487DD0",
+      "bytes": 7483,
+      "lines": 165,
+      "captured_at": "2026-10-14T02:36:55.0574168Z"
+    },
+    {
+      "file": "web/src/components/ai/AICrossRuleConflictDetection.test.tsx",
+      "sha256": "1F628CCBDD307385C4C3FDF7A4CC9847EBDC300CCEABED6CC5CD1F0D11215218",
+      "bytes": 26481,
+      "lines": 779,
+      "captured_at": "2026-10-14T02:36:55.0766007Z"
+    },
+    {
+      "file": "web/src/components/ai/AICrossRuleConflictDetection.tsx",
+      "sha256": "11B56E655045F0F30D4408B272215A75F9AA8D9A1C8F6A6D841EB58623133DEF",
+      "bytes": 13712,
+      "lines": 338,
+      "captured_at": "2026-10-14T02:36:55.0783772Z"
+    },
+    {
+      "file": "web/src/components/ai/AIDataRepairSuggestions.test.tsx",
+      "sha256": "0AB168F4027052186CDCA0E375D38F493E5093D60D15A512709C63A9C41F55A7",
+      "bytes": 20249,
+      "lines": 508,
+      "captured_at": "2026-10-14T02:36:55.0968047Z"
+    },
+    {
+      "file": "web/src/components/ai/AIDataRepairSuggestions.tsx",
+      "sha256": "BF86876F15D2AD704E18E485A9D480B296320C307B8F1270B589A1800DDE6F03",
+      "bytes": 6578,
+      "lines": 146,
+      "captured_at": "2026-10-14T02:36:55.0980551Z"
+    },
+    {
+      "file": "web/src/components/ai/AIDigestNarration.test.tsx",
+      "sha256": "110E4AA30830C0BC413137DEE4E58C3B243AE2228ECAB4539FF7496F86372655",
+      "bytes": 16802,
+      "lines": 451,
+      "captured_at": "2026-10-14T02:36:55.11553Z"
+    },
+    {
+      "file": "web/src/components/ai/AIDigestNarration.tsx",
+      "sha256": "D04000FDFCE020DDF0A93334C02800047DF1297C69249683B8A0B8ACC94C9D2A",
+      "bytes": 3792,
+      "lines": 94,
+      "captured_at": "2026-10-14T02:36:55.116348Z"
+    },
+    {
+      "file": "web/src/components/ai/AIDriveCoaching.test.tsx",
+      "sha256": "8CF90EE1CBB0791FAFEB2992054E7591FDD30141130C6B1AFFAB006F1C6A563B",
+      "bytes": 14248,
+      "lines": 396,
+      "captured_at": "2026-10-14T02:36:55.1356157Z"
+    },
+    {
+      "file": "web/src/components/ai/AIDriveCoaching.tsx",
+      "sha256": "DA0578B148CE3E38B6F067FF037DFED4B79193EA859C59E719D3A82BCE052DEE",
+      "bytes": 5005,
+      "lines": 123,
+      "captured_at": "2026-10-14T02:36:55.1366185Z"
+    },
+    {
+      "file": "web/src/components/ai/AIFeatureCard.test.tsx",
+      "sha256": "F8A8E8D368D09F034A4BEF5315FF881927A201F8C5AB45C702AF512DE48A5E43",
+      "bytes": 22691,
+      "lines": 678,
+      "captured_at": "2026-10-14T02:36:55.1385703Z"
+    },
+    {
+      "file": "web/src/components/ai/AIFeatureCard.tsx",
+      "sha256": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+      "bytes": 13277,
+      "lines": 352,
+      "captured_at": "2026-10-14T02:36:55.1480898Z"
+    },
+    {
+      "file": "web/src/components/ai/AIFeedbackQueueTriage.test.tsx",
+      "sha256": "2E930BB6BB480A4B12D079CFA3B44238E13A14A3B6E34578AE7ADB5187E6B998",
+      "bytes": 15287,
+      "lines": 417,
+      "captured_at": "2026-10-14T02:36:55.1667072Z"
+    },
+    {
+      "file": "web/src/components/ai/AIFeedbackQueueTriage.tsx",
+      "sha256": "48394840C2887AE18242C1DFB67FE352EB5DD519CE22D4A82C00EDDE601AC1B5",
+      "bytes": 7369,
+      "lines": 163,
+      "captured_at": "2026-10-14T02:36:55.1677853Z"
+    },
+    {
+      "file": "web/src/components/ai/AIGeofenceAwareAutomationSuggestions.test.tsx",
+      "sha256": "F95A952CEEC5238615A0BC91EAD5ADFE94A01B3088FAB9DB29871787F6401C6A",
+      "bytes": 33835,
+      "lines": 772,
+      "captured_at": "2026-10-14T02:36:55.1871059Z"
+    },
+    {
+      "file": "web/src/components/ai/AIGeofenceAwareAutomationSuggestions.tsx",
+      "sha256": "8940D60BA8FD4A98D6DD86998BB46769ED1C11FF81044E7AEF528BC13C58A36F",
+      "bytes": 12330,
+      "lines": 328,
+      "captured_at": "2026-10-14T02:36:55.1885564Z"
+    },
+    {
+      "file": "web/src/components/ai/AIInboxAutoCategorization.test.tsx",
+      "sha256": "AC665EE500225755B432D5C91ACF0EA2F94C291450774964FF77F6ACE8788604",
+      "bytes": 24164,
+      "lines": 683,
+      "captured_at": "2026-10-14T02:36:55.1906745Z"
+    },
+    {
+      "file": "web/src/components/ai/AIInboxAutoCategorization.tsx",
+      "sha256": "EB8D26FF632E2209FBEBB4908B18683AD09813311E18148ABC38951702F1E4BB",
+      "bytes": 11415,
+      "lines": 310,
+      "captured_at": "2026-10-14T02:36:55.1920921Z"
+    },
+    {
+      "file": "web/src/components/ai/AIIncidentTimelineSummarizer.test.tsx",
+      "sha256": "7A25B2274177901CA5457B2190061C9EE1A55F3ABF68B5EA90B385B02D67BA4B",
+      "bytes": 14983,
+      "lines": 401,
+      "captured_at": "2026-10-14T02:36:55.210079Z"
+    },
+    {
+      "file": "web/src/components/ai/AIIncidentTimelineSummarizer.tsx",
+      "sha256": "C07F93FF1A319308C990F8879F3F290DF372C381F9BEFB4CBF0C1E005F25BAAC",
+      "bytes": 7508,
+      "lines": 167,
+      "captured_at": "2026-10-14T02:36:55.2112327Z"
+    },
+    {
+      "file": "web/src/components/ai/AILearnedAnomalyBaselines.test.tsx",
+      "sha256": "FFAC98427CBD44A3422692CAC5410A832E0FC4FF6F336F5DFDAA019943F5719B",
+      "bytes": 15186,
+      "lines": 410,
+      "captured_at": "2026-10-14T02:36:55.2271389Z"
+    },
+    {
+      "file": "web/src/components/ai/AILearnedAnomalyBaselines.tsx",
+      "sha256": "FABFF92BDD20AD5CEF42596EAD7752F90844C3ABDCF7446BD6EE494973196FA3",
+      "bytes": 3644,
+      "lines": 84,
+      "captured_at": "2026-10-14T02:36:55.2281598Z"
+    },
+    {
+      "file": "web/src/components/ai/AILifetimeStatsQA.test.tsx",
+      "sha256": "18C72CC433970FFEDCE1A9826A931E31127718491A7A1207EA460CA55B34CE48",
+      "bytes": 18119,
+      "lines": 505,
+      "captured_at": "2026-10-14T02:36:55.2453406Z"
+    },
+    {
+      "file": "web/src/components/ai/AILifetimeStatsQA.tsx",
+      "sha256": "D608BC5B02A29A12DDBD34996CAA2F7EE046A85C28224D2559F6759A09073955",
+      "bytes": 6709,
+      "lines": 162,
+      "captured_at": "2026-10-14T02:36:55.2463941Z"
+    },
+    {
+      "file": "web/src/components/ai/AiLimitBanner.tsx",
+      "sha256": "AB219B5CFB43C50FD53625162003648C118ED4759CF5DD05D1686D437AA15DDE",
+      "bytes": 10118,
+      "lines": 269,
+      "captured_at": "2026-10-14T02:36:55.2477209Z"
+    },
+    {
+      "file": "web/src/components/ai/AILogTraceSummarization.test.tsx",
+      "sha256": "E0AF68244435B0324A84314F177E0510BED3AC2F2FF87F486F42E218C4DC6B2F",
+      "bytes": 23458,
+      "lines": 556,
+      "captured_at": "2026-10-14T02:36:55.2673545Z"
+    },
+    {
+      "file": "web/src/components/ai/AILogTraceSummarization.tsx",
+      "sha256": "29731E4F6E2CE328AF5636D586C286B99C03D1131DDE603A6531ABE50AF5A98F",
+      "bytes": 8147,
+      "lines": 191,
+      "captured_at": "2026-10-14T02:36:55.268781Z"
+    },
+    {
+      "file": "web/src/components/ai/AIMLChargingCurveClustering.test.tsx",
+      "sha256": "E0760B5F32DCC77657BBC1FED67797C68E4BD44D3728AE825963A11AB6C6BE60",
+      "bytes": 14042,
+      "lines": 386,
+      "captured_at": "2026-10-14T02:36:55.2902874Z"
+    },
+    {
+      "file": "web/src/components/ai/AIMLChargingCurveClustering.tsx",
+      "sha256": "15F4F013B45E03AB826ABFC0461C0E1610E608C1BFD724496A3ECDD8F60DEF10",
+      "bytes": 5470,
+      "lines": 122,
+      "captured_at": "2026-10-14T02:36:55.2914081Z"
+    },
+    {
+      "file": "web/src/components/ai/AIMqttSseInspectorExplanations.test.tsx",
+      "sha256": "4C009D2FB74ED17578A3057A9B0E7A6B0CE7DA6E1927235823EA4FB9113BEA03",
+      "bytes": 15472,
+      "lines": 431,
+      "captured_at": "2026-10-14T02:36:55.3104868Z"
+    },
+    {
+      "file": "web/src/components/ai/AIMqttSseInspectorExplanations.tsx",
+      "sha256": "749F86CB8DA359E4BE9A8E72E477E6E4876020F6B6F5D4EC1BC7C0666BC418F1",
+      "bytes": 7821,
+      "lines": 179,
+      "captured_at": "2026-10-14T02:36:55.3182821Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLAlertBuilder.test.tsx",
+      "sha256": "ECC83B2FDD2CD37F2411D82E01A47F7AAB92CC77B546C42A12403F921E03F88F",
+      "bytes": 19357,
+      "lines": 507,
+      "captured_at": "2026-10-14T02:36:55.3210396Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLAlertBuilder.tsx",
+      "sha256": "C0E1CE32BFF87D25BF7DA8A262603AB6F0C17E19D0CF667FC8C797BBC698C248",
+      "bytes": 3703,
+      "lines": 92,
+      "captured_at": "2026-10-14T02:36:55.3224549Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLAutomationBuilder.test.tsx",
+      "sha256": "BDF292F04737F30B4D2F679B6DF7A04B1D5B0F66F3F3CFF3BACFC336B2CFDD5A",
+      "bytes": 18616,
+      "lines": 495,
+      "captured_at": "2026-10-14T02:36:55.340491Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLAutomationBuilder.tsx",
+      "sha256": "11A367187BAF9397B971E74AC2EA93E335CFC0C362529FCB2F79DD346D7DAD91",
+      "bytes": 4305,
+      "lines": 111,
+      "captured_at": "2026-10-14T02:36:55.3417109Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLDashboardComposer.test.tsx",
+      "sha256": "1D84FE5EFB6D8F4A729DE792E97565EC92C42F7A8F4D25CB63B02BC3B426BF6B",
+      "bytes": 26805,
+      "lines": 690,
+      "captured_at": "2026-10-14T02:36:55.3443361Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLDashboardComposer.tsx",
+      "sha256": "FD995F9A3B18698FEBD9AE6783099F4EFA080BB7144D2FA07A30FC141C6B03EC",
+      "bytes": 8636,
+      "lines": 225,
+      "captured_at": "2026-10-14T02:36:55.3458862Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLDriveSearch.test.tsx",
+      "sha256": "81304A86CFB6AF533D8BDF04C22EE30886E5BA14B3CE3399C1EB0AD6A26F558B",
+      "bytes": 14591,
+      "lines": 410,
+      "captured_at": "2026-10-14T02:36:55.3655065Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLDriveSearch.tsx",
+      "sha256": "0C3B24DCBF7BEDC19FD436BF1D13853C3EF8A216BD3B50A1924CA73D8E0373EC",
+      "bytes": 2159,
+      "lines": 58,
+      "captured_at": "2026-10-14T02:36:55.3664181Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLGrafanaPanel.test.tsx",
+      "sha256": "B79F2DB7A47E6CD88A6D76629E397D30432A730110EE255CA9239D33F81E581B",
+      "bytes": 25689,
+      "lines": 674,
+      "captured_at": "2026-10-14T02:36:55.3690501Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLGrafanaPanel.tsx",
+      "sha256": "FA8B9912FCA3883D977BA1121581699CD2CA6FBD2EB5E7F3667297360A1556C1",
+      "bytes": 10667,
+      "lines": 281,
+      "captured_at": "2026-10-14T02:36:55.3705816Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLSearch.test.tsx",
+      "sha256": "EC996BC99B0FFEE1C1A808D305E20EA294504E4349F45015E7CDBB4AB70F8907",
+      "bytes": 13591,
+      "lines": 381,
+      "captured_at": "2026-10-14T02:36:55.3890749Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLSearch.tsx",
+      "sha256": "364DCA048B9F92794C5FF31BC4DBDE5CCA1B5A6236FD8D7974CC6C08F5214029",
+      "bytes": 2669,
+      "lines": 72,
+      "captured_at": "2026-10-14T02:36:55.3899473Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLSqlPlayground.test.tsx",
+      "sha256": "A820EC187C0153B72AA21A5815DF90D7D4C06A70AD10605E3F65F98D1A48684F",
+      "bytes": 26119,
+      "lines": 740,
+      "captured_at": "2026-10-14T02:36:55.3922796Z"
+    },
+    {
+      "file": "web/src/components/ai/AINLSqlPlayground.tsx",
+      "sha256": "AB52ADF86E91D3C92E7FA73FB54A8307BD35A432E9CE4A07A16B3F318E633E2D",
+      "bytes": 9461,
+      "lines": 239,
+      "captured_at": "2026-10-14T02:36:55.3954291Z"
+    },
+    {
+      "file": "web/src/components/ai/AiOutputPanel.test.tsx",
+      "sha256": "30D56F98064C935FCEF47E56590174BE6FA304681BA8AFE672A2F7C74CC87A3B",
+      "bytes": 13174,
+      "lines": 286,
+      "captured_at": "2026-10-14T02:36:55.3969194Z"
+    },
+    {
+      "file": "web/src/components/ai/AiOutputPanel.tsx",
+      "sha256": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+      "bytes": 4830,
+      "lines": 120,
+      "captured_at": "2026-10-14T02:36:55.3977431Z"
+    },
+    {
+      "file": "web/src/components/ai/AIPeriodCompareNarration.test.tsx",
+      "sha256": "854FC07B4D510EF751F79AC08EFFD2508F98E03B485071766EB288FBAC0A257E",
+      "bytes": 16394,
+      "lines": 462,
+      "captured_at": "2026-10-14T02:36:55.4168098Z"
+    },
+    {
+      "file": "web/src/components/ai/AIPeriodCompareNarration.tsx",
+      "sha256": "61F16632EC7E2A94E487DEE229CDDD3529BC812E4F3513B3F343C1C51E87A743",
+      "bytes": 5289,
+      "lines": 120,
+      "captured_at": "2026-10-14T02:36:55.4178424Z"
+    },
+    {
+      "file": "web/src/components/ai/AIPiiRedactionSharedExports.test.tsx",
+      "sha256": "21B5B35BCE3E1B809EA43749980B599B173E8964ED9E1823B8DD70FC6A114EA9",
+      "bytes": 16603,
+      "lines": 477,
+      "captured_at": "2026-10-14T02:36:55.4355554Z"
+    },
+    {
+      "file": "web/src/components/ai/AIPiiRedactionSharedExports.tsx",
+      "sha256": "4C25E609D73B60155E6076CBD6CE4534D91412CDF09CD07D2C23B88FE35C4902",
+      "bytes": 9072,
+      "lines": 221,
+      "captured_at": "2026-10-14T02:36:55.4380534Z"
+    },
+    {
+      "file": "web/src/components/ai/AIPredictiveMaintenance.test.tsx",
+      "sha256": "DEB1AD324ED61F2CA8C51E28986E4D891BDEA3C150C9F7280928DC5353819A50",
+      "bytes": 15453,
+      "lines": 412,
+      "captured_at": "2026-10-14T02:36:55.458338Z"
+    },
+    {
+      "file": "web/src/components/ai/AIPredictiveMaintenance.tsx",
+      "sha256": "81246CD1BC5EDC262B1F92D54800C64D5E8200D1363DAD280994A788488B5419",
+      "bytes": 7741,
+      "lines": 175,
+      "captured_at": "2026-10-14T02:36:55.4602494Z"
+    },
+    {
+      "file": "web/src/components/ai/AIPreheatPrecoolRecommender.test.tsx",
+      "sha256": "B1B16E3D29E37050E1C57B30F5B76F1622D354D1048504DAA7D12C526CC18F5A",
+      "bytes": 22474,
+      "lines": 625,
+      "captured_at": "2026-10-14T02:36:55.4803183Z"
+    },
+    {
+      "file": "web/src/components/ai/AIPreheatPrecoolRecommender.tsx",
+      "sha256": "E974648E9FE94669E03D455CDF27FC99B0B5843559B24E2F2B65DEB4F2A8C84C",
+      "bytes": 10740,
+      "lines": 239,
+      "captured_at": "2026-10-14T02:36:55.4823302Z"
+    },
+    {
+      "file": "web/src/components/ai/AIQuietHoursSuggestion.test.tsx",
+      "sha256": "848EC93506910FDDF431CA858E168D1B36FB917C3A63BAD55B132AA35D3BBC73",
+      "bytes": 32370,
+      "lines": 768,
+      "captured_at": "2026-10-14T02:36:55.5037601Z"
+    },
+    {
+      "file": "web/src/components/ai/AIQuietHoursSuggestion.tsx",
+      "sha256": "108BD3C662C7AD8877053B118319B0C11F7751E2514D28282C2455C79320ABDB",
+      "bytes": 11434,
+      "lines": 298,
+      "captured_at": "2026-10-14T02:36:55.5053812Z"
+    },
+    {
+      "file": "web/src/components/ai/AIRAGHelp.test.tsx",
+      "sha256": "DBA57AA9BC4426E555ED54BCEAAAD99E6E826BE77D8B3CBBF8EBCD8301419356",
+      "bytes": 14778,
+      "lines": 424,
+      "captured_at": "2026-10-14T02:36:55.5255173Z"
+    },
+    {
+      "file": "web/src/components/ai/AIRAGHelp.tsx",
+      "sha256": "5E7671F152FBA5A86E7C89D6BE5F3D14CCD39B112C9AD4C8573DCC14891BF734",
+      "bytes": 2082,
+      "lines": 55,
+      "captured_at": "2026-10-14T02:36:55.5265073Z"
+    },
+    {
+      "file": "web/src/components/ai/AIRangePrediction.test.tsx",
+      "sha256": "67637B5C48ECD5606A0FF8D723D3BE87B4E9B27BF06D6656F1555ED703927FFE",
+      "bytes": 15638,
+      "lines": 417,
+      "captured_at": "2026-10-14T02:36:55.5469032Z"
+    },
+    {
+      "file": "web/src/components/ai/AIRangePrediction.tsx",
+      "sha256": "814E04EC5716327D27F6BDE966B330EAE2D3F95D6A0E22F181BD8F17980879B4",
+      "bytes": 5011,
+      "lines": 113,
+      "captured_at": "2026-10-14T02:36:55.5487311Z"
+    },
+    {
+      "file": "web/src/components/ai/AIRouteEfficiencySuggestions.test.tsx",
+      "sha256": "529439F5071CE6862A47C8F13426E9C4AD9830C780F6685B3A1F4F5B25F06445",
+      "bytes": 14628,
+      "lines": 395,
+      "captured_at": "2026-10-14T02:36:55.550648Z"
+    },
+    {
+      "file": "web/src/components/ai/AIRouteEfficiencySuggestions.tsx",
+      "sha256": "8601E581E93B48AE111AFE7F44E20D21D7B9D14A47A32E380B1945367B9927E8",
+      "bytes": 4237,
+      "lines": 96,
+      "captured_at": "2026-10-14T02:36:55.5529607Z"
+    },
+    {
+      "file": "web/src/components/ai/AISafetySettingExplainer.test.tsx",
+      "sha256": "F50AA05DB849DA0D6749E2AE5DED74CB5FD0E9DAE61A327473DD6D1315394B5D",
+      "bytes": 18857,
+      "lines": 513,
+      "captured_at": "2026-10-14T02:36:55.5549828Z"
+    },
+    {
+      "file": "web/src/components/ai/AISafetySettingExplainer.tsx",
+      "sha256": "CC4924B4D7C5FAE6D9A3045EA6AF0B80DD801A2DF0EED03F570568B65409D9F9",
+      "bytes": 5909,
+      "lines": 146,
+      "captured_at": "2026-10-14T02:36:55.555919Z"
+    },
+    {
+      "file": "web/src/components/ai/AISignalExplorerNlFilter.test.tsx",
+      "sha256": "FA99F9665E96D361A51AD5FE72F666513B064C2527B2A4F1EE59214F4F4E55A2",
+      "bytes": 27396,
+      "lines": 722,
+      "captured_at": "2026-10-14T02:36:55.5748712Z"
+    },
+    {
+      "file": "web/src/components/ai/AISignalExplorerNlFilter.tsx",
+      "sha256": "859456C6C5ACAEF9E755C159B91A645E4CB8322E6278C5E4D7C7ED1553B69A8F",
+      "bytes": 10400,
+      "lines": 253,
+      "captured_at": "2026-10-14T02:36:55.5767343Z"
+    },
+    {
+      "file": "web/src/components/ai/AISmartChargeScheduleSuggestion.test.tsx",
+      "sha256": "41F05012892B1F5F068188E2EECC43F90469B8F55730846B17A036B494A95090",
+      "bytes": 17207,
+      "lines": 478,
+      "captured_at": "2026-10-14T02:36:55.5982105Z"
+    },
+    {
+      "file": "web/src/components/ai/AISmartChargeScheduleSuggestion.tsx",
+      "sha256": "164A13BC86BA7DF2D971126B3C47006FBC2E335248DBEB8573760D43AA5AFF78",
+      "bytes": 5254,
+      "lines": 140,
+      "captured_at": "2026-10-14T02:36:55.5995109Z"
+    },
+    {
+      "file": "web/src/components/ai/AISoftwareUpdateChangelogSummarizer.test.tsx",
+      "sha256": "8136115856D3B9B20ECECA7BCD8FC34D7180F60282E7722F0715061E18AEB6FC",
+      "bytes": 17077,
+      "lines": 451,
+      "captured_at": "2026-10-14T02:36:55.6181235Z"
+    },
+    {
+      "file": "web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx",
+      "sha256": "B14C1F732631ADE27F7B678E60F096F50D36FE292B99CE57368B7AE28D28C5B1",
+      "bytes": 8131,
+      "lines": 187,
+      "captured_at": "2026-10-14T02:36:55.6193556Z"
+    },
+    {
+      "file": "web/src/components/ai/AISpeedProfileInsights.test.tsx",
+      "sha256": "49BF57EE59FC9FA872986648B4C2560F91F25D03D06738A3E9FC5ECE07F2CD77",
+      "bytes": 15970,
+      "lines": 421,
+      "captured_at": "2026-10-14T02:36:55.6375502Z"
+    },
+    {
+      "file": "web/src/components/ai/AISpeedProfileInsights.tsx",
+      "sha256": "4E8A08788961B82EF5A366C719CAC3E4D50B2E778ACEB0182061465D0AF739DE",
+      "bytes": 4175,
+      "lines": 99,
+      "captured_at": "2026-10-14T02:36:55.63859Z"
+    },
+    {
+      "file": "web/src/components/ai/AIStateMachineDebuggerNarrator.test.tsx",
+      "sha256": "A117B971DB07BBCD85871D0FA09DDA110146AB0B9E822E35ACA11FD399C599AD",
+      "bytes": 19070,
+      "lines": 552,
+      "captured_at": "2026-10-14T02:36:55.6556864Z"
+    },
+    {
+      "file": "web/src/components/ai/AIStateMachineDebuggerNarrator.tsx",
+      "sha256": "BADDDF2561258C51636E11EA79325EEB14198E101298492ABA30D37FAEF09D5E",
+      "bytes": 8868,
+      "lines": 204,
+      "captured_at": "2026-10-14T02:36:55.6570681Z"
+    },
+    {
+      "file": "web/src/components/ai/AISuggestNewGeofences.test.tsx",
+      "sha256": "7D511ACFFDB53F6C53F8E8636BCBD9EB64683236FFA8CF8F9C5E3D903AE3C447",
+      "bytes": 28046,
+      "lines": 789,
+      "captured_at": "2026-10-14T02:36:55.6598604Z"
+    },
+    {
+      "file": "web/src/components/ai/AISuggestNewGeofences.tsx",
+      "sha256": "AD67748DF9EC7C2EA962C4108B2192D0AA9EB9ABBD7D9AF4D579A6623661BEC3",
+      "bytes": 11318,
+      "lines": 308,
+      "captured_at": "2026-10-14T02:36:55.6615864Z"
+    },
+    {
+      "file": "web/src/components/ai/AITCONarration.test.tsx",
+      "sha256": "10B5F57CC9DC44D9B91A136512C5410F53B5494199CACBDE973E5C9CA413248A",
+      "bytes": 15482,
+      "lines": 429,
+      "captured_at": "2026-10-14T02:36:55.681411Z"
+    },
+    {
+      "file": "web/src/components/ai/AITCONarration.tsx",
+      "sha256": "B937F9EAE5E6BF00541F478288261B4295FD64DCE132878BD8F749596CC425B0",
+      "bytes": 7586,
+      "lines": 174,
+      "captured_at": "2026-10-14T02:36:55.6842357Z"
+    },
+    {
+      "file": "web/src/components/ai/AIThinkingIndicator.test.tsx",
+      "sha256": "A5E69904F2CF1660B1383FCAAD05A3FF68C782D28583CCCB4585B4A25A730063",
+      "bytes": 5402,
+      "lines": 123,
+      "captured_at": "2026-10-14T02:36:55.6853822Z"
+    },
+    {
+      "file": "web/src/components/ai/AIThinkingIndicator.tsx",
+      "sha256": "9F387482D09223469A93BB71B25D6B5800D8FEC6B51B0EF5481AE4B27FC8037D",
+      "bytes": 4998,
+      "lines": 105,
+      "captured_at": "2026-10-14T02:36:55.6865257Z"
+    },
+    {
+      "file": "web/src/components/ai/AITirePressureTrendReasoning.test.tsx",
+      "sha256": "A503D5E4510B97C9C54DBA72AA174657ABE8FABC47753008BCAB99EAB7C4A331",
+      "bytes": 18178,
+      "lines": 487,
+      "captured_at": "2026-10-14T02:36:55.7071075Z"
+    },
+    {
+      "file": "web/src/components/ai/AITirePressureTrendReasoning.tsx",
+      "sha256": "6ED27CFFA4B31AB2279875800C010833B18A98EF36B48609F9C9A737B88565C7",
+      "bytes": 7553,
+      "lines": 164,
+      "captured_at": "2026-10-14T02:36:55.7146874Z"
+    },
+    {
+      "file": "web/src/components/ai/AITripPlannerLLMAgent.test.tsx",
+      "sha256": "1D52985CE6D8B85FCF345641F5EE00ED95687BEA94E51B704CD5AE4AF7369B50",
+      "bytes": 22452,
+      "lines": 672,
+      "captured_at": "2026-10-14T02:36:55.7264974Z"
+    },
+    {
+      "file": "web/src/components/ai/AITripPlannerLLMAgent.tsx",
+      "sha256": "56F3E7D23EF694B6CE21B150DC44A00AAE928E270BA07022E3E5CD3488625E55",
+      "bytes": 4167,
+      "lines": 133,
+      "captured_at": "2026-10-14T02:36:55.7378031Z"
+    },
+    {
+      "file": "web/src/components/ai/AITripPostcardShareCardImageGeneration.test.tsx",
+      "sha256": "1F53998FCD66146A9302942C88833456EA39AFC373B6E86282F7490086747DD0",
+      "bytes": 18138,
+      "lines": 485,
+      "captured_at": "2026-10-14T02:36:55.7760454Z"
+    },
+    {
+      "file": "web/src/components/ai/AITripPostcardShareCardImageGeneration.tsx",
+      "sha256": "697966A5358EE3E69D747316CF15E8971CB62F2DEDF0742D16FBA4C91A6681E2",
+      "bytes": 5494,
+      "lines": 130,
+      "captured_at": "2026-10-14T02:36:55.7806256Z"
+    },
+    {
+      "file": "web/src/components/ai/AIVampireDrainExplanation.test.tsx",
+      "sha256": "A51A92505C69534599E4E48387743C41DBE1AB33C3FC697887BC2C17E348FB2D",
+      "bytes": 17593,
+      "lines": 477,
+      "captured_at": "2026-10-14T02:36:55.8075022Z"
+    },
+    {
+      "file": "web/src/components/ai/AIVampireDrainExplanation.tsx",
+      "sha256": "FDF5E24B09428AFBE249CD705E60A3148D4C2A3F73493EFC77B36634E954789D",
+      "bytes": 7673,
+      "lines": 174,
+      "captured_at": "2026-10-14T02:36:55.8095199Z"
+    },
+    {
+      "file": "web/src/components/ai/AIVehiclePaintPreview.test.tsx",
+      "sha256": "B0EA02C381BBE96DD025F4913D89FE9A0EBC7FB47F01ADE69194DF63F5BEAF5D",
+      "bytes": 14394,
+      "lines": 384,
+      "captured_at": "2026-10-14T02:36:55.8335562Z"
+    },
+    {
+      "file": "web/src/components/ai/AIVehiclePaintPreview.tsx",
+      "sha256": "3BA58574FB1BD48D9013A0F20CD2366019C38B02068D0710070CF0A98BE96E3F",
+      "bytes": 6255,
+      "lines": 146,
+      "captured_at": "2026-10-14T02:36:55.8356654Z"
+    },
+    {
+      "file": "web/src/components/ai/AIVoiceMode.test.tsx",
+      "sha256": "21AAB5A752340540AFFEA9A3B5F9D269E322FD254E4300AE94C29A1F4565905A",
+      "bytes": 26166,
+      "lines": 732,
+      "captured_at": "2026-10-14T02:36:55.8564224Z"
+    },
+    {
+      "file": "web/src/components/ai/AIVoiceMode.tsx",
+      "sha256": "07FCCD5BF09B37BA3E5729D33910B06600F8C837E01056C39852505FDEF18499",
+      "bytes": 20595,
+      "lines": 597,
+      "captured_at": "2026-10-14T02:36:55.8606284Z"
+    },
+    {
+      "file": "web/src/components/ai/AIWatchFaceNLResponse.test.tsx",
+      "sha256": "6C9AFE288838FC2247E383DCBA87E028156135D9B4992E353609494421E74B67",
+      "bytes": 23963,
+      "lines": 634,
+      "captured_at": "2026-10-14T02:36:55.8795874Z"
+    },
+    {
+      "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx",
+      "sha256": "F56FF714E3AD17B5FEB97E432529C852AC1085605C595CDB93838919E857E93D",
+      "bytes": 8387,
+      "lines": 194,
+      "captured_at": "2026-10-14T02:36:55.881463Z"
+    },
+    {
+      "file": "web/src/components/ai/AIYearReviewNarration.test.tsx",
+      "sha256": "DA11512DFEADF25C4922362502EFC9B6E2D67E248333D8B8CB9AA6CE5BE737C3",
+      "bytes": 14617,
+      "lines": 378,
+      "captured_at": "2026-10-14T02:36:55.901624Z"
+    },
+    {
+      "file": "web/src/components/ai/AIYearReviewNarration.tsx",
+      "sha256": "6E6109BF1E52BDD0A95A516B15DF47665758F2D188DE8F7F53CBC722E332C14E",
+      "bytes": 2704,
+      "lines": 68,
+      "captured_at": "2026-10-14T02:36:55.9031247Z"
+    },
+    {
+      "file": "web/src/components/ai/automationDraftInput.ts",
+      "sha256": "74131FE9A5288C9C665E5C6923625C538B4657C201CF83DBF2B3321F04A9AE80",
+      "bytes": 5621,
+      "lines": 112,
+      "captured_at": "2026-10-14T02:36:55.904638Z"
+    },
+    {
+      "file": "web/src/components/ai/ConfirmDialog.tsx",
+      "sha256": "AEC0ADF7C45264772751B4FEECE45BBEB6C2861AFA15182581D59B2C8872957C",
+      "bytes": 4657,
+      "lines": 135,
+      "captured_at": "2026-10-14T02:36:55.905821Z"
+    },
+    {
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "sha256": "953592D2D52D941B7FCDE3F30FDED6DECB432C7CD7E0BD5A16A6D495DEC61076",
+      "bytes": 4538,
+      "lines": 141,
+      "captured_at": "2026-10-14T02:36:55.9069868Z"
+    },
+    {
+      "file": "web/src/components/ai/index.test.ts",
+      "sha256": "C027039146BAD690F91150F65161903AF981CA991CA37F707B3F0C0D1DFFE7CA",
+      "bytes": 1730,
+      "lines": 31,
+      "captured_at": "2026-10-14T02:36:55.9165418Z"
+    },
+    {
+      "file": "web/src/components/ai/index.ts",
+      "sha256": "E5125F596C27A6A34E311FBC08AA939CBD925C9572B2BBC5DAD08231A67BC178",
+      "bytes": 5542,
+      "lines": 64,
+      "captured_at": "2026-10-14T02:36:55.9178531Z"
+    },
+    {
+      "file": "web/src/components/ai/withAiFeature.test.tsx",
+      "sha256": "653C81D8E483623D2EDCCCD61732961F762FD61CD387FDED95166CDFE770082E",
+      "bytes": 3780,
+      "lines": 107,
+      "captured_at": "2026-10-14T02:36:55.9189331Z"
+    },
+    {
+      "file": "web/src/components/ai/withAiFeature.tsx",
+      "sha256": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+      "bytes": 2255,
+      "lines": 60,
+      "captured_at": "2026-10-14T02:36:55.9197795Z"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "bytes": 658,
+      "lines": 17,
+      "captured_at": "2026-10-14T02:36:55.9204642Z"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "bytes": 10783,
+      "lines": 259,
+      "captured_at": "2026-10-14T02:36:55.9221583Z"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "bytes": 5174,
+      "lines": 93,
+      "captured_at": "2026-10-14T02:36:55.9234803Z"
+    },
+    {
+      "file": "web/src/components/ui/Drawer.tsx",
+      "sha256": "F4E17BA0F8C43C4C567FEDF3CB17D3E7F27FF13B2219F45C9BD62CEBE1F7F72D",
+      "bytes": 6711,
+      "lines": 211,
+      "captured_at": "2026-10-14T02:36:55.925543Z"
+    },
+    {
+      "file": "web/src/components/ui/Textarea.tsx",
+      "sha256": "6DE5EFA5B3F0077C97712BE4FC7C3B436DF47A4C803012CAE8CB0756BAD2DB75",
+      "bytes": 4609,
+      "lines": 115,
+      "captured_at": "2026-10-14T02:36:55.9268146Z"
+    },
+    {
+      "file": "web/src/features/system/__tests__/ChatbotAIOff.test.tsx",
+      "sha256": "F70970B0CE9DCA4B7CC563D73AAA6357A54D2457E08CA4B10CBFA1A40E086719",
+      "bytes": 3473,
+      "lines": 97,
+      "captured_at": "2026-10-14T02:36:55.9280289Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/ChatMessageItem.test.tsx",
+      "sha256": "8DFA44E8EA48077C7E5D2435FD5CDF7617ADB9FB88F2C822EBAB5149EF7157F8",
+      "bytes": 15709,
+      "lines": 390,
+      "captured_at": "2026-10-14T02:36:55.9304101Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/ChatMessageItem.tsx",
+      "sha256": "FF34C5D9BD4BBD1AF224F85E59030DA97143902707F28ED6E4342213AC1CC308",
+      "bytes": 9577,
+      "lines": 269,
+      "captured_at": "2026-10-14T02:36:55.9322055Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/ChatWelcome.test.tsx",
+      "sha256": "4E077EF6046AEF1232C8132E21FA81D9975F11240F1371FA6557FFC01E9DEE45",
+      "bytes": 7745,
+      "lines": 195,
+      "captured_at": "2026-10-14T02:36:55.9336899Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/ChatWelcome.tsx",
+      "sha256": "33F59CB63E2E1C23ACD818648ABD832AB504C0B6A3080F33CCCB00C8F9BA5509",
+      "bytes": 1858,
+      "lines": 51,
+      "captured_at": "2026-10-14T02:36:55.9345783Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/CodeBlock.test.tsx",
+      "sha256": "7F26C103B5F636ADDE2316AB513A163EF00D5454985415535DA91E7069F30B59",
+      "bytes": 6591,
+      "lines": 174,
+      "captured_at": "2026-10-14T02:36:55.9361188Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/CodeBlock.tsx",
+      "sha256": "42BCC56141C00A20E7CCB043EB6E6F4A7A2FE708FB0466FA37B5507EDFBDCD58",
+      "bytes": 1584,
+      "lines": 45,
+      "captured_at": "2026-10-14T02:36:55.9370329Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/KnowledgeCitations.tsx",
+      "sha256": "2FF11AECDBDB60044A72F697912F9D75DCFBA605C6D19319566C1159E53BCCE6",
+      "bytes": 2132,
+      "lines": 48,
+      "captured_at": "2026-10-14T02:36:55.9379287Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/knowledgeEvidence.test.ts",
+      "sha256": "61C87694C4D77E2B1525B0389E85B2047000DF35BF52445B9C6738CBE4AF7B52",
+      "bytes": 1876,
+      "lines": 42,
+      "captured_at": "2026-10-14T02:36:55.9389824Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/knowledgeEvidence.ts",
+      "sha256": "3B640CC3EE4E9D20EEFE7547F15E4526F107B7EB8A9B2BF3A18A35DFBC6D9343",
+      "bytes": 2257,
+      "lines": 60,
+      "captured_at": "2026-10-14T02:36:55.9400166Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/MarkdownRenderer.test.tsx",
+      "sha256": "A6B24ABD18CACADA970D782AA1566BE611E9F698C674F57171A1232751933FF3",
+      "bytes": 10534,
+      "lines": 197,
+      "captured_at": "2026-10-14T02:36:55.9415278Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/MarkdownRenderer.tsx",
+      "sha256": "2D37EA0290B3891E2BE4284F0BD276E8C9ECB96CD09DBABF80A8B2A0F194BD15",
+      "bytes": 5934,
+      "lines": 165,
+      "captured_at": "2026-10-14T02:36:55.9430329Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/SessionList.test.tsx",
+      "sha256": "B48E355F74E6881406A64A55E7C99C7B437B8B1F15AB64FCB3036556BB160CBE",
+      "bytes": 12511,
+      "lines": 298,
+      "captured_at": "2026-10-14T02:36:55.9618721Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/SessionList.tsx",
+      "sha256": "A2B81F615FD56D941C595DF1D9D980B40DB5B1707DFAD5B797A243E9EDB35A0D",
+      "bytes": 9749,
+      "lines": 261,
+      "captured_at": "2026-10-14T02:36:55.964465Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/SuggestedPrompts.test.tsx",
+      "sha256": "3133577C811B11EB2701E977DEE79B7B7A0998095B317D0E554463E27AEED967",
+      "bytes": 5546,
+      "lines": 140,
+      "captured_at": "2026-10-14T02:36:55.9659646Z"
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/SuggestedPrompts.tsx",
+      "sha256": "A693D4E2B715CD48ACF189628F01FF8D8DB2159574C3C8C865E91220A913459A",
+      "bytes": 3013,
+      "lines": 89,
+      "captured_at": "2026-10-14T02:36:55.9670332Z"
+    },
+    {
+      "file": "web/src/features/system/pages/ChatbotPage.test.tsx",
+      "sha256": "5AC5A008337B0EDC1C4B7CC4FB8750AEB90AFB30D334FA07217DD9FF0E9EEE47",
+      "bytes": 30097,
+      "lines": 857,
+      "captured_at": "2026-10-14T02:36:55.9727907Z"
+    },
+    {
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "sha256": "E2A1D211E939C74175D4EF571838095EC85454D187931D7A05E67C03E3BEC31F",
+      "bytes": 38902,
+      "lines": 1077,
+      "captured_at": "2026-10-14T02:36:55.9777283Z"
+    },
+    {
+      "file": "web/src/hooks/__tests__/useAiStream.test.ts",
+      "sha256": "4E90501EB6AFC2FCCD498A3C38524F6C30038B10AA472508F1ECD645DBA7A95A",
+      "bytes": 32707,
+      "lines": 847,
+      "captured_at": "2026-10-14T02:36:55.9817679Z"
+    },
+    {
+      "file": "web/src/hooks/useAiEnabled.test.tsx",
+      "sha256": "7376A394BFFF7C938A706CDD251A90B11C68C3A0CD371DCCD5AD7A87AB923497",
+      "bytes": 3890,
+      "lines": 104,
+      "captured_at": "2026-10-14T02:36:55.9828158Z"
+    },
+    {
+      "file": "web/src/hooks/useAiEnabled.ts",
+      "sha256": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+      "bytes": 1681,
+      "lines": 39,
+      "captured_at": "2026-10-14T02:36:55.983718Z"
+    },
+    {
+      "file": "web/src/hooks/useAiStream.ts",
+      "sha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+      "bytes": 23120,
+      "lines": 617,
+      "captured_at": "2026-10-14T02:36:55.9868379Z"
+    },
+    {
+      "file": "web/src/hooks/useMediaQuery.ts",
+      "sha256": "4E3887DAA49D5D772C93BCD7FE373382D97A778850CD31FB8CF6EF22AFB6C582",
+      "bytes": 2685,
+      "lines": 70,
+      "captured_at": "2026-10-14T02:36:55.9881673Z"
+    },
+    {
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "sha256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+      "bytes": 2081,
+      "lines": 49,
+      "captured_at": "2026-10-14T02:36:55.9889694Z"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "sha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "bytes": 1843667,
+      "lines": 39002,
+      "captured_at": "2026-10-14T02:36:56.2839591Z"
+    },
+    {
+      "file": "web/src/i18n/en/locale-detail-chatbot.json",
+      "sha256": "EB18BB593DE9F14A9F519A5C7805F91CB464CC5C5BA3403B5957A96EB20B30D1",
+      "bytes": 2981,
+      "lines": 76,
+      "captured_at": "2026-10-14T02:36:56.2856144Z"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "bytes": 4411,
+      "lines": 168,
+      "captured_at": "2026-10-14T02:36:56.2871051Z"
+    },
+    {
+      "file": "web/src/api/devtools.ts",
+      "sha256": "199A63E65265E4A2787F700C180042E22FAED5EB1E1D97F6027EF72DBCBF6F4C",
+      "bytes": 11149,
+      "lines": 272,
+      "captured_at": "2026-10-14T02:39:15.4781759Z"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "bytes": 18863,
+      "lines": 462,
+      "captured_at": "2026-10-14T02:39:15.4852707Z"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "bytes": 5230,
+      "lines": 148,
+      "captured_at": "2026-10-14T02:39:15.487255Z"
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "sha256": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+      "bytes": 5253,
+      "lines": 146,
+      "captured_at": "2026-10-14T02:39:15.4893568Z"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMode.tsx",
+      "sha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+      "bytes": 3188,
+      "lines": 116,
+      "captured_at": "2026-10-14T02:39:15.4915718Z"
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "sha256": "04BDAA937938F96AF3B2D39B8236608063DE83D7A530DB8C67FE6BD1DEE120A3",
+      "bytes": 20093,
+      "lines": 439,
+      "captured_at": "2026-10-14T02:39:15.4942591Z"
+    },
+    {
+      "file": "web/src/ai/features.ts",
+      "sha256": "A9E780C3591933FB3553872D249E3CF7F19B28F8E22DF6FCDBAF957C8E5C2EED",
+      "bytes": 77019,
+      "lines": 743,
+      "captured_at": "2026-10-14T02:39:15.5135849Z"
+    },
+    {
+      "file": "web/src/features/system/__tests__/TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx",
+      "sha256": "2CEB7BF479004A8C7EE8D3AAAAB97B61721DE6DFB72F8360FB0A504A8B7F90AE",
+      "bytes": 8553,
+      "lines": 224,
+      "captured_at": "2026-10-14T02:39:15.5163035Z"
+    },
+    {
+      "file": "web/src/features/system/__tests__/TestVoiceModeAIOnWiredCallsRoute.test.tsx",
+      "sha256": "1355D16FB93748948DDCEE9EF47269B44231E92DCDB3BB4293E4F85598E2E30A",
+      "bytes": 12572,
+      "lines": 362,
+      "captured_at": "2026-10-14T02:39:15.5183005Z"
+    },
+    {
+      "file": "internal/api/ai_routes.go",
+      "sha256": "F0BCBD1B33717F76EFA91855587A239B03E8111956862F4906842251BAAC54B3",
+      "bytes": 95554,
+      "lines": 1831,
+      "captured_at": "2026-10-14T02:42:53.867831Z"
+    }
+  ],
+  "test_inventory": [
+    {
+      "file": "web/src/api/hooks/useChat.test.tsx",
+      "literal_declarations": 16,
+      "names": [
+        {
+          "line": 96,
+          "text": "it('exposes a stable root and derived key tuples', () => {"
+        },
+        {
+          "line": 102,
+          "text": "it('scopes history keys per session id', () => {"
+        },
+        {
+          "line": 109,
+          "text": "it('GETs /chatbot/sessions with an abort signal and surfaces the list', async () => {"
+        },
+        {
+          "line": 126,
+          "text": "it('surfaces request errors as isError', async () => {"
+        },
+        {
+          "line": 137,
+          "text": "it('GETs /chatbot/history?session_id=<id> with a signal and returns messages', async () => {"
+        },
+        {
+          "line": 152,
+          "text": "it('is disabled (fires no request) when sessionId is empty', async () => {"
+        },
+        {
+          "line": 165,
+          "text": "it('PATCHes /chatbot/sessions/{id} and trims the title in the optimistic cache', async () => {"
+        },
+        {
+          "line": 189,
+          "text": "it('clears the override (null) when renamed to a whitespace-only string', async () => {"
+        },
+        {
+          "line": 205,
+          "text": "it('URL-encodes the session id in the PATCH path', async () => {"
+        },
+        {
+          "line": 217,
+          "text": "it('rejects and flags isError (routed to the error toast) on failure', async () => {"
+        },
+        {
+          "line": 233,
+          "text": "it('DELETEs /chatbot/sessions/{id}, drops the row, and evicts its history', async () => {"
+        },
+        {
+          "line": 257,
+          "text": "it('rejects and flags isError on failure', async () => {"
+        },
+        {
+          "line": 273,
+          "text": "it('POSTs /chatbot with message + session_id and invokes the caller onSuccess', async () => {"
+        },
+        {
+          "line": 292,
+          "text": "it('omits session_id from the body when the caller does not supply one', async () => {"
+        },
+        {
+          "line": 306,
+          "text": "it('invokes the caller-provided onError and suppresses the fallback toast', async () => {"
+        },
+        {
+          "line": 324,
+          "text": "it('falls back to an assertive error toast when the caller omits onError', async () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/components/ai/AIChatbotIndicator.test.tsx",
+      "literal_declarations": 10,
+      "names": [
+        {
+          "line": 88,
+          "text": "it('renders nothing when ai_mode=off even with the chatbot-llm toggle on', () => {"
+        },
+        {
+          "line": 100,
+          "text": "it('renders nothing when a non-off mode has the chatbot-llm toggle set to false', () => {"
+        },
+        {
+          "line": 111,
+          "text": "it('renders nothing when the chatbot-llm flag is entirely absent from ai_features', () => {"
+        },
+        {
+          "line": 122,
+          "text": "it('renders nothing (fail-closed) when the settings query has not resolved yet', () => {"
+        },
+        {
+          "line": 133,
+          "text": "it('renders the badge inside the data-ai-feature marker root when mode=local + toggle on', () => {"
+        },
+        {
+          "line": 144,
+          "text": "it('also renders when mode=cloud (both non-off modes pass the gate)', () => {"
+        },
+        {
+          "line": 159,
+          "text": "it('exposes the chip as a labelled image so screen readers announce a stable name', () => {"
+        },
+        {
+          "line": 169,
+          "text": "it('marks the Helix glyph decorative so it is not announced twice', () => {"
+        },
+        {
+          "line": 178,
+          "text": "it('carries the long-form explanation on the title attribute for a hover tooltip', () => {"
+        },
+        {
+          "line": 189,
+          "text": "it('exposes a stable displayName for React DevTools and the lazy loader', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/components/ai/AIFeatureCard.test.tsx",
+      "literal_declarations": 29,
+      "names": [
+        {
+          "line": 64,
+          "text": "it('renders the default Helix label with the brand tooltip, accessible name, and a decorative icon', () => {"
+        },
+        {
+          "line": 81,
+          "text": "it('honours a custom label override while keeping the Helix accessible name', () => {"
+        },
+        {
+          "line": 93,
+          "text": "it('renders the title as a level-3 heading, the description, and the Helix badge', () => {"
+        },
+        {
+          "line": 113,
+          "text": "it('applies a custom badge label inside the card header', () => {"
+        },
+        {
+          "line": 130,
+          "text": "it('passes shared stream activity into the Helix evidence trail', () => {"
+        },
+        {
+          "line": 158,
+          "text": "it('shows the empty hint when canStart is false and a hint is supplied', () => {"
+        },
+        {
+          "line": 173,
+          "text": "it('hides the empty hint once canStart flips to true', () => {"
+        },
+        {
+          "line": 192,
+          "text": "it('renders the universal Ask Helix CTA with a per-feature accessible name and tooltip', () => {"
+        },
+        {
+          "line": 219,
+          "text": "it('lets buttonTitle override the tooltip while keeping the aria-label verb', () => {"
+        },
+        {
+          "line": 236,
+          "text": "it('exposes the action button through buttonTestId when supplied', () => {"
+        },
+        {
+          "line": 253,
+          "text": "it('disables the button and mirrors aria-disabled when canStart is false', () => {"
+        },
+        {
+          "line": 270,
+          "text": "it('shows the thinking label, disables, and announces aria-busy while streaming', () => {"
+        },
+        {
+          "line": 292,
+          "text": "it('calls stream.start() on click when no onAction override is supplied', () => {"
+        },
+        {
+          "line": 308,
+          "text": "it('calls onAction instead of stream.start() when an override is supplied', () => {"
+        },
+        {
+          "line": 327,
+          "text": "it('swallows the click while disabled (canStart false) so no stream fires', () => {"
+        },
+        {
+          "line": 343,
+          "text": "it('swallows the click while streaming (double-submit guard via disabled)', () => {"
+        },
+        {
+          "line": 361,
+          "text": "it.each(["
+        },
+        {
+          "line": 400,
+          "text": "it('retains the action override and blocks unavailable and streaming repeats inside a form', async () => {"
+        },
+        {
+          "line": 447,
+          "text": "it('allows the existing inline action and title to wrap without hiding card content', () => {"
+        },
+        {
+          "line": 466,
+          "text": "it('retains streaming state and accessible action identity with an adaptive label', () => {"
+        },
+        {
+          "line": 486,
+          "text": "it('coerces the button below and after the inputSlot even when placement is inline', () => {"
+        },
+        {
+          "line": 506,
+          "text": "it('renders children between the action button and the output panel', () => {"
+        },
+        {
+          "line": 527,
+          "text": "it('nests the button in the header row when placement is inline (default)', () => {"
+        },
+        {
+          "line": 545,
+          "text": "it('lifts the button into its own row when placement is below', () => {"
+        },
+        {
+          "line": 566,
+          "text": "it('keeps the header, input and domain content through paused, failed and done-empty streams', () => {"
+        },
+        {
+          "line": 620,
+          "text": "it('renders no output panel while idle with no accumulated text', () => {"
+        },
+        {
+          "line": 634,
+          "text": "it('renders the accumulated stream text in the output panel when done', () => {"
+        },
+        {
+          "line": 649,
+          "text": "it('surfaces a stream error inside the output panel', () => {"
+        },
+        {
+          "line": 665,
+          "text": "it('shows the thinking indicator while streaming before any text arrives', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/components/ai/AiOutputPanel.test.tsx",
+      "literal_declarations": 22,
+      "names": [
+        {
+          "line": 37,
+          "text": "it('renders nothing when idle with no accumulated text', () => {"
+        },
+        {
+          "line": 43,
+          "text": "it('renders nothing when paused-confirm with no text (the dialog owns the UI)', () => {"
+        },
+        {
+          "line": 49,
+          "text": "it('shows accumulated text even while idle once some text exists', () => {"
+        },
+        {
+          "line": 59,
+          "text": "it('shows the animated thinking indicator while streaming with no text yet', () => {"
+        },
+        {
+          "line": 69,
+          "text": "it('renders the accumulated text (not the indicator) once deltas arrive', () => {"
+        },
+        {
+          "line": 75,
+          "text": "it('renders a custom pendingChild in place of the default indicator', () => {"
+        },
+        {
+          "line": 86,
+          "text": "it('omits the placeholder entirely when pendingChild is explicitly null', () => {"
+        },
+        {
+          "line": 97,
+          "text": "it('renders the error message inside an assertive alert region', () => {"
+        },
+        {
+          "line": 104,
+          "text": "it('falls back to \"unknown\" when the error message is null', () => {"
+        },
+        {
+          "line": 109,
+          "text": "it('prioritizes the error while keeping incomplete accumulated text readable', () => {"
+        },
+        {
+          "line": 121,
+          "text": "it('does not fabricate a narrative or completion summary for an empty failed stream', () => {"
+        },
+        {
+          "line": 129,
+          "text": "it('retains the literal string zero and unknown failure without inventing freshness', () => {"
+        },
+        {
+          "line": 138,
+          "text": "it('keeps partial prose selectable verbatim alongside failed evidence without a done summary', () => {"
+        },
+        {
+          "line": 165,
+          "text": "it('keeps the real feature retry available and preserves streaming, paused and done phases', () => {"
+        },
+        {
+          "line": 193,
+          "text": "it('marks the decorative brand mark aria-hidden so the alert reads cleanly', () => {"
+        },
+        {
+          "line": 202,
+          "text": "it('renders the completed narrative with whitespace preserved', () => {"
+        },
+        {
+          "line": 210,
+          "text": "it('shows an explicit empty-state message when done with no output (never a blank panel)', () => {"
+        },
+        {
+          "line": 222,
+          "text": "it('renders successful and failed evidence sources without exposing payloads', () => {"
+        },
+        {
+          "line": 245,
+          "text": "it('uses existing surface and shape roles without fixed white chrome', () => {"
+        },
+        {
+          "line": 255,
+          "text": "it('keeps long RTL prose and markup literal with wrapping and paragraph breaks', () => {"
+        },
+        {
+          "line": 264,
+          "text": "it('keeps error semantics and long messages using the theme danger role', () => {"
+        },
+        {
+          "line": 274,
+          "text": "it('preserves evidence-only paused streams and clears them on a caller scope reset', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/components/ai/AIVoiceMode.test.tsx",
+      "literal_declarations": 18,
+      "names": [
+        {
+          "line": 300,
+          "text": "it('renders nothing when ai_mode=off even with the voice-mode toggle on', () => {"
+        },
+        {
+          "line": 316,
+          "text": "it('renders the fully-composed panel (positive control) when ai_mode=cloud AND the toggle is on', () => {"
+        },
+        {
+          "line": 364,
+          "text": "it('commits only final results and never duplicates interim revisions (regression guard)', async () => {"
+        },
+        {
+          "line": 392,
+          "text": "it('shows interim text as an ephemeral preview that does not enable send', async () => {"
+        },
+        {
+          "line": 412,
+          "text": "it('joins successive final utterances with a single space', async () => {"
+        },
+        {
+          "line": 431,
+          "text": "it('keeps send disabled with a hint until a transcript is dictated, then enables it', async () => {"
+        },
+        {
+          "line": 447,
+          "text": "it('POSTs exactly once to /api/v1/ai/voice/chat with the transcript + a session id and renders the first delta', async () => {"
+        },
+        {
+          "line": 486,
+          "text": "it('coalesces a second click while streaming into a no-op (double-submit guard)', async () => {"
+        },
+        {
+          "line": 509,
+          "text": "it('surfaces the stream error when the backend returns a non-2xx status', async () => {"
+        },
+        {
+          "line": 530,
+          "text": "it('speaks each complete sentence from streamed deltas and flushes the tail on done', async () => {"
+        },
+        {
+          "line": 555,
+          "text": "it('mutes spoken replies when the TTS toggle is pressed and silences subsequent deltas', async () => {"
+        },
+        {
+          "line": 591,
+          "text": "it('surfaces an STT error and resets the mic when recognition emits an error', async () => {"
+        },
+        {
+          "line": 622,
+          "text": "it('disables the mic and shows a hint when SpeechRecognition is unavailable', () => {"
+        },
+        {
+          "line": 639,
+          "text": "it('stops the mic and cancels in-flight speech when the stop button is pressed mid-stream', async () => {"
+        },
+        {
+          "line": 668,
+          "text": "it('persists the transcript draft while idle and clears it after a completed send', async () => {"
+        },
+        {
+          "line": 701,
+          "text": "it('restores a saved transcript draft on mount', () => {"
+        },
+        {
+          "line": 714,
+          "text": "it('aborts recognition and wipes the draft on unmount', async () => {"
+        },
+        {
+          "line": 729,
+          "text": "it('exposes a stable displayName', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/__tests__/ChatbotAIOff.test.tsx",
+      "literal_declarations": 3,
+      "names": [
+        {
+          "line": 55,
+          "text": "it('renders nothing when ai_mode=off even with the chatbot-llm toggle on', () => {"
+        },
+        {
+          "line": 70,
+          "text": "it('renders nothing when ai_mode is non-off but the chatbot-llm toggle is false', () => {"
+        },
+        {
+          "line": 84,
+          "text": "it('renders the indicator when ai_mode=cloud AND chatbot-llm toggle is on (positive control)', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/ChatMessageItem.test.tsx",
+      "literal_declarations": 20,
+      "names": [
+        {
+          "line": 72,
+          "text": "it('renders a user bubble with its text, role marker and a user avatar', () => {"
+        },
+        {
+          "line": 83,
+          "text": "it('renders an assistant bubble through the markdown renderer with a bot avatar', () => {"
+        },
+        {
+          "line": 92,
+          "text": "it('renders the assistant tool evidence and usage trail', () => {"
+        },
+        {
+          "line": 109,
+          "text": "it('shows the timestamp only on the last message in a group', () => {"
+        },
+        {
+          "line": 126,
+          "text": "it('dims the avatar into an invisible spacer when it is not first in the group', () => {"
+        },
+        {
+          "line": 133,
+          "text": "it('while streaming: reveals streamedText, shows a blinking cursor, hides timestamp and actions', () => {"
+        },
+        {
+          "line": 154,
+          "text": "it('copies the message content to the clipboard from the icon-only copy control', async () => {"
+        },
+        {
+          "line": 166,
+          "text": "it('offers Regenerate only for the last assistant message and forwards the message on click', () => {"
+        },
+        {
+          "line": 177,
+          "text": "it('hides Regenerate when not the last assistant or when no handler is supplied', () => {"
+        },
+        {
+          "line": 199,
+          "text": "it('hides the whole action row when actionsDisabled is set', () => {"
+        },
+        {
+          "line": 208,
+          "text": "it('opens a focused, prefilled editor for the last user message', () => {"
+        },
+        {
+          "line": 220,
+          "text": "it('does not offer inline edit for assistant messages or non-last user messages', () => {"
+        },
+        {
+          "line": 239,
+          "text": "it('saves an edited message via the Save button and closes the editor', () => {"
+        },
+        {
+          "line": 254,
+          "text": "it('disables Save and no-ops resend for empty or unchanged edits', () => {"
+        },
+        {
+          "line": 273,
+          "text": "it('submits on Enter, inserts a newline on Shift+Enter, and cancels on Escape', () => {"
+        },
+        {
+          "line": 318,
+          "text": "it('cancels an edit via the Cancel button without resending', () => {"
+        },
+        {
+          "line": 333,
+          "text": "it('tolerates a malformed payload with missing content without crashing on edit', () => {"
+        },
+        {
+          "line": 349,
+          "text": "it('renders deep-link citations on a completed assistant message', () => {"
+        },
+        {
+          "line": 365,
+          "text": "it('hides citations while streaming and on user messages', () => {"
+        },
+        {
+          "line": 376,
+          "text": "it('lets readers inspect retrieved excerpts and distinguishes cited from merely retrieved chunks', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/ChatWelcome.test.tsx",
+      "literal_declarations": 10,
+      "names": [
+        {
+          "line": 69,
+          "text": "it('renders the headline as a level-2 heading wired through i18n', () => {"
+        },
+        {
+          "line": 77,
+          "text": "it('renders the supporting description as a paragraph wired through i18n', () => {"
+        },
+        {
+          "line": 92,
+          "text": "it('renders the Helix mark as a decorative (aria-hidden) graphic', () => {"
+        },
+        {
+          "line": 99,
+          "text": "it('exposes no unlabelled image role to screen readers', () => {"
+        },
+        {
+          "line": 107,
+          "text": "it('renders exactly the four suggestion chips inside a labelled list, in order', () => {"
+        },
+        {
+          "line": 116,
+          "text": "it('wires every string (chips + list label) through i18n with an English fallback', () => {"
+        },
+        {
+          "line": 126,
+          "text": "it('forwards the exact chip text to onPick exactly once when clicked', () => {"
+        },
+        {
+          "line": 140,
+          "text": "it('does not call onPick on render and forwards successive picks in order', () => {"
+        },
+        {
+          "line": 167,
+          "text": "it('exposes each chip as a native, focusable button (keyboard operable)', () => {"
+        },
+        {
+          "line": 179,
+          "text": "it('renders resolved translations rather than hardcoded English', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/CodeBlock.test.tsx",
+      "literal_declarations": 15,
+      "names": [
+        {
+          "line": 63,
+          "text": "it('renders the supplied language token as the header label', () => {"
+        },
+        {
+          "line": 68,
+          "text": "it('trims surrounding whitespace from the language token', () => {"
+        },
+        {
+          "line": 74,
+          "text": "it('falls back to \"text\" when no language is supplied', () => {"
+        },
+        {
+          "line": 79,
+          "text": "it('falls back to \"text\" for an empty or whitespace-only language', () => {"
+        },
+        {
+          "line": 90,
+          "text": "it('renders the raw text inside <pre><code> when no children are given', () => {"
+        },
+        {
+          "line": 95,
+          "text": "it('prefers pre-rendered children over the raw text for display', () => {"
+        },
+        {
+          "line": 106,
+          "text": "it('falls back to the raw text when children is explicitly null', () => {"
+        },
+        {
+          "line": 111,
+          "text": "it('renders an empty code block without crashing when text is empty', () => {"
+        },
+        {
+          "line": 121,
+          "text": "it('renders an icon-only copy button exposing an accessible name', () => {"
+        },
+        {
+          "line": 129,
+          "text": "it('copies the RAW text — not the displayed children — to the clipboard', async () => {"
+        },
+        {
+          "line": 142,
+          "text": "it('toggles the button to the \"Copied\" state after a successful copy', async () => {"
+        },
+        {
+          "line": 148,
+          "text": "it('copies an empty string when text is empty (never the literal \"undefined\")', async () => {"
+        },
+        {
+          "line": 158,
+          "text": "it('wraps the block in a group named for the code language', () => {"
+        },
+        {
+          "line": 163,
+          "text": "it('names the group with the \"text\" fallback when no language is set', () => {"
+        },
+        {
+          "line": 168,
+          "text": "it('merges a custom className onto the root group while keeping base styles', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/knowledgeEvidence.test.ts",
+      "literal_declarations": 4,
+      "names": [
+        {
+          "line": 5,
+          "text": "it('accepts only uniquely identified, relevant chunks actually returned by retrieval', () => {"
+        },
+        {
+          "line": 24,
+          "text": "it('treats malformed tool outputs as no evidence', () => {"
+        },
+        {
+          "line": 29,
+          "text": "it('shows a query-relevant excerpt rather than an unrelated document prefix', () => {"
+        },
+        {
+          "line": 38,
+          "text": "it('does not repeat a chunk retrieved by multiple tool calls', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/MarkdownRenderer.test.tsx",
+      "literal_declarations": 9,
+      "names": [
+        {
+          "line": 55,
+          "text": "it('shows the raw source verbatim while the markdown chunk loads, then swaps in parsed markdown', async () => {"
+        },
+        {
+          "line": 77,
+          "text": "it('renders h1/h2/h3 markdown as real, role-exposed heading elements', async () => {"
+        },
+        {
+          "line": 86,
+          "text": "it('opens links in a new tab with rel=\"noopener noreferrer\" to block reverse-tabnabbing', async () => {"
+        },
+        {
+          "line": 96,
+          "text": "it('renders inline code as a bare <code> without the CodeBlock chrome', async () => {"
+        },
+        {
+          "line": 107,
+          "text": "it('routes fenced code to <CodeBlock> with the language tag, a single <pre>, and a working copy button', async () => {"
+        },
+        {
+          "line": 132,
+          "text": "it('renders bullet and numbered markdown as styled <ul>/<ol> lists', async () => {"
+        },
+        {
+          "line": 146,
+          "text": "it('renders GFM tables with header + body cells (proves remark-gfm is active)', async () => {"
+        },
+        {
+          "line": 158,
+          "text": "it('escapes raw HTML in the source instead of mounting live DOM (no rehype-raw)', async () => {"
+        },
+        {
+          "line": 172,
+          "text": "it('renders an empty surface (no throw) when given null / undefined / empty source', async () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/SessionList.test.tsx",
+      "literal_declarations": 18,
+      "names": [
+        {
+          "line": 100,
+          "text": "it('renders the New Chat control + Sessions header and fires onNewChat', () => {"
+        },
+        {
+          "line": 109,
+          "text": "it('shows the loading placeholder only while loading with no sessions', () => {"
+        },
+        {
+          "line": 116,
+          "text": "it('shows the shared EmptyState when there are no sessions and not loading', () => {"
+        },
+        {
+          "line": 124,
+          "text": "it('keeps rendering existing rows during an in-flight refetch', () => {"
+        },
+        {
+          "line": 132,
+          "text": "it(\"renders a row's title, relative time and message count\", () => {"
+        },
+        {
+          "line": 141,
+          "text": "it('labels a session with no last message as \"Empty\"', () => {"
+        },
+        {
+          "line": 151,
+          "text": "it('falls back to a truncated first message when a session has no title', () => {"
+        },
+        {
+          "line": 158,
+          "text": "it('falls back to \"Untitled conversation\" with neither title nor first message', () => {"
+        },
+        {
+          "line": 164,
+          "text": "it('selects a session when its row is clicked', () => {"
+        },
+        {
+          "line": 174,
+          "text": "it('marks only the active session with aria-current', () => {"
+        },
+        {
+          "line": 187,
+          "text": "it('enters rename mode on double-click and commits a trimmed title on Enter', () => {"
+        },
+        {
+          "line": 204,
+          "text": "it('seeds the rename input with the full, untruncated first message', () => {"
+        },
+        {
+          "line": 216,
+          "text": "it('ignores an empty rename draft without calling onRename', () => {"
+        },
+        {
+          "line": 232,
+          "text": "it('cancels a rename on Escape without committing', () => {"
+        },
+        {
+          "line": 247,
+          "text": "it('commits a rename when the input loses focus', () => {"
+        },
+        {
+          "line": 261,
+          "text": "it('opens a confirm dialog and deletes on confirm', () => {"
+        },
+        {
+          "line": 278,
+          "text": "it('dismisses the delete dialog without deleting on cancel', () => {"
+        },
+        {
+          "line": 291,
+          "text": "it('hides the delete control while a row is being renamed', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/components/chatbot/SuggestedPrompts.test.tsx",
+      "literal_declarations": 9,
+      "names": [
+        {
+          "line": 33,
+          "text": "it('returns the four static chips, each with a namespaced key and non-empty default', () => {"
+        },
+        {
+          "line": 45,
+          "text": "it('uses unique i18n keys so they are safe as React list keys', () => {"
+        },
+        {
+          "line": 50,
+          "text": "it('returns a fresh array on each call (no shared mutable module state)', () => {"
+        },
+        {
+          "line": 62,
+          "text": "it('renders a single labelled list with one button per suggestion', () => {"
+        },
+        {
+          "line": 77,
+          "text": "it('forwards the exact chip text to onPick when a chip is clicked', () => {"
+        },
+        {
+          "line": 94,
+          "text": "it('does not invoke onPick on mount (only on user interaction)', () => {"
+        },
+        {
+          "line": 100,
+          "text": "it('marks every leading sparkle icon decorative so it is not announced', () => {"
+        },
+        {
+          "line": 108,
+          "text": "it('prefers a real translation over the English default for label and picked value', () => {"
+        },
+        {
+          "line": 124,
+          "text": "it('falls back to the English default when a translation resolves empty (no nameless chip)', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/pages/ChatbotPage.test.tsx",
+      "literal_declarations": 16,
+      "names": [
+        {
+          "line": 406,
+          "text": "it('renders the composer, action buttons, live log region, and welcome hero', () => {"
+        },
+        {
+          "line": 437,
+          "text": "it('uses the shared mobile drawer with Escape dismissal and focus restoration', async () => {"
+        },
+        {
+          "line": 455,
+          "text": "it('opens/closes the sidebar, lists sessions, and persists visibility to localStorage', async () => {"
+        },
+        {
+          "line": 486,
+          "text": "it('sends on Enter, POSTs /chatbot with the trimmed message, and reveals the reply', async () => {"
+        },
+        {
+          "line": 506,
+          "text": "it('does NOT submit on Shift+Enter or for a whitespace-only message', async () => {"
+        },
+        {
+          "line": 525,
+          "text": "it('recalls the last user message into an empty composer on ArrowUp', async () => {"
+        },
+        {
+          "line": 546,
+          "text": "it('regenerate resends the preceding user message via /chatbot', async () => {"
+        },
+        {
+          "line": 567,
+          "text": "it('edit-and-resend truncates history and resends the edited text', async () => {"
+        },
+        {
+          "line": 593,
+          "text": "it('loads a session on select and resets to the welcome on new chat', async () => {"
+        },
+        {
+          "line": 623,
+          "text": "it('rename and delete hit the encoded session endpoints with the right methods', async () => {"
+        },
+        {
+          "line": 653,
+          "text": "it('picking a suggestion fills the composer without auto-submitting', async () => {"
+        },
+        {
+          "line": 667,
+          "text": "it.each(["
+        },
+        {
+          "line": 725,
+          "text": "it('carries successful retrieval evidence to the completed assistant turn without trusting other tools', async () => {"
+        },
+        {
+          "line": 749,
+          "text": "it('opens an SSE stream to /api/v1/ai/chatbot and accumulates deltas, finalising on done', async () => {"
+        },
+        {
+          "line": 807,
+          "text": "it('surfaces an SSE `error` frame inline and stops streaming', async () => {"
+        },
+        {
+          "line": 827,
+          "text": "it('finalises the placeholder and unblocks retries after a transport-level (5xx) failure', async () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/hooks/__tests__/useAiStream.test.ts",
+      "literal_declarations": 38,
+      "names": [
+        {
+          "line": 65,
+          "text": "it('parses a delta frame', () => {"
+        },
+        {
+          "line": 70,
+          "text": "it('parses a tool_call frame', () => {"
+        },
+        {
+          "line": 82,
+          "text": "it('parses a tool_result frame with data', () => {"
+        },
+        {
+          "line": 95,
+          "text": "it('parses a tool_result error frame', () => {"
+        },
+        {
+          "line": 107,
+          "text": "it('parses a confirm_request frame', () => {"
+        },
+        {
+          "line": 119,
+          "text": "it('parses a done frame', () => {"
+        },
+        {
+          "line": 130,
+          "text": "it('parses an error frame', () => {"
+        },
+        {
+          "line": 135,
+          "text": "it('returns null for unknown event types', () => {"
+        },
+        {
+          "line": 139,
+          "text": "it('returns null for malformed JSON', () => {"
+        },
+        {
+          "line": 143,
+          "text": "it('skips comment lines (leading colon)', () => {"
+        },
+        {
+          "line": 150,
+          "text": "it('accumulates delta text and transitions through states', async () => {"
+        },
+        {
+          "line": 186,
+          "text": "it('retains an ordered, privacy-safe tool activity trail', async () => {"
+        },
+        {
+          "line": 227,
+          "text": "it('resets activity and completion metadata for a new run', async () => {"
+        },
+        {
+          "line": 258,
+          "text": "it('handles SSE frames split across multiple network chunks', async () => {"
+        },
+        {
+          "line": 276,
+          "text": "it('moves to paused-confirm on confirm_request', async () => {"
+        },
+        {
+          "line": 297,
+          "text": "it('surfaces a 404 (off-mode) as state=error', async () => {"
+        },
+        {
+          "line": 307,
+          "text": "it('surfaces a server error event as state=error', async () => {"
+        },
+        {
+          "line": 323,
+          "text": "it('treats EOF without a terminal event as an incomplete stream', async () => {"
+        },
+        {
+          "line": 334,
+          "text": "it('drops malformed events and continues', async () => {"
+        },
+        {
+          "line": 352,
+          "text": "it('does not reset output when scopeKey is unchanged across rerenders', async () => {"
+        },
+        {
+          "line": 370,
+          "text": "it('aborts an in-flight stream and clears output when scopeKey changes mid-stream', async () => {"
+        },
+        {
+          "line": 391,
+          "text": "it('clears completed output (text/activity/usage/finishReason) when scopeKey changes after done', async () => {"
+        },
+        {
+          "line": 419,
+          "text": "it('clears a terminal error/limit banner when scopeKey changes', async () => {"
+        },
+        {
+          "line": 444,
+          "text": "it('treats undefined scopeKey (no entity scope) as always-unchanged, preserving legacy behaviour', async () => {"
+        },
+        {
+          "line": 463,
+          "text": "it('aborts the in-flight fetch on cancel()', async () => {"
+        },
+        {
+          "line": 501,
+          "text": "it('aborts on unmount', async () => {"
+        },
+        {
+          "line": 521,
+          "text": "it('coalesces duplicate start() calls', async () => {"
+        },
+        {
+          "line": 566,
+          "text": "it('retains new same-scope state and controller after an old genuine AbortError', async () => {"
+        },
+        {
+          "line": 596,
+          "text": "it('still coalesces starts after an old AbortError settles', async () => {"
+        },
+        {
+          "line": 616,
+          "text": "it('ignores a superseded delayed HTTP failure', async () => {"
+        },
+        {
+          "line": 630,
+          "text": "it.each(['done', 'error', 'confirm_request'] as const)("
+        },
+        {
+          "line": 670,
+          "text": "it('retains new scope state after old scope AbortError', async () => {"
+        },
+        {
+          "line": 691,
+          "text": "it('stops state updates and remaining buffered events after callback cancellation', async () => {"
+        },
+        {
+          "line": 712,
+          "text": "it.each(['cancel', 'unmount'] as const)('suppresses late final fragments after %s without restart', async (action) => {"
+        },
+        {
+          "line": 732,
+          "text": "it('ignores old network errors while retaining current failures and manual retry', async () => {"
+        },
+        {
+          "line": 751,
+          "text": "it('keeps new activity and latest callback while ignoring old tool events and EOF', async () => {"
+        },
+        {
+          "line": 796,
+          "text": "it('finalizes a current genuine AbortError without treating it as a network failure', async () => {"
+        },
+        {
+          "line": 817,
+          "text": "it('does not fail new running activity when an obsolete reader rejects with AbortError', async () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/hooks/useAiEnabled.test.tsx",
+      "literal_declarations": 7,
+      "names": [
+        {
+          "line": 53,
+          "text": "it('returns false when settings have not yet resolved', () => {"
+        },
+        {
+          "line": 63,
+          "text": "it('returns false when ai_mode is the default off', () => {"
+        },
+        {
+          "line": 71,
+          "text": "it('returns false when ai_mode is omitted (undefined)', () => {"
+        },
+        {
+          "line": 77,
+          "text": "it('returns false in mode=local when the per-feature flag is missing', () => {"
+        },
+        {
+          "line": 83,
+          "text": "it('returns false in mode=cloud when the per-feature flag is explicitly false', () => {"
+        },
+        {
+          "line": 91,
+          "text": "it('returns false when ai_features is omitted entirely', () => {"
+        },
+        {
+          "line": 97,
+          "text": "it('returns true only when mode != off AND the per-feature flag is true', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/__tests__/TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx",
+      "literal_declarations": 3,
+      "names": [
+        {
+          "line": 101,
+          "text": "it('TestVoiceModeAIOffNoVoiceControlsOrStorage: renders nothing and writes no transcript draft when ai_mode=off (toggle on to defeat the trivial path)', () => {"
+        },
+        {
+          "line": 162,
+          "text": "it('TestVoiceModeAIOffNoVoiceControlsOrStorage: renders nothing and writes no transcript draft when ai_mode is non-off but the voice-mode toggle is false', () => {"
+        },
+        {
+          "line": 190,
+          "text": "it('TestVoiceModeAIOffNoVoiceControlsOrStorage: renders the AI section when ai_mode=cloud AND voice-mode toggle is on (positive control)', () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    },
+    {
+      "file": "web/src/features/system/__tests__/TestVoiceModeAIOnWiredCallsRoute.test.tsx",
+      "literal_declarations": 2,
+      "names": [
+        {
+          "line": 211,
+          "text": "it('TestVoiceModeAIOnWiredCallsRoute: dictating a transcript and clicking Speak to Helix POSTs once to /api/v1/ai/voice/chat and renders the first delta', async () => {"
+        },
+        {
+          "line": 299,
+          "text": "it('TestVoiceModeAIOnWiredCallsRoute: a second click while streaming is a no-op (double-submit guard)', async () => {"
+        }
+      ],
+      "status": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "runner_discovered": null
+    }
+  ],
+  "catalog_check": {
+    "missing_literal_keys": [],
+    "literal_unique_keys": 91,
+    "dynamic_keys": "suggestion i18nKey literals included; tool identifiers exempt; no normal catalog acceptance",
+    "generator": "NOTRUN"
+  },
+  "queue_snapshot": {
+    "inspected_at": "2026-10-14T02:42:53.8459213Z",
+    "active_direct_repairs": [],
+    "rows": [
+      {
+        "line": 232,
+        "item": "phase6-qa-system-chatbot",
+        "status": "[~]",
+        "row": "| [~] | 6 | phase6-qa-system-chatbot | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-chatbot.json; web\\logs\\phase6-qa-system-chatbot.log | phase5-page-system-chatbot | 1 | reserved02:29:12.925Z; actor pending | - | ChatbotPage; no actual chats/model/provider/prompt/network actions. |"
+      },
+      {
+        "line": 1172,
+        "item": "phase3-ai-output-panel",
+        "status": "[x]",
+        "row": "| [x] | 3 | phase3-ai-output-panel | shared | web\\src\\components\\ai\\AiOutputPanel.tsx; web\\src\\components\\ai\\AiOutputPanel.test.tsx | phase3-helix-evidence-trail | 1 | 2026-10-08T05:46:30.857Z | d96c72e9a4 | phase3-helix-evidence-trail / 1 / 2026-10-08T05:46:30.857Z / Verified real-owner plan=phase3-ai-output-panel in session frontend-phase3-owner-plan.json; category=domain-ai; sources=web\\src\\components\\ai\\AiOutputPanel.tsx; tests=web\\src\\components\\ai\\AiOutputPanel.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; actor=16c673bb-8b5d-4501-9ecb-7141d34608e1; Parent exact final hashes/full diff/preservation and scoped receipt verified; normal matching tests where present, strict lint0 source scan0 with retained reviews; explicit combined six-fixture program0; browser acceptance separate |"
+      },
+      {
+        "line": 1173,
+        "item": "phase3-ai-stream-generation-isolation",
+        "status": "[x]",
+        "row": "| [x] | 3 | phase3-ai-stream-generation-isolation | shared | web\\src\\hooks\\useAiStream.ts | phase3-ai-stream-overlap-diagnosis | 1 | 2026-10-08T18:06:29.747Z | 8f13724849 | phase3-ai-stream-overlap-diagnosis / 1 / 2026-10-08T18:06:29.747Z / Confirmed standalone shared-hook root correction ONLY web\\src\\hooks\\useAiStream.ts + hooks\\__tests__\\useAiStream.test.ts from exact accepted current bytes. Diagnosis actual original27 pass, seven real-hook isolation probes FAIL: obsolete AbortError resets newer state, old finally loses newer controller/coalescing, delayed old events reach latest callback. Add generation and local controller ownership-safe guards/cleanup, preserve public APIs/SSE/parser/cancel/scope/privacy/no-auto-POST-retry and all original tests; carry exact diagnosis regressions. No SQL/caller/catalog/config workaround; guarded original+7 regressions/lint/scan/ALL reached fixture types required.; actor=2718dc31-3359-4a9e-957c-ce337e60bb11; actor context idle verified 2026-10-08T18:25:44.254Z: Actual delivered idle full report read; exact scope released, original/current bytes preserved; source acceptance or actual remaining root/fixture blockers handled separately; Verified scoped delivery acceptance commit=8f13724849; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=41/41 final normal, original27 assertions retained plus14 regressions including all seven actual isolation failures; exact inverse original-test proof after typed mock/equivalent call-count corrections. Generation/local controller ownership guards preserve parser/public API/SSE/privacy/scope/explicit cancel/no-auto-POST retry. Final strict lint/source scan/ALL reached fixture0, no caller compensating hacks or integration/browser claim, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "line": 1175,
+        "item": "phase3-ai-voice-presentation",
+        "status": "[x]",
+        "row": "| [x] | 3 | phase3-ai-voice-presentation | shared | web\\src\\components\\ai\\AIVoiceMode.tsx; web\\src\\components\\ai\\AIVoiceMode.test.tsx; web\\src\\features\\system\\__tests__\\TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx; web\\src\\features\\system\\__tests__\\TestVoiceModeAIOnWiredCallsRoute.test.tsx | phase3-aifeature-card | 1 | 2026-10-08T17:25:43.513Z | ee30621f80 | phase3-aifeature-card / 1 / 2026-10-08T17:25:43.513Z / Accepted bounded region profile=frontend-phase3-ai-voice-scoping.json; exact spec=phase3-ai-voice-presentation; sources=web\\src\\components\\ai\\AIVoiceMode.tsx; tests=web\\src\\components\\ai\\AIVoiceMode.test.tsx,web\\src\\features\\system\\__tests__\\TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx,web\\src\\features\\system\\__tests__\\TestVoiceModeAIOnWiredCallsRoute.test.tsx; dispatch plan=frontend-phase3-complex-owner-plan.json; fresh dispatch baseline required after predecessor commit/context release; same-file serial regions only; preserve every section/API/behavior and full original scoping evidence; unresolved catalog/hook/privacy needs remain explicit, never fake data or local engines; reboot reconciliation 2026-10-08T17:18:31.366Z: actual zero live actors; frozen delivery retained, awaiting read-only intake, not stuck or new implementation attempt; READ-ONLY reboot review reserved, attempts unchanged; isolated new receipt, no original source/test edits; actor=74fad51b-e30c-4594-9be5-51966156406e; actor context idle verified 2026-10-08T17:43:32.623Z: Actual lifecycle idle and complete isolated recovery result read; source frozen/released; acceptance and composed limitations remain separate; Verified scoped delivery acceptance commit=ee30621f80; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=23/23 across exact3 guarded suites, strict lint/source scan/ALL reached fixture diagnostics0 and exact generated geometry0; original18 cases/expectation intent/localization/privacy/gates/routes/cancel/HOC/card/output preserved; prior loader failure retained, no browser/native permission/provider privacy acceptance claimed, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "line": 1721,
+        "item": "phase3-retained-ai-output-error",
+        "status": "[x]",
+        "row": "| [x] | 3 | phase3-retained-ai-output-error | shared | web\\src\\components\\ai\\AiOutputPanel.tsx | phase3-ai-output-panel | 1 | 2026-10-08T15:08:02.528Z | d2a305ab49 | phase3-ai-output-panel / 1 / 2026-10-08T15:08:02.528Z / Confirmed shared limitation in AIFeatureCard review: AiOutputPanel error branch replaces supplied nonempty narrative. Own ONLY web\\src\\components\\ai\\AiOutputPanel.tsx and AiOutputPanel.test.tsx, fresh accepted baseline. Preserve supplied text alongside explicit failed/interrupted/incomplete state without implying success or inventing last-success timestamps; distinguish partial streaming output from verified results. Preserve public phases/error/retry/copy/evidence and all original tests; only declared localized keys, no catalog/provider/API edits. If additional trust metadata is necessary report it rather than fake a successful/stale classification.; actor=f417fe02-b3c1-498b-9a89-248eeb88dc73; actor context idle verified 2026-10-08T15:48:22.342Z: Actual current lifecycle idle and full exact report read; delivery preserved, source writes released; acceptance remains separate; Historical expected worker receipt absent; parent read-only revalidation original/current hashes verified, strict lint0/scanner0/actual all reached fixture diagnostics0. Normal tests actual EXIT1 before collection during new sole catalog-owner copy edits; raw failure preserved in session parent-revalidation receipt. No49-test parent pass claimed; tests wait for new catalog release/closure; Fresh parent normal guarded runtime executed after catalog closure: actual22/22, EXIT0; strict lint0, source scan0, all reached fixture diagnostics0. Append-only receipt preserves prior startup EXIT1 and missing historical worker receipt; no49-test claim.; Scoped retained-error delivery accepted using NEW independent parent proof: actual normal22/22, lint0, source scan0, all reached fixture diagnostics0; exact original/current hashes and partial/error/retry/source trust assertions reviewed. Missing historical worker receipt remains explicitly missing; prior normal startup failure preserved append-only. Not49 tests, no fabricated historical final hash receipt, no browser/full phase acceptance. |"
+      },
+      {
+        "line": 2237,
+        "item": "phase5-page-system-chatbot",
+        "status": "[x]",
+        "row": "| [x] | 5 | phase5-page-system-chatbot | original-page-migration | web\\src\\features\\system\\pages\\ChatbotPage.tsx; web\\src\\features\\system\\pages\\ChatbotPage.test.tsx | - | 1 | 2026-10-12T12:23:58.9737776Z | 4280cbbf73551b6b582ba018191cf2cd4ae86f68 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/chatbot; audit=docs\\frontend-audits\\audit-page-181.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. First real original Phase5 source worker reserved; explicit exclusive page+namedcolocatedtest, shared-owner changes require parent claim. Read session phase5-page-worker-instructions.txt. Actual worker=dd5897be-3661-482f-89db-ca6f2bd7210b; lifecycle=awaitingterminalnotification;doNOTpoll/duplicate/rereadownedsource. INTAKEN source-only:17 scoped casesPASS in parent245-case runner; lint0; inherited workspace-height style candidate1 remains explicitly unaccepted, not waived.1077/1106 presentation,2 panels/6 sections preserved. Native composer clipping/shared child needs retained. Initial push twice failed remote commit_refs, recovered automatically at next sequential source commit; now pushed. No full/native QA. |"
+      }
+    ],
+    "scope": "exact items and direct filenames; aggregate dependency list is not a duplicate repair"
+  },
+  "completionBoundary": "Report delivery, not application acceptance. Source mechanisms confirmed; proposed repros unexecuted; native/runtime NOTRUN.",
+  "clock": {
+    "reservation": "2026-10-14T02:29:12.925Z",
+    "return": "2026-10-14T02:49:12.925Z",
+    "hard": "2026-10-14T02:54:12.925Z",
+    "actualCreation": "not exposed; reservation used conservatively; no clock reset",
+    "firstObserved": "2026-10-14T02:35:29.1374929Z"
+  },
+  "alreadyMetDuplicateCheck": {
+    "result": "Not already met: assigned JSON/log absent at startup",
+    "historicalAudit": "audit-page-181 is Phase0, not Phase6 completion",
+    "sourceMigration": "phase5-page-system-chatbot completed SOURCE ONLY; do not redispatch",
+    "alreadyFixed": [
+      "Canonical SSE generation/controller isolation",
+      "AiOutputPanel partial-text error retention and completed-empty feedback",
+      "HelixEvidenceTrail reduced-motion/low-bandwidth spinner",
+      "PageLayout forwards to PageContainer",
+      "Neutral page planning/waiting icon"
+    ],
+    "queue": "Exact-item/direct-file scan at shell3057 found zero separate active repairs; aggregate phase5-feature-migration is not a direct repair. Concurrent insertion shifted row offsets; final exact-item snapshot supersedes old offsets."
+  },
+  "authority": {
+    "fullyRead": [
+      "docs/orchestrator-loop.md",
+      "docs/frontend-design-contract.md",
+      "docs/frontend-mission.md",
+      "docs/frontend-worker-conventions.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      "docs/CONTRIBUTING.md",
+      "docs/frontend-audits/audit-page-181.json"
+    ],
+    "relevantRead": [
+      "docs/session-handoff.md:1-240",
+      "frontend-inventory authority and chatbot entries",
+      "docs/I18N_GUIDELINES.md:1-190",
+      "Exact queue assignment, source predecessor and matching shared repairs"
+    ],
+    "instructions": "No applicable AGENTS.md found. User bounded read-only prohibitions govern; no external heartbeat/helper/test run."
+  },
+  "notRun": [
+    "tests/runner discovery",
+    "lint/helpers/scanners",
+    "npx tsc --noEmit/compiler",
+    "build/install/server",
+    "browser/native/screenshots/contrast/keyboard/device geometry",
+    "network/API/provider/model/chat/prompt/microphone/TTS actions",
+    "catalog generators/normal namespace gates",
+    "Git/queue/source/test/catalog edits",
+    "agents"
+  ],
+  "testEvidence": {
+    "literalDeclarations": 249,
+    "inventoryFiles": 18,
+    "pageDeclarations": 16,
+    "pageScenariosVisibleInSource": 17,
+    "parameterization": "One page it.each has two explicit rows. it.each counts as one declaration in 249; runner discovery unknown.",
+    "discovered": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "status": "NOTRUN",
+    "historicalOnly": "Queue's page17/hook41/output22 passes are historical, never fresh passes here.",
+    "limitations": "Page doubles heavy children/i18n; speech APIs stubbed. Remaining counted collateral files declaration-read only; full bodies read for page, SessionList, ChatMessageItem, useChat, useAiStream, AIVoiceMode, AiOutputPanel, MarkdownRenderer, ChatWelcome, SuggestedPrompts, knowledgeEvidence and ChatbotAIOff."
+  },
+  "preservation": {
+    "sections": 6,
+    "pageLines": 1077,
+    "historicalPageLines": 1106,
+    "domainLines": 988,
+    "pagePlusDomainLines": 2065,
+    "rootGlassPanelTags": 2,
+    "rootChartContainerTags": 0,
+    "suggestions": 4,
+    "limit": "Current lexical counts and historical record only, not immutable-original parity or mounted acceptance."
+  },
+  "ruleScan": {
+    "scope": "Page/eight chatbot production supports/useChat/devtools/useAiStream/useAiEnabled; six shared AI supports additionally screened",
+    "rawGrepCounts": {
+      "static-inline-style": 0,
+      "raw-htmlCaseSensitive": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-paramCaseSensitive": 0,
+      "hidden-section": 0,
+      "directJsxEnglishLiteral": 0,
+      "PageLayoutWrapper": 1,
+      "fetchOrUseEffect": 18
+    },
+    "exceptions": "PageLayout is valid PageContainer adapter. Canonical SSE owns fetch. Effects implement focus/preferences/hydration/timers, not page REST fetch. devtools unrelated export fetch is outside chatbot closure. AI opt-in/history visibility and no retrieval evidence are intentional conditions. Existing motion foundation vendor wrapper is not a page import repair. Raw shared/test fixture HTML and dynamic styles are allowed. Narrow regex is not exhaustive AST/i18n/runtime acceptance. Backend SQL/log/panic/context audit out of this frontend scope."
+  },
+  "failures": [
+    {
+      "shellId": "2796",
+      "exit": 1,
+      "failure": "useOperationalMode.ts does not exist; corrected .tsx lookup"
+    },
+    {
+      "shellId": "2969",
+      "exit": 1,
+      "failure": "PowerShell quoted regex escaping: positional parameter 'sm\\|overflow-x-auto'; corrected single quoting"
+    },
+    {
+      "shellId": "3143",
+      "exit": 1,
+      "failure": "Windows command length: The filename or extension is too long. (os error 206). Command never executed, report unchanged; split artifact authoring follows."
+    },
+    {
+      "shellId": "3021",
+      "exit": 0,
+      "invalidSubcheck": "Hard-coded queue offsets shifted by concurrent parent edit; exact-item shell3057 supersedes"
+    },
+    {
+      "shellId": "2842",
+      "exit": 0,
+      "correctedScreen": "Case-insensitive raw control/camelCase grep false positives; shell2945 case-sensitive checks corrected"
+    },
+    {
+      "shellId": "2708",
+      "exit": 0,
+      "correctedScreen": "Mixed formatted initial grep results; explicit line/text lookup superseded"
+    }
+  ],
+  "evidenceLimits": {
+    "scope": "Pinned envelope is broader than audited closure; not every pinned AI collateral file was audited. Full page and eight chatbot domain source files read. API/types/routes/helpers relevant ranges traced only.",
+    "pins": "Startup discovery and first page read preceded broad pin capture; dependencies additionally pinned as identified. No immutable original hash/test proof inferred.",
+    "queue": "Parent-owned queue concurrently changed; exact item snapshot timestamp retained. Queue never written.",
+    "repros": "All hypothetical reproductions described below are unexecuted synthetic future checks, not observed application failures."
+  },
+  "confirmedIssues": [
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Session/history scope",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Deferred/rejected B history after A must not leave actionable A under B.",
+      "line": 583,
+      "id": "F01",
+      "priority": "P1",
+      "sourceMechanismAndRepair": "loadSession changes ID without clearing/scoping messages; hydration 167-183 returns on missing data. Sessions 142-145 mask fatal as empty; history error/loading/paused never displayed. Scope messages/actions and render retained/fatal states.",
+      "rule": "state-trust"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Accepted send",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Enter a second draft during pending baseline/AI; retain rejected draft.",
+      "line": 514,
+      "id": "F02",
+      "priority": "P1",
+      "sourceMechanismAndRepair": "handleSend clears input unconditionally at 516 after submit rejects pending work at 467/497. Enter 522 bypasses disabled Send; pendingAiRequest absent from button busy guard. Clear only accepted send.",
+      "rule": "draft-retention"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Baseline settlement",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Resolve old baseline after New/select; no cross-session transcript/focus mutation.",
+      "line": 206,
+      "id": "F03",
+      "priority": "P1",
+      "sourceMechanismAndRepair": "onSuccess appends to current messages at 221 and may adopt old session at 208; New/load 571-591 invalidate only SSE/reveal, not mutation. Add target/generation authority, distinct from fixed shared SSE.",
+      "rule": "session-authority"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Active deletion",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Reject active DELETE; preserve transcript/draft and recovery.",
+      "line": 705,
+      "id": "F04",
+      "priority": "P1",
+      "sourceMechanismAndRepair": "DELETE dispatch 707 immediately clears active conversation at 709 before success. useChat 73-87 success-only cache eviction cannot restore UI on error. Defer active reset to current confirmed success with pending/error recovery.",
+      "rule": "mutation-retention"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Revision recovery",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Reject replacement edit/regenerate; old answer and revised draft remain recoverable.",
+      "line": 594,
+      "id": "F05",
+      "priority": "P1",
+      "sourceMechanismAndRepair": "Regenerate truncates at 629; edit replaces tail at 684 before replacement succeeds. ChatMessageItem 103-111 closes void-callback editor immediately. Errors only toast; retain old revision/raw edit until success or expose rollback.",
+      "rule": "mutation-retention"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Rename/discovery",
+      "file": "web/src/features/system/components/chatbot/SessionList.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Rename without double-click/hover and cancel danger deletion.",
+      "line": 155,
+      "id": "F06",
+      "priority": "P1",
+      "sourceMechanismAndRepair": "Rename only onDoubleClick; keyboard activates selection. Delete 196 invisible until hover/own focus, no coarse-pointer visibility. Expose named keyboard/touch rename/delete; preserve danger confirmation and full title seed.",
+      "rule": "a11y-actions"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Saved date preferences",
+      "file": "web/src/features/system/components/chatbot/ChatMessageItem.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Saved timezone differing from browser must control message and old-session dates.",
+      "line": 220,
+      "id": "F07",
+      "priority": "P2",
+      "sourceMechanismAndRepair": "Unbound formatTime defaults browser timezone/locale (dateFormat 98-116). SessionList 175 relative helper localizes words but old-date fallback lacks saved timezone. Adopt existing useDateFormat 75-107, preserve raw timestamps.",
+      "rule": "preference-timezone"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Welcome chrome",
+      "file": "web/src/features/system/components/chatbot/ChatWelcome.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Source/theme review only; no measured contrast claim.",
+      "line": 28,
+      "id": "F08",
+      "priority": "P2",
+      "sourceMechanismAndRepair": "Purple scale-150 blur halo at 28 and purple-blue gradient at 31 are decorative glow prohibited by restrained contract. Use neutral existing surface; keep welcome and four editable suggestions.",
+      "rule": "visual-restraint"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Streaming caret",
+      "file": "web/src/features/system/components/chatbot/ChatMessageItem.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Low bandwidth plus normal OS motion must not pulse.",
+      "line": 190,
+      "id": "F09",
+      "priority": "P2",
+      "sourceMechanismAndRepair": "motion-safe pulse honors OS only, not low-bandwidth useMotionPreference 44-48. Existing page/trail already honor shared preference. Use static marker/combined preference, not new animation system.",
+      "rule": "motion-preference"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Tool/message finalization",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "tool_call then done without tool_result must not keep Gathering; failed/canceled not success.",
+      "line": 300,
+      "id": "F10",
+      "priority": "P2",
+      "sourceMechanismAndRepair": "done 300-317 commits text/usage but leaves page-owned running aiActivity. Hook 453-459 settles separate array. ChatMessageItem 196 maps all non-streaming error/cancel rows to done. Carry outcome and settle page tool records.",
+      "rule": "terminal-trust"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Empty typed completion",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "done with zero deltas must explain no output, not blank assistant bubble.",
+      "line": 307,
+      "id": "F11",
+      "priority": "P2",
+      "sourceMechanismAndRepair": "done-only assistant commits empty text, nonempty messages hide welcome, ChatMessageItem 185-198 has no done-empty explanation. AiOutputPanel already handles this elsewhere; adopt typed localized no-output recovery.",
+      "rule": "empty-state"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Honest tool evidence",
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Successful unrelated uncited tool must not imply verified grounded answer.",
+      "line": 55,
+      "id": "F12",
+      "priority": "P2",
+      "sourceMechanismAndRepair": "Succeeded tool count at 46 alone yields Grounded in N TeslaSync sources. Tool status/name/id/usage do not establish answer attribution/entailment. Label execution honestly; preserve knowledgeEvidence validated retrieval/cited distinction.",
+      "rule": "evidence-trust"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Evidence summary localization",
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "RTL/reordered translation and large localized token count; technical IDs exempt.",
+      "line": 57,
+      "id": "F13",
+      "priority": "P2",
+      "sourceMechanismAndRepair": "Summary concatenates translated fragments/raw count; footer 126-135 similarly joins outcomes/tokens. Use whole interpolated/plural messages and existing number formatting with separate exact catalog lease if necessary.",
+      "rule": "i18n-fragments"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Unsupported on-device assurance",
+      "file": "web/src/components/ai/AIVoiceMode.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Future authorized native/policy processing review only; mic/provider/network NOTRUN.",
+      "line": 567,
+      "id": "F14",
+      "priority": "P1",
+      "sourceMechanismAndRepair": "Disclosure guarantees recognition stays on device; source 330-378 merely starts vendor SpeechRecognition, no verified local-processing capability. App text-only POST does not prove browser service processing. Qualify copy via privacy/catalog owner; no actual audio exfiltration asserted.",
+      "rule": "privacy-assurance"
+    },
+    {
+      "testGap": "No new regression executed; existing test declarations are inventory only.",
+      "title": "Child mobile allocation",
+      "file": "web/src/features/system/components/chatbot/SuggestedPrompts.tsx",
+      "reproStatus": "NOTRUN",
+      "reproNotRun": "Future mounted width/zoom targets and non-overlap measurements only.",
+      "line": 77,
+      "id": "F15",
+      "priority": "P2",
+      "sourceMechanismAndRepair": "sm Button is h-9 at Button.tsx 38, no mobile minima in suggestion/citation/message edit/regenerate. SessionList New sm and delete h-auto/p-1.5 also lack 44px default. Page/voice already override. Adopt child mobile classes; no measured WCAG/device failure claimed.",
+      "rule": "mobile-target-source"
+    }
+  ],
+  "confirmedIssueCount": 15,
+  "conditionalNativeCandidates": [
+    {
+      "id": "C01",
+      "file": "web/src/hooks/useAiStream.ts",
+      "line": 435,
+      "mechanism": "paused-confirm supported by hook, not page decision UI/Stop busy branch; actual chatbot confirmation emission and continuation unverified. Never invent endpoint or auto-confirm.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "line": 787,
+      "mechanism": "Fixed calc workspace below optional voice; composer keyboard/safe-area/short viewport/zoom clipping native-unverified. Reuse existing queue retained geometry need, no duplicate.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "line": 833,
+      "mechanism": "Polite additions log/nested evidence status and focus/forced-colors/RTL/stream announcement behavior require genuine composed screen-reader/native proof.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/system/components/chatbot/MarkdownRenderer.tsx",
+      "line": 107,
+      "mechanism": "Table overflow has no named/tabbable scroll region; browser native focus/keyboard scrolling and long-code reachability unverified.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C05",
+      "file": "web/src/api/types.ts",
+      "line": 1223,
+      "mechanism": "Typed wire ChatMessage lacks evidence/usage; historical backend enrichment/durability unknown, no persistence guarantee invented.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C06",
+      "file": "web/src/api/devtools.ts",
+      "line": 254,
+      "mechanism": "Chat writes do not request optional requiresLiveMode and page/SSE/voice lack mode guard. Conversational/session policy applicability, server enforcement and offline replay require contract proof; no actual violation outcome asserted.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "C07",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "line": 522,
+      "mechanism": "Enter lacks IME composition guard; actual native composition ordering not observed.",
+      "status": "NOTRUN"
+    }
+  ],
+  "sectionAudit": [
+    {
+      "name": "Header/history",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "line": 759,
+      "actions": "History toggle/pressed state and AI opt-in indicator",
+      "states": "PageLayout/PageContainer/localized title; desktop stored visibility, mobile initially closed; focus/contrast native-unverified"
+    },
+    {
+      "name": "Independent voice",
+      "file": "web/src/components/ai/AIVoiceMode.tsx",
+      "line": 183,
+      "actions": "Speak/Stop mic; mute/unmute playback; explicit voice Send; Stop stream/speech",
+      "states": "Fail-closed opt-in, unsupported/STT error, interim/final text, independent session, idle draft persistence/clear on done/unmount; partial error output retained. Paused contract C01, privacy F14"
+    },
+    {
+      "name": "Session history",
+      "file": "web/src/features/system/components/chatbot/SessionList.tsx",
+      "line": 85,
+      "actions": "select/New/rename Enter Escape blur/delete danger confirmation cancel",
+      "states": "Initial loading/empty, titles/counts/active state/full rename seed; desktop/mobile Drawer preserved. Missing fatal/retained-refresh/paused trust F01, mutation F04, discovery F06, prefs F07, targets F15"
+    },
+    {
+      "name": "Conversation/welcome",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "line": 830,
+      "actions": "Four localized suggestions populate editable draft without auto-send; read/scroll conversation",
+      "states": "Welcome/grouping/baseline waiting/AI planning-grounding/partial text and frame/transport errors; no heuristic fallback. Scope F01, empty F11, glow F08; native geometry C02"
+    },
+    {
+      "name": "Messages/evidence",
+      "file": "web/src/features/system/components/chatbot/ChatMessageItem.tsx",
+      "line": 126,
+      "actions": "copy message/code; regenerate last assistant; edit last user/save/cancel; evidence expand; links; table scroll",
+      "states": "Null-safe lazy Markdown without raw HTML, rel hardening, validated/deduped bounded knowledge excerpts; cited means source-name present, not entailment. Raw clipboard preserved. Terminal F10, trust F12, fragments F13, timestamp F07, motion F09, revisions F05"
+    },
+    {
+      "name": "Composer",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx",
+      "line": 893,
+      "actions": "Send/Enter/Shift+Enter/ArrowUp recall/Stop/Escape/New/load cancel reveal and SSE",
+      "states": "Explicit localized label and page mobile minima; editable busy draft. Canonical generation/controller cleanup and reduced-motion reveal retained. Draft F02, baseline F03, IME C07; pause/native focus unverified"
+    }
+  ],
+  "dataSources": "useChat TanStack sessions/history enabled by session with GET AbortSignal; devtools253-272 encoded snake_case paths/body for GET history/sessions, POST message, PATCH title, DELETE session; router.go4132-4138 declarations. Canonical useAiStream POST /ai/chatbot, voice independent /ai/voice/chat declaration in ai_routes.go. Settings opt-in gate fail-closed. Physical SI values are not converted/cached here; user raw text preserved. No route/handler/provider/auth behavior was exercised.",
+  "repairGrouping": "N01 F01+F03 session-owned history/baseline authority; N02 F02 accepted send; N03 F04 confirmed deletion; N04 F05 recoverable revision; N05 F06+F15 child action discovery/mobile allocation; N06 F07 settings-bound timestamps; N07 F08 restrained welcome; N08 F09 combined motion marker; N09 F10+F11 explicit terminal/no-output; N10 F12+F13 honest localized shared evidence; N11 F14 qualified shared voice privacy. Recommendations only, no dispatch or queue edit. Page/test owner for page needs; existing child source/test pairs for domain needs; exact shared/privacy/catalog leases for N10/N11. Serialize overlapping files; do not remigrate completed roots.",
+  "repairNeeds": [
+    {
+      "id": "N01",
+      "issues": [
+        "F01",
+        "F03"
+      ]
+    },
+    {
+      "id": "N02",
+      "issues": [
+        "F02"
+      ]
+    },
+    {
+      "id": "N03",
+      "issues": [
+        "F04"
+      ]
+    },
+    {
+      "id": "N04",
+      "issues": [
+        "F05"
+      ]
+    },
+    {
+      "id": "N05",
+      "issues": [
+        "F06",
+        "F15"
+      ]
+    },
+    {
+      "id": "N06",
+      "issues": [
+        "F07"
+      ]
+    },
+    {
+      "id": "N07",
+      "issues": [
+        "F08"
+      ]
+    },
+    {
+      "id": "N08",
+      "issues": [
+        "F09"
+      ]
+    },
+    {
+      "id": "N09",
+      "issues": [
+        "F10",
+        "F11"
+      ]
+    },
+    {
+      "id": "N10",
+      "issues": [
+        "F12",
+        "F13"
+      ]
+    },
+    {
+      "id": "N11",
+      "issues": [
+        "F14"
+      ]
+    }
+  ],
+  "commandEvidence": "Successful post-pin shell inspection commands and raw output preserved literally in permitted log. Early full view reads/authority discovery and raw output exist in conversation tool evidence; early exact command bodies and failure2969 full command were not completely mirrored to log. Numeric shell exits recorded where known, not invented for view tools. Windows oversized authoring shell3143 never launched. Log is append-only; this missing capture is an explicit report limitation, not hidden.",
+  "conditionalCandidateCount": 7,
+  "repairNeedCount": 11,
+  "pins_after": [
+    {
+      "captured_at": "2026-10-14T02:48:54.4836644Z",
+      "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "file": "internal/api/router.go"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4906885Z",
+      "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "file": "web/src/api/client.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4911045Z",
+      "sha256": "BCBE103558C5E6C80532AE8E001C8F019A6232AB869F14649BD3D3DBEC7119B1",
+      "file": "web/src/api/hooks/useChat.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4914120Z",
+      "sha256": "05508ACCBC5E2E717A67BD239A95874F18DCF4FC5D76DA7414C361509E729792",
+      "file": "web/src/api/hooks/useChat.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4918017Z",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "file": "web/src/api/types.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4921667Z",
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "file": "web/src/App.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4924160Z",
+      "sha256": "723AE166C17C43DE7E91F2E435E43D8647C09816580883D875C550F56950FDCD",
+      "file": "web/src/components/ai/AIAlertMessageTemplateButton.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4926719Z",
+      "sha256": "BFC9AAC3AC0F74EB252367B12FAB45D92BB35EDAEBC6C4DF48FB986AA6598A57",
+      "file": "web/src/components/ai/AIAlertMessageTemplateSuggestion.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4929090Z",
+      "sha256": "5D0AC3622CFF10627F1CFE33E6794FECA2EC8751E84532801629CB538F9A1EFE",
+      "file": "web/src/components/ai/AIAlertMessageTemplateSuggestion.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4931421Z",
+      "sha256": "FCE1D402E24116DE180F4C15A8117B7746358F7FE154BB95AD18FDDAB7547018",
+      "file": "web/src/components/ai/AIAlertPackBuilder.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4934228Z",
+      "sha256": "33A88A3F9F8E92A08D1BBE6272C4A4A5ECB95F4161B6386DB087C6824840FCB5",
+      "file": "web/src/components/ai/AIAlertPackBuilder.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4936613Z",
+      "sha256": "BFDB2CB04BCEED0C0DAF8EEA9B9EEF349A01B9DE20D78430C57C1E01E160E32D",
+      "file": "web/src/components/ai/AIAlertTuningSuggestions.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4939048Z",
+      "sha256": "DD00CAE8694B400E31BD01F3493CFCD8596B6257441E30C95E8BC6D57D0F2993",
+      "file": "web/src/components/ai/AIAlertTuningSuggestions.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4941551Z",
+      "sha256": "86940CACB24284E3172797A28EB16DAB34A67074D1020ADA2A76F55DBFB217BA",
+      "file": "web/src/components/ai/AIAnomalyExplanations.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4943740Z",
+      "sha256": "674D96627709A199E9E517A6801FE36ACBAB03A42A7DA7AC56E493F71457D5B9",
+      "file": "web/src/components/ai/AIAnomalyExplanations.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4945943Z",
+      "sha256": "E0EFCA1E6725121A5F69104BA77CDCEDBD6333BFF784F40B6457F22F15FFE479",
+      "file": "web/src/components/ai/AIAutoNameUnnamedLocations.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4949727Z",
+      "sha256": "503A0CA00F753760D42BB3621C19407967F2E66B8D612FBB8A5C9F88C0D8E1AF",
+      "file": "web/src/components/ai/AIAutoTripNameSuggestion.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4952205Z",
+      "sha256": "D57F6CFAFAD7503075FF2299D90EAA090448F647A386EF12BE8A976731E02A89",
+      "file": "web/src/components/ai/AIAutoTripNameSuggestion.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4954651Z",
+      "sha256": "65A5C2018DFF541AB93EA361AE2DB52E7D36C324355A1B7AAEC14703425FFC1B",
+      "file": "web/src/components/ai/AIBatteryHealthForecastNarrative.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4957024Z",
+      "sha256": "CCC45AD59C75868F352AB96408E1AAA7F547D3038F1DDC3912DC45CDEB38826B",
+      "file": "web/src/components/ai/AIBatteryHealthForecastNarrative.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4959752Z",
+      "sha256": "282D6C923B56131BB206B92C24B07A5B4B24BF63AABF3B55EAA4E49A631548B5",
+      "file": "web/src/components/ai/AICabinTemperatureImpactNarrative.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4962305Z",
+      "sha256": "A4CD514A565C43FBA478DE186A4B275A4E0945B0ECCA952BF279D9A1BFEBF139",
+      "file": "web/src/components/ai/AICabinTemperatureImpactNarrative.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4964992Z",
+      "sha256": "068DBD01CC6766B9540198DBAB789D092DE89DAF94B779C93DC038B1C661F2C1",
+      "file": "web/src/components/ai/AIChargingCurveFingerprintClustering.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4967439Z",
+      "sha256": "955530C076B24D8A17E87B55F2E5B71651B410668654C384E385ACEB10CFEDA8",
+      "file": "web/src/components/ai/AIChargingCurveFingerprintClustering.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4969849Z",
+      "sha256": "364917D7EA394F49929A21203145AC317C5F70C8072BC937A69B593D9B231ADF",
+      "file": "web/src/components/ai/AIChargingDiagnosis.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4972141Z",
+      "sha256": "4AD098990837887DEA06E71C9EE23229070AC679B49FC64F95D147CEEE0A8672",
+      "file": "web/src/components/ai/AIChargingDiagnosis.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4974534Z",
+      "sha256": "38995BEEDB4DC4BDF8D3FB1D3B15B0CAC3A2B633BFC81860871619FEAA2BBF5C",
+      "file": "web/src/components/ai/AIChatbotIndicator.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4976838Z",
+      "sha256": "E4A2CD5CB28D967AAF53CF2715E44FAC6E2153BAF8CDDAE2377AEDB7E597DE30",
+      "file": "web/src/components/ai/AIChatbotIndicator.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4979214Z",
+      "sha256": "800030F0FCC024A3E9823109EAE34E935F59E00F79A2B900292942AF8B05DE40",
+      "file": "web/src/components/ai/AICostForecastNarration.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4981739Z",
+      "sha256": "4AAC95B09653BE1A787AD3692955002529C2B4650D8008CFA57A4529CB487DD0",
+      "file": "web/src/components/ai/AICostForecastNarration.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4984423Z",
+      "sha256": "1F628CCBDD307385C4C3FDF7A4CC9847EBDC300CCEABED6CC5CD1F0D11215218",
+      "file": "web/src/components/ai/AICrossRuleConflictDetection.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4986813Z",
+      "sha256": "11B56E655045F0F30D4408B272215A75F9AA8D9A1C8F6A6D841EB58623133DEF",
+      "file": "web/src/components/ai/AICrossRuleConflictDetection.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4989172Z",
+      "sha256": "0AB168F4027052186CDCA0E375D38F493E5093D60D15A512709C63A9C41F55A7",
+      "file": "web/src/components/ai/AIDataRepairSuggestions.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4991518Z",
+      "sha256": "BF86876F15D2AD704E18E485A9D480B296320C307B8F1270B589A1800DDE6F03",
+      "file": "web/src/components/ai/AIDataRepairSuggestions.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4994185Z",
+      "sha256": "110E4AA30830C0BC413137DEE4E58C3B243AE2228ECAB4539FF7496F86372655",
+      "file": "web/src/components/ai/AIDigestNarration.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4996607Z",
+      "sha256": "D04000FDFCE020DDF0A93334C02800047DF1297C69249683B8A0B8ACC94C9D2A",
+      "file": "web/src/components/ai/AIDigestNarration.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.4999379Z",
+      "sha256": "8CF90EE1CBB0791FAFEB2992054E7591FDD30141130C6B1AFFAB006F1C6A563B",
+      "file": "web/src/components/ai/AIDriveCoaching.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5002054Z",
+      "sha256": "DA0578B148CE3E38B6F067FF037DFED4B79193EA859C59E719D3A82BCE052DEE",
+      "file": "web/src/components/ai/AIDriveCoaching.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5004686Z",
+      "sha256": "F8A8E8D368D09F034A4BEF5315FF881927A201F8C5AB45C702AF512DE48A5E43",
+      "file": "web/src/components/ai/AIFeatureCard.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5007337Z",
+      "sha256": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+      "file": "web/src/components/ai/AIFeatureCard.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5009949Z",
+      "sha256": "2E930BB6BB480A4B12D079CFA3B44238E13A14A3B6E34578AE7ADB5187E6B998",
+      "file": "web/src/components/ai/AIFeedbackQueueTriage.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5013882Z",
+      "sha256": "48394840C2887AE18242C1DFB67FE352EB5DD519CE22D4A82C00EDDE601AC1B5",
+      "file": "web/src/components/ai/AIFeedbackQueueTriage.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5016928Z",
+      "sha256": "F95A952CEEC5238615A0BC91EAD5ADFE94A01B3088FAB9DB29871787F6401C6A",
+      "file": "web/src/components/ai/AIGeofenceAwareAutomationSuggestions.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5019418Z",
+      "sha256": "8940D60BA8FD4A98D6DD86998BB46769ED1C11FF81044E7AEF528BC13C58A36F",
+      "file": "web/src/components/ai/AIGeofenceAwareAutomationSuggestions.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5022052Z",
+      "sha256": "AC665EE500225755B432D5C91ACF0EA2F94C291450774964FF77F6ACE8788604",
+      "file": "web/src/components/ai/AIInboxAutoCategorization.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5157113Z",
+      "sha256": "EB8D26FF632E2209FBEBB4908B18683AD09813311E18148ABC38951702F1E4BB",
+      "file": "web/src/components/ai/AIInboxAutoCategorization.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5164047Z",
+      "sha256": "7A25B2274177901CA5457B2190061C9EE1A55F3ABF68B5EA90B385B02D67BA4B",
+      "file": "web/src/components/ai/AIIncidentTimelineSummarizer.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5167464Z",
+      "sha256": "C07F93FF1A319308C990F8879F3F290DF372C381F9BEFB4CBF0C1E005F25BAAC",
+      "file": "web/src/components/ai/AIIncidentTimelineSummarizer.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5170065Z",
+      "sha256": "FFAC98427CBD44A3422692CAC5410A832E0FC4FF6F336F5DFDAA019943F5719B",
+      "file": "web/src/components/ai/AILearnedAnomalyBaselines.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5172562Z",
+      "sha256": "FABFF92BDD20AD5CEF42596EAD7752F90844C3ABDCF7446BD6EE494973196FA3",
+      "file": "web/src/components/ai/AILearnedAnomalyBaselines.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5175315Z",
+      "sha256": "18C72CC433970FFEDCE1A9826A931E31127718491A7A1207EA460CA55B34CE48",
+      "file": "web/src/components/ai/AILifetimeStatsQA.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5178062Z",
+      "sha256": "D608BC5B02A29A12DDBD34996CAA2F7EE046A85C28224D2559F6759A09073955",
+      "file": "web/src/components/ai/AILifetimeStatsQA.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5181514Z",
+      "sha256": "AB219B5CFB43C50FD53625162003648C118ED4759CF5DD05D1686D437AA15DDE",
+      "file": "web/src/components/ai/AiLimitBanner.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5183788Z",
+      "sha256": "E0AF68244435B0324A84314F177E0510BED3AC2F2FF87F486F42E218C4DC6B2F",
+      "file": "web/src/components/ai/AILogTraceSummarization.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5186470Z",
+      "sha256": "29731E4F6E2CE328AF5636D586C286B99C03D1131DDE603A6531ABE50AF5A98F",
+      "file": "web/src/components/ai/AILogTraceSummarization.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5190091Z",
+      "sha256": "E0760B5F32DCC77657BBC1FED67797C68E4BD44D3728AE825963A11AB6C6BE60",
+      "file": "web/src/components/ai/AIMLChargingCurveClustering.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5192376Z",
+      "sha256": "15F4F013B45E03AB826ABFC0461C0E1610E608C1BFD724496A3ECDD8F60DEF10",
+      "file": "web/src/components/ai/AIMLChargingCurveClustering.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5194520Z",
+      "sha256": "4C009D2FB74ED17578A3057A9B0E7A6B0CE7DA6E1927235823EA4FB9113BEA03",
+      "file": "web/src/components/ai/AIMqttSseInspectorExplanations.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5196482Z",
+      "sha256": "749F86CB8DA359E4BE9A8E72E477E6E4876020F6B6F5D4EC1BC7C0666BC418F1",
+      "file": "web/src/components/ai/AIMqttSseInspectorExplanations.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5198440Z",
+      "sha256": "ECC83B2FDD2CD37F2411D82E01A47F7AAB92CC77B546C42A12403F921E03F88F",
+      "file": "web/src/components/ai/AINLAlertBuilder.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5200188Z",
+      "sha256": "C0E1CE32BFF87D25BF7DA8A262603AB6F0C17E19D0CF667FC8C797BBC698C248",
+      "file": "web/src/components/ai/AINLAlertBuilder.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5202071Z",
+      "sha256": "BDF292F04737F30B4D2F679B6DF7A04B1D5B0F66F3F3CFF3BACFC336B2CFDD5A",
+      "file": "web/src/components/ai/AINLAutomationBuilder.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5203803Z",
+      "sha256": "11A367187BAF9397B971E74AC2EA93E335CFC0C362529FCB2F79DD346D7DAD91",
+      "file": "web/src/components/ai/AINLAutomationBuilder.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5205771Z",
+      "sha256": "1D84FE5EFB6D8F4A729DE792E97565EC92C42F7A8F4D25CB63B02BC3B426BF6B",
+      "file": "web/src/components/ai/AINLDashboardComposer.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5207555Z",
+      "sha256": "FD995F9A3B18698FEBD9AE6783099F4EFA080BB7144D2FA07A30FC141C6B03EC",
+      "file": "web/src/components/ai/AINLDashboardComposer.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5209410Z",
+      "sha256": "81304A86CFB6AF533D8BDF04C22EE30886E5BA14B3CE3399C1EB0AD6A26F558B",
+      "file": "web/src/components/ai/AINLDriveSearch.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5211236Z",
+      "sha256": "0C3B24DCBF7BEDC19FD436BF1D13853C3EF8A216BD3B50A1924CA73D8E0373EC",
+      "file": "web/src/components/ai/AINLDriveSearch.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5213283Z",
+      "sha256": "B79F2DB7A47E6CD88A6D76629E397D30432A730110EE255CA9239D33F81E581B",
+      "file": "web/src/components/ai/AINLGrafanaPanel.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5216061Z",
+      "sha256": "FA8B9912FCA3883D977BA1121581699CD2CA6FBD2EB5E7F3667297360A1556C1",
+      "file": "web/src/components/ai/AINLGrafanaPanel.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5220619Z",
+      "sha256": "EC996BC99B0FFEE1C1A808D305E20EA294504E4349F45015E7CDBB4AB70F8907",
+      "file": "web/src/components/ai/AINLSearch.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5224056Z",
+      "sha256": "364DCA048B9F92794C5FF31BC4DBDE5CCA1B5A6236FD8D7974CC6C08F5214029",
+      "file": "web/src/components/ai/AINLSearch.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5227340Z",
+      "sha256": "A820EC187C0153B72AA21A5815DF90D7D4C06A70AD10605E3F65F98D1A48684F",
+      "file": "web/src/components/ai/AINLSqlPlayground.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5230100Z",
+      "sha256": "AB52ADF86E91D3C92E7FA73FB54A8307BD35A432E9CE4A07A16B3F318E633E2D",
+      "file": "web/src/components/ai/AINLSqlPlayground.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5232881Z",
+      "sha256": "30D56F98064C935FCEF47E56590174BE6FA304681BA8AFE672A2F7C74CC87A3B",
+      "file": "web/src/components/ai/AiOutputPanel.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5235590Z",
+      "sha256": "C3BB5766576F4E80B16762122D2EE35038A9AA7CF6FE96DF426269FE07E3C8A4",
+      "file": "web/src/components/ai/AiOutputPanel.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5238491Z",
+      "sha256": "854FC07B4D510EF751F79AC08EFFD2508F98E03B485071766EB288FBAC0A257E",
+      "file": "web/src/components/ai/AIPeriodCompareNarration.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5241577Z",
+      "sha256": "61F16632EC7E2A94E487DEE229CDDD3529BC812E4F3513B3F343C1C51E87A743",
+      "file": "web/src/components/ai/AIPeriodCompareNarration.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5244886Z",
+      "sha256": "21B5B35BCE3E1B809EA43749980B599B173E8964ED9E1823B8DD70FC6A114EA9",
+      "file": "web/src/components/ai/AIPiiRedactionSharedExports.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5247691Z",
+      "sha256": "4C25E609D73B60155E6076CBD6CE4534D91412CDF09CD07D2C23B88FE35C4902",
+      "file": "web/src/components/ai/AIPiiRedactionSharedExports.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5250322Z",
+      "sha256": "DEB1AD324ED61F2CA8C51E28986E4D891BDEA3C150C9F7280928DC5353819A50",
+      "file": "web/src/components/ai/AIPredictiveMaintenance.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5252767Z",
+      "sha256": "81246CD1BC5EDC262B1F92D54800C64D5E8200D1363DAD280994A788488B5419",
+      "file": "web/src/components/ai/AIPredictiveMaintenance.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5255712Z",
+      "sha256": "B1B16E3D29E37050E1C57B30F5B76F1622D354D1048504DAA7D12C526CC18F5A",
+      "file": "web/src/components/ai/AIPreheatPrecoolRecommender.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5258243Z",
+      "sha256": "E974648E9FE94669E03D455CDF27FC99B0B5843559B24E2F2B65DEB4F2A8C84C",
+      "file": "web/src/components/ai/AIPreheatPrecoolRecommender.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5261173Z",
+      "sha256": "848EC93506910FDDF431CA858E168D1B36FB917C3A63BAD55B132AA35D3BBC73",
+      "file": "web/src/components/ai/AIQuietHoursSuggestion.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5263740Z",
+      "sha256": "108BD3C662C7AD8877053B118319B0C11F7751E2514D28282C2455C79320ABDB",
+      "file": "web/src/components/ai/AIQuietHoursSuggestion.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5266325Z",
+      "sha256": "DBA57AA9BC4426E555ED54BCEAAAD99E6E826BE77D8B3CBBF8EBCD8301419356",
+      "file": "web/src/components/ai/AIRAGHelp.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5268926Z",
+      "sha256": "5E7671F152FBA5A86E7C89D6BE5F3D14CCD39B112C9AD4C8573DCC14891BF734",
+      "file": "web/src/components/ai/AIRAGHelp.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5271635Z",
+      "sha256": "67637B5C48ECD5606A0FF8D723D3BE87B4E9B27BF06D6656F1555ED703927FFE",
+      "file": "web/src/components/ai/AIRangePrediction.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5274085Z",
+      "sha256": "814E04EC5716327D27F6BDE966B330EAE2D3F95D6A0E22F181BD8F17980879B4",
+      "file": "web/src/components/ai/AIRangePrediction.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5276751Z",
+      "sha256": "529439F5071CE6862A47C8F13426E9C4AD9830C780F6685B3A1F4F5B25F06445",
+      "file": "web/src/components/ai/AIRouteEfficiencySuggestions.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5279206Z",
+      "sha256": "8601E581E93B48AE111AFE7F44E20D21D7B9D14A47A32E380B1945367B9927E8",
+      "file": "web/src/components/ai/AIRouteEfficiencySuggestions.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5281748Z",
+      "sha256": "F50AA05DB849DA0D6749E2AE5DED74CB5FD0E9DAE61A327473DD6D1315394B5D",
+      "file": "web/src/components/ai/AISafetySettingExplainer.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5284141Z",
+      "sha256": "CC4924B4D7C5FAE6D9A3045EA6AF0B80DD801A2DF0EED03F570568B65409D9F9",
+      "file": "web/src/components/ai/AISafetySettingExplainer.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5286991Z",
+      "sha256": "FA99F9665E96D361A51AD5FE72F666513B064C2527B2A4F1EE59214F4F4E55A2",
+      "file": "web/src/components/ai/AISignalExplorerNlFilter.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5289708Z",
+      "sha256": "859456C6C5ACAEF9E755C159B91A645E4CB8322E6278C5E4D7C7ED1553B69A8F",
+      "file": "web/src/components/ai/AISignalExplorerNlFilter.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5292606Z",
+      "sha256": "41F05012892B1F5F068188E2EECC43F90469B8F55730846B17A036B494A95090",
+      "file": "web/src/components/ai/AISmartChargeScheduleSuggestion.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5295086Z",
+      "sha256": "164A13BC86BA7DF2D971126B3C47006FBC2E335248DBEB8573760D43AA5AFF78",
+      "file": "web/src/components/ai/AISmartChargeScheduleSuggestion.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5297847Z",
+      "sha256": "8136115856D3B9B20ECECA7BCD8FC34D7180F60282E7722F0715061E18AEB6FC",
+      "file": "web/src/components/ai/AISoftwareUpdateChangelogSummarizer.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5300695Z",
+      "sha256": "B14C1F732631ADE27F7B678E60F096F50D36FE292B99CE57368B7AE28D28C5B1",
+      "file": "web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5303402Z",
+      "sha256": "49BF57EE59FC9FA872986648B4C2560F91F25D03D06738A3E9FC5ECE07F2CD77",
+      "file": "web/src/components/ai/AISpeedProfileInsights.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5306102Z",
+      "sha256": "4E8A08788961B82EF5A366C719CAC3E4D50B2E778ACEB0182061465D0AF739DE",
+      "file": "web/src/components/ai/AISpeedProfileInsights.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5309016Z",
+      "sha256": "A117B971DB07BBCD85871D0FA09DDA110146AB0B9E822E35ACA11FD399C599AD",
+      "file": "web/src/components/ai/AIStateMachineDebuggerNarrator.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5311600Z",
+      "sha256": "BADDDF2561258C51636E11EA79325EEB14198E101298492ABA30D37FAEF09D5E",
+      "file": "web/src/components/ai/AIStateMachineDebuggerNarrator.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5314347Z",
+      "sha256": "7D511ACFFDB53F6C53F8E8636BCBD9EB64683236FFA8CF8F9C5E3D903AE3C447",
+      "file": "web/src/components/ai/AISuggestNewGeofences.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5317015Z",
+      "sha256": "AD67748DF9EC7C2EA962C4108B2192D0AA9EB9ABBD7D9AF4D579A6623661BEC3",
+      "file": "web/src/components/ai/AISuggestNewGeofences.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5319637Z",
+      "sha256": "10B5F57CC9DC44D9B91A136512C5410F53B5494199CACBDE973E5C9CA413248A",
+      "file": "web/src/components/ai/AITCONarration.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5322096Z",
+      "sha256": "B937F9EAE5E6BF00541F478288261B4295FD64DCE132878BD8F749596CC425B0",
+      "file": "web/src/components/ai/AITCONarration.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5324573Z",
+      "sha256": "A5E69904F2CF1660B1383FCAAD05A3FF68C782D28583CCCB4585B4A25A730063",
+      "file": "web/src/components/ai/AIThinkingIndicator.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5327266Z",
+      "sha256": "9F387482D09223469A93BB71B25D6B5800D8FEC6B51B0EF5481AE4B27FC8037D",
+      "file": "web/src/components/ai/AIThinkingIndicator.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5329991Z",
+      "sha256": "A503D5E4510B97C9C54DBA72AA174657ABE8FABC47753008BCAB99EAB7C4A331",
+      "file": "web/src/components/ai/AITirePressureTrendReasoning.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5332450Z",
+      "sha256": "6ED27CFFA4B31AB2279875800C010833B18A98EF36B48609F9C9A737B88565C7",
+      "file": "web/src/components/ai/AITirePressureTrendReasoning.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5342022Z",
+      "sha256": "1D52985CE6D8B85FCF345641F5EE00ED95687BEA94E51B704CD5AE4AF7369B50",
+      "file": "web/src/components/ai/AITripPlannerLLMAgent.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5346168Z",
+      "sha256": "56F3E7D23EF694B6CE21B150DC44A00AAE928E270BA07022E3E5CD3488625E55",
+      "file": "web/src/components/ai/AITripPlannerLLMAgent.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5350762Z",
+      "sha256": "1F53998FCD66146A9302942C88833456EA39AFC373B6E86282F7490086747DD0",
+      "file": "web/src/components/ai/AITripPostcardShareCardImageGeneration.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5353107Z",
+      "sha256": "697966A5358EE3E69D747316CF15E8971CB62F2DEDF0742D16FBA4C91A6681E2",
+      "file": "web/src/components/ai/AITripPostcardShareCardImageGeneration.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5357013Z",
+      "sha256": "A51A92505C69534599E4E48387743C41DBE1AB33C3FC697887BC2C17E348FB2D",
+      "file": "web/src/components/ai/AIVampireDrainExplanation.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5360900Z",
+      "sha256": "FDF5E24B09428AFBE249CD705E60A3148D4C2A3F73493EFC77B36634E954789D",
+      "file": "web/src/components/ai/AIVampireDrainExplanation.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5363226Z",
+      "sha256": "B0EA02C381BBE96DD025F4913D89FE9A0EBC7FB47F01ADE69194DF63F5BEAF5D",
+      "file": "web/src/components/ai/AIVehiclePaintPreview.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5365054Z",
+      "sha256": "3BA58574FB1BD48D9013A0F20CD2366019C38B02068D0710070CF0A98BE96E3F",
+      "file": "web/src/components/ai/AIVehiclePaintPreview.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5368986Z",
+      "sha256": "21AAB5A752340540AFFEA9A3B5F9D269E322FD254E4300AE94C29A1F4565905A",
+      "file": "web/src/components/ai/AIVoiceMode.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5371448Z",
+      "sha256": "07FCCD5BF09B37BA3E5729D33910B06600F8C837E01056C39852505FDEF18499",
+      "file": "web/src/components/ai/AIVoiceMode.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5373520Z",
+      "sha256": "6C9AFE288838FC2247E383DCBA87E028156135D9B4992E353609494421E74B67",
+      "file": "web/src/components/ai/AIWatchFaceNLResponse.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5375723Z",
+      "sha256": "F56FF714E3AD17B5FEB97E432529C852AC1085605C595CDB93838919E857E93D",
+      "file": "web/src/components/ai/AIWatchFaceNLResponse.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5381038Z",
+      "sha256": "DA11512DFEADF25C4922362502EFC9B6E2D67E248333D8B8CB9AA6CE5BE737C3",
+      "file": "web/src/components/ai/AIYearReviewNarration.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5386098Z",
+      "sha256": "6E6109BF1E52BDD0A95A516B15DF47665758F2D188DE8F7F53CBC722E332C14E",
+      "file": "web/src/components/ai/AIYearReviewNarration.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5389446Z",
+      "sha256": "74131FE9A5288C9C665E5C6923625C538B4657C201CF83DBF2B3321F04A9AE80",
+      "file": "web/src/components/ai/automationDraftInput.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5392823Z",
+      "sha256": "AEC0ADF7C45264772751B4FEECE45BBEB6C2861AFA15182581D59B2C8872957C",
+      "file": "web/src/components/ai/ConfirmDialog.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5395432Z",
+      "sha256": "953592D2D52D941B7FCDE3F30FDED6DECB432C7CD7E0BD5A16A6D495DEC61076",
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5398477Z",
+      "sha256": "C027039146BAD690F91150F65161903AF981CA991CA37F707B3F0C0D1DFFE7CA",
+      "file": "web/src/components/ai/index.test.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5400687Z",
+      "sha256": "E5125F596C27A6A34E311FBC08AA939CBD925C9572B2BBC5DAD08231A67BC178",
+      "file": "web/src/components/ai/index.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5403099Z",
+      "sha256": "653C81D8E483623D2EDCCCD61732961F762FD61CD387FDED95166CDFE770082E",
+      "file": "web/src/components/ai/withAiFeature.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5404708Z",
+      "sha256": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+      "file": "web/src/components/ai/withAiFeature.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5406454Z",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5408215Z",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "file": "web/src/components/layout/PageContainer.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5409871Z",
+      "sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "file": "web/src/components/ui/Button.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5411504Z",
+      "sha256": "F4E17BA0F8C43C4C567FEDF3CB17D3E7F27FF13B2219F45C9BD62CEBE1F7F72D",
+      "file": "web/src/components/ui/Drawer.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5416059Z",
+      "sha256": "6DE5EFA5B3F0077C97712BE4FC7C3B436DF47A4C803012CAE8CB0756BAD2DB75",
+      "file": "web/src/components/ui/Textarea.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5419404Z",
+      "sha256": "F70970B0CE9DCA4B7CC563D73AAA6357A54D2457E08CA4B10CBFA1A40E086719",
+      "file": "web/src/features/system/__tests__/ChatbotAIOff.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5421695Z",
+      "sha256": "8DFA44E8EA48077C7E5D2435FD5CDF7617ADB9FB88F2C822EBAB5149EF7157F8",
+      "file": "web/src/features/system/components/chatbot/ChatMessageItem.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5423835Z",
+      "sha256": "FF34C5D9BD4BBD1AF224F85E59030DA97143902707F28ED6E4342213AC1CC308",
+      "file": "web/src/features/system/components/chatbot/ChatMessageItem.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5425768Z",
+      "sha256": "4E077EF6046AEF1232C8132E21FA81D9975F11240F1371FA6557FFC01E9DEE45",
+      "file": "web/src/features/system/components/chatbot/ChatWelcome.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5427579Z",
+      "sha256": "33F59CB63E2E1C23ACD818648ABD832AB504C0B6A3080F33CCCB00C8F9BA5509",
+      "file": "web/src/features/system/components/chatbot/ChatWelcome.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5429486Z",
+      "sha256": "7F26C103B5F636ADDE2316AB513A163EF00D5454985415535DA91E7069F30B59",
+      "file": "web/src/features/system/components/chatbot/CodeBlock.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5431280Z",
+      "sha256": "42BCC56141C00A20E7CCB043EB6E6F4A7A2FE708FB0466FA37B5507EDFBDCD58",
+      "file": "web/src/features/system/components/chatbot/CodeBlock.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5433220Z",
+      "sha256": "2FF11AECDBDB60044A72F697912F9D75DCFBA605C6D19319566C1159E53BCCE6",
+      "file": "web/src/features/system/components/chatbot/KnowledgeCitations.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5435113Z",
+      "sha256": "61C87694C4D77E2B1525B0389E85B2047000DF35BF52445B9C6738CBE4AF7B52",
+      "file": "web/src/features/system/components/chatbot/knowledgeEvidence.test.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5436894Z",
+      "sha256": "3B640CC3EE4E9D20EEFE7547F15E4526F107B7EB8A9B2BF3A18A35DFBC6D9343",
+      "file": "web/src/features/system/components/chatbot/knowledgeEvidence.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5438744Z",
+      "sha256": "A6B24ABD18CACADA970D782AA1566BE611E9F698C674F57171A1232751933FF3",
+      "file": "web/src/features/system/components/chatbot/MarkdownRenderer.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5440458Z",
+      "sha256": "2D37EA0290B3891E2BE4284F0BD276E8C9ECB96CD09DBABF80A8B2A0F194BD15",
+      "file": "web/src/features/system/components/chatbot/MarkdownRenderer.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5442310Z",
+      "sha256": "B48E355F74E6881406A64A55E7C99C7B437B8B1F15AB64FCB3036556BB160CBE",
+      "file": "web/src/features/system/components/chatbot/SessionList.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5444241Z",
+      "sha256": "A2B81F615FD56D941C595DF1D9D980B40DB5B1707DFAD5B797A243E9EDB35A0D",
+      "file": "web/src/features/system/components/chatbot/SessionList.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5446062Z",
+      "sha256": "3133577C811B11EB2701E977DEE79B7B7A0998095B317D0E554463E27AEED967",
+      "file": "web/src/features/system/components/chatbot/SuggestedPrompts.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5448460Z",
+      "sha256": "A693D4E2B715CD48ACF189628F01FF8D8DB2159574C3C8C865E91220A913459A",
+      "file": "web/src/features/system/components/chatbot/SuggestedPrompts.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5451004Z",
+      "sha256": "5AC5A008337B0EDC1C4B7CC4FB8750AEB90AFB30D334FA07217DD9FF0E9EEE47",
+      "file": "web/src/features/system/pages/ChatbotPage.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5453425Z",
+      "sha256": "E2A1D211E939C74175D4EF571838095EC85454D187931D7A05E67C03E3BEC31F",
+      "file": "web/src/features/system/pages/ChatbotPage.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5455526Z",
+      "sha256": "4E90501EB6AFC2FCCD498A3C38524F6C30038B10AA472508F1ECD645DBA7A95A",
+      "file": "web/src/hooks/__tests__/useAiStream.test.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5457628Z",
+      "sha256": "7376A394BFFF7C938A706CDD251A90B11C68C3A0CD371DCCD5AD7A87AB923497",
+      "file": "web/src/hooks/useAiEnabled.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5459309Z",
+      "sha256": "AFB5DDDD9EDC3F024249D1BA97F04A8C9C9A5D5B9BC09BE672113FE155069250",
+      "file": "web/src/hooks/useAiEnabled.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5461354Z",
+      "sha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+      "file": "web/src/hooks/useAiStream.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5463454Z",
+      "sha256": "4E3887DAA49D5D772C93BCD7FE373382D97A778850CD31FB8CF6EF22AFB6C582",
+      "file": "web/src/hooks/useMediaQuery.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5465208Z",
+      "sha256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+      "file": "web/src/hooks/useMotionPreference.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5485847Z",
+      "sha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "file": "web/src/i18n/en.json"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5487961Z",
+      "sha256": "EB18BB593DE9F14A9F519A5C7805F91CB464CC5C5BA3403B5957A96EB20B30D1",
+      "file": "web/src/i18n/en/locale-detail-chatbot.json"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5489789Z",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "file": "web/src/lib/workspaceScope.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5491599Z",
+      "sha256": "199A63E65265E4A2787F700C180042E22FAED5EB1E1D97F6027EF72DBCBF6F4C",
+      "file": "web/src/api/devtools.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5493524Z",
+      "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "file": "web/src/lib/dateFormat.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5495234Z",
+      "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "file": "web/src/hooks/useDateFormat.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5496893Z",
+      "sha256": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+      "file": "web/src/hooks/useSettings.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5498538Z",
+      "sha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+      "file": "web/src/hooks/useOperationalMode.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5500357Z",
+      "sha256": "04BDAA937938F96AF3B2D39B8236608063DE83D7A530DB8C67FE6BD1DEE120A3",
+      "file": "web/src/lib/tokens.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5503662Z",
+      "sha256": "A9E780C3591933FB3553872D249E3CF7F19B28F8E22DF6FCDBAF957C8E5C2EED",
+      "file": "web/src/ai/features.ts"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5506491Z",
+      "sha256": "2CEB7BF479004A8C7EE8D3AAAAB97B61721DE6DFB72F8360FB0A504A8B7F90AE",
+      "file": "web/src/features/system/__tests__/TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5510829Z",
+      "sha256": "1355D16FB93748948DDCEE9EF47269B44231E92DCDB3BB4293E4F85598E2E30A",
+      "file": "web/src/features/system/__tests__/TestVoiceModeAIOnWiredCallsRoute.test.tsx"
+    },
+    {
+      "captured_at": "2026-10-14T02:48:54.5514704Z",
+      "sha256": "F0BCBD1B33717F76EFA91855587A239B03E8111956862F4906842251BAAC54B3",
+      "file": "internal/api/ai_routes.go"
+    }
+  ],
+  "pin_drift": [
+    {
+      "before": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "after": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "file": "web/src/i18n/en.json"
+    }
+  ],
+  "summaryByRule": [
+    {
+      "count": 1,
+      "rule": "a11y-actions"
+    },
+    {
+      "count": 1,
+      "rule": "draft-retention"
+    },
+    {
+      "count": 1,
+      "rule": "empty-state"
+    },
+    {
+      "count": 1,
+      "rule": "evidence-trust"
+    },
+    {
+      "count": 1,
+      "rule": "i18n-fragments"
+    },
+    {
+      "count": 1,
+      "rule": "mobile-target-source"
+    },
+    {
+      "count": 1,
+      "rule": "motion-preference"
+    },
+    {
+      "count": 2,
+      "rule": "mutation-retention"
+    },
+    {
+      "count": 1,
+      "rule": "preference-timezone"
+    },
+    {
+      "count": 1,
+      "rule": "privacy-assurance"
+    },
+    {
+      "count": 1,
+      "rule": "session-authority"
+    },
+    {
+      "count": 1,
+      "rule": "state-trust"
+    },
+    {
+      "count": 1,
+      "rule": "terminal-trust"
+    },
+    {
+      "count": 1,
+      "rule": "visual-restraint"
+    }
+  ],
+  "filesWithMostIssues": [
+    {
+      "count": 7,
+      "file": "web/src/features/system/pages/ChatbotPage.tsx"
+    },
+    {
+      "count": 2,
+      "file": "web/src/components/ai/HelixEvidenceTrail.tsx"
+    },
+    {
+      "count": 2,
+      "file": "web/src/features/system/components/chatbot/ChatMessageItem.tsx"
+    },
+    {
+      "count": 1,
+      "file": "web/src/components/ai/AIVoiceMode.tsx"
+    },
+    {
+      "count": 1,
+      "file": "web/src/features/system/components/chatbot/ChatWelcome.tsx"
+    },
+    {
+      "count": 1,
+      "file": "web/src/features/system/components/chatbot/SessionList.tsx"
+    },
+    {
+      "count": 1,
+      "file": "web/src/features/system/components/chatbot/SuggestedPrompts.tsx"
+    }
+  ],
+  "documentValidation": {
+    "errors": [],
+    "changedRecords": 1,
+    "citationsChecked": 28,
+    "counts": "15 findings/7 candidates/11 needs/6 sections and each finding mapped once",
+    "json": "ConvertFrom-Json succeeded",
+    "pinRecordsBefore": 174,
+    "normalCatalogGates": "NOTRUN",
+    "pinRecordsAfter": 174,
+    "citationCheck": "file exists and main line in range, raw actual line logged; not exhaustive semantic citation AST",
+    "tests": "NOTRUN"
+  },
+  "partialReason": "Source QA findings, candidates, coverage, dedup and document/pin checks delivered. Exact early command bodies/raw reads and full failed2969 command are not completely mirrored in artifact log; no claim of full command-capture compliance. Concurrent pinned-file drift reported; no stabilization or rerun permitted.",
+  "release_at": "2026-10-14T02:48:54.7903370Z",
+  "release_scope": "Both writable artifacts and all inspection commands; no source/test/catalog/queue/Git lease acquired; report-only partial, no application acceptance.",
+  "dispositionContinuation": {
+    "status": "DONE",
+    "scope": "Disposition of the original 15 confirmed source findings and seven conditional candidates against the canonical queue only. No source re-audit, fresh source-fix verification, repeated proven passes, new findings, or page approval.",
+    "requestReceivedAt": "2026-10-14T05:08:17.962Z",
+    "canonicalClaim": {
+      "item": "phase6-qa-system-chatbot",
+      "actor": "894d94f0-51a1-4db0-af3f-d4ba8ca1ffd4",
+      "attempt": 1,
+      "started": "2026-10-14T05:06:00Z",
+      "returnDeadline": "2026-10-14T05:26:00Z",
+      "hardDeadline": "2026-10-14T05:31:00Z",
+      "note": "Current canonical continuation claim, not a reset of the original reservation, deadlines, attempt, or release receipt."
+    },
+    "alreadyDoneCheck": {
+      "result": "Change required: the existing report has original findings and N01-N11 group membership, but no per-finding current canonical-queue disposition or exact proposed repair-file ownership.",
+      "originalEvidenceRetained": "Original findings, candidates, pins, historical test evidence, failure chronology, partialReason, command-capture limitations, catalog drift, original clock and original release fields are unchanged. Top-level DONE means this report-only continuation is complete; it does not turn the original PARTIAL evidence capture into full compliance."
+    },
+    "completionBoundary": "Report delivery only. All original reproductions and native/application checks remain NOTRUN. Missing below means a confirmed original finding lacks a matching canonical fix objective/owner, not that current source was freshly inspected and proven still defective.",
+    "canonicalQueueEvidence": {
+      "path": "migration-queue.md",
+      "inspectedAt": "2026-10-14T05:12:38.3362537Z",
+      "snapshotUtf8Sha256": "7D486E556799A3765B4655E7A051BAF28570737955D972961B9FB411E65784F3",
+      "taskRows": 1892,
+      "focusedObjectiveMatches": 10,
+      "matchingNonhistoricalRepairRows": 0,
+      "method": "Read the canonical queue as one text snapshot; match original owner filenames and chatbot/conversation/privacy/grounding/session-settlement/revision/caret terms. Separately read exact shared-root and predecessor rows. Classify objectives, not mere dependency mentions, catalog projections, or unrelated page findings.",
+      "rows": [
+        {
+          "item": "phase6-qa-system-chatbot",
+          "status": "[~]",
+          "line": 342,
+          "disposition": "This exclusive report/log claim, not a source-fix owner."
+        },
+        {
+          "item": "phase5-page-system-chatbot",
+          "status": "[x]",
+          "line": 2347,
+          "commit": "4280cbbf73551b6b582ba018191cf2cd4ae86f68",
+          "disposition": "Completed source migration, not a new F01-F15 fix objective. Preserve completion; do not remigrate. Native composer clipping/shared-child needs were explicitly retained."
+        },
+        {
+          "item": "audit-page-181",
+          "status": "[x]",
+          "line": 1093,
+          "commit": "296f9e0ef0",
+          "disposition": "Historical Phase0 audit, not a repair or current page acceptance."
+        },
+        {
+          "item": "phase3-ai-stream-generation-isolation",
+          "status": "[x]",
+          "commit": "8f13724849",
+          "disposition": "Accepted shared SSE generation/controller isolation. Do not duplicate this root; F03 is distinct page-owned baseline mutation settlement."
+        },
+        {
+          "item": "phase3-ai-output-panel",
+          "status": "[x]",
+          "line": 1282,
+          "commit": "d96c72e9a4",
+          "disposition": "Existing shared output implementation. F11 concerns the different page/message rendering path, not reopening the shared completed-empty root."
+        },
+        {
+          "item": "phase3-retained-ai-output-error",
+          "status": "[x]",
+          "line": 1831,
+          "commit": "d2a305ab49",
+          "disposition": "Accepted shared partial-output error retention. Distinct from page edit/regenerate recovery F05; no shared-root rerun."
+        },
+        {
+          "item": "phase3-ai-voice-presentation",
+          "status": "[x]",
+          "line": 1285,
+          "commit": "ee30621f80",
+          "disposition": "Accepted presentation/scoped historical tests; unresolved privacy needs and no provider/native privacy acceptance remain explicit. Does not close the unsupported assurance F14."
+        },
+        {
+          "item": "phase3-ai-voice-scoping",
+          "status": "[x]",
+          "line": 1286,
+          "disposition": "Read-only historical scoping, not a privacy-copy repair."
+        },
+        {
+          "item": "phase3-helix-evidence-trail",
+          "status": "[-]",
+          "line": 1719,
+          "commit": "674792c5bc",
+          "disposition": "Excluded historical provenance/revalidation/repair-loop bookkeeping, exact source files absent from the current claim. Neither an active F12/F13 owner nor evidence these findings were fixed; do not retry the excluded bookkeeping item."
+        },
+        {
+          "item": "phase5-current-source-catalog-closure",
+          "status": "[x]",
+          "line": 910,
+          "commit": "91650fc9de1b96f60f00a01e24f2f73a716bd817",
+          "disposition": "Completed literal catalog closure/projections are not F13 whole-message/plural semantics or F14 qualified privacy copy. No catalog gap or new key was measured here."
+        },
+        {
+          "item": "phase5-feature-migration",
+          "status": "[b]",
+          "line": 2152,
+          "disposition": "Aggregate dependency mention, files '-', not a chatbot repair claim."
+        }
+      ],
+      "unrelatedMatches": [
+        "phase6-qa-exports-exports",
+        "phase6-qa-vehicles-vehicle-access",
+        "phase3-ailearned-anomaly-baselines"
+      ],
+      "limitation": "A bounded read-only queue snapshot, not a live-worker census or immutable current-source receipt. Queue ownership may change after inspection. The parent must reread before assigning exclusive source files."
+    },
+    "finalQueueOwnershipCheck": {
+      "checkedAt": "2026-10-14T05:17:12.0875910Z",
+      "snapshotUtf8Sha256": "EF268EC7258706F19343E6F5D2761EEEBD4254571DDAF4C2B7D7673EC57576B0",
+      "method": "Compare exact proposed source/test file names, derived solely from the report, against canonical row file columns. No source reads.",
+      "directOwnerRows": [
+        {"item": "audit-page-181", "status": "[x]"},
+        {"item": "phase3-ai-voice-presentation", "status": "[x]"},
+        {"item": "phase3-ai-voice-scoping", "status": "[x]"},
+        {"item": "phase5-page-system-chatbot", "status": "[x]"}
+      ],
+      "activeDirectFixOwners": 0,
+      "limitation": "Concurrent canonical queue changed after the earlier objective snapshot; exact original-finding file owners still have no pending/active repair claim at this final read. Parent must reread before dispatch; no current lifecycle census was performed."
+    },
+    "findingDispositions": [
+      {
+        "id": "F01",
+        "need": "N01",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "ChatbotPage page/test owner",
+        "reason": "No canonical scoped history/session-state repair. Historical page migration is not closure of this finding."
+      },
+      {
+        "id": "F02",
+        "need": "N02",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "ChatbotPage page/test owner",
+        "reason": "No canonical accepted-send/draft-retention repair."
+      },
+      {
+        "id": "F03",
+        "need": "N01",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "ChatbotPage page/test owner",
+        "reason": "Page-owned baseline settlement is distinct from completed phase3-ai-stream-generation-isolation; group with F01 rather than reopening the SSE hook."
+      },
+      {
+        "id": "F04",
+        "need": "N03",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "ChatbotPage page/test owner",
+        "reason": "No canonical confirmed-active-delete/pending/error-retention repair; success-only hook cache eviction does not close page UI retention."
+      },
+      {
+        "id": "F05",
+        "need": "N04",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "Serialized page and ChatMessageItem domain source/test owner",
+        "reason": "No canonical recoverable edit/regenerate repair; shared AiOutputPanel retained-error root is a different rendering path."
+      },
+      {
+        "id": "F06",
+        "need": "N05",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "SessionList/chatbot-child domain owner",
+        "reason": "No canonical named keyboard/touch rename/delete repair. Group overlapping SessionList/mobile work with F15."
+      },
+      {
+        "id": "F07",
+        "need": "N06",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "ChatMessageItem and SessionList domain source/test owner",
+        "reason": "No canonical adoption of the existing saved-date formatter in these children; no shared formatter rewrite requested."
+      },
+      {
+        "id": "F08",
+        "need": "N07",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "ChatWelcome domain source/test owner",
+        "reason": "No canonical welcome halo/gradient repair. Already-neutral page waiting/planning icon is not the child welcome surface."
+      },
+      {
+        "id": "F09",
+        "need": "N08",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "ChatMessageItem domain source/test owner",
+        "reason": "No canonical child caret motion-preference repair; the originally fixed shared trail spinner is a different element."
+      },
+      {
+        "id": "F10",
+        "need": "N09",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "Serialized ChatbotPage and ChatMessageItem domain source/test owner",
+        "reason": "No canonical page-owned tool-record settlement or explicit message-terminal outcome repair. Shared hook settlement does not settle the page's separate activity array."
+      },
+      {
+        "id": "F11",
+        "need": "N09",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "Serialized ChatbotPage and ChatMessageItem domain source/test owner",
+        "reason": "No canonical completed-empty feedback on this transcript path; existing AiOutputPanel empty feedback is not a duplicate of the page-specific need."
+      },
+      {
+        "id": "F12",
+        "need": "N10",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "HelixEvidenceTrail shared trust owner",
+        "reason": "No canonical repair distinguishing successful tool execution from grounded answer attribution. Historical excluded trail bookkeeping must not be treated as active repair or proof of closure."
+      },
+      {
+        "id": "F13",
+        "need": "N10",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "HelixEvidenceTrail shared owner with separate serialized canonical-English integration",
+        "reason": "No canonical whole-message/plural/number-formatting repair. Existing catalog closure is not this semantic objective; group with F12 at the same source owner."
+      },
+      {
+        "id": "F14",
+        "need": "N11",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "AIVoiceMode privacy/copy owner with separate serialized canonical-English integration",
+        "reason": "No canonical qualification of the unsupported on-device assurance. Historical voice presentation expressly leaves privacy acceptance unresolved; no raw-audio transmission incident is asserted."
+      },
+      {
+        "id": "F15",
+        "need": "N05",
+        "disposition": "MISSING_CONFIRMED_FIX_OWNER",
+        "existingFixItem": null,
+        "owner": "Chatbot-child domain source/test owner",
+        "reason": "No canonical child mobile target-allocation repair. Source-level allocation finding only; native geometry/overlap/actual WCAG failure remain unmeasured."
+      }
+    ],
+    "missingConfirmedFixOwners": [
+      {
+        "id": "N01",
+        "issues": ["F01", "F03"],
+        "ownerKind": "page",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\features\\system\\pages\\ChatbotPage.tsx",
+          "web\\src\\features\\system\\pages\\ChatbotPage.test.tsx"
+        ],
+        "objective": "Bind history/transcript/actions and baseline completion to the selected session/generation; represent history pending, failed, paused and retained states without relabeling previous conversation content.",
+        "duplicateBoundary": "Do not change or reprove the completed useAiStream generation-isolation root."
+      },
+      {
+        "id": "N02",
+        "issues": ["F02"],
+        "ownerKind": "page",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\features\\system\\pages\\ChatbotPage.tsx",
+          "web\\src\\features\\system\\pages\\ChatbotPage.test.tsx"
+        ],
+        "objective": "Clear composer input only after an accepted submission; align Enter and Send pending guards and preserve a rejected second draft."
+      },
+      {
+        "id": "N03",
+        "issues": ["F04"],
+        "ownerKind": "page",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\features\\system\\pages\\ChatbotPage.tsx",
+          "web\\src\\features\\system\\pages\\ChatbotPage.test.tsx"
+        ],
+        "objective": "Reset the active conversation only after current confirmed DELETE success; retain transcript/draft and expose pending/error recovery on failure.",
+        "readOnlyDependency": "Existing useChat success-only cache eviction; no hook/route rewrite demonstrated necessary."
+      },
+      {
+        "id": "N04",
+        "issues": ["F05"],
+        "ownerKind": "page-and-domain",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\features\\system\\pages\\ChatbotPage.tsx",
+          "web\\src\\features\\system\\pages\\ChatbotPage.test.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.test.tsx"
+        ],
+        "objective": "Keep the previous answer and raw revision recoverable when replacement edit/regenerate is rejected or fails; coordinate editor acceptance with page replacement lifecycle.",
+        "ownershipNeed": "Parent must explicitly extend the page claim to the named domain pair, or serialize tightly coupled page/domain owners. No writes authorized by this report."
+      },
+      {
+        "id": "N05",
+        "issues": ["F06", "F15"],
+        "ownerKind": "domain",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\features\\system\\components\\chatbot\\SessionList.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\SessionList.test.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\SuggestedPrompts.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\SuggestedPrompts.test.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.test.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\KnowledgeCitations.tsx"
+        ],
+        "objective": "Expose named keyboard/touch rename and discoverable delete while retaining full title and destructive recovery/confirmation semantics; add child mobile allocation for suggestions, citations, edit/regenerate and session actions.",
+        "testOwnershipNeed": "Retained pins establish the three named test pairs, not a standalone KnowledgeCitations test. The parent must allocate citation coverage explicitly; no existing standalone citation fixture is claimed.",
+        "nativeBoundary": "Source allocation fix only; mounted touch targets, zoom, overlap and viewport acceptance still require future authorized native evidence."
+      },
+      {
+        "id": "N06",
+        "issues": ["F07"],
+        "ownerKind": "domain",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.test.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\SessionList.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\SessionList.test.tsx"
+        ],
+        "objective": "Adopt existing useDateFormat for saved locale/timezone-bound message times and old-session date fallback without altering raw timestamps.",
+        "readOnlyDependency": "web\\src\\hooks\\useDateFormat.ts; no shared formatter defect or rewrite was established."
+      },
+      {
+        "id": "N07",
+        "issues": ["F08"],
+        "ownerKind": "domain",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\features\\system\\components\\chatbot\\ChatWelcome.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\ChatWelcome.test.tsx"
+        ],
+        "objective": "Replace the decorative halo/gradient with existing neutral restrained surface roles while preserving the welcome and four editable suggestions.",
+        "nativeBoundary": "No fresh rendered contrast or visual acceptance."
+      },
+      {
+        "id": "N08",
+        "issues": ["F09"],
+        "ownerKind": "domain",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.test.tsx"
+        ],
+        "objective": "Use a static streaming marker or the existing combined OS-reduced-motion/low-bandwidth preference rather than OS-only ambient pulse.",
+        "duplicateBoundary": "Do not rewrite the motion-preference hook or repeat the already-fixed shared evidence spinner."
+      },
+      {
+        "id": "N09",
+        "issues": ["F10", "F11"],
+        "ownerKind": "page-and-domain",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\features\\system\\pages\\ChatbotPage.tsx",
+          "web\\src\\features\\system\\pages\\ChatbotPage.test.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.tsx",
+          "web\\src\\features\\system\\components\\chatbot\\ChatMessageItem.test.tsx"
+        ],
+        "objective": "Settle page-owned running tool activity with honest terminal outcomes; distinguish failed/canceled from successful completion and show localized recoverable no-output feedback for done with zero text.",
+        "ownershipNeed": "Parent must explicitly allocate/serialize the named page and domain pairs.",
+        "duplicateBoundary": "Existing shared SSE settlement and AiOutputPanel completed-empty behavior remain complete; only this caller/transcript path is missing."
+      },
+      {
+        "id": "N10",
+        "issues": ["F12", "F13"],
+        "ownerKind": "shared-trust-and-localization",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\components\\ai\\HelixEvidenceTrail.tsx"
+        ],
+        "objective": "Describe tool execution without implying answer grounding; use whole interpolated/plural messages and existing localized number formatting for summary and footer, preserving actual cited/retrieved evidence distinctions.",
+        "testOwnershipNeed": "The original pinned inventory does not establish a standalone HelixEvidenceTrail test. Parent must explicitly allocate a covering fixture before implementation; no existing test path or pass is invented.",
+        "catalogOwnershipNeed": "Separate orchestrator-serialized canonical-English owner only if exact whole-message/plural key changes are required. Keys/projections are not selected or edited by this continuation.",
+        "duplicateBoundary": "Do not reactivate excluded phase3-helix-evidence-trail bookkeeping or repeat completed catalog closure. This is a specific missing source/copy objective, not a generic provenance campaign."
+      },
+      {
+        "id": "N11",
+        "issues": ["F14"],
+        "ownerKind": "shared-privacy-copy",
+        "existingQueueItem": null,
+        "exactProposedFiles": [
+          "web\\src\\components\\ai\\AIVoiceMode.tsx",
+          "web\\src\\components\\ai\\AIVoiceMode.test.tsx"
+        ],
+        "objective": "Qualify the unsupported on-device recognition assurance to distinguish app text-only submission from unverified browser speech-service processing.",
+        "catalogOwnershipNeed": "Separate serialized canonical-English owner if the existing disclosure key needs new copy; do not alter provider/speech engine, permissions, routes or settings.",
+        "duplicateBoundary": "Historical voice presentation/scoping is complete, but explicitly did not certify provider/privacy processing. No microphone, speech-service, raw-audio transmission, or actual privacy incident was observed here."
+      }
+    ],
+    "ownerSerialization": {
+      "pagePair": ["N01", "N02", "N03", "N04", "N09"],
+      "chatMessageItemPair": ["N04", "N05", "N06", "N08", "N09"],
+      "sessionListPair": ["N05", "N06"],
+      "rule": "These are missing objective groups, not 11 independently dispatchable workers. Combine same-file objectives under one explicitly queued exclusive owner or serialize them. Page claims do not implicitly authorize child/shared/catalog writes. No assignment, actor, new queue ID or dependency was created.",
+      "catalog": "N10/N11 potential copy integration belongs to the one serialized canonical-English owner; the historical catalog snapshot is not a current catalog lease."
+    },
+    "candidateDispositions": [
+      {
+        "id": "C01",
+        "disposition": "UNCERTAIN_CONTRACT_CANDIDATE_NOT_A_CONFIRMED_FIX",
+        "reason": "Actual chatbot confirm emission and continuation capability remain unverified. No invented endpoint, auto-confirm, or provider operation."
+      },
+      {
+        "id": "C02",
+        "disposition": "RETAINED_EXISTING_NATIVE_NEED_NO_DUPLICATE",
+        "canonicalReference": "phase5-page-system-chatbot",
+        "reason": "Original predecessor already retains workspace-height/composer clipping need; native geometry is NOTRUN, not a confirmed layout failure or a new measured fix."
+      },
+      {
+        "id": "C03",
+        "disposition": "UNCERTAIN_NATIVE_CANDIDATE_NOT_A_CONFIRMED_FIX",
+        "reason": "Composed screen-reader announcements, focus, forced-colors and RTL still need actual authorized proof. No blanket accessibility approval or fresh QA campaign."
+      },
+      {
+        "id": "C04",
+        "disposition": "UNCERTAIN_NATIVE_CANDIDATE_NOT_A_CONFIRMED_FIX",
+        "reason": "Original unnamed/non-tabbable markdown overflow remains a native keyboard/scroll reachability candidate; do not promote it to an observed failure."
+      },
+      {
+        "id": "C05",
+        "disposition": "UNCERTAIN_BACKEND_CONTRACT_CANDIDATE_NOT_A_CONFIRMED_FIX",
+        "reason": "Evidence/usage durability and backend enrichment are unknown. No persistence guarantee, backend fix owner or API change inferred."
+      },
+      {
+        "id": "C06",
+        "disposition": "UNCERTAIN_POLICY_CANDIDATE_NOT_A_CONFIRMED_FIX",
+        "reason": "Conversational/session live-mode policy applicability and enforcement remain unknown. Do not infer a mutation-policy incident or allocate business/backend operations."
+      },
+      {
+        "id": "C07",
+        "disposition": "UNCERTAIN_NATIVE_CANDIDATE_NOT_A_CONFIRMED_FIX",
+        "reason": "Actual IME composition ordering was not observed. Preserve the candidate without upgrading to an executed reproduction."
+      }
+    ],
+    "completedRootsNotToRepeat": [
+      "Canonical shared SSE generation/controller isolation; not F03 baseline settlement.",
+      "Shared AiOutputPanel partial-text retention/completed-empty handling; not F05/F11 caller path.",
+      "Shared HelixEvidenceTrail reduced-motion/low-bandwidth spinner; not F09 child caret.",
+      "PageLayout forwarding to PageContainer; not C02 measured geometry.",
+      "Neutral page planning/waiting icon; not F08 child welcome halo.",
+      "Completed phase5-page-system-chatbot source migration and historical scoped passes."
+    ],
+    "counts": {
+      "originalConfirmedFindings": 15,
+      "findingDispositions": 15,
+      "missingConfirmedFindingsWithoutMatchingCanonicalFixOwner": 15,
+      "missingObjectiveGroups": 11,
+      "confirmedFindingsClosedByFreshSourceProof": 0,
+      "conditionalCandidates": 7,
+      "uncertainCandidates": 6,
+      "retainedExistingNativeNeeds": 1,
+      "newFindings": 0,
+      "newlyQueuedOrDispatchedItems": 0,
+      "applicationTestsExecuted": 0,
+      "nativeChecksExecuted": 0
+    },
+    "notRun": [
+      "Source re-audit or source-fix revalidation",
+      "Tests, lint, compiler, helpers, scanners and proven-pass reruns",
+      "Browser, native, accessibility, visual, geometry and screenshot checks",
+      "Chat, prompt, AI/model/provider, microphone, TTS, network, API and business operations",
+      "Catalog/source/test/queue/Git modifications",
+      "Install, server, Docker and nested agents"
+    ],
+    "inspectionCorrection": {
+      "shellId": "4273",
+      "exit": 0,
+      "invalidSubcheck": "The automatic PowerShell $Matches regex variable overwrote a local variable named $matches, producing a bogus MATCH COUNT 1 display. That subcheck is not evidence.",
+      "supersededBy": "4288",
+      "correctedResult": "Independent $foundRows variable: 1892 canonical task rows, 10 focused matches, zero matching nonhistorical repair rows. Original source evidence was not rescanned."
+    },
+    "artifactValidation": {
+      "shellId": "4358",
+      "exit": 0,
+      "kind": "Report document structure/mapping/preservation only, not tests, lint, compiler, helper or application acceptance",
+      "json": "OK",
+      "duplicateJsonKeys": 0,
+      "findingDispositions": 15,
+      "missingObjectiveGroups": 11,
+      "candidateDispositions": 7,
+      "originalRepairGroupMembership": "Unchanged",
+      "originalReportBytesReconstruction": "MATCH",
+      "originalReportSha256": "3E747DA2E4155BB3F063D66D1E272EE59D31BCF578D43B50E5D05DA81F12CF04",
+      "originalEvidencePreservationProof": "Removing only the new continuation/originalDeliveryStatus and restoring historical status PARTIAL reconstructs the exact original report bytes/SHA256; original fields including nativeNOTRUN and historical limitations are unchanged.",
+      "documentErrors": 0,
+      "sourceApplicationChecksExecuted": 0
+    },
+    "releaseDecisionAt": "2026-10-14T05:17:12.0875910Z",
+    "releaseScope": "Final delivery releases both owned report/log artifacts and all inspections, after final receipt persistence. No source, test, catalog, queue, Git, browser or operation lease was acquired. DONE is report-only; no page approval."
+  }
+}

@@ -1,11 +1,15 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { AlertBanner, EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { Button } from '@/components/ui/Button';
+import { Text } from '@/components/ui/Typography';
 import { cn } from '@/lib/cn';
 
 export interface CompareSectionState {
   isLoading: boolean;
+  /** A required source has no data and its first request is paused (cause-neutral). */
+  isPaused?: boolean;
   error: unknown;
   emptyMessage: string | null;
   onRetry: () => void;
@@ -41,6 +45,21 @@ export function CompareSectionBody({
           resourceName={resourceName}
           listHref="/drives"
         />
+      </div>
+    );
+  }
+
+  if (state.isPaused) {
+    return (
+      <div className={classes} data-compare-paused="">
+        <AlertBanner variant="info" role="status" title={resourceName ?? t('driveCompare.title', 'Drive Compare')}>
+          <Text as="p" variant="bodySm" color="secondary">
+            {t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')}
+          </Text>
+          <Button type="button" variant="ghost" size="sm" className="mt-2 min-h-11 md:min-h-9" onClick={state.onRetry}>
+            {t('common.retry', 'Retry')}
+          </Button>
+        </AlertBanner>
       </div>
     );
   }

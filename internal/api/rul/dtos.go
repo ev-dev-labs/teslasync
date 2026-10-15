@@ -44,6 +44,11 @@ type ComponentRUL struct {
 	Confidence       float64  `json:"confidence"`
 	Status           string   `json:"status"`
 	Basis            string   `json:"basis"`
+	// Availability is independent of confidence and numeric zero. BasisKind
+	// identifies the model/fallback without requiring consumers to parse Basis.
+	ObservationAvailable bool      `json:"observation_available"`
+	ProjectionAvailable  bool      `json:"projection_available"`
+	BasisKind            BasisKind `json:"basis_kind"`
 }
 
 // NextService is the single most-urgent upcoming replacement — the component

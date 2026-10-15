@@ -1,7 +1,10 @@
+import { forwardRef, type ComponentProps } from 'react';
 import { Input } from '@/components/ui';
+import { cn } from '@/lib/cn';
 
-interface SiNumberInputProps {
-  id?: string;
+type InputProps = ComponentProps<typeof Input>;
+
+interface SiNumberInputProps extends Omit<InputProps, 'ref' | 'type' | 'value' | 'defaultValue' | 'onChange' | 'label' | 'hint' | 'suffix' | 'min' | 'max' | 'step'> {
   label: string;
   value: number | null;
   onChange: (value: number | null) => void;
@@ -13,28 +16,32 @@ interface SiNumberInputProps {
   required?: boolean;
 }
 
-export function SiNumberInput({
-  id,
+const minimumClasses: Record<NonNullable<InputProps['size']>, string> = {
+  sm: 'min-h-11 min-w-11 md:min-h-9 md:min-w-0',
+  md: 'min-h-11 min-w-11 md:min-h-10 md:min-w-0',
+  lg: 'min-h-12 min-w-11 md:min-w-0',
+  auto: 'min-h-11 min-w-11 md:min-h-d-row md:min-w-0',
+};
+
+export const SiNumberInput = forwardRef<HTMLInputElement, SiNumberInputProps>(({
   label,
   value,
   onChange,
   siUnit,
   displayHint,
-  min,
-  max,
-  step,
-  required,
-}: SiNumberInputProps) {
+  size = 'md',
+  className,
+  ...props
+}, ref) => {
   return (
     <Input
-      id={id}
+      {...props}
+      ref={ref}
       type="number"
       label={label}
       value={value ?? ''}
-      min={min}
-      max={max}
-      step={step}
-      required={required}
+      size={size}
+      className={cn(minimumClasses[size], className)}
       hint={displayHint}
       suffix={<span className="text-xs text-[var(--text-muted)]">{siUnit}</span>}
       onChange={(event) => {
@@ -43,4 +50,5 @@ export function SiNumberInput({
       }}
     />
   );
-}
+});
+SiNumberInput.displayName = 'SiNumberInput';

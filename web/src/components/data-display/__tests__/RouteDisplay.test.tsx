@@ -1,6 +1,21 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { RouteDisplay, endpointLabel } from '../RouteDisplay';
+
+let previousPreferences: ReturnType<typeof getFormatterPreferences>;
+
+beforeEach(() => {
+  previousPreferences = getFormatterPreferences();
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
+});
+
+afterEach(() => {
+  cleanup();
+  setGlobalPrecision(previousPreferences.precision);
+  setGlobalLocale(previousPreferences.locale);
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -25,7 +40,7 @@ describe('RouteDisplay.endpointLabel', () => {
   });
 
   it('falls back to coords when address is missing', () => {
-    expect(endpointLabel({ lat: 47.71, lon: -122.18 })).toBe('📍 47.71, -122.18');
+    expect(endpointLabel({ lat: 47.71, lon: -122.18 })).toBe('📍 47.71000, -122.18000');
   });
 
   it('returns null when neither address nor coords are present', () => {

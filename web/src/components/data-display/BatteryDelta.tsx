@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Battery } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface BatteryDeltaProps {
   /** Starting state-of-charge percentage (0–100). */
@@ -47,6 +48,7 @@ export function BatteryDelta({
   testId,
 }: BatteryDeltaProps) {
   const { t } = useTranslation();
+  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const hasData =
     startPct != null &&
     endPct != null &&
@@ -78,12 +80,12 @@ export function BatteryDelta({
         ? 'text-amber-300'
         : 'text-[var(--text-muted)]';
 
-  const compactLabel = delta === 0 ? dash : `${sign}${magnitude}%`;
-  const pairLabel = `${startPct}% → ${endPct}%`;
+  const compactLabel = delta === 0 ? dash : `${sign}${fmtPercent(magnitude)}`;
+  const pairLabel = `${fmtPercent(startPct)} → ${fmtPercent(endPct)}`;
   const visible = variant === 'pair' ? pairLabel : compactLabel;
   const a11y = t('battery.delta.aria', 'Battery {{from}}% to {{to}}%', {
-    from: startPct,
-    to: endPct,
+    from: fmtNumber(startPct),
+    to: fmtNumber(endPct),
   });
 
   return (

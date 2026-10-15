@@ -1,0 +1,442 @@
+{
+  "item": "audit-page-029",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+  "routes": ["/intelligence/causal-lab"],
+  "purpose": "Vehicle-scoped history and creation of persisted observational baseline/treatment estimates, with explicit evidence quality and causal limitations. This is not intervention execution or randomized experimentation.",
+  "primaryGoal": "Choose an intervention label, metric and already-observed business windows; review and confirm an estimate; compare baseline, treatment, signed effect, samples and confounder coverage without mistaking association for causation.",
+  "dataSources": [
+    {
+      "name": "Experiment history",
+      "hook": "useCausalExperiments(vehicleId, 10, (page - 1) * 10)",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 149,
+      "endpoint": "GET /api/v1/advanced-intelligence/causal-experiments?vehicle_id=N&limit=10&offset=N",
+      "ownership": "useAdvancedList -> request -> advancedintelligence handler -> advancedintelligencesvc -> DurableRepository.ListExperiments",
+      "routeEvidence": [
+        "internal\\api\\router.go:3917 mounts advancedIntelligenceHandler",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:69-84 mounts GET/POST inside /advanced-intelligence"
+      ],
+      "behavior": "Enabled only for positive vehicle IDs; query key includes vehicle, limit and offset; forwards AbortSignal; inherited query policy is not overridden. Reads subject- and vehicle-scoped advanced_causal_experiments joined to advanced_causal_results, newest created_at/id first. Not a live telemetry source.",
+      "sourceEvidence": "internal\\database\\advancedintelligence\\durable_repository.go:324-348"
+    },
+    {
+      "name": "Create persisted observational estimate",
+      "hook": "useCreateCausalExperiment",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 229,
+      "endpoint": "POST /api/v1/advanced-intelligence/causal-experiments",
+      "ownership": "Typed request -> handler -> advancedintelligencesvc.CreateCausalExperiment -> SourceRepository.MetricWindow -> durable CreateExperiment",
+      "behavior": "Sends vehicle_id, intervention_kind, metric, four ISO instants and confirmed:true. Success invalidates causal-experiment queries and shows source-aware toast; failure shows toast and MutationError. Hook does not set requiresLiveMode; request still invokes central write/offline guards. Actual non-live policy acceptance was not tested.",
+      "sourceEvidence": [
+        "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx:77-87",
+        "web\\src\\api\\client.ts:368-392",
+        "internal\\app\\advancedintelligencesvc\\federated_causal_tco.go:222-299"
+      ]
+    },
+    {
+      "name": "Measured windows, not simulated outcomes",
+      "file": "internal\\database\\advancedintelligence\\source_repository.go",
+      "line": 587,
+      "endpoint": null,
+      "ownership": "Server-owned historical drives and charging_sessions aggregates",
+      "behavior": "Half-open started_at windows. Drive energy is sum(energy_used_wh)/sum(distance_m) over supported completed positive-distance/energy drives; average speed is AVG(avg_speed_mps) over completed nonnegative speeds. Charging success is percentage of window sessions completed with positive total_energy_added_wh. Charging samples count charging sessions; drive samples use the supported energy/distance predicate even for speed. Confounder coverage and ambient comparison come from drives for all metrics. Preserve these actual distinctions; do not invent signal-history or randomized sources.",
+      "units": "Wh/m, m/s and percentages remain canonical in wire/cache; only renderers convert.",
+      "estimatorEvidence": "internal\\app\\advancedintelligencesvc\\federated_causal_tco.go:304-343",
+      "estimatorBehavior": "At least five metric samples each window; coverage at least 70%; known ambient temperatures within 10 degrees C. Result is insufficient, non_causal or estimated. Only estimated fills baseline/treatment/effect metric fields; effect = treatment - baseline. Confounder coverage is the minimum across windows. Source limitation explicitly says driver/route confounders remain unobserved."
+    },
+    {
+      "name": "Workspace selection, formatting and evidence selection",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 39,
+      "hooks": ["useSelectedVehicle", "useUnits", "useNumberFormatting"],
+      "ownership": "Workspace vehicle store/URL/fleet fallback; existing saved SI display and numeric preferences",
+      "behavior": "Selected vehicle hook consumes useVehicles. EvidencePanel receives the first item of the CURRENT page, falling back to mutation.data only when that page has no first item. Therefore 'latest' is not necessarily newest overall. Baseline/treatment datetime-local controls are independent business dates, not competing global range selectors.",
+      "scopeEvidence": "web\\src\\lib\\workspaceScope.ts:23-74 excludes this route from global range paths; vehicle-disabled lists do not include it.",
+      "unverified": "Vehicles endpoint implementation, live data freshness and actual settings responses were not traced beyond inspected owners."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "contract": "Existing PageContainer adapter; full width/min-w-0/@container and gap-6. Keep shell ownership of vehicle scope, navigation and gutters."
+    },
+    {
+      "name": "InsightPanel / SourceContent",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "line": 23,
+      "contract": "Domain wrapper around shared LayoutCard, useDataState and SourceContent. query, empty, sourceState, error and onRetry supported. Fatal failures replace only this source; retained data survives stale refresh with retry. Form panel is independent."
+    },
+    {
+      "name": "EvidencePanel",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 25,
+      "contract": "Domain owner of quality, evidence, limitations and explicitly unsupported lists. Uses Badge, Text, KVList, EmptyState and InsightPanel. Nullable arrays normalized. Three always-present subsections."
+    },
+    {
+      "name": "Shared form and actions",
+      "owner": "web\\src\\components\\ui",
+      "contracts": [
+        "Input: native datetime-local, required, label, error/hint and stable generated identity; default md minimum 40px.",
+        "Select: native select, options, label/error/hint; label-derived ID remains; default md minimum 40px.",
+        "ConfirmDialog: loading disables confirm/cancel, blocks backdrop/Escape close, optional details and confirmDisabled already available.",
+        "Pagination: parent-controlled page/pageSize/total; previous/next, edge actions, numbered slots and direct jump; no page-size change exposed by this page."
+      ]
+    },
+    {
+      "name": "Feedback and motion",
+      "owners": [
+        "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+        "web\\src\\components\\motion\\FadeIn.tsx"
+      ],
+      "contract": "AlertBanner preserves causal warning and mutation errors. FadeIn delegates reduced motion to useMotionPreference; source skips initial entrance and delay when reduced."
+    },
+    {
+      "name": "Specialist SI efficiency formatter",
+      "owner": "web\\src\\features\\advanced-intelligence\\formatters.ts",
+      "line": 10,
+      "contract": "formatEfficiencyFromSI rejects null/nonfinite values; converts Wh/m using existing SI converters to saved energy/distance units and shared number formatter. Preserve signed effects; do not use legacy helpers or clamp to positive."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 131,
+      "rule": "MDC-033 / mission shared-component reuse",
+      "detail": "Four locally bordered metric blocks repeat label/value framing; baseline and treatment also repeat sample captions. This is presentation duplication, not permission to merge their distinct measurements.",
+      "fix": "Evaluate existing StatGroup/StatStrip contracts for signed specialist numeric display and sample captions; otherwise retain a small feature renderer until equivalence is proven.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "History metric grid stacks by default, becomes 2 columns at sm and 4 at lg (page:130).",
+      "Form uses 1/2/3 columns at default/md/xl (page:175).",
+      "Evidence uses 1 column then 3 at lg (EvidencePanel:45).",
+      "Pagination wraps and uses container-driven compact slots; Modal source uses mobile bottom sheet and internal scroll."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+        "line": 121,
+        "rule": "MDC-043 / long-content responsive reachability",
+        "detail": "The inner icon/title row has no min-w-0, shrink-0 icon or explicit token wrapping. Raw underscore identifiers and metric-plus-date metadata can pressure narrow history cards. No overflow was measured.",
+        "fix": "Retain full labels/date but use localized display labels, min-w-0 and wrapping; test long strings/RTL/200% text at 320px and allocated narrow containers.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "UNVERIFIED at all ten contract widths; no browser, screenshot or touch exercise."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Native form submission and required datetime controls; shared labels are associated to control IDs.",
+      "Decorative icons aria-hidden; heading overrides use Text as h3; status has textual state, not color alone.",
+      "Evidence sections carry localized aria-label; shared SourceContent exposes status and retry.",
+      "ConfirmDialog delegates portal/dialog semantics to Modal; actual focus implementation and keyboard behavior not exercised."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\ui\\Select.tsx",
+        "line": 57,
+        "rule": "MDC-021 stable field identity",
+        "detail": "Select still derives ID from localized label before falling back to useId, unlike inspected Input. This page's two controls inherit locale-sensitive DOM identity; duplicate IDs on this single page were not demonstrated.",
+        "fix": "Shared owner should extend the Input identity contract to Select while preserving explicit IDs/feedback/ref/native values. Do not generate IDs from translated text.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+        "line": 173,
+        "rule": "MDC-040 / accessible form recovery",
+        "detail": "Window rules are panel description only; inputs have required but no field-level error/hint or described-by linking those constraints. Server rejection is generic and placed behind the still-open confirmation dialog.",
+        "fix": "Use existing Input error/hint/described-by and localized validation summary; preserve authoritative server validation and focus the first invalid field after dismissing review.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\ui\\Input.tsx",
+        "line": 30,
+        "rule": "MDC-040 mobile target default",
+        "detail": "Input and Select default md min-h-10 (40px), below the contract's stronger 44px target. Page supplies no sizing override. This is not a measured WCAG failure; spacing exception and actual target composition remain unverified.",
+        "fix": "Use reviewed shared sizing/density policy or a supported page-level size variant; validate all six controls at mobile widths.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ],
+    "acceptance": "Keyboard, focus trap/restoration, screen reader announcements, measured contrast, forced colors and touch targets UNVERIFIED."
+  },
+  "states": {
+    "initialLoading": "History query flows through InsightPanel/SourceContent skeleton; form remains present. EvidencePanel is not connected to history trust state.",
+    "noVehicle": "History instructs selection; Review disabled; evidence subsections still render with generic missing/unsupported messages.",
+    "empty": "Resolved empty history supplies localized no-recorded-experiments message and refresh. Evidence arrays default empty; limitations fallback says none returned.",
+    "fatalError": "History source-scoped ErrorDisplay and refetch via InsightPanel; form remains reachable.",
+    "retainedStaleOffline": "InsightPanel useDataState preserves history on refresh error or paused retained query and shows SourceContent retained notice/retry; paused unresolved source uses explicit availability-not-resolved copy. Separate evidence metadata has no retained/paused/error context.",
+    "mutation": "Pending prevents second confirm and disables review; success closes dialog, invalidates history and emits toast. Failure leaves dialog open and page-level MutationError underneath.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+        "line": 54,
+        "rule": "MDC-026 / MDC-032 scope-correct retained evidence",
+        "detail": "latest is experiments[0] ?? mutation.data. Mutation result survives vehicle/page changes, so an empty/loading history for vehicle B can display evidence from a prior mutation for vehicle A. A page-2 first row also becomes 'latest'.",
+        "fix": "Explicitly select evidence by current vehicle and record identity; never fallback across scope. Label which history record owns the evidence. Preserve returned mutation result with correct identity rather than deleting its capability.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+        "line": 41,
+        "rule": "MDC-032 scoped pagination",
+        "detail": "page state is not reset/clamped when vehicle changes. Existing offset can exceed new vehicle history, presenting an empty list. Pagination is inside empty-suppressed content; if total is lost for an out-of-range page, navigation may disappear.",
+        "fix": "Reset page on vehicle change and safely recover out-of-range pages without changing query keys or backend ordering; retain server pagination and all navigation actions.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+        "line": 244,
+        "rule": "MDC-026 unknown is not unsupported or empty",
+        "detail": "EvidencePanel receives undefined metadata while initial history is pending or failed, but says quality metadata is unsupported, no supporting evidence returned and no additional limitations returned. Those conclusions are not established until a result exists.",
+        "fix": "Feed explicit unresolved/loading/error/retained state through existing SourceContent contracts; keep unsupported causal capabilities always visible separately from unknown source metadata.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+        "line": 239,
+        "rule": "MDC-026 / MDC-040 actionable mutation error",
+        "detail": "onSuccess alone closes confirmation, and MutationError is in the underlying form, not ConfirmDialog details. On failure, relevant error may be obscured by the modal; toast does not provide field-specific recovery.",
+        "fix": "Use existing ConfirmDialog.details for mutation feedback or close and focus an accessible form error summary; preserve retry/cancel and never auto-repeat the write.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 119,
+      "rule": "MDC-010 / MDC-015 neutral semantic surfaces",
+      "detail": "History uses fixed translucent white background/borders, plus four nested bordered metric cards. Five source lines contain white utilities. This is theme-specific surface noise, not pure-white body text.",
+      "fix": "Reuse existing surface/border tokens and reduce redundant boxes without dropping the four metric identities or samples.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 82,
+      "rule": "MDC-010 / MDC-015 shared domain surface",
+      "detail": "Evidence source rows also use fixed white border/background; three source icons are cyan and unsupported block uses amber. Warning hue is meaningful, but generic source icon emphasis and translucent-white cards should not establish a competing visual language.",
+      "fix": "Retain semantic warning, subdue decorative source icons and use current neutral surface/border tokens.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ui\\ConfirmDialog.tsx",
+      "line": 69,
+      "rule": "MDC-010 / mission visual intensity",
+      "detail": "Warning confirm button hardcodes solid amber-500/600. This page inherits a saturated action treatment; actual contrast and composed intensity were not measured.",
+      "fix": "Shared dialog/button owner should review semantic warning action tokens across themes, preserving warning intent, loading/focus and confirmation behavior.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 124,
+      "rule": "MDC-044 domain-label localization",
+      "detail": "intervention_kind, metric and state are rendered as raw backend identifiers, despite localized choices in the form. Backend evidence/reasons/limitations remain server text, a distinct source boundary.",
+      "fix": "Map known enum IDs to existing localized display labels with safe raw fallback; retain unmodified source values in wire/cache and preserve server narrative text rather than inventing translations.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 69,
+      "rule": "MDC-033 metric meaning preservation",
+      "detail": "Charging effect is a difference between two percentages but displayed with the same percent suffix as baseline/treatment. Backend explicitly computes treatment minus baseline; this is percentage points, not relative percent change.",
+      "fix": "Label effect as signed percentage-point difference for charging; preserve existing raw value, metric sign and SI speed/efficiency difference formatting. Do not recompute a relative effect.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 252,
+      "rule": "MDC-024 review context",
+      "detail": "Review opens a generic confirmation message but does not show selected vehicle, intervention, metric or four windows. Existing ConfirmDialog.details supports a structured review; no new dialog system is needed.",
+      "fix": "Populate details from an explicit immutable review snapshot, with localized dates/timezone and vehicle identity; bind confirmation to that reviewed scope. Keep clear observational/non-execution disclosure.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+      "line": 79,
+      "rule": "MDC-040 typed input validation",
+      "detail": "Date conversion occurs immediately before mutation; native required is the only client constraint. Ordering, 24h minimum, 365-day maximum and observed-window validation are server-owned. Invalid date conversion can throw before mutation error handling if form state is invalid.",
+      "fix": "Validate finite instants and show accessible field errors before opening review; retain server as authority and actual one-minute future tolerance. Preserve local-wall-clock to UTC conversion and business-date independence.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": "Fix evidence scope/trust, vehicle pagination and accessible mutation review/error recovery before purely cosmetic changes.",
+    "next": "Localized enum labels, percentage-point effect meaning, neutral shared/page surfaces and long-content/mobile verification.",
+    "rationale": "History preservation is already substantially source-isolated; the greatest source-confirmed risks are evidence attributed to the wrong scope and unresolved data presented as returned/unsupported."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Select stable field identity parity",
+      "existingOwnerFile": "web\\src\\components\\ui\\Select.tsx",
+      "propsVariantsStates": "Preserve id, label, help, error, hint, required, aria-describedby, refs, values/options and sizing. Use stable generated identity when id omitted, independent of locale; verify repeated labels, locale changes and feedback association.",
+      "usedBy": ["CausalExperimentationPage intervention selector", "CausalExperimentationPage metric selector"],
+      "dependsOn": ["Input identity contract MDC-021/MDC-050", "centralized shared-owner acceptance"]
+    },
+    {
+      "name": "Advanced intelligence evidence trust propagation",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Retain quality/evidence/limitations/unsupported; accept explicit source trust/recovery through existing InsightPanel/SourceContent. Distinguish loading, unresolved/paused, empty, fatal and retained metadata; no measurement fabrication.",
+      "usedBy": ["CausalExperimentationPage EvidencePanel"],
+      "dependsOn": ["InsightPanel query/sourceState contract", "SourceContent loading/empty/retained states", "page-owned correct vehicle/record selection"],
+      "note": "Other consumers were not audited; coordinate owner before any public API change. No new universal evidence component is justified by this one-page inspection."
+    },
+    {
+      "name": "Neutral EvidencePanel and warning dialog styling review",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "additionalOwnerFile": "web\\src\\components\\ui\\ConfirmDialog.tsx",
+      "propsVariantsStates": "Token-backed neutral source rows and restrained warning action. Keep quality semantic variants, causal warning, unsupported list, loading/disabled/focus and current ConfirmDialog public API.",
+      "usedBy": ["CausalExperimentationPage evidence sections", "CausalExperimentationPage confirmation"],
+      "dependsOn": ["MDC-010/MDC-015 semantic color/surface owners", "actual multi-theme contrast validation"]
+    },
+    {
+      "name": "Shared form touch/density policy verification",
+      "existingOwnerFile": "web\\src\\components\\ui\\Input.tsx",
+      "additionalOwnerFile": "web\\src\\components\\ui\\Select.tsx",
+      "propsVariantsStates": "Review md 40px versus 44px mobile default, density and spacing exceptions without globally changing saved density/defaults. Existing lg/auto variants may suffice.",
+      "usedBy": ["CausalExperimentationPage six form controls"],
+      "dependsOn": ["MDC-014 density preservation", "MDC-040 actual touch measurements"]
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [
+      "Local history metric card framing overlaps existing shared stat presentation vocabulary; no second library is imported.",
+      "Input stable generated field identity and Select label-derived identity implement different versions of the shared form contract."
+    ],
+    "notCompeting": [
+      "Baseline/treatment datetime-local windows are independent experiment business dates, not duplicated workspace range pickers.",
+      "InsightPanel is a domain adapter of shared LayoutCard/SourceContent, not a new overlay/query system.",
+      "formatEfficiencyFromSI composes existing SI converters and shared number formatting; signed specialist values must survive any stats adoption."
+    ]
+  },
+  "preservation": {
+    "sourceHash": "4EC92E4041C866171C235FCDC0EB3939FAE143F479571BB42C08E8804E14DFD8",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact bytes of root-relative page file, not a concatenated dependency hash.",
+    "currentLineCount": 271,
+    "sections": [
+      {"name": "Association-is-not-proof notice", "count": 1},
+      {"name": "Experiment history InsightPanel", "count": 1},
+      {"name": "Per-record baseline/treatment/effect/confounder grid", "count": 4},
+      {"name": "History pagination when total > 10", "count": 1},
+      {"name": "Create windowed experiment InsightPanel", "count": 1},
+      {"name": "EvidencePanel", "count": 1},
+      {"name": "Evidence data quality / sources / limitations subsections", "count": 3},
+      {"name": "Explicitly unsupported disclosure inside limitations", "count": 1},
+      {"name": "Confirm experiment estimate dialog", "count": 1}
+    ],
+    "sectionCounts": {
+      "pageInsightPanelCallsites": 2,
+      "pageEvidencePanelCallsites": 1,
+      "resolvedDomainPanelShells": 3,
+      "pageGlassPanelCallsites": 0,
+      "pageChartContainerCallsites": 0,
+      "evidenceSectionElements": 3,
+      "chartSeries": 0
+    },
+    "actions": [
+      "Workspace vehicle selection remains shell-owned.",
+      "Change intervention among charging_schedule, tire_service, software_update, climate_preconditioning and driving_policy.",
+      "Change metric among drive_energy_wh_per_m, charging_success_pct and average_speed_mps.",
+      "Edit baseline start/end and treatment start/end local business dates.",
+      "Review with native form validation; cancel/close dialog; confirm observational estimate once; pending guard.",
+      "Retry history failures/stale source and refresh resolved empty source via existing query.",
+      "Previous/next/first/last/numbered/direct-jump pagination through shared Pagination; fixed 10-row server pages.",
+      "Observe success/error toast and inline MutationError; history invalidation on success."
+    ],
+    "defaults": "Charging schedule / charging success; local datetime defaults 8-to-6 days ago baseline and 5-to-2 days ago treatment; page 1 and PAGE_SIZE 10.",
+    "dataBehavior": [
+      "Keep vehicle/subject scope, server ordering and pagination, AbortSignal, query keys, invalidation and inherited retry/stale policy.",
+      "Keep canonical Wh/m and m/s fields untouched in API/cache, signed effects and null placeholders distinct from zero.",
+      "Keep both sample counts, confounder percentage, record state, intervention/metric identity and updated_at.",
+      "Keep all returned data quality, sample/coverage/window metadata, evidence source/summary/date/count, reasons and limitations.",
+      "Explicitly preserve no randomized assignment/proof and no execution of selected intervention disclosures.",
+      "History currently does not display individual baseline/treatment date bounds, version or created_at despite wire fields; do not falsely claim these were visible.",
+      "No charts, exports, intervention execution, record delete/edit or experiment replay actions exist on this inspected page; do not invent them.",
+      "Keep saved unit/number/date preferences and local-wall-clock date handling. Unknown source values never become measured zero."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source audit; only assigned report and heartbeat written.",
+    "runtime": "UNVERIFIED. No browser, server, production request, experiment creation, mutation or screenshot.",
+    "visualKeyboardResponsiveContrast": "UNVERIFIED. Findings about overflow/intensity/target sizing are source observations or risks, not mounted acceptance.",
+    "testing": "No TypeScript, lint, build or tests executed. Scope forbids full-repository gates; audit skill script was inspected but not run because it unconditionally invokes project-wide TypeScript.",
+    "staticChecks": {
+      "command": "PowerShell Select-String -CaseSensitive on assigned page for raw interactive tags, style=, neon|glow|shadow, text-white and white; Get-FileHash -Algorithm SHA256; Get-Content line count",
+      "exitCode": 0,
+      "output": [
+        "<(button|input|textarea|select|table)\\b : 0",
+        "style= : 0",
+        "neon|glow|shadow : 0",
+        "text-white : 0",
+        "white : 5",
+        "SHA256 4EC92E4041C866171C235FCDC0EB3939FAE143F479571BB42C08E8804E14DFD8",
+        "271 lines"
+      ],
+      "scope": "Counts cover the page, not all transitive shared components. Source inspection found category imports rather than direct chart/map/motion libraries.",
+      "failedProbe": "An earlier PowerShell quoting probe exited 1 without output; subsequent simple case-sensitive probe succeeded. Earlier case-insensitive raw-tag probe matched seven shared components and is not a violation count."
+    },
+    "backend": "Inspected only relevant mount, service and aggregate/durable source portions; no database contents or authorization/runtime execution verified. No claim of backend-wide correctness.",
+    "scope": "One mounted route confirmed in App.tsx source. Shared consumers outside this page were not enumerated; proposals do not constitute whole-app shared API acceptance."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\CausalExperimentationPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\formatters.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\ui\\Input.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\ui\\Modal.tsx",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\webvitals\\routetemplates_gen.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\app\\advancedintelligencesvc\\federated_causal_tco.go",
+    "internal\\app\\advancedintelligencesvc\\engines_test.go",
+    "internal\\database\\advancedintelligence\\source_repository.go",
+    "internal\\database\\advancedintelligence\\durable_repository.go"
+  ]
+}

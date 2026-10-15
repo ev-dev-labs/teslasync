@@ -40,12 +40,9 @@ export function usePushPublicKey() {
         // 404 from the server means VAPID is unconfigured — surface as
         // "disabled" rather than an error so the channel card can render
         // its explanatory empty state. Prefer the structured HTTP status
-        // (robust against copy changes); fall back to message-matching
-        // for non-ApiError rejections.
+        // (robust against copy changes). Unstructured failures cannot
+        // establish that configuration is absent.
         if (isApiError(err) && err.status === 404) {
-          return null;
-        }
-        if (err instanceof Error && /not configured/i.test(err.message)) {
           return null;
         }
         throw err;
@@ -98,10 +95,10 @@ export function useSubscribePush() {
  * Remove a single subscription by endpoint. Used both by the per-device
  * "Remove" action and by the unsubscribe path in `useWebPush.unsubscribe()`.
  *
- * The toast helper deliberately uses neutral copy ("removed") rather
- * than "disabled" so the same hook can power both flows.
+ * Lifecycle callers suppress success feedback until browser removal is
+ * confirmed; a successful DELETE alone only proves server removal.
  */
-export function useUnsubscribePush() {
+export function useUnsubscribePush({ notifySuccess = true }: { notifySuccess?: boolean } = {}) {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
@@ -112,7 +109,7 @@ export function useUnsubscribePush() {
       }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: pushKeys.list });
-      success('toast.webpush.unsubscribe.success', 'Browser push removed for this device');
+      if (notifySuccess) success('toast.webpush.unsubscribe.success', 'Browser push removed for this device');
     },
     onError: (e) => error(e, 'toast.webpush.unsubscribe.error', 'Failed to remove browser push'),
   });

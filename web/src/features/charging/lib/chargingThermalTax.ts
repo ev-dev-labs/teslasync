@@ -26,6 +26,10 @@
  *     `ac_charging_power_w` + `dc_charging_power_w` readings instead —
  *     less precise, but still principled, and the summary's `energySource`
  *     field always says which one was used so a caller can hedge the UI.
+ * Raw signed and fractional readings are retained. The share uses only
+ * source intervals fully covered by finite heater readings within maxGapS;
+ * it never compares a partial counter window with the full heater integral.
+ * A measured zero remains a cumulative/power result, not missing energy.
  *
  * Pure and React-free. Accepts a minimal STRUCTURAL sample shape rather than
  * importing the full API telemetry type, so it stays trivially testable
@@ -44,14 +48,27 @@ export interface ThermalTaxSample {
 export type ThermalPhaseState = 'heater_on' | 'heater_off';
 
 export interface ThermalPhase {
+  /** First and last observations of this state, not exact transition instants. */
   startMs: number;
   endMs: number;
+  /** Observed span only; independent of the summary's midpoint-rule heaterOnS. */
   durationS: number;
   state: ThermalPhaseState;
   avgHeaterW: number;
+  /** Transition windows bracketed by opposite-state observations; null at unobserved session edges. */
+  startTransition: { earliestMs: number; latestMs: number } | null;
+  endTransition: { earliestMs: number; latestMs: number } | null;
 }
 
 export type ThermalEnergySource = 'cumulative' | 'power_integral' | 'none';
+
+export interface ThermalSourceInterval {
+  startMs: number;
+  endMs: number;
+  deliveredEnergyWh: number;
+  /** Null unless heater readings cover this entire source interval without a coverage gap. */
+  heaterWh: number | null;
+}
 
 export interface ChargingThermalTaxSummary {
   sampleCount: number;
@@ -59,8 +76,15 @@ export interface ChargingThermalTaxSummary {
   spanS: number;
   heaterWh: number;
   deliveredEnergyWh: number | null;
-  /** heaterWh / deliveredEnergyWh, 0..100+. Null when delivered energy is unknown or zero. */
+  /** Ratio of matchedHeaterWh / matchedDeliveredEnergyWh; null without comparable positive energy. */
   heaterSharePct: number | null;
+  sourceIntervals: ThermalSourceInterval[];
+  /** Fraction of the sample span represented by the delivered-energy source, including unmatched intervals. */
+  sourceCoveragePct: number;
+  matchedHeaterWh: number | null;
+  matchedDeliveredEnergyWh: number | null;
+  /** Fraction of the sample span covered by matched source intervals. */
+  matchedCoveragePct: number;
   heaterOnS: number;
   heaterOnPct: number;
   peakHeaterW: number;
@@ -94,6 +118,20 @@ function tsMs(sample: ThermalTaxSample): number | null {
 interface TimedPoint {
   tMs: number;
   value: number;
+  channels?: string;
+}
+
+function energyPoints(samples: readonly ThermalTaxSample[], cumulative: boolean): TimedPoint[] {
+  return samples.flatMap((s) => {
+    const tMs = tsMs(s);
+    const ac = num(cumulative ? s.ac_charging_energy_in_wh : s.ac_charging_power_w);
+    const dc = num(cumulative ? s.dc_charging_energy_in_wh : s.dc_charging_power_w);
+    return tMs == null || (ac == null && dc == null) ? [] : [{
+      tMs,
+      value: (ac ?? 0) + (dc ?? 0),
+      channels: `${ac != null ? 'ac' : ''}${dc != null ? 'dc' : ''}`,
+    }];
+  }).sort((a, b) => a.tMs - b.tMs);
 }
 
 /** Trapezoidal integral of `value` (a rate, per hour) over time → the "Wh" (or matching) accumulated. */
@@ -118,19 +156,13 @@ function trapezoidIntegrateWh(points: readonly TimedPoint[]): number {
  * the caller should fall back to the power integral instead.
  */
 function cumulativeDeliveredWh(samples: readonly ThermalTaxSample[]): number | null {
-  const points: TimedPoint[] = [];
-  for (const s of samples) {
-    const t = tsMs(s);
-    if (t == null) continue;
-    const ac = num(s.ac_charging_energy_in_wh);
-    const dc = num(s.dc_charging_energy_in_wh);
-    if (ac == null && dc == null) continue;
-    points.push({ tMs: t, value: (ac ?? 0) + (dc ?? 0) });
-  }
+  const points = energyPoints(samples, true);
   if (points.length < 2) return null;
-  points.sort((a, b) => a.tMs - b.tMs);
+  if (points[0]!.tMs === points[points.length - 1]!.tMs) return null;
   for (let i = 1; i < points.length; i++) {
-    if (points[i]!.value < points[i - 1]!.value) return null; // reset — untrustworthy
+    if (points[i]!.channels !== points[i - 1]!.channels ||
+        (points[i]!.tMs === points[i - 1]!.tMs && points[i]!.value !== points[i - 1]!.value) ||
+        points[i]!.value < points[i - 1]!.value) return null; // reset or changed source
   }
   const delivered = points[points.length - 1]!.value - points[0]!.value;
   return delivered >= 0 ? delivered : null;
@@ -138,25 +170,19 @@ function cumulativeDeliveredWh(samples: readonly ThermalTaxSample[]): number | n
 
 /** Fallback delivered-energy estimate: trapezoid-integrate instantaneous AC+DC power. */
 function powerIntegralDeliveredWh(samples: readonly ThermalTaxSample[]): number | null {
-  const points: TimedPoint[] = [];
-  for (const s of samples) {
-    const t = tsMs(s);
-    if (t == null) continue;
-    const ac = num(s.ac_charging_power_w);
-    const dc = num(s.dc_charging_power_w);
-    if (ac == null && dc == null) continue;
-    points.push({ tMs: t, value: (ac ?? 0) + (dc ?? 0) });
-  }
+  const points = energyPoints(samples, false);
   if (points.length < 2) return null;
-  points.sort((a, b) => a.tMs - b.tMs);
+  if (points[0]!.tMs === points[points.length - 1]!.tMs ||
+      points.some((p, i) => p.channels !== points[0]!.channels ||
+        (i > 0 && p.tMs === points[i - 1]!.tMs && p.value !== points[i - 1]!.value))) return null;
   return trapezoidIntegrateWh(points);
 }
 
 /**
  * Segment the (time-sorted) samples into contiguous heater-on / heater-off
- * phases. Boundaries fall on sample timestamps — the true transition
- * instant between two samples is approximated by the timestamp of the
- * sample where the new state is first observed.
+ * phases. Retain each run's observed span and bracket transitions between
+ * the adjacent opposite-state readings. Sparse observations cannot establish
+ * an exact transition instant or prove that only one transition occurred.
  */
 function buildPhases(
   sorted: readonly { tMs: number; heaterW: number; state: ThermalPhaseState }[],
@@ -176,7 +202,15 @@ function buildPhases(
         endMs,
         durationS: Math.max(0, (endMs - startMs) / 1000),
         state: sorted[runStartIdx]!.state,
-        avgHeaterW: Math.round(avgHeaterW),
+        avgHeaterW,
+        startTransition: runStartIdx > 0 ? {
+          earliestMs: sorted[runStartIdx - 1]!.tMs,
+          latestMs: startMs,
+        } : null,
+        endTransition: !atEnd ? {
+          earliestMs: endMs,
+          latestMs: sorted[i]!.tMs,
+        } : null,
       });
       runStartIdx = i;
     }
@@ -202,6 +236,11 @@ export function analyzeChargingThermalTax(
       heaterWh: 0,
       deliveredEnergyWh: null,
       heaterSharePct: null,
+      sourceIntervals: [],
+      sourceCoveragePct: 0,
+      matchedHeaterWh: null,
+      matchedDeliveredEnergyWh: null,
+      matchedCoveragePct: 0,
       heaterOnS: 0,
       heaterOnPct: 0,
       peakHeaterW: 0,
@@ -213,20 +252,31 @@ export function analyzeChargingThermalTax(
 
   const spanS = (timed[timed.length - 1]!.tMs - timed[0]!.tMs) / 1000;
 
-  const heaterPoints: TimedPoint[] = timed.map((p) => ({
+  const heaterReadings = timed.map((p) => ({
     tMs: p.tMs,
-    value: Math.max(0, num(p.sample.battery_heater_power_w) ?? 0),
+    value: num(p.sample.battery_heater_power_w),
   }));
-  const heaterWh = trapezoidIntegrateWh(heaterPoints);
-  const peakHeaterW = Math.max(...heaterPoints.map((p) => p.value));
+  const heaterPoints = heaterReadings.filter((p): p is TimedPoint => p.value != null);
+  let heaterWh = 0;
+  for (let i = 1; i < heaterReadings.length; i++) {
+    const prev = heaterReadings[i - 1]!;
+    const cur = heaterReadings[i]!;
+    if (prev.value != null && cur.value != null) {
+      heaterWh += trapezoidIntegrateWh([
+        { tMs: prev.tMs, value: prev.value }, { tMs: cur.tMs, value: cur.value },
+      ]);
+    }
+  }
+  const peakHeaterW = heaterPoints.length ? Math.max(...heaterPoints.map((p) => p.value)) : 0;
 
   // Heater-on duration: midpoint rule between consecutive samples — an
   // interval counts as "on" for its full duration when the average of its
   // two endpoint readings clears the on-threshold.
   let heaterOnS = 0;
-  for (let i = 1; i < heaterPoints.length; i++) {
-    const prev = heaterPoints[i - 1]!;
-    const cur = heaterPoints[i]!;
+  for (let i = 1; i < heaterReadings.length; i++) {
+    const prev = heaterReadings[i - 1]!;
+    const cur = heaterReadings[i]!;
+    if (prev.value == null || cur.value == null) continue;
     const dtS = (cur.tMs - prev.tMs) / 1000;
     if (dtS <= 0) continue;
     const avgW = (prev.value + cur.value) / 2;
@@ -243,20 +293,48 @@ export function analyzeChargingThermalTax(
   let deliveredEnergyWh: number | null = null;
   let energySource: ThermalEnergySource = 'none';
   const cumulative = cumulativeDeliveredWh(samples);
-  if (cumulative != null && cumulative > 0) {
+  if (cumulative != null) {
     deliveredEnergyWh = cumulative;
     energySource = 'cumulative';
   } else {
     const integral = powerIntegralDeliveredWh(samples);
-    if (integral != null && integral > 0) {
+    if (integral != null) {
       deliveredEnergyWh = integral;
       energySource = 'power_integral';
     }
   }
 
+  const sourcePoints = energySource === 'none' ? [] : energyPoints(samples, energySource === 'cumulative');
+  const sourceIntervals: ThermalSourceInterval[] = [];
+  for (let i = 1; i < sourcePoints.length; i++) {
+    const prev = sourcePoints[i - 1]!;
+    const cur = sourcePoints[i]!;
+    if (cur.tMs <= prev.tMs) continue;
+    const heater = heaterReadings.filter((p) => p.tMs >= prev.tMs && p.tMs <= cur.tMs);
+    // Do not prorate cumulative counters or extrapolate missing heater endpoints.
+    const covered = heater.length >= 2 &&
+      heater[0]!.tMs === prev.tMs && heater[heater.length - 1]!.tMs === cur.tMs &&
+      heater.every((p, index) => p.value != null &&
+        (index === 0 || (p.tMs - heater[index - 1]!.tMs) / 1000 <= opts.maxGapS)) &&
+      (energySource === 'cumulative' || (cur.tMs - prev.tMs) / 1000 <= opts.maxGapS);
+    sourceIntervals.push({
+      startMs: prev.tMs,
+      endMs: cur.tMs,
+      deliveredEnergyWh: energySource === 'cumulative'
+        ? cur.value - prev.value : trapezoidIntegrateWh([prev, cur]),
+      heaterWh: covered
+        ? trapezoidIntegrateWh(heater.filter((p): p is TimedPoint => p.value != null)) : null,
+    });
+  }
+  const matched = sourceIntervals.filter((p) => p.heaterWh != null);
+  const matchedHeaterWh = matched.length ? matched.reduce((sum, p) => sum + p.heaterWh!, 0) : null;
+  const matchedDeliveredEnergyWh = matched.length
+    ? matched.reduce((sum, p) => sum + p.deliveredEnergyWh, 0) : null;
+  const matchedS = matched.reduce((sum, p) => sum + (p.endMs - p.startMs) / 1000, 0);
+  const sourceS = sourceIntervals.reduce((sum, p) => sum + (p.endMs - p.startMs) / 1000, 0);
   const heaterSharePct =
-    deliveredEnergyWh != null && deliveredEnergyWh > 0
-      ? Math.round((heaterWh / deliveredEnergyWh) * 1000) / 10
+    matchedHeaterWh != null && matchedDeliveredEnergyWh != null && matchedDeliveredEnergyWh > 0
+      ? (matchedHeaterWh / matchedDeliveredEnergyWh) * 100
       : null;
 
   // Coverage: fraction of the span bridged by gaps no larger than maxGapS.
@@ -270,12 +348,17 @@ export function analyzeChargingThermalTax(
   return {
     sampleCount: timed.length,
     spanS: Math.round(spanS),
-    heaterWh: Math.round(heaterWh),
-    deliveredEnergyWh: deliveredEnergyWh != null ? Math.round(deliveredEnergyWh) : null,
+    heaterWh,
+    deliveredEnergyWh,
     heaterSharePct,
+    sourceIntervals,
+    sourceCoveragePct: spanS > 0 ? (sourceS / spanS) * 100 : 0,
+    matchedHeaterWh,
+    matchedDeliveredEnergyWh,
+    matchedCoveragePct: spanS > 0 ? (matchedS / spanS) * 100 : 0,
     heaterOnS: Math.round(heaterOnS),
     heaterOnPct: spanS > 0 ? Math.round((heaterOnS / spanS) * 1000) / 10 : 0,
-    peakHeaterW: Math.round(peakHeaterW),
+    peakHeaterW,
     phases,
     dataCoveragePct,
     energySource,

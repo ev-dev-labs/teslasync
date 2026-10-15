@@ -3,18 +3,20 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
+import { useSettings } from '@/hooks/useSettings';
 import type { Drive } from '@/types/driving';
 
 import {
   DepartureForecastEvidenceQuality,
   DepartureForecastHeatmap,
   DepartureForecastHourDistribution,
-  DepartureForecastKpiBand,
   DepartureForecastMethodology,
   DepartureForecastNext24Chart,
   DepartureForecastRankedWindows,
@@ -23,24 +25,28 @@ import {
   type DepartureForecastQueryState,
 } from '../components/departure-forecast';
 import { forecastDepartures } from '../lib/departureForecast';
+import { DepartureEvidenceBrief } from '../components/operationalbrief-a-m/DepartureEvidenceBrief';
 
 const DRIVE_HISTORY_LIMIT = 1_000;
 const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function DepartureForecastPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   usePageTitle(t('departure.title', 'Departure Forecast'));
 
-  const { vehicleId } = useSelectedVehicle();
-  const timeZone = useTimezone('vehicle');
+  const { vehicleId, vehicle } = useSelectedVehicle();
+  const { settings } = useSettings();
+  const { locale, tz: timeZone } = useDateFormat('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(
     vehicleIdStr,
     DRIVE_HISTORY_LIMIT,
   );
-  const [nowMs] = useState(() => Date.now());
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
+  // History refreshes must not rebase the model's mount-time snapshot.
+  const [modelAnchorMs] = useState(() => Date.now());
   const hasCachedData =
-    vehicleId != null && drivesQuery.data !== undefined;
+    vehicleId != null && drivesState.hasData;
   const isResolved =
     vehicleId != null && (hasCachedData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
@@ -49,43 +55,62 @@ export default function DepartureForecastPage() {
   );
   const forecast = useMemo(
     () =>
-      forecastDepartures(drives, nowMs, timeZone, {
+      forecastDepartures(drives, modelAnchorMs, timeZone, {
         historyLimit: DRIVE_HISTORY_LIMIT,
       }),
-    [drives, nowMs, timeZone],
+    [drives, modelAnchorMs, timeZone],
   );
   const state: DepartureForecastQueryState = {
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && !hasCachedData && drivesQuery.isLoading,
+      vehicleId != null && drivesState.status === 'initial' && !drivesState.isRefreshBlocked,
+    isRefreshBlocked: vehicleId != null && drivesState.isRefreshBlocked,
+    fetchStatus: drivesQuery.fetchStatus,
     isResolved,
     error:
-      drivesQuery.isError && !hasCachedData
-        ? drivesQuery.error
-        : null,
+      drivesState.fatalError,
     refreshError:
-      drivesQuery.isError && hasCachedData
-        ? drivesQuery.error
-        : null,
+      drivesState.refreshError,
     onRetry: () => void drivesQuery.refetch(),
   };
-  const locale = i18n.language;
   const modelTimeZone = forecast.timeZone;
+  const vehicleTimeZone = vehicleId != null && vehicle?.id === vehicleId
+    ? vehicle.timezone
+    : null;
+  const usesVehicleMetadata = Boolean(vehicleTimeZone && vehicleTimeZone !== 'UTC');
+  const timeZoneProvenance = [
+    t('departure.method.effectiveZone', 'Effective model timezone: {{timeZone}}.', { timeZone: modelTimeZone }),
+    usesVehicleMetadata
+      ? t('departure.method.zoneMetadata', 'Source: selected vehicle timezone metadata ({{timeZone}}).', { timeZone: vehicleTimeZone })
+      : t('departure.method.zoneFallback', 'Source: shared vehicle-mode fallback ({{source}}); vehicle timezone metadata is missing or UTC.', {
+          source: settings.timezone_user?.trim()
+            ? t('departure.method.zoneSavedUser', 'saved user timezone')
+            : t('departure.method.zoneBrowser', 'browser timezone, or UTC if unavailable'),
+        }),
+    timeZone.trim() !== modelTimeZone
+      ? t('departure.method.zoneInvalid', 'The resolved timezone "{{requested}}" is missing or invalid; this model uses UTC without changing shared settings.', { requested: timeZone })
+      : '',
+  ].filter(Boolean).join(' ');
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('departure.title', 'Departure Forecast')}
+      query={drivesQuery}
       subtitle={t(
         'departure.subtitle',
         'Vehicle-timezone departure patterns from returned drive starts, expressed as modeled likelihood estimates',
       )}
     >
+      {hasCachedData && state.isRefreshBlocked && !state.refreshError && (
+        <StaleRefreshWarning state={drivesState} label={t('departure.title', 'Departure Forecast')} />
+      )}
       <FadeIn>
-        <DepartureForecastKpiBand
+        <DepartureEvidenceBrief
           forecast={forecast}
           state={state}
           locale={locale}
           timeZone={modelTimeZone}
+          timeZoneProvenance={timeZoneProvenance}
         />
       </FadeIn>
 
@@ -153,8 +178,9 @@ export default function DepartureForecastPage() {
           forecast={forecast}
           locale={locale}
           timeZone={modelTimeZone}
+          timeZoneProvenance={timeZoneProvenance}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }
