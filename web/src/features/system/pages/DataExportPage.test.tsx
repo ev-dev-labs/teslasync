@@ -562,6 +562,7 @@ describe('DataExportPage — Project Apex elevation', () => {
   it('submits a new export with the chosen type, format and default 30-day window', async () => {
     renderPage();
     await screen.findByText('New export');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start export' })).toBeEnabled());
 
     fireEvent.click(screen.getByRole('radio', { name: 'JSON' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Charging' }));
@@ -582,6 +583,7 @@ describe('DataExportPage — Project Apex elevation', () => {
   it('omits the date range when the "All Time" preset is selected', async () => {
     renderPage();
     await screen.findByText('New export');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Start export' })).toBeEnabled());
 
     fireEvent.click(screen.getByRole('button', { name: 'All time' }));
     fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
@@ -826,7 +828,7 @@ describe('DataExportPage — Project Apex elevation', () => {
 
     // In open mode the RequiresAuth wrapper renders its stable placeholder and
     // never mounts the underlying scheduled-exports panel.
-    expect(screen.getByTestId('requires-auth-empty-session_list')).toBeInTheDocument();
+    expect(await screen.findByTestId('requires-auth-empty-session_list')).toBeInTheDocument();
     expect(
       mockedRequest.mock.calls.some((c) => c[0] === '/scheduled-exports'),
     ).toBe(false);
@@ -835,6 +837,7 @@ describe('DataExportPage — Project Apex elevation', () => {
   it('names the wizard vehicle selector and preserves all seven export choices', async () => {
     renderPage();
     const selector = await screen.findByRole('combobox', { name: 'STEP 3 — select vehicle' });
+    await within(selector).findByRole('option', { name: 'Model 3' });
     // Select prepends its placeholder; the empty-valued real choice must
     // remain independently available so users can return to all vehicles.
     const [placeholder, ...vehicleChoices] = within(selector).getAllByRole('option');
