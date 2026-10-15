@@ -41,12 +41,16 @@ timezoneMock, briefPropsMock, nestedBriefPropsMock, comparisonPropsMock, chartPr
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string, values?: Record<string, unknown>) =>
-      Object.entries(values ?? {}).reduce(
+    t: (key: string, fallback?: string | Record<string, unknown>, values?: Record<string, unknown>) => {
+      const bag = typeof fallback === 'string' ? values : fallback;
+      const template = typeof fallback === 'string' ? fallback
+        : typeof bag?.defaultValue === 'string' ? bag.defaultValue : key;
+      return Object.entries(bag ?? {}).reduce(
         (text, [name, value]) =>
           text.replace(new RegExp(`{{${name}}}`, 'g'), String(value)),
-        fallback,
-      ),
+        template,
+      );
+    },
   }),
 }));
 
@@ -77,14 +81,16 @@ vi.mock('@/hooks/useSettings', async () => {
   const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
   return {
     ...actual,
-    useSettings: () => {
-      const result = actual.useSettings();
-      return {
-        ...result,
-        locale: formatting.locale,
-        settings: { ...result.settings, tz_display_default: formatting.timezoneMode },
-      };
-    },
+    // Bare renders mount no QueryClient, so settle settings synchronously from
+    // the file's formatting fixture instead of running the real settings query.
+    useSettings: () => ({
+      settings: {
+        locale: formatting.locale, tz_display_default: formatting.timezoneMode, timezone_user: '',
+        decimal_precision: 2, unit_of_length: 'km', unit_of_temp: 'C', time_format_default: 'relative',
+      },
+      settingsUnavailable: false, refetch: vi.fn(), isMiles: false, isFahrenheit: false, isPSI: false,
+      decimals: 2, locale: formatting.locale, density: 'comfortable', rangeType: 'rated',
+    }) as unknown as ReturnType<typeof actual.useSettings>,
   };
 });
 
