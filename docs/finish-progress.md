@@ -194,3 +194,8 @@ Not started.
 
 - The full cost-analysis component area passes: **17 test files, 280 tests**.
 - Updated the remaining stale end-to-end expectation to keep distance-based gasoline comparisons unavailable without verified driven-distance evidence. Core aggregates, calculator, table and chart suites all pass.
+
+### Charging checkpoint: charger resilience (2026-10-15)
+
+- Verified the full requested focused suites: `chargerResilience.test.ts` and `ChargerResiliencePage.test.tsx` passed (**51 tests**).
+- Closed the four charger-resilience runner items after confirming the implementation covers unavailable energy denominators and session fallback, preserves unknown identities, supplies contextual accessible labels, and uses numeric table column kinds. The implementation is in `5fed1ace2f`.
