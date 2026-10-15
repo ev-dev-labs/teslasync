@@ -875,7 +875,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
               : archived
               ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')
               : t('notifications.inbox.empty.message', 'System events, alerts, automation, and scheduled notifications appear here when triggered.')}
-            action={hasOptionalFilters ? { label: t('common.clearFilters', 'Clear filters'), onClick: clearOptionalFilters } : undefined}
+            secondaryAction={hasOptionalFilters ? { label: t('common.clearFilters', 'Clear filters'), onClick: clearOptionalFilters } : undefined}
             actionTo={archived ? undefined : {
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
               to: '/notifications/studio',
@@ -892,7 +892,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             message={hasOptionalFilters
               ? t('notifications.inbox.empty.noMatchesMessage', 'Clear the notification filters or adjust the workspace date range to see other records.')
               : t('notifications.group.emptyMessage', 'Related notifications are grouped here when they occur repeatedly.')}
-            action={hasOptionalFilters ? { label: t('common.clearFilters', 'Clear filters'), onClick: clearOptionalFilters } : undefined}
+            secondaryAction={hasOptionalFilters ? { label: t('common.clearFilters', 'Clear filters'), onClick: clearOptionalFilters } : undefined}
             actionTo={{
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
               to: '/notifications/studio',

@@ -11573,10 +11573,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Notification checkpoint 2026-10-15: no-match flat and grouped EmptyState clear-filter actions verified in InboxBody.test.tsx; split catalog check passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },

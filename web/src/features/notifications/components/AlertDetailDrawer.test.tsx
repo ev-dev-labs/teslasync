@@ -103,6 +103,12 @@ describe('getAlertRemediationKind', () => {
   });
 });
 
+function fieldRow(label: string): HTMLElement {
+  const term = screen.getByText(label).closest('dt');
+  if (!term?.parentElement) throw new Error('Field row was not rendered');
+  return term.parentElement;
+}
+
 describe('AlertDetailDrawer', () => {
   it.each([
     [false, null],
@@ -110,8 +116,8 @@ describe('AlertDetailDrawer', () => {
     [false, new Error('Initial detail failure')],
   ])('keeps unresolved lifecycle and owner unknown without writes (loading=%s)', (isLoading, error) => {
     const { onAcknowledge, onReopen, onRetry } = renderDrawer({ detail: null, isLoading, error });
-    expect(screen.getByText('Resolution state').closest('div')).toHaveTextContent('Unknown');
-    expect(screen.getByText('Owner').closest('div')).toHaveTextContent('Unknown');
+    expect(fieldRow('Resolution state')).toHaveTextContent('Unknown');
+    expect(fieldRow('Owner')).toHaveTextContent('Unknown');
     expect(screen.queryByText('Awaiting acknowledgement')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Acknowledge alert' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reopen alert' })).not.toBeInTheDocument();
@@ -130,19 +136,19 @@ describe('AlertDetailDrawer', () => {
     renderDrawer({ detail: { ...alert({ id: 99, title: 'Other alert', acknowledged_at: CREATED_AT, acknowledged_by: 'other.owner' }), events: [] } });
     expect(screen.getByRole('dialog', { name: 'Battery critically low' })).toBeInTheDocument();
     expect(screen.queryByText('other.owner')).not.toBeInTheDocument();
-    expect(screen.getByText('Resolution state').closest('div')).toHaveTextContent('Unknown');
+    expect(fieldRow('Resolution state')).toHaveTextContent('Unknown');
     expect(screen.queryByRole('button', { name: 'Reopen alert' })).not.toBeInTheDocument();
   });
 
   it('does not invent Open when a detail omits acknowledgement evidence', () => {
     renderDrawer({ detail: { ...alert(), events: [] } });
-    expect(screen.getByText('Resolution state').closest('div')).toHaveTextContent('Unknown');
+    expect(fieldRow('Resolution state')).toHaveTextContent('Unknown');
     expect(screen.queryByRole('button', { name: 'Acknowledge alert' })).not.toBeInTheDocument();
   });
 
   it('permits acknowledgement only for explicit server-confirmed open lifecycle', () => {
     const { onAcknowledge } = renderDrawer({ detail: { ...alert(), acknowledged_at: null, events: [] } });
-    expect(screen.getByText('Resolution state').closest('div')).toHaveTextContent('Open');
+    expect(fieldRow('Resolution state')).toHaveTextContent('Open');
     fireEvent.click(screen.getByRole('button', { name: 'Acknowledge alert' }));
     expect(onAcknowledge).toHaveBeenCalledWith(41);
   });
@@ -169,11 +175,11 @@ describe('AlertDetailDrawer', () => {
     const created_at = '2026-05-02T01:00:00Z';
     const sourceAlert = alert({ created_at });
     renderDrawer({ alert: sourceAlert });
-    expect(screen.getByText('Triggered').closest('div')).toHaveTextContent(
+    expect(fieldRow('Triggered')).toHaveTextContent(
       formatDateTime(created_at, { locale: 'de-DE', tz }),
     );
     expect(screen.getByRole('list', { name: 'Timeline' })).toHaveTextContent(
-      formatDateTime(created_at, { locale: 'de-DE', tz }),
+      formatDateTime(CREATED_AT, { locale: 'de-DE', tz }),
     );
     expect(vi.mocked(useTimezone)).toHaveBeenCalledWith(mode);
     for (const [name, path] of [
