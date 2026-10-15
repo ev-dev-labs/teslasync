@@ -762,8 +762,6 @@ describe('ChargingDetailPage — corrected SI session-distance display boundary'
     { name: 'missing start', start: null, end: 150000 },
     { name: 'missing end', start: 100000, end: null },
     { name: 'both missing', start: null, end: null },
-    { name: 'zero delta', start: 100000, end: 100000 },
-    { name: 'negative delta', start: 150000, end: 100000 },
   ])('retains the missing reading at all three sites for $name', ({ start, end }) => {
     mockSession.mockReturnValue(makeQuery({
       data: makeSession({ start_odometer_m: start, end_odometer_m: end }),
@@ -773,6 +771,18 @@ describe('ChargingDetailPage — corrected SI session-distance display boundary'
     // Existing live SI total/rate values remain independent of missing session delta.
     expect(kvValue('Range Added')).toBe('45.00 km');
     expect(kvValue('Charge Rate')).toBe('30.00 km/h');
+  });
+
+  it.each([
+    { name: 'zero delta', start: 100000, end: 100000, expected: '0.00 km' },
+    { name: 'negative delta', start: 150000, end: 100000, expected: '-50.00 km' },
+  ])('preserves a measured $name at all three sites', ({ start, end, expected }) => {
+    mockUnits.mockReturnValue(unitReturn('km'));
+    mockSession.mockReturnValue(makeQuery({
+      data: makeSession({ start_odometer_m: start, end_odometer_m: end }),
+    }));
+    renderPage();
+    assertSessionDistances(expected);
   });
 });
 

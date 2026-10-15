@@ -78,12 +78,12 @@ describe('MetricSwitcherChart native trend controls', () => {
         </QueryClientProvider>
       </I18nextProvider>,
     );
-    const tabs = within(screen.getByRole('tablist', { name: 'Mesure pour Tendances de recharge' }));
+    const tabs = within(screen.getByRole('tablist', { name: 'Tendances de recharge metric' }));
     expect(tabs.getByRole('tab', { name: 'Énergie' })).toHaveAttribute('aria-selected', 'true');
     fireEvent.click(tabs.getByRole('tab', { name: 'Coût' }));
     expect(onMetricChange).toHaveBeenCalledExactlyOnceWith('cost');
     expect(screen.getByRole('table')).toHaveTextContent('2200');
-    expect(screen.queryByRole('tablist', { name: 'Tendances de recharge metric' })).toBeNull();
+    expect(screen.queryByRole('tablist', { name: 'Mesure pour Tendances de recharge' })).toBeNull();
   });
 
       it('bounds the five metric trend allocation and reflows caller actions below md', async () => {
