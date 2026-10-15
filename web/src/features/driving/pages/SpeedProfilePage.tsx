@@ -59,6 +59,22 @@ export function efficiencyClass(eff: number): string {
 
 export { getEfficiency };
 
+/**
+ * Efficiency bands for the scatter. Thresholds stay in raw SI (Wh/km) so a
+ * drive's band never depends on the viewer's distance unit; only the legend
+ * text converts them for display.
+ */
+export const EFFICIENCY_BANDS = [
+  { id: 'efficient', maxWhPerKm: 140, color: 'var(--semantic-success)', chip: 'bg-[var(--semantic-success)]', labelKey: 'speedProfile.efficient', fallback: 'Efficient' },
+  { id: 'typical', maxWhPerKm: 200, color: 'var(--semantic-info)', chip: 'bg-[var(--semantic-info)]', labelKey: 'speedProfile.typical', fallback: 'Typical' },
+  { id: 'moderate', maxWhPerKm: 260, color: 'var(--semantic-warning)', chip: 'bg-[var(--semantic-warning)]', labelKey: 'speedProfile.moderate', fallback: 'Moderate' },
+  { id: 'high', maxWhPerKm: Number.POSITIVE_INFINITY, color: 'var(--semantic-danger)', chip: 'bg-[var(--semantic-danger)]', labelKey: 'speedProfile.highConsumption', fallback: 'High consumption' },
+] as const;
+
+export function efficiencyBand(whPerKm: number) {
+  return EFFICIENCY_BANDS.find((band) => whPerKm < band.maxWhPerKm) ?? EFFICIENCY_BANDS[EFFICIENCY_BANDS.length - 1];
+}
+
 /* ------------------------------------------------------------------ */
 /*  SpeedProfilePage                                                  */
 /* ------------------------------------------------------------------ */
@@ -162,7 +178,7 @@ export default function SpeedProfilePage() {
       points.push({
         speed: toSpeedDisplay(d.avgSpeedMps),
         efficiency: eff,
-        color: raw < 140 ? 'var(--semantic-success)' : raw < 200 ? 'var(--semantic-info)' : raw < 260 ? 'var(--semantic-warning)' : 'var(--semantic-danger)',
+        color: efficiencyBand(raw).color,
       });
     }
     return points;
@@ -538,11 +554,25 @@ export default function SpeedProfilePage() {
                     </ResponsiveContainer>
                   </EmbeddedChart>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
-                  <ScatterLegend colorClass="bg-[var(--semantic-success)]" label={t('speedProfile.efficient', 'Efficient')} />
-                  <ScatterLegend colorClass="bg-[var(--semantic-warning)]" label={t('speedProfile.moderate', 'Moderate')} />
-                  <ScatterLegend colorClass="bg-[var(--semantic-danger)]" label={t('speedProfile.highConsumption', 'High consumption')} />
-                </div>
+                <ul
+                  className="mt-3 flex flex-wrap items-center justify-end gap-x-3 gap-y-1"
+                  aria-label={t('speedProfile.efficiencyBands', 'Efficiency bands')}
+                  data-testid="speed-efficiency-bands"
+                >
+                  {EFFICIENCY_BANDS.map((band, index) => {
+                    const lower = index > 0 ? EFFICIENCY_BANDS[index - 1].maxWhPerKm : null;
+                    const format = (whPerKm: number) => fmtInt(toEfficiencyDisplay(whPerKm));
+                    const range = lower == null
+                      ? t('speedProfile.bandBelow', 'below {{max}} {{unit}}', { max: format(band.maxWhPerKm), unit: efficiencyUnit })
+                      : Number.isFinite(band.maxWhPerKm)
+                        ? t('speedProfile.bandBetween', '{{min}}–{{max}} {{unit}}', { min: format(lower), max: format(band.maxWhPerKm), unit: efficiencyUnit })
+                        : t('speedProfile.bandAtLeast', '{{min}} {{unit}} or more', { min: format(lower), unit: efficiencyUnit });
+                    return (
+                      <ScatterLegend key={band.id} colorClass={band.chip}
+                        label={t('speedProfile.bandLabel', '{{label}}: {{range}}', { label: t(band.labelKey, band.fallback), range })} />
+                    );
+                  })}
+                </ul>
               </>
             )}
             </SectionErrorBoundary>
@@ -585,9 +615,9 @@ export default function SpeedProfilePage() {
 /** Coloured legend chip for the efficiency scatter (colour paired with text). */
 function ScatterLegend({ colorClass, label }: { colorClass: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <li className="inline-flex items-center gap-1.5">
       <span className={cn('inline-block h-2 w-2 rounded-full', colorClass)} aria-hidden="true" />
       <Caption>{label}</Caption>
-    </span>
+    </li>
   );
 }

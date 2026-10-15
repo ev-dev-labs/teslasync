@@ -235,6 +235,7 @@ import SpeedProfilePage, {
   bucketIcon,
   efficiencyClass,
   getEfficiency,
+  efficiencyBand,
 } from './SpeedProfilePage';
 import type { Drive, SpeedProfileData } from '@/types/driving';
 
@@ -396,6 +397,22 @@ describe('SpeedProfilePage helpers', () => {
 /* ── Specs: page render / orchestration ───────────────────────────── */
 
 describe('SpeedProfilePage', () => {
+  it('classifies efficiency into four raw-SI bands independent of display units', () => {
+    expect([139.99, 140, 199.99, 200, 259.99, 260, 1000].map((value) => efficiencyBand(value).id))
+      .toEqual(['efficient', 'typical', 'typical', 'moderate', 'moderate', 'high', 'high']);
+    expect(efficiencyBand(150).color).toBe('var(--semantic-info)');
+  });
+
+  it.each([
+    ['km', undefined, ['Efficient: below 140 Wh/km', 'Typical: 140–200 Wh/km', 'Moderate: 200–260 Wh/km', 'High consumption: 260 Wh/km or more']],
+    ['mi', UNIT_PREFS_MI, ['Efficient: below 225 Wh/mi', 'Typical: 225–322 Wh/mi', 'Moderate: 322–418 Wh/mi', 'High consumption: 418 Wh/mi or more']],
+  ] as const)('labels every efficiency band with its localized %s range', (_unit, prefs, expected) => {
+    if (prefs) unitsMock.mockReturnValue({ unitPrefs: prefs });
+    renderPage();
+    const legend = screen.getByRole('list', { name: 'Efficiency bands' });
+    expect(within(legend).getAllByRole('listitem').map((item) => item.textContent)).toEqual(expected);
+  });
+
   it('uses shared scalable typography on every axis without rewriting saved font preferences', () => {
     const root = document.documentElement;
     const originalStyle = root.getAttribute('style');
@@ -591,8 +608,9 @@ describe('SpeedProfilePage', () => {
       ? 'No speed distribution available yet'
       : 'Not enough drive data for the efficiency scatter yet';
     const expectOutline = () => {
+      // Source notices repeat their section label, so a title may appear more than once.
       for (const title of ['Speed Distribution', 'Speed Envelope', 'Speed Buckets', 'Efficiency vs Speed', 'Efficiency Insight']) {
-        expect(screen.getByText(title)).toBeInTheDocument();
+        expect(screen.getAllByText(title).length).toBeGreaterThan(0);
       }
     };
     mock.mockReturnValue(makeQuery({ refetch }));
@@ -850,8 +868,10 @@ describe('SpeedProfilePage', () => {
         { name: 'Efficiency', value: points[0].efficiency, unit: prefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km' },
       ],
     }));
-    expect(within(screen.getByRole('tooltip')).getByText(alternative.dataColumns[0].format(points[0].speed))).toBeInTheDocument();
-    expect(within(screen.getByRole('tooltip')).getByText(alternative.dataColumns[1].format(points[0].efficiency))).toBeInTheDocument();
+    // Scope to the rendered chart tooltip; page help tooltips also expose role="tooltip".
+    const chartTooltip = within(within(tooltip.container).getByRole('tooltip'));
+    expect(chartTooltip.getByText(alternative.dataColumns[0].format(points[0].speed))).toBeInTheDocument();
+    expect(chartTooltip.getByText(alternative.dataColumns[1].format(points[0].efficiency))).toBeInTheDocument();
     tooltip.unmount();
     expect(screen.getByTestId('gauge-Avg Speed')).toHaveAttribute(
       'data-reading', String(Math.round(convertSpeedFromSI(PROFILE.avgSpeedMps!, speed))),
@@ -953,16 +973,18 @@ describe('SpeedProfilePage source-unit and insight regressions', () => {
       expect(screen.getByText('Not enough drive data for the efficiency scatter yet')).toBeInTheDocument();
     });
 
-    it('renders measured zero speed and efficiency rather than a missing-value status', () => {
+    it('renders a measured zero average speed rather than a missing-value status', () => {
+      // Zero energy is "no energy measurement" in the shared intensity helper,
+      // so pair the measured zero speed with a valid energy reading.
       drivesMock.mockReturnValue(makeQuery<Drive[]>({
-        data: [makeDrive({ avgSpeedMps: 0, distanceM: 1000, energyUsedWh: 0 })],
+        data: [makeDrive({ avgSpeedMps: 0, distanceM: 1000, energyUsedWh: 100 })],
       }));
       renderPage();
       expectLabels();
       expect(card().getByText('0.00 km/h')).toBeInTheDocument();
-      expect(card().getByText('0.00')).toBeInTheDocument();
+      expect(card().getByText('100.00')).toBeInTheDocument();
       expect(card().queryByText('Unknown')).not.toBeInTheDocument();
-      expect(captured.scatterData).toEqual([{ speed: 0, efficiency: 0, color: 'var(--semantic-success)' }]);
+      expect(captured.scatterData).toEqual([{ speed: 0, efficiency: 100, color: 'var(--semantic-success)' }]);
     });
 
     it('keeps nonfinite drive measurements unknown rather than formatting them or inventing zero', () => {
