@@ -114,7 +114,7 @@ export interface OrchestrationInput {
   previousPlan?: Record<string, number[]>;
 }
 
-/** Structured violation/diagnostic. `message*` fields are i18n-key + params, never pre-rendered prose. */
+/** Structured violation/diagnostic; validation reasons are localized at the render boundary. */
 export type ViolationCode =
   | 'deadline_infeasible'
   | 'vehicle_shortfall'
@@ -124,6 +124,13 @@ export type ViolationCode =
   | 'invalid_input';
 
 export type ViolationSeverity = 'error' | 'warning';
+
+export type ValidationReason =
+  | { id: 'slot_minutes_invalid'; args: { defaultMinutes: number } }
+  | { id: 'horizon_slots_invalid' }
+  | { id: 'vehicle_id_missing' }
+  | { id: 'vehicle_capacity_invalid' }
+  | { id: 'powerwall_capacity_invalid' };
 
 export interface Violation {
   code: ViolationCode;
@@ -135,6 +142,7 @@ export interface Violation {
   slotIndex?: number;
   /** Unmet energy, watt-hours, when applicable. */
   unmetWh?: number;
+  reason?: ValidationReason;
   /** Free-form machine detail for developer diagnostics / JSON export only. */
   detail?: string;
 }

@@ -4,7 +4,7 @@ import { Badge, Icon, Text } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { severityTokens } from '@/lib/tokens';
-import type { Violation, ViolationCode } from '../lib/types';
+import type { ValidationReason, Violation, ViolationCode } from '../lib/types';
 
 interface ConstraintViolationsPanelProps {
   violations: Violation[];
@@ -29,6 +29,14 @@ const FALLBACKS: Record<ViolationCode, string> = {
   invalid_input: 'Some plan inputs were invalid and were adjusted or dropped: {{detail}}',
 };
 
+const REASON_TEMPLATES: Record<ValidationReason['id'], { key: string; fallback: string }> = {
+  slot_minutes_invalid: { key: 'homeEnergy.violation.reasons.slotMinutesInvalid', fallback: 'Slot duration must be positive; {{defaultMinutes}} minutes was used instead.' },
+  horizon_slots_invalid: { key: 'homeEnergy.violation.reasons.horizonSlotsInvalid', fallback: 'The planning horizon must contain a positive number of slots.' },
+  vehicle_id_missing: { key: 'homeEnergy.violation.reasons.vehicleIdMissing', fallback: 'A vehicle without a valid identifier was excluded.' },
+  vehicle_capacity_invalid: { key: 'homeEnergy.violation.reasons.vehicleCapacityInvalid', fallback: 'A vehicle with invalid usable battery capacity was excluded.' },
+  powerwall_capacity_invalid: { key: 'homeEnergy.violation.reasons.powerwallCapacityInvalid', fallback: 'The home battery was ignored because its capacity must be positive.' },
+};
+
 /** Structured constraint-violation / infeasibility report, grouped by severity. Never fabricates readiness. */
 export function ConstraintViolationsPanel({ violations }: ConstraintViolationsPanelProps) {
   const { t } = useTranslation();
@@ -38,11 +46,15 @@ export function ConstraintViolationsPanel({ violations }: ConstraintViolationsPa
   const warnings = violations.filter((v) => v.severity === 'warning');
 
   function describe(v: Violation): string {
+    const reasonTemplate = v.reason ? REASON_TEMPLATES[v.reason.id] : undefined;
+    const detail = reasonTemplate && v.reason
+      ? t(reasonTemplate.key, reasonTemplate.fallback, 'args' in v.reason ? v.reason.args : {})
+      : t('homeEnergy.violation.reasons.unspecified', 'Review the plan inputs for invalid values.');
     return t(VIOLATION_TEMPLATES[v.code], FALLBACKS[v.code], {
       vehicleName: v.vehicleName ?? t('homeEnergy.violation.unknownVehicle', 'A vehicle'),
       unmet: v.unmetWh != null ? formatEnergy(v.unmetWh) : '',
       slot: v.slotIndex ?? '—',
-      detail: v.detail ?? '',
+      detail,
     });
   }
 
@@ -67,6 +79,9 @@ export function ConstraintViolationsPanel({ violations }: ConstraintViolationsPa
           {[...errors, ...warnings].map((v, i) => (
             <li
               key={`${v.code}-${v.vehicleId ?? ''}-${v.slotIndex ?? ''}-${i}`}
+              data-reason-id={v.reason?.id}
+              data-reason-args={v.reason && 'args' in v.reason ? JSON.stringify(v.reason.args) : undefined}
+              data-machine-detail={v.detail}
               className="flex min-w-0 items-start gap-2 rounded-lg border border-[var(--border-subtle)] p-2.5"
             >
               {v.severity === 'error' ? (

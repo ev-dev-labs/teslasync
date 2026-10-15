@@ -83,8 +83,11 @@ describe('ConstraintViolationsPanel severity icon presentation', () => {
       'Grid import limit exceeded in slot #3.',
       'Grid export limit exceeded in slot #4.',
       'Powerwall dropped below its reserve floor in slot #5.',
-      'Some plan inputs were invalid and were adjusted or dropped: forecast_length_mismatch',
+      'Some plan inputs were invalid and were adjusted or dropped: Review the plan inputs for invalid values.',
     ]);
+    // Unstructured machine detail stays available for diagnostics, not as visible copy.
+    expect(rows[5]).toHaveAttribute('data-machine-detail', 'forecast_length_mismatch');
+    expect(rows[5]).not.toHaveAttribute('data-reason-id');
     rows.forEach((row, index) => {
       expect(row.querySelectorAll('svg')).toHaveLength(1);
       expectDecorativeIcon(
@@ -108,12 +111,40 @@ describe('ConstraintViolationsPanel severity icon presentation', () => {
     expect(screen.getByText('2 warning(s)')).toHaveClass('text-[var(--semantic-warning)]');
     const rows = within(screen.getByRole('list')).getAllByRole('listitem');
     expect(rows.map(row => row.textContent)).toEqual([
-      'Some plan inputs were invalid and were adjusted or dropped: departure_slot_unknown',
+      'Some plan inputs were invalid and were adjusted or dropped: Review the plan inputs for invalid values.',
       'Powerwall dropped below its reserve floor in slot #0.',
     ]);
+    expect(rows[0]).toHaveAttribute('data-machine-detail', 'departure_slot_unknown');
     rows.forEach(row => expectDecorativeIcon(row, 'triangle-alert', severityTokens.warn.fg));
     expect(screen.queryByText('No violations')).not.toBeInTheDocument();
     expect(screen.queryByText('This plan satisfies every hard constraint modeled.')).not.toBeInTheDocument();
+  });
+
+  it('localizes structured validation reasons with stable ids and arguments', () => {
+    const violations: Violation[] = [
+      {
+        code: 'invalid_input', severity: 'warning',
+        reason: { id: 'slot_minutes_invalid', args: { defaultMinutes: 15 } },
+        detail: 'slotMinutes must be positive; defaulted to 15',
+      },
+      {
+        code: 'invalid_input', severity: 'warning', vehicleId: 'v-1',
+        reason: { id: 'vehicle_capacity_invalid' },
+        detail: 'usableCapacityWh must be > 0 — vehicle dropped',
+      },
+    ];
+    render(<ConstraintViolationsPanel violations={violations} />);
+
+    const rows = screen.getAllByRole('listitem');
+    expect(rows.map(row => row.textContent)).toEqual([
+      'Some plan inputs were invalid and were adjusted or dropped: Slot duration must be positive; 15 minutes was used instead.',
+      'Some plan inputs were invalid and were adjusted or dropped: A vehicle with invalid usable battery capacity was excluded.',
+    ]);
+    expect(rows[0]).toHaveAttribute('data-reason-id', 'slot_minutes_invalid');
+    expect(rows[0]).toHaveAttribute('data-reason-args', JSON.stringify({ defaultMinutes: 15 }));
+    expect(rows[0]).toHaveAttribute('data-machine-detail', 'slotMinutes must be positive; defaulted to 15');
+    expect(rows[1]).toHaveAttribute('data-reason-id', 'vehicle_capacity_invalid');
+    expect(rows[1]).not.toHaveAttribute('data-reason-args');
   });
 
   it('keeps missing energy and slot evidence distinct from measured zero', () => {
