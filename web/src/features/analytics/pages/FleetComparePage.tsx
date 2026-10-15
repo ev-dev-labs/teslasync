@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { VisuallyHidden } from '@/components/a11y';
 import {
   Battery, Thermometer, Lock, Shield, Wifi, Car,
   Gauge, ArrowLeftRight, Info, Calendar,
@@ -59,7 +60,7 @@ function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow, winnerLa
       {value}
       {isWinner && <>
         <span aria-hidden="true">✓</span>
-        <span className="sr-only">{winnerLabel}</span>
+        <VisuallyHidden>{winnerLabel}</VisuallyHidden>
       </>}
     </Text>
   );

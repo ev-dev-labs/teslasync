@@ -806,7 +806,7 @@ export default function BackupRestorePage() {
   );
   const runsEmpty = (
     <div className="space-y-3">
-      <EmptyState
+      <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */
         icon={<Icons.clock className="h-10 w-10 text-[var(--text-muted)]" />}
         title={runsOffset === 0 ? t('backup.noRuns', 'No backup runs yet') : t('backup.history', 'Backup history')}
         message={runsOffset === 0

@@ -9,6 +9,7 @@
  */
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { VisuallyHidden } from '@/components/a11y';
 import { Pencil, Trash2 } from 'lucide-react';
 
 import {
@@ -172,9 +173,9 @@ export function FlagsTable({
   if (loading && sorted.length === 0) {
     return (
       <div role="region" aria-busy="true" aria-label={t('admin.flags.table.loading', 'Loading flags…')}>
-        <Text as="span" className="sr-only" aria-live="polite">
+        <VisuallyHidden liveRegion>
           {t('admin.flags.table.loading', 'Loading flags…')}
-        </Text>
+        </VisuallyHidden>
         <div aria-hidden="true">
           <TableSkeleton rows={5} cols={3} />
         </div>

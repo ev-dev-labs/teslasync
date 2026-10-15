@@ -9,6 +9,7 @@
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { VisuallyHidden } from '@/components/a11y';
 
 import {
   Badge,
@@ -150,9 +151,9 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
   if (loading && safeRows.length === 0) {
     return (
       <div role="region" aria-busy="true" aria-label={t('admin.flags.audit.loading', 'Loading audit log…')}>
-        <Text as="span" className="sr-only" aria-live="polite">
+        <VisuallyHidden liveRegion>
           {t('admin.flags.audit.loading', 'Loading audit log…')}
-        </Text>
+        </VisuallyHidden>
         <div aria-hidden="true">
           <TableSkeleton rows={5} cols={7} />
         </div>

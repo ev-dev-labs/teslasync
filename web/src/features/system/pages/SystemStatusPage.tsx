@@ -615,7 +615,7 @@ export default function SystemStatusPage() {
                       ))}
                     </ul>
                   ) : (
-                    <EmptyState message={t('systemStatus.noComponents', 'Current component status is unavailable.')} className="py-6" />
+                    <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('systemStatus.noComponents', 'Current component status is unavailable.')} className="py-6" />
                   )}
                 </GlassPanel>
               </section>
@@ -625,7 +625,7 @@ export default function SystemStatusPage() {
                 <section id="action-items" aria-label={t('systemStatus.actionItems', 'Operator action items')}>
                   <ActionItemsPanel title={t('systemStatus.needsAttention', 'Needs your attention')}>
                     {attentionNotice && <Text role="status" size="sm" color="secondary" className="py-3">{attentionNotice}</Text>}
-                    {!hasAttention && !attentionNotice && <EmptyState message={t('operations.noAttention', 'No current attention items.')} className="py-6" />}
+                    {!hasAttention && !attentionNotice && <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('operations.noAttention', 'No current attention items.')} className="py-6" />}
                     {hasMaintenance && (
                       <ActionItem
                         severity="info"

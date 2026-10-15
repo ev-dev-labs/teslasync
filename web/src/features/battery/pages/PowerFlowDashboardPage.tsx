@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
+import { VisuallyHidden } from '@/components/a11y';
 import { Badge, Button, Caption, Icon } from '@/components/ui';
 
 import { KVList, Energy, type StatMetric } from '@/components/data-display';
@@ -78,7 +79,7 @@ function FlowArrow({ from, to, power, active, direction }: FlowArrowProps) {
       <span className="ms-auto min-w-0 break-words tabular-nums" aria-hidden="true">
         {fmtWatts(power == null ? null : Math.abs(power))}
       </span>
-      {direction ? <span className="sr-only">{direction}</span> : null}
+      {direction ? <VisuallyHidden>{direction}</VisuallyHidden> : null}
     </div>
   );
 }

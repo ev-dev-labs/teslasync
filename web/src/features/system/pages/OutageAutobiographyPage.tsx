@@ -102,7 +102,7 @@ export default function OutageAutobiographyPage() {
             label={t('system.outage.title', 'Outage autobiography')}
             emptyMessage={t('system.outage.empty', 'No outage evidence has been recorded for this vehicle yet.')}
             errorMessage={t('system.outage.loadError', 'Unable to load outage evidence.')}
-            emptyContent={outageEmptyContext ? <EmptyState message={outageEmptyContext} /> : undefined}
+            emptyContent={outageEmptyContext ? <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={outageEmptyContext} /> : undefined}
             error={state.fatalError}
             errorRecovery={{ onRetry: () => { void outageQuery.refetch(); } }}
           >
@@ -119,7 +119,7 @@ export default function OutageAutobiographyPage() {
               ))}
             </ul>
           ) : !outage.replay_preserves_event_time ? (
-            <EmptyState message={t('system.outage.detailsUnavailable', 'No replay assurance or outage notes were supplied. Missing details do not establish zero incidents.')} />
+            <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('system.outage.detailsUnavailable', 'No replay assurance or outage notes were supplied. Missing details do not establish zero incidents.')} />
           ) : null}
           </> : null}
           </SourceContent>
@@ -135,7 +135,7 @@ export default function OutageAutobiographyPage() {
             label={t('system.outage.certificate', 'Session certificate')}
             emptyMessage={t('system.outage.certificateEmpty', 'A session certificate is not available for this vehicle yet.')}
             errorMessage={t('system.outage.certificateError', 'Unable to load the session certificate.')}
-            emptyContent={certificateEmptyContext ? <EmptyState message={certificateEmptyContext} /> : undefined}
+            emptyContent={certificateEmptyContext ? <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={certificateEmptyContext} /> : undefined}
           >
             <Text as="p" variant="bodySm">
               {t('system.outage.certificateReady', 'The session certificate is available for download with its original evidence intact.')}

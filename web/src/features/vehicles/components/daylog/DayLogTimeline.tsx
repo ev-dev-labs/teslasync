@@ -1,6 +1,7 @@
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { VisuallyHidden } from '@/components/a11y';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { TFunction } from 'i18next';
 import { Badge, Button, Code, GlassPanel, Input, PanelTitle, Text } from '@/components/ui';
@@ -402,17 +403,17 @@ function EventRow({ event, position, total, timezone, expanded, onToggle, t, for
           aria-controls={expanded ? detailsId : undefined}
           aria-labelledby={`${actionId} ${titleId} ${timeId} ${identityId}`}
         >
-          <span id={actionId} className="sr-only">
+          <VisuallyHidden id={actionId}>
             {
             expanded
               ? t('dayLog.list.collapse', 'Hide details')
               : t('dayLog.list.expand', 'Show details')
             }
-          </span>
+          </VisuallyHidden>
           <ExpandIcon aria-hidden="true" className="h-4 w-4" />
         </Button>
       </div>
-      <span id={identityId} className="sr-only">{event.id}</span>
+      <VisuallyHidden id={identityId}>{event.id}</VisuallyHidden>
       {expanded && (
         <div id={detailsId} className="mt-1.5 min-w-0 space-y-1 rounded-md bg-surface-2 p-3">
           <DetailLine label={t('dayLog.list.detailCategory', 'Category')} value={t(`dayLog.categories.${categoryOf(event.type)}`, categoryOf(event.type))} />

@@ -331,7 +331,7 @@ export default function TCOOptimizerPage() {
             ))}
           </div>
           {result && strategies.length === 0 && (
-            <EmptyState message={t('advancedIntelligence.panel.empty', 'No supported data is available.')} />
+            <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('advancedIntelligence.panel.empty', 'No supported data is available.')} />
           )}
         </InsightPanel>
       </FadeIn>

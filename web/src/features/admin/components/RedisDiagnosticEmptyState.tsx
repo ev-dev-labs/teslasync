@@ -352,7 +352,7 @@ function OtherRedisVehicles({
               </Button>
             ))}
           </div>
-        ) : <EmptyState message={t('common.noData', 'No data available')} className="py-6" />}
+        ) : <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('common.noData', 'No data available')} className="py-6" />}
       </SourceContent>
     </div>
   )

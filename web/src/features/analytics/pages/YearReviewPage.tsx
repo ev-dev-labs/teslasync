@@ -83,7 +83,7 @@ export default function YearReviewPage() {
     if (data) return content(data);
     const placeholder = sectionLoading ? skeleton
       : reviewState.fatalError ? <QueryError error={reviewState.fatalError} onRetry={refetch} />
-      : vehiclesState.fatalError ? <EmptyState message={t('yearReview.brief.unavailable', 'Year evidence unavailable')} />
+      : vehiclesState.fatalError ? <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('yearReview.brief.unavailable', 'Year evidence unavailable')} />
       : (
       <EmptyState
         message={t('yearReview.selectVehiclePrompt', 'Select a vehicle to view its year in review')}
@@ -133,7 +133,7 @@ export default function YearReviewPage() {
   if (!validYear) {
     return (
       <PageLayout title={t('yearReview.title', 'Year in review')}>
-        <EmptyState message={t('playground.validation.schemaMismatch', 'Does not match the API specification ({{constraint}}).',
+        <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('playground.validation.schemaMismatch', 'Does not match the API specification ({{constraint}}).',
           { constraint: '2010–2100' })} />
         <Button onClick={() => goYear(currentYear)} className="min-h-11">
           {t('yearReview.pageTitle', { year: currentYear, defaultValue: '{{year}} Year in review' })}

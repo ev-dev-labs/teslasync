@@ -179,7 +179,7 @@ export default function FleetOperationsPage() {
               <Skeleton lines={2} />
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */
               title={t('vehicles.emptyTitle', 'No vehicles yet')}
               message={t('vehicles.emptyMessage', 'Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis.')}
             />

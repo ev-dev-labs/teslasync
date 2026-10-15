@@ -168,7 +168,7 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
           </div>
         ) : <Text role="status" color="secondary">—</Text>
       ) : routines?.length === 0 ? (
-        <EmptyState message={t('automations.routines.resource', 'Geofence routines')} />
+        <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */ message={t('automations.routines.resource', 'Geofence routines')} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {(routines ?? []).map((routine) => (

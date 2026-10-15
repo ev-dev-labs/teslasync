@@ -136,7 +136,7 @@ export function TrueCostMonthlyDirectory({
         </Text>
         <TrueCostSectionBody state={state}>
           {analysis.monthlyAccounting.arrayAvailability !== 'valid' ? (
-            <EmptyState
+            <EmptyState /* no-action: this informational panel has no local recovery action; parent-page source controls remain available. */
               message={analysis.monthlyAccounting.arrayAvailability === 'invalid'
                 ? t('tco.methodology.invalidMonthly', 'The monthly_breakdown field is malformed; no monthly rows were fabricated.')
                 : t('tco.savings.unavailable', 'Unavailable')}

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useId } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { VisuallyHidden } from '@/components/a11y';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
 import { QueryError, Skeleton } from '@/components/feedback';
-import { Accordion, Badge, Heading, Text, Button as ControlButton } from '@/components/ui';
+import { Accordion, Badge, Text, Button as ControlButton } from '@/components/ui';
 import { deriveDataState } from '@/api/dataState';
 import { cn } from '@/lib/cn';
 import { isApiError } from '@/lib/resilience';
@@ -284,7 +285,7 @@ export default function WatchFacePage() {
   return (
     <>
       <WatchShell>
-        <Heading as="h1" level="page" className="sr-only">{title}</Heading>
+        <VisuallyHidden as="h1">{title}</VisuallyHidden>
         {watchContent}
       </WatchShell>
       {/*
@@ -533,3 +534,4 @@ export function formatRelativeTime(
   const count = Math.floor(diffSec / 86400);
   return translate?.('watch.updated.daysAgo', '{{count}}d ago', count) ?? `${count}d ago`;
 }
+
