@@ -11577,7 +11577,7 @@
     "WorkAttempts": 0,
     "InfraAttempts": 0,
     "Notes": "Notification checkpoint 2026-10-15: no-match flat and grouped EmptyState clear-filter actions verified in InboxBody.test.tsx; split catalog check passed.",
-    "Commit": "45cc42e9e6",
+    "Commit": "e6b296e32f",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -11709,7 +11709,7 @@
     "WorkAttempts": 0,
     "InfraAttempts": 0,
     "Notes": "Notification checkpoint 2026-10-15: useNotificationListener.test.ts passed 33/33 after resetting the shared requestPermission mock between tests.  Attempt 1: FAILED | fix-notifications-browser-notifications-f02 | dependency failures prevented regression verification | done so far: changed web\\src\\hooks\\useWebPush.ts and web\\src\\hooks\\__tests__\\useNotificationListener.test.ts for shared permission synchronization and focused regressions Attempt 2: FAILED | fix-notifications-browser-notifications-f02 | missing dependencies prevented regression verification | done so far: inspected existing shared permission synchronization and regressions; no source changes",
-    "Commit": "",
+    "Commit": "596db0624d",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -12191,7 +12191,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-10 | verification blocked by missing dependencies | done so far: updated web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx and web\\src\\features\\notifications\\components\\NotificationLatencyPanel.test.tsx Attempt 2: FAILED | fix-notifications-notification-health-nh-10 | required regression blocked by missing dependencies; restoration failed with ENOTEMPTY | done so far: confirmed existing implementation and focused regression; no source changes | Notification checkpoint: unusable/zero latency cases, plural two-delivery copy, and singular one-delivery copy pass (8 focused cases); full panel suite is 39/50 with 11 unrelated failures.,
+    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-10 | verification blocked by missing dependencies | done so far: updated web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx and web\\src\\features\\notifications\\components\\NotificationLatencyPanel.test.tsx Attempt 2: FAILED | fix-notifications-notification-health-nh-10 | required regression blocked by missing dependencies; restoration failed with ENOTEMPTY | done so far: confirmed existing implementation and focused regression; no source changes | Notification checkpoint: unusable/zero latency cases, plural two-delivery copy, and singular one-delivery copy pass (8 focused cases); full panel suite is 39/50 with 11 unrelated failures.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
