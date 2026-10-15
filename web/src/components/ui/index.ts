@@ -1,4 +1,5 @@
 export { Button, BUTTON_BASE, BUTTON_VARIANTS, type ButtonProps } from './Button';
+export { IconButton, type IconButtonProps, type IconButtonVariant } from './IconButton';
 export { Badge, BADGE_VARIANTS, type BadgeProps } from './Badge';
 export { Card, CardHeader, CardFooter, type CardProps, type CardHeaderProps } from './Card';
 export { Checkbox, type CheckboxProps, type CheckboxSize } from './Checkbox';

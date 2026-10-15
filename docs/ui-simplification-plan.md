@@ -19,8 +19,8 @@ On `fix/dashboard-followups`, before UI edits: split catalog check passed (57 bu
 
 | # | file / surface | page/route | widget/card | A | B | C | D | data-layer gap | attempts | status |
 |---|---|---|---|---|---|---|---|---|---:|---|
-| 0 | `OperationalBrief.tsx`, `OperationalNarrativeDetails.tsx`, shared tests | shared | Evidence card | todo | todo | todo | todo | inspect existing freshness contract | 0 | in-progress |
-| 1 | shared tooltip, button, icons | shared | IconButton | n/a | todo | n/a | n/a | none expected | 0 | todo |
+| 0 | `OperationalBrief.tsx`, `OperationalNarrativeDetails.tsx`, shared tests | shared | Evidence card | todo | todo | todo | todo | inspect existing freshness contract | 0 | todo |
+| 1 | `components/ui/IconButton.tsx`, shared tooltip, button | shared | IconButton | n/a | done | n/a | n/a | none | 1 | done |
 | 2 | shared widget header and freshness primitives | dashboard | WidgetShell | n/a | todo | todo | n/a | inspect query freshness fields | 0 | todo |
 | 3 | `features/dashboard/widgets/**` | dashboard | all dashboard widgets | todo | todo | todo | todo | per widget during inventory | 0 | todo |
 | 4 | `features/vehicles/**` | vehicle routes | evidence cards and repeated actions | todo | todo | todo | todo | per row | 0 | todo |
@@ -28,11 +28,11 @@ On `fix/dashboard-followups`, before UI edits: split catalog check passed (57 bu
 | 6 | remaining `features/*/**` | all remaining routes | evidence cards, repeated actions, nested cards | todo | todo | todo | todo | per row | 0 | todo |
 | 7 | grep exit check, full gates and browser/e2e | app-wide | leftovers / summary | verify | verify | verify | verify | confirm | 0 | todo |
 
-## Decision log
+## Progress checkpoints`n`n- Row 1 complete: added `IconButton` with caller-provided accessible label, tooltip, variants, route-link mode, busy/disabled behavior and menu ARIA props. Focused suite passed 3/3; standalone typecheck, full lint, and production build passed. No catalog key was needed because every label is passed in by the caller.`n`n## Decision log
 
 | row # | situation | decision | why |
 |---|---|---|---|
-| 0 | User requested catalog discipline for every new user-facing string. | All new copy will be added as a complete-sentence `en.json` key and called through `t()`; counted text uses i18next `count`; run split check after each catalog edit. | Explicit user requirement and task guardrail. |
+| 1 | `Tooltip` already owns hover/focus/touch/Escape behavior and Button owns busy/disabled button state. | Compose these primitives; link mode uses React Router `Link` with the shared button tokens. | Keep behavior and visuals shared and avoid another tooltip implementation. |`n| 0 | User requested catalog discipline for every new user-facing string. | All new copy will be added as a complete-sentence `en.json` key and called through `t()`; counted text uses i18next `count`; run split check after each catalog edit. | Explicit user requirement and task guardrail. |
 | 0 | User reordered gates and full test execution. | Build, standalone typecheck, lint, and split check pass before simplification; full Vitest follows simplification. | Latest user priority order. |
 | 0 | Task requires commits to stay build/lint/typecheck green. | Keep those checks on each shared-component or migration commit; targeted tests per row, then full Vitest at requested stage. | Task hard rule. |
 
@@ -44,3 +44,4 @@ On `fix/dashboard-followups`, before UI edits: split catalog check passed (57 bu
 ## Summary
 
 In progress. No UI code changed yet. Current branch is `ui/simplification`; started from `fix/dashboard-followups` at `7570c940ec`.
+
