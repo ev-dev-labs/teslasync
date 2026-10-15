@@ -3412,7 +3412,7 @@
     },
     "method": {
       "timezoneFallback": "The requested local timezone was invalid, so UTC is used for every weekday, hour, day, and month grouping.",
-      "timeSemantics": "The API applies the selected date-only bounds in UTC. Returned instants are then grouped consistently by weekday, hour, day, and month in {{timezone}}.",
+      "timeSemantics": "The selected local dates are requested as exact instants in {{timezone}} (start inclusive, end exclusive). Returned instants are then grouped consistently by weekday, hour, day, and month in {{timezone}}.",
       "timestampRules": "Blank or malformed starts are invalid; valid starts after the page’s frozen analysis clock are counted as future and excluded.",
       "predictability": "Predictability is 100 minus normalized Shannon entropy across 24 local start hours. Overall and monthly scores require at least {{count}} valid starts.",
       "consistency": "Typical departures use a circular median so midnight-adjacent times stay close. Median circular deviation requires {{count}} starts on that weekday.",

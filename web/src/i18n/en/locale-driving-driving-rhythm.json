@@ -326,6 +326,21 @@
   "entityContext": {
     "title": "Related context"
   },
+  "errorBoundary": {
+    "body": "An unexpected error occurred. Please try again.",
+    "chunkBody": "A new version was deployed. Click Reload to load the latest assets.",
+    "chunkTitle": "New Version Deployed",
+    "connectionBody": "Unable to reach the server. Check your connection and try again.",
+    "connectionTitle": "Connection Lost",
+    "goHome": "Go Home",
+    "inlineTitle": "Component failed to load",
+    "retriesExceeded": "Multiple retries failed. Try refreshing the page or checking system status.",
+    "retry": "Retry",
+    "retryAttempt": "Retry attempt {{count}}",
+    "title": "Something went wrong",
+    "tryAgain": "Try Again",
+    "tryAgainAnyway": "Try Again Anyway"
+  },
   "export": {
     "jobDrawer": {
       "activeCount": "{{count}} export running",
@@ -626,7 +641,7 @@
       "predictability": "Predictability is 100 minus normalized Shannon entropy across 24 local start hours. Overall and monthly scores require at least {{count}} valid starts.",
       "returned": "Rows returned",
       "scope": "These are descriptive departure patterns. They do not identify causes or predict a specific future trip.",
-      "timeSemantics": "The API applies the selected date-only bounds in UTC. Returned instants are then grouped consistently by weekday, hour, day, and month in {{timezone}}.",
+      "timeSemantics": "The selected local dates are requested as exact instants in {{timezone}} (start inclusive, end exclusive). Returned instants are then grouped consistently by weekday, hour, day, and month in {{timezone}}.",
       "timestampRules": "Blank or malformed starts are invalid; valid starts after the page’s frozen analysis clock are counted as future and excluded.",
       "timezoneFallback": "The requested local timezone was invalid, so UTC is used for every weekday, hour, day, and month grouping.",
       "title": "Coverage & methodology",

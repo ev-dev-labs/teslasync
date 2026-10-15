@@ -630,6 +630,7 @@
       "title": "Waiting for upstream"
     }
   },
+  "errorBoundary": {},
   "errorHelp": {
     "title": "Where to look next"
   },

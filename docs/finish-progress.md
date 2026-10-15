@@ -98,6 +98,7 @@ Order: feature by feature, by primary-file cluster.
 | Explorer | exp05/exp09 (exp03 left failed) | filter grouping test |
 | Regen efficiency | 04/05/07/08 | harness fixes only |
 | Speed sweet spot | f03/f04/f05 | exportable coerced to boolean |
+| Driving rhythm / dynamics | rhythm f01/f03/f04, dynamics f03/04/05/07 | exact-instant window, truthful time-semantics copy |
 
 Real product bugs fixed along the way: drive-detail energy/regen estimate was
 1000× too large; (0,0) GPS placeholder stretched routes; TorqueHistory ticks
@@ -108,8 +109,7 @@ labels without i18n init and was not announced (now role=alert).
 
 ### Next up (driving, then other features)
 
-rhythm (f01/f03, punchcard
-f04, tips f03/04/05/07) → compare (f01/f07, driveCompare f05) → what-if
+compare (f01/f07, driveCompare f05) → what-if
 (003/006/007) → misc (ShareDriveDialog f03, ElapsedComposition 02, replayMarkers
 f10). Then vehicles (62), vehicle-systems (45), charging (48), system (47),
 notifications, settings, battery, and the rest.

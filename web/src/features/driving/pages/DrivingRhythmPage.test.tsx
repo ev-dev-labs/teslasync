@@ -65,6 +65,7 @@ vi.mock('@/hooks/usePageTitle', () => ({
 
 vi.mock('@/hooks/useRangeState', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
+  const calendarHelpers = await vi.importActual<typeof import('@/lib/dateRange')>('@/lib/dateRange');
   return {
     useRangeState: (options: unknown) => {
       rangeOptionsMock(options);
@@ -73,9 +74,11 @@ vi.mock('@/hooks/useRangeState', async () => {
         end: '2026-08-07',
       });
       sharedRange.set = setRange;
+      const { calendarRangeToInstants } = calendarHelpers;
       return {
         ...range,
         timezone: 'America/Los_Angeles',
+        ...calendarRangeToInstants({ startDate: range.start, endDate: range.end, timezone: 'America/Los_Angeles' }),
         setRange,
       };
     },
@@ -286,7 +289,8 @@ describe('DrivingRhythmPage', () => {
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
-    expect(useHistoryMock).toHaveBeenCalledWith('42', '2025-01-01', '2026-08-07');
+    // Exact Los Angeles window: local midnight start, exclusive next-day end.
+    expect(useHistoryMock).toHaveBeenCalledWith('42', '2025-01-01T08:00:00.000Z', '2026-08-08T07:00:00.000Z');
     expect(rangeOptionsMock).toHaveBeenCalledWith({
       persistKey: 'driving-rhythm.range',
       defaultPresetId: 'all',
@@ -302,7 +306,7 @@ describe('DrivingRhythmPage', () => {
     expect(screen.queryByTestId('driving-rhythm-range')).not.toBeInTheDocument();
 
     await waitFor(() =>
-      expect(useHistoryMock).toHaveBeenLastCalledWith('42', '2026-07-01', '2026-07-31'),
+      expect(useHistoryMock).toHaveBeenLastCalledWith('42', '2026-07-01T07:00:00.000Z', '2026-08-01T07:00:00.000Z'),
     );
   });
 
@@ -478,7 +482,7 @@ describe('DrivingRhythmPage', () => {
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent(
       'Driving Rhythm',
     );
-    expect(useHistoryMock).toHaveBeenCalledWith(undefined, '2025-01-01', '2026-08-07');
+    expect(useHistoryMock).toHaveBeenCalledWith(undefined, '2025-01-01T08:00:00.000Z', '2026-08-08T07:00:00.000Z');
     expect(
       screen.queryByTestId('driving-rhythm-punchcard'),
     ).not.toBeInTheDocument();

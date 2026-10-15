@@ -33,14 +33,16 @@ export default function DrivingRhythmPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { start, end, timezone } = useRangeState({
+  const { start, end, timezone, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'driving-rhythm.range',
     defaultPresetId: 'all',
     inheritSharedPreference: false,
   });
   const [analysisNowMs] = useState(() => Date.now());
 
-  const drivesQuery = useDriveCalendarHistory(vehicleIdStr, start, end);
+  // Request the exact local window (inclusive start, exclusive end instant);
+  // local dates still define the calendar denominator below.
+  const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
   const sourceState = useDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
