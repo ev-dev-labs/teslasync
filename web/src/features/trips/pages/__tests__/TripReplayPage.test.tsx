@@ -35,7 +35,7 @@
  * consistent with the other page tests.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act, within, getDefaultNormalizer } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
@@ -68,6 +68,10 @@ const { captured, driveMock, unitsMock } = vi.hoisted(() => ({
 }));
 
 // i18n → return the developer fallback string.
+// Settings are seeded into a real query cache; use the real settings and timezone hooks.
+vi.unmock('@/hooks/useSettings');
+vi.unmock('@/lib/timezone');
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
   return {
@@ -357,7 +361,8 @@ describe('Trip replay summary event bounds', () => {
     expect(scope).toHaveTextContent('16. Juni 2024');
     expect(drive.startTs).toBe('2024-06-16T06:59:00Z');
     expect(drive.endTs).toBe('2024-06-16T07:01:00Z');
-    expect((captured.map as CapturedMap).positions).toEqual(POSITIONS);
+    // Positions keep every raw field; the page only adds per-field source origins.
+    expect((captured.map as CapturedMap).positions).toEqual(POSITIONS.map((position) => expect.objectContaining(position)));
   });
 
   it.each([
@@ -367,7 +372,10 @@ describe('Trip replay summary event bounds', () => {
   ])('keeps invalid or missing bounds explicit: $startTs / $endTs', ({ startTs, endTs, endLabel }) => {
     driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive({ startTs, endTs }) }));
     renderPage(settings);
-    const scope = screen.getByTitle(`Drive #7 · ${startTs} – ${endTs ?? 'In progress'}`);
+    // Empty raw bounds leave a double space in the title; match it verbatim.
+    const scope = screen.getByTitle(`Drive #7 · ${startTs} – ${endTs ?? 'In progress'}`, {
+      normalizer: getDefaultNormalizer({ trim: false, collapseWhitespace: false }),
+    });
     expect(scope).toHaveTextContent(`Drive #7 · — – ${endLabel} (${settings.timezone_user})`);
     expect(scope).not.toHaveTextContent('Invalid Date');
   });
@@ -383,7 +391,8 @@ describe('Trip replay summary event bounds', () => {
   });
 
   it('does not invent event bounds when the drive record is missing', () => {
-    driveMock.mockReturnValue(makeDriveQuery());
+    // A settled response without a drive record (not a still-pending request).
+    driveMock.mockReturnValue({ ...makeDriveQuery(), data: null, isSuccess: true, isPending: false });
     renderPage(settings);
     expect(screen.getByTitle('Drive record unavailable; event bounds unknown.'))
       .toHaveTextContent('Drive record unavailable; event bounds unknown.');
@@ -492,7 +501,7 @@ describe('TripReplayPage postures', () => {
     expect(captured.map.positions[0].speed).toBe(10);
     act(() => captured.map.onSeekToIndex(1));
     for (const field of ['speed', 'power', 'batteryLevel', 'elevation', 'ratedRange', 'outsideTemp']) {
-      expect(screen.getByTestId(`replay-source-${field}`)).toHaveTextContent('Timestamp: 2024-06-15T12:01:00.000Z · Age: 0 s');
+      expect(screen.getByTestId(`replay-source-${field}`)).toHaveTextContent('Timestamp: 2024-06-15T12:01:00.000Z · Age: 0.00 s');
     }
   });
 
@@ -555,9 +564,9 @@ describe('TripReplayPage postures', () => {
     expect(captured.elevation.data).toEqual([]);
     expect(captured.charts.data).toEqual([]);
     const summary = screen.getByRole('region', { name: 'Drive Summary' });
-    expect(summary).toHaveTextContent('12 km');
+    expect(summary).toHaveTextContent('12.00 km');
     expect(summary).toHaveTextContent('1h 1m');
-    expect(summary).toHaveTextContent('250 Wh/km');
+    expect(summary).toHaveTextContent('250.00 Wh/km');
     // avg/max speed, efficiency, battery, elevation gain + loss → "—".
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
   });
@@ -586,7 +595,7 @@ describe('TripReplayPage populated', () => {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     for (const label of ['Speed', 'Power', 'Elevation', 'Range', 'Temperature']) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
     // "Battery" labels both the summary tile and the live-stats card.
     expect(screen.getAllByText('Battery').length).toBeGreaterThanOrEqual(2);

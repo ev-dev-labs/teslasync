@@ -176,7 +176,8 @@ function route(speeds: (number | null)[]): DrivePosition[] {
  * buckets plus the neutral unknown-speed path. */
 const ROUTE = route([0, 10 / 3.6, 45 / 3.6, 80 / 3.6, 130 / 3.6, null]);
 const STATIONARY = [pos(47.6, -122.3), pos(47.6, -122.3), pos(47.6, -122.3)];
-const INVALID = [pos(0, 0), pos(0, 0)];
+// Genuinely absent GPS: (0, 0) is a measured coordinate for replay (see geo.test.ts).
+const INVALID = [pos(Number.NaN, Number.NaN), pos(Number.NaN, Number.NaN)];
 
 function renderMap(props: Partial<TripReplayMapProps> = {}) {
   const onSeekToIndex = props.onSeekToIndex ?? vi.fn();

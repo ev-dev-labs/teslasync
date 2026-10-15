@@ -45,6 +45,18 @@ const polylineProps: Array<{
   eventHandlers?: { click?: (e: { latlng: { lat: number; lng: number } }) => void };
 }> = [];
 
+// jsdom resolves no CSS custom properties; give the map renderer concrete paint.
+vi.mock('@/lib/colors', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/colors')>(),
+  resolveMapRendererColor: (role: string) => ({
+    'var(--semantic-success)': 'rgb(56, 97, 79)',
+    'var(--semantic-info)': 'rgb(56, 94, 126)',
+    'var(--semantic-warning)': 'rgb(116, 88, 41)',
+    'var(--semantic-danger)': 'rgb(131, 70, 78)',
+    'var(--text-secondary)': 'rgb(71, 85, 105)',
+  } as Record<string, string>)[role] ?? null,
+}));
+
 vi.mock('@/components/maps', async () => {
   const passthrough = ({ children }: { children?: React.ReactNode }) =>
     React.createElement('div', null, children);

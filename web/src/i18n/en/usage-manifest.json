@@ -60304,6 +60304,7 @@
       "journey.detail.title",
       "journey.filter.all",
       "journey.filter.status",
+      "journey.form.createFailed",
       "journey.form.destination",
       "journey.form.name",
       "journey.form.namePlaceholder",

@@ -344,6 +344,12 @@ function VehicleJourneyPanel({ vehicleId, draft, setDraft }: {
               <Button type="submit" loading={create.isPending} disabled={vehicleId == null}>
                 {t('journey.form.submit', 'Create journey')}
               </Button>
+              {create.isError && create.variables?.vehicle_id === vehicleId ? (
+                // The draft stays in the form; say so instead of relying on a transient toast.
+                <Text as="p" variant="bodySm" role="alert" className="mt-2 text-[var(--semantic-danger)]">
+                  {t('journey.form.createFailed', 'The journey could not be planned. Your draft is kept; try again.')}
+                </Text>
+              ) : null}
             </div>
             </FormSection>
           </form>

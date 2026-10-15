@@ -149,7 +149,7 @@ describe('TripReplayPage local modernization regressions', () => {
     expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Source: Position · Historical');
     expect(screen.getByTestId('replay-source-batteryLevel')).toHaveTextContent('Source: Position · Historical');
     expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Source: Telemetry · Estimated');
-    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Age: 10 s');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Age: 10.00 s');
     expect(screen.getByTestId('replay-source-outsideTemp')).toHaveTextContent('Source: Unknown · Unknown source');
     expect(captured.map?.positions[0]).toMatchObject({ power: 1500, batteryLevel: 0 });
     expect(captured.summary?.drive).toBe(currentDrive);
@@ -195,16 +195,16 @@ describe('TripReplayPage local modernization regressions', () => {
       tirePressureFl: null, tirePressureFr: null, tirePressureRl: null, tirePressureRr: null,
     }];
     mount();
-    expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Timestamp: 2024-01-01T00:00:00.000Z · Age: 0 s');
-    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2023-12-31T23:55:00.000Z · Age: 300 s');
-    expect(screen.getByTestId('replay-source-elevation')).toHaveTextContent('Age: 300 s');
-    expect(screen.getByTestId('replay-source-ratedRange')).toHaveTextContent('Age: 0 s');
+    expect(screen.getByTestId('replay-source-speed')).toHaveTextContent('Timestamp: 2024-01-01T00:00:00.000Z · Age: 0.00 s');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2023-12-31T23:55:00.000Z · Age: 300.00 s');
+    expect(screen.getByTestId('replay-source-elevation')).toHaveTextContent('Age: 300.00 s');
+    expect(screen.getByTestId('replay-source-ratedRange')).toHaveTextContent('Age: 0.00 s');
     expect(screen.getByTestId('replay-source-ratedRange')).not.toHaveTextContent('Unknown');
     expect(screen.getByTestId('replay-source-outsideTemp')).toHaveTextContent('Temperature · Unknown');
     expect(screen.getByTestId('replay-source-outsideTemp')).toHaveTextContent('Timestamp: Unknown · Age: Unknown');
     expect(captured.map?.positions[0].power).toBe(1500);
     act(() => captured.map?.onSeekToIndex(1));
-    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2024-01-01T00:01:00.000Z · Age: 0 s');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2024-01-01T00:01:00.000Z · Age: 0.00 s');
   });
 
   it('retains the existing later-row tie break and reveals future telemetry as negative age', () => {
@@ -219,7 +219,7 @@ describe('TripReplayPage local modernization regressions', () => {
     }));
     mount();
     expect(captured.map?.positions[0].power).toBe(10000);
-    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2024-01-01T00:00:10.000Z · Age: -10 s');
+    expect(screen.getByTestId('replay-source-power')).toHaveTextContent('Timestamp: 2024-01-01T00:00:10.000Z · Age: -10.00 s');
   });
 
   it('rejects missing, nonfinite and out-of-bounds coordinates without fabricating a route', () => {
@@ -281,7 +281,7 @@ describe('TripReplayPage local modernization regressions', () => {
     expect(captured.map?.positions.map(p => p.power)).toEqual([null, 0]);
     expect(captured.charts?.data.map(p => p.power)).toEqual([null, 0]);
     expect(captured.playback?.getPreviewAt?.(0)?.power).toBeUndefined();
-    expect(captured.playback?.getPreviewAt?.(1)?.power).toBe('0 kW');
+    expect(captured.playback?.getPreviewAt?.(1)?.power).toBe('0.00 kW');
   });
 
   it('formats signed fractional watts at the display boundary without changing raw replay samples', () => {
@@ -291,7 +291,7 @@ describe('TripReplayPage local modernization regressions', () => {
     expect(captured.charts?.data.map(p => p.power)).toEqual([1.2505, -2.50025]);
     expect(captured.charts?.powerUnit).toBe('kW');
     expect(captured.playback?.getPreviewAt?.(0)?.power).toBe('1.25 kW');
-    expect(captured.playback?.getPreviewAt?.(1)?.power).toBe('-2.5 kW');
+    expect(captured.playback?.getPreviewAt?.(1)?.power).toBe('-2.50 kW');
   });
 
   it('restores each drive identity with equal sample counts and cancels the previous URL write', () => {

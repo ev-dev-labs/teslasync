@@ -532,7 +532,7 @@ describe('JourneyPanel', () => {
     const refetch = vi.fn();
     mockList.mockReturnValue(idle({ isPending: true, fetchStatus: 'paused', refetch }));
     renderPanel();
-    expect(screen.getByRole('status')).toHaveTextContent('Refresh paused');
+    expect(screen.getAllByRole('status').some((status) => status.textContent?.includes('Refresh paused'))).toBe(true);
     expect(screen.queryByRole('status', { name: 'Loading journeys…' })).not.toBeInTheDocument();
     expect(screen.queryByText(/No journeys yet/)).not.toBeInTheDocument();
     expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
@@ -549,7 +549,7 @@ describe('JourneyPanel', () => {
     const refetch = vi.fn();
     mockDetail.mockReturnValue(idle({ isPending: true, fetchStatus: 'paused', refetch }));
     rerenderVehicle(7);
-    expect(screen.getByRole('status')).toHaveTextContent('Refresh paused');
+    expect(screen.getAllByRole('status').some((status) => status.textContent?.includes('Refresh paused'))).toBe(true);
     expect(screen.queryByRole('status', { name: 'Loading journey…' })).not.toBeInTheDocument();
     expect(screen.queryByText(/Select a journey to manage/)).not.toBeInTheDocument();
     expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();

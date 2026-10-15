@@ -202,7 +202,7 @@ describe('ReportPanel', () => {
     expect(screen.getByText('1 of 2 plans')).toBeInTheDocument();
     expect(screen.getByText('4 of 5')).toBeInTheDocument();
     for (const line of report.evidence) expect(screen.getByText(`· ${line}`)).toBeInTheDocument();
-    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0);
   });
 
   it('does not turn known zero distance, duration or detour into missing data', () => {

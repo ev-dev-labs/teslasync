@@ -109,10 +109,15 @@ export on origin concentration; stale "kW ×1000" methodology copy; efficiency
 scorecard JSON/CSV dropped the target gap; inline ErrorBoundary rendered blank
 labels without i18n init and was not announced (now role=alert).
 
-### Next up (driving, then other features)
+### Groups done (trips)
 
-Driving is complete except explorer exp03. Next: trips (rest of the trip-replay
-items), then vehicles (62), vehicle-systems (45), charging (48), system (47),
+| Cluster | Items | Notes |
+| --- | --- | --- |
+| Trip replay / journey / stops | replay f01/02/03/08/11/13/14/15/16/18/19, journey 01–04, departure 06 | inline journey-create failure alert; settings/timezone unmocked where the cache is seeded |
+
+### Next up
+
+Driving and trips are complete (except explorer exp03). Next: vehicles (62), vehicle-systems (45), charging (48), system (47),
 notifications, settings, battery, and the rest.
 
 ## Known open issues (left failed in state.json)

@@ -95,8 +95,9 @@ describe('StopScoreTable', () => {
       { site: 'High score', score: 120, wait_s: null, unit_price: null, health: null,
         corridor_m: 0, evidence: [] },
     ]);
-    expect(screen.getByRole('progressbar', { name: 'Score for High score' }))
-      .toHaveAttribute('aria-valuenow', '100');
-    expect(screen.getByText('120.00')).toBeInTheDocument();
+    // An out-of-range score is not a progressbar value; the bar stays a labeled group.
+    expect(screen.getByRole('group', { name: 'Score for High score' }))
+      .not.toHaveAttribute('aria-valuenow');
+    expect(screen.getAllByText('120.00').length).toBeGreaterThan(0);
   });
 });

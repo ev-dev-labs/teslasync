@@ -42,7 +42,8 @@
       "namePlaceholder": "Tahoe ski trip",
       "origin": "Origin",
       "destination": "Destination",
-      "submit": "Create journey"
+      "submit": "Create journey",
+      "createFailed": "The journey could not be planned. Your draft is kept; try again."
     },
     "detail": {
       "title": "Journey detail",
