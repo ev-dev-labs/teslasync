@@ -286,10 +286,23 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
   the modified arrival reliability profile suite passed **7/7**.
 - `npx tsc --noEmit` passed. `node scripts/split-i18n-catalog.mjs --check`
   passed. Root `go build ./...` and `go test ./...` completed successfully.
-- The full lint rerun and `npm run build` are still in progress after the
-  mutation policy update. Its next failure was the virtualization inventory:
+- The first full lint rerun after the mutation policy update next failed at
+  the virtualization inventory:
   `RecommendationDetails` was missing from the acknowledged set even though
   it fetches fixed 25-record server pages. Added the specific bounded-page
   justification; the standalone virtualization audit now passes with **17/17
-  long-list surfaces acknowledged**, and the area test run completed. Lint and
-  the second build run remain in progress.
+  long-list surfaces acknowledged**.
+
+### Phase 7 gate status (2026-10-15, current branch)
+
+- `node scripts/split-i18n-catalog.mjs --check`: pass.
+- `npx tsc --noEmit`: pass; the production build's TypeScript and service
+  worker typecheck stages also pass.
+- `npm run lint`: pass across ESLint and all registered audits.
+- `go build ./...` and `go test ./...`: pass.
+- Full `npx vitest run`: **55,308 passed, 1,536 failed, 4 skipped**, 3 errors,
+  2,702 files. The earlier recorded baseline was about 1,830 failures; the
+  focused arrival reliability chart suite passed **7/7**.
+- The build bundles and PWA contract checks pass except the service worker SHA
+  comparison, because commits advanced during its build. Rebuild after this
+  documentation commit so the worker and postbuild gate use the same SHA.
