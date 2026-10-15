@@ -104,7 +104,7 @@ export default function StatisticsPage() {
 
   const batteryQuery = useBatteryHealthAnalytics(activeId || null);
   const mileageQuery = useMileageStats(activeId);
-  const stateQuery = useStateSummary(activeId);
+  const stateQuery = useStateSummary(activeId, { start: startInstant, end: endInstantExclusive });
   const { data: stateSummary, isLoading: stateLoading } = stateQuery;
   const fleetQuery = useFleetAnalytics({ start: startInstant, end: endInstantExclusive });
   const { data: fleetResponse, isLoading: fleetLoading } = fleetQuery;
@@ -169,16 +169,20 @@ export default function StatisticsPage() {
           <CardGrid label={t('statistics.periodSummary', 'Totals and averages')} items={[{
             id: 'statistics-period',
             size: 'full',
-            content: <StatisticsPeriodBrief
-              stats={stats}
-              loading={statsLoading}
-              error={statsError}
-              onRetry={() => { void refetch(); }}
-              fromKm={fromKm}
-              whPerKmToDisplay={whPerKmToDisplay}
-              distanceUnit={distanceUnit}
-              efficiencyUnit={efficiencyUnit}
-            />,
+            content: (
+              <StatisticsChartPlacement>
+                <StatisticsPeriodBrief
+                  stats={stats}
+                  loading={statsLoading}
+                  error={statsError}
+                  onRetry={() => { void refetch(); }}
+                  fromKm={fromKm}
+                  whPerKmToDisplay={whPerKmToDisplay}
+                  distanceUnit={distanceUnit}
+                  efficiencyUnit={efficiencyUnit}
+                />
+              </StatisticsChartPlacement>
+            ),
           }]} />
         </FadeIn>
       </Section>
@@ -253,7 +257,11 @@ export default function StatisticsPage() {
       <Section id="statistics-mileage-fleet" title={t('statistics.mileageAndFleet', 'Mileage and fleet comparison')}>
         <FadeIn delay={0.2}>
           <CardGrid label={t('statistics.mileageAndFleet', 'Mileage and fleet comparison')} items={[
-            { id: 'statistics-mileage', size: 'third', content: <StatisticsMileageBrief query={mileageQuery} fromKm={fromKm} distanceUnit={distanceUnit} /> },
+            { id: 'statistics-mileage', size: 'third', content: (
+              <StatisticsChartPlacement>
+                <StatisticsMileageBrief query={mileageQuery} fromKm={fromKm} distanceUnit={distanceUnit} />
+              </StatisticsChartPlacement>
+            ) },
             { id: 'statistics-fleet', size: 'half', content: (
           <StatisticsChartPlacement>
           <StaleRefreshWarning state={fleetSource} label={t('statistics.vehicleComparison', 'Vehicle comparison')} />

@@ -347,6 +347,17 @@ beforeEach(() => {
 });
 
 describe('StatisticsPage', () => {
+  it('places every card-grid item as one spanned cell so briefs never collapse to a single column', async () => {
+    mockMileage.mockReturnValue(qr({ data: makeMileage(), error: new Error('mileage refresh failed') }));
+    renderPage();
+    await screen.findByText('500 km');
+    const grids = document.querySelectorAll('[data-card-grid] > *');
+    expect(grids).toHaveLength(3);
+    const cells = Array.from(grids).map(grid => Array.from(grid.children));
+    expect(cells.map(row => row.length)).toEqual([1, 2, 2]);
+    for (const cell of cells.flat()) expect(cell.className).toMatch(/\bcol-span-\d+\b/);
+  });
+
   it('renders recorded state shares from the real summary hook and restored seconds envelope', async () => {
     const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
     mockStateSummary.mockImplementation(actual.useStateSummary);
@@ -363,7 +374,7 @@ describe('StatisticsPage', () => {
       ],
     };
     mockedRequest.mockImplementation((path: unknown) => {
-      if (path === '/vehicle-states/summary?vehicle_id=1') return Promise.resolve(response);
+      if (typeof path === 'string' && path.startsWith('/vehicle-states/summary?vehicle_id=1')) return Promise.resolve(response);
       if (typeof path === 'string' && path.startsWith('/analytics/period-stats')) return periodStatsHandler();
       if (typeof path === 'string' && path.startsWith('/annotations')) return Promise.resolve([]);
       return Promise.resolve({});
@@ -379,7 +390,7 @@ describe('StatisticsPage', () => {
         expect(within(row!).getByText(share)).toBeInTheDocument();
       }
     });
-    const call = mockedRequest.mock.calls.find(args => args[0] === '/vehicle-states/summary?vehicle_id=1');
+    const call = mockedRequest.mock.calls.find(args => String(args[0]).startsWith('/vehicle-states/summary?vehicle_id=1'));
     expect(call?.[1]?.signal).toBeInstanceOf(AbortSignal);
     expect(response.by_state[0]).toEqual({
       state: 'driving', total_seconds: 7_200, percentage: 25, transition_count: 10,
@@ -1023,7 +1034,10 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
     expect(within(screen.getByRole('group', { name: 'Health' })).getByText('—')).toBeInTheDocument();
     expect(screen.getByText('71.50 kWh')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('Battery health may be out of date');
+    expect(within(screen.getByTestId('statistics-battery-brief')).getByText('Retained statistics')).toBeInTheDocument();
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledOnce();
   });
 
@@ -1083,6 +1097,38 @@ describe('StatisticsPage', () => {
     expect(within(brief).getByText('0.00 km')).toBeInTheDocument();
     expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
     expect(screen.queryByText('No mileage data available')).not.toBeInTheDocument();
+  });
+
+  it('marks paused and refreshing battery health without claiming returned or empty statistics', async () => {
+    const retryBattery = vi.fn();
+    const retryMileage = vi.fn();
+    mockMileage.mockReturnValue(qr({ data: makeMileage(), refetch: retryMileage }));
+    mockBattery.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch: retryBattery }));
+    const { rerenderPage } = renderPage();
+    await screen.findByText('500 km');
+    const brief = () => screen.getByTestId('statistics-battery-brief');
+    expect(within(brief()).getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('No battery health data available')).not.toBeInTheDocument();
+    const notice = screen.getByRole('alert');
+    expect(notice).not.toHaveTextContent(/offline/i);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Retry unavailable sources: Battery health' }));
+    expect(retryBattery).toHaveBeenCalledOnce();
+    expect(retryMileage).not.toHaveBeenCalled();
+
+    mockBattery.mockReturnValue(qr({ data: makeBattery(), fetchStatus: 'paused', refetch: retryBattery }));
+    rerenderPage();
+    expect(within(brief()).getByText('Refresh paused')).toBeInTheDocument();
+    expect(within(brief()).queryByText('Returned statistics')).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+
+    mockBattery.mockReturnValue(qr({ data: makeBattery(), isFetching: true, fetchStatus: 'fetching', refetch: retryBattery }));
+    rerenderPage();
+    expect(within(brief()).getByText('Refreshing')).toBeInTheDocument();
+
+    mockBattery.mockReturnValue(qr({ data: makeBattery(), isSuccess: true, refetch: retryBattery }));
+    rerenderPage();
+    expect(within(brief()).getByText('Returned statistics')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
   });
 
   it('retains mileage through refresh progress, failure and pause, retries only mileage and recovers', async () => {
@@ -1215,6 +1261,32 @@ describe('StatisticsPage', () => {
     expect(screen.getByRole('group', {
       name: 'Distance and energy bar chart comparing all vehicles in the fleet',
     })).toBeInTheDocument();
+  });
+
+  it('scopes the state distribution request and key to the selected range', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
+    mockStateSummary.mockImplementation(actual.useStateSummary);
+    const response = {
+      vehicle_id: 1, days: 15, start: '', end: '', total_seconds: 3_600,
+      by_state: [{ state: 'driving', total_seconds: 3_600, percentage: 100, transition_count: 1 }],
+    };
+    mockedRequest.mockImplementation((path: string) => Promise.resolve(
+      path.startsWith('/vehicle-states/summary') ? response : makeStats(),
+    ));
+    const { startInstant, endInstantExclusive } = calendarRangeToInstants({
+      startDate: '2025-03-01',
+      endDate: '2025-03-15',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    const { client } = renderPage(['/statistics?from=2025-03-01&to=2025-03-15']);
+    await screen.findByRole('region', { name: 'Statistics' });
+
+    const params = new URLSearchParams({ vehicle_id: '1', start: startInstant, end: endInstantExclusive });
+    await waitFor(() => expect(issuedPaths()).toContain(`/vehicle-states/summary?${params}`));
+    expect(mockStateSummary).toHaveBeenCalledWith('1', { start: startInstant, end: endInstantExclusive });
+    await waitFor(() => expect(client.getQueryData(
+      actual.analyticsKeys.stateSummary('1', startInstant, endInstantExclusive),
+    )).toEqual(response));
   });
 
   it('preserves precise rolling 24-hour bounds in the fleet request and key', async () => {

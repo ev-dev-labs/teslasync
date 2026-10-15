@@ -40,9 +40,9 @@ const fleetValues = (distance: unknown, energy: unknown) =>
     t: (key: string) => key,
   })[0];
 
-const stateShares = (rows: Array<{ totalMin?: unknown; total_min?: unknown }>) =>
+const stateShares = (percentages: unknown[]) =>
   derive<Array<{ value: number | null }>>('stateData', {
-    stateSummary: rows.map(row => ({ state: 'driving', ...row })),
+    stateSummary: percentages.map(percentage => ({ state: 'driving', percentage })),
     knownNumber,
     STATE_LABELS: { driving: 'digitalTwin.statusLabel.driving' },
     STATE_SERIES: { driving: 1 },
@@ -51,11 +51,12 @@ const stateShares = (rows: Array<{ totalMin?: unknown; total_min?: unknown }>) =
   }).map(row => row.value);
 
 describe('statistics modernization source contracts', () => {
-  it('keeps query identity, enabled behavior and both original fleet bounds', () => {
+  it('keeps query identity, enabled behavior and precise range bounds', () => {
     expect(page).toContain("queryKey: ['period-stats', activeId]");
     expect(page).toContain('/analytics/period-stats?vehicle_id=${activeId}');
     expect(page).toContain('enabled: !!activeId');
-    expect(page).toContain('useFleetAnalytics({ start: startDate, end: endDate })');
+    expect(page).toContain('useFleetAnalytics({ start: startInstant, end: endInstantExclusive })');
+    expect(page).toContain('useStateSummary(activeId, { start: startInstant, end: endInstantExclusive })');
     expect(page).toContain("persistKey: 'statistics.range'");
     expect(page).toContain("defaultPresetId: '1y'");
     expect(page).not.toMatch(/RangePicker|VehicleSelect|ResizeObserver|useContainerWidth/);
@@ -79,8 +80,8 @@ describe('statistics modernization source contracts', () => {
 
   it('keeps chart series, legend state, export identities and source aggregation', () => {
     expect(page.match(/<ChartCard\b/g)).toHaveLength(2);
-    expect(page).toContain('total != null && total > 0 && minutes[index] != null');
-    expect(page).toContain('Math.round((minutes[index] / total) * 100) : null');
+    expect(page).toContain('percentage != null && percentage >= 0 && percentage <= 100');
+    expect(page).toContain('Math.round(percentage) : null');
     expect(page).toContain('Math.round(fromKm(v.distance))');
     expect(page).toContain('Math.round(v.energy)');
     expect(page).toContain('innerRadius={50} outerRadius={90} paddingAngle={3}');
@@ -101,15 +102,14 @@ describe('statistics modernization source contracts', () => {
       expect(fleetValues(value, value)).toEqual({ name: 'Vehicle', distance: null, energy: null });
       expect(fleetValues(value, 0)).toEqual({ name: 'Vehicle', distance: null, energy: 0 });
       expect(fleetValues(0, value)).toEqual({ name: 'Vehicle', distance: 0, energy: null });
-      expect(stateShares([{ totalMin: value }, { totalMin: 30 }])).toEqual([null, null]);
+      expect(stateShares([value, 30])).toEqual([null, 30]);
     },
   );
 
-  it('keeps measured zero distinct from unknown and leaves a zero-total state share undefined', () => {
+  it('keeps measured zero distinct from unknown in fleet values and source state shares', () => {
     expect(fleetValues(0, 0)).toEqual({ name: 'Vehicle', distance: 0, energy: 0 });
-    expect(stateShares([{ totalMin: 0 }, { totalMin: 30 }])).toEqual([0, 100]);
-    expect(stateShares([{ totalMin: 0 }, { totalMin: 0 }])).toEqual([null, null]);
-    expect(stateShares([{ totalMin: 0, total_min: 30 }, { totalMin: 30 }])).toEqual([0, 100]);
+    expect(stateShares([0, 100])).toEqual([0, 100]);
+    expect(stateShares([0, 0])).toEqual([0, 0]);
   });
 
   it.each([1, -1, 1.75, -1.75])(
@@ -121,10 +121,10 @@ describe('statistics modernization source contracts', () => {
     },
   );
 
-  it('keeps fractional state aggregation and both minute shapes without accepting negative durations', () => {
-    expect(stateShares([{ totalMin: 0.5 }, { total_min: 1.5 }])).toEqual([25, 75]);
-    expect(stateShares([{ totalMin: NaN, total_min: 0.5 }, { totalMin: 1.5 }])).toEqual([25, 75]);
-    expect(stateShares([{ totalMin: -0.5 }, { totalMin: 1.5 }])).toEqual([null, null]);
+  it('rounds fractional source percentages and rejects shares outside 0-100', () => {
+    expect(stateShares([25.4, 74.6])).toEqual([25, 75]);
+    expect(stateShares([62.5, 12.5])).toEqual([63, 13]);
+    expect(stateShares([-0.5, 100.5, 101])).toEqual([null, null, null]);
   });
 
   it('keeps freshness, saved views, refresh and both empty-state destinations', () => {

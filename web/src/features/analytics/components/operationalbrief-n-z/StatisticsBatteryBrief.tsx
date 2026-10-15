@@ -4,7 +4,8 @@ import { Battery } from 'lucide-react';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { LayoutCard } from '@/components/layout';
 import { LinearGauge } from '@/components/charts';
-import { EmptyState, Skeleton } from '@/components/feedback';
+import { DataSourceNotice, EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -44,10 +45,16 @@ export function StatisticsBatteryBrief({ query }: ComponentProps<typeof BatteryS
       }) } },
   ];
   const operationalMetrics = useOperationalMetrics(metrics);
-  return <LayoutCard title={t('statistics.batteryHealth', 'Battery health')}>
-    <StatisticsSource hasData={battery != null} loading={query.isLoading} error={query.error}
+  const source = useDataState({ ...query, data: battery ?? undefined }, { provenance: 'historical' });
+  const loading = query.isLoading && !source.isRefreshBlocked;
+  const label = t('statistics.batteryHealth', 'Battery health');
+  return <LayoutCard title={label}>
+    <StaleRefreshWarning state={source} label={label} />
+    <StatisticsSource hasData={battery != null} loading={loading} error={source.fatalError}
       onRetry={() => { void query.refetch(); }} skeleton={<Skeleton className="h-40 rounded-xl" />}
-      empty={<EmptyState icon={<Battery className="h-8 w-8" aria-hidden="true" />}
+      empty={source.isRefreshBlocked
+        ? <DataSourceNotice sources={[{ id: 'statistics-battery', label, query: { ...query, data: battery ?? undefined } }]} />
+        : <EmptyState icon={<Battery className="h-8 w-8" aria-hidden="true" />}
         message={t('statistics.noBattery', 'No battery health data available')}
         description={t('statistics.noBatteryDescription', 'Battery health estimates appear after enough charging and range telemetry has accumulated.')}
         actionTo={{ label: t('routes.batteryHealth', 'Battery health'), to: '/battery' }} className="py-8" />}
@@ -61,11 +68,13 @@ export function StatisticsBatteryBrief({ query }: ComponentProps<typeof BatteryS
       eyebrow={t('statistics.batteryHealth', 'Battery health')}
       title={t('statistics.brief.batteryTitle', 'Battery estimate evidence')}
       description={t('statistics.brief.batteryDescription', 'Capacity, annual degradation rate, cycle count and source-reported age retain their distinct units.')}
-      statusLabel={battery ? query.error ? t('statistics.brief.retained', 'Retained statistics') : t('statistics.brief.available', 'Returned statistics')
-        : query.isLoading ? t('statistics.brief.loading', 'Loading statistics') : t('statistics.brief.unavailable', 'Statistics unavailable')}
-      statusTone={query.error ? 'warning' : 'neutral'}
+      statusLabel={source.isRefreshBlocked ? t('dataSources.status.paused', 'Refresh paused')
+        : source.isRefreshing ? t('dataSources.status.refreshing', 'Refreshing')
+        : battery ? source.refreshError ? t('statistics.brief.retained', 'Retained statistics') : t('statistics.brief.available', 'Returned statistics')
+        : loading ? t('statistics.brief.loading', 'Loading statistics') : t('statistics.brief.unavailable', 'Statistics unavailable')}
+      statusTone={source.refreshError || source.isRefreshBlocked ? 'warning' : 'neutral'}
       scope={t('statistics.brief.batteryScope', 'Battery-health source estimates; observation bounds unknown')}
       provenance={t('statistics.batteryHealth', 'Battery health')} metrics={operationalMetrics}
-      loading={query.isLoading && !battery} />
+      loading={loading && !battery} />
   </LayoutCard>;
 }
