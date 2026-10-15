@@ -949,6 +949,7 @@
     "unlocked": "✓ Unlocked",
     "title": "Lifetime stats",
     "allVehicles": "All vehicles",
+    "vehicleUnavailable": "Vehicle {{vehicleId}} is not available in the current fleet.",
     "subtitle": "Your all-time driving achievements and milestones",
     "source": {
       "allTime": "All time",

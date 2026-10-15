@@ -52,13 +52,17 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallbackOrOpts?: unknown) => {
-        if (typeof fallbackOrOpts === 'string') return fallbackOrOpts;
-        if (fallbackOrOpts && typeof fallbackOrOpts === 'object') {
+      t: (key: string, fallbackOrOpts?: unknown, values?: Record<string, unknown>) => {
+        let template: string | undefined;
+        let interpolation = values;
+        if (typeof fallbackOrOpts === 'string') template = fallbackOrOpts;
+        else if (fallbackOrOpts && typeof fallbackOrOpts === 'object') {
           const o = fallbackOrOpts as Record<string, unknown>;
-          if (typeof o.defaultValue === 'string') return o.defaultValue;
+          if (typeof o.defaultValue === 'string') template = o.defaultValue;
+          interpolation = o;
         }
-        return key;
+        template ??= key;
+        return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(interpolation?.[name] ?? name));
       },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
@@ -910,7 +914,7 @@ describe('DataExportPage — Project Apex elevation', () => {
     await waitFor(() => expect(account).toHaveValue('1'));
     vehiclesData = [{ ...baseVehicle(), id: 2, display_name: 'Model Y' }];
     act(() => { queryClient.setQueryData(['vehicles'], vehiclesData); });
-    await waitFor(() => expect(within(wizard).getByRole('option', { name: 'Unknown — #1' })).toBeInTheDocument());
+    await waitFor(() => expect(within(wizard).getByRole('option', { name: 'Vehicle 1 is not available in the current fleet.' })).toBeInTheDocument());
     expect(wizard).toHaveValue('1');
     expect(account).toHaveValue('1');
     for (const name of ['Start export', 'Start full export']) {
@@ -937,7 +941,7 @@ describe('DataExportPage — Project Apex elevation', () => {
     await waitFor(() => expect(within(wizard).getByRole('option', { name: 'Model 3' })).toBeInTheDocument());
     expect(wizard).toHaveValue(target);
     expect(account).toHaveValue(target);
-    expect(within(wizard).getByRole('option', { name: `Unknown — #${target}` })).toBeInTheDocument();
+    expect(within(wizard).getByRole('option', { name: `Vehicle ${target} is not available in the current fleet.` })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start export' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Start full export' })).toBeDisabled();
     expect(postCalls).toEqual([]);

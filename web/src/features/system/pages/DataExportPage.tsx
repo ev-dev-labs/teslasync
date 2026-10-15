@@ -534,7 +534,7 @@ function VehicleTargetFeedback({ vehiclesState, onRetryVehicles, unknownTarget }
           actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }} />
       ) : null}
       {unknownTarget && (
-        <HelperText>{t('common.unknown', 'Unknown')} — #{unknownTarget}</HelperText>
+        <HelperText>{t('dataExport.vehicleUnavailable', 'Vehicle {{vehicleId}} is not available in the current fleet.', { vehicleId: unknownTarget })}</HelperText>
       )}
     </div>
   );
@@ -637,7 +637,7 @@ function ExportWizard({
         opts.push({ value: String(v.id), label: v.display_name || v.vin });
       }
     }
-    if (unknownTarget) opts.push({ value: vehicleId, label: `${t('common.unknown', 'Unknown')} — #${vehicleId}` });
+    if (unknownTarget) opts.push({ value: vehicleId, label: t('dataExport.vehicleUnavailable', 'Vehicle {{vehicleId}} is not available in the current fleet.', { vehicleId }) });
     return opts;
   }, [vehicles, t, unknownTarget, vehicleId]);
 
@@ -1233,7 +1233,7 @@ function AccountExportPanel({ vehiclesState, onRetryVehicles }: VehicleTargetPro
         value: String(v.id),
         label: v.display_name || v.vin || `Vehicle ${v.id}`,
       })),
-      ...(unknownTarget ? [{ value: vehicleId, label: `${t('common.unknown', 'Unknown')} — #${vehicleId}` }] : []),
+      ...(unknownTarget ? [{ value: vehicleId, label: t('dataExport.vehicleUnavailable', 'Vehicle {{vehicleId}} is not available in the current fleet.', { vehicleId }) }] : []),
     ],
     [vehicles, t, unknownTarget, vehicleId],
   );
