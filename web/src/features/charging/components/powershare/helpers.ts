@@ -115,7 +115,8 @@ export function humanizeEnum(
     for (const [identity, key, fallback] of group.labels) {
       if (raw === identity || raw === `${group.proto}${identity}` ||
           raw === `${group.signal}${identity}`) {
-        return t(key, fallback);
+        const translated = t(key, { defaultValue: fallback });
+        return typeof translated === 'string' ? translated : fallback;
       }
     }
   }

@@ -5867,7 +5867,7 @@
     "Status": "failed",
     "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-powershare-ps-f05 | focused Vitest verification stalled without output | done so far: canonical imports updated in RuntimeCard.tsx, SnapshotCard.tsx, StopReasonCard.tsx; regressions added in PowersharePage.test.tsx Attempt 2: FAILED | fix-charging-powershare-ps-f05 | focused Vitest verification stalled without output; direct invocation also stalled; both stopped | done so far: confirmed all three canonical imports and existing focused regressions; populated-data cases retained; no files changed Attempt 1: FAILED | fix-charging-powershare-ps-f05 | focused Vitest blocked before collection by external generated-i18n catalog validation | done so far: all three canonical LayoutCard imports confirmed; focused regressions and populated-data cases retained; no additional files changed Attempt 2: FAILED | fix-charging-powershare-ps-f05 | focused Vitest verification stalled without output | done so far: confirmed canonical LayoutCard imports in all three cards and existing regressions with populated-data cases preserved; no additional files changed",
+    "Notes": " Attempt 1: FAILED | fix-charging-powershare-ps-f05 | focused Vitest verification stalled without output | done so far: canonical imports updated in RuntimeCard.tsx, SnapshotCard.tsx, StopReasonCard.tsx; regressions added in PowersharePage.test.tsx Attempt 2: FAILED | fix-charging-powershare-ps-f05 | focused Vitest verification stalled without output; direct invocation also stalled; both stopped | done so far: confirmed all three canonical imports and existing focused regressions; populated-data cases retained; no files changed Attempt 1: FAILED | fix-charging-powershare-ps-f05 | focused Vitest blocked before collection by external generated-i18n catalog validation | done so far: all three canonical LayoutCard imports confirmed; focused regressions and populated-data cases retained; no additional files changed Attempt 2: FAILED | fix-charging-powershare-ps-f05 | focused Vitest verification stalled without output | done so far: confirmed canonical LayoutCard imports in all three cards and existing regressions with populated-data cases preserved; no additional files changed CHECKPOINT 2026-10-15: Powershare helpers/constants/runtime/stop-reason suites pass (85 tests); trend card remains open.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -5898,7 +5898,7 @@
     "Status": "failed",
     "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk) Attempt 2: timeout after 25 minutes (changes left on disk)",
+    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk) Attempt 2: timeout after 25 minutes (changes left on disk) CHECKPOINT 2026-10-15: Powershare helpers/constants/runtime/stop-reason suites pass (85 tests); trend card remains open.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },

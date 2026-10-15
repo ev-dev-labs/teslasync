@@ -97,7 +97,7 @@ describe('RuntimePanel — state priority', () => {
   it('always renders the panel title and shows the skeleton (no content) while loading', () => {
     const { container } = renderPanel({
       isLoading: true,
-      status: 'PowershareStatusActive',
+      status: 'PowershareStateEnabled',
       shareType: 'PowershareTypeHome',
       powerKw: 7.5,
       hoursLeft: 4.2,
@@ -174,7 +174,7 @@ describe('RuntimePanel — error branch', () => {
 describe('RuntimePanel — populated view', () => {
   it('renders the humanized status, destination row, and both formatted bars', () => {
     renderPanel({
-      status: 'PowershareStatusActive',
+      status: 'PowershareStateEnabled',
       shareType: 'PowershareTypeHome',
       powerKw: 7.5,
       hoursLeft: 4.2,
@@ -184,7 +184,7 @@ describe('RuntimePanel — populated view', () => {
 
     // Status row — prefix-stripped + humanized.
     expect(screen.getByText('Status')).toBeInTheDocument();
-    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('Enabled')).toBeInTheDocument();
 
     // Destination row.
     expect(screen.getByText('Destination')).toBeInTheDocument();
@@ -263,7 +263,7 @@ describe('RuntimePanel — non-finite hardening', () => {
 describe('RuntimePanel — a11y', () => {
   it('marks every icon decorative and color-codes the status dot alongside its label', () => {
     const { container } = renderPanel({
-      status: 'PowershareStatusActive',
+      status: 'PowershareStateEnabled',
       shareType: 'PowershareTypeHome',
       powerKw: 7.5,
     });
@@ -274,9 +274,9 @@ describe('RuntimePanel — a11y', () => {
     expect(icons.length).toBeGreaterThan(0);
     expect(hidden.length).toBe(icons.length);
 
-    // The "success" status maps to an emerald dot, but the text label ("Active")
+    // The "success" status maps to an emerald dot, and its text label remains visible.
     // means color is never the sole indicator.
     expect(container.querySelector('.bg-emerald-400')).not.toBeNull();
-    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('Enabled')).toBeInTheDocument();
   });
 });

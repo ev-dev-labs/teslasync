@@ -144,11 +144,11 @@ describe('POWERSHARE_SIGNALS — cold-signal identifiers', () => {
   it('drives humanizeEnum prefix-stripping for each enum signal', () => {
     // The signal name doubles as the strip prefix `humanizeEnum` uses to turn a
     // proto-cased literal into a human label — prove that wiring end to end.
-    expect(humanizeEnum('PowershareStatusActive', POWERSHARE_SIGNALS.status)).toBe('Active');
+    expect(humanizeEnum('PowershareStateEnabled', POWERSHARE_SIGNALS.status)).toBe('Enabled');
     expect(humanizeEnum('PowershareTypeHome', POWERSHARE_SIGNALS.type)).toBe('Home');
     expect(
-      humanizeEnum('PowershareStopReasonUserRequest', POWERSHARE_SIGNALS.stopReason),
-    ).toBe('User Request');
+      humanizeEnum('PowershareStopReasonStatusUser', POWERSHARE_SIGNALS.stopReason),
+    ).toBe('User');
     expect(humanizeEnum(null, POWERSHARE_SIGNALS.status)).toBeNull();
   });
 });

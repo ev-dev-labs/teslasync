@@ -183,3 +183,9 @@ Not started.
 - `npx vitest run src/features/charging/components/cost-analysis/types.test.ts` passes (**13 tests**).
 - Updated stale shape assertions for the richer coverage/disclosure result, pinned accounting to UTC fixtures, and retained unknown actual-cost savings and unverified distance as unavailable.
 - The broader charging area is still in progress; its initial sweep had **143 failing tests** across 37 files. Continue cluster by cluster.
+
+### Charging checkpoint: Powershare enum and runtime panels (2026-10-15)
+
+- Focused helpers, signal constants, runtime, and stop-reason suites pass (**85 tests**).
+- `humanizeEnum` now falls back to its verified English label when the translator has no initialized result. Test fixtures now use the actual generated proto enum identities (`PowershareStateEnabled`, `PowershareStopReasonStatus*`).
+- A separate `TrendCard.test.tsx` timestamp-export case remains failing and is not included in this checkpoint.

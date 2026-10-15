@@ -93,7 +93,7 @@ afterEach(() => {
 
 describe('StopReasonPanel — persistent chrome', () => {
   it('renders the "Stop Reason" heading with a decorative, a11y-hidden icon in the populated state', () => {
-    renderPanel({ reason: 'PowershareStopReasonFault' });
+    renderPanel({ reason: 'PowershareStopReasonStatusFault' });
 
     const heading = screen.getByRole('heading', { name: /stop reason/i });
     expect(heading).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe('StopReasonPanel — persistent chrome', () => {
 
 describe('StopReasonPanel — loading state', () => {
   it('shows a skeleton and suppresses the badge / error / empty branches', () => {
-    const { container } = renderPanel({ isLoading: true, reason: 'PowershareStopReasonFault' });
+    const { container } = renderPanel({ isLoading: true, reason: 'PowershareStopReasonStatusFault' });
 
     const skeleton = container.querySelector('div[aria-hidden="true"].w-full');
     expect(skeleton).not.toBeNull();
@@ -166,10 +166,10 @@ describe('StopReasonPanel — loading state', () => {
 
 describe('StopReasonPanel — populated (reason present)', () => {
   it('humanises the proto enum into the Badge label and shows the helper caption', () => {
-    renderPanel({ reason: 'PowershareStopReasonUserRequest' });
+    renderPanel({ reason: 'PowershareStopReasonStatusUser' });
 
     // `PowershareStopReasonUserRequest` → prefix stripped → camelCase split.
-    const badge = screen.getByText('User Request');
+    const badge = screen.getByText('User');
     expect(badge.tagName).toBe('SPAN');
 
     expect(
@@ -182,7 +182,7 @@ describe('StopReasonPanel — populated (reason present)', () => {
   });
 
   it('projects a fault reason onto the danger Badge variant', () => {
-    renderPanel({ reason: 'PowershareStopReasonFault' });
+    renderPanel({ reason: 'PowershareStopReasonStatusFault' });
     const badge = screen.getByText('Fault');
     expect(badge).toHaveClass(
       'border-[var(--semantic-danger-border)]',
@@ -197,8 +197,8 @@ describe('StopReasonPanel — populated (reason present)', () => {
   });
 
   it('projects a user-initiated reason onto the warning Badge variant', () => {
-    renderPanel({ reason: 'PowershareStopReasonUserRequest' });
-    const badge = screen.getByText('User Request');
+    renderPanel({ reason: 'PowershareStopReasonStatusUser' });
+    const badge = screen.getByText('User');
     expect(badge).toHaveClass(
       'border-[var(--semantic-warning-border)]',
       'bg-[var(--semantic-warning-bg)]',
@@ -208,7 +208,7 @@ describe('StopReasonPanel — populated (reason present)', () => {
     expect(badge).not.toHaveClass('border-[var(--semantic-danger-border)]');
     expect(badge).not.toHaveClass('bg-[var(--semantic-danger-bg)]');
     expect(badge).not.toHaveClass('text-[var(--semantic-danger)]');
-    expect(badge).toHaveTextContent(/^User Request$/);
+    expect(badge).toHaveTextContent(/^User$/);
   });
 
   it('treats a bare "None" as a neutral, non-alarming reason (not amber/red)', () => {

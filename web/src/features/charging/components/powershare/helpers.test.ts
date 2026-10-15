@@ -88,7 +88,7 @@ describe('statusVariant', () => {
   });
 
   it('flags error / fail states as danger, ahead of any active-like match', () => {
-    expect(statusVariant('PowershareStatusError')).toBe('danger');
+    expect(statusVariant('PowershareStateError')).toBe('danger');
     expect(statusVariant('Failure')).toBe('danger');
     // danger has precedence: a value carrying both "active" and "error"
     // resolves to danger because error/fail is evaluated first.
