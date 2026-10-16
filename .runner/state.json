@@ -13260,10 +13260,10 @@
       "web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-science-science-lab-sci-009 | verification blocked by missing Vite and TypeScript dependencies | done so far: updated web\\src\\features\\science\\components\\ElectrochemPanel.tsx and web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx Attempt 2: FAILED | fix-science-science-lab-sci-009 | required tests blocked by missing dependencies and failed restoration | done so far: inspected existing implementation and covering tests; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-science-science-lab-sci-009 | verification blocked by missing Vite and TypeScript dependencies | done so far: updated web\\src\\features\\science\\components\\ElectrochemPanel.tsx and web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx Attempt 2: FAILED | fix-science-science-lab-sci-009 | required tests blocked by missing dependencies and failed restoration | done so far: inspected existing implementation and covering tests; no source files changed Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13278,10 +13278,10 @@
       "web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-science-science-lab-sci-008 | Missing Vite and TypeScript dependencies prevented verification | done so far: updated the four assigned components and ScienceLabPage.test.tsx; removed duplicate wrappers and added preservation regression Attempt 2: FAILED | fix-science-science-lab-sci-008 | Missing dependencies block verification; restoration failed | done so far: inspected existing four-component reconciliation and preservation regression; attempted required focused test; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-science-science-lab-sci-008 | Missing Vite and TypeScript dependencies prevented verification | done so far: updated the four assigned components and ScienceLabPage.test.tsx; removed duplicate wrappers and added preservation regression Attempt 2: FAILED | fix-science-science-lab-sci-008 | Missing dependencies block verification; restoration failed | done so far: inspected existing four-component reconciliation and preservation regression; attempted required focused test; no source changes Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13294,10 +13294,10 @@
       "web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-science-science-lab-sci-007 | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\features\\science\\components\\helpers.ts, web\\src\\features\\science\\components\\ElectrochemPanel.tsx, web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx Attempt 2: FAILED | fix-science-science-lab-sci-007 | required regression verification blocked by missing dependencies | done so far: existing palette integration and regression preserved; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-science-science-lab-sci-007 | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\features\\science\\components\\helpers.ts, web\\src\\features\\science\\components\\ElectrochemPanel.tsx, web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx Attempt 2: FAILED | fix-science-science-lab-sci-007 | required regression verification blocked by missing dependencies | done so far: existing palette integration and regression preserved; no source changes Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13315,10 +13315,10 @@
       "web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-science-science-lab-sci-006 | dependency failures prevented test and TypeScript verification | done so far: seven formatter migrations and focused regression added in ScienceLabPage.test.tsx Attempt 2: FAILED | fix-science-science-lab-sci-006 | missing/broken dependencies prevented test and TypeScript verification | done so far: confirmed seven existing formatter migrations and focused regression; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-science-science-lab-sci-006 | dependency failures prevented test and TypeScript verification | done so far: seven formatter migrations and focused regression added in ScienceLabPage.test.tsx Attempt 2: FAILED | fix-science-science-lab-sci-006 | missing/broken dependencies prevented test and TypeScript verification | done so far: confirmed seven existing formatter migrations and focused regression; no source changes Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13336,10 +13336,10 @@
       "web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-science-science-lab-sci-005 | verification blocked by incomplete dependencies and failed restoration | done so far: updated seven assigned components and ScienceLabPage.test.tsx; scoped prohibited-pattern scan found no matches Attempt 2: FAILED | fix-science-science-lab-sci-005 | verification blocked by incomplete dependencies and two failed restoration attempts | done so far: inspected existing seven-component fix and regression coverage; no source changes; scoped prohibited-pattern scan found no matches",
+    "Notes": "Attempt 1: FAILED | fix-science-science-lab-sci-005 | verification blocked by incomplete dependencies and failed restoration | done so far: updated seven assigned components and ScienceLabPage.test.tsx; scoped prohibited-pattern scan found no matches Attempt 2: FAILED | fix-science-science-lab-sci-005 | verification blocked by incomplete dependencies and two failed restoration attempts | done so far: inspected existing seven-component fix and regression coverage; no source changes; scoped prohibited-pattern scan found no matches Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13353,10 +13353,10 @@
       "web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-science-science-lab-sci-003 | Missing dependencies and unresponsive dev server blocked verification | done so far: updated ThermalPanel.tsx, WeatherPanel.tsx, ElectrochemPanel.tsx and ScienceLabPage.test.tsx Attempt 2: FAILED | fix-science-science-lab-sci-003 | Dependency restoration failed and existing server became unresponsive, blocking required verification | done so far: inspected prior implementation and regression tests; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-science-science-lab-sci-003 | Missing dependencies and unresponsive dev server blocked verification | done so far: updated ThermalPanel.tsx, WeatherPanel.tsx, ElectrochemPanel.tsx and ScienceLabPage.test.tsx Attempt 2: FAILED | fix-science-science-lab-sci-003 | Dependency restoration failed and existing server became unresponsive, blocking required verification | done so far: inspected prior implementation and regression tests; no source files changed Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13368,10 +13368,10 @@
       "web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-science-science-lab-sci-004 | dependency failures prevented test execution | done so far: updated web\\src\\features\\science\\pages\\ScienceLabPage.tsx and web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx with resolved-scope links and regressions Attempt 2: FAILED | fix-science-science-lab-sci-004 | dependency failures prevented test execution | done so far: inspected existing resolved-scope links and regressions; preserved source files unchanged",
+    "Notes": "Attempt 1: FAILED | fix-science-science-lab-sci-004 | dependency failures prevented test execution | done so far: updated web\\src\\features\\science\\pages\\ScienceLabPage.tsx and web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx with resolved-scope links and regressions Attempt 2: FAILED | fix-science-science-lab-sci-004 | dependency failures prevented test execution | done so far: inspected existing resolved-scope links and regressions; preserved source files unchanged Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13383,10 +13383,10 @@
       "web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-science-science-lab-sci-002 | dependency failures prevented verification | done so far: updated web\\src\\features\\science\\pages\\ScienceLabPage.tsx and web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx; added fleet-trust feedback and nine regression cases Attempt 2: FAILED | fix-science-science-lab-sci-002 | missing dependencies prevented verification | done so far: inspected existing fleet-trust implementation and nine regressions; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-science-science-lab-sci-002 | dependency failures prevented verification | done so far: updated web\\src\\features\\science\\pages\\ScienceLabPage.tsx and web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx; added fleet-trust feedback and nine regression cases Attempt 2: FAILED | fix-science-science-lab-sci-002 | missing dependencies prevented verification | done so far: inspected existing fleet-trust implementation and nine regressions; no source files changed Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13398,10 +13398,10 @@
       "web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-science-science-lab-sci-001 | Required /science registration needs web\\src\\lib\\workspaceScope.ts, outside the owned files and prohibited routing scope | done so far: inspected page, tests, range state and science hooks; restored all attempted edits; no net source changes; tests not run Attempt 2: FAILED | fix-science-science-lab-sci-001 | Required /science registration is absent from web\\src\\lib\\workspaceScope.ts, outside the owned files and prohibited routing scope | done so far: read required contract and handoff; confirmed page still uses local range controls and shared registration is missing; no files changed; tests not run",
+    "Notes": "Attempt 1: FAILED | fix-science-science-lab-sci-001 | Required /science registration needs web\\src\\lib\\workspaceScope.ts, outside the owned files and prohibited routing scope | done so far: inspected page, tests, range state and science hooks; restored all attempted edits; no net source changes; tests not run Attempt 2: FAILED | fix-science-science-lab-sci-001 | Required /science registration is absent from web\\src\\lib\\workspaceScope.ts, outside the owned files and prohibited routing scope | done so far: read required contract and handoff; confirmed page still uses local range controls and shared registration is missing; no files changed; tests not run Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
