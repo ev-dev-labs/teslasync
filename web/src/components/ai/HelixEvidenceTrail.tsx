@@ -20,12 +20,15 @@ export interface HelixEvidenceTrailProps {
   activity: AiToolActivity[];
   state: AiStreamState;
   usage?: AiUsage | null;
+  /** Localize the small allowlist of known tool names at user-facing call sites. */
+  localizeKnownTools?: boolean;
 }
 
 export function HelixEvidenceTrail({
   activity,
   state,
   usage,
+  localizeKnownTools = true,
 }: HelixEvidenceTrailProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
@@ -36,12 +39,54 @@ export function HelixEvidenceTrail({
   const failed = activity.filter((item) => item.status === 'failed').length;
   const isGathering = activity.some((item) => item.status === 'running');
   const tokenCount = (usage?.in ?? 0) + (usage?.out ?? 0);
+  const countedSentence = (
+    key: string,
+    count: number,
+    singular: string,
+    plural: string,
+  ) => t(key, {
+    count,
+    formattedCount: fmtInt(count),
+    defaultValue_one: singular,
+    defaultValue: plural,
+  });
+  const displayToolName = (name: string) => {
+    if (!localizeKnownTools) return name;
+    if (name === 'query_battery_status') {
+      return t('helix.tools.batteryStatus', 'Battery status');
+    }
+    if (name === 'query_vehicle_location') {
+      return t('helix.tools.vehicleLocation', 'Vehicle location');
+    }
+    return name;
+  };
 
   // Activity records execution outcomes, not answer attribution or citations.
-  const summary =
-    succeeded > 0
-      ? `${fmtInt(succeeded)} ${t('helix.evidence.successful', 'successful')}`
-      : t('helix.evidence.limited', 'Limited evidence');
+  const summary = succeeded > 0
+    ? countedSentence(
+        'helix.evidence.successSummary',
+        succeeded,
+        '{{formattedCount}} tool completed successfully.',
+        '{{formattedCount}} tools completed successfully.',
+      )
+    : t('helix.evidence.limited', 'Limited evidence');
+  const footer = [
+    countedSentence(
+      'helix.evidence.successSummary', succeeded,
+      '{{formattedCount}} tool completed successfully.',
+      '{{formattedCount}} tools completed successfully.',
+    ),
+    countedSentence(
+      'helix.evidence.unavailableSummary', failed,
+      '{{formattedCount}} tool was unavailable.',
+      '{{formattedCount}} tools were unavailable.',
+    ),
+    ...(tokenCount > 0 ? [countedSentence(
+      'helix.evidence.tokenSummary', tokenCount,
+      '{{formattedCount}} token used.',
+      '{{formattedCount}} tokens used.',
+    )] : []),
+  ].join(' ');
 
   return (
     <div
@@ -97,7 +142,7 @@ export function HelixEvidenceTrail({
               />
             )}
             <Text variant="bodySm" className="min-w-0 break-words">
-              {item.name}
+              {displayToolName(item.name)}
             </Text>
             <Text variant="caption" className="min-w-0 break-words">
               {item.status === 'running'
@@ -112,14 +157,7 @@ export function HelixEvidenceTrail({
 
       {state === 'done' && (
         <Text as="p" variant="caption" className="mt-2 break-words">
-          {fmtInt(succeeded)} {t('helix.evidence.successful', 'successful')} · {fmtInt(failed)}{' '}
-          {t('helix.evidence.unavailable', 'unavailable')}
-          {tokenCount > 0 && (
-            <>
-              {' · '}
-              {fmtInt(tokenCount)} {t('helix.evidence.tokens', 'tokens')}
-            </>
-          )}
+          {footer}
         </Text>
       )}
     </div>

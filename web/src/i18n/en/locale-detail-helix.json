@@ -14,7 +14,13 @@
       "used": "Used",
       "unavailable": "Unavailable",
       "successful": "successful",
-      "tokens": "tokens"
+      "tokens": "tokens",
+      "successSummary_one": "{{formattedCount}} tool completed successfully.",
+      "successSummary_other": "{{formattedCount}} tools completed successfully.",
+      "unavailableSummary_one": "{{formattedCount}} tool was unavailable.",
+      "unavailableSummary_other": "{{formattedCount}} tools were unavailable.",
+      "tokenSummary_one": "{{formattedCount}} token used.",
+      "tokenSummary_other": "{{formattedCount}} tokens used."
     },
     "brief": {
       "description": "Features and provider reflect the current draft; mode respects the saved off-mode guard. Spend is independently audited usage. Editing a draft does not save it.",
@@ -39,6 +45,10 @@
     },
     "thinkingButtonLabel": "Helix is thinking…",
     "thinkingStatusLabel": "Helix is thinking",
-    "errorLabel": "Helix error:"
+    "errorLabel": "Helix error:",
+    "tools": {
+      "batteryStatus": "Battery status",
+      "vehicleLocation": "Vehicle location"
+    }
   }
 }

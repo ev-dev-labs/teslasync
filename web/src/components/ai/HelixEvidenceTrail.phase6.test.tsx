@@ -60,8 +60,9 @@ describe('HelixEvidenceTrail phase-six execution metadata', () => {
     async (name) => {
       await renderTrail([{ id: 'execution-only', name, status: 'succeeded' }]);
       const trail = screen.getByTestId('helix-evidence-trail');
-      expect(trail).toHaveTextContent(name);
-      expect(trail).toHaveTextContent('1 successful');
+      expect(trail).toHaveTextContent(name === 'query_battery_status' ? 'Battery status' : name);
+      expect(trail.querySelector('[title]')).toHaveAttribute('title', name);
+      expect(trail).toHaveTextContent('1 tool completed successfully.');
       expect(trail).not.toHaveTextContent(/Grounded in|TeslaSync sources?|Used|cited|verified/i);
     },
   );
@@ -84,7 +85,7 @@ describe('HelixEvidenceTrail phase-six execution metadata', () => {
     expect(rows).toHaveLength(3);
     expect(trail.querySelector('script')).toBeNull();
     expect(trail).not.toHaveTextContent(/secret-input|secret-result|arguments|privateValue/);
-    expect(trail.querySelector('p')).toHaveTextContent('2 successful · 1 Unavailable');
+    expect(trail.querySelector('p')).toHaveTextContent('2 tools completed successfully. 1 tool was unavailable.');
     expect(JSON.stringify(activity)).toBe(before);
   });
 
@@ -95,14 +96,14 @@ describe('HelixEvidenceTrail phase-six execution metadata', () => {
     const usage = { in: 12345, out: 67890 };
     await renderTrail(activity, 'done', usage);
     const trail = screen.getByTestId('helix-evidence-trail');
-    expect(trail).toHaveTextContent('1,234 successful');
-    expect(trail.querySelector('p')).toHaveTextContent('1,234 successful · 0 Unavailable · 80,235 tokens');
+    expect(trail).toHaveTextContent('1,234 tools completed successfully.');
+    expect(trail.querySelector('p')).toHaveTextContent('1,234 tools completed successfully. 0 tools were unavailable. 80,235 tokens used.');
     act(() => {
       setGlobalLocale('de-DE');
       setGlobalPrecision(4);
     });
-    expect(trail).toHaveTextContent('1.234 successful');
-    expect(trail.querySelector('p')).toHaveTextContent('1.234 successful · 0 Unavailable · 80.235 tokens');
+    expect(trail).toHaveTextContent('1.234 tools completed successfully.');
+    expect(trail.querySelector('p')).toHaveTextContent('1.234 tools completed successfully. 0 tools were unavailable. 80.235 tokens used.');
     expect(usage).toEqual({ in: 12345, out: 67890 });
     expect(trail.querySelectorAll('[title]')).toHaveLength(1234);
   });
@@ -111,7 +112,7 @@ describe('HelixEvidenceTrail phase-six execution metadata', () => {
     await renderTrail([{ id: 'failed', name: 'query_future', status: 'failed' }], 'done', usage);
     const trail = screen.getByTestId('helix-evidence-trail');
     expect(trail).toHaveTextContent('Limited evidence');
-    expect(trail.querySelector('p')).toHaveTextContent('0 successful · 1 Unavailable');
+    expect(trail.querySelector('p')).toHaveTextContent('0 tools completed successfully. 1 tool was unavailable.');
     expect(trail).not.toHaveTextContent('tokens');
   });
 

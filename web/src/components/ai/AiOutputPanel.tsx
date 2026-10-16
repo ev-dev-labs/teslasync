@@ -159,7 +159,7 @@ export function AiOutputPanel({
           {t('ai.common.noOutput', 'No output was generated.')}
         </Text>
       )}
-      <HelixEvidenceTrail activity={activity} state={state} usage={usage} />
+      <HelixEvidenceTrail activity={activity} state={state} usage={usage} localizeKnownTools />
     </div>
   )
 }

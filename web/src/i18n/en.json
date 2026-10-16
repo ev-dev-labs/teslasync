@@ -6721,8 +6721,6 @@
     "carPreferences": "Car display preferences",
     "speedHistory": "Speed history",
     "positionDataWillAppear": "Position data will appear here",
-    "sentryOn": "Sentry ON",
-    "sentryOff": "Sentry OFF",
     "climateOn": "Climate ON",
     "climateOff": "Climate OFF",
     "batteryLevel": "Battery level",
@@ -20085,14 +20083,14 @@
     "tempHistoryAria": "Outside temperature trend line chart per recent drive",
     "torqueHistoryAria": "Motor inverter torque output history area chart",
     "health": {
-  "good": "Good",
-  "warning": "Warning",
-  "critical": "Critical"
-},
+      "good": "Good",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
     "motorStateValue": {
-  "overheating": "Overheating",
-  "idle": "Idle"
-}
+      "overheating": "Overheating",
+      "idle": "Idle"
+    }
   },
   "dynamics": {
     "modernization": {
@@ -24179,7 +24177,13 @@
       "used": "Used",
       "unavailable": "Unavailable",
       "successful": "successful",
-      "tokens": "tokens"
+      "tokens": "tokens",
+      "successSummary_one": "{{formattedCount}} tool completed successfully.",
+      "successSummary_other": "{{formattedCount}} tools completed successfully.",
+      "unavailableSummary_one": "{{formattedCount}} tool was unavailable.",
+      "unavailableSummary_other": "{{formattedCount}} tools were unavailable.",
+      "tokenSummary_one": "{{formattedCount}} token used.",
+      "tokenSummary_other": "{{formattedCount}} tokens used."
     },
     "brief": {
       "description": "Features and provider reflect the current draft; mode respects the saved off-mode guard. Spend is independently audited usage. Editing a draft does not save it.",
@@ -24204,7 +24208,11 @@
     },
     "thinkingButtonLabel": "Helix is thinking…",
     "thinkingStatusLabel": "Helix is thinking",
-    "errorLabel": "Helix error:"
+    "errorLabel": "Helix error:",
+    "tools": {
+      "batteryStatus": "Battery status",
+      "vehicleLocation": "Vehicle location"
+    }
   },
   "chatbot": {
     "canceled": "Response stopped. Any partial text is incomplete.",
@@ -32927,13 +32935,13 @@
       "atSeconds": "t={{seconds}}s",
       "emptyMessage": "Import metadata (event.json / folder) or run local motion analysis to derive clip event candidates. View telemetry-derived incidents separately in the Reconstruction tab; they are not added to this clip’s event evidence.",
       "emptyTitle": "No event candidates yet",
-      "basis":  {
-        "reason":  "event.json reason: \"{{reason}}\"",
-        "folder":  "folder: {{folder}}",
-        "sentryFolder":  "folder: {{folder}} (no event.json reason found — trigger cause unknown)",
-        "savedFolder":  "folder: {{folder}} (user-saved clip; no event metadata found)",
-        "motionScore":  "sampled-frame pixel-difference score: {{score}} across {{pairs}} frame-pair(s)",
-        "motionDisclaimer":  "basis: luminance delta heuristic only — no object/person/plate recognition was performed"
+      "basis": {
+        "reason": "event.json reason: \"{{reason}}\"",
+        "folder": "folder: {{folder}}",
+        "sentryFolder": "folder: {{folder}} (no event.json reason found — trigger cause unknown)",
+        "savedFolder": "folder: {{folder}} (user-saved clip; no event metadata found)",
+        "motionScore": "sampled-frame pixel-difference score: {{score}} across {{pairs}} frame-pair(s)",
+        "motionDisclaimer": "basis: luminance delta heuristic only — no object/person/plate recognition was performed"
       },
       "title": "Event evidence",
       "wholeClip": "whole clip",

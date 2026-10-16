@@ -1321,13 +1321,22 @@
       "gathering": "Gathering",
       "limited": "Limited evidence",
       "reading": "Reading",
+      "successSummary_one": "{{formattedCount}} tool completed successfully.",
+      "successSummary_other": "{{formattedCount}} tools completed successfully.",
       "successful": "successful",
       "title": "Evidence trail",
-      "tokens": "tokens",
-      "unavailable": "Unavailable"
+      "tokenSummary_one": "{{formattedCount}} token used.",
+      "tokenSummary_other": "{{formattedCount}} tokens used.",
+      "unavailable": "Unavailable",
+      "unavailableSummary_one": "{{formattedCount}} tool was unavailable.",
+      "unavailableSummary_other": "{{formattedCount}} tools were unavailable."
     },
     "thinkingButtonLabel": "Helix is thinking…",
     "thinkingStatusLabel": "Helix is thinking",
+    "tools": {
+      "batteryStatus": "Battery status",
+      "vehicleLocation": "Vehicle location"
+    },
     "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
   },
   "help": {
