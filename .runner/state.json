@@ -4897,10 +4897,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-charging-heatmap-chh006 | test verification exceeded time box | done so far: public type import fixed, focused regression added, populated cases preserved, catalogs regenerated and checked",
+    "Notes": " Attempt 1: FAILED | fix-charging-charging-heatmap-chh006 | test verification exceeded time box | done so far: public type import fixed, focused regression added, populated cases preserved, catalogs regenerated and checked | Retry verification failed 2026-10-15: focused charging set 341 passed / 44 failed. ChargingHeatmap page tests fail 10 KPI assertions: expected data-operational-metric/value cards (including Avg Duration) while the current informational brief omits card wrappers for unavailable metrics; example TypeError is `.toHaveAttribute` received null.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -4931,11 +4931,11 @@
       "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-charging-list-cl03 | missing dependencies prevent verification | done so far: updated web\\src\\api\\hooks\\useCharging.ts and web\\src\\features\\charging\\pages\\__tests__\\ChargingHeatmapPage.test.tsx Attempt 2: FAILED | fix-charging-charging-list-cl03 | missing dependencies prevent verification; restoration failed twice | done so far: confirmed existing mutation fix and focused regressions; no source changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-charging-charging-list-cl03 | missing dependencies prevent verification | done so far: updated web\\src\\api\\hooks\\useCharging.ts and web\\src\\features\\charging\\pages\\__tests__\\ChargingHeatmapPage.test.tsx Attempt 2: FAILED | fix-charging-charging-list-cl03 | missing dependencies prevent verification; restoration failed twice | done so far: confirmed existing mutation fix and focused regressions; no source changes | Verification completed 2026-10-15: useCharging hook tests and WaitOraclePanel.test.tsx passed in focused charging run.",
+    "Commit": "f19ae5dccd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -5048,10 +5048,10 @@
       "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-history-th05 | server filtering and page wiring require out-of-scope ownership; requested tests blocked by external vite-plugin-pwa startup failure | done so far: read contracts and traced hook, page, handler and repository; source unchanged Attempt 2: FAILED | fix-charging-tesla-charging-history-th05 | server filtering and page wiring require unassigned files; requested tests blocked by missing Vite dependencies | done so far: read contracts, verified missing range support across hook/page/server, ran exact requested test command; source unchanged",
+    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-history-th05 | server filtering and page wiring require out-of-scope ownership; requested tests blocked by external vite-plugin-pwa startup failure | done so far: read contracts and traced hook, page, handler and repository; source unchanged Attempt 2: FAILED | fix-charging-tesla-charging-history-th05 | server filtering and page wiring require unassigned files; requested tests blocked by missing Vite dependencies | done so far: read contracts, verified missing range support across hook/page/server, ran exact requested test command; source unchanged | Retry verification failed 2026-10-15: TeslaChargingHistoryPage and __tests__/TeslaChargingHistoryPage report 18 failing assertions. Representative exact errors: cannot find expected localized date text “31. Jan. 2024, 16:30”; summary details/status text and absent-metric card selectors are not found under the current shared Review details brief.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -5066,10 +5066,10 @@
       "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-history-th06 | Missing dependencies prevented test and TypeScript verification | done so far: guarded mutation, aligned page disabled state and explanation, added hook and page regressions in four files Attempt 2: FAILED | fix-charging-tesla-charging-history-th06 | Missing dependencies prevent regression and TypeScript verification | done so far: confirmed existing live-only mutation, disabled/explanatory page behavior, optional scope, real outcomes, success-only invalidation and regressions; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-history-th06 | Missing dependencies prevented test and TypeScript verification | done so far: guarded mutation, aligned page disabled state and explanation, added hook and page regressions in four files Attempt 2: FAILED | fix-charging-tesla-charging-history-th06 | Missing dependencies prevent regression and TypeScript verification | done so far: confirmed existing live-only mutation, disabled/explanatory page behavior, optional scope, real outcomes, success-only invalidation and regressions; no source changes | Retry verification failed 2026-10-15: TeslaChargingHistoryPage and __tests__/TeslaChargingHistoryPage report 18 failing assertions. Representative exact errors: cannot find expected localized date text “31. Jan. 2024, 16:30”; summary details/status text and absent-metric card selectors are not found under the current shared Review details brief.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -5100,10 +5100,10 @@
       "web\\src\\features\\charging\\pages\\__tests__\\TeslaChargingHistoryPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-history-th08 | verification blocked by generated i18n catalog startup failure | done so far: updated web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx, web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.test.tsx, web\\src\\features\\charging\\pages\\__tests__\\TeslaChargingHistoryPage.test.tsx Attempt 2: FAILED | fix-charging-tesla-charging-history-th08 | verification blocked by missing Vite dependencies and unsuccessful dependency restoration | done so far: inspected existing formatter adoption and coverage; no source files changed",
+    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-history-th08 | verification blocked by generated i18n catalog startup failure | done so far: updated web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx, web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.test.tsx, web\\src\\features\\charging\\pages\\__tests__\\TeslaChargingHistoryPage.test.tsx Attempt 2: FAILED | fix-charging-tesla-charging-history-th08 | verification blocked by missing Vite dependencies and unsuccessful dependency restoration | done so far: inspected existing formatter adoption and coverage; no source files changed | Retry verification failed 2026-10-15: TeslaChargingHistoryPage and __tests__/TeslaChargingHistoryPage report 18 failing assertions. Representative exact errors: cannot find expected localized date text “31. Jan. 2024, 16:30”; summary details/status text and absent-metric card selectors are not found under the current shared Review details brief.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -5131,10 +5131,10 @@
       "web\\src\\features\\charging\\pages\\__tests__\\TeslaChargingHistoryPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-history-th10 | verification blocked by missing dependencies and locked binaries | done so far: updated web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx, web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.test.tsx, web\\src\\features\\charging\\pages\\__tests__\\TeslaChargingHistoryPage.test.tsx Attempt 2: FAILED | fix-charging-tesla-charging-history-th10 | verification blocked by missing dependencies and failed dependency restoration | done so far: inspected existing implementation and regressions; preserved all three expected files unchanged",
+    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-history-th10 | verification blocked by missing dependencies and locked binaries | done so far: updated web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.tsx, web\\src\\features\\charging\\pages\\TeslaChargingHistoryPage.test.tsx, web\\src\\features\\charging\\pages\\__tests__\\TeslaChargingHistoryPage.test.tsx Attempt 2: FAILED | fix-charging-tesla-charging-history-th10 | verification blocked by missing dependencies and failed dependency restoration | done so far: inspected existing implementation and regressions; preserved all three expected files unchanged | Retry verification failed 2026-10-15: TeslaChargingHistoryPage and __tests__/TeslaChargingHistoryPage report 18 failing assertions. Representative exact errors: cannot find expected localized date text “31. Jan. 2024, 16:30”; summary details/status text and absent-metric card selectors are not found under the current shared Review details brief.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -5162,10 +5162,10 @@
       "web\\src\\features\\charging\\pages\\__tests__\\TeslaChargingHistoryPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-history-th12 | dependency failures prevented test and type verification | done so far: page fix and regression coverage persisted in all three assigned files Attempt 2: FAILED | fix-charging-tesla-charging-history-th12 | dependency restoration failed; scoped tests and TypeScript verification could not run | done so far: prior page fix and regression coverage preserved in all three assigned files; no new source changes",
+    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-history-th12 | dependency failures prevented test and type verification | done so far: page fix and regression coverage persisted in all three assigned files Attempt 2: FAILED | fix-charging-tesla-charging-history-th12 | dependency restoration failed; scoped tests and TypeScript verification could not run | done so far: prior page fix and regression coverage preserved in all three assigned files; no new source changes | Retry verification failed 2026-10-15: TeslaChargingHistoryPage and __tests__/TeslaChargingHistoryPage report 18 failing assertions. Representative exact errors: cannot find expected localized date text “31. Jan. 2024, 16:30”; summary details/status text and absent-metric card selectors are not found under the current shared Review details brief.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -5259,10 +5259,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-sessions-f15 | verification incomplete within time box | done so far: updated page, regression tests, English catalog and generated charging projection",
+    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-sessions-f15 | verification incomplete within time box | done so far: updated page, regression tests, English catalog and generated charging projection | Retry verification failed 2026-10-15: TeslaChargingSessionsPage.test.tsx reports 16 failures. Representative exact errors: cannot find “Updating.”, “Data unavailable”, or `[data-testid=\"stale-refresh-warning\"]` in scoped/unavailable/retained cases.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -6157,11 +6157,11 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk)",
-    "Commit": "",
+    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk) | Verification completed 2026-10-15: useCharging hook tests and WaitOraclePanel.test.tsx passed in focused charging run.",
+    "Commit": "f19ae5dccd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
