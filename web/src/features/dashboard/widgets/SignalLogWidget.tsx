@@ -1,7 +1,7 @@
 import { useMemo, useRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollText, Pause, Play } from 'lucide-react';
-import { Badge, Button } from '@/components/ui';
+import { Badge, IconButton } from '@/components/ui';
 import { useSignalObservations, useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { isFiniteNumber } from '@/lib/numberFormat';
@@ -164,23 +164,12 @@ export default function SignalLogWidget({ vehicleId, size }: WidgetProps) {
   const rate = useMemo(() => deriveSignalRate(mqttData?.vehicles), [mqttData]);
 
   const pauseAction = (
-    <Button
-      variant="ghost"
-      size="sm"
+    <IconButton
+      icon={paused ? <Play className="h-4 w-4" aria-hidden="true" /> : <Pause className="h-4 w-4" aria-hidden="true" />}
+      label={paused ? t('widget.signalLog.resume', 'Resume') : t('widget.signalLog.pause', 'Pause')}
+      aria-label={paused ? t('widget.signalLog.resume', 'Resume') : t('widget.signalLog.pause', 'Pause')}
       onClick={handleTogglePause}
-      className="min-h-[44px] min-w-[44px]"
-      aria-label={
-        paused
-          ? t('widget.signalLog.resume', 'Resume')
-          : t('widget.signalLog.pause', 'Pause')
-      }
-    >
-      {paused ? (
-        <Play className="h-3.5 w-3.5" />
-      ) : (
-        <Pause className="h-3.5 w-3.5" />
-      )}
-    </Button>
+    />
   );
 
   return (

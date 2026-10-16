@@ -374,7 +374,7 @@ describe('RecentDrivesListWidget — states & interaction', () => {
     renderWidget({ size: STANDARD });
 
     expect(screen.getByText('No recent drives recorded')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No recent drives recorded')?.closest('[role="status"]')).toHaveAttribute('data-variant', 'default');
     // Standard widgets keep their header even when empty…
     expect(screen.getByText('Recent drives')).toBeInTheDocument();
     // …but the list itself is gated behind having rows.

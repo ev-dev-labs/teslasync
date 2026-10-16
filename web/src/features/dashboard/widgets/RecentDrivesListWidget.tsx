@@ -13,6 +13,7 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
+import { IconButton } from '@/components/ui/IconButton';
 import { WidgetBigNumber } from './shared';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
@@ -78,12 +79,8 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
       isError={isError}
       onRefresh={() => refetch()}
       actions={
-        <Link
-          to="/drives"
-          className="min-h-11 rounded-md text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)] transition-colors flex items-center gap-1"
-        >
-          {t('widget.viewAll', 'View all')} <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-        </Link>
+        <IconButton href="/drives" icon={<ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
+          label={t('widget.viewAll', 'View all')} aria-label={t('widget.viewAll', 'View all')} />
       }
     >
       {items.length > 0 ? (

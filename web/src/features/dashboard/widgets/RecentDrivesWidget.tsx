@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Route, ArrowUpRight } from 'lucide-react';
@@ -13,6 +12,7 @@ import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { WidgetEventFeed, type EventFeedItem } from './shared';
 import { WidgetShell } from './WidgetShell';
+import { IconButton } from '@/components/ui/IconButton';
 import type { WidgetProps } from './types';
 import type { Drive } from '../types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -64,12 +64,8 @@ export default function RecentDrivesWidget({ vehicleId }: WidgetProps) {
       isError={isError}
       onRefresh={() => refetch()}
       actions={
-        <Link
-          to="/drives"
-          className="min-h-11 rounded-md text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)] transition-colors flex items-center gap-1"
-        >
-          {t('widget.viewAll', 'View all')} <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-        </Link>
+        <IconButton href="/drives" icon={<ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
+          label={t('widget.viewAll', 'View all')} aria-label={t('widget.viewAll', 'View all')} />
       }
     >
       <WidgetEventFeed

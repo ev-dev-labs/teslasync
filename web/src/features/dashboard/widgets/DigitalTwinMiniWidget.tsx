@@ -1,8 +1,7 @@
 import { useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Monitor, ArrowUpRight, Lock, Unlock, Shield } from 'lucide-react';
-import { Badge, Text } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { VehicleTwin } from '@/components/vehicles';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
@@ -11,6 +10,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { WidgetStatusGrid } from './shared';
 import { WidgetShell } from './WidgetShell';
+import { IconButton } from '@/components/ui/IconButton';
 import type { WidgetProps } from './types';
 
 const REFRESH_INTERVAL = 5_000;
@@ -80,13 +80,8 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
       isError={stateError}
       onRefresh={handleRefresh}
       actions={
-        <Link
-          to="/digital-twin"
-          className="flex min-h-11 max-w-full items-center gap-1 rounded-shape-sm px-2 transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-        >
-          <Text variant="bodySm" className="min-w-0 [overflow-wrap:anywhere]">{t('widget.open', 'Open')}</Text>
-          <ArrowUpRight className="h-3 w-3 shrink-0" aria-hidden="true" />
-        </Link>
+        <IconButton href="/digital-twin" icon={<ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
+          label={t('widget.open', 'Open')} aria-label={t('widget.open', 'Open')} />
       }
     >
       {vehicle ? (

@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Monitor, Lock, Unlock, ArrowUpRight } from 'lucide-react';
 import { Badge, Text } from '@/components/ui';
@@ -12,6 +11,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { WidgetStatusGrid } from './shared';
 import { WidgetShell } from './WidgetShell';
+import { IconButton } from '@/components/ui/IconButton';
 import type { WidgetProps } from './types';
 import { sourceBoundaryState } from '../components/continuation-dashboard-1/sourceBoundary';
 
@@ -100,12 +100,8 @@ export default function DigitalTwinWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
       actions={
-        <Link
-          to="/digital-twin"
-          className="flex min-h-11 items-center gap-1 rounded-shape-sm px-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-        >
-          {t('widget.open', 'Open')} <ArrowUpRight className="h-3 w-3" />
-        </Link>
+        <IconButton href="/digital-twin" icon={<ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
+          label={t('widget.open', 'Open')} aria-label={t('widget.open', 'Open')} />
       }
     >
       {vehicle ? (

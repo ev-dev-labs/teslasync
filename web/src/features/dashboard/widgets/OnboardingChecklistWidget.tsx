@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 
 import { EmptyState } from '@/components/feedback'
-import { Badge, Button } from '@/components/ui'
+import { Badge, Button, IconButton } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useAlertRules, useNotificationChannels } from '@/api/hooks/useNotifications'
@@ -154,17 +154,8 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
 
   // ── Header actions: dismiss button (always visible while widget renders) ──
   const headerActions = (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      onClick={dismiss}
-      className="min-h-11 min-w-11 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
-      aria-label={t('checklist.dismiss', 'Dismiss')}
-      title={t('checklist.dismiss', 'Dismiss')}
-    >
-      <X className="h-3.5 w-3.5" />
-    </Button>
+    <IconButton icon={<X className="h-4 w-4" aria-hidden="true" />}
+      label={t('checklist.dismiss', 'Dismiss')} aria-label={t('checklist.dismiss', 'Dismiss')} onClick={dismiss} />
   )
 
   return (
