@@ -27,7 +27,8 @@ interface EvidencePanelProps {
 function qualityVariant(status: DataQuality['status'] | undefined): BadgeProps['variant'] {
   if (status === 'sufficient') return 'success';
   if (status === 'limited') return 'warning';
-  return status == null ? 'neutral' : 'danger';
+  if (status === 'insufficient') return 'danger';
+  return 'neutral';
 }
 
 export function qualityStatusLabel(status: string | null | undefined, t: TFunction): string {
