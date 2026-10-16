@@ -2,37 +2,24 @@
 
 Resume file for whoever continues this work. Updated and pushed after every group.
 
-## Current priority order (latest handoff)
+## Current priority order (2026-10-15 handoff)
 
-1. Keep the `ui/simplification` branch based on `fix/dashboard-followups` and
-   complete `docs/ui-simplification-task.md` from section 0.
-2. After UI simplification, run the full Vitest suite and fix failures.
-3. Resume Phase 6 from `.runner/state.json`: complete every pending item and
-   retry every failed item once using its notes. Exclude only an exact change
-   replaced by a UI simplification commit; record the specific replacement and
-   commit. Leave any remaining failed item with its exact error.
-4. Update this file and `.runner/state.json` after each Phase 6 group. At final
-   handoff, list every excluded and failed item with its reason here.
+1. Pass build, `npx tsc --noEmit`, lint, and split-i18n catalog check; defer the full Vitest suite.
+2. Follow `docs/ui-simplification-task.md` from section 0 on `ui/simplification`, branched from `fix/dashboard-followups`.
+3. After simplification, run the full Vitest suite and repair failures.
+4. Complete every Phase 6 pending item and retry every failed item once using its notes. Exclude only exact changes replaced by simplification commits, with the replacement and commit recorded. Update `.runner/state.json` and this file after each group, then list all excluded and failed items with specific reasons.
 
-The frontend gates from `web/` are build, `npx tsc --noEmit`, lint, and
-`node scripts/split-i18n-catalog.mjs --check`. Every new user-facing string
-must use `t()` and a complete-sentence key in `en.json`; plural strings use
-i18next `count`.
+The web gates are build, `npx tsc --noEmit`, lint, and `node scripts/split-i18n-catalog.mjs --check`. Every new user-facing string must use `t()` and a complete-sentence `en.json` key; plurals use i18next `count`.
 
+## Current UI simplification checkpoint
+
+Working on `ui/simplification`. Rows 0–3 are complete and pushed. Row 4 (vehicles) is in progress. Initial gates now pass after regenerating the stale usage manifest: catalog check, full lint, standalone typecheck, and production build. The build retains its existing CSS parser and startup bundle warnings. Focused vehicle work remains in progress; full Vitest is deferred until the UI simplification is complete.
 ## Where things are
 
-- Branches: work is committed on `fix/dashboard-followups-finish` and pushed to
-  **both** `origin/fix/dashboard-followups-finish` and `origin/fix/dashboard-followups`
-  after every group (fast-forward only). The original session worked in the
-  worktree `.claude/worktrees/phase6-finish` with `web/node_modules` as a junction
-  to the main checkout's `web/node_modules` (no package changes).
-- Item status: the main checkout's `.runner/state.json` (gitignored). Closed items
-  get `Status: "done"` (or `"excluded"`), `Commit`, and a `FINISH: …` note appended.
-  As of the last update: 646 done, 500 pending, 130 failed (68 closed in this
-  finishing pass so far).
-- Baselines used for "is this failure new?": full Vitest at HEAD before this pass
-  had **4,279 failing tests**; after the shared harness repair **~1,830**.
-
+- Active branch: `ui/simplification`, based on `fix/dashboard-followups`.
+- Current UI checkpoint: rows 0–3 complete; vehicles row 4 is in progress. Rows 5–7 remain.
+- Phase 6 is deliberately paused until the UI task and full Vitest repair finish. The latest requested inventory was 312 pending and 114 failed; reconcile with `.runner/state.json` when Phase 6 resumes. No Phase 6 items have been updated in this continuation.
+- Preserve the uncommitted Analytics hook edits and the untracked `docs/ui-simplification-task.md`; they predate or belong to the user's workspace context. Do not stage them as part of UI vehicle commits.
 ## How each group is done
 
 1. List the open items for one page/component cluster (items sharing a primary
