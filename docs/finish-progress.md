@@ -529,3 +529,312 @@ Update `.runner/state.json` and this progress document after each group. This or
 - Phase 6 Driving verification checkpoint: BipolarBar unit/accessibility spacing was fixed in 8666bb2e38; the focused chart, driving type, and driving hook suites pass **186/186**. Trip planner DTO/hook verification, Go race tests, and split-i18n check also pass. Both driving items are done. Overall counts: 977 done / 291 failed / 8 pending.
 
 - Phase 6 remaining departure/browser verification checkpoint (2026-10-16): ChargeDepartureAlignmentPage passes its required colocated suite, covering both timezone/date formatting and numeric formatting items; BrowserPushChannelCard plus both synthetic browser/server push hook suites pass. These three items are done. Retry results: NavigationRoutePage has 10 failing assertions spanning retained recovery, empty states, metrics, measured coordinates, cardinal mapping and independent history; ModelTrustPage has five failures including mobile details/actions and financial/calibration assertions; FeatureFlagsPage has seven save/edit/audit-source failures (its hook suite passes); useOwnership has one governance-run cache invalidation failure. Those four remain failed with exact test summaries recorded in state.json. Tesla API usage 	u10 remains pending until its requested browser screenshot verification. Overall counts: 980 done / 295 failed / 1 pending.
+
+
+## Final reconciliation (2026-10-16)
+
+Phase 6 is closed for this handoff: **981 done / 295 failed / 0 pending / 0 excluded**. The Tesla API usage screenshot item is done after visual review of 375px and 1440px RangePicker layouts in light and dark theme; mobile trigger measured 44px high, desktop trigger 32px, and keyboard focus/selection passed.
+
+Final gates: split-i18n check **pass** (57 bundles, 181 fallbacks, 1,266 shell keys, 0 missing); `npm run lint` **pass**; `npx tsc --noEmit` **pass**; `npm run build` **pass** (existing CSS minifier warning `hue.bg-$`); `go build ./...` and `go test ./...` **pass**. Full Vitest: **53,079 passed / 3,826 failed / 4 skipped** across 2,705 files (2,117 files passed, 588 failed; 3 runtime errors). This is 21 fewer failures than the previous full run. The all-pages nested-surface contract passes focused (1/1), the AST audit test passes (2/2), and the static audit reports **0 nested standalone briefs / 0 nested bordered surfaces / 0 duplicate heading/title pairs**.
+
+### Excluded items
+
+None.
+
+### Failed items after retry
+
+- `fix-admin-feedback-queue-fq005` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-admin-fleet-telemetry-coverage-f04` — validation exceeded time box
+- `fix-admin-gas-price-auto-poll-gas-03` — Focused npx vitest run and direct runner retry stalled without output; stopped both, verification incomplete
+- `fix-admin-gas-price-auto-poll-gas-05` — verification commands stalled without output
+- `fix-admin-vehicle-cost-f03` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-admin-ingest-xray-xray-01` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-admin-live-signal-inspector-lsi-06` — frontend regression tests stalled before producing output
+- `fix-admin-redis-signal-viewer-f01` — scoped tests stalled without output; behavior verification incomplete
+- `fix-admin-redis-signal-viewer-f03` — scoped tests blocked before collection by external generated-catalog failure
+- `fix-admin-redis-signal-viewer-f09` — focused test verification incomplete within time box; local tools exist, so broken dependencies are not established
+- `fix-admin-redis-signal-viewer-f06` — shared-type edit prohibition blocks typed adapter alignment
+- `fix-admin-slow-queries-sq-002` — regression and browser verification blocked by unresponsive commands
+- `fix-admin-vehicle-cost-f06` — browser layout verification and final catalog check incomplete within time box
+- `fix-advanced-behavioral-sentinel-bs003` — Focused regressions did not finish within time box
+- `fix-advanced-charging-forensics-cf-03` — scoped tests blocked by external catalog validation; Edge layout checks timed out
+- `fix-advanced-emergency-resilience-er-f03` — targeted tests blocked before collection by external locale-battery.json catalog preflight failure
+- `fix-advanced-emergency-resilience-er-f05` — focused verification blocked by external i18n catalog startup failure
+- `fix-advanced-emergency-resilience-er-f06` — command execution unavailable; verification blocked
+- `fix-advanced-federated-learning-fl003` — verification blocked by stalled test and catalog commands
+- `fix-advanced-federated-learning-fl005` — validation runners stalled without output
+- `fix-advanced-twin-lab-f04` — external catalog validation blocked test startup
+- `fix-advanced-twin-lab-f05` — runtime verification blocked
+- `fix-analytics-analytics-f12` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-analytics-analytics-f05` — required frontend regressions blocked by external i18n catalog startup failure
+- `fix-analytics-analytics-f07` — Required validation blocked by unavailable/stalled PowerShell execution
+- `fix-analytics-analytics-f10` — required tests stalled without output; completion unverified
+- `fix-analytics-analytics-f11` — missing dependencies block tests, catalog regeneration/check and typecheck; restoration failed twice
+- `fix-analytics-drive-archetypes-da-003` — Targeted Vitest and TypeScript stalled without verification results, including direct Vitest execution
+- `fix-analytics-drive-calendar-dc01` — Required regression blocked before collection by external i18n catalog validation
+- `fix-analytics-drive-calendar-dc05` — command execution stalled without output, blocking regression tests and catalog regeneration/check
+- `fix-analytics-fleet-compare-f08` — verification exceeded time box; initial test startup failed on external catalog drift, regenerated --check and scoped test retry did not finish
+- `fix-analytics-fleet-compare-f09` — focused Vitest stalled without output for 120 seconds via both npx and direct local invocation; verification blocked
+- `fix-analytics-lifetime-stats-ls-03` — focused regression execution stalled without output
+- `fix-analytics-lifetime-stats-ls-04` — weekday identity absent from assigned component; verification blocked by external catalog drift
+- `fix-analytics-mileage-f02` — required test startup stalled; browser verification blocked by onboarding redirect
+- `fix-analytics-statistics-stat-qa-03` — prerequisite state hook/key bounds support missing outside assigned scope
+- `fix-analytics-statistics-stat-qa-06` — required tests blocked by external i18n catalog startup failure
+- `fix-analytics-statistics-stat-qa-08` — Required verification stalled without output
+- `fix-analytics-timeline-tl-05` — focused tests blocked before collection by external i18n catalog validation
+- `fix-analytics-true-cost-tc-qa-01` — targeted tests blocked by external generated-catalog startup failure
+- `fix-analytics-true-cost-tc-qa-06` — required full-file verification incomplete
+- `fix-analytics-true-cost-tc-qa-02` — required Vitest verification stalled within time box
+- `fix-analytics-weekly-digest-wd-qa-01` — required regression validation could not complete because command execution stalled
+- `fix-analytics-weekly-digest-wd-qa-02` — regression verification stalled without results
+- `fix-analytics-year-review-f08` — required frontend verification blocked by external generated-catalog startup failure
+- `fix-automations-automation-list-al-s01` — required frontend tests blocked before collection by external generated i18n catalog drift
+- `fix-automations-automation-list-al-s07` — focused regression execution blocked by external i18n catalog validation
+- `fix-automations-automation-list-al-s08` — required verification blocked by unavailable PowerShell
+- `fix-automations-automations-list-f01` — required frontend regression blocked by external i18n startup failure
+- `fix-automations-automations-list-f03` — required tests blocked by missing tools and dependency restore failure
+- `fix-automations-automations-list-f05` — verification blocked by missing dependencies
+- `fix-automations-automation-list-al-s03` — recovery test failed; four-file verification incomplete within time box
+- `fix-automations-automation-list-al-s04` — Required tests blocked before collection by external generated i18n catalog validation
+- `fix-automations-automation-list-al-s06` — Tests, TypeScript and Edge verification blocked by incomplete dependencies; dependency restoration failed
+- `fix-automations-automations-list-f08` — missing existing duplicate/export contracts and builder draft handoff outside assigned scope
+- `fix-automations-automation-history-ahqa-08` — scoped Vitest execution stalled without output
+- `fix-battery-battery-degradation-bd-01` — shared energy-type alignment remains incomplete and prohibited by prompt
+- `fix-battery-battery-degradation-bd-02` — frontend verification blocked by external generated-i18n startup failure and stalled checks
+- `fix-battery-battery-degradation-bd-03` — frontend regression verification blocked by startup stalls and alternate-loader config error
+- `fix-battery-battery-degradation-bd-05` — runtime verification blocked: Vitest stalled and Go unavailable
+- `fix-battery-battery-degradation-bd-06` — required verification blocked by missing dependencies, locked Rollup binary, and unavailable Go runtime
+- `fix-battery-battery-degradation-bd-07` — required regressions blocked by missing frontend dependencies and C compiler
+- `fix-battery-battery-degradation-bd-08` — frontend verification blocked by broken dependencies; restoration attempts failed
+- `fix-battery-battery-degradation-bd-09` — required tests blocked by missing frontend dependencies and C compiler
+- `fix-battery-battery-degradation-bd-10` — required verification blocked by missing Go and broken frontend dependencies
+- `fix-battery-battery-degradation-bd-11` — required validation blocked by missing Vitest, npm ENOTEMPTY errors, and unavailable Go toolchain
+- `fix-battery-battery-degradation-bd-13` — required tests blocked by missing frontend dependencies and GCC; dependency restoration failed
+- `fix-battery-battery-passport-f04` — tests blocked before collection by external generated-i18n validation failure
+- `fix-battery-battery-passport-f07` — validation runners stalled without results
+- `fix-battery-cells-bc-qa-008` — required frontend tests blocked before collection by external generated i18n catalog validation
+- `fix-battery-charge-advisor-ca-s05` — complete energy filtering requires prohibited backend edits; test execution blocked by unavailable PowerShell
+- `fix-battery-charge-advisor-ca-s10` — focused Vitest verification blocked by nonresponsive shell
+- `fix-battery-energy-flow-f01` — required backend edits prohibited; test execution blocked by unavailable PowerShell
+- `fix-battery-power-flow-dashboard-f01` — required server changes prohibited by web-only rule
+- `fix-battery-sleep-efficiency-q01` — required backend filtering conflicts with explicit web-only edit restriction
+- `fix-battery-vampire-drain-vd08` — frontend verification blocked by missing dependencies and failed restoration
+- `fix-battery-energy-flow-f03` — Required Vitest blocked before test execution by external generated-catalog validation
+- `fix-battery-energy-flow-f05` — verification incomplete within time box; page test visibility assertion failed
+- `fix-battery-power-flow-dashboard-f06` — validation stalled without test output using both npx and the direct local Vitest runner; stopped both processes
+- `fix-battery-projected-range-prange-qa-006` — focused test stalled; catalog freshness check failed
+- `fix-battery-sleep-efficiency-q08` — scoped tests blocked by external generated-i18n catalog startup failure; no tests executed
+- `fix-battery-sleep-efficiency-q14` — focused tests blocked by external generated-catalog startup failure
+- `fix-battery-vampire-drain-vd05` — scoped verification stalled without output
+- `fix-battery-vampire-drain-vd06` — tests stalled and browser checks blocked
+- `fix-charging-charge-interruption-f3` — focused regression blocked by catalog validation; retries exceeded remaining time
+- `fix-charging-charging-curve-f08` — targeted tests blocked by external i18n catalog startup failure
+- `fix-charging-charging-curve-f05` — regression rerun blocked by external catalog drift
+- `fix-charging-charging-curve-f04` — focused tests blocked before collection by external generated-localization validation
+- `fix-charging-charging-detail-f04` — external catalog startup failure prevented test execution
+- `fix-charging-charging-detail-f05` — required suite blocked by catalog drift; isolated suite has two unrelated distance failures
+- `fix-charging-charging-detail-f09` — verification incomplete due to external catalog drift and time box
+- `fix-charging-charging-heatmap-chh003` — verification blocked by external i18n catalog startup failure
+- `fix-charging-charging-heatmap-chh004` — scoped regression execution blocked by external i18n catalog startup failure
+- `fix-charging-charging-heatmap-chh006` — test verification exceeded time box
+- `fix-charging-charging-thermal-tax-ctt-s01` — required verification blocked by missing dependencies and failed npm restoration
+- `fix-charging-smart-charge-sc-f01` — missing dependencies and ENOTEMPTY errors prevented verification
+- `fix-charging-tesla-charging-history-th02` — required tests stalled without output
+- `fix-charging-tesla-charging-history-th03` — focused tests could not execute: shell startup failure and direct runner stalled
+- `fix-charging-tesla-charging-history-th04` — targeted Vitest blocked by external catalog validation; behavior unverified
+- `fix-charging-tesla-charging-history-th05` — server filtering and page wiring require unassigned files; requested tests blocked by missing Vite dependencies
+- `fix-charging-tesla-charging-history-th06` — Missing dependencies prevent regression and TypeScript verification
+- `fix-charging-tesla-charging-history-th07` — validation blocked by PowerShell startup timeout and unresponsive catalog command
+- `fix-charging-tesla-charging-history-th08` — verification blocked by missing Vite dependencies and unsuccessful dependency restoration
+- `fix-charging-tesla-charging-history-th10` — verification blocked by missing dependencies and failed dependency restoration
+- `fix-charging-tesla-charging-history-th12` — dependency restoration failed; scoped tests and TypeScript verification could not run
+- `fix-charging-tesla-charging-sessions-f02` — Backend GET lacks date-bound support outside allowed scope; focused tests stalled
+- `fix-charging-tesla-charging-sessions-f03` — focused Vitest verification stalled without results
+- `fix-charging-tesla-charging-sessions-f15` — verification incomplete within time box
+- `fix-charging-charging-list-cl14` — focused tests blocked by external i18n catalog startup failure
+- `fix-charging-charging-list-cl16` — verification exceeded timebox
+- `fix-charging-charging-thermal-tax-ctt-h01` — command execution blocked; required tests and catalog verification incomplete
+- `fix-charging-charging-thermal-tax-ctt-h03` — corrected regression remains unverified within time box
+- `fix-charging-charging-thermal-tax-ctt-s05` — composed theme/forced-colors verification blocked by onboarding redirect; regression blocked by external catalog startup failure
+- `fix-charging-cost-analysis-ca04` — required tests blocked before collection by external generated-i18n catalog validation
+- `fix-charging-cost-analysis-ca08` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-charging-cost-analysis-ca06` — regression verification blocked by generated catalog startup failures
+- `fix-charging-cost-analysis-ca13` — Required render-boundary change is outside assigned files
+- `fix-charging-powershare-ps-f05` — focused Vitest verification stalled without output
+- `fix-charging-smart-charge-sc-f04` — targeted tests stalled without output
+- `fix-charging-smart-charge-sc-f08` — external i18n catalog startup failure prevented regression verification
+- `fix-charging-smart-charge-sc-f10` — command execution unavailable; required test and browser verification blocked
+- `fix-charging-smart-charge-sc-f06` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-charging-tesla-charging-sessions-f12` — focused Vitest run stalled without output
+- `fix-charging-tesla-charging-sessions-f07` — targeted tests blocked by external i18n startup failure
+- `fix-dashboard-glance-f02` — scoped Vitest stalled; no test results or exit code
+- `fix-dashboard-glance-f04` — scoped tests stalled and onboarding redirects blocked browser verification
+- `fix-dashboard-quick-stats-qs-004` — verification blocked by external generated-i18n startup failure
+- `fix-dashboard-quick-stats-qs-002` — scoped verification stalled without output; no test exit status available
+- `fix-dashcam-dashcam-intelligence-dc002` — verification blocked by command execution timeouts
+- `fix-dashcam-dashcam-intelligence-dc012` — command execution unavailable; required regeneration and tests unverified
+- `fix-dashcam-dashcam-intelligence-dc014` — Scoped test and browser verification incomplete within time limit
+- `fix-dashcam-dashcam-intelligence-dc011` — regression and catalog check incomplete within time box; external TypeScript failures
+- `fix-dashcam-dashcam-intelligence-dc016` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-diagnostics-root-cause-intelligence-rc04` — scoped test execution stalled without output
+- `fix-diagnostics-root-cause-intelligence-rc08` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-diagnostics-service-evidence-pack-sep-source-004` — dependencies broken: targeted Vitest and direct runner stalled without output; verification could not complete
+- `fix-diagnostics-service-evidence-pack-sep-source-007` — external i18n startup failure and first-run setup blocked verification
+- `fix-diagnostics-service-evidence-pack-sep-source-009` — required test blocked by missing dependencies; restoration failed on locked Rollup binary
+- `fix-dashcam-dashcam-intelligence-dc015` — Required focused Vitest command stalled without output; verification remains incomplete
+- `fix-diagnostics-anomaly-dashboard-f01` — required verification blocked by PowerShell startup timeouts and stalled commands
+- `fix-diagnostics-anomaly-dashboard-f03` — required frontend verification blocked by external i18n catalog startup failure
+- `fix-diagnostics-anomaly-dashboard-f05` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-diagnostics-remaining-useful-life-rul-01` — focused regression verification incomplete
+- `fix-diagnostics-remaining-useful-life-rul-03` — Required scoped tests stalled without output using both npx and direct local Vitest; verification incomplete
+- `fix-diagnostics-remaining-useful-life-rul-04` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-diagnostics-remaining-useful-life-rul-05` — targeted tests blocked by external generated-catalog startup failure
+- `fix-diagnostics-root-cause-intelligence-rc01` — verification stalled in shared catalog startup; TypeScript unfinished
+- `fix-diagnostics-root-cause-intelligence-rc05` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-diagnostics-root-cause-intelligence-rc06` — required regression blocked by unavailable/unresponsive PowerShell
+- `fix-diagnostics-service-evidence-pack-sep-source-006` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-explore-explore-f02` — verification blocked by missing Vite dependencies and locked Rollup binary
+- `fix-explore-explore-f03` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-explore-explore-f04` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-explore-explore-f06` — focused tests blocked by broken dependency installation
+- `fix-exports-exports-ex03` — validation blocked by missing dependencies, locked dependency file and non-rendering dev application
+- `fix-exports-exports-ex05` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-exports-exports-ex07` — verification blocked by missing dependencies and failed restoration
+- `fix-fleet-ops-fleet-operations-f01` — verification blocked by missing dependencies and Windows filesystem errors
+- `fix-fleet-ops-fleet-operations-f03` — dependency failures blocked verification
+- `fix-fleet-ops-fleet-operations-f05` — missing dependencies and npm ENOTDIR prevented test and TypeScript verification
+- `fix-home-energy-whole-home-energy-f06` — verification blocked by missing dependencies and locked Rollup binary
+- `fix-home-energy-whole-home-energy-f07` — required test blocked by missing Vite dependencies
+- `fix-home-energy-whole-home-energy-f10` — missing dependencies and locked binaries prevented verification
+- `fix-intelligence-packs-intelligence-pack-marketplace-f04` — verification blocked by missing dependencies and Windows file locks
+- `fix-intelligence-packs-intelligence-pack-marketplace-f13` — Required test blocked: Vitest missing; dependency restoration failed with locked Rollup module (EPERM), then ENOENT
+- `fix-intelligence-packs-intelligence-pack-marketplace-f14` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-maps-navigation-route-nav-qa-005` — tests blocked by missing Vite; dependency restoration blocked by locked Rollup binary
+- `fix-notifications-archived-f01` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-notifications-archived-f05` — missing dependencies prevented required regression verification; restoration failed with ENOTDIR and ENOTEMPTY
+- `fix-notifications-archived-f08` — missing dependencies and unresponsive localhost:5173 blocked verification
+- `fix-notifications-archived-f12` — dependency restoration and runtime verification blocked
+- `fix-notifications-channels-nc002` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-notifications-channels-nc011` — dependency restoration failed; required regression and TypeScript verification blocked
+- `fix-notifications-channels-nc013` — focused tests blocked by missing Vite dependencies and locked Rollup binary
+- `fix-notifications-channels-nc014` — required regressions blocked by broken dependencies; restoration failed
+- `fix-notifications-channels-nc015` — required tests blocked by missing dependencies; restore failed with EBUSY
+- `fix-notifications-notification-health-nh-02` — verification blocked by missing Vite dependencies and npm restoration ENOENT
+- `fix-notifications-notification-health-nh-04` — required regression could not execute because dependencies are missing and restoration failed
+- `fix-notifications-notification-health-nh-07` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-notifications-notification-health-nh-09` — dependency restoration failures prevented verification
+- `fix-notifications-notification-health-nh-11` — Dependency restoration blocked test and TypeScript verification
+- `fix-notifications-notification-health-nh-12` — verification blocked by missing dependencies and Windows restoration error
+- `fix-notifications-notification-health-nh-13` — dependency failures prevented regression verification
+- `fix-notifications-notification-health-nh-14` — required test blocked by missing dependencies; both restoration attempts failed with ENOTEMPTY
+- `fix-notifications-notification-health-nh-15` — canonical catalog prerequisite outside scope; missing Vite and TypeScript block verification
+- `fix-ownership-insurance-telematics-f01` — required tests blocked by missing frontend dependencies, failed dependency restoration, and unavailable Go toolchain
+- `fix-ownership-insurance-telematics-f04` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-ownership-insurance-telematics-f07` — missing dependencies prevent regression verification; dependency restoration failed with ENOTEMPTY
+- `fix-ownership-insurance-telematics-f08` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-ownership-insurance-telematics-f09` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-ownership-insurance-telematics-f15` — missing Vitest dependency, Go toolchain and owned translation catalog follow-up
+- `fix-ownership-model-trust-mt03` — focused tests blocked by missing dependencies; restoration failed with ENOENT
+- `fix-ownership-model-trust-mt04` — targeted verification blocked by missing dependencies and failed dependency restoration
+- `fix-ownership-model-trust-mt05` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-ownership-tariff-lab-tl10` — missing dependencies blocked regression execution and typecheck; dependency restoration failed
+- `fix-ownership-tariff-lab-tl08` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-ownership-tariff-lab-tl05` — dependency failures prevented verification; no tests executed
+- `fix-ownership-tariff-lab-tl04` — missing dependencies and EPERM prevented verification
+- `fix-ownership-tariff-lab-tl02` — focused verification blocked by broken dependencies and failed restore attempts
+- `fix-ownership-tariff-lab-tl01` — missing dependencies and failed restoration blocked tests and Edge verification
+- `fix-ownership-tariff-lab-tl09` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-ownership-tariff-lab-tl07` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-ownership-warranty-command-wc-08` — missing dependencies prevented regression verification
+- `fix-ownership-warranty-command-wc-04` — focused tests blocked by missing dependencies; restoration failed with ENOENT
+- `fix-ownership-warranty-command-wc-03` — Missing dependencies block targeted tests; existing dev server is unresponsive, blocking browser acceptance
+- `fix-ownership-warranty-command-wc-01` — dependency failures prevented test execution
+- `fix-power-user-grafana-panel-f01` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-resale-vault-warranty-resale-vault-f09` — Missing dependencies prevented targeted test execution
+- `fix-resale-vault-warranty-resale-vault-f11` — Missing dependencies prevent required tests and typecheck; restoration failed
+- `fix-resale-vault-warranty-resale-vault-f10` — dependency corruption prevented verification
+- `fix-resale-vault-warranty-resale-vault-f01` — missing pathe blocked regression execution; canonical copy keys require catalog integration
+- `fix-resale-vault-warranty-resale-vault-f02` — missing dependencies prevent verification; warning catalog entry remains outstanding outside assigned scope
+- `fix-science-science-lab-sci-009` — required tests blocked by missing dependencies and failed restoration
+- `fix-science-science-lab-sci-008` — Missing dependencies block verification; restoration failed
+- `fix-science-science-lab-sci-007` — required regression verification blocked by missing dependencies
+- `fix-science-science-lab-sci-006` — missing/broken dependencies prevented test and TypeScript verification
+- `fix-science-science-lab-sci-005` — verification blocked by incomplete dependencies and two failed restoration attempts
+- `fix-science-science-lab-sci-003` — Dependency restoration failed and existing server became unresponsive, blocking required verification
+- `fix-science-science-lab-sci-004` — dependency failures prevented test execution
+- `fix-science-science-lab-sci-002` — missing dependencies prevented verification
+- `fix-science-science-lab-sci-001` — Required /science registration is absent from web\src\lib\workspaceScope.ts, outside the owned files and prohibited routing scope
+- `fix-service-intelligence-service-intelligence-si11` — tests and typecheck blocked by missing dependencies; restoration failed with ENOTEMPTY and EBUSY
+- `fix-service-intelligence-service-intelligence-si09` — Required verification blocked by missing dependencies and failed restoration
+- `fix-service-intelligence-service-intelligence-si08` — missing dependencies block regression tests and TypeScript; restoration failed
+- `fix-service-intelligence-service-intelligence-si06` — Required verification blocked by missing dependencies and unresponsive existing dev server
+- `fix-service-intelligence-service-intelligence-si04` — dependency failures prevented verification
+- `fix-service-intelligence-service-intelligence-si03` — regression blocked by missing Vite; dependency restoration failed with ENOTEMPTY
+- `fix-service-intelligence-service-intelligence-si01` — focused tests blocked by missing dependencies; both restoration attempts failed
+- `fix-settings-active-sessions-as-02` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-settings-active-sessions-as-04` — missing dependencies and ENOTEMPTY restoration failures prevented regression verification
+- `fix-settings-active-sessions-as-03` — dependency restoration failures prevented regression execution and typechecking
+- `fix-settings-active-sessions-as-11` — dependency restoration failed; required tests could not execute
+- `fix-settings-active-sessions-as-06` — required tests blocked by missing dependencies and failed dependency restoration; translation key remains absent
+- `fix-settings-active-sessions-as-05` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-settings-fleet-setup-fs013` — missing Vite dependencies prevented regression verification
+- `fix-settings-helix-helix-03` — Required tests blocked by missing dependencies; restoration failed with EBUSY
+- `fix-settings-helix-helix-02` — required regression blocked by missing dependencies and EBUSY during restoration
+- `fix-settings-helix-helix-08` — verification blocked by missing dependencies and restore errors
+- `fix-settings-helix-helix-07` — focused test blocked by missing dependencies and failed restoration
+- `fix-settings-privacy-privacy-05` — focused verification blocked by missing Vite and failed dependency restoration
+- `fix-settings-privacy-privacy-02` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-settings-privacy-privacy-01` — dependency restoration failed; focused regressions could not execute
+- `fix-settings-two-factor-auth-tfa-05` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-settings-two-factor-auth-tfa-03` — shared dependency failures prevented required test execution
+- `fix-sharing-share-card-sc09` — dependency failures prevented verification
+- `fix-sharing-shared-drive-f05` — verification blocked by missing dependencies and EPERM during restoration
+- `fix-sharing-shared-drive-f02` — focused tests blocked by missing dependencies and failed dependency restoration
+- `fix-sharing-shared-drive-f01` — dependency failures prevented test execution and verification
+- `fix-telemetry-signal-correlation-sc-01` — verification blocked by missing dependencies and failed restoration (ENOTEMPTY)
+- `fix-telemetry-signal-change-points-scp002` — Missing Vitest and dependency restoration ENOTEMPTY blocked verification
+- `fix-telemetry-signal-deadband-f002` — Missing dependencies prevent required test execution; restoration blocked by EPERM
+- `fix-system-my-activity-ma-03` — verification blocked by missing dependencies and failed restoration
+- `fix-system-my-activity-ma-06` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
+- `fix-system-search-ss02` — Required tests blocked by missing Go and frontend dependency restoration failure
+- `fix-system-search-ss03` — palette alignment requires prohibited shared-component edits; required checks blocked by missing Vite and Go
+- `fix-system-search-ss10` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-system-state-machine-debugger-f02` — required Vitest and TypeScript checks blocked by missing dependencies; restoration failed with ENOTEMPTY and EBUSY
+- `fix-system-state-machine-debugger-f03` — Missing dependencies prevent regression verification; restoration failed
+- `fix-system-state-machine-debugger-f05` — dependency filesystem failures blocked regression execution
+- `fix-system-state-machine-debugger-f06` — missing dependencies block tests and browser verification
+- `fix-system-state-machine-debugger-f08` — Dependency failures prevented verification
+- `fix-system-state-machine-debugger-f11` — Dependency failures prevented regression execution and typecheck verification
+- `fix-system-system-status-ss-001` — required tests blocked by incomplete dependencies
+- `fix-system-system-status-ss-002` — missing local dependencies prevented verification
+- `fix-system-system-status-ss-003` — missing dependencies prevented required test execution
+- `fix-system-system-status-ss-010` — dependency restoration failed; required regression could not execute
+- `fix-system-system-status-ss-019` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-system-system-status-ss-011` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-system-tesla-api-usage-tu01` — verification blocked by missing Vite dependencies and ENOENT during restoration
+- `fix-system-tesla-api-usage-tu02` — required tests blocked by missing Vitest; dependency restoration failed with ENOTEMPTY
+- `fix-system-tesla-api-usage-tu03` — missing dependencies prevented verification
+- `fix-system-tesla-api-usage-tu07` — verification blocked by missing vite and vite-plugin-pwa dependencies
+- `fix-system-tesla-api-usage-tu09` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-system-tesla-api-usage-tu05` — dependency failures prevent regression verification
+- `fix-telemetry-live-signal-monitor-lsm-f03` — dependency corruption blocks tests, TypeScript and Edge verification
+- `fix-telemetry-signal-correlation-sc-02` — targeted verification blocked by missing dependencies and failed dependency restoration
+- `fix-telemetry-signal-correlation-sc-05` — Missing dependencies block regression and TypeScript validation; restoration failed with ENOTEMPTY
+- `fix-telemetry-signal-correlation-sc-07` — missing dependency files prevent required test verification
+- `fix-telemetry-signal-correlation-sc-06` — missing dependencies block verification; canonical translation integration pending outside assigned scope
+- `fix-telemetry-signal-correlation-sc-04` — missing validation dependencies and required catalog entries outside assigned scope
+- `fix-telemetry-signal-deadband-f005` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-telemetry-signal-diff-sd-01` — required tests blocked by missing Vite dependencies; restoration failed with EPERM
+- `fix-telemetry-signal-diff-sd-02` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-telemetry-signal-diff-sd-03` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-telemetry-signal-diff-sd-07` — canonical copy requires separate catalog owner; focused tests blocked by missing Vite dependencies
+- `fix-telemetry-signal-diff-sd-08` — targeted tests blocked by missing Vite dependencies
+- `fix-telemetry-signal-diff-sd-11` — focused verification blocked by missing Vite dependencies and failed dependency restoration
+- `fix-telemetry-signal-diff-sd-12` — Retry did not reach a passing verification; see task-specific notes in state.json.
+- `fix-watch-watch-face-f01` — existing implementation could not be verified because frontend dependencies and Go toolchain are unavailable
+- `fix-watch-watch-face-f06` — dependency restoration failed; focused tests could not execute
+- `fix-watch-watch-face-f10` — missing dependencies prevented verification
+- `fix-model-trust-mobile-regression-fixture` — missing dependencies prevent scoped test verification; restoration failed twice with ENOENT
+- `fix-feature-flag-delete-result-feedback` — Required tests and typecheck blocked by dependency restoration failures
+- `fix-governance-run-cache-invalidation` — focused tests blocked by incomplete dependencies and failed restoration
+- `fix-ownership-shared-quality-labels` — Retry did not reach a passing verification; see task-specific notes in state.json.

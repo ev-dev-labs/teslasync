@@ -16354,11 +16354,11 @@
       "web\\src\\components\\forms\\__tests__\\RangePicker.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-system-tesla-api-usage-tu10 | dependency failures prevented tests and Edge verification | done so far: updated web\\src\\components\\forms\\RangePicker.tsx and web\\src\\components\\forms\\__tests__\\RangePicker.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu10 | dependency failures prevented targeted tests and Edge verification | done so far: preserved existing RangePicker implementation and tests; no source changes Focused batch ran; screenshot/browser verification remains outstanding, so status stays pending.",
-    "Commit": "",
+    "Notes": "Attempt 1: FAILED | fix-system-tesla-api-usage-tu10 | dependency failures prevented tests and Edge verification | done so far: updated web\\src\\components\\forms\\RangePicker.tsx and web\\src\\components\\forms\\__tests__\\RangePicker.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu10 | dependency failures prevented targeted tests and Edge verification | done so far: preserved existing RangePicker implementation and tests; no source changes Focused batch ran; screenshot/browser verification remains outstanding, so status stays pending. DONE | fix-system-tesla-api-usage-tu10 | RangePicker visual check completed in Edge: 375px viewport trigger measured 44px high; desktop 1440px trigger measured 32px high; light/dark screenshots inspected; keyboard focus and range behavior covered by RangePicker tests. Temporary harness/screenshots removed.",
+    "Commit": "d2cb6396ac",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
