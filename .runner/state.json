@@ -11492,10 +11492,10 @@
       "web\\src\\features\\notifications\\hooks\\useAlertRuleEditorController.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-alert-studio-as-n01 | validation blocked by missing dependencies and locked node_modules | done so far: updated web/src/features/notifications/hooks/useAlertRuleEditorController.ts and added web/src/features/notifications/hooks/useAlertRuleEditorController.test.ts Attempt 2: FAILED | fix-notifications-alert-studio-as-n01 | verification blocked by missing dependencies and locked Rollup binary | done so far: inspected inherited controller fix and colocated regression tests; attempted dependency restoration and scoped test retry; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-notifications-alert-studio-as-n01 | validation blocked by missing dependencies and locked node_modules | done so far: updated web/src/features/notifications/hooks/useAlertRuleEditorController.ts and added web/src/features/notifications/hooks/useAlertRuleEditorController.test.ts Attempt 2: FAILED | fix-notifications-alert-studio-as-n01 | verification blocked by missing dependencies and locked Rollup binary | done so far: inspected inherited controller fix and colocated regression tests; attempted dependency restoration and scoped test retry; no source changes Retry verification passed in the Notifications batch; assigned regression suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11522,10 +11522,10 @@
       "web\\src\\features\\notifications\\pages\\ArchivedPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-archived-f01 | verification blocked by missing dependencies and locked binaries | done so far: updated web/src/features/notifications/pages/ArchivedPage.tsx and web/src/features/notifications/pages/ArchivedPage.test.tsx Attempt 2: FAILED | fix-notifications-archived-f01 | descriptor propagation requires forbidden shared-consumer edits; verification blocked by missing dependencies and locked Rollup binary | done so far: inspected and preserved prior ArchivedPage changes; attempted dependency restoration and required tests; no source edits",
+    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f01 | verification blocked by missing dependencies and locked binaries | done so far: updated web/src/features/notifications/pages/ArchivedPage.tsx and web/src/features/notifications/pages/ArchivedPage.test.tsx Attempt 2: FAILED | fix-notifications-archived-f01 | descriptor propagation requires forbidden shared-consumer edits; verification blocked by missing dependencies and locked Rollup binary | done so far: inspected and preserved prior ArchivedPage changes; attempted dependency restoration and required tests; no source edits Retry failed: ArchivedPage.test.tsx has 2 failures: active-lookup loading assertion is missing and confirmed zero severity count is not found on the collapsed summary face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11592,10 +11592,10 @@
       "web\\src\\features\\notifications\\components\\NotificationFilterBar.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-archived-f05 | missing dependencies prevented verification | done so far: updated InboxBody.tsx and NotificationFilterBar.tsx; added regressions in ArchivedPage.test.tsx, InboxBody.test.tsx, and NotificationFilterBar.test.tsx Attempt 2: FAILED | fix-notifications-archived-f05 | missing dependencies prevented required regression verification; restoration failed with ENOTDIR and ENOTEMPTY | done so far: preserved prior normalization and regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f05 | missing dependencies prevented verification | done so far: updated InboxBody.tsx and NotificationFilterBar.tsx; added regressions in ArchivedPage.test.tsx, InboxBody.test.tsx, and NotificationFilterBar.test.tsx Attempt 2: FAILED | fix-notifications-archived-f05 | missing dependencies prevented required regression verification; restoration failed with ENOTDIR and ENOTEMPTY | done so far: preserved prior normalization and regressions; no source changes Retry failed: ArchivedPage.test.tsx and InboxBody.test.tsx fail 10 cases; severity/count details and archived semantics are asserted on the card face, and archived activation dialog remains open in one case.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11641,10 +11641,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry verification passed in the Notifications batch; assigned regression suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11656,10 +11656,10 @@
       "web\\src\\features\\notifications\\components\\InboxBody.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-archived-f08 | missing dependencies and Windows ENOTEMPTY errors blocked verification | done so far: updated web/src/features/notifications/components/NotificationInboxTable.tsx and added coverage in web/src/features/notifications/components/InboxBody.test.tsx Attempt 2: FAILED | fix-notifications-archived-f08 | missing dependencies and unresponsive localhost:5173 blocked verification | done so far: preserved existing table sizing changes and regression coverage; no source edits",
+    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f08 | missing dependencies and Windows ENOTEMPTY errors blocked verification | done so far: updated web/src/features/notifications/components/NotificationInboxTable.tsx and added coverage in web/src/features/notifications/components/InboxBody.test.tsx Attempt 2: FAILED | fix-notifications-archived-f08 | missing dependencies and unresponsive localhost:5173 blocked verification | done so far: preserved existing table sizing changes and regression coverage; no source edits Retry failed: InboxBody.test.tsx has 8 failures; archived mode severity/details and responsive dialog assertions do not match current brief/dialog rendering.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11671,10 +11671,10 @@
       "web\\src\\features\\notifications\\components\\InboxBody.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-archived-f12 | dependency restoration blocked; tests and browser verification incomplete | done so far: updated web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx and web\\src\\features\\notifications\\components\\InboxBody.test.tsx Attempt 2: FAILED | fix-notifications-archived-f12 | dependency restoration and runtime verification blocked | done so far: inspected and retained existing NotificationInboxDetails.tsx and InboxBody.test.tsx implementation; no new changes",
+    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f12 | dependency restoration blocked; tests and browser verification incomplete | done so far: updated web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx and web\\src\\features\\notifications\\components\\InboxBody.test.tsx Attempt 2: FAILED | fix-notifications-archived-f12 | dependency restoration and runtime verification blocked | done so far: inspected and retained existing NotificationInboxDetails.tsx and InboxBody.test.tsx implementation; no new changes Retry failed: InboxBody.test.tsx has 8 failures; an exact metric format mismatch (expected 1,250 ms, rendered 1,250.00 ms) and archived details/dialog assertions fail.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11690,10 +11690,10 @@
       "web\\src\\hooks\\__tests__\\useNotificationListener.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-browser-notifications-f01 | verification blocked by missing dependencies and locked Rollup binary | done so far: updated the three assigned source files and three regression test files Attempt 2: FAILED | fix-notifications-browser-notifications-f01 | verification blocked by missing dependencies and locked Rollup binary | done so far: inspected and preserved existing implementation and regressions; attempted required focused tests, dependency restoration, and TypeScript validation",
+    "Notes": "Attempt 1: FAILED | fix-notifications-browser-notifications-f01 | verification blocked by missing dependencies and locked Rollup binary | done so far: updated the three assigned source files and three regression test files Attempt 2: FAILED | fix-notifications-browser-notifications-f01 | verification blocked by missing dependencies and locked Rollup binary | done so far: inspected and preserved existing implementation and regressions; attempted required focused tests, dependency restoration, and TypeScript validation Retry verification passed in the Notifications batch; assigned regression suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11887,10 +11887,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " | Channel checkpoint: ChannelsPage.test.tsx passes 23/23; duplicate responsive paused-status copy is asserted as present.",
+    "Notes": "| Channel checkpoint: ChannelsPage.test.tsx passes 23/23; duplicate responsive paused-status copy is asserted as present. Retry failed: ChannelProvidersPanel.test.tsx cannot find translated provider label Courriel; 1 failure.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11970,10 +11970,10 @@
       "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-channels-nc011 | missing dependencies prevent regression and TypeScript verification | done so far: updated all five expected files with consolidated feedback, preserved failure details, and focused regression coverage Attempt 2: FAILED | fix-notifications-channels-nc011 | dependency restoration failed; required regression and TypeScript verification blocked | done so far: confirmed existing consolidation and regression coverage; preserved all five expected files without further edits",
+    "Notes": "Attempt 1: FAILED | fix-notifications-channels-nc011 | missing dependencies prevent regression and TypeScript verification | done so far: updated all five expected files with consolidated feedback, preserved failure details, and focused regression coverage Attempt 2: FAILED | fix-notifications-channels-nc011 | dependency restoration failed; required regression and TypeScript verification blocked | done so far: confirmed existing consolidation and regression coverage; preserved all five expected files without further edits Retry failed: ChannelFormModal.test.tsx has 3 failures; create-mode tests cannot find the URL label in the modal.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11984,10 +11984,10 @@
       "web\\src\\api\\hooks\\useNotifications.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-channels-nc012 | verification blocked by missing dependencies and locked native binaries | done so far: changed web/src/api/hooks/useNotifications.ts and added web/src/api/hooks/useNotifications.test.tsx Attempt 2: FAILED | fix-notifications-channels-nc012 | regression verification blocked by missing dependencies and locked Rollup native binary | done so far: confirmed existing stats invalidation/broadcast and colocated create/update/failure regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-notifications-channels-nc012 | verification blocked by missing dependencies and locked native binaries | done so far: changed web/src/api/hooks/useNotifications.ts and added web/src/api/hooks/useNotifications.test.tsx Attempt 2: FAILED | fix-notifications-channels-nc012 | regression verification blocked by missing dependencies and locked Rollup native binary | done so far: confirmed existing stats invalidation/broadcast and colocated create/update/failure regressions; no source changes Retry verification passed in the Notifications batch; assigned regression suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11999,10 +11999,10 @@
       "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-channels-nc013 | focused tests blocked by missing dependencies and locked Rollup binary | done so far: updated ChannelFormModal.tsx and ChannelFormModal.test.tsx; regression remains unverified Attempt 2: FAILED | fix-notifications-channels-nc013 | focused tests blocked by missing Vite dependencies and locked Rollup binary | done so far: inspected existing implementation and regressions; attempted dependency restoration and retried required tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-notifications-channels-nc013 | focused tests blocked by missing dependencies and locked Rollup binary | done so far: updated ChannelFormModal.tsx and ChannelFormModal.test.tsx; regression remains unverified Attempt 2: FAILED | fix-notifications-channels-nc013 | focused tests blocked by missing Vite dependencies and locked Rollup binary | done so far: inspected existing implementation and regressions; attempted dependency restoration and retried required tests; no source changes Retry failed: ChannelFormModal.test.tsx has 3 failures; create-mode URL validation/label assertions fail because the URL label is not found.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12016,10 +12016,10 @@
       "web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-channels-nc014 | regression execution blocked by missing dependencies and locked Rollup module | done so far: updated channelMeta.ts and ChannelFormModal.tsx; added regressions in channelMeta.test.ts and ChannelFormModal.test.tsx Attempt 2: FAILED | fix-notifications-channels-nc014 | required regressions blocked by broken dependencies; restoration failed | done so far: inspected existing implementation and regressions; no source edits",
+    "Notes": "Attempt 1: FAILED | fix-notifications-channels-nc014 | regression execution blocked by missing dependencies and locked Rollup module | done so far: updated channelMeta.ts and ChannelFormModal.tsx; added regressions in channelMeta.test.ts and ChannelFormModal.test.tsx Attempt 2: FAILED | fix-notifications-channels-nc014 | required regressions blocked by broken dependencies; restoration failed | done so far: inspected existing implementation and regressions; no source edits Retry failed: ChannelFormModal.test.tsx has 3 failures; create-mode URL validation/label assertions fail because the URL label is not found.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12033,10 +12033,10 @@
       "web\\src\\features\\notifications\\components\\channels\\channelMeta.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-channels-nc015 | verification blocked by missing dependencies and failed dependency restore | done so far: updated web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.tsx, web\\src\\features\\notifications\\components\\channels\\channelMeta.ts, web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.test.tsx, web\\src\\features\\notifications\\components\\channels\\channelMeta.test.ts Attempt 2: FAILED | fix-notifications-channels-nc015 | required tests blocked by missing dependencies; restore failed with EBUSY | done so far: inspected existing implementation and regressions in all four expected files; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-notifications-channels-nc015 | verification blocked by missing dependencies and failed dependency restore | done so far: updated web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.tsx, web\\src\\features\\notifications\\components\\channels\\channelMeta.ts, web\\src\\features\\notifications\\components\\channels\\ChannelFormModal.test.tsx, web\\src\\features\\notifications\\components\\channels\\channelMeta.test.ts Attempt 2: FAILED | fix-notifications-channels-nc015 | required tests blocked by missing dependencies; restore failed with EBUSY | done so far: inspected existing implementation and regressions in all four expected files; no source changes Retry failed: ChannelFormModal.test.tsx has 3 failures; create-mode URL validation/label assertions fail because the URL label is not found.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12081,10 +12081,10 @@
       "web\\src\\features\\notifications\\components\\channels\\WebhookSignaturePreview.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-channels-nc017 | verification blocked by missing dependencies and locked binaries | done so far: updated WebhookSignaturePreview.tsx and added WebhookSignaturePreview.test.tsx Attempt 2: FAILED | fix-notifications-channels-nc017 | verification blocked by missing dependencies and locked Rollup binary | done so far: inspected existing caller fix and five regressions; no source changes; focused test output recorded in logs\\fix-notifications-channels-nc017.log",
+    "Notes": "Attempt 1: FAILED | fix-notifications-channels-nc017 | verification blocked by missing dependencies and locked binaries | done so far: updated WebhookSignaturePreview.tsx and added WebhookSignaturePreview.test.tsx Attempt 2: FAILED | fix-notifications-channels-nc017 | verification blocked by missing dependencies and locked Rollup binary | done so far: inspected existing caller fix and five regressions; no source changes; focused test output recorded in logs\\fix-notifications-channels-nc017.log Retry verification passed in the Notifications batch; assigned regression suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12113,10 +12113,10 @@
       "web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-02 | verification blocked by missing dependencies and ENOTEMPTY restoration failures | done so far: updated NotificationBurnRatePanel.tsx and added regression cases in NotificationHealthPanels.continuation.test.tsx Attempt 2: FAILED | fix-notifications-notification-health-nh-02 | verification blocked by missing Vite dependencies and npm restoration ENOENT | done so far: confirmed existing implementation and regression coverage; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-notifications-notification-health-nh-02 | verification blocked by missing dependencies and ENOTEMPTY restoration failures | done so far: updated NotificationBurnRatePanel.tsx and added regression cases in NotificationHealthPanels.continuation.test.tsx Attempt 2: FAILED | fix-notifications-notification-health-nh-02 | verification blocked by missing Vite dependencies and npm restoration ENOENT | done so far: confirmed existing implementation and regression coverage; no source files changed Retry failed: NotificationHealthPanels.continuation.test.tsx has 18 failures; stale warning, fatigue denominators and full table grouping assertions differ from rendered output.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12143,10 +12143,10 @@
       "web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-04 | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx and web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx Attempt 2: FAILED | fix-notifications-notification-health-nh-04 | required regression could not execute because dependencies are missing and restoration failed | done so far: inspected existing snapshot policy, as-of disclosure, and regressions; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-notifications-notification-health-nh-04 | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx and web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx Attempt 2: FAILED | fix-notifications-notification-health-nh-04 | required regression could not execute because dependencies are missing and restoration failed | done so far: inspected existing snapshot policy, as-of disclosure, and regressions; no source files changed Retry failed: NotificationHealthPanels.continuation.test.tsx has 18 failures; expected fatigue caption “of 1 rules” and other labels are not found.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12158,10 +12158,10 @@
       "web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-07 | missing test dependencies and out-of-scope canonical catalog prerequisite | done so far: corrected AlertFatiguePanel.tsx help fallback and added NotificationHealthPanels.continuation.test.tsx composite-grouping regression Attempt 2: FAILED | fix-notifications-notification-health-nh-07 | missing test dependencies and out-of-scope canonical catalog prerequisite | done so far: existing corrected help fallback and composite-grouping regression preserved; requested test attempted but could not start",
+    "Notes": "Attempt 1: FAILED | fix-notifications-notification-health-nh-07 | missing test dependencies and out-of-scope canonical catalog prerequisite | done so far: corrected AlertFatiguePanel.tsx help fallback and added NotificationHealthPanels.continuation.test.tsx composite-grouping regression Attempt 2: FAILED | fix-notifications-notification-health-nh-07 | missing test dependencies and out-of-scope canonical catalog prerequisite | done so far: existing corrected help fallback and composite-grouping regression preserved; requested test attempted but could not start Retry failed: NotificationHealthPanels.continuation.test.tsx has 18 failures; composite fatigue/grouping and retained-detail assertions differ from current output.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12173,10 +12173,10 @@
       "web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-09 | dependency failures prevented verification | done so far: updated web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx and web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx Attempt 2: FAILED | fix-notifications-notification-health-nh-09 | dependency restoration failures prevented verification | done so far: confirmed existing composite chart/Cell keys and collision regression preserve truncation and full-title alternatives; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-notifications-notification-health-nh-09 | dependency failures prevented verification | done so far: updated web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx and web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx Attempt 2: FAILED | fix-notifications-notification-health-nh-09 | dependency restoration failures prevented verification | done so far: confirmed existing composite chart/Cell keys and collision regression preserve truncation and full-title alternatives; no source changes Retry failed: NotificationHealthPanels.continuation.test.tsx has 18 failures; section population and source-retention assertions fail.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12203,10 +12203,10 @@
       "web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-11 | Dependency failures prevented test and TypeScript verification | done so far: updated web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx and web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx Attempt 2: FAILED | fix-notifications-notification-health-nh-11 | Dependency restoration blocked test and TypeScript verification | done so far: inspected existing implementation and regression coverage; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-notifications-notification-health-nh-11 | Dependency failures prevented test and TypeScript verification | done so far: updated web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx and web\\src\\features\\notifications\\components\\NotificationHealthPanels.continuation.test.tsx Attempt 2: FAILED | fix-notifications-notification-health-nh-11 | Dependency restoration blocked test and TypeScript verification | done so far: inspected existing implementation and regression coverage; no files changed Retry failed: NotificationHealthPanels.continuation.test.tsx has 18 failures; full grouping/denominator and retained-detail assertions fail.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12222,10 +12222,10 @@
       "web\\src\\components\\data-display\\DataProvenanceBadge.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-12 | verification blocked by missing dependencies and Windows restoration errors | done so far: updated four assigned components and both regression test files Attempt 2: FAILED | fix-notifications-notification-health-nh-12 | verification blocked by missing dependencies and Windows restoration error | done so far: inspected existing changes in all six assigned files; no source edits; attempted required regressions twice and TypeScript once",
+    "Notes": "Attempt 1: FAILED | fix-notifications-notification-health-nh-12 | verification blocked by missing dependencies and Windows restoration errors | done so far: updated four assigned components and both regression test files Attempt 2: FAILED | fix-notifications-notification-health-nh-12 | verification blocked by missing dependencies and Windows restoration error | done so far: inspected existing changes in all six assigned files; no source edits; attempted required regressions twice and TypeScript once Retry failed: NotificationLatencyPanel.test.tsx has 25 failures; expected notification-chart-data is absent and empty Apdex neutrality queries return null.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12239,10 +12239,10 @@
       "web\\src\\features\\notifications\\components\\NotificationLatencyPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-13 | dependency failures prevented regression verification | done so far: updated three panel callers and NotificationLatencyPanel.test.tsx with focused regressions Attempt 2: FAILED | fix-notifications-notification-health-nh-13 | dependency failures prevented regression verification | done so far: confirmed existing historical provenance in all three callers and focused regressions separating fetch/event times; preserved source unchanged",
+    "Notes": "Attempt 1: FAILED | fix-notifications-notification-health-nh-13 | dependency failures prevented regression verification | done so far: updated three panel callers and NotificationLatencyPanel.test.tsx with focused regressions Attempt 2: FAILED | fix-notifications-notification-health-nh-13 | dependency failures prevented regression verification | done so far: confirmed existing historical provenance in all three callers and focused regressions separating fetch/event times; preserved source unchanged Retry failed: NotificationLatencyPanel.test.tsx has 25 failures; expected notification-chart-data is absent and empty Apdex neutrality queries return null.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12256,10 +12256,10 @@
       "web\\src\\features\\notifications\\components\\NotificationLatencyPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-14 | verification blocked by missing dependencies and npm ENOENT | done so far: updated all three panels and NotificationLatencyPanel.test.tsx with neutral icon roles and focused regressions Attempt 2: FAILED | fix-notifications-notification-health-nh-14 | required test blocked by missing dependencies; both restoration attempts failed with ENOTEMPTY | done so far: confirmed existing neutral secondary/muted icon roles and focused regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-notifications-notification-health-nh-14 | verification blocked by missing dependencies and npm ENOENT | done so far: updated all three panels and NotificationLatencyPanel.test.tsx with neutral icon roles and focused regressions Attempt 2: FAILED | fix-notifications-notification-health-nh-14 | required test blocked by missing dependencies; both restoration attempts failed with ENOTEMPTY | done so far: confirmed existing neutral secondary/muted icon roles and focused regressions; no source changes Retry failed: NotificationLatencyPanel.test.tsx has 25 failures; expected notification-chart-data is absent and empty Apdex neutrality queries return null.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12272,10 +12272,10 @@
       "web\\src\\features\\notifications\\components\\NotificationLatencyPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-notification-health-nh-15 | catalog prerequisite outside scope; missing Vite and TypeScript prevent verification | done so far: updated both panels and NotificationLatencyPanel.test.tsx; retained all sections Attempt 2: FAILED | fix-notifications-notification-health-nh-15 | canonical catalog prerequisite outside scope; missing Vite and TypeScript block verification | done so far: inspected and retained prior panel implementations and missing/invalid, zero, signed and fractional input tests; no new edits Checkpoint 2026-10-15: counted whole-sentence keys are present and split catalog check passes. Full NotificationLatencyPanel test run: 43 passed / 7 failed; remaining chart-context/error-boundary and stale expectation failures keep verification open. New execution order recorded 2026-10-15: pass build/typecheck/lint/split-i18n first; UI simplification on ui/simplification next; full Vitest after simplification; then finish/retry all Phase 6 pending/failed items and document every excluded/failed result.",
+    "Notes": "Attempt 1: FAILED | fix-notifications-notification-health-nh-15 | catalog prerequisite outside scope; missing Vite and TypeScript prevent verification | done so far: updated both panels and NotificationLatencyPanel.test.tsx; retained all sections Attempt 2: FAILED | fix-notifications-notification-health-nh-15 | canonical catalog prerequisite outside scope; missing Vite and TypeScript block verification | done so far: inspected and retained prior panel implementations and missing/invalid, zero, signed and fractional input tests; no new edits Checkpoint 2026-10-15: counted whole-sentence keys are present and split catalog check passes. Full NotificationLatencyPanel test run: 43 passed / 7 failed; remaining chart-context/error-boundary and stale expectation failures keep verification open. New execution order recorded 2026-10-15: pass build/typecheck/lint/split-i18n first; UI simplification on ui/simplification next; full Vitest after simplification; then finish/retry all Phase 6 pending/failed items and document every excluded/failed result. Retry failed: NotificationLatencyPanel.test.tsx has 25 failures; expected notification-chart-data is absent and empty Apdex neutrality queries return null.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
