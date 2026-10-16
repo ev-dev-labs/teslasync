@@ -112,10 +112,8 @@ describe('WidgetTipCards — rendering tips', () => {
     expect(screen.getByText(description.trim())).toHaveTextContent(description.trim());
     expect(screen.getByText(impactLabel.trim())).toHaveTextContent(impactLabel.trim());
     expect(screen.getByText(impactLabel.trim())).toHaveClass('max-w-full', 'whitespace-normal');
-    expect(screen.getByRole('listitem')).toHaveClass(
-      'bg-[var(--surface-2)]', 'border-[var(--border-subtle)]',
-    );
-    expect(screen.getByRole('listitem')).not.toHaveClass('bg-white/[0.03]', 'border-white/[0.06]');
+    expect(screen.getByRole('listitem')).toHaveClass('border-b', 'last:border-b-0');
+    expect(screen.getByRole('listitem')).not.toHaveClass('bg-[var(--surface-2)]', 'rounded-lg');
   });
 
   it('renders each tip title + description as accessible list items', () => {

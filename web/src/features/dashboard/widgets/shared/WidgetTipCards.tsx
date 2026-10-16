@@ -63,7 +63,7 @@ export function WidgetTipCards({
         <div
           key={tip.id}
           role="listitem"
-          className="flex min-h-[44px] min-w-0 items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+          className="flex min-h-[44px] min-w-0 items-start gap-3 border-b border-[var(--border-subtle)] py-3 last:border-b-0"
         >
           {tip.icon && (
             // Decorative leading glyph — the title conveys the meaning, so hide

@@ -150,21 +150,24 @@ describe('WidgetStatusGrid — cell rendering', () => {
   });
 });
 
-describe('WidgetStatusGrid — status → style map', () => {
-  const cases: Array<[StatusCell['status'], string, string]> = [
-    ['ok', 'bg-[var(--semantic-success-bg)]', 'bg-[var(--semantic-success)]'],
-    ['warning', 'bg-[var(--semantic-warning-bg)]', 'bg-[var(--semantic-warning)]'],
-    ['error', 'bg-[var(--semantic-danger-bg)]', 'bg-[var(--semantic-danger)]'],
-    ['inactive', 'bg-[var(--surface-2)]', 'bg-[var(--text-muted)]'],
-    ['unknown', 'bg-[var(--surface-2)]', 'bg-[var(--text-muted)]'],
+describe('WidgetStatusGrid - flat status styles', () => {
+  const cases: Array<[StatusCell['status'], string]> = [
+    ['ok', 'bg-[var(--semantic-success)]'],
+    ['warning', 'bg-[var(--semantic-warning)]'],
+    ['error', 'bg-[var(--semantic-danger)]'],
+    ['inactive', 'bg-[var(--text-muted)]'],
+    ['unknown', 'bg-[var(--text-muted)]'],
   ];
 
-  it.each(cases)('paints the %s status chip and dot with its palette', (status, chipBg, dotBg) => {
+  it.each(cases)('shows the %s status dot while keeping the cell flat', (status, dotBg) => {
     const { container } = render(<WidgetStatusGrid cells={[makeCell({ status })]} />);
 
     const [cell] = getCellNodes(container);
-    expect(cell.className).toContain(chipBg);
     expect(getDot(cell).className).toContain(dotBg);
+    expect(cell.className).toContain('border-b');
+    expect(cell.className).not.toContain('bg-');
+    expect(cell.className).not.toContain('rounded-shape-sm');
+    expect(cell).toHaveTextContent(status === 'ok' ? 'Healthy' : status === 'warning' ? 'Warning' : status === 'error' ? 'Error' : status === 'inactive' ? 'Inactive' : 'Unknown');
   });
 });
 
@@ -180,7 +183,7 @@ describe('WidgetStatusGrid — fail-closed status (hardened bug)', () => {
     }).not.toThrow();
 
     const [cell] = getCellNodes(container);
-    expect(cell.className).toContain('bg-[var(--surface-2)]');
+    expect(cell.className).not.toContain('bg-');
     expect(getDot(cell).className).toContain('bg-[var(--text-muted)]');
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     // The label still renders — the widget degrades, it does not blank out.
@@ -222,10 +225,10 @@ describe('WidgetStatusGrid — column layout', () => {
     const grid = getGrid(container);
     expect(grid.className).toContain('grid-cols-2');
     expect(grid.className).not.toContain('@sm:grid-cols-4');
-    // Compact chips get the tighter px-2 py-1.5 padding.
+    // Compact flat rows keep a tighter vertical rhythm without inset boxes.
     const [cell] = getCellNodes(container);
-    expect(cell.className).toContain('px-2');
     expect(cell.className).toContain('py-1.5');
+    expect(cell.className).not.toContain('px-');
   });
 });
 

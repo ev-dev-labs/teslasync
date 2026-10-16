@@ -23,25 +23,20 @@ export interface WidgetStatusGridProps {
   emptyIcon?: ReactNode;
 }
 
-const statusStyles: Record<StatusCell['status'], { bg: string; dot: string }> = {
+const statusStyles: Record<StatusCell['status'], { dot: string }> = {
   ok: {
-    bg: `${severityTokens.success.bg} ${severityTokens.success.border}`,
     dot: severityTokens.success.dot,
   },
   warning: {
-    bg: `${severityTokens.warn.bg} ${severityTokens.warn.border}`,
     dot: severityTokens.warn.dot,
   },
   error: {
-    bg: `${severityTokens.critical.bg} ${severityTokens.critical.border}`,
     dot: severityTokens.critical.dot,
   },
   inactive: {
-    bg: 'bg-[var(--surface-2)] border-[var(--border-subtle)]',
     dot: 'bg-[var(--text-muted)]',
   },
   unknown: {
-    bg: 'bg-[var(--surface-2)] border-[var(--border-subtle)]',
     dot: 'bg-[var(--text-muted)]',
   },
 };
@@ -87,9 +82,8 @@ export function WidgetStatusGrid({
           <div
             key={cell.id}
             className={cn(
-              'relative flex min-h-11 min-w-0 items-start gap-2 rounded-shape-sm border px-3 py-2',
-              style.bg,
-              compact && 'px-2 py-1.5',
+              'relative flex min-h-11 min-w-0 items-start gap-2 border-b border-[var(--border-subtle)] py-2 last:border-b-0',
+              compact && 'py-1.5',
             )}
           >
             {/* Status meaning remains visible as text independently of this dot. */}
