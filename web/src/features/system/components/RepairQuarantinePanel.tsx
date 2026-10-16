@@ -34,7 +34,7 @@ export function RepairQuarantinePanel({
   canWrite,
   writeBlockReason,
 }: RepairQuarantinePanelProps) {
-  const { expandedKeys, setExpandedKeys } = useTableExpansion<number>();
+  const { expandedKeys, setExpandedKeys } = useTableExpansion();
   const { t } = useTranslation();
   const [filters, setFilters] = useState<RepairQuarantineFilters>({
     vehicle_id: vehicleId,
