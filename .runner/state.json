@@ -2523,7 +2523,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 repair group 15: Automation Builder and shared FormSection 109/109 pass, including three new red-before-fix validation-description regressions. Duplicate groups removed using one native fieldset; all help/error ID references preserved, validation/save/focus/source-retry coverage retained. Full shared forms 372 passed / 6 existing failures, zero new identities; tsc and scoped ESLint pass. Status unchanged.",
     "Commit": "0e065f2946",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -2538,7 +2538,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-automations-automation-builder-ab-qa-002 | regression tests blocked by external i18n catalog startup failure | done so far: updated web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx and web\\src\\features\\automations\\pages\\AutomationBuilderPage.test.tsx DONE | fix-automations-automation-builder-ab-qa-002 | no change needed: fix and regression coverage already present; test execution blocked by external i18n catalog startup failure",
+    "Notes": " Attempt 1: FAILED | fix-automations-automation-builder-ab-qa-002 | regression tests blocked by external i18n catalog startup failure | done so far: updated web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx and web\\src\\features\\automations\\pages\\AutomationBuilderPage.test.tsx DONE | fix-automations-automation-builder-ab-qa-002 | no change needed: fix and regression coverage already present; test execution blocked by external i18n catalog startup failure | 2026-10-16 repair group 15: Automation Builder and shared FormSection 109/109 pass, including three new red-before-fix validation-description regressions. Duplicate groups removed using one native fieldset; all help/error ID references preserved, validation/save/focus/source-retry coverage retained. Full shared forms 372 passed / 6 existing failures, zero new identities; tsc and scoped ESLint pass. Status unchanged.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -2553,7 +2553,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-automations-automation-builder-ab-qa-003 | scoped tests stalled before execution | done so far: updated web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx and web\\src\\features\\automations\\pages\\AutomationBuilderPage.test.tsx with condition validation, accessible feedback, and regression coverage DONE | fix-automations-automation-builder-ab-qa-003 | no change needed: requested validation and regression coverage already present; scoped test blocked by external catalog startup failure",
+    "Notes": " Attempt 1: FAILED | fix-automations-automation-builder-ab-qa-003 | scoped tests stalled before execution | done so far: updated web\\src\\features\\automations\\pages\\AutomationBuilderPage.tsx and web\\src\\features\\automations\\pages\\AutomationBuilderPage.test.tsx with condition validation, accessible feedback, and regression coverage DONE | fix-automations-automation-builder-ab-qa-003 | no change needed: requested validation and regression coverage already present; scoped test blocked by external catalog startup failure | 2026-10-16 repair group 15: Automation Builder and shared FormSection 109/109 pass, including three new red-before-fix validation-description regressions. Duplicate groups removed using one native fieldset; all help/error ID references preserved, validation/save/focus/source-retry coverage retained. Full shared forms 372 passed / 6 existing failures, zero new identities; tsc and scoped ESLint pass. Status unchanged.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },

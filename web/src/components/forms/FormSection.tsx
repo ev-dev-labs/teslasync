@@ -1,8 +1,8 @@
-import { type ReactNode, useId } from 'react'
+import { type AriaAttributes, type ReactNode, useId } from 'react'
 import { HelperText, PanelTitle } from '@/components/ui/Typography'
 import { cn } from '@/lib/cn'
 
-export interface FormSectionProps {
+export interface FormSectionProps extends Pick<AriaAttributes, 'aria-invalid' | 'aria-describedby'> {
   /** Visible heading, rendered as an `<h3>` and used as the group's
    * accessible name via `aria-labelledby`. */
   title: string
@@ -16,16 +16,16 @@ export interface FormSectionProps {
 }
 
 /** Accessible group for form controls with consistent spacing. */
-export function FormSection({ title, description, children, className }: FormSectionProps) {
+export function FormSection({ title, description, children, className, 'aria-invalid': invalid, 'aria-describedby': describedBy }: FormSectionProps) {
   const headingId = useId()
   const descriptionId = useId()
   const hasDescription = Boolean(description)
 
   return (
-    <div
-      role="group"
+    <fieldset
       aria-labelledby={headingId}
-      aria-describedby={hasDescription ? descriptionId : undefined}
+      aria-describedby={[hasDescription ? descriptionId : undefined, describedBy].filter(Boolean).join(' ') || undefined}
+      aria-invalid={invalid}
       className={cn('glass-panel min-w-0 overflow-visible p-4 sm:p-6 space-y-4', className)}
     >
       <div>
@@ -39,6 +39,6 @@ export function FormSection({ title, description, children, className }: FormSec
       <div className="space-y-4">
         {children}
       </div>
-    </div>
+    </fieldset>
   )
 }

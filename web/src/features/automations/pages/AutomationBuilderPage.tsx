@@ -999,15 +999,11 @@ export default function AutomationBuilderPage() {
             </FadeIn>
 
             <FadeIn delay={0.1}>
-              <div
-                data-tour="automation-conditions"
-                role="group"
-                aria-label={t('automations.builder.onlyIf', 'Only if (conditions)')}
-                aria-invalid={!conditionsReady ? 'true' : undefined}
-                aria-describedby={conditionError ? conditionErrorId : undefined}
-              >
+              <div data-tour="automation-conditions">
                 <FormSection
                   title={t('automations.builder.onlyIf', 'Only if (conditions)')}
+                  aria-invalid={!conditionsReady ? 'true' : undefined}
+                  aria-describedby={conditionError ? conditionErrorId : undefined}
                   description={t(
                     'automations.builder.onlyIfDesc',
                     'Optional checks that must pass before actions run.',

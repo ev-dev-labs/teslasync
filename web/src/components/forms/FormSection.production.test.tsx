@@ -241,3 +241,50 @@ describe('FormSection production composition', () => {
     expect(group).toHaveAccessibleDescription('اختر تفضيلاتك')
   })
 })
+
+
+describe('FormSection validation semantics', () => {
+  it('associates help and validation evidence with one named group', () => {
+    render(<>
+      <p id="condition-error">Choose a valid geofence.</p>
+      <FormSection title="Only if" description="Optional checks." aria-invalid="true" aria-describedby="condition-error">
+        <Input label="Geofence" />
+      </FormSection>
+    </>);
+    const group = screen.getByRole('group', { name: 'Only if' });
+    expect(group).toHaveAttribute('aria-invalid', 'true');
+    expect(group).toHaveAccessibleDescription('Optional checks. Choose a valid geofence.');
+    expect(within(group).getByRole('textbox', { name: 'Geofence' })).toBeInTheDocument();
+  });
+
+  it('clears validation without removing the persistent help association', () => {
+    const { rerender } = render(<>
+      <p id="condition-error">Choose a valid geofence.</p>
+      <FormSection title="Only if" description="Optional checks." aria-invalid="true" aria-describedby="condition-error">
+        <Input label="Geofence" />
+      </FormSection>
+    </>);
+    const group = screen.getByRole('group', { name: 'Only if' });
+    expect(group).toHaveAttribute('aria-invalid', 'true');
+    rerender(<>
+      <p id="condition-error">Choose a valid geofence.</p>
+      <FormSection title="Only if" description="Optional checks.">
+        <Input label="Geofence" />
+      </FormSection>
+    </>);
+    expect(screen.getByRole('group', { name: 'Only if' })).toBe(group);
+    expect(group).not.toHaveAttribute('aria-invalid');
+    expect(group).toHaveAccessibleDescription('Optional checks.');
+  });
+
+  it('retains an external error description without help text', () => {
+    render(<>
+      <p id="condition-error">Choose a valid geofence.</p>
+      <FormSection title="Only if" aria-describedby="condition-error">
+        <Input label="Geofence" />
+      </FormSection>
+    </>);
+    expect(screen.getByRole('group', { name: 'Only if' }))
+      .toHaveAccessibleDescription('Choose a valid geofence.');
+  });
+});

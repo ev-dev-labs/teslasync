@@ -51,6 +51,10 @@ const H = vi.hoisted(() => ({
   realTrigger: false,
 }));
 
+// These query-boundary fixtures model source failures while the browser is online.
+// Unrelated settings fetches must not flip their recovery controls into offline mode.
+vi.mock('@/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => true }));
+
 vi.mock('@/hooks/useSettings', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
   return {
@@ -371,10 +375,12 @@ describe('condition readiness and submit validation', () => {
     await screen.findByDisplayValue('Existing One');
     const group = screen.getByRole('group', { name: 'Only if (conditions)' });
     expect(group).toHaveAttribute('aria-invalid', 'true');
-    const feedback = document.getElementById(group.getAttribute('aria-describedby')!);
+    const descriptionIds = group.getAttribute('aria-describedby')!.split(/\s+/);
+    expect(descriptionIds.map(id => document.getElementById(id))).not.toContain(null);
+    const feedback = document.getElementById(descriptionIds.at(-1)!);
     expect(feedback).toBeInTheDocument();
     expect(feedback?.textContent).not.toBe('');
-    expect(screen.getAllByText('Not ready yet')).toHaveLength(2);
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(1);
     fireEvent.submit(container.querySelector('form')!);
     expect(H.updateMutateAsync).not.toHaveBeenCalled();
     expect(H.createMutateAsync).not.toHaveBeenCalled();
@@ -391,7 +397,7 @@ describe('condition readiness and submit validation', () => {
     H.updateMutateAsync.mockResolvedValue({ id: 5 });
     const { container } = renderPage('/automations/5/edit');
     await screen.findByDisplayValue('Existing One');
-    expect(screen.getAllByText('Ready to save')).toHaveLength(2);
+    expect(screen.getAllByText('Ready to save')).toHaveLength(1);
     expect(screen.getByRole('group', { name: 'Only if (conditions)' })).not.toHaveAttribute('aria-invalid');
     fireEvent.submit(container.querySelector('form')!);
     await waitFor(() => expect(H.updateMutateAsync).toHaveBeenCalledWith({
@@ -708,7 +714,7 @@ describe('AutomationBuilderPage — create mode', () => {
     expect(screen.getByText('conditions:0')).toBeInTheDocument();
     expect(screen.getByText('actions:1')).toBeInTheDocument();
     // Readiness starts incomplete (no name, no trigger).
-    expect(screen.getAllByText('Not ready yet')).toHaveLength(2);
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(1);
     // Form controls are present and labelled.
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Trigger type' })).toBeInTheDocument();
@@ -716,14 +722,14 @@ describe('AutomationBuilderPage — create mode', () => {
 
   it('flips the readiness badge to "Ready to save" once name + trigger are set', () => {
     renderPage('/automations/new');
-    expect(screen.getAllByText('Not ready yet')).toHaveLength(2);
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(1);
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Commute Prep' } });
     fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
       target: { value: 'trigger_signal' },
     });
 
-    expect(screen.getAllByText('Ready to save')).toHaveLength(2);
+    expect(screen.getAllByText('Ready to save')).toHaveLength(1);
     expect(screen.queryByText('Not ready yet')).not.toBeInTheDocument();
     // The stubbed configurator reflects the newly created default trigger.
     expect(screen.getByText('tc:trigger_signal')).toBeInTheDocument();
@@ -780,7 +786,7 @@ describe('AutomationBuilderPage — create mode', () => {
     expect(rows[0].querySelector('svg')).toHaveClass(neonColorMap.green.text);
     expect(rows[2].querySelector('svg')).toHaveClass(typography.color.muted);
     expect(within(assistant).getByText('Select a geofence for each geofence condition')).toBeInTheDocument();
-    expect(screen.getAllByText('Not ready yet')).toHaveLength(2);
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(1);
     expect(H.updateMutateAsync).not.toHaveBeenCalled();
   });
 
