@@ -284,41 +284,11 @@ export function DataFreshness({
 
   if (variant === 'widget') {
     return (
-      <span className="group/freshness inline-flex min-w-0 items-center gap-2">
-        {onRefresh && (
-          <IconButton
-            icon={<RefreshCw className={cn('h-4 w-4', isFetching && !reduce && 'animate-spin')} aria-hidden="true" />}
-            label={ariaLabel}
-            aria-label={ariaLabel}
-            variant="ghost"
-            onClick={handleClick}
-            busy={isFetching}
-            disabled={isFetching}
-            className="!h-8 !w-8"
-          />
-        )}
-        <span
-          className={cn('inline-flex min-w-0 items-center gap-1.5 text-xs', cfg.color)}
-          title={title}
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          aria-label={ariaLabel}
-          data-bg-refetch={isBackgroundRefetch ? 'true' : undefined}
-        >
-          {!compact && relativeTime && (
-            <span className={cn(
-              'tabular-nums transition-opacity motion-reduce:transition-none',
-              status === 'fresh'
-                ? 'invisible opacity-0 group-hover/freshness:visible group-hover/freshness:opacity-100 group-focus-within/freshness:visible group-focus-within/freshness:opacity-100'
-                : 'visible opacity-100',
-            )}>
-              {relativeTime}
-            </span>
-          )}
+      <IconButton
+        icon={(
           <span
             className={cn(
-              'relative h-2 w-2 shrink-0 rounded-full',
+              'relative h-2.5 w-2.5 shrink-0 rounded-full',
               status === 'stale'
                 ? 'border border-[var(--semantic-warning)] bg-transparent'
                 : cfg.dotColor,
@@ -331,8 +301,15 @@ export function DataFreshness({
               <span className={cn('absolute inset-0 animate-ping [animation-iteration-count:2] rounded-full opacity-60', cfg.dotColor)} />
             )}
           </span>
-        </span>
-      </span>
+        )}
+        label={ariaLabel}
+        aria-label={ariaLabel}
+        variant="ghost"
+        onClick={onRefresh ? handleClick : undefined}
+        busy={isFetching}
+        disabled={!onRefresh || isFetching}
+        className="!h-7 !w-7 !min-h-0 !min-w-0 !p-0"
+      />
     );
   }
 

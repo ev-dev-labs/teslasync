@@ -3694,6 +3694,7 @@
     "noChargeData": "No charge data",
     "noChargeHistory": "No charge sessions yet",
     "noClimate": "No climate data",
+    "noClimateDescription": "Climate readings will appear after the vehicle sends its next telemetry update.",
     "noCommands": "No commands sent",
     "noDegradation": "No degradation data",
     "noDetails": "No details available",

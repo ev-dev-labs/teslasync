@@ -670,7 +670,7 @@ export default function GlancePage() {
               to="/"
               className="inline-flex min-h-11 min-w-11 items-center rounded-control px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
             >
-              <Caption>{t('glance.openApp', 'Open full app →')}</Caption>
+              <Caption className="whitespace-nowrap">{t('glance.openApp', 'Open full app →')}</Caption>
             </Link>
           </div>
         </>

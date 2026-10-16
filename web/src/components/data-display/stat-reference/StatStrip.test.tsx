@@ -86,8 +86,17 @@ describe('single StatStrip renderer contract', () => {
     expect(container.querySelector('[data-columns]')).toHaveAttribute('data-columns', '3');
     rerender(<StatStrip metrics={[...metrics, ...metrics, ...metrics, { metricId: 'duration', rawValue: 60 }]} period={period} />);
     expect(container.querySelectorAll('[data-stat]')).toHaveLength(7);
-    expect(container.querySelectorAll('[data-stat-bank]')).toHaveLength(2);
-    expect(container.querySelectorAll('[data-stat-bank]')[0]).toHaveAttribute('data-columns', '6');
+    expect(container.querySelectorAll('[data-stat-bank]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-stat-bank]')[0]).toHaveAttribute('data-columns', '3');
+    expect([...container.querySelectorAll('[data-stat-bank]')].map(bank => bank.querySelectorAll('[data-stat]').length))
+      .toEqual([3, 2, 2]);
+  });
+  it('limits six metrics to two balanced three-tile rows', () => {
+    const { container } = render(<StatStrip metrics={Array.from({ length: 6 }, (_, index) => ({
+      metricId: 'count' as const, rawValue: index, label: `Metric ${index + 1}`,
+    }))} period={period} maxPerRow={3} />);
+    expect([...container.querySelectorAll('[data-stat-bank]')].map(bank => bank.querySelectorAll('[data-stat]').length))
+      .toEqual([3, 3]);
   });
   it('preserves supplied comparisons and breakdown facts and updates precision mounted', () => {
     setGlobalPrecision(2);

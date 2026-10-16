@@ -11,6 +11,7 @@ import {
   type FreshnessQuery,
 } from '@/components/data-display';
 import type { WidgetHelp } from './types';
+import { WidgetTitleContext } from './WidgetTitleContext';
 
 export interface WidgetShellProps {
   title?: string;
@@ -135,7 +136,7 @@ export function WidgetShell({
             </div>
             {description && <p className={dashboardTokens.description}>{description}</p>}
           </div>
-          <div className="flex max-w-full flex-wrap items-center gap-2">
+          <div className="ms-auto flex shrink-0 items-center gap-1.5">
             {status}
             {widgetId && dashboardId && (
               <PinButton
@@ -169,7 +170,7 @@ export function WidgetShell({
       <div
         className={cn(
           dashboardTokens.body,
-          !noPadding ? 'px-4 pb-3 overflow-auto' : 'flex flex-col overflow-hidden',
+          !noPadding ? 'px-4 pb-3' : 'flex flex-col',
           degradedContent && 'opacity-[0.45] transition-opacity duration-fast motion-reduce:transition-none',
         )}
         data-content-degraded={degradedContent || undefined}
@@ -183,7 +184,7 @@ export function WidgetShell({
         ) : (
           <>
             {dataState && <StaleRefreshWarning state={dataState} className="mb-2" />}
-            {children}
+            <WidgetTitleContext.Provider value={title}>{children}</WidgetTitleContext.Provider>
           </>
         )}
       </div>

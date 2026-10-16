@@ -32,7 +32,7 @@ afterEach(() => {
 });
 
 describe('production StatStrip content preservation', () => {
-  it('renders every occurrence in ordered six-column banks without mutating raw measurements', () => {
+  it('renders every occurrence in balanced rows without mutating raw measurements', () => {
     const metrics: readonly StatMetric[] = Object.freeze(Array.from({ length: 14 }, (_, index) =>
       Object.freeze({ metricId: 'count' as const, rawValue: index, occurrenceId: `record-${index}`,
         label: `Source measurement ${index}` })));
@@ -44,8 +44,8 @@ describe('production StatStrip content preservation', () => {
     expect(tiles.map(tile => tile.querySelector('[data-stat-value]')?.textContent))
       .toEqual(metrics.map(metric => String(metric.rawValue)));
     expect([...container.querySelectorAll('[data-stat-bank]')].map(bank => bank.getAttribute('data-columns')))
-      .toEqual(['6', '6', '2']);
-    expect(screen.getByTestId('production-stats-kpis-2').querySelectorAll('[data-stat]')).toHaveLength(2);
+      .toEqual(['3', '3', '3', '3', '2']);
+    expect(screen.getByTestId('production-stats-kpis-4').querySelectorAll('[data-stat]')).toHaveLength(2);
     expect(metrics.map(metric => metric.rawValue)).toEqual(Array.from({ length: 14 }, (_, index) => index));
   });
 

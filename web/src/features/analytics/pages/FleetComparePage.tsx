@@ -656,7 +656,7 @@ export default function FleetComparePage() {
               to="/period-compare"
               className="font-medium text-[var(--text-primary)] underline underline-offset-2"
             >
-              {t('comparison.banner.toPeriodCta', 'Open period comparison →')}
+              <span className="whitespace-nowrap">{t('comparison.banner.toPeriodCta', 'Open period comparison →')}</span>
             </Link>
           </AlertBanner>
         </FadeIn>

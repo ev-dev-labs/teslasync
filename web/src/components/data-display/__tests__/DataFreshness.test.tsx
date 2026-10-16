@@ -68,7 +68,7 @@ describe('FRESHNESS_COLORS', () => {
 })
 
 describe('DataFreshness widget variant', () => {
-  it('renders one status dot and a separate icon-only refresh action', () => {
+  it('uses the freshness dot itself as the icon-only refresh action', () => {
     const onRefresh = vi.fn()
     const { container } = render(
       <DataFreshness
@@ -81,10 +81,9 @@ describe('DataFreshness widget variant', () => {
       />,
     )
 
-    const status = screen.getByRole('status', { name: /Refresh data/ })
-    expect(status.querySelectorAll('span.rounded-full')).toHaveLength(1)
-    expect(status.querySelector('span.rounded-full')).toHaveClass('bg-[var(--semantic-success)]')
     const refresh = screen.getByRole('button', { name: /Refresh data/ })
+    expect(refresh.querySelectorAll('span.rounded-full')).toHaveLength(1)
+    expect(refresh.querySelector('span.rounded-full')).toHaveClass('bg-[var(--semantic-success)]')
     expect(refresh).toHaveAttribute('aria-describedby')
     expect(refresh).not.toHaveTextContent('Refresh data')
     fireEvent.click(refresh)
@@ -126,12 +125,12 @@ describe('DataFreshness widget variant', () => {
   it('uses an outlined warning ring for stale data and a slow pulse for errors', () => {
     const props = { updatedAt: Date.now(), isFetching: false, isStale: false, isError: false, variant: 'widget' as const }
     const { container, rerender } = render(<DataFreshness {...props} isStale />)
-    expect(screen.getByRole('status').querySelector('span.rounded-full')).toHaveClass(
+    expect(screen.getByRole('button').querySelector('span.rounded-full')).toHaveClass(
       'border-[var(--semantic-warning)]',
       'bg-transparent',
     )
     rerender(<DataFreshness {...props} isError />)
-    expect(screen.getByRole('status').querySelector('span.rounded-full')).toHaveClass(
+    expect(screen.getByRole('button').querySelector('span.rounded-full')).toHaveClass(
       'animate-[pulse_2s_ease-in-out_infinite]',
     )
     expect(container.querySelector('svg.lucide-wifi, svg.lucide-wifi-off')).not.toBeInTheDocument()

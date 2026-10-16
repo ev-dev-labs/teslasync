@@ -457,7 +457,7 @@ export default function PeriodComparePage() {
               to="/vehicle-comparison"
               className="font-medium text-[var(--theme-primary)] underline-offset-2 hover:underline"
             >
-              {t('compare.banner.toFleetCta', 'Open fleet comparison →')}
+              <span className="whitespace-nowrap">{t('compare.banner.toFleetCta', 'Open fleet comparison →')}</span>
             </Link>
           </AlertBanner>
         </FadeIn>
@@ -484,7 +484,7 @@ export default function PeriodComparePage() {
                 size: 'full',
                 content: (
                   <>
-                    <OperationalBrief compact testId="period-compare-summary"
+                    <OperationalBrief compact variant="embedded" testId="period-compare-summary"
                       eyebrow={t('compare.title', 'Period comparison')}
                       title={t('compare.brief.title', 'Period comparison evidence')}
                       description={t('compare.brief.description', 'Period A measurements with Period B baselines and semantic changes. The two source windows are independent.')}

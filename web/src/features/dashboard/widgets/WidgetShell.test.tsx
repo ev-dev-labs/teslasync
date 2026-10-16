@@ -464,7 +464,7 @@ describe('WidgetShell — pin button', () => {
 });
 
 describe('WidgetShell — content padding', () => {
-  it('uses the scrollable padded container by default', () => {
+  it('uses the padded content container without a nested scroll area', () => {
     render(
       <WidgetShell title="Battery">
         <Child />
@@ -472,11 +472,11 @@ describe('WidgetShell — content padding', () => {
     );
 
     const wrapper = screen.getByTestId('child').parentElement as HTMLElement;
-    expect(wrapper.className).toContain('overflow-auto');
+    expect(wrapper.className).not.toContain('overflow-auto');
     expect(wrapper.className).toContain('px-4');
   });
 
-  it('drops padding, stretches unpadded content through flex layout and clips overflow', () => {
+  it('drops padding and stretches unpadded content without clipping overflow', () => {
     render(
       <WidgetShell title="Battery" noPadding>
         <Child />
@@ -484,7 +484,7 @@ describe('WidgetShell — content padding', () => {
     );
 
     const wrapper = screen.getByTestId('child').parentElement as HTMLElement;
-    expect(wrapper.className).toContain('overflow-hidden');
+    expect(wrapper.className).not.toContain('overflow-hidden');
     expect(wrapper).toHaveClass('flex', 'flex-col');
     expect(wrapper.className).not.toContain('overflow-auto');
   });

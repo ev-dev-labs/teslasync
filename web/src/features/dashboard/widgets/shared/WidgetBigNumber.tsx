@@ -1,7 +1,9 @@
+import { useContext } from 'react';
 import { AnimatedNumber } from '@/components/data-display';
 import { Badge } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { dashboardTokens } from '../../lib/dashboardTokens';
+import { WidgetTitleContext } from '../WidgetTitleContext';
 
 const badgeVariantMap = {
   success: 'success',
@@ -38,6 +40,7 @@ export function WidgetBigNumber({
   align = 'start',
   size = 'primary',
 }: WidgetBigNumberProps) {
+  const widgetTitle = useContext(WidgetTitleContext);
   // A "big number" is only meaningful when it is a finite number. Guarding on
   // `!== null` alone let NaN / ±Infinity through — the non-animated path then
   // rendered the literal string "NaN"/"Infinity", and AnimatedNumber silently
@@ -52,7 +55,7 @@ export function WidgetBigNumber({
 
   return (
     <div className={cn('flex h-full min-w-0 flex-col justify-center gap-1', align === 'center' ? 'items-center text-center' : 'items-start')}>
-      {label && (
+      {label && label !== widgetTitle && (
         <span className={dashboardTokens.metricLabel}>{label}</span>
       )}
       <div className="flex max-w-full flex-wrap items-baseline gap-x-1.5 gap-y-1">

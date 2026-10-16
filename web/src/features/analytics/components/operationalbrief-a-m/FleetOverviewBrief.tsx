@@ -48,7 +48,7 @@ export function FleetOverviewBrief({ query, scope, retained }: {
   const operationalMetrics = useOperationalMetrics(metrics);
   const loading = isLoading && !data && query.fetchStatus !== 'paused';
   const partial = data?.partial_result?.is_partial === true;
-  return <OperationalBrief compact metrics={operationalMetrics} loading={loading}
+  return <OperationalBrief compact variant="embedded" metrics={operationalMetrics} loading={loading}
     eyebrow={t('analytics.title', 'Fleet analytics')}
     title={t('analytics.brief.overview', 'Fleet performance summary')}
     description={t('analytics.brief.overviewDescription', 'Returned fleet aggregates; gasoline savings and CO₂ saved retain the existing distance-based estimates.')}

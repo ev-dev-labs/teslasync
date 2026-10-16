@@ -51,8 +51,8 @@ export default function PhysicsCarKeptLivingSection({ physics }: { physics: Phys
       {(living?.notes ?? []).length ? (living?.notes ?? []).map((note, index) => <Text key={`${index}-${note}`} as="p" variant="bodySm">{note}</Text>) :
         <Text as="p" variant="bodySm">{t('teslaOnly.livingNoNotes', 'No explanatory notes returned; a silent broker does not identify the missing source.')}</Text>}
       <div className="flex flex-wrap gap-4">
-        <Link to="/tesla-physics/clocks" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.livingOpenClocks', 'Inspect event and ingest clocks')} →</Link>
-        <Link to="/tesla-physics/unknown" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.livingOpenUnknown', 'Inspect unknown-hour budgets')} →</Link>
+        <Link to="/tesla-physics/clocks" className="whitespace-nowrap text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.livingOpenClocks', 'Inspect event and ingest clocks')} →</Link>
+        <Link to="/tesla-physics/unknown" className="whitespace-nowrap text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.livingOpenUnknown', 'Inspect unknown-hour budgets')} →</Link>
       </div>
     </Evidence>
   </>;

@@ -65,7 +65,7 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
             title={t('widget.climateSummaryTitle', 'Returned climate temperatures')}
             description={t('widget.climateSummaryDescription', 'Cabin and outside temperatures remain separate SI measurements, converted only for display; HVAC, defrost and heater states remain below.')}
             scope={t('widget.climateSummaryScope', 'Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established.', { id })}
-            testId="dashboard-climate-temperatures-brief" />
+            testId="dashboard-climate-temperatures-brief" showTitle={false} />
           <WidgetStatusGrid cells={[
             { id: 'hvac', label: t('widget.hvac', 'HVAC'), status: hvacState == null ? 'unknown' : hvacState ? 'ok' : 'inactive', statusLabel: hvacState == null ? t('hero.unknownStatus', 'Unknown') : hvacState ? t('widget.hvacOn', 'On') : t('widget.hvacOff', 'Off') },
             ...(climateData.defrost_mode && climateData.defrost_mode !== 'Off' ? [{
@@ -77,9 +77,11 @@ export default function ClimateStatusWidget({ vehicleId }: WidgetProps) {
           ]} />
         </div>
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        <EmptyState
+          variant="informational"
           icon={<Thermometer className="h-5 w-5" />}
           message={t('widget.noClimate', 'No climate data')}
+          description={t('widget.noClimateDescription', 'Climate readings will appear after the vehicle sends its next telemetry update.')}
           className="py-4"
         />
       )}

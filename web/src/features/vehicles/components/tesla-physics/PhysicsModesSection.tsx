@@ -51,8 +51,8 @@ export default function PhysicsModesSection({ physics }: { physics: PhysicsPage 
         })}</Text>) : <Text as="p" variant="bodySm">{t('teslaOnly.modesNoDrops', 'No meter drops in returned evidence; no historical mode conclusion follows.')}</Text>
         : <Text as="p" variant="bodySm">{t('teslaOnly.modesMeterMissing', 'Meter evidence was not returned; mode context cannot be cross-checked against counter drops.')}</Text>}
       <div className="flex flex-wrap gap-4">
-        <Link to="/tesla-physics/meters" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.modesOpenMeters', 'Inspect before/after meter evidence')} →</Link>
-        <Link to="/tesla-physics/firmware-epochs" className="text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.modesOpenEpochs', 'Inspect observed firmware epochs')} →</Link>
+        <Link to="/tesla-physics/meters" className="whitespace-nowrap text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.modesOpenMeters', 'Inspect before/after meter evidence')} →</Link>
+        <Link to="/tesla-physics/firmware-epochs" className="whitespace-nowrap text-[var(--theme-primary)] underline-offset-4 hover:underline">{t('teslaOnly.modesOpenEpochs', 'Inspect observed firmware epochs')} →</Link>
       </div>
     </Evidence>
   </>;

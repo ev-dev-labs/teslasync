@@ -13,7 +13,7 @@ export function StatStrip({
   metrics, period, id, title, variant = 'standalone', loading = false,
   error, retained = false, breakdown, preferences, className,
   periodInHeader = false, periodHeaderId, periodContextInHeader = false,
-  comparisonLabel, secondary, footer, emptyContent, testId,
+  comparisonLabel, secondary, footer, emptyContent, testId, maxPerRow = 3,
 }: StatStripProps) {
   const { t } = useTranslation();
   const generatedId = useId();
@@ -22,8 +22,15 @@ export function StatStrip({
   const contextInHeader = periodInHeader && periodContextInHeader && Boolean(periodHeaderId);
   const items = metrics ?? [];
   const facts = breakdown ?? [];
-  const banks = Array.from({ length: Math.ceil(items.length / 6) }, (_, index) => items.slice(index * 6, index * 6 + 6));
-  return <section id={id} data-testid={testId} data-stat-strip={id ?? `stat-${generatedId}`} data-period-kind={period.kind} data-retained={retained}
+  const rowCount = Math.ceil(items.length / maxPerRow);
+  const baseRows = rowCount > 0 ? Math.floor(items.length / rowCount) : 0;
+  const expandedRows = rowCount > 0 ? items.length % rowCount : 0;
+  const banks = Array.from({ length: rowCount }, (_, index) => {
+    const count = baseRows + (index < expandedRows ? 1 : 0);
+    const start = index * baseRows + Math.min(index, expandedRows);
+    return items.slice(start, start + count);
+  });
+  return <section id={id} data-testid={testId} data-stat-strip={id ?? `stat-${generatedId}`} data-period-kind={period.kind} data-max-per-row={maxPerRow} data-retained={retained}
     aria-busy={loading} aria-describedby={periodInHeader ? periodHeaderId : undefined}
     className={cn(styles.root, variant === 'standalone' &&
       'rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)]', className)}>

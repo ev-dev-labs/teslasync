@@ -17,11 +17,13 @@ interface DashboardSourceBriefProps {
   loading?: boolean;
   testId: string;
   variant?: 'standalone' | 'embedded';
+  showTitle?: boolean;
 }
 
 export function DashboardSourceBrief({
   metrics, state, eyebrow, title, description, scope, freshness, loading, testId,
   variant = 'embedded',
+  showTitle = true,
 }: DashboardSourceBriefProps) {
   const { t } = useTranslation();
   const operationalMetrics = useOperationalMetrics(metrics);
@@ -38,6 +40,7 @@ export function DashboardSourceBrief({
     <OperationalBrief
       compact
       variant={variant}
+      hideHeading={!showTitle}
       testId={testId}
       eyebrow={eyebrow}
       title={title}

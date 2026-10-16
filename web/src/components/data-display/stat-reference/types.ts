@@ -41,6 +41,8 @@ export interface StatStripProps {
   readonly footer?: ReactNode;
   readonly emptyContent?: ReactNode;
   readonly testId?: string;
+  /** Maximum number of metric tiles in one row; rows are distributed evenly. */
+  readonly maxPerRow?: 2 | 3 | 4;
   /** Only for StatGroup: period is provided visibly by its card header. */
   readonly periodInHeader?: boolean;
   readonly periodHeaderId?: string;

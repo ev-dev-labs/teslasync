@@ -117,7 +117,8 @@ describe('ClimateStatusWidget — rendering', () => {
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
     expect(brief).toHaveTextContent('0°C');
     expect(brief).toHaveTextContent('-10°C');
-    expect(brief).toHaveTextContent('continuous recording coverage is not established');
+    expect(brief).not.toHaveTextContent('continuous recording coverage is not established');
+    expect(brief.querySelector('h4')).toBeNull();
     expect(screen.getByText('HVAC')).toBeInTheDocument();
     expect(screen.getByText('Defrost')).toBeInTheDocument();
   });
@@ -226,7 +227,7 @@ describe('ClimateStatusWidget — rendering', () => {
     });
     render(<ClimateStatusWidget size={STANDARD} />);
 
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('Defrost')).not.toBeInTheDocument();
     expect(screen.queryByText('Heater')).not.toBeInTheDocument();

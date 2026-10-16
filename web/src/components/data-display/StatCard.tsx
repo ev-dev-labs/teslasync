@@ -84,7 +84,7 @@ export function StatCard({ label, value, kind, unit, icon, trend, sublabel, load
   return (
     <Card className={cn('flex min-h-28 flex-col gap-2 p-5', className)} style={style}>
       <div className="flex items-center justify-between gap-3">
-        <Text as="span" size="sm" weight="medium" color="secondary">{label}</Text>
+        {label && <Text as="span" size="sm" weight="medium" color="secondary">{label}</Text>}
         {icon ? (
           <span
             aria-hidden="true"

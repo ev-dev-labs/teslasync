@@ -1,9 +1,10 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { dashboardTokens } from '../../lib/dashboardTokens';
+import { WidgetTitleContext } from '../WidgetTitleContext';
 
 export interface StatGridItem {
   label: string;
@@ -26,13 +27,16 @@ export interface WidgetStatGridProps {
 }
 
 function autoCols(count: number): 2 | 3 | 4 {
+  if (count <= 2) return 2;
   if (count % 3 === 0) return 3;
-  if (count % 4 === 0) return 4;
+  if (count % 4 === 1 && count % 3 === 2) return 3;
+  if (count % 4 === 0 || count % 4 >= 2) return 4;
   return 2;
 }
 
 export function WidgetStatGrid({ stats, compact, cols, maxPerRow }: WidgetStatGridProps) {
   const { t } = useTranslation('dashboard');
+  const widgetTitle = useContext(WidgetTitleContext);
   const items = stats ?? [];
 
   if (items.length === 0) {
@@ -56,7 +60,7 @@ export function WidgetStatGrid({ stats, compact, cols, maxPerRow }: WidgetStatGr
       {items.map((stat, index) => (
         <StatCard
           key={`${stat.label}-${index}`}
-          label={stat.label}
+          label={stat.label === widgetTitle ? '' : stat.label}
           value={stat.value}
           unit={stat.unit}
           icon={undefined}
