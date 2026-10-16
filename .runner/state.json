@@ -1154,7 +1154,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 1,
-    "Notes": " Attempt 1: FAILED | fix-analytics-analytics-f02 | Validation blocked within time box: Vitest startup stalled and Go race compiler unavailable | done so far: updated all nine expected files with typed metadata, partial trust disclosure, source-specific retry, retained totals, paused-loading handling and regression tests Attempt 2: FAILED | fix-analytics-analytics-f02 | Required tests could not execute: Go unavailable and frontend dependencies incomplete | done so far: inspected existing typed partial metadata, nonblocking source-specific retry, retained totals and regression coverage; no source changes Attempt 1: FAILED | fix-analytics-analytics-f02 | Required frontend tests blocked by external i18n catalog startup failure | done so far: inspected existing implementation and regression coverage; Go race tests passed; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-analytics-analytics-f02 | Validation blocked within time box: Vitest startup stalled and Go race compiler unavailable | done so far: updated all nine expected files with typed metadata, partial trust disclosure, source-specific retry, retained totals, paused-loading handling and regression tests Attempt 2: FAILED | fix-analytics-analytics-f02 | Required tests could not execute: Go unavailable and frontend dependencies incomplete | done so far: inspected existing typed partial metadata, nonblocking source-specific retry, retained totals and regression coverage; no source changes Attempt 1: FAILED | fix-analytics-analytics-f02 | Required frontend tests blocked by external i18n catalog startup failure | done so far: inspected existing implementation and regression coverage; Go race tests passed; no source changes | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified.",
     "Commit": "cc13feb90b",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1176,7 +1176,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-analytics-analytics-f12 | canonical SI cutover requires out-of-scope consumers and missing Phase-48 methodology | done so far: read instructions and traced endpoint, response type, hooks and populated-data consumers Attempt 2: FAILED | fix-analytics-analytics-f12 | atomic SI cutover requires out-of-scope consumers and missing Phase-48 methodology | done so far: read contracts and instructions, verified legacy endpoint/type/consumer dependencies, attempted both required test commands; no files changed Retry failed: AnalyticsPage.test.tsx has 6 failures for partial-source/load state copy and Analytics/Statistics suites include collapsed-brief details missing on the face.",
+    "Notes": "Attempt 1: FAILED | fix-analytics-analytics-f12 | canonical SI cutover requires out-of-scope consumers and missing Phase-48 methodology | done so far: read instructions and traced endpoint, response type, hooks and populated-data consumers Attempt 2: FAILED | fix-analytics-analytics-f12 | atomic SI cutover requires out-of-scope consumers and missing Phase-48 methodology | done so far: read contracts and instructions, verified legacy endpoint/type/consumer dependencies, attempted both required test commands; no files changed Retry failed: AnalyticsPage.test.tsx has 6 failures for partial-source/load state copy and Analytics/Statistics suites include collapsed-brief details missing on the face. | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified. This verifies the Statistics consumer only; canonical fleet SI cutover, AnalyticsPage/type suites and Go race gate remain unverified for this item, so it remains failed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1191,7 +1191,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-04 | scoped verification blocked by catalog preflight | done so far: updated web\\src\\features\\analytics\\pages\\StatisticsPage.tsx and web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx with partial disclosure, paused-load handling, and regression coverage DONE | fix-analytics-statistics-stat-qa-04 | no change needed: requested implementation and regression coverage already present; test execution stalled without output",
+    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-04 | scoped verification blocked by catalog preflight | done so far: updated web\\src\\features\\analytics\\pages\\StatisticsPage.tsx and web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx with partial disclosure, paused-load handling, and regression coverage DONE | fix-analytics-statistics-stat-qa-04 | no change needed: requested implementation and regression coverage already present; test execution stalled without output | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1818,7 +1818,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-01 | required consumer edits outside assigned ownership; test startup blocked | done so far: added raw-envelope regression in web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx; production hook unchanged Attempt 2: FAILED | fix-analytics-statistics-stat-qa-01 | required consumer edits outside assigned ownership; scoped test runners stalled without output | done so far: confirmed wire mismatch and both direct consumers; preserved existing raw-envelope regression; no files changed",
+    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-01 | required consumer edits outside assigned ownership; test startup blocked | done so far: added raw-envelope regression in web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx; production hook unchanged Attempt 2: FAILED | fix-analytics-statistics-stat-qa-01 | required consumer edits outside assigned ownership; scoped test runners stalled without output | done so far: confirmed wire mismatch and both direct consumers; preserved existing raw-envelope regression; no files changed | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified.",
     "Commit": "930055010e",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1833,7 +1833,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified.",
     "Commit": "5b5afd5ef6",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1845,10 +1845,10 @@
       "web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "failed",
-    "WorkAttempts": 2,
+    "Status": "done",
+    "WorkAttempts": 3,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-03 | prerequisite hook/key and response-envelope reconciliation missing outside allowed scope | done so far: inspected page, tests, hook and handler; attempted focused tests; no files changed Attempt 2: FAILED | fix-analytics-statistics-stat-qa-03 | prerequisite hook/key and response-envelope reconciliation remains outside allowed scope | done so far: read contracts and inspected page, tests, hook and supported handler bounds; attempted focused tests without output; no files changed Attempt 1: FAILED | fix-analytics-statistics-stat-qa-03 | prerequisite state hook/key bounds support missing outside allowed scope | done so far: inspected page, tests, reconciled envelope and supported handler bounds; attempted focused tests without output; no files changed Attempt 2: FAILED | fix-analytics-statistics-stat-qa-03 | prerequisite state hook/key bounds support missing outside assigned scope | done so far: read contracts and inspected page, tests, hook, key, response envelope and supported handler bounds; attempted focused tests; no files changed",
+    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-03 | prerequisite hook/key and response-envelope reconciliation missing outside allowed scope | done so far: inspected page, tests, hook and handler; attempted focused tests; no files changed Attempt 2: FAILED | fix-analytics-statistics-stat-qa-03 | prerequisite hook/key and response-envelope reconciliation remains outside allowed scope | done so far: read contracts and inspected page, tests, hook and supported handler bounds; attempted focused tests without output; no files changed Attempt 1: FAILED | fix-analytics-statistics-stat-qa-03 | prerequisite state hook/key bounds support missing outside allowed scope | done so far: inspected page, tests, reconciled envelope and supported handler bounds; attempted focused tests without output; no files changed Attempt 2: FAILED | fix-analytics-statistics-stat-qa-03 | prerequisite state hook/key bounds support missing outside assigned scope | done so far: read contracts and inspected page, tests, hook, key, response envelope and supported handler bounds; attempted focused tests; no files changed | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified. Retry passed: existing implementation and preserved regressions satisfy the assigned source bounds, unsupported-health or charging-proxy requirement.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1864,7 +1864,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified.",
     "Commit": "d51ed017e8",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1877,10 +1877,10 @@
       "web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "failed",
-    "WorkAttempts": 2,
+    "Status": "done",
+    "WorkAttempts": 3,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-06 | verification commands stalled without output | done so far: updated web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsBatteryBrief.tsx, web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsSource.test.tsx, web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx Attempt 2: FAILED | fix-analytics-statistics-stat-qa-06 | scoped verification stalled without output | done so far: inspected existing implementation and regression coverage; no files changed Attempt 1: FAILED | fix-analytics-statistics-stat-qa-06 | required verification stalled without output | done so far: inspected existing fix and regression coverage in all three expected files; no new changes Attempt 2: FAILED | fix-analytics-statistics-stat-qa-06 | required tests blocked by external i18n catalog startup failure | done so far: inspected existing fix and regression coverage in all three expected files; no additional changes",
+    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-06 | verification commands stalled without output | done so far: updated web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsBatteryBrief.tsx, web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsSource.test.tsx, web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx Attempt 2: FAILED | fix-analytics-statistics-stat-qa-06 | scoped verification stalled without output | done so far: inspected existing implementation and regression coverage; no files changed Attempt 1: FAILED | fix-analytics-statistics-stat-qa-06 | required verification stalled without output | done so far: inspected existing fix and regression coverage in all three expected files; no new changes Attempt 2: FAILED | fix-analytics-statistics-stat-qa-06 | required tests blocked by external i18n catalog startup failure | done so far: inspected existing fix and regression coverage in all three expected files; no additional changes | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified. Retry passed: existing implementation and preserved regressions satisfy the assigned source bounds, unsupported-health or charging-proxy requirement.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1896,7 +1896,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-07 | verification blocked by test startup and external TypeScript errors | done so far: updated StatisticsMileageBrief.tsx, StatisticsSource.test.tsx, StatisticsPage.test.tsx with trust handling and lifecycle coverage DONE | fix-analytics-statistics-stat-qa-07 | no change needed: requested behavior and coverage already present; test execution blocked by external missing dependencies",
+    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-07 | verification blocked by test startup and external TypeScript errors | done so far: updated StatisticsMileageBrief.tsx, StatisticsSource.test.tsx, StatisticsPage.test.tsx with trust handling and lifecycle coverage DONE | fix-analytics-statistics-stat-qa-07 | no change needed: requested behavior and coverage already present; test execution blocked by external missing dependencies | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1909,10 +1909,10 @@
       "web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "failed",
-    "WorkAttempts": 1,
+    "Status": "done",
+    "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-analytics-statistics-stat-qa-08 | Required verification blocked by missing dependencies and locked native modules | done so far: Updated StatisticsPeriodBrief.tsx, StatisticsSource.test.tsx, and StatisticsPage.test.tsx with disclosures and focused regressions Attempt 2: FAILED | fix-analytics-statistics-stat-qa-08 | Required tests blocked by missing dependencies; restoration blocked by locked Rollup native module | done so far: Confirmed existing disclosures and focused regressions; no source changes Attempt 1: FAILED | fix-analytics-statistics-stat-qa-08 | Required verification stalled without output | done so far: Confirmed existing disclosures and regressions in StatisticsPeriodBrief.tsx, StatisticsSource.test.tsx, and StatisticsPage.test.tsx; preserved all files Retry failed: StatisticsPage.test.tsx has 48 failures; mixed-window, CO2 methodology and other source/context details are expected on the card face but are behind Review details.",
+    "Notes": "Attempt 1: FAILED | fix-analytics-statistics-stat-qa-08 | Required verification blocked by missing dependencies and locked native modules | done so far: Updated StatisticsPeriodBrief.tsx, StatisticsSource.test.tsx, and StatisticsPage.test.tsx with disclosures and focused regressions Attempt 2: FAILED | fix-analytics-statistics-stat-qa-08 | Required tests blocked by missing dependencies; restoration blocked by locked Rollup native module | done so far: Confirmed existing disclosures and focused regressions; no source changes Attempt 1: FAILED | fix-analytics-statistics-stat-qa-08 | Required verification stalled without output | done so far: Confirmed existing disclosures and regressions in StatisticsPeriodBrief.tsx, StatisticsSource.test.tsx, and StatisticsPage.test.tsx; preserved all files Retry failed: StatisticsPage.test.tsx has 48 failures; mixed-window, CO2 methodology and other source/context details are expected on the card face but are behind Review details. | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified. Retry passed: existing implementation and preserved regressions satisfy the assigned source bounds, unsupported-health or charging-proxy requirement.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1930,7 +1930,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified.",
     "Commit": "474de38f8f",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1948,7 +1948,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified.",
     "Commit": "152f1c579f",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1963,7 +1963,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 6: StatisticsPage 114/114; combined page/source/preservation/shared 188/188; exact values, denominator constraints, age/plurals, source-window requests and real drawer methodology verified.",
     "Commit": "60e1dfc147",
     "NotBefore": "0001-01-01T00:00:00"
   },

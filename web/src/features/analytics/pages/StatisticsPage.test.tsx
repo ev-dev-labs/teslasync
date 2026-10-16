@@ -69,7 +69,8 @@ vi.mock('react-i18next', async () => {
       if (typeof fallbackOrOpts === 'string') {
         if (opts && typeof opts === 'object') {
           const o = opts as Record<string, unknown>;
-          return fallbackOrOpts.replace(/{{(\w+)}}/g, (_m, name: string) =>
+          const plural = typeof o.count === 'number' ? o.count === 1 ? o.defaultValue_one : o.defaultValue_other : undefined;
+          return (typeof plural === 'string' ? plural : fallbackOrOpts).replace(/{{(\w+)}}/g, (_m, name: string) =>
             name in o ? String(o[name]) : `{{${name}}}`,
           );
         }
@@ -324,6 +325,30 @@ function issuedPaths(): string[] {
 
 function periodStatsCallCount(): number {
   return issuedPaths().filter((p) => p.startsWith('/analytics/period-stats')).length;
+}
+
+function withBriefDetails(brief: HTMLElement, check: (dialog: HTMLElement) => void) {
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  check(dialog);
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+function expectDetails(brief: HTMLElement, ...texts: string[]) {
+  withBriefDetails(brief, dialog => {
+    for (const text of texts) expect(within(dialog).getByText(text)).toBeInTheDocument();
+  });
+}
+function expectHiddenFields(brief: HTMLElement, count: number, total: number) {
+  expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(total - count);
+  expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(total - count);
+  expect(brief.querySelectorAll('[data-value-state="missing"], [data-value-state="invalid"]')).toHaveLength(0);
+  if (count === total) {
+    expect(within(brief).getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(within(brief).getByText('Values will appear when the source provides measurements.')).toBeInTheDocument();
+  }
+  withBriefDetails(brief, dialog => {
+    expect(within(dialog).getByText(count === 1 ? '1 empty field is hidden.' : `${count} empty fields are hidden.`)).toBeInTheDocument();
+  });
 }
 
 beforeEach(() => {
@@ -668,9 +693,9 @@ describe('StatisticsPage', () => {
     const averages = screen.getByTestId('statistics-averages-brief');
     expect(averages.querySelectorAll('[data-value-state="value"]')).toHaveLength(3);
     const mileage = screen.getByTestId('statistics-mileage-brief');
-    expect(within(mileage).getByText('Mixed lifetime and last-30-day windows')).toBeInTheDocument();
-    expect(within(mileage).getByText('Last 30 days divided by 30')).toBeInTheDocument();
     const calls = periodStatsCallCount();
+    expectDetails(mileage, 'Mixed lifetime and last-30-day windows', 'Last 30 days divided by 30');
+    expect(periodStatsCallCount()).toBe(calls);
     fireEvent.click(within(averages).getByRole('button', { name: 'Review details' }));
     const drawer = await screen.findByRole('dialog');
     expect(within(drawer).getByText('Recorded cost divided by source kilometres; not display-distance units.')).toBeInTheDocument();
@@ -720,13 +745,18 @@ describe('StatisticsPage', () => {
     await within(totals).findByText('50.00 kg');
     const co2 = totals.querySelector('[data-operational-metric="statistics-co2"]');
     expect(co2).toHaveTextContent('CO₂ saved');
-    expect(co2).toHaveTextContent('Estimated CO₂ savings, not measured emissions.');
-    expect(co2).toHaveTextContent('completed-drive distance in kilometres × 0.120 kg CO₂/km');
-    expect(co2).toHaveTextContent('fixed ICE baseline and assuming zero EV emissions');
-    expect(co2).toHaveTextContent('Grid emissions vary and are not deducted.');
+    expect(co2).toHaveTextContent('50.00 kg');
+    const calls = periodStatsCallCount();
+    withBriefDetails(totals, dialog => {
+      const detail = within(dialog).getByRole('group', { name: 'CO₂ saved' });
+      expect(detail).toHaveTextContent('Estimated CO₂ savings, not measured emissions.');
+      expect(detail).toHaveTextContent('completed-drive distance in kilometres × 0.120 kg CO₂/km');
+      expect(detail).toHaveTextContent('fixed ICE baseline and assuming zero EV emissions');
+      expect(detail).toHaveTextContent('Grid emissions vary and are not deducted.');
+    });
     // The returned fixture is 50 kg, not 500 km × 0.120 = 60 kg.
     expect(within(totals).queryByText('60.00 kg')).not.toBeInTheDocument();
-    const calls = periodStatsCallCount();
+    expect(periodStatsCallCount()).toBe(calls);
     fireEvent.click(within(totals).getByRole('button', { name: 'Review details' }));
     const drawer = await screen.findByRole('dialog');
     expect(within(drawer).getByText('50.00 kg')).toBeInTheDocument();
@@ -758,12 +788,17 @@ describe('StatisticsPage', () => {
     await within(totals).findByText('100.00 kWh');
     const energy = totals.querySelector('[data-operational-metric="statistics-total-energy"]');
     expect(energy).toHaveTextContent('Total energy');
-    expect(energy).toHaveTextContent('Charging-session energy added, not measured drive energy used; numerator of the efficiency proxy.');
+    expect(energy).toHaveTextContent('100.00 kWh');
+    withBriefDetails(totals, dialog => {
+      expect(within(dialog).getByRole('group', { name: 'Total energy' })).toHaveTextContent('Charging-session energy added, not measured drive energy used; numerator of the efficiency proxy.');
+    });
 
     const averages = screen.getByTestId('statistics-averages-brief');
     const proxy = averages.querySelector('[data-operational-metric="statistics-average-efficiency"]');
     expect(proxy).toHaveTextContent(efficiency);
-    expect(proxy).toHaveTextContent('Charging-energy/distance proxy: charging-session energy added divided by completed-drive distance, not measured driving efficiency.');
+    withBriefDetails(averages, dialog => {
+      expect(within(dialog).getByRole('group', { name: 'Avg efficiency' })).toHaveTextContent('Charging-energy/distance proxy: charging-session energy added divided by completed-drive distance, not measured driving efficiency.');
+    });
     // The fixture intentionally returns 160 Wh/km, not 100 kWh / 500 km = 200 Wh/km.
     expect(within(averages).queryByText(length === 'km' ? '200.00 Wh/km' : '321.87 Wh/mi')).not.toBeInTheDocument();
     expect(within(averages).getByText('$0.50')).toBeInTheDocument();
@@ -778,12 +813,9 @@ describe('StatisticsPage', () => {
       }));
       renderPage();
       const totals = screen.getByTestId('statistics-totals-brief');
-      const state = value == null ? 'missing' : 'invalid';
-      await waitFor(() => expect(totals.querySelectorAll(`[data-value-state="${state}"]`)).toHaveLength(5));
-      const averages = screen.getByTestId('statistics-averages-brief');
-      expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(state === 'missing' ? 3 : 2);
-      expect(averages.querySelectorAll(`[data-value-state="${state}"]`)).toHaveLength(state === 'missing' ? 3 : 1);
-      expect(within(averages).getAllByText('No measurement supplied')).toHaveLength(state === 'missing' ? 3 : 2);
+      await waitFor(() => expect(totals).not.toHaveAttribute('aria-busy'));
+      expectHiddenFields(totals, 5, 5);
+      expectHiddenFields(screen.getByTestId('statistics-averages-brief'), 3, 3);
     },
   );
 
@@ -794,8 +826,7 @@ describe('StatisticsPage', () => {
       renderPage();
       const averages = screen.getByTestId('statistics-averages-brief');
       await waitFor(() => expect(within(averages).getByText('$0.50')).toBeInTheDocument());
-      expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
-      expect(within(averages).getByText('No measurement supplied')).toBeInTheDocument();
+      expectHiddenFields(averages, 1, 3);
     },
   );
 
@@ -810,7 +841,7 @@ describe('StatisticsPage', () => {
     expect(within(totals).getByText('0 km')).toBeInTheDocument();
     expect(within(totals).getByText('$0.00')).toBeInTheDocument();
     const averages = screen.getByTestId('statistics-averages-brief');
-    expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+    expectHiddenFields(averages, 2, 3);
     expect(within(averages).getByText('0.00 Wh/km')).toBeInTheDocument();
   });
 
@@ -847,7 +878,7 @@ describe('StatisticsPage', () => {
       renderPage();
       const averages = screen.getByTestId('statistics-averages-brief');
       await within(averages).findByText('160.00 Wh/km');
-      expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+      expectHiddenFields(averages, 2, 3);
     },
   );
 
@@ -856,7 +887,7 @@ describe('StatisticsPage', () => {
     renderPage();
     const averages = screen.getByTestId('statistics-averages-brief');
     await within(averages).findByText('-0.25 km');
-    expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+    expectHiddenFields(averages, 1, 3);
   });
 
   it.each([undefined, null, NaN, Infinity, '0', false])(
@@ -866,8 +897,7 @@ describe('StatisticsPage', () => {
       renderPage();
       const averages = screen.getByTestId('statistics-averages-brief');
       await within(averages).findByText('11.90 km');
-      expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
-      expect(within(averages).getByText('No measurement supplied')).toBeInTheDocument();
+      expectHiddenFields(averages, 1, 3);
     },
   );
 
@@ -878,7 +908,7 @@ describe('StatisticsPage', () => {
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Statistics' }).querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
+    expectHiddenFields(screen.getByTestId('statistics-totals-brief'), 5, 5);
   });
 
   it('re-fetches the period stats when the error retry button is clicked', async () => {
@@ -904,7 +934,7 @@ describe('StatisticsPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Complete a drive or charging session/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View drives' })).toHaveAttribute('href', '/drives');
-    expect(screen.getByRole('region', { name: 'Statistics' }).querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
+    expectHiddenFields(screen.getByTestId('statistics-totals-brief'), 5, 5);
   });
 
   it('renders the battery-health gauge and its stat cards on the happy path', async () => {
@@ -962,12 +992,12 @@ describe('StatisticsPage', () => {
     async battery_age_months => {
       mockBattery.mockReturnValue(qr({ data: makeBattery({ battery_age_months }) }));
       renderPage();
-      const age = screen.getByTestId('statistics-battery-brief')
-        .querySelector('[data-operational-metric="statistics-battery-age"]');
-      expect(age).toHaveAttribute('data-value-state', battery_age_months == null ? 'missing' : 'invalid');
-      expect(age).not.toHaveTextContent('0.00 months');
-      expect(age).not.toHaveTextContent('NaN');
-      expect(age).not.toHaveTextContent('Infinity');
+      const brief = screen.getByTestId('statistics-battery-brief');
+      expect(brief.querySelector('[data-operational-metric="statistics-battery-age"]')).not.toBeInTheDocument();
+      expectHiddenFields(brief, 1, 4);
+      expect(brief).not.toHaveTextContent('0.00 months');
+      expect(brief).not.toHaveTextContent('NaN');
+      expect(brief).not.toHaveTextContent('Infinity');
     },
   );
 
@@ -1038,7 +1068,7 @@ describe('StatisticsPage', () => {
     expect(screen.getByText('71.50 kWh')).toBeInTheDocument();
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveTextContent('Battery health may be out of date');
-    expect(within(screen.getByTestId('statistics-battery-brief')).getByText('Retained statistics')).toBeInTheDocument();
+    expectDetails(screen.getByTestId('statistics-battery-brief'), 'Retained statistics');
     fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledOnce();
   });
@@ -1048,14 +1078,14 @@ describe('StatisticsPage', () => {
     const { unmount } = renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('No battery health data available')).toBeInTheDocument();
-    expect(screen.getByTestId('statistics-battery-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expectHiddenFields(screen.getByTestId('statistics-battery-brief'), 4, 4);
     unmount();
 
     mockBattery.mockReturnValue(qr({ error: new Error('battery down') }));
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByTestId('statistics-battery-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expectHiddenFields(screen.getByTestId('statistics-battery-brief'), 4, 4);
   });
 
   it('renders the mileage summary cards on the happy path', async () => {
@@ -1073,12 +1103,12 @@ describe('StatisticsPage', () => {
     mockMileage.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'fetching' }));
     const { rerenderPage } = renderPage();
     await screen.findByText('500 km');
-    expect(within(screen.getByTestId('statistics-mileage-brief')).getByText('Loading statistics')).toBeInTheDocument();
+    expectDetails(screen.getByTestId('statistics-mileage-brief'), 'Loading statistics');
     expect(screen.queryByText('No mileage data available')).not.toBeInTheDocument();
 
     mockMileage.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused', refetch: retryMileage }));
     rerenderPage();
-    expect(within(screen.getByTestId('statistics-mileage-brief')).getByText('Refresh paused')).toBeInTheDocument();
+    expectDetails(screen.getByTestId('statistics-mileage-brief'), 'Refresh paused');
     const notice = screen.getByRole('alert');
     expect(notice).toHaveTextContent('Refresh paused');
     expect(notice).not.toHaveTextContent(/offline/i);
@@ -1109,7 +1139,7 @@ describe('StatisticsPage', () => {
     const { rerenderPage } = renderPage();
     await screen.findByText('500 km');
     const brief = () => screen.getByTestId('statistics-battery-brief');
-    expect(within(brief()).getByText('Refresh paused')).toBeInTheDocument();
+    expectDetails(brief(), 'Refresh paused');
     expect(screen.queryByText('No battery health data available')).not.toBeInTheDocument();
     const notice = screen.getByRole('alert');
     expect(notice).not.toHaveTextContent(/offline/i);
@@ -1119,17 +1149,17 @@ describe('StatisticsPage', () => {
 
     mockBattery.mockReturnValue(qr({ data: makeBattery(), fetchStatus: 'paused', refetch: retryBattery }));
     rerenderPage();
-    expect(within(brief()).getByText('Refresh paused')).toBeInTheDocument();
-    expect(within(brief()).queryByText('Returned statistics')).not.toBeInTheDocument();
+    expectDetails(brief(), 'Refresh paused');
+    withBriefDetails(brief(), dialog => expect(within(dialog).queryByText('Returned statistics')).not.toBeInTheDocument());
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
 
     mockBattery.mockReturnValue(qr({ data: makeBattery(), isFetching: true, fetchStatus: 'fetching', refetch: retryBattery }));
     rerenderPage();
-    expect(within(brief()).getByText('Refreshing')).toBeInTheDocument();
+    expectDetails(brief(), 'Refreshing');
 
     mockBattery.mockReturnValue(qr({ data: makeBattery(), isSuccess: true, refetch: retryBattery }));
     rerenderPage();
-    expect(within(brief()).getByText('Returned statistics')).toBeInTheDocument();
+    expectDetails(brief(), 'Returned statistics');
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
   });
 
@@ -1140,7 +1170,7 @@ describe('StatisticsPage', () => {
     mockMileage.mockReturnValue(qr({ data: makeMileage(), isFetching: true, fetchStatus: 'fetching', refetch: retryMileage }));
     const { rerenderPage } = renderPage();
     await screen.findByText('500 km');
-    expect(within(screen.getByTestId('statistics-mileage-brief')).getByText('Refreshing')).toBeInTheDocument();
+    expectDetails(screen.getByTestId('statistics-mileage-brief'), 'Refreshing');
     expect(screen.getByText('8,000 km')).toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
 
@@ -1172,14 +1202,14 @@ describe('StatisticsPage', () => {
     const { unmount } = renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByText('No mileage data available')).toBeInTheDocument();
-    expect(screen.getByTestId('statistics-mileage-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expectHiddenFields(screen.getByTestId('statistics-mileage-brief'), 4, 4);
     unmount();
 
     mockMileage.mockReturnValue(qr({ error: new Error('mileage down') }));
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByTestId('statistics-mileage-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expectHiddenFields(screen.getByTestId('statistics-mileage-brief'), 4, 4);
   });
 
   it('renders the state-distribution chart figure when data is present', async () => {
