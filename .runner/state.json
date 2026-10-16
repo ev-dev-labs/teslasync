@@ -6543,10 +6543,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk)",
+    "Notes": "Attempt 1: timeout after 25 minutes (changes left on disk) RedactionEditor focused suite passed; existing accessible labels retain the required unique IDs/native values.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -6577,10 +6577,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk)",
+    "Notes": "Attempt 1: timeout after 25 minutes (changes left on disk) Retry failed: EventEvidencePanel.test.tsx has 1 localization regression; saved descriptor text with quotes/ampersand is not found after language change. RedactionEditor and eventDetection suites pass.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
