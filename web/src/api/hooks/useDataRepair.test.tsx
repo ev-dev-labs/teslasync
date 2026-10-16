@@ -224,7 +224,7 @@ describe('dataRepairKeys', () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       mockedRequest.mockRejectedValueOnce(new Error('Refresh failed'));
       await act(async () => { await result.current.refetch(); });
-      expect(result.current.isError).toBe(true);
+      await waitFor(() => expect(result.current.isRefetchError).toBe(true));
       expect(result.current.data).toEqual(cases);
       expect(result.current.isPreviousScope).toBe(false);
       expect(result.current.canWriteCurrentScope).toBe(true);
