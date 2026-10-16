@@ -19,6 +19,7 @@ import {
   Select,
   Text,
   Textarea,
+  useTableExpansion,
 } from '@/components/ui';
 import { useRepairQuarantineColumns } from './useRepairQuarantineColumns';
 
@@ -33,6 +34,7 @@ export function RepairQuarantinePanel({
   canWrite,
   writeBlockReason,
 }: RepairQuarantinePanelProps) {
+  const { expandedKeys, setExpandedKeys } = useTableExpansion<number>();
   const { t } = useTranslation();
   const [filters, setFilters] = useState<RepairQuarantineFilters>({
     vehicle_id: vehicleId,
@@ -200,6 +202,8 @@ export function RepairQuarantinePanel({
               keyExtractor={(item) => item.id}
               mobileColumns={['session', 'actions']}
               expandable
+              expandedKeys={expandedKeys}
+              onExpandedChange={setExpandedKeys}
               renderExpanded={(item) => (
                 <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
                   {columns.filter((column) => !['session', 'actions'].includes(column.key)).map((column) => (

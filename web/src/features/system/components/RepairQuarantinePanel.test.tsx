@@ -350,9 +350,9 @@ describe('RepairQuarantinePanel scope and write authority', () => {
 describe('RepairQuarantinePanel complete ledger', () => {
   it('uses the existing row disclosure for reason, operator, quarantine time and status while retaining actions', () => {
     render(<RepairQuarantinePanel vehicleId={7} canWrite />);
-    const expand = screen.getByRole('button', { name: 'Expand row' });
+    const expand = screen.getByRole('button', { name: /^Expand row:/ });
     fireEvent.click(expand);
-    expect(screen.getByRole('button', { name: 'Collapse row' })).toHaveAttribute('aria-expanded', 'true');
+    expect(expand).toHaveAttribute('aria-expanded', 'true');
     const details = document.querySelector('dl')!;
     expect(within(details).getByText('Reason')).toBeInTheDocument();
     expect(within(details).getByText('Original recovery reason')).toBeInTheDocument();
