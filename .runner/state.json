@@ -908,11 +908,11 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 1,
+    "Status": "done",
+    "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-advanced-road-hazard-mesh-rhm-04 | verification blocked by missing dependencies and failed restoration | done so far: updated EvidencePanel.tsx and EvidencePanel.sampleCounts.test.tsx; regenerated English catalog projections Attempt 2: FAILED | fix-advanced-road-hazard-mesh-rhm-04 | verification blocked by missing dependencies and EPERM during restoration | done so far: confirmed existing localized labels, raw unknown fallback, colocated regressions, and English catalog entries; no source changes Attempt 1: timeout after 25 minutes (changes left on disk)",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-advanced-road-hazard-mesh-rhm-04 | verification blocked by missing dependencies and failed restoration | done so far: updated EvidencePanel.tsx and EvidencePanel.sampleCounts.test.tsx; regenerated English catalog projections Attempt 2: FAILED | fix-advanced-road-hazard-mesh-rhm-04 | verification blocked by missing dependencies and EPERM during restoration | done so far: confirmed existing localized labels, raw unknown fallback, colocated regressions, and English catalog entries; no source changes Attempt 1: timeout after 25 minutes (changes left on disk) | completed during full-suite triage: corrected unknown quality badge from danger to neutral; EvidencePanel.sampleCounts.test.tsx passed 20/20.",
+    "Commit": "020211b8cd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {

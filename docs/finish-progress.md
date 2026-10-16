@@ -469,3 +469,8 @@ Update `.runner/state.json` and this progress document after each group. This or
   neither is a build failure.
 - User-owned edits in `web/src/api/hooks/useAnalytics.ts` and its test remain
   uncommitted and untouched.
+- Full-suite triage fix: unknown EvidencePanel quality codes were incorrectly
+  given the danger badge variant. Unknown and absent codes now use the neutral
+  variant while recognized `insufficient` remains danger. The matching pending
+  Phase 6 item `fix-advanced-road-hazard-mesh-rhm-04` is completed; its focused
+  suite passes **20/20**. Commit recorded in `.runner/state.json`.
