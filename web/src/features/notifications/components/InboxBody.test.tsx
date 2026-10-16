@@ -622,9 +622,9 @@ describe('InboxBody — grouped view', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Open notification: Persisted critical evidence' }));
       const drawer = await screen.findByRole('dialog');
       await within(drawer).findByRole('button', { name: 'Retry' });
-      expect(within(drawer).getByText('Severity').closest('div')).toHaveTextContent('critical');
-      expect(within(drawer).getByText('Owner').closest('div')).toHaveTextContent('Unknown');
-      expect(within(drawer).getByText('Resolution state').closest('div')).toHaveTextContent('Unknown');
+      expect(within(drawer).getByText('Severity').closest('dt')?.nextElementSibling).toHaveTextContent('critical');
+      expect(within(drawer).getByText('Owner').closest('dt')?.nextElementSibling).toHaveTextContent('Unknown');
+      expect(within(drawer).getByText('Resolution state').closest('dt')?.nextElementSibling).toHaveTextContent('Unknown');
       expect(within(drawer).queryByRole('button', { name: 'Acknowledge alert' })).not.toBeInTheDocument();
       expect(within(drawer).queryByRole('button', { name: 'Reopen alert' })).not.toBeInTheDocument();
       expect(callsFor((path, method) => path.startsWith('/alerts/') && method === 'POST')).toHaveLength(0);
@@ -799,9 +799,9 @@ describe('InboxBody — archived mode', () => {
     fireEvent.click(readMessage);
     const dialog = await screen.findByRole('dialog', { name: title });
     expect(dialog).toHaveTextContent(message);
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    fireEvent.click(screen.getByRole('button', { name: `Expand row: ${title}` }));
     expect(screen.getByRole('region', { name: 'Notification details' })).toHaveTextContent(message);
   });
 
@@ -1153,7 +1153,7 @@ describe('InboxBody — redesigned evidence contracts', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Reopen alert' }));
         await waitFor(() => expect(callsFor((path, method) => path === '/alerts/49/reopen' && method === 'POST')).toHaveLength(1));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-        fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Expand row: Rule evidence' }));
         expect(within(screen.getByRole('region', { name: 'Notification details' })).getByRole('button', { name: 'View context' })).toBeInTheDocument();
       });
 
@@ -1194,7 +1194,7 @@ describe('InboxBody — redesigned evidence contracts', () => {
         await screen.findByText('Configurable evidence');
         expect(screen.getByRole('columnheader', { name: 'Received' })).toHaveClass('hidden', 'md:table-cell');
         expect(screen.getByRole('columnheader', { name: /Notification/ })).not.toHaveClass('hidden');
-        expect(screen.getByRole('button', { name: 'Expand row' })).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.getByRole('button', { name: 'Expand row: Configurable evidence' })).toHaveAttribute('aria-expanded', 'false');
         const resize = screen.getByRole('separator', { name: 'Resize column Notification' });
         fireEvent.keyDown(resize, { key: 'ArrowRight' });
         expect(localStorage.getItem('teslasync.table.notifications:inbox.widths')).toContain('"title":308');
@@ -1215,9 +1215,9 @@ describe('InboxBody — redesigned evidence contracts', () => {
         })]) });
         renderInbox();
         await screen.findByText('Failed delivery');
-        fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Expand row: Failed delivery' }));
         const details = screen.getByRole('region', { name: 'Notification details' });
-        expect(within(details).getByText('0.00 ms')).toBeInTheDocument();
+        expect(within(details).getByText('0 ms')).toBeInTheDocument();
         expect(within(details).getByText('Connection refused')).toBeInTheDocument();
         expect(within(details).getByText('system.mqtt.outage')).toBeInTheDocument();
         expect(within(details).getByText('Sent').nextElementSibling).toHaveTextContent('—');
@@ -1233,7 +1233,7 @@ describe('InboxBody — redesigned evidence contracts', () => {
         installRequest({ logs: () => Promise.resolve([makeLog({ id: 44, title: 'Archived evidence', archived_at: NOW_ISO, read_at: NOW_ISO })]) });
         renderInbox({ archived: true, route: '/notifications/archived' });
         await screen.findByText('Archived evidence');
-        fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Expand row: Archived evidence' }));
         const details = screen.getByRole('region', { name: 'Notification details' });
         fireEvent.click(within(details).getByRole('button', { name: 'Mark as unread' }));
         await waitFor(() => expect(callsFor((path, method) => path === '/notifications/mark-unread' && method === 'POST')).toHaveLength(1));
@@ -1247,7 +1247,7 @@ describe('InboxBody — redesigned evidence contracts', () => {
         fireEvent.click(await screen.findByRole('button', { name: 'Open notification: Unknown latency' }));
         const dialog = screen.getByRole('dialog', { name: 'Unknown latency' });
         expect(within(dialog).getByText('Delivery latency').nextElementSibling).toHaveTextContent('—');
-        expect(within(dialog).queryByText('0.00 ms')).not.toBeInTheDocument();
+        expect(within(dialog).queryByText('0 ms')).not.toBeInTheDocument();
         await waitFor(() => expect(markReadPosts()).toHaveLength(1));
       });
 
@@ -1363,7 +1363,8 @@ describe('InboxBody — controlled column-header filters', () => {
             archived: true,
             route: '/notifications/archived?severity=critical&vehicle_id=1&rule_id=10&source=rule&q=pressure&read=unread&from=2026-01-01&to=2026-01-30',
           });
-          await screen.findByText('No archived notifications');
+          await screen.findByText('No notifications match these filters');
+          expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
           const table = screen.getByRole('table', { name: 'Archived' });
           expect(table.parentElement).toHaveClass('min-w-0', 'w-full', 'max-w-full');
           expect(table.parentElement?.parentElement?.parentElement).toHaveClass('min-w-0', 'w-full', 'max-w-full');

@@ -11544,7 +11544,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " DONE | fix-notifications-archived-f02 | no change needed: requested trust-state behavior and coverage already exist; test execution blocked by missing Vite dependency",
+    "Notes": " DONE | fix-notifications-archived-f02 | no change needed: requested trust-state behavior and coverage already exist; test execution blocked by missing Vite dependency | 2026-10-16 repair group 14: InboxBody 64/64 and integer latency-detail regressions 8/8 pass; exact expansion labels, semantic metadata, real-dialog Escape, filtered mobile Clear filters, acknowledgement/reopen, archive/restore and read actions preserved. Seven original failures closed, zero new identities. Full browser/layout acceptance not verified; status unchanged.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11559,7 +11559,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " DONE | fix-notifications-archived-f03 | no change needed: requested retry and honest-total behavior already implemented; test execution blocked by missing Vitest and locked dependency restoration",
+    "Notes": " DONE | fix-notifications-archived-f03 | no change needed: requested retry and honest-total behavior already implemented; test execution blocked by missing Vitest and locked dependency restoration | 2026-10-16 repair group 14: InboxBody 64/64 and integer latency-detail regressions 8/8 pass; exact expansion labels, semantic metadata, real-dialog Escape, filtered mobile Clear filters, acknowledgement/reopen, archive/restore and read actions preserved. Seven original failures closed, zero new identities. Full browser/layout acceptance not verified; status unchanged.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11576,7 +11576,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Notification checkpoint 2026-10-15: no-match flat and grouped EmptyState clear-filter actions verified in InboxBody.test.tsx; split catalog check passed.",
+    "Notes": "Notification checkpoint 2026-10-15: no-match flat and grouped EmptyState clear-filter actions verified in InboxBody.test.tsx; split catalog check passed. | 2026-10-16 repair group 14: InboxBody 64/64 and integer latency-detail regressions 8/8 pass; exact expansion labels, semantic metadata, real-dialog Escape, filtered mobile Clear filters, acknowledgement/reopen, archive/restore and read actions preserved. Seven original failures closed, zero new identities. Full browser/layout acceptance not verified; status unchanged.",
     "Commit": "e6b296e32f",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11595,7 +11595,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f05 | missing dependencies prevented verification | done so far: updated InboxBody.tsx and NotificationFilterBar.tsx; added regressions in ArchivedPage.test.tsx, InboxBody.test.tsx, and NotificationFilterBar.test.tsx Attempt 2: FAILED | fix-notifications-archived-f05 | missing dependencies prevented required regression verification; restoration failed with ENOTDIR and ENOTEMPTY | done so far: preserved prior normalization and regressions; no source changes Retry failed: ArchivedPage.test.tsx and InboxBody.test.tsx fail 10 cases; severity/count details and archived semantics are asserted on the card face, and archived activation dialog remains open in one case.",
+    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f05 | missing dependencies prevented verification | done so far: updated InboxBody.tsx and NotificationFilterBar.tsx; added regressions in ArchivedPage.test.tsx, InboxBody.test.tsx, and NotificationFilterBar.test.tsx Attempt 2: FAILED | fix-notifications-archived-f05 | missing dependencies prevented required regression verification; restoration failed with ENOTDIR and ENOTEMPTY | done so far: preserved prior normalization and regressions; no source changes Retry failed: ArchivedPage.test.tsx and InboxBody.test.tsx fail 10 cases; severity/count details and archived semantics are asserted on the card face, and archived activation dialog remains open in one case. | 2026-10-16 repair group 14: InboxBody 64/64 and integer latency-detail regressions 8/8 pass; exact expansion labels, semantic metadata, real-dialog Escape, filtered mobile Clear filters, acknowledgement/reopen, archive/restore and read actions preserved. Seven original failures closed, zero new identities. Full browser/layout acceptance not verified; status unchanged.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11610,7 +11610,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-archived-f09 | focused tests blocked by missing dependencies and locked binaries | done so far: updated web\\src\\features\\notifications\\components\\InboxBody.tsx and web\\src\\features\\notifications\\components\\InboxBody.test.tsx DONE | fix-notifications-archived-f09 | no change needed: validation and focused regressions already exist; execution blocked by missing dependencies",
+    "Notes": " Attempt 1: FAILED | fix-notifications-archived-f09 | focused tests blocked by missing dependencies and locked binaries | done so far: updated web\\src\\features\\notifications\\components\\InboxBody.tsx and web\\src\\features\\notifications\\components\\InboxBody.test.tsx DONE | fix-notifications-archived-f09 | no change needed: validation and focused regressions already exist; execution blocked by missing dependencies | 2026-10-16 repair group 14: InboxBody 64/64 and integer latency-detail regressions 8/8 pass; exact expansion labels, semantic metadata, real-dialog Escape, filtered mobile Clear filters, acknowledgement/reopen, archive/restore and read actions preserved. Seven original failures closed, zero new identities. Full browser/layout acceptance not verified; status unchanged.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11659,7 +11659,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f08 | missing dependencies and Windows ENOTEMPTY errors blocked verification | done so far: updated web/src/features/notifications/components/NotificationInboxTable.tsx and added coverage in web/src/features/notifications/components/InboxBody.test.tsx Attempt 2: FAILED | fix-notifications-archived-f08 | missing dependencies and unresponsive localhost:5173 blocked verification | done so far: preserved existing table sizing changes and regression coverage; no source edits Retry failed: InboxBody.test.tsx has 8 failures; archived mode severity/details and responsive dialog assertions do not match current brief/dialog rendering.",
+    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f08 | missing dependencies and Windows ENOTEMPTY errors blocked verification | done so far: updated web/src/features/notifications/components/NotificationInboxTable.tsx and added coverage in web/src/features/notifications/components/InboxBody.test.tsx Attempt 2: FAILED | fix-notifications-archived-f08 | missing dependencies and unresponsive localhost:5173 blocked verification | done so far: preserved existing table sizing changes and regression coverage; no source edits Retry failed: InboxBody.test.tsx has 8 failures; archived mode severity/details and responsive dialog assertions do not match current brief/dialog rendering. | 2026-10-16 repair group 14: InboxBody 64/64 and integer latency-detail regressions 8/8 pass; exact expansion labels, semantic metadata, real-dialog Escape, filtered mobile Clear filters, acknowledgement/reopen, archive/restore and read actions preserved. Seven original failures closed, zero new identities. Full browser/layout acceptance not verified; status unchanged.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11674,7 +11674,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f12 | dependency restoration blocked; tests and browser verification incomplete | done so far: updated web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx and web\\src\\features\\notifications\\components\\InboxBody.test.tsx Attempt 2: FAILED | fix-notifications-archived-f12 | dependency restoration and runtime verification blocked | done so far: inspected and retained existing NotificationInboxDetails.tsx and InboxBody.test.tsx implementation; no new changes Retry failed: InboxBody.test.tsx has 8 failures; an exact metric format mismatch (expected 1,250 ms, rendered 1,250.00 ms) and archived details/dialog assertions fail. | 2026-10-16 triage group 9: fixed integer-ms regression using locale-aware fmtInt (backend LatencyMs is *int); 8 new direct tests pass for English/German, integer zero and null/absent at precision 4. InboxBody improves 56/8 to 57/7; remaining failures are exact detail-field, expansion, Escape and filtered-empty assertions. Full item remains failed until those and requested browser/layout verification pass.",
+    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f12 | dependency restoration blocked; tests and browser verification incomplete | done so far: updated web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx and web\\src\\features\\notifications\\components\\InboxBody.test.tsx Attempt 2: FAILED | fix-notifications-archived-f12 | dependency restoration and runtime verification blocked | done so far: inspected and retained existing NotificationInboxDetails.tsx and InboxBody.test.tsx implementation; no new changes Retry failed: InboxBody.test.tsx has 8 failures; an exact metric format mismatch (expected 1,250 ms, rendered 1,250.00 ms) and archived details/dialog assertions fail. | 2026-10-16 triage group 9: fixed integer-ms regression using locale-aware fmtInt (backend LatencyMs is *int); 8 new direct tests pass for English/German, integer zero and null/absent at precision 4. InboxBody improves 56/8 to 57/7; remaining failures are exact detail-field, expansion, Escape and filtered-empty assertions. Full item remains failed until those and requested browser/layout verification pass. | 2026-10-16 repair group 14: InboxBody 64/64 and integer latency-detail regressions 8/8 pass; exact expansion labels, semantic metadata, real-dialog Escape, filtered mobile Clear filters, acknowledgement/reopen, archive/restore and read actions preserved. Seven original failures closed, zero new identities. Full browser/layout acceptance not verified; status unchanged.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
