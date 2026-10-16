@@ -375,7 +375,7 @@ describe('MediaPlayerPage full-value history disclosure', () => {
 
 /** Read the shared stat tile's value, excluding its help and source context. */
 function kpiValue(label: string): string {
-  const span = within(statsRegion()).getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' });
+  const span = within(statsRegion()).getByText(label, { selector: '[data-operational-metric] > :first-child' });
   const value = span.closest('[data-operational-metric]')?.querySelector('[data-operational-value]');
   if (!(value instanceof HTMLElement)) throw new Error(`Missing ${label} stat value`);
   return value.textContent ?? '';

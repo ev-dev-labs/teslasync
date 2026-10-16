@@ -119,7 +119,7 @@ function mountPage() {
   </QueryClientProvider>);
 }
 function metric(label: string | RegExp): HTMLElement {
-  const match = screen.getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' })
+  const match = screen.getByText(label, { selector: '[data-operational-metric] > :first-child' })
     .closest<HTMLElement>('[data-operational-metric]');
   if (!match) throw new Error(`Missing canonical stat: ${label}`);
   return match;

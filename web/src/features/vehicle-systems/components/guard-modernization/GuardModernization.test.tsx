@@ -150,7 +150,7 @@ function metric(label: string) {
   const overview = screen.getByRole('region', { name: 'Guard status overview' });
   const query = within(overview);
   // Tooltip descriptions may legitimately repeat a metric's label text.
-  const selector = '[data-operational-metric] > div:first-child > :first-child';
+  const selector = '[data-operational-metric] > :first-child';
   expect(query.getAllByText(label, { selector })).toHaveLength(1);
   const tile = query.getByText(label, { selector }).closest('[data-operational-metric]');
   if (!(tile instanceof HTMLElement)) throw new Error(`Missing metric tile for ${label}`);

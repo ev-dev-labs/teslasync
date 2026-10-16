@@ -85,7 +85,7 @@ function RouterWrapper({ children }: { children: ReactNode }) {
 function summaryMetric(label: string) {
   const region = screen.getByTestId('software-update-summary');
   const node = within(region).getByText(label, {
-    selector: '[data-operational-metric] > div:first-child > :first-child',
+    selector: '[data-operational-metric] > :first-child',
   }).closest('[data-operational-metric]');
   if (!(node instanceof HTMLElement)) throw new Error(`Missing summary metric ${label}`);
   return within(node);

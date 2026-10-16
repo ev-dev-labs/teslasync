@@ -24,7 +24,7 @@ The limited run used `npx vitest run --maxWorkers=4 --reporter=json --outputFile
 
 Limiting concurrency produced **no net reduction** in failed assertions. The all-pages nested-surface contract passed in the limited run, following its timeout/failure during the previous busy run; this identifies a resource-sensitive check, not an explanation for thousands of failures. The exact previous 3,826-case JSON was not retained, so aggregate equality does not prove identical failed test identities. An earlier structured report with 3,847 failures was recovered separately and is retained locally as `vitest-prior-structured.json`.
 
-Compared with the documented 1,536-failure baseline, the current total is **2,290 higher**, with 65 additional tests and three additional files. A per-category comparison to that exact baseline cannot be reconstructed from its aggregate receipt. The older 850-failure log retains 849 distinct failure identities: **629** also fail now and **220** are no longer failing or no longer present under the same name. Unmatched current identities must not automatically be called redesign regressions because the test sets and source revisions differ.
+Compared with the documented 1,536-failure baseline, the current total is **2,290 higher**, with 61 additional tests and three additional files. A per-category comparison to that exact baseline cannot be reconstructed from its aggregate receipt. The older 850-failure log retains 849 distinct failure identities: **629** also fail now and **220** are no longer failing or no longer present under the same name. Unmatched current identities must not automatically be called redesign regressions because the test sets and source revisions differ.
 
 The following is an exhaustive primary-diagnostic classification of the **3,826** failures. The assertion source and representative rendered output were inspected for each family. These are repair queues: remaining UI/state and value/API assertions still require focused diagnosis before deciding whether the test or production behavior is wrong.
 
@@ -46,6 +46,12 @@ The largest established repair family combines evidence disclosure, flat metric 
 Three assertions fail in the limited run but were absent from the earlier 3,847-failure report: JourneyAssurance departure-zone preference rerender, Fleet API retained rejected-refresh text, and GDPR manifest retained-refresh recovery. Source revisions differ, so these are timing/state candidates rather than confirmed new flakes. The governance cache test also fails before its cache assertions: it expects a rejected response containing `Plan recording failed` but receives an undefined-property error. Its existing item note therefore does not establish an invalidation bug.
 
 The separate **295-item Phase 6 reason breakdown** and every item ID are grouped in the appendix below. No status was changed during triage.
+
+### Repair group 1: flat metric label selectors (2026-10-16)
+
+Updated the nine vehicle-systems test files listed by the obsolete-selector grep to find the existing metric label directly inside its flat tile. All original labels, values, raw-unit expectations, interactions and assertions remain. The same 320 tests improved from **196 passed / 124 failed** to **233 passed / 87 failed**: **37 resolved, zero new failures, no skipped or removed tests**. The remaining 87 failures are retained for the next disclosure/unavailable-value/loading migrations; this is a scoped result, not a fresh full-suite result. Details are in local `.runner/gates/metric-selector-repair.json`.
+
+Typecheck, production build and full lint/audit chain pass. No catalog keys or production code changed. Appended the per-file results to 38 matching Phase 6 records without changing their acceptance status; no currently failed Phase 6 record belongs to these nine assigned test files. State totals remain **981 done / 295 failed / 0 pending**.
 
 ## Current UI simplification checkpoint
 

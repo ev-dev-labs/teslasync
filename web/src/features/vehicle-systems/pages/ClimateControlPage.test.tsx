@@ -335,7 +335,7 @@ function renderPage(path = '/climate-control') {
   );
 }
 
-const metricLabelSelector = '[data-operational-metric] > div:first-child > div:first-child';
+const metricLabelSelector = '[data-operational-metric] > :first-child';
 
 /** Scope the visible metric label, not its duplicate evidence description. */
 function card(label: string): HTMLElement {

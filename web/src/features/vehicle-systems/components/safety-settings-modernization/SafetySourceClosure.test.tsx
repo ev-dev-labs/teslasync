@@ -92,7 +92,7 @@ function panel(title: string) {
   return element;
 }
 function statValue(label: string) {
-  const labelNode = within(panel('Safety summary')).getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' });
+  const labelNode = within(panel('Safety summary')).getByText(label, { selector: '[data-operational-metric] > :first-child' });
   const tile = labelNode.closest<HTMLElement>('[data-operational-metric]');
   if (!tile) throw new Error(`Missing safety stat: ${label}`);
   return tile.querySelector('[data-operational-value]')?.textContent;

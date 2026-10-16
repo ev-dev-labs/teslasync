@@ -254,7 +254,7 @@ function section(name: string) {
 }
 
 function metric(label: string) {
-  const element = kpi().getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' }).closest('[data-operational-metric]');
+  const element = kpi().getByText(label, { selector: '[data-operational-metric] > :first-child' }).closest('[data-operational-metric]');
   if (!(element instanceof HTMLElement)) throw new Error(`Missing guard ${label} metric`);
   return element;
 }

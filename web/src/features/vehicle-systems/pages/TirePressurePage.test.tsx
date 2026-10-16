@@ -299,7 +299,7 @@ function renderPage() {
 
 /** Scope to the real shared statistic, not its label/tooltip wrapper. */
 function kpiCard(label: string) {
-  const el = screen.getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' }).closest('[data-operational-metric]');
+  const el = screen.getByText(label, { selector: '[data-operational-metric] > :first-child' }).closest('[data-operational-metric]');
   if (!el) throw new Error(`KPI card not found for label: ${label}`);
   return within(el as HTMLElement);
 }
