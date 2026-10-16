@@ -3021,10 +3021,10 @@
       "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-03 | frontend regression execution blocked by test startup stalls | done so far: changed internal\\api\\batterydegradation\\handler.go, internal\\api\\batterydegradation\\dtos.go, internal\\api\\batterydegradation\\calculations.go, internal\\api\\batterydegradation\\handler_test.go, web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx, web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx, web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx; Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-03 | required verification blocked by test startup stalls and unavailable Go executable | done so far: confirmed existing thermal availability wiring, neutral unknown risk, and focused regressions; no files changed Attempt 1: FAILED | fix-battery-battery-degradation-bd-03 | frontend regression verification blocked by startup stalls and alternate-loader config error | done so far: confirmed existing thermal availability fix and regressions; Go race tests passed; no files changed",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-03 | frontend regression execution blocked by test startup stalls | done so far: changed internal\\api\\batterydegradation\\handler.go, internal\\api\\batterydegradation\\dtos.go, internal\\api\\batterydegradation\\calculations.go, internal\\api\\batterydegradation\\handler_test.go, web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx, web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx, web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx; Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-03 | required verification blocked by test startup stalls and unavailable Go executable | done so far: confirmed existing thermal availability wiring, neutral unknown risk, and focused regressions; no files changed Attempt 1: FAILED | fix-battery-battery-degradation-bd-03 | frontend regression verification blocked by startup stalls and alternate-loader config error | done so far: confirmed existing thermal availability fix and regressions; Go race tests passed; no files changed | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3061,10 +3061,10 @@
       "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-05 | verification blocked by external catalog/type errors and missing race-test compiler | done so far: implemented backend prediction contract, page/stats consumers, and regression tests in all seven expected files Attempt 2: FAILED | fix-battery-battery-degradation-bd-05 | runtime verification blocked: Vitest stalled and Go unavailable | done so far: inspected existing fit-validity, crossing-status, signed/fractional evidence contract and regression tests; no changes made",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-05 | verification blocked by external catalog/type errors and missing race-test compiler | done so far: implemented backend prediction contract, page/stats consumers, and regression tests in all seven expected files Attempt 2: FAILED | fix-battery-battery-degradation-bd-05 | runtime verification blocked: Vitest stalled and Go unavailable | done so far: inspected existing fit-validity, crossing-status, signed/fractional evidence contract and regression tests; no changes made | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3081,10 +3081,10 @@
       "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-06 | frontend regression and TypeScript validation blocked by missing dependencies and failed restoration | done so far: updated all seven assigned files with baseline/estimator evidence and regressions; scoped Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-06 | required verification blocked by missing dependencies, locked Rollup binary, and unavailable Go runtime | done so far: confirmed existing nominal-baseline evidence, observed-estimator distinction, BD-C01 disclaimer, and focused regressions; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-06 | frontend regression and TypeScript validation blocked by missing dependencies and failed restoration | done so far: updated all seven assigned files with baseline/estimator evidence and regressions; scoped Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-06 | required verification blocked by missing dependencies, locked Rollup binary, and unavailable Go runtime | done so far: confirmed existing nominal-baseline evidence, observed-estimator distinction, BD-C01 disclaimer, and focused regressions; no source changes | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3101,10 +3101,10 @@
       "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-07 | frontend regression unverified within time box | done so far: changed all seven expected files; observation provenance implemented; backend race tests passed; frontend regressions added Attempt 2: FAILED | fix-battery-battery-degradation-bd-07 | required regressions blocked by missing frontend dependencies and C compiler | done so far: inspected existing observation provenance implementation and regressions; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-07 | frontend regression unverified within time box | done so far: changed all seven expected files; observation provenance implemented; backend race tests passed; frontend regressions added Attempt 2: FAILED | fix-battery-battery-degradation-bd-07 | required regressions blocked by missing frontend dependencies and C compiler | done so far: inspected existing observation provenance implementation and regressions; no source changes | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3121,10 +3121,10 @@
       "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-08 | validation blocked by unavailable Go and broken frontend dependencies | done so far: updated all five assigned implementation files and both regression test files Attempt 2: FAILED | fix-battery-battery-degradation-bd-08 | frontend verification blocked by broken dependencies; restoration attempts failed | done so far: existing metric fixes and regressions preserved; backend race tests passed; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-08 | validation blocked by unavailable Go and broken frontend dependencies | done so far: updated all five assigned implementation files and both regression test files Attempt 2: FAILED | fix-battery-battery-degradation-bd-08 | frontend verification blocked by broken dependencies; restoration attempts failed | done so far: existing metric fixes and regressions preserved; backend race tests passed; no source changes | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3141,10 +3141,10 @@
       "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-09 | frontend test execution blocked by dependencies and time limit | done so far: history contract, retained-baseline labels, timestamps, English copy and regression tests implemented; backend race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-09 | required tests blocked by missing frontend dependencies and C compiler | done so far: confirmed existing retained-baseline labels, nullable range/odometer history, sample timestamps and regression coverage",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-09 | frontend test execution blocked by dependencies and time limit | done so far: history contract, retained-baseline labels, timestamps, English copy and regression tests implemented; backend race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-09 | required tests blocked by missing frontend dependencies and C compiler | done so far: confirmed existing retained-baseline labels, nullable range/odometer history, sample timestamps and regression coverage | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3161,10 +3161,10 @@
       "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-10 | verification blocked by missing Go and broken frontend dependencies | done so far: changed internal\\api\\batterydegradation\\handler.go, internal\\api\\batterydegradation\\handler_test.go, web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx, web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx Attempt 2: FAILED | fix-battery-battery-degradation-bd-10 | required verification blocked by missing Go and broken frontend dependencies | done so far: corrected internal\\api\\batterydegradation\\handler_test.go to preserve the live estimator without expecting a fabricated history sample",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-10 | verification blocked by missing Go and broken frontend dependencies | done so far: changed internal\\api\\batterydegradation\\handler.go, internal\\api\\batterydegradation\\handler_test.go, web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx, web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx Attempt 2: FAILED | fix-battery-battery-degradation-bd-10 | required verification blocked by missing Go and broken frontend dependencies | done so far: corrected internal\\api\\batterydegradation\\handler_test.go to preserve the live estimator without expecting a fabricated history sample | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3181,10 +3181,10 @@
       "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-11 | missing frontend dependencies and C compiler prevent required validation | done so far: updated all five assigned implementation files and both regression test files; scoped backend tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-11 | required validation blocked by missing Vitest, npm ENOTEMPTY errors, and unavailable Go toolchain | done so far: inspected and preserved existing implementation and focused regressions; no source edits",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-11 | missing frontend dependencies and C compiler prevent required validation | done so far: updated all five assigned implementation files and both regression test files; scoped backend tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-11 | required validation blocked by missing Vitest, npm ENOTEMPTY errors, and unavailable Go toolchain | done so far: inspected and preserved existing implementation and focused regressions; no source edits | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3233,10 +3233,10 @@
       "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-13 | frontend verification blocked within time box | done so far: updated all seven expected files; added date-boundary and month-key tests; scoped Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-13 | required tests blocked by missing frontend dependencies and GCC; dependency restoration failed | done so far: inspected prior implementation and regression coverage; preserved all source files unchanged",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-13 | frontend verification blocked within time box | done so far: updated all seven expected files; added date-boundary and month-key tests; scoped Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-13 | required tests blocked by missing frontend dependencies and GCC; dependency restoration failed | done so far: inspected prior implementation and regression coverage; preserved all source files unchanged | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3726,10 +3726,10 @@
       "web\\src\\features\\battery\\pages\\EnergyFlowPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-energy-flow-f01 | precise bounds require service/repository files outside assigned ownership; test tooling unavailable | done so far: read instructions and traced page-to-repository range loss; no files changed Attempt 2: FAILED | fix-battery-energy-flow-f01 | precise bounds require service/repository changes outside assigned ownership; requested checks blocked by missing Vite and Go | done so far: confirmed range loss from page through handler, service and repository; no files changed Attempt 1: FAILED | fix-battery-energy-flow-f01 | required backend edits prohibited; test execution blocked by unavailable PowerShell | done so far: read contract and conventions, confirmed fix is absent and range loss persists; no files changed",
+    "Notes": " Attempt 1: FAILED | fix-battery-energy-flow-f01 | precise bounds require service/repository files outside assigned ownership; test tooling unavailable | done so far: read instructions and traced page-to-repository range loss; no files changed Attempt 2: FAILED | fix-battery-energy-flow-f01 | precise bounds require service/repository changes outside assigned ownership; requested checks blocked by missing Vite and Go | done so far: confirmed range loss from page through handler, service and repository; no files changed Attempt 1: FAILED | fix-battery-energy-flow-f01 | required backend edits prohibited; test execution blocked by unavailable PowerShell | done so far: read contract and conventions, confirmed fix is absent and range loss persists; no files changed | Retry verification failed 2026-10-15: EnergyFlowPage.test.tsx has 9 failures. Representative error: cannot find “Shared source total” in the collapsed summary; 5 focused files total 311 passed / 56 failed. `workspaceScope`, `useDriving`, and Go race packages pass.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3807,10 +3807,10 @@
       "web\\src\\features\\battery\\pages\\VampireDrainPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-vampire-drain-vd08 | validation blocked by missing dependencies, locked Rollup binary, and unavailable Go | done so far: changed web\\src\\api\\hooks\\useEnergy.ts, web\\src\\api\\hooks\\useDriving.test.ts, web\\src\\features\\battery\\pages\\VampireDrainPage.tsx, web\\src\\features\\battery\\pages\\VampireDrainPage.test.tsx Attempt 2: FAILED | fix-battery-vampire-drain-vd08 | frontend verification blocked by missing dependencies and failed restoration | done so far: prior hook extraction and regressions preserved; backend race tests passed; no source files changed",
+    "Notes": " Attempt 1: FAILED | fix-battery-vampire-drain-vd08 | validation blocked by missing dependencies, locked Rollup binary, and unavailable Go | done so far: changed web\\src\\api\\hooks\\useEnergy.ts, web\\src\\api\\hooks\\useDriving.test.ts, web\\src\\features\\battery\\pages\\VampireDrainPage.tsx, web\\src\\features\\battery\\pages\\VampireDrainPage.test.tsx Attempt 2: FAILED | fix-battery-vampire-drain-vd08 | frontend verification blocked by missing dependencies and failed restoration | done so far: prior hook extraction and regressions preserved; backend race tests passed; no source files changed | Retry verification failed 2026-10-15: VampireDrainPage.test.tsx has 5 failures. Representative exact error: cannot find “After unplug” in the page review surface; tests also cannot find “Tonight: unknown”, expected stale warning, and retained metrics in collapsed brief. Go race packages pass.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
