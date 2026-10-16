@@ -127,7 +127,7 @@ export function ArrivalReliabilityWindowComparisons({
                     { window: windowLabel(window), timeZone },
                   )}
                 </Text>
-                <NestedDrivingBrief title={t('arrivalReliability.brief.windowQuantities', 'Route-window timing quantities')}
+                <NestedDrivingBrief variant="embedded" title={t('arrivalReliability.brief.windowQuantities', 'Route-window timing quantities')}
                   description={rankLabel(index, window)}
                   loading={state.isLoading} unavailable={state.error != null}
                   retained={state.refreshError != null || state.isRefreshBlocked}

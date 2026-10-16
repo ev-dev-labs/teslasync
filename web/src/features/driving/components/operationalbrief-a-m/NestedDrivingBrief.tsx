@@ -20,11 +20,12 @@ interface Props {
   retained?: boolean;
   unavailable?: boolean;
   testId?: string;
+  variant?: 'standalone' | 'embedded';
 }
 
 export function NestedDrivingBrief({
   metrics, title, description, period, preferences, loading = false,
-  retained = false, unavailable = false, testId,
+  retained = false, unavailable = false, testId, variant = 'standalone',
 }: Props) {
   const { t } = useTranslation();
   const sourceMetrics: StatMetric[] = metrics.map(({ displayValue, ...metric }) =>
@@ -48,7 +49,7 @@ export function NestedDrivingBrief({
   const provenance = period.kind === 'unknown'
     ? period.reason ?? description
     : period.provenance ?? description;
-  return <OperationalBrief compact metrics={values} title={title}
+  return <OperationalBrief compact variant={variant} metrics={values} title={title}
     eyebrow={t('driving.brief.eyebrow', 'Driving evidence')}
     description={description}
     scope={<Text as="span" size="xs" color="muted" className="min-w-0 break-words">{scope}</Text>}

@@ -53,7 +53,7 @@ export function TemplateBrowser({ controller }: { controller: AlertRuleEditorCon
             const Icon = tpl.icon
             const tokens = severityTokens[tpl.severity]
             return (
-              <GlassPanel key={tpl.name} className="flex h-full flex-col gap-2 p-3 text-left">
+              <GlassPanel variant="embedded" key={tpl.name} className="flex h-full flex-col gap-2 p-3 text-left">
                 <div className="flex min-w-0 items-start gap-2">
                   <div className={cn('shrink-0 rounded-lg p-1.5', tokens.bg)}>
                     <Icon className={cn('h-3.5 w-3.5', tokens.fg)} aria-hidden="true" />

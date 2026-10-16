@@ -66,7 +66,7 @@ export default function RideOverview({ drive, loading = false, unresolved = fals
                 {t('dynamics.ride.details', 'Open trip details')}
               </Link>
             </div>
-            <NestedDrivingBrief
+            <NestedDrivingBrief variant="embedded"
               testId="dynamics-ride-metrics"
               title={t('dynamics.ride.title', 'Selected ride')}
               description={t('dynamics.modernization.rideSource', 'Recorded drive totals; missing measurements remain unknown.')}

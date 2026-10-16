@@ -102,7 +102,7 @@ export function EfficiencyDetectivePanel({ vehicleId }: EfficiencyDetectivePanel
           <Text as="p" variant="bodySm">{data.explanation}</Text>
           {data.verdict !== 'insufficient_data' && (
             <>
-              <MapsOperationalBrief
+              <MapsOperationalBrief variant="embedded"
                 title={t('tempImpact.detective.brief.title', 'Month-over-month diagnosis')}
                 description={detail}
                 scope={scope}

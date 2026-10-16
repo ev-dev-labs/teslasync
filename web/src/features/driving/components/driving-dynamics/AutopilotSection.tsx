@@ -118,7 +118,7 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
         <Navigation className="h-4 w-4 text-indigo-300" aria-hidden="true" />
         {t('dynamics.autopilot', 'Autopilot & Cruise')}
       </PanelTitle>
-      <NestedDrivingBrief metrics={metrics} title={t('dynamics.brief.cruiseTitle', 'Speed and cruise settings')}
+      <NestedDrivingBrief variant="embedded" metrics={metrics} title={t('dynamics.brief.cruiseTitle', 'Speed and cruise settings')}
         description={source} loading={loading && !hasAny}
         unavailable={!hasAny && !loading} retained={error != null && hasAny}
         period={{ kind: 'unknown', label: t('dynamics.review.liveBadge', 'Current signals · not trip history'), reason: source }} />

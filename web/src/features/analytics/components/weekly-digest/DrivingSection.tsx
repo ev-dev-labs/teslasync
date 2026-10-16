@@ -157,7 +157,7 @@ export function DrivingSection({
       </div>
 
       {/* Top drive card */}
-      <GlassPanel className="mt-auto p-4">
+      <GlassPanel variant="embedded" className="mt-auto p-4">
         {metrics.topDrive ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
             <Badge variant="success" size="sm">

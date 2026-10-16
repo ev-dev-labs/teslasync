@@ -220,7 +220,7 @@ export default function ChargeInterruptionPage() {
             <ul className="grid min-w-0 grid-cols-1 gap-3 @3xl:grid-cols-2 @6xl:grid-cols-3">
               {summary.sites.map((s) => (
                 <li key={s.key} className="min-w-0">
-                  <Card padding="sm" className="h-full">
+                  <Card variant="embedded" padding="sm" className="h-full">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       <Text variant="body" className="min-w-0 break-words font-medium">{s.label}</Text>
                       <Badge variant={TREND_BADGE[s.recentTrend]}>

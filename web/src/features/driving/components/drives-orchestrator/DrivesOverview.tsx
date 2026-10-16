@@ -64,7 +64,7 @@ export function DrivesOverview({
   ];
   return <FadeIn>
     <GlassPanel id="drives-overview" className="p-4 sm:p-5">
-      <NestedDrivingBrief metrics={metrics} title={t('drives.overview', 'Overview')}
+      <NestedDrivingBrief variant="embedded" metrics={metrics} title={t('drives.overview', 'Overview')}
         testId="drives-overview" description={scope}
         preferences={{ units: unitPrefs, currency: { kind: 'symbol', value: '' } }}
         loading={isDrivesLoading} retained={drivesState.refreshError != null}

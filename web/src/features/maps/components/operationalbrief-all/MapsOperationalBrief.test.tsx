@@ -109,6 +109,14 @@ function renderBrief(loading?: boolean, sources: readonly { label: string; state
 }
 
 describe('maps OperationalBrief source contract', () => {
+  it('forwards embedded mode to the shared surface', () => {
+    const { container } = render(<MemoryRouter><MapsOperationalBrief title="Vehicle status"
+      description="Independent position evidence" scope={scope} metrics={metrics}
+      sources={[{ label: sourceLabel, state }]} variant="embedded" /></MemoryRouter>);
+    expect(container.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
   it('retains measured zero and missing heading with real source status and original bounds', () => {
     const { container } = renderBrief();
     const band = screen.getByRole('region', { name: 'Vehicle status' });

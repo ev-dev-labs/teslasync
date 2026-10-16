@@ -287,7 +287,7 @@ export default function SignalEntropyPage() {
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              <Card padding="sm" className="shadow-none">
+              <Card variant="embedded" padding="sm" className="shadow-none">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant={summary.dominantBinFraction >= 0.9 ? 'warning' : 'success'}>
                     {summary.dominantBinFraction >= 0.9
@@ -301,7 +301,7 @@ export default function SignalEntropyPage() {
                     : t('signalEntropy.activeText', 'This signal spreads its samples across multiple bins, so each new reading is genuinely informative rather than decoration on a fixed state.')}
                 </Text>
               </Card>
-              <Card padding="sm" className="shadow-none">
+              <Card variant="embedded" padding="sm" className="shadow-none">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant="info">{t('signalEntropy.range', 'Observed range')}</Badge>
                 </div>

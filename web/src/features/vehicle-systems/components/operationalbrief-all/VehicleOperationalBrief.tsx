@@ -19,14 +19,16 @@ interface Props {
   footer?: ReactNode;
   className?: string;
   embedded?: boolean;
+  variant?: 'standalone' | 'embedded';
 }
 
 /** Preserve source-local evidence and specialist displays without claiming completeness. */
 export function VehicleOperationalBrief({
   id, title, description, metrics, period, preferences, loading = false,
-  retained = false, available, error, footer, className, embedded = false,
+  retained = false, available, error, footer, className, embedded = false, variant,
 }: Props) {
   const { t } = useTranslation();
+  const isEmbedded = variant ? variant === 'embedded' : embedded;
   const operationalMetrics = useOperationalMetrics(metrics, preferences);
   const known = available ?? metrics.some(metric => metric.rawValue != null);
   const status = loading ? 'loading' : retained ? 'retained'
@@ -49,9 +51,9 @@ export function VehicleOperationalBrief({
 
   return (
     <div className={className} data-source-period-kind={period.kind} data-source-retained={retained || undefined}>
-      <OperationalBrief compact variant={embedded ? 'embedded' : 'standalone'} testId={id}
+      <OperationalBrief compact variant={isEmbedded ? 'embedded' : 'standalone'} testId={id}
         eyebrow={t('vehicleSystems.brief.eyebrow', 'Vehicle systems evidence')}
-        title={embedded
+        title={isEmbedded
           ? t('vehicleSystems.brief.sectionSummary', '{{section}} evidence', { section: title ?? period.label })
           : title ?? period.label}
         description={description ?? coverage}

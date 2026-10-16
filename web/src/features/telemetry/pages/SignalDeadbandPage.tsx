@@ -256,7 +256,7 @@ export default function SignalDeadbandPage() {
                 : emptyMessage}
             />
           ) : (
-            <TelemetrySummaryBrief title={t('signalDeadband.recommendation.title', 'Retention audit')}
+            <TelemetrySummaryBrief variant="embedded" title={t('signalDeadband.recommendation.title', 'Retention audit')}
               metrics={auditMetrics} testId="signal-deadband-retention-summary" sourceStatus={historyState.status}
               retained={historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null}
               scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: historyHours, signal })}

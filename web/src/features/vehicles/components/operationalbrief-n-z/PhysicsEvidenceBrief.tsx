@@ -3,12 +3,13 @@ import type { PhysicsPage } from '../tesla-physics/PhysicsPageShell';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { VehicleEvidenceBrief } from './VehicleEvidenceBrief';
 
-export function PhysicsEvidenceBrief({ physics, id, metrics, description, available = true }: {
+export function PhysicsEvidenceBrief({ physics, id, metrics, description, available = true, variant = 'standalone' }: {
   physics: PhysicsPage;
   id: string;
   metrics: readonly StatMetric[];
   description?: string;
   available?: boolean;
+  variant?: 'standalone' | 'embedded';
 }) {
   const { report, state, t } = physics;
   const { formatDateTime } = useDateFormat();
@@ -17,7 +18,7 @@ export function PhysicsEvidenceBrief({ physics, id, metrics, description, availa
   const limited = evidence && (!evidence.history_available || !evidence.black_box_available ||
     evidence.history_truncated || evidence.black_box_truncated ||
     evidence.drive_sessions_truncated || evidence.charge_sessions_truncated);
-  return <VehicleEvidenceBrief refreshFailed={state.refreshError != null} id={id} title={t('teslaOnly.briefTitle', '{{title}} evidence summary', { title: physics.title })}
+  return <VehicleEvidenceBrief refreshFailed={state.refreshError != null} variant={variant} id={id} title={t('teslaOnly.briefTitle', '{{title}} evidence summary', { title: physics.title })}
     description={description ?? t('teslaOnly.briefLimits', 'Returned observations only; missing readings and row caps do not establish lifetime completeness.')}
     metrics={metrics} status={state.status === 'ok' && (!available || limited) ? 'partial' : state.status}
     scope={evidence ? <>

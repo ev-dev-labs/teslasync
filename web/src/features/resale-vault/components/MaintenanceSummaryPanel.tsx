@@ -33,7 +33,7 @@ export function MaintenanceSummaryPanel({ maintenance, sources }: MaintenanceSum
 
   return (
     <LayoutCard title={t('resaleVault.maintenance.title', 'Maintenance & service')}>
-      <VaultSummaryBrief id="maintenance" title={t('resaleVault.brief.maintenance.title', 'Maintenance record counts')}
+      <VaultSummaryBrief variant="embedded" id="maintenance" title={t('resaleVault.brief.maintenance.title', 'Maintenance record counts')}
         description={description} metrics={metrics} hasEvidence={maintenance != null} sources={sources}
         scope={t('resaleVault.brief.maintenance.scope', 'Account-wide source; observation bounds unavailable')} />
       {!maintenance ? (

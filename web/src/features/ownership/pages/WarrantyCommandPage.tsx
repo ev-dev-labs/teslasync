@@ -572,7 +572,7 @@ export default function WarrantyCommandPage() {
       </div>
 
       {coverage.warranty.kind === 'battery' || coverage.capacity_retention_pct != null ? (
-        <Card padding="sm" className="mt-4 shadow-none">
+        <Card variant="embedded" padding="sm" className="mt-4 shadow-none">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Text as="span" variant="caption">
               {t('ownership.warranty.card.capacity', 'Battery retention vs. warranty floor')}

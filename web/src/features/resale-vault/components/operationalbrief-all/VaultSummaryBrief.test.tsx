@@ -28,6 +28,12 @@ function source(query: Parameters<typeof deriveDataState<unknown>>[0]): VaultEvi
 }
 
 describe('VaultSummaryBrief retained evidence and real drawer', () => {
+  it('forwards embedded mode to the shared surface', () => {
+    const { container } = render(<VaultSummaryBrief {...props} variant="embedded" />);
+    expect(container.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
   it('retains numeric raw measurements and validation states through the actual bridge', () => {
     const input: readonly StatMetric[] = [
       ...metrics,

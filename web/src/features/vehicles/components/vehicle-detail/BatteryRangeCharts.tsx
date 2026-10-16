@@ -101,11 +101,11 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
             className="w-32 shrink-0"
           />
           <div className="flex-1">
-            <GlassPanel className="p-3 mb-2">
+            <GlassPanel variant="embedded" className="p-3 mb-2">
               <Text variant="caption">{t('common.battery', 'Battery')}</Text>
               <AnimatedNumber value={batteryLevel} suffix="%" className={valueClass} />
             </GlassPanel>
-            <GlassPanel className="p-3">
+            <GlassPanel variant="embedded" className="p-3">
               <Text variant="caption">{t('common.range', 'Range')}</Text>
               <AnimatedNumber
                 value={ratedRangeDisplay}

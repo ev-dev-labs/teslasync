@@ -209,7 +209,7 @@ export default function DrivingCoachSection({ vehicleId, showPerDriveScores = tr
 
         <FadeIn delay={0.45} className="h-full">
           <GlassPanel className="h-full space-y-3 p-4 sm:p-5">
-            <NestedDrivingBrief metrics={intensityMetrics}
+            <NestedDrivingBrief variant="embedded" metrics={intensityMetrics}
               title={t('dynamics.brief.coachConsumption', 'Vehicle coaching consumption')}
               description={t('dynamics.coach.scopeDescription', 'Completed drives with positive recorded energy and available speed, power, and temperature over the last 30 days. Scores compare consumption with this vehicle’s best measured trip; power and speed profiles are heuristics, not observed braking technique or safety ratings.')}
               loading={coachQuery.isLoading && !coachState.hasData}

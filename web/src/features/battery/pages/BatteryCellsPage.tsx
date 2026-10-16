@@ -856,7 +856,7 @@ export default function BatteryCellsPage() {
             ) : insights.length > 0 ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {insights.map((ins, i) => (
-                  <GlassPanel key={i} className="p-4 shadow-none">
+                  <GlassPanel variant="embedded" key={i} className="p-4 shadow-none">
                     <div className="flex items-start gap-3">
                       <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
                       <div className="min-w-0">

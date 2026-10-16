@@ -132,7 +132,7 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
             </Text>
           </div>
 
-          <NestedDrivingBrief metrics={metrics}
+          <NestedDrivingBrief variant="embedded" metrics={metrics}
             title={t('dynamics.brief.liveQuantities', 'Reported powertrain quantities')}
             description={t('dynamics.grok.honesty', 'Interpreted from live motor, pedal, and accelerometer signals. Not Autopilot, not the chassis controller, and not a 0–60 claim.')}
             retained={motorQuery.isError || dynamicsQuery.isError}

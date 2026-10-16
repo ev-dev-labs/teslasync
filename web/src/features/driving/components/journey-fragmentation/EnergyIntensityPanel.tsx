@@ -63,7 +63,7 @@ export function EnergyIntensityPanel({ result, state, loading = false }: Journey
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<BatteryMedium className="h-7 w-7" />} message={t('journeyFragmentation.energy.empty', 'No observed journeys are available for energy comparison.')} />
       ) : (
         <>
-          <NestedDrivingBrief metrics={metrics}
+          <NestedDrivingBrief variant="embedded" metrics={metrics}
             title={t('journeyFragmentation.brief.intensityTitle', 'Whole-journey intensity')}
             description={t('journeyFragmentation.energy.subtitle', 'Distance-weighted whole-journey intensity with complete-energy coverage shown for each group.')}
             period={{ kind: 'unknown', label: t('journeyFragmentation.energy.title', 'Observed energy-intensity comparison'),

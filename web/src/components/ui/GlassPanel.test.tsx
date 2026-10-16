@@ -31,6 +31,15 @@ const GREEN_GLOW = GLOW_CLASSES.green;
 const PURPLE_GLOW = GLOW_CLASSES.purple;
 
 describe('GlassPanel — element + children', () => {
+  it('renders embedded panels without a second bordered or printed surface', () => {
+    render(<GlassPanel variant="embedded" data-testid="panel">Panel body</GlassPanel>);
+    const panel = screen.getByTestId('panel');
+    expect(panel).toHaveAttribute('data-surface-variant', 'embedded');
+    expect(panel).not.toHaveAttribute('data-print-card');
+    expect(panel.className).toContain('border-0');
+    expect(panel.className).toContain('shadow-none');
+  });
+
   it('renders a native <div> carrying its children', () => {
     render(<GlassPanel data-testid="panel">Panel body</GlassPanel>);
     const panel = screen.getByTestId('panel');

@@ -102,7 +102,7 @@ export function FsdObservatoryPanel({ insights, state, dataState }: FsdObservato
           ) : <>
           <StaleRefreshWarning state={source} label={t('fsd.observatory.title', 'FSD observatory')} />
           <DataProvenanceBadge provenance={source.provenance} status={source.status} updatedAt={source.updatedAt} />
-          <NestedDrivingBrief metrics={metrics}
+          <NestedDrivingBrief variant="embedded" metrics={metrics}
             title={t('fsd.brief.observatoryMetrics', 'Reset-safe counter quantities')}
             description={honesty} loading={bodyState.isLoading} retained={retained}
             unavailable={!source.hasData || source.status === 'unavailable'}

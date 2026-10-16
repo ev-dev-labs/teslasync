@@ -79,7 +79,7 @@ export function AlertsPanel({
               const Icon = severity === 'critical'
                 ? AlertCircle : severity === 'warning' ? AlertTriangle : Info;
               return (
-                <GlassPanel
+                <GlassPanel variant="embedded"
                   key={severity}
                   role="listitem"
                   className="flex min-w-0 flex-wrap items-center justify-between gap-2 px-4 py-3"

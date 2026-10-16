@@ -41,7 +41,7 @@ export default function AlertPacksPanel({ onEditRule }: Props) {
         message={t('common.noData', 'No data available')} action={{ label: t('common.refresh', 'Refresh'), onClick: () => void catalog.refetch() }} /> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map(pack => (
-            <GlassPanel key={pack.id} className="flex flex-col gap-3 p-4">
+            <GlassPanel variant="embedded" key={pack.id} className="flex flex-col gap-3 p-4">
               <PanelTitle>{packName(pack)}</PanelTitle>
               <Text variant="bodySm">{t(`alertPacks.catalog.${pack.id}.description`, pack.description)}</Text>
               <Caption className="mt-auto">{t('alertPacks.ruleCount', '{{count}} rules · version {{version}}', { count: pack.rules.length, version: pack.version })}</Caption>

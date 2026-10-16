@@ -113,7 +113,7 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
             </div>
             {latest ? (
               <div className="mt-5 space-y-3">
-                <NestedDrivingBrief title={t('effTarget.brief.completedTitle', 'Completed-week consumption')}
+                <NestedDrivingBrief variant="embedded" title={t('effTarget.brief.completedTitle', 'Completed-week consumption')}
                   description={marginLabel} loading={sourceState.isLoading}
                   retained={retained} unavailable={sourceState.error != null}
                   period={{ kind: 'unknown', label: formatWeek(latest.weekStart),
@@ -165,7 +165,7 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
               </Badge>
             </div>
             {active ? (
-              <NestedDrivingBrief title={t('effTarget.brief.activeTitle', 'Active-week observations')}
+              <NestedDrivingBrief variant="embedded" title={t('effTarget.brief.activeTitle', 'Active-week observations')}
                 description={t('effTarget.status.inProgress', 'In progress · not graded')}
                 loading={sourceState.isLoading} retained={retained}
                 unavailable={sourceState.error != null}

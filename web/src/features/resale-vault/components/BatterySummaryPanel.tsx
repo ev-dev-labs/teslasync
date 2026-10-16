@@ -39,7 +39,7 @@ export function BatterySummaryPanel({ battery, sources }: BatterySummaryPanelPro
     <LayoutCard title={t('resaleVault.battery.title', 'Battery health')}
       actions={battery?.health_grade ? <Badge variant="info">{battery.health_grade}</Badge> : undefined}>
 
-      <VaultSummaryBrief
+      <VaultSummaryBrief variant="embedded"
         id="battery" title={t('resaleVault.brief.battery.title', 'Battery measurements')}
         description={description} metrics={metrics} hasEvidence={battery != null} sources={sources}
         scope={t('resaleVault.brief.window', 'Observed evidence: {{start}} → {{end}}', {

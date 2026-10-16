@@ -32,6 +32,15 @@ vi.mock('@/hooks/useMotionPreference', () => ({
 }));
 
 describe('Card', () => {
+  it('renders embedded cards without a second bordered or printed surface', () => {
+    render(<Card variant="embedded" data-testid="card">Body copy</Card>);
+    const card = screen.getByTestId('card');
+    expect(card).toHaveAttribute('data-surface-variant', 'embedded');
+    expect(card).not.toHaveAttribute('data-print-card');
+    expect(card.className).toContain('border-0');
+    expect(card.className).toContain('shadow-none');
+  });
+
   it('renders a <div> wrapper around its children', () => {
     render(<Card>Body copy</Card>);
     const el = screen.getByText('Body copy');

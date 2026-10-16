@@ -197,7 +197,7 @@ export function OverviewTab({ query }: { query: FleetAnalyticsQuery }) {
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
           {QUICK_LINKS.map((link) => (
             <Link key={link.href} to={link.href} className="block">
-              <GlassPanel hover className="flex items-center gap-3 p-3">
+              <GlassPanel variant="embedded" hover className="flex items-center gap-3 p-3">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-2)]" aria-hidden="true">
                   {link.icon}
                 </div>

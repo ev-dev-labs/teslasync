@@ -38,12 +38,14 @@ interface Props {
   capReached?: boolean;
   completenessUnknown?: boolean;
   lastSuccessAt?: string;
+  variant?: 'standalone' | 'embedded';
 }
 
 export function TelemetrySummaryBrief({
   title, description, metrics, scope, provenance, testId, loading = false,
   unavailable = false, retained = false, unknown = false, statusLabel, freshness, sourceStatus, sourceBounds = [],
   requestedBounds = [], observedBounds = [], capReached = false, completenessUnknown = false, lastSuccessAt,
+  variant = 'standalone',
 }: Props) {
   const { t } = useTranslation();
   const { formatDateTime, tz } = useDateFormat();
@@ -55,7 +57,7 @@ export function TelemetrySummaryBrief({
     ? ` (${formatDateTime(bound.from)} → ${formatDateTime(bound.to)} · ${tz})`
     : null;
   return (
-    <OperationalBrief compact testId={testId} metrics={operationalMetrics}
+    <OperationalBrief compact variant={variant} testId={testId} metrics={operationalMetrics}
       eyebrow={t('telemetry.brief.eyebrow', 'Telemetry evidence')}
       title={title} description={description}
       scope={<>{scope}{sourceBounds.map((bound, index) => <Caption key={`${bound.signal}-${index}`} className="min-w-0 break-words">

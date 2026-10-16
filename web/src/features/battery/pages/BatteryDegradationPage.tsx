@@ -759,7 +759,7 @@ export default function BatteryDegradationPage() {
                     (rf.name !== 'temperature_exposure' || thermalAvailable) &&
                     validPercent(rf.score) ? rf.score : NaN;
                   return (
-                    <GlassPanel key={rf.name} className="p-4 shadow-none">
+                    <GlassPanel variant="embedded" key={rf.name} className="p-4 shadow-none">
                       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                         <div className="flex min-w-0 max-w-full items-center gap-2">
                           <Icon className={cn('h-4 w-4 shrink-0', riskScoreColor(score))} aria-hidden="true" />
@@ -847,7 +847,7 @@ export default function BatteryDegradationPage() {
                 sizes={['third', 'third', 'third']}
               >
                 {/* Charge habits */}
-                <GlassPanel className="p-4 shadow-none">
+                <GlassPanel variant="embedded" className="p-4 shadow-none">
                   <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                     <Text variant="bodySm" weight="medium" className="min-w-0 break-words">{t('battery.degradation.chargeHabits', 'Charge habits')}</Text>
                     <Badge variant={habitsScore != null ? scoreVariant(habitsScore) : 'neutral'} size="sm">
@@ -867,7 +867,7 @@ export default function BatteryDegradationPage() {
                 </GlassPanel>
 
                 {/* Temperature exposure */}
-                <GlassPanel className="p-4 shadow-none">
+                <GlassPanel variant="embedded" className="p-4 shadow-none">
                   <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                     <Text variant="bodySm" weight="medium" className="min-w-0 break-words">{t('battery.degradation.tempExposure', 'Temperature exposure')}</Text>
                     <Badge variant={tempScore != null ? riskBadgeVariant(tempScore) : 'neutral'} size="sm">
@@ -884,7 +884,7 @@ export default function BatteryDegradationPage() {
                 </GlassPanel>
 
                 {/* Cycle depth */}
-                <GlassPanel className="p-4 shadow-none">
+                <GlassPanel variant="embedded" className="p-4 shadow-none">
                   <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                     <Text variant="bodySm" weight="medium" className="min-w-0 break-words">{t('battery.degradation.cycleDepth', 'Cycle depth')}</Text>
                     <Badge variant={cycleDepthScore != null ? scoreVariant(cycleDepthScore) : 'neutral'} size="sm">

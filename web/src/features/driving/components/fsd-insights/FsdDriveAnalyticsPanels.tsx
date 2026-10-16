@@ -177,7 +177,7 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
         )}
       </Text>
       <FsdSectionBody state={state} className="min-h-28">
-        <NestedDrivingBrief metrics={metrics}
+        <NestedDrivingBrief variant="embedded" metrics={metrics}
           title={t('fsd.brief.periodQuantities', 'Current and previous period quantities')}
           description={t('fsd.comparison.subtitle', 'The immediately preceding window uses the same duration and timezone.')}
           loading={state.isLoading} unavailable={state.error != null || insights == null}

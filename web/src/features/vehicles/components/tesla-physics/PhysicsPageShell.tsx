@@ -79,7 +79,7 @@ export function PhysicsPageShell({ physics, children, navigation }: {
     {navigation}
     {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => { void query.refetch(); }} /> : report ? <div className="space-y-6">
       <LayoutCard title={t('teslaOnly.scopeTitle', 'Evidence boundaries')}>
-        <PhysicsEvidenceBrief physics={physics} id="physics-evidence-boundaries" available={evidence != null}
+        <PhysicsEvidenceBrief physics={physics} variant="embedded" id="physics-evidence-boundaries" available={evidence != null}
           description={t('teslaOnly.scopeCaution', 'The exclusive report covers at most 14 days. Row caps, missing history, and partial session coverage limit conclusions; a zero finding is not lifetime proof.')}
           metrics={[
             { metricId: 'count', occurrenceId: 'history', label: t('teslaOnly.historyRowsLabel', 'Bounded history rows'), rawValue: evidence?.history_rows, context: <>{t('teslaOnly.historyRows', 'History rows: {{count}}', { count: evidence?.history_rows ?? unknown(t) })}<div>{t('teslaOnly.briefSourceFlags', 'Available: {{available}} · row cap reached: {{capped}}', { available: yesNo(evidence?.history_available, t), capped: yesNo(evidence?.history_truncated, t) })}</div></> },

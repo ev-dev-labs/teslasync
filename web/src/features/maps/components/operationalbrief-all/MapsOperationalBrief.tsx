@@ -15,9 +15,10 @@ interface MapsOperationalBriefProps {
   sources: readonly { label: string; state: DataState<unknown> }[];
   loading?: boolean;
   onRetry?: () => void;
+  variant?: 'standalone' | 'embedded';
 }
 
-export function MapsOperationalBrief({ title, description, scope, metrics, sources, loading, onRetry }: MapsOperationalBriefProps) {
+export function MapsOperationalBrief({ title, description, scope, metrics, sources, loading, onRetry, variant = 'standalone' }: MapsOperationalBriefProps) {
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
   const operationalMetrics = useOperationalMetrics(metrics);
@@ -52,6 +53,7 @@ export function MapsOperationalBrief({ title, description, scope, metrics, sourc
   return (
     <OperationalBrief
       compact
+      variant={variant}
       eyebrow={t('mapsBrief.eyebrow', 'Location evidence')}
       title={title}
       description={description}

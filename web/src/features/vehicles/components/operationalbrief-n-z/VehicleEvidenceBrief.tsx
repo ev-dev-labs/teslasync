@@ -15,13 +15,14 @@ interface VehicleEvidenceBriefProps {
   freshness?: ReactNode;
   loading?: boolean;
   variant?: 'standalone' | 'embedded';
+  hideHeading?: boolean;
   /** True only when retained data follows an actual refresh error (not a pause). */
   refreshFailed?: boolean;
 }
 
 export function VehicleEvidenceBrief({
   id, title, description, metrics: sourceMetrics, status, scope, provenance, freshness, loading, refreshFailed = false,
-  variant = 'standalone',
+  variant = 'standalone', hideHeading = false,
 }: VehicleEvidenceBriefProps) {
   const { t } = useTranslation();
   const bridgedMetrics = useOperationalMetrics(sourceMetrics);
@@ -48,5 +49,5 @@ export function VehicleEvidenceBrief({
     statusLabel={labels[status]}
     statusTone={status === 'stale' || status === 'partial' || status === 'initialFailure' ? 'warning' : 'neutral'}
     loading={loading ?? status === 'initial'}
-    metrics={metrics} scope={scope} freshness={freshness} provenance={provenance} />;
+    metrics={metrics} scope={scope} freshness={freshness} provenance={provenance} hideHeading={hideHeading} />;
 }

@@ -926,7 +926,7 @@ export default function ChatbotPage() {
                         <IconBox color="neutral" size="sm">
                           <HelixMark className={iconSize.md} aria-hidden="true" />
                         </IconBox>
-                        <GlassPanel className="min-w-0 !p-3">
+                        <GlassPanel variant="embedded" className="min-w-0 !p-3">
                           <Text as="p" variant="bodySm" className="break-words">
                             {t('chatbot.processing', 'Helix is processing your request…')}
                           </Text>

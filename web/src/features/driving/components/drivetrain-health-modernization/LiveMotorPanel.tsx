@@ -177,7 +177,7 @@ export function LiveMotorPanel({
     </Badge>
     <SourceBoundary state={state} label={t('drivetrain.liveMotor', 'Live Motor Status')}
       loading={loading} empty={!motorLatest} emptyMessage={t('drivetrain.noLiveMotor', 'No live motor telemetry yet')}>
-      <NestedDrivingBrief metrics={metrics} preferences={preferences}
+      <NestedDrivingBrief variant="embedded" metrics={metrics} preferences={preferences}
         title={t('drivetrain.brief.liveReadings', 'Returned motor readings')}
         description={period.provenance ?? period.label}
         loading={loading && !state.hasData} unavailable={state.fatalError != null}

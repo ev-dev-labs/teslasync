@@ -15,10 +15,11 @@ interface VaultSummaryBriefProps {
   scope: ReactNode;
   sources?: readonly VaultEvidenceSource[];
   provenance?: string;
+  variant?: 'standalone' | 'embedded';
 }
 
 export function VaultSummaryBrief({
-  id, title, description, metrics, hasEvidence, scope, sources = [], provenance,
+  id, title, description, metrics, hasEvidence, scope, sources = [], provenance, variant = 'standalone',
 }: VaultSummaryBriefProps) {
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
@@ -48,6 +49,7 @@ export function VaultSummaryBrief({
   return (
     <OperationalBrief
       compact
+      variant={variant}
       testId={`vault-${id}-brief`}
       eyebrow={t('resaleVault.brief.eyebrow', 'Vehicle-history evidence')}
       title={title}

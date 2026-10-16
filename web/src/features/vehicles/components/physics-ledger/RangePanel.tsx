@@ -19,7 +19,7 @@ export function RangePanel({ ledger, status }: { ledger: PhysicsLedger; status?:
       <Text as="p" size="sm" color="secondary">
         {r?.honesty ?? t('physicsLedger.range.empty', 'No range estimators were recorded in this window.')}
       </Text>
-      <LedgerEvidenceBrief ledger={ledger} id="ledger-range-summary" status={status}
+      <LedgerEvidenceBrief ledger={ledger} id="ledger-range-summary" status={status} variant="embedded" hideHeading
         available={r != null && !r.unknown} title={t('physicsLedger.range.title', 'Range disagreement')}
         description={r?.honesty ?? t('physicsLedger.range.empty', 'No range estimators were recorded in this window.')}
         metrics={[

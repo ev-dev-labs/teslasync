@@ -27,7 +27,7 @@ export function StructureIndicators({ result, state, loading = false }: JourneyF
       {state && !state.hasData ? <PendingEvidence state={state} loading={loading} /> : result.includedDrives === 0 ? (
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<Footprints className="h-7 w-7" />} message={t('journeyFragmentation.structure.empty', 'No included drives are available for structural indicators.')} />
       ) : (
-        <NestedDrivingBrief title={t('journeyFragmentation.brief.structureTitle', 'Observed chain quantities')}
+        <NestedDrivingBrief variant="embedded" title={t('journeyFragmentation.brief.structureTitle', 'Observed chain quantities')}
           description={t('journeyFragmentation.structure.subtitle', 'Structural indicators describe the returned records; they are not route or intent recommendations.')}
           period={{ kind: 'unknown', label: t('journeyFragmentation.structure.title', 'Short-fragment and chain structure'),
             reason: t('journeyFragmentation.structure.compactHint', 'Multi-drive, short linked gaps, and within the configured distance rule') }}

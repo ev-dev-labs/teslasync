@@ -26,7 +26,7 @@ export function SoftwareUpdateSummaryPanel({ softwareUpdates, sources }: Softwar
   return (
     <LayoutCard title={t('resaleVault.software.title', 'Software updates')}
       actions={softwareUpdates?.latest_version ? <Badge variant="info">{softwareUpdates.latest_version}</Badge> : undefined}>
-      <VaultSummaryBrief id="software" title={t('resaleVault.brief.software.title', 'Observed software history')}
+      <VaultSummaryBrief variant="embedded" id="software" title={t('resaleVault.brief.software.title', 'Observed software history')}
         description={description} metrics={metrics} hasEvidence={softwareUpdates != null} sources={sources}
         scope={t('resaleVault.brief.boundsUnknown', 'Complete source coverage and observation bounds are not established')} />
       {!softwareUpdates ? (

@@ -47,7 +47,7 @@ export default function GForcePanel({ vehicleId }: { vehicleId: number | null | 
       <DynamicsPausedNotice state={state} label={t('dynamics.gForce', 'Acceleration G-Force')} />
       {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => void query.refetch()} /> : null}
       {hasAny || query.isLoading ? (
-        <NestedDrivingBrief
+        <NestedDrivingBrief variant="embedded"
           testId="dynamics-g-force"
           title={t('dynamics.brief.accelerationAxes', 'Reported acceleration axes')}
           description={t('dynamics.modernization.gSource', 'Latest reported acceleration; missing axes are not zero.')}

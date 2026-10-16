@@ -140,7 +140,7 @@ export function ChargingSection({
       </div>
 
       {/* Charge energy week-over-week */}
-      <GlassPanel className="mt-auto flex items-center justify-between gap-4 px-4 py-3">
+      <GlassPanel variant="embedded" className="mt-auto flex items-center justify-between gap-4 px-4 py-3">
         <Caption>{t('analytics.weeklyDigest.energyVsLastWeek', 'Energy vs. last week')}</Caption>
         <Badge
           variant={

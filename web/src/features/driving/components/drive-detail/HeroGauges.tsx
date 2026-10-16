@@ -214,14 +214,14 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true }: {
         ) : null}
         {pricingState ? <StaleRefreshWarning state={pricingState} label={t('nav.settings', 'Settings')} /> : null}
         <div role="group" aria-label={t('driveDetail.heroGauges', 'Drive summary')}>
-          <NestedDrivingBrief metrics={basicMetrics}
+          <NestedDrivingBrief variant="embedded" metrics={basicMetrics}
             title={t('driveDetail.heroGauges', 'Drive summary')}
             description={t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history')}
             period={recordPeriod}
             retained={state.refreshError != null || pricingState?.refreshError != null} />
         </div>
         <div className="mt-5 border-t border-[var(--border-subtle)] pt-4">
-          <NestedDrivingBrief metrics={performanceMetrics}
+          <NestedDrivingBrief variant="embedded" metrics={performanceMetrics}
             title={t('driveDetail.report.performance', 'Performance and comparisons')}
             description={t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history')}
             period={recordPeriod} retained={state.refreshError != null} />

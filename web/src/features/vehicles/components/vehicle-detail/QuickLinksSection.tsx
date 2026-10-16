@@ -46,7 +46,7 @@ export function QuickLinksSection() {
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
               )}
             >
-              <GlassPanel
+              <GlassPanel variant="embedded"
                 hover
                 glow="cyan"
                 className={cn(

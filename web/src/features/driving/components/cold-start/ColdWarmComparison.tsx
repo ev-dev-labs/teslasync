@@ -115,7 +115,7 @@ export function ColdWarmComparison({
                     ? t('coldStart.comparison.sufficient', 'Aggregate sample ready')
                     : t('coldStart.comparison.building', 'Building aggregate confidence')}
                 </Badge>
-                <NestedDrivingBrief metrics={metrics}
+                <NestedDrivingBrief variant="embedded" metrics={metrics}
                   title={t('coldStart.brief.cohortTitle', 'Distance-weighted cohort consumption')}
                   description={deltaLabel} loading={state.isLoading}
                   retained={state.retained}

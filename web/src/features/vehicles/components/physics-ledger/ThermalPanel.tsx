@@ -21,7 +21,7 @@ export function ThermalPanel({ ledger, status }: { ledger: PhysicsLedger; status
       <Text as="p" size="sm" color="secondary">
         {th?.honesty ?? t('physicsLedger.thermal.empty', 'No pack temperature sensors reported in this window.')}
       </Text>
-      <LedgerEvidenceBrief ledger={ledger} id="ledger-thermal-summary" status={status}
+      <LedgerEvidenceBrief ledger={ledger} id="ledger-thermal-summary" status={status} variant="embedded" hideHeading
         available={th != null && !th.unknown} title={t('physicsLedger.thermal.title', 'Thermal')}
         description={th?.honesty ?? t('physicsLedger.thermal.empty', 'No pack temperature sensors reported in this window.')}
         metrics={[

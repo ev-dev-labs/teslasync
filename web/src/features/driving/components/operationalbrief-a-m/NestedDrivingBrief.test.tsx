@@ -94,6 +94,12 @@ beforeEach(() => {
 });
 
 describe('NestedDrivingBrief — real compact renderer and unconditional numerical bridge', () => {
+  it('forwards embedded mode to the shared surface', () => {
+    const { container } = show(<NestedDrivingBrief {...props} variant="embedded" />);
+    expect(container.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
   it('keeps shared brief and Drive DNA cadence type dependencies on the public category', () => {
     expect(nestedSource).toMatch(/import type \{ StatMetric, StatPeriod \} from '@\/components\/data-display';/);
     expect(nestedSource).toMatch(/import type \{ MetricPreferences \} from '@\/components\/data-display';/);

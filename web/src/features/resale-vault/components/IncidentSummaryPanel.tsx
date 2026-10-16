@@ -30,7 +30,7 @@ export function IncidentSummaryPanel({ incidents, sources }: IncidentSummaryPane
 
   return (
     <LayoutCard title={t('resaleVault.incidents.title', 'Security incidents')}>
-      <VaultSummaryBrief id="incidents" title={t('resaleVault.brief.incidents.title', 'Observed security history')}
+      <VaultSummaryBrief variant="embedded" id="incidents" title={t('resaleVault.brief.incidents.title', 'Observed security history')}
         description={description} metrics={metrics} hasEvidence={incidents != null} sources={sources}
         scope={t('resaleVault.brief.window', 'Observed evidence: {{start}} → {{end}}', {
           start: incidents?.earliest_event_at ?? '—', end: incidents?.latest_event_at ?? '—',

@@ -101,7 +101,7 @@ export function ThermalPanels({
       {/* Independent neighbors remain visible when the health source fails. */}
       <SourceBoundary state={drivesState} label={t('drivetrain.powerSummary', 'Power Summary')}
         loading={drivesLoading} empty={drivesEmpty} emptyMessage={t('drivetrain.noData', 'No data')}>
-        <NestedDrivingBrief period={{ kind: 'unknown', label: t('drivetrain.modernization.driveSubset', 'Recent drives within the selected range'),
+        <NestedDrivingBrief variant="embedded" period={{ kind: 'unknown', label: t('drivetrain.modernization.driveSubset', 'Recent drives within the selected range'),
           reason: t('drivetrain.brief.powerScope', 'Loaded recent drives, not a complete selected-range power aggregate.') }}
           title={t('drivetrain.powerSummary', 'Power Summary')}
           description={t('drivetrain.brief.powerScope', 'Loaded recent drives, not a complete selected-range power aggregate.')}

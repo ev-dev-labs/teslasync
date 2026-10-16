@@ -81,7 +81,7 @@ export default function SpeedGearPanel({
           {t('dynamics.shiftState', 'Shift State')}
         </Badge>
       </div>
-      <NestedDrivingBrief
+      <NestedDrivingBrief variant="embedded"
         testId="dynamics-current-motor-power"
         title={t('dynamics.power', 'Motor Power')}
         description={t('dynamics.modernization.motorSource', 'Latest reported motor signals; not selected-trip history.')}
@@ -102,7 +102,7 @@ export default function SpeedGearPanel({
           provenance: t('dynamics.modernization.motorSource', 'Latest reported motor signals; not selected-trip history.'),
         }}
       />
-      <NestedDrivingBrief
+      <NestedDrivingBrief variant="embedded"
         testId="dynamics-range-speeds"
         title={t('dynamics.review.rangeAnalytics', 'Date-range trip context')}
         description={t('dynamics.modernization.loadedSpeeds', 'Average and maximum of the loaded trips, including any current drive; not a complete-range aggregate.')}

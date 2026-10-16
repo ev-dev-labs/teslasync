@@ -49,6 +49,12 @@ function setup(overrides: Partial<Parameters<typeof TelemetrySummaryBrief>[0]> =
 }
 
 describe('Telemetry compact OperationalBrief contract', () => {
+  it('forwards embedded mode to the shared surface', () => {
+    const { container } = setup({ variant: 'embedded' });
+    expect(container.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
   it('uses saved locale and timezone across day boundaries without losing exact evidence in either surface', () => {
     preferences.locale = 'de-DE';
     preferences.timezone_user = 'America/Los_Angeles';

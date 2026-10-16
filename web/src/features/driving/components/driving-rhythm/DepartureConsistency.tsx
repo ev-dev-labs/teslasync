@@ -98,7 +98,7 @@ export function DepartureConsistency({
                       )}
                     </Badge>
                   </div>
-                  <NestedDrivingBrief title={dayLabel(day)}
+                  <NestedDrivingBrief variant="embedded" title={dayLabel(day)}
                     description={t('rhythm.consistency.subtitle', 'Typical 24-hour departure and median circular deviation by local weekday in {{timezone}}.', { timezone: summary.timeZone })}
                     loading={state.isLoading} unavailable={state.error != null} retained={state.retained}
                     period={{ kind: 'unknown', label: dayLabel(day),

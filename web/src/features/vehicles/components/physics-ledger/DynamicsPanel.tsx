@@ -22,7 +22,7 @@ export function DynamicsPanel({ ledger, status }: { ledger: PhysicsLedger; statu
       <Text as="p" size="sm" color="secondary">
         {d?.honesty ?? t('physicsLedger.dynamics.empty', 'No motion samples were recorded in this window.')}
       </Text>
-      <LedgerEvidenceBrief ledger={ledger} id="ledger-dynamics-summary" status={status}
+      <LedgerEvidenceBrief ledger={ledger} id="ledger-dynamics-summary" status={status} variant="embedded" hideHeading
         available={d != null && !d.unknown}
         title={t('physicsLedger.dynamics.title', 'Longitudinal dynamics')}
         description={d?.honesty ?? t('physicsLedger.dynamics.empty', 'No motion samples were recorded in this window.')}

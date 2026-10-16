@@ -110,7 +110,7 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
   });
 
   it('removes its own surface when embedded in a vehicle-systems section', () => {
-    const view = render(<VehicleOperationalBrief embedded id="embedded-vehicle-brief"
+    const view = render(<VehicleOperationalBrief variant="embedded" id="embedded-vehicle-brief"
       title="Climate evidence" metrics={[{ metricId: 'count', occurrenceId: 'rows', label: 'Rows', rawValue: 4 }]}
       period={period} />);
 

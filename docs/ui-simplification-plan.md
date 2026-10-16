@@ -91,3 +91,103 @@ In progress. Row 1 IconButton and row 2 shared widget freshness are complete. Ro
 
 
 
+
+## Automated nested-surface sweep (2026-10-15)
+
+The TypeScript AST inventory checks JSX evidence briefs against enclosing
+`Card`, `GlassPanel`, `LayoutCard`, `Panel`, `SectionCard`, `SectionSurface`,
+and `WidgetShell` surfaces, and compares direct heading text/i18n keys with
+descendant card title text/i18n keys. The audit is `web/scripts/audit-nested-surfaces.mjs`;
+the all-source guard is `node --test scripts/__tests__/audit-nested-surfaces.test.mjs`.
+
+### Full pre-fix inventory
+
+The baseline contained **38 nested standalone brief placements** and **4
+duplicate heading/title pairs**. The complete brief inventory is listed
+below; the first 31 placements were flattened during the first pass, and the
+remaining seven were surfaced by the second pass before fixes.
+
+Nested brief placements (38):
+
+- `driving/components/arrival-reliability/ArrivalReliabilityWindowComparisons.tsx:130` — NestedDrivingBrief
+- `driving/components/cold-start/ColdWarmComparison.tsx:118` — NestedDrivingBrief
+- `driving/components/drive-detail/HeroGauges.tsx:217,224` — NestedDrivingBrief (2)
+- `driving/components/drives-orchestrator/DrivesOverview.tsx:67` — NestedDrivingBrief
+- `driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx:180` — NestedDrivingBrief
+- `driving/components/drivetrain-health-modernization/ThermalPanels.tsx:104` — NestedDrivingBrief
+- `driving/components/driving-dynamics/AutopilotSection.tsx:121` — NestedDrivingBrief
+- `driving/components/driving-dynamics/DrivingCoachSection.tsx:212` — NestedDrivingBrief
+- `driving/components/driving-dynamics/GrokDynamicsBriefing.tsx:135` — NestedDrivingBrief
+- `driving/components/driving-dynamics-modernization/GForcePanel.tsx:50` — NestedDrivingBrief
+- `driving/components/driving-dynamics-modernization/RideOverview.tsx:69` — NestedDrivingBrief
+- `driving/components/driving-dynamics-modernization/SpeedGearPanel.tsx:84,105` — NestedDrivingBrief (2)
+- `driving/components/driving-rhythm/DepartureConsistency.tsx:101` — NestedDrivingBrief
+- `driving/components/driving-rhythm/WeekdayWeekendComparison.tsx:106` — NestedDrivingBrief
+- `driving/components/efficiency-target/GoalPulse.tsx:116,168` — NestedDrivingBrief (2)
+- `driving/components/explorer/NewRepeatBehavior.tsx:94` — NestedDrivingBrief
+- `driving/components/fsd-insights/FsdDriveAnalyticsPanels.tsx:180` — NestedDrivingBrief
+- `driving/components/fsd-insights/FsdObservatoryPanel.tsx:105` — NestedDrivingBrief
+- `driving/components/journey-fragmentation/EnergyIntensityPanel.tsx:66` — NestedDrivingBrief
+- `driving/components/journey-fragmentation/StructureIndicators.tsx:30` — NestedDrivingBrief
+- `maps/components/EfficiencyDetectivePanel.tsx:105` — MapsOperationalBrief
+- `resale-vault/components/BatteryCertificatePanel.tsx:92` — VaultSummaryBrief
+- `resale-vault/components/BatterySummaryPanel.tsx:42` — VaultSummaryBrief
+- `resale-vault/components/DrivingChargingSummaryPanel.tsx:66,72` — VaultSummaryBrief (2)
+- `resale-vault/components/IncidentSummaryPanel.tsx:33` — VaultSummaryBrief
+- `resale-vault/components/MaintenanceSummaryPanel.tsx:36` — VaultSummaryBrief
+- `resale-vault/components/SoftwareUpdateSummaryPanel.tsx:29` — VaultSummaryBrief
+- `vehicle-systems/components/comfort-consistency/ComfortConsistencySourceAvailability.tsx:33` — SourceAvailabilityBrief
+- `vehicle-systems/components/hvac-cycling/HvacCyclingSourceAvailability.tsx:35` — SourceAvailabilityBrief
+- `vehicles/components/physics-ledger/DynamicsPanel.tsx:25` — LedgerEvidenceBrief
+- `vehicles/components/physics-ledger/RangePanel.tsx:22` — LedgerEvidenceBrief
+- `vehicles/components/physics-ledger/ThermalPanel.tsx:24` — LedgerEvidenceBrief
+- `vehicles/components/physics-ledger/TiresPanel.tsx:26` — LedgerEvidenceBrief
+- `vehicles/components/tesla-physics/PhysicsPageShell.tsx:82` — PhysicsEvidenceBrief
+
+Duplicate outer heading and inner card title (4):
+
+- `vehicles/components/physics-ledger/DynamicsPanel.tsx:20` — `physicsLedger.dynamics.title`
+- `vehicles/components/physics-ledger/RangePanel.tsx:17` — `physicsLedger.range.title`
+- `vehicles/components/physics-ledger/ThermalPanel.tsx:19` — `physicsLedger.thermal.title`
+- `vehicles/components/physics-ledger/TiresPanel.tsx:21` — `physicsLedger.tires.title`
+
+After the fixes, rerun the audit and record its nested-brief and duplicate
+title counts here. The target is zero for both.
+
+### Full nested bordered-surface extension
+
+A second AST pass widened the inventory from evidence briefs to any bordered
+surface component nested in another bordered surface. It found **26 nested
+surface blocks** in addition to the 38 evidence-brief placements above; these
+26 locations were added to the pre-fix sweep before being edited:
+
+- `admin/components/structural-closure/fleet-api/FleetAPIConfiguredEndpoints.tsx:56` — GlassPanel inside LayoutCard
+- `analytics/components/analytics/OverviewTab.tsx:200` — GlassPanel inside GlassPanel
+- `analytics/components/weekly-digest/AlertsSection.tsx:88` — GlassPanel inside GlassPanel
+- `analytics/components/weekly-digest/ChargingSection.tsx:143` — GlassPanel inside GlassPanel
+- `analytics/components/weekly-digest/DrivingSection.tsx:160` — GlassPanel inside GlassPanel
+- `analytics/components/weekly-digest-modernization/AlertsPanel.tsx:82` — GlassPanel inside LayoutCard
+- `analytics/components/weekly-digest-modernization/BatteryPanel.tsx:59,67` — GlassPanel inside LayoutCard (2)
+- `battery/pages/BatteryCellsPage.tsx:859` — GlassPanel inside LayoutCard
+- `battery/pages/BatteryDegradationPage.tsx:762,850,870,887` — GlassPanel inside LayoutCard (4)
+- `charging/pages/ChargeInterruptionPage.tsx:223` — Card inside LayoutCard
+- `maps/pages/LocationsPage.tsx:364` — GlassPanel inside LayoutCard
+- `notifications/components/alert-editor-source-closure/TemplateBrowser.tsx:56` — GlassPanel inside GlassPanel
+- `notifications/components/packs/AlertPacksPanel.tsx:44` — GlassPanel inside GlassPanel
+- `ownership/pages/WarrantyCommandPage.tsx:575` — Card inside Card
+- `system/pages/ChatbotPage.tsx:929` — GlassPanel inside GlassPanel
+- `telemetry/pages/SignalCorrelationPage.tsx:439,472` — Card inside GlassPanel (2)
+- `telemetry/pages/SignalEntropyPage.tsx:290,304` — Card inside GlassPanel (2)
+- `vehicles/components/vehicle-detail/BatteryRangeCharts.tsx:104,108` — GlassPanel inside GlassPanel (2)
+- `vehicles/components/vehicle-detail/QuickLinksSection.tsx:49` — GlassPanel inside GlassPanel
+
+Current pre-fix totals for the combined sweep: **64 surface/brief blocks**
+(38 brief placements + 26 nested surfaces), with 4 duplicate title pairs.
+After edits, the permanent AST guard reports **0 unresolved standalone
+briefs, 0 nested bordered surfaces, and 0 duplicate title pairs** across
+`src`. The 26 nested `Card`/`GlassPanel` children now accept
+`variant="embedded"`, which removes their border, background, shadow, and
+print-surface marker while preserving content padding. Ledger summaries keep
+the outer section title and hide their repeated inner heading. The permanent
+AST regression runs through
+`node --test scripts/__tests__/audit-nested-surfaces.test.mjs`.

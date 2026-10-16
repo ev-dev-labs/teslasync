@@ -53,7 +53,7 @@ export function FleetAPIConfiguredEndpoints({ controller }: Props) {
               </div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-4">
                 {configuredEndpoints.filter((ep) => configuredEndpointMap[ep.key]).map((ep) => (
-                  <GlassPanel key={ep.key} className="min-w-0 space-y-1 p-3">
+                  <GlassPanel variant="embedded" key={ep.key} className="min-w-0 space-y-1 p-3">
                     <Text as="span" size="xs" weight="medium" color="secondary" className="block break-words">{ep.label}</Text>
                     <Code className="block break-all" title={configuredEndpointMap[ep.key]}>{configuredEndpointMap[ep.key]}</Code>
                   </GlassPanel>

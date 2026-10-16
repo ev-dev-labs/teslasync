@@ -28,6 +28,7 @@
   },
   "audits": [
     { "script": "audit-empty-state-cta.mjs", "npmScript": "audit:empty-state", "status": "active", "enforcement": "zero-violations", "asserts": "Every EmptyState carries an actionable CTA." },
+    { "script": "audit-nested-surfaces.mjs", "wiredBy": "src/__tests__/nestedSurfaces.contract.test.ts", "status": "active", "enforcement": "zero-violations", "asserts": "No standalone brief or bordered card renders inside another surface, and no outer heading duplicates an inner card title." },
     { "script": "audit-tooltip-text-color.mjs", "npmScript": "audit:tooltip-text", "status": "active", "enforcement": "zero-violations", "asserts": "Recharts tooltip content uses readable token colours." },
     { "script": "audit-i18n-shadowed-keys.mjs", "npmScript": "audit:i18n-shadowed", "status": "active", "enforcement": "zero-violations", "asserts": "No i18n key is shadowed by a namespace of the same name." },
     { "script": "audit-query-signal.mjs", "npmScript": "audit:query-signal", "status": "active", "enforcement": "zero-violations", "asserts": "Query hooks thread an AbortSignal." },

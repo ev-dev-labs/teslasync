@@ -197,7 +197,7 @@ export function LiveSignalTail({
         </div>
 
         {showStats ? (
-          <TelemetrySummaryBrief title={t('liveMonitor.brief.tailTitle', 'Buffered tail summary')}
+          <TelemetrySummaryBrief variant="embedded" title={t('liveMonitor.brief.tailTitle', 'Buffered tail summary')}
             metrics={metrics} testId="live-tail-summary"
             statusLabel={paused ? t('liveMonitor.brief.tailPaused', 'Tail paused') : t('liveMonitor.brief.tailRecording', 'Tail recording enabled')}
             scope={t('liveMonitor.brief.sseScope', 'Current SSE session · bounded tail buffer')}

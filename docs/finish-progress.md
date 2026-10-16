@@ -433,3 +433,27 @@ Update `.runner/state.json` and this progress document after each group. This or
   missing metrics and drawer-only metadata), plus unrelated stale caller
   expectations. New embedded-mode assertions pass. Full suite repair remains
   scheduled after simplification.
+
+### UI simplification: repository-wide nested-surface sweep (2026-10-15)
+
+- The AST plan inventory captured 38 standalone brief placements, 26 nested
+  bordered surfaces, and four duplicate heading/title pairs. All have been
+  fixed: the post-fix audit reports **0 / 0 / 0** unresolved briefs, nested
+  surfaces, and repeated titles. Nested `Card` and `GlassPanel` components now
+  support `variant="embedded"`, which removes the inner border, background,
+  shadow, and print marker. Four Physics Ledger sections retain their outer
+  heading and hide the duplicate brief heading.
+- Added `audit-nested-surfaces.mjs` and a Vitest contract that scans every
+  TSX page. `node scripts/audit-nested-surfaces.mjs` and the Vitest contract
+  both pass. The audit is registered in the existing audit registry without
+  changing package files.
+- Shared component and wrapper regressions pass **75/75**, including embedded
+  surface behavior. `tsc --noEmit` and split-i18n check pass. Screenshot
+  review at 375px, 768px, and 1440px found a single surface per block and
+  balanced metric rows; captures remain in
+  `docs/ui-simplification/row6-analytics-driving-after-{375,768,1440}.png`.
+- The broader selected area batch reported **426 passed / 95 failed** across
+  13 suites. The failures remain existing data-placeholder, card-face
+  metadata, and timing/chart expectation drift; the full-suite triage is still
+  scheduled after simplification. A full lint run is being repeated after the
+  new audit registry entry, followed by a fresh production build.

@@ -2,6 +2,7 @@ import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 export interface GlassPanelProps extends HTMLAttributes<HTMLDivElement> {
+  variant?: 'standalone' | 'embedded';
   glow?: 'cyan' | 'green' | 'purple' | 'none';
   hover?: boolean;
   /**
@@ -43,28 +44,31 @@ const paddingClasses: Record<NonNullable<GlassPanelProps['padding']>, string> = 
 };
 
 export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
-  ({ glow = 'none', hover = false, padding, className, children, ...props }, ref) => (
+  ({ glow = 'none', hover = false, padding, className, children, variant = 'standalone', ...props }, ref) => (
     <div
       ref={ref}
-      data-print-card
+      data-surface-variant={variant}
+      data-print-card={variant === 'standalone' ? true : undefined}
       className={cn(
         // Card and GlassPanel share the neutral panel surface contract.
-        'bg-[var(--panel-bg)] border border-[var(--panel-border)] rounded-panel shadow-panel',
+        variant === 'embedded'
+          ? 'min-w-0 bg-transparent border-0 rounded-none shadow-none'
+          : 'bg-[var(--panel-bg)] border border-[var(--panel-border)] rounded-panel shadow-panel',
         // Windows High Contrast / forced-colors mode.
         // The `--panel-border` rgba alpha collapses to near-transparent
         // under forced-colors, making panels invisible against the OS
         // Canvas background. Force a system-color border + Canvas bg so
         // the surface is always perceivable for low-vision users.
-        'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
+        variant === 'standalone' && 'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
         padding ? (paddingClasses[padding] ?? null) : null,
-        hover && 'hover:border-[var(--panel-border-hover)] forced-colors:hover:border-[CanvasText]',
+        variant === 'standalone' && hover && 'hover:border-[var(--panel-border-hover)] forced-colors:hover:border-[CanvasText]',
         // `glow` is frequently data-driven (`glow={HEALTH_GLOW[status]}`,
         // `glow={glowMap[color] ?? 'none'}`, `glow={active ? 'green' : 'none'}`).
         // Should a value land outside the union at runtime, `GLOW_CLASSES[glow]`
         // is undefined; fall back to the no-glow tokens so the hover affordance
         // degrades cleanly instead of leaking `undefined` into the class list.
         // Mirrors Badge's variant/size null-safety.
-        hover && (GLOW_CLASSES[glow] ?? GLOW_CLASSES.none),
+        variant === 'standalone' && hover && (GLOW_CLASSES[glow] ?? GLOW_CLASSES.none),
         className,
       )}
       {...props}

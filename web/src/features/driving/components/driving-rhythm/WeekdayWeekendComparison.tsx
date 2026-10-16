@@ -103,7 +103,7 @@ export function WeekdayWeekendComparison({
                     })}
                   </Badge>
                 </div>
-                <NestedDrivingBrief title={row.label}
+                <NestedDrivingBrief variant="embedded" title={row.label}
                   description={t('rhythm.comparison.subtitle', 'Per-day rates use every selected calendar day, including days with no drive.')}
                   loading={state.isLoading} unavailable={state.error != null} retained={state.retained}
                   period={{ kind: 'unknown', label: `${row.label} · ${summary.timeZone}`,

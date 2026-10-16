@@ -89,7 +89,7 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
       </HelperText>
 
       <StaleRefreshWarning state={certState} label={t('resaleVault.certificate.title', 'Battery certificate')} />
-      <VaultSummaryBrief id="certificate" title={t('resaleVault.brief.certificate.title', 'Certificate measurements')}
+      <VaultSummaryBrief variant="embedded" id="certificate" title={t('resaleVault.brief.certificate.title', 'Certificate measurements')}
         description={description} metrics={metrics} hasEvidence={issued != null}
         sources={[{ id: 'certificate', section: 'battery', labelKey: 'resaleVault.certificate.title',
           label: 'Battery certificate', loading: !certState.hasData && certQuery.isLoading, state: certState }]}

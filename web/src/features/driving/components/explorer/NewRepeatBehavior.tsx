@@ -91,7 +91,7 @@ export function NewRepeatBehavior({
             />
           ) : (
             <div className="flex min-h-72 flex-col justify-between gap-5">
-              <NestedDrivingBrief metrics={metrics}
+              <NestedDrivingBrief variant="embedded" metrics={metrics}
                 title={t('explorer.brief.behaviorTitle', 'Destination arrival counts')}
                 description={definition} loading={state.isLoading} unavailable={state.error != null}
                 period={{ kind: 'unknown', label: t('explorer.behavior.title', 'New vs repeat behavior'),

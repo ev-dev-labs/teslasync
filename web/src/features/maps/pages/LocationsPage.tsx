@@ -361,7 +361,7 @@ export default function LocationsPage() {
                   const avg = visits > 0 ? totalDuration / visits : 0;
                   return (
                     <li key={loc.id} className="space-y-2">
-                      <GlassPanel className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:border-[var(--border-subtle)] sm:p-4">
+                      <GlassPanel variant="embedded" className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:border-[var(--border-subtle)] sm:p-4">
                         <Text
                           as="div"
                           size="xs"

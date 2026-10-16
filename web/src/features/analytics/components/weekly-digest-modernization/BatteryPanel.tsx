@@ -56,7 +56,7 @@ export function BatteryPanel({
           {/* Keep the specialist battery gauge's rounding, clamping and color.
               Its original average measurements are not new SOC snapshots. */}
           <div className="flex min-w-0 flex-wrap gap-3">
-            {metrics.batteryStart == null ? <GlassPanel className="w-full px-4 py-3">
+            {metrics.batteryStart == null ? <GlassPanel variant="embedded" className="w-full px-4 py-3">
               <Text color="secondary">{t('analytics.weeklyDigest.avgBatteryStart', 'Avg battery at charge start')}</Text>
               <Text>—</Text>
             </GlassPanel> : <BatteryPill
@@ -64,7 +64,7 @@ export function BatteryPanel({
               level={Math.round(metrics.batteryStart)}
               label={t('analytics.weeklyDigest.avgBatteryStart', 'Avg battery at charge start')}
             />}
-            {metrics.batteryEnd == null ? <GlassPanel className="w-full px-4 py-3">
+            {metrics.batteryEnd == null ? <GlassPanel variant="embedded" className="w-full px-4 py-3">
               <Text color="secondary">{t('analytics.weeklyDigest.avgBatteryEnd', 'Avg battery at charge end')}</Text>
               <Text>—</Text>
             </GlassPanel> : <BatteryPill

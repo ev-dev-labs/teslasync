@@ -436,7 +436,7 @@ export default function SignalCorrelationPage() {
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              <Card padding="sm" className="shadow-e0">
+              <Card variant="embedded" padding="sm" className="shadow-e0">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant={result.significant ? 'success' : 'warning'}>
                     {result.significant
@@ -469,7 +469,7 @@ export default function SignalCorrelationPage() {
                       )}
                 </Text>
               </Card>
-              <Card padding="sm" className="shadow-e0">
+              <Card variant="embedded" padding="sm" className="shadow-e0">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant="info">{leadLabel}</Badge>
                 </div>

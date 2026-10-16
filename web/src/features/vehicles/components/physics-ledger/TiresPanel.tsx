@@ -23,7 +23,7 @@ export function TiresPanel({ ledger, status }: { ledger: PhysicsLedger; status?:
       <Text as="p" size="sm" color="secondary">
         {tr?.honesty ?? t('physicsLedger.tires.empty', 'No TPMS corners reported in this window.')}
       </Text>
-      <LedgerEvidenceBrief ledger={ledger} id="ledger-tires-summary" status={status}
+      <LedgerEvidenceBrief ledger={ledger} id="ledger-tires-summary" status={status} variant="embedded" hideHeading
         available={tr != null && !tr.unknown} title={t('physicsLedger.tires.title', 'Tires')}
         description={tr?.honesty ?? t('physicsLedger.tires.empty', 'No TPMS corners reported in this window.')}
         metrics={[

@@ -63,13 +63,13 @@ export function DrivingChargingSummaryPanel({ driving, charging, sources }: Driv
 
   return (
     <LayoutCard title={t('resaleVault.usage.title', 'Driving & charging history')}>
-      <VaultSummaryBrief id="driving" title={t('resaleVault.usage.driving', 'Driving')}
+      <VaultSummaryBrief variant="embedded" id="driving" title={t('resaleVault.usage.driving', 'Driving')}
         description={description} metrics={drivingMetrics} hasEvidence={driving != null}
         sources={sources?.filter((source) => source.section === 'driving_history')}
         scope={t('resaleVault.brief.window', 'Observed evidence: {{start}} → {{end}}', {
           start: driving?.earliest_drive_at ?? '—', end: driving?.latest_drive_at ?? '—',
         })} />
-      <VaultSummaryBrief id="charging" title={t('resaleVault.usage.charging', 'Charging')}
+      <VaultSummaryBrief variant="embedded" id="charging" title={t('resaleVault.usage.charging', 'Charging')}
         description={description} metrics={chargingMetrics} hasEvidence={charging != null}
         sources={sources?.filter((source) => source.section === 'charging_history')}
         scope={t('resaleVault.brief.window', 'Observed evidence: {{start}} → {{end}}', {
