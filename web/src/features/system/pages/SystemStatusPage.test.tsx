@@ -937,7 +937,8 @@ describe('SystemStatusPage — assessment source authority', () => {
     inline['update-check'] = updateCheck()
     view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
     expect(actionsRegion().queryByText('Update available — v2.0.0')).not.toBeInTheDocument()
-    expect(actionsRegion().queryByRole('status')).not.toBeInTheDocument()
+    expect(actionsRegion().queryByText('Previously loaded data remains visible while affected sources recover.')).not.toBeInTheDocument()
+    expect(actionsRegion().getByRole('status')).toHaveTextContent('No current attention items.')
     expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
   })
 

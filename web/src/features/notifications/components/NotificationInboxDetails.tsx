@@ -15,7 +15,7 @@ interface NotificationInboxDetailsProps {
 
 /** Shared by inline inspection and the non-rule dialog; nothing is inferred from missing metadata. */
 export function NotificationInboxDetails({ log, rule, vehicle, actions = [] }: NotificationInboxDetailsProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const timestamp = (value: string | null | undefined) =>
     value && Number.isFinite(Date.parse(value)) ? <DateTime value={value} in="user" /> : '—';
@@ -25,7 +25,7 @@ export function NotificationInboxDetails({ log, rule, vehicle, actions = [] }: N
     { label: t('notifications.inbox.detail.scheduled', 'Scheduled'), value: timestamp(log.scheduled_at) },
     { label: t('notifications.inbox.columns.read', 'Read'), value: timestamp(log.read_at) },
     { label: t('notifications.tab.archived', 'Archived'), value: timestamp(log.archived_at) },
-    { label: t('notifications.inbox.detail.latency', 'Delivery latency'), value: log.latency_ms != null ? t('notifications.inbox.detail.milliseconds', '{{value}} ms', { value: fmtNumber(log.latency_ms) }) : '—' },
+    { label: t('notifications.inbox.detail.latency', 'Delivery latency'), value: log.latency_ms != null ? t('notifications.inbox.detail.milliseconds', '{{value}} ms', { value: fmtInt(log.latency_ms) }) : '—' },
     { label: t('notifications.inbox.columns.type', 'Type'), value: log.event_type || (log.channel_id != null && log.channel_id > 0 ? t('notifications.inbox.legacyDelivery', 'Legacy channel delivery (original source not recorded)') : '—') },
     { label: t('notifications.inbox.filter.rule', 'Rule'), value: rule?.name ?? (log.alert_id != null ? t('notifications.inbox.source.ruleId', 'Rule #{{id}}', { id: log.alert_id }) : '—') },
     { label: t('notifications.inbox.filter.vehicle', 'Vehicle'), value: vehicle?.display_name || (rule?.vehicle_id != null ? `#${rule.vehicle_id}` : '—') },

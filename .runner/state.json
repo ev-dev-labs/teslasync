@@ -11674,7 +11674,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f12 | dependency restoration blocked; tests and browser verification incomplete | done so far: updated web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx and web\\src\\features\\notifications\\components\\InboxBody.test.tsx Attempt 2: FAILED | fix-notifications-archived-f12 | dependency restoration and runtime verification blocked | done so far: inspected and retained existing NotificationInboxDetails.tsx and InboxBody.test.tsx implementation; no new changes Retry failed: InboxBody.test.tsx has 8 failures; an exact metric format mismatch (expected 1,250 ms, rendered 1,250.00 ms) and archived details/dialog assertions fail.",
+    "Notes": "Attempt 1: FAILED | fix-notifications-archived-f12 | dependency restoration blocked; tests and browser verification incomplete | done so far: updated web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx and web\\src\\features\\notifications\\components\\InboxBody.test.tsx Attempt 2: FAILED | fix-notifications-archived-f12 | dependency restoration and runtime verification blocked | done so far: inspected and retained existing NotificationInboxDetails.tsx and InboxBody.test.tsx implementation; no new changes Retry failed: InboxBody.test.tsx has 8 failures; an exact metric format mismatch (expected 1,250 ms, rendered 1,250.00 ms) and archived details/dialog assertions fail. | 2026-10-16 triage group 9: fixed integer-ms regression using locale-aware fmtInt (backend LatencyMs is *int); 8 new direct tests pass for English/German, integer zero and null/absent at precision 4. InboxBody improves 56/8 to 57/7; remaining failures are exact detail-field, expansion, Escape and filtered-empty assertions. Full item remains failed until those and requested browser/layout verification pass.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15932,10 +15932,10 @@
       "web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "failed",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-001 | required tests could not execute because local dependencies are incomplete | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx with assessment gating and regression coverage Attempt 2: FAILED | fix-system-system-status-ss-001 | required tests blocked by incomplete dependencies | done so far: reviewed and preserved existing assessment gating and regression coverage; no source changes Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.",
+    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-001 | required tests could not execute because local dependencies are incomplete | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx with assessment gating and regression coverage Attempt 2: FAILED | fix-system-system-status-ss-001 | required tests blocked by incomplete dependencies | done so far: reviewed and preserved existing assessment gating and regression coverage; no source changes Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains. | 2026-10-16 triage group 9 retry passed: SystemStatusPage 122/122. Recovery removes the prior retained notice and update finding; the healthy informational panel remains per design. Loading/paused/zero/invalid/raw counts, local outcomes, source hook signals and Refresh (R) regressions pass; acceptance verified.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15947,10 +15947,10 @@
       "web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "failed",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-002 | missing Vite and TypeScript dependencies prevented verification | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx Attempt 2: FAILED | fix-system-system-status-ss-002 | missing local dependencies prevented verification | done so far: inspected existing implementation and coverage; no files changed Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.",
+    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-002 | missing Vite and TypeScript dependencies prevented verification | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx Attempt 2: FAILED | fix-system-system-status-ss-002 | missing local dependencies prevented verification | done so far: inspected existing implementation and coverage; no files changed Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains. | 2026-10-16 triage group 9 retry passed: SystemStatusPage 122/122. Recovery removes the prior retained notice and update finding; the healthy informational panel remains per design. Loading/paused/zero/invalid/raw counts, local outcomes, source hook signals and Refresh (R) regressions pass; acceptance verified.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15962,10 +15962,10 @@
       "web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "failed",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-003 | dependency failures prevented test execution | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx Attempt 2: FAILED | fix-system-system-status-ss-003 | missing dependencies prevented required test execution | done so far: existing implementation and coverage inspected; no files changed Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.",
+    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-003 | dependency failures prevented test execution | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx Attempt 2: FAILED | fix-system-system-status-ss-003 | missing dependencies prevented required test execution | done so far: existing implementation and coverage inspected; no files changed Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains. | 2026-10-16 triage group 9 retry passed: SystemStatusPage 122/122. Recovery removes the prior retained notice and update finding; the healthy informational panel remains per design. Loading/paused/zero/invalid/raw counts, local outcomes, source hook signals and Refresh (R) regressions pass; acceptance verified.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16007,10 +16007,10 @@
       "web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "failed",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-010 | missing dependencies blocked test execution and typecheck | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx with query wiring and regressions Attempt 2: FAILED | fix-system-system-status-ss-010 | dependency restoration failed; required regression could not execute | done so far: inspected existing implementation and regressions; no source changes Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.",
+    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-010 | missing dependencies blocked test execution and typecheck | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx with query wiring and regressions Attempt 2: FAILED | fix-system-system-status-ss-010 | dependency restoration failed; required regression could not execute | done so far: inspected existing implementation and regressions; no source changes Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains. | 2026-10-16 triage group 9 retry passed: SystemStatusPage 122/122. Recovery removes the prior retained notice and update finding; the healthy informational panel remains per design. Loading/paused/zero/invalid/raw counts, local outcomes, source hook signals and Refresh (R) regressions pass; acceptance verified.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16024,10 +16024,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "failed",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": "Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.",
+    "Notes": "Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains. | 2026-10-16 triage group 9 retry passed: SystemStatusPage 122/122. Recovery removes the prior retained notice and update finding; the healthy informational panel remains per design. Loading/paused/zero/invalid/raw counts, local outcomes, source hook signals and Refresh (R) regressions pass; acceptance verified.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
