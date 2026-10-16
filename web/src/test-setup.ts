@@ -12,21 +12,13 @@ vi.mock('react-i18next', () => {
     return s
   }
   const t = (key: string, second?: unknown, third?: unknown): string => {
-    if (typeof second === 'string') {
-      return interpolate(
-        second,
-        third && typeof third === 'object' ? (third as Record<string, unknown>) : undefined,
-      )
-    }
-    if (second && typeof second === 'object') {
-      const bag = second as Record<string, unknown>
-      // Mirror i18next's plural defaults: defaultValue_one applies when count is 1.
-      const tpl = bag.count === 1 && typeof bag.defaultValue_one === 'string'
-        ? bag.defaultValue_one
-        : typeof bag.defaultValue === 'string' ? bag.defaultValue : key
-      return interpolate(tpl, bag)
-    }
-    return key
+    const options = typeof second === 'string' ? third : second
+    const bag = options && typeof options === 'object' ? options as Record<string, unknown> : {}
+    const fallback = typeof second === 'string' ? second
+      : typeof bag.defaultValue === 'string' ? bag.defaultValue : key
+    const plural = typeof bag.count === 'number'
+      ? bag.count === 1 ? bag.defaultValue_one : bag.defaultValue_other : undefined
+    return interpolate(typeof plural === 'string' ? plural : fallback, bag)
   }
   return {
     useTranslation: () => ({ t, i18n: { language: 'en', changeLanguage: vi.fn() } }),

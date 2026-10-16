@@ -603,8 +603,12 @@ describe('TirePressurePage — loading / empty / error states', () => {
     expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
     expect(screen.queryByText('No history data')).not.toBeInTheDocument();
     expect(screen.queryByText('Normal')).not.toBeInTheDocument();
-    // KPIs fall back to em-dash placeholders, never a stray 0-value.
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    const summary = screen.getByRole('region', { name: 'Tire pressure summary' });
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(summary.querySelectorAll('[aria-busy="true"]')).toHaveLength(4);
+    expect(summary.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+    expect(within(summary).queryByText('0', { exact: true })).not.toBeInTheDocument();
+    expect(within(summary).queryByText('No metric values are available yet.')).not.toBeInTheDocument();
   });
 
   it('renders honest empty states when the vehicle has no readings/history', async () => {
@@ -612,11 +616,14 @@ describe('TirePressurePage — loading / empty / error states', () => {
     setHistory([], 'resolve');
     renderPage();
 
-    expect((await screen.findAllByText(/vehicle/i)).length).toBeGreaterThan(0);
-    // Both the chart and the table surface an empty placeholder.
-    expect(screen.getAllByText(/vehicle/i).length).toBeGreaterThan(0);
+    expect(await screen.findByText('No current readings available')).toBeInTheDocument();
+    expect(screen.getAllByText('No history data').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText('Normal')).not.toBeInTheDocument();
-    expect(kpiCard('Avg pressure').getByText('—')).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Tire pressure summary' });
+    expect(within(summary).getByText('No metric values are available yet.')).toBeVisible();
+    expect(within(summary).getByText('Avg pressure')).toBeVisible();
+    expect(summary.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+    expect(within(summary).queryByText('0', { exact: true })).not.toBeInTheDocument();
   });
 
   it('names the failed source, preserves history, and keeps section retry working', async () => {

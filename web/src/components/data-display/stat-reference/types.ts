@@ -4,6 +4,8 @@ import type { MetricId, MetricPreferences, MetricRaw, MetricDisplayOptions, Stat
 export interface StatMetric {
   readonly metricId: MetricId;
   readonly rawValue: MetricRaw;
+  /** Preserve an independent source's pending state alongside resolved siblings. */
+  readonly loading?: boolean;
   /** Stable occurrence key when a semantic metric repeats. Never a semantic metric ID. */
   readonly occurrenceId?: string;
   readonly missingReason?: string;

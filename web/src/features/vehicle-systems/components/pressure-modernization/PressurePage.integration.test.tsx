@@ -309,7 +309,10 @@ describe('pressure page live composition — authored, execution owned by parent
     const { container } = mount();
     await screen.findAllByText('Front left (bar)');
     expect(stat(container, 'text').queryByText('—')).not.toBeInTheDocument();
-    expect(stat(container, 'count').getByText('—')).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Tire pressure summary' });
+    expect(summary.querySelectorAll('[aria-busy="true"]')).toHaveLength(3);
+    expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(1);
+    expect(stat(container, 'count').queryByText('0', { exact: true })).not.toBeInTheDocument();
     expect(screen.getByTestId('pressure-series')).toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
   });
@@ -367,14 +370,18 @@ describe('pressure page live composition — authored, execution owned by parent
     expect(view.client.getQueryData(['tire-pressure-latest', 42])).toMatchObject({ front_left: 280_000, rear_right: 295_000 });
   });
 
-  it('keeps all shells and missing KPIs when both sources authoritatively have no readings', async () => {
+  it('keeps all shells and explains unavailable KPIs when both sources authoritatively have no readings', async () => {
     H.latest = null;
     H.history = [];
-    const { container } = mount();
+    mount();
     await screen.findByText('No current readings available');
     expect(screen.getAllByText('No history data').length).toBeGreaterThanOrEqual(2);
-    expect(stat(container, 'count').getByText('—')).toBeInTheDocument();
-    expect(stat(container, 'text').getByText('—')).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Tire pressure summary' });
+    expect(within(summary).getByText('No metric values are available yet.')).toBeVisible();
+    expect(within(summary).getByText('Warning count')).toBeVisible();
+    expect(within(summary).getByText('Last updated')).toBeVisible();
+    expect(summary.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+    expect(within(summary).queryByText('0', { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     for (const title of ['Tire pressure summary', 'Current readings', 'Pressure history', 'History table']) {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
@@ -386,7 +393,13 @@ describe('pressure page live composition — authored, execution owned by parent
     const { container } = mount();
     await waitFor(() => expect(screen.getAllByRole('meter')).toHaveLength(4));
     expect(stat(container, 'pressure').getByText('2.88 bar')).toBeInTheDocument();
-    expect(stat(container, 'text').getByText('—')).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Tire pressure summary' });
+    expect(summary.querySelector('[data-operational-metric="tire-pressure-range-last-updated"]')).not.toBeInTheDocument();
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog');
+    expect(within(details).getByText('1 empty field is hidden.')).toBeVisible();
+    expect(within(details).queryByText('Last updated')).not.toBeInTheDocument();
+    fireEvent.keyDown(details, { key: 'Escape' });
     expect(screen.getAllByRole('button', { name: /^Retry$/ }).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('heading', { name: 'History table' })).toBeInTheDocument();
   });

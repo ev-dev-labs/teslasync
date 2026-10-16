@@ -35,6 +35,7 @@ export function formatOperationalMetrics(
       label,
       rawValue: metric.rawValue,
       valueState: formatted.state,
+      ...(metric.loading === undefined ? {} : { loading: metric.loading }),
       value: metric.href
         ? <Link to={metric.href} aria-label={accessibleLabel}
           className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">

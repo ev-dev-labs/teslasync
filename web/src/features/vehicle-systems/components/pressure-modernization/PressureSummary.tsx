@@ -34,6 +34,7 @@ export function PressureSummary({
       label: t('tirePressure.avgPressure', 'Avg pressure'),
       description: t('tirePressure.methodology.average', 'Arithmetic mean of the corners with a pressure reading. Missing corners are excluded.'),
       rawValue: summary ? summary.avg / PASCALS_PER_KPA : null,
+      loading: latestLoading,
       display: { precision, units: { pressure: units.pressure, locale } },
       context: latestLoading ? t('common.loading', 'Loading...') : undefined,
     },
@@ -43,6 +44,7 @@ export function PressureSummary({
       label: t('tirePressure.minPressure', 'Min pressure'),
       description: t('tirePressure.methodology.minimum', 'Lowest reported corner pressure. Missing corners are excluded.'),
       rawValue: summary ? summary.min / PASCALS_PER_KPA : null,
+      loading: latestLoading,
       display: { precision, units: { pressure: units.pressure, locale } },
       context: latestLoading ? t('common.loading', 'Loading...') : undefined,
     },
@@ -52,6 +54,7 @@ export function PressureSummary({
       label: t('tirePressure.warningCount', 'Warning count'),
       description: t('tirePressure.methodology.warningCount', 'Reported corners outside the inclusive 250–350 kPa normal band. This is not a count of vehicle TPMS flags.'),
       rawValue: summary?.warningCount ?? null,
+      loading: latestLoading,
       context: latestLoading ? t('common.loading', 'Loading...')
         : summary ? t('tirePressure.reportedCorners', '{{count}} of 4 corners reported', { count: summary.reportedCount }) : undefined,
     },
@@ -61,6 +64,7 @@ export function PressureSummary({
       label: t('tirePressure.lastUpdated', 'Last updated'),
       description: t('tirePressure.methodology.lastUpdated', 'Newest history row in the selected window; not the observation time of the latest readings.'),
       rawValue: lastUpdatedAt ? formatDateTime(lastUpdatedAt) : null,
+      loading: historyLoading,
       context: historyLoading ? t('common.loading', 'Loading...') : t('tirePressure.pressureHistory', 'Pressure history'),
     },
   ];
@@ -78,7 +82,7 @@ export function PressureSummary({
         }}
         preferences={{ units: { ...units, precision, locale }, currency: { kind: 'symbol', value: '' } }}
         // A loading latest query must not blank the independent history date.
-        // Source-local loading captions above keep each missing value honest.
+        // Each metric owns its source's pending state instead of masking siblings.
         loading={false}
         retained={retained}
       />

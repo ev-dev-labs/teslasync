@@ -24,9 +24,29 @@
  */
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
+import { createInstance } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { useSettings } from '@/hooks/useSettings'
 import { useTimezone } from '@/lib/timezone'
 import { _resetAuthExpiredLatch } from '@/lib/resilience'
+
+describe('test-setup — plural fallback parity', () => {
+  it.each([0, 1, 2])('matches i18next fallback signatures for count=%s', async count => {
+    const english = createInstance()
+    await english.init({ lng: 'en', resources: { en: { translation: {} } } })
+    const { result } = renderHook(() => useTranslation())
+    const fallback = 'Waiting for measurements.'
+    const options = {
+      count,
+      defaultValue_one: '{{count}} measurement is pending.',
+      defaultValue_other: '{{count}} measurements are pending.',
+    }
+    expect(result.current.t('test.pendingMeasurements', fallback, options))
+      .toBe(english.t('test.pendingMeasurements', fallback, options))
+    expect(result.current.t('test.pendingMeasurements', { ...options, defaultValue: fallback }))
+      .toBe(english.t('test.pendingMeasurements', { ...options, defaultValue: fallback }))
+  })
+})
 
 describe('test-setup — IntersectionObserver polyfill', () => {
   it('installs a global IntersectionObserver constructor under jsdom', () => {
