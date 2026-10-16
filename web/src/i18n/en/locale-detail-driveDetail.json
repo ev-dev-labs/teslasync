@@ -333,6 +333,12 @@
     "socOverTimeAria": "State of charge percent over time area chart",
     "speedHistogramAria": "Speed-bucket distribution histogram",
     "temperaturesAria": "Inside, outside, driver and passenger temperature lines over the drive timeline",
-    "tirePressureAria": "Front and rear tire pressure lines over the drive timeline"
+    "tirePressureAria": "Front and rear tire pressure lines over the drive timeline",
+    "elevationGain": "Elevation gain",
+    "elevationLoss": "Elevation loss",
+    "elevationNet": "Net elevation",
+    "powerSummary": "Power summary",
+    "minMovingSpeed": "Min moving speed",
+    "tirePressureRange": "{{wheel}} pressure range"
   }
 }

@@ -7,10 +7,9 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
+import { ChartCard, ChartSummary } from '@/components/layout';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { Table, Text } from '@/components/ui';
 
 import { useUnits } from '@/hooks/useUnits';
 import type { ChartDataPoint, DriveStats } from './types';
@@ -43,8 +42,21 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
 
   return (
     <FadeIn>
-      {/* chart-a11y:no-table dense per-sample power trace; max/regen/avg stats appear below the chart */}
+      {/* chart-a11y:no-table dense per-sample power trace; max/regen/avg stats appear in the card summary */}
       <ChartCard
+        summary={(
+          <ChartSummary
+            label={t('driveDetail.powerSummary', 'Power summary')}
+            caption={t('driveDetail.report.powerMethod', 'Power samples preserve sign: positive draw, negative regeneration. Peak values require observations.')}
+            items={[
+              { id: 'max-power', label: t('driveDetail.maxPower', 'Maximum power'), unit: 'kW', value: max != null ? fmtInt(max) : '—' },
+              { id: 'max-regen', label: t('driveDetail.maxRegen', 'Maximum regen'), unit: 'kW', value: min != null && min < 0 ? fmtInt(min) : min != null ? '0' : '—' },
+              { id: 'avg-power', label: t('driveDetail.avgPower', 'Average power'), unit: 'kW', value: drive?.avgPowerW != null && Number.isFinite(drive.avgPowerW) ? fmtNumber(drive.avgPowerW / 1000) : '—' },
+              { id: 'sample-mean-power', label: t('driveDetail.report.sampleMeanPower', 'Mean sampled power'), unit: 'kW', value: mean != null ? fmtNumber(mean) : '—' },
+              { id: 'min-moving-speed', label: t('driveDetail.minMovingSpeed', 'Min moving speed'), unit: unitPrefs.speed, value: minMoving != null ? fmtNumber(minMoving) : '—' },
+            ]}
+          />
+        )}
         title={t('driveDetail.powerProfile', 'Power profile')}
         ariaLabel={t('driveDetail.powerProfileAria', 'Drive power profile area chart over time')}
         height={220}
@@ -88,18 +100,6 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
           </div>
         )}
       </ChartCard>
-      <div className="mt-3 space-y-2">
-        <Text as="p" variant="caption">{t('driveDetail.report.powerMethod', 'Power samples preserve sign: positive draw, negative regeneration. Peak values require observations.')}</Text>
-        <Table variant="embedded" aria-label={t('driveDetail.powerProfile', 'Power profile')}>
-          <tbody>
-            <tr><th scope="row">{t('driveDetail.maxPower', 'Maximum power')}</th><td>{max != null ? `${fmtInt(max)} kW` : '—'}</td></tr>
-            <tr><th scope="row">{t('driveDetail.maxRegen', 'Maximum regen')}</th><td>{min != null && min < 0 ? `${fmtInt(min)} kW` : min != null ? '0 kW' : '—'}</td></tr>
-            <tr><th scope="row">{t('driveDetail.report.sampleMeanPower', 'Mean sampled power')}</th><td>{mean != null ? `${fmtNumber(mean)} kW` : '—'}</td></tr>
-            <tr><th scope="row">{t('driveDetail.avgPower', 'Average power')}</th><td>{drive?.avgPowerW != null && Number.isFinite(drive.avgPowerW) ? `${fmtNumber(drive.avgPowerW / 1000)} kW` : '—'}</td></tr>
-            <tr><th scope="row">{t('driveDetail.minSpeed', 'Minimum moving speed')}</th><td>{minMoving != null ? `${fmtNumber(minMoving)} ${unitPrefs.speed}` : '—'}</td></tr>
-          </tbody>
-        </Table>
-      </div>
     </FadeIn>
   );
 }

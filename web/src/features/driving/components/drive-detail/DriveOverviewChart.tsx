@@ -8,10 +8,10 @@ import {
   AREA_DEFAULTS, areaGradient,
   ChartBrush, useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
+import { ChartCard, ChartSummary } from '@/components/layout';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { Table, Text } from '@/components/ui';
+import { Table } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 
 import type { DriveDetail } from '@/types/driving';
@@ -50,8 +50,9 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
 
   return (
     <FadeIn>
-      {/* chart-a11y:no-table dense per-sample drive trace; mean/max/min summary table follows below in the rich legend */}
+      {/* chart-a11y:no-table dense per-sample drive trace; the card summary carries the per-signal mean/max/min table */}
       <ChartCard
+        summary={<DriveStatsLegend chartData={chartData} />}
         title={t('driveDetail.driveChart', 'Drive overview')}
         ariaLabel={t('driveDetail.driveChartAria', 'Drive overview composed chart of speed, range, SOC and power over time')}
         chartKey="drive-detail-overview"
@@ -124,8 +125,6 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
           )
         )}
       </ChartCard>
-      {/* Rich legend with Mean/Max/Min stats */}
-      <DriveStatsLegend chartData={chartData} />
     </FadeIn>
   );
 }
@@ -190,15 +189,20 @@ function DriveStatsLegend({ chartData }: { chartData: ChartDataPoint[] }) {
   const maxLabel = t('driveDetail.stat.max', 'Max');
   const minLabel = t('driveDetail.stat.min', 'Min');
 
+  // Without samples the chart's own empty state says so; skip a table of dashes.
+  if (items.length === 0) return null;
+
   return (
-    <div className="mt-3 space-y-2">
-      <Text as="p" variant="caption">{t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}</Text>
+    <ChartSummary
+      label={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}
+      caption={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}
+    >
       <Table variant="embedded" aria-label={t('driveDetail.report.sampleStatistics', 'Sample statistics · arithmetic means, not time-weighted drive aggregates')}>
         <thead><tr><th scope="col">{t('driveDetail.report.signal', 'Signal')}</th><th scope="col">{meanLabel}</th><th scope="col">{maxLabel}</th><th scope="col">{minLabel}</th></tr></thead>
-        <tbody>{items.length > 0 ? items.map((item) => (
+        <tbody>{items.map((item) => (
           <tr key={item.label}><th scope="row">{item.label}</th><td className="whitespace-nowrap tabular-nums">{item.mean}</td><td className="whitespace-nowrap tabular-nums">{item.max}</td><td className="whitespace-nowrap tabular-nums">{item.min}</td></tr>
-        )) : <tr><td colSpan={4}>{t('driveDetail.noChartData', 'No telemetry data available')}</td></tr>}</tbody>
+        ))}</tbody>
       </Table>
-    </div>
+    </ChartSummary>
   );
 }

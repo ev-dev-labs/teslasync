@@ -11,6 +11,7 @@ export { CardGrid, type CardGridItem, type CardGridProps } from './layout-refere
 export { useCardPlacement } from './layout-reference/CardPlacementContext';
 export { LayoutCard, type LayoutCardProps } from './layout-reference/LayoutCard';
 export { ChartCard, type ChartCardProps } from './layout-reference/ChartCard';
+export { ChartSummary, type ChartSummaryItem, type ChartSummaryProps } from './layout-reference/ChartSummary';
 export { LockedNotice, type LockedNoticeProps } from './layout-reference/LockedNotice';
 export { AboutPanel, type AboutPanelProps } from './layout-reference/AboutPanel';
 export { SourceContent, type SourceContentProps, type SourceState } from './layout-reference/SourceContent';

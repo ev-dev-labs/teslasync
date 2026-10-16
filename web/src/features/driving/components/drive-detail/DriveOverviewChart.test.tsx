@@ -162,7 +162,9 @@ describe('DriveOverviewChart', () => {
 
   it('shows the empty state and hides the legend when there is no telemetry', () => {
     renderChart([]);
-    expect(screen.getAllByText('No telemetry data available')).toHaveLength(2);
+    // The chart's empty state speaks once; no table of dashes is added.
+    expect(screen.getAllByText('No telemetry data available')).toHaveLength(1);
+    expect(screen.queryByRole('table', { name: /Sample statistics/ })).toBeNull();
     // No legend series were computed.
     expect(screen.queryByText('Speed')).not.toBeInTheDocument();
     expect(screen.queryByText(/Mean:/)).not.toBeInTheDocument();

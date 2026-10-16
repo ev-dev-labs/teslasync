@@ -6,12 +6,18 @@ import { containerPolicy } from './layoutPolicy';
 
 export type ChartCardProps = Omit<EmbeddedChartProps, 'className' | 'embeddedTitleHeading'> & {
   footer?: ReactNode;
+  /**
+   * Key values that belong to this chart (usually a `<ChartSummary>`),
+   * rendered inside the card between the title and the chart so stats never
+   * float between cards.
+   */
+  summary?: ReactNode;
 };
 
 /** One host surface/title with opt-in canonical chart controls. Without sizing
  * overrides the viewport retains placement-derived mobile/desktop heights. */
 export function ChartCard({
-  title, subtitle, children, footer, ariaLabel, ariaDescription, data, dataColumns,
+  title, subtitle, children, footer, summary, ariaLabel, ariaDescription, data, dataColumns,
   height, mobileHeight, fluid = false, size, ...props
 }: ChartCardProps) {
   const placement = useContext(CardPlacementContext);
@@ -26,6 +32,7 @@ export function ChartCard({
   );
   return (
     <LayoutCard title={title} description={subtitle} footer={footer}>
+      {summary}
       <div data-chart className="min-w-0">
         <EmbeddedChart
           {...props}

@@ -9,10 +9,9 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
+import { ChartCard, ChartSummary } from '@/components/layout';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { Table } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 
@@ -54,21 +53,24 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
   const hasChart = points.length > 1 && stats.hasAnyTemp;
 
   return (
-    <FadeIn className="space-y-3">
-      <Table variant="embedded" aria-label={t('driveDetail.temperatures', 'Temperatures')}>
-        <tbody>
-          {[
-            { id: 'outside', label: t('driveDetail.outsideTemp', 'Outside temperature'), value: stats.avgOutsideTemp },
-            { id: 'inside', label: t('driveDetail.insideTemp', 'Inside temperature'), value: stats.avgInsideTemp },
-            { id: 'driver', label: t('driveDetail.driverTemp', 'Driver temperature'), value: driverAvg },
-            { id: 'passenger', label: t('driveDetail.passengerTemp', 'Passenger temperature'), value: passengerAvg },
-          ].map((row) => <tr key={row.id}><th scope="row">{row.label}</th><td className="tabular-nums">{row.value != null ? `${fmtNumber(row.value)}${tempUnit}` : '—'}</td></tr>)}
-          <tr><th scope="row">{t('driveDetail.climate', 'Climate')}</th><td>{stats.climateStatus == null ? '—' : stats.climateStatus === 'On' ? t('driveDetail.report.climateOn', 'On') : stats.climateStatus === 'Off' ? t('driveDetail.report.climateOff', 'Off') : t('driveDetail.report.climateMostlyOff', 'Mostly off')}</td></tr>
-          <tr><th scope="row">{t('driveDetail.fanStatus', 'Fan status')}</th><td>{stats.maxFanSpeed != null ? `${t('driveDetail.avg', 'Avg')} ${fmtInt(stats.avgFanSpeed)} · ${t('driveDetail.max', 'Max')} ${fmtInt(stats.maxFanSpeed)}` : '—'}</td></tr>
-        </tbody>
-      </Table>
-      {/* chart-a11y:no-table dense per-sample temperature trace; min/avg stats appear above the chart in the stat tiles */}
+    <FadeIn>
+      {/* chart-a11y:no-table dense per-sample temperature trace; averages and climate state appear in the card summary */}
       <ChartCard
+        summary={(
+          <ChartSummary
+            label={t('driveDetail.temperatures', 'Temperatures')}
+            items={[
+              ...[
+                { id: 'outside', label: t('driveDetail.outsideTemp', 'Outside temperature'), value: stats.avgOutsideTemp },
+                { id: 'inside', label: t('driveDetail.insideTemp', 'Inside temperature'), value: stats.avgInsideTemp },
+                { id: 'driver', label: t('driveDetail.driverTemp', 'Driver temperature'), value: driverAvg },
+                { id: 'passenger', label: t('driveDetail.passengerTemp', 'Passenger temperature'), value: passengerAvg },
+              ].map(row => ({ id: row.id, label: row.label, unit: tempUnit, value: row.value != null ? fmtNumber(row.value) : '—' })),
+              { id: 'climate', label: t('driveDetail.climate', 'Climate'), value: stats.climateStatus == null ? '—' : stats.climateStatus === 'On' ? t('driveDetail.report.climateOn', 'On') : stats.climateStatus === 'Off' ? t('driveDetail.report.climateOff', 'Off') : t('driveDetail.report.climateMostlyOff', 'Mostly off') },
+              { id: 'fan', label: t('driveDetail.fanStatus', 'Fan status'), value: stats.maxFanSpeed != null ? `${t('driveDetail.avg', 'Avg')} ${fmtInt(stats.avgFanSpeed)} · ${t('driveDetail.max', 'Max')} ${fmtInt(stats.maxFanSpeed)}` : '—' },
+            ]}
+          />
+        )}
         title={t('driveDetail.temperatures', 'Temperatures')}
         ariaLabel={t('driveDetail.temperaturesAria', 'Inside, outside, driver and passenger temperature lines over the drive timeline')}
         height={310}

@@ -4,6 +4,7 @@ export { CardGrid, type CardGridItem, type CardGridProps } from './CardGrid';
 export { useCardPlacement } from './CardPlacementContext';
 export { LayoutCard, type LayoutCardProps } from './LayoutCard';
 export { ChartCard, type ChartCardProps } from './ChartCard';
+export { ChartSummary, type ChartSummaryItem, type ChartSummaryProps } from './ChartSummary';
 export { LockedNotice, type LockedNoticeProps } from './LockedNotice';
 export { AboutPanel, type AboutPanelProps } from './AboutPanel';
 export { KeyValueList, type KeyValueItem } from './KeyValueList';

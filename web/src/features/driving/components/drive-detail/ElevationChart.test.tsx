@@ -34,7 +34,7 @@
  * (this component has no data source of its own).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import { chartTokens } from '@/lib/tokens';
@@ -186,7 +186,12 @@ import { ElevationChart } from './ElevationChart';
 
 vi.mock('@/components/layout', async () => {
   const charts = await import('@/components/charts');
-  return { ChartCard: charts.ChartContainer };
+  const { ChartSummary } = await import('@/components/layout/layout-reference/ChartSummary');
+  // The card renders its summary between the title and the chart.
+  const ChartCard = ({ summary, ...props }: { summary?: ReactNode } & Parameters<typeof charts.ChartContainer>[0]) => (
+    <>{summary}<charts.ChartContainer {...props} /></>
+  );
+  return { ChartCard, ChartSummary };
 });
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -262,6 +267,11 @@ function renderChart(chartData: ChartDataPoint[] = POINTS, stats: DriveStats = m
 }
 
 /** Rows the recharts ComposedChart double received as its `data` prop. */
+/** Summary values in card order: gain, loss, net (unit lives in each label). */
+function summaryValues(): (string | null)[] {
+  return Array.from(document.querySelectorAll('[data-chart-summary] dd')).map((value) => value.textContent);
+}
+
 function readChartRows(): ChartDataPoint[] {
   return JSON.parse(screen.getByTestId('composed-chart').getAttribute('data-json') || '[]');
 }
@@ -379,19 +389,19 @@ describe('ElevationChart — gain / loss / net summary', () => {
     [-Number.MAX_VALUE, Number.MAX_VALUE],
   ].map((elevations) => ({ elevations })))('does not turn insufficient deltas into zero for $elevations', ({ elevations }) => {
     renderChart(elevations.map((elevation) => makePoint({ elevation })), makeStats({ elevGain: 0, elevLoss: 0 }));
-    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
+    expect(summaryValues()).toEqual(['—', '—', '—']);
   });
 
   it.each([0, -12.5, 0.25])('renders measured zero for a flat adjacent pair at %s metres', (elevation) => {
     renderChart([makePoint({ elevation }), makePoint({ elevation })], makeStats({ elevGain: 0, elevLoss: 0 }));
-    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0.00 m', '0.00 m', '0.00 m']);
+    expect(summaryValues()).toEqual(['0.00', '0.00', '0.00']);
   });
 
   it('renders fractional gain, loss and negative net from signed observations', () => {
     renderChart([
       makePoint({ elevation: -2.5 }), makePoint({ elevation: -1.75 }), makePoint({ elevation: -3 }),
     ], makeStats({ elevGain: 0.75, elevLoss: 1.25 }));
-    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0.75 m', '1.25 m', '-0.50 m']);
+    expect(summaryValues()).toEqual(['0.75', '1.25', '-0.50']);
   });
 
   it('uses nullable pair evidence rather than legacy zero stats', () => {
@@ -399,7 +409,7 @@ describe('ElevationChart — gain / loss / net summary', () => {
       ...makeStats({ elevGain: 0, elevLoss: 0 }),
       elevationEvidence: { gainM: null, lossM: null, eligiblePairCount: 0, pairCount: 2, coverage: 0 },
     }} />);
-    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
+    expect(summaryValues()).toEqual(['—', '—', '—']);
   });
 
   it('renders observed partial totals without bridging missing readings', () => {
@@ -410,37 +420,40 @@ describe('ElevationChart — gain / loss / net summary', () => {
       ...makeStats(),
       elevationEvidence: { gainM: 0.75, lossM: 0, eligiblePairCount: 1, pairCount: 3, coverage: 1 / 3 },
     }} />);
-    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0.75 m', '0.00 m', '0.75 m']);
+    expect(summaryValues()).toEqual(['0.75', '0.00', '0.75']);
   });
 
   it.each([NaN, Infinity, -Infinity])('keeps invalid summary values %s unknown', (invalid) => {
     renderChart(POINTS, makeStats({ elevGain: invalid, elevLoss: 0 }));
-    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '0.00 m', '—']);
+    expect(summaryValues()).toEqual(['—', '0.00', '—']);
   });
 
   it('normalizes invalid chart readings to gaps while preserving valid zeroes', () => {
     renderChart([makePoint({ elevation: 0 }), makePoint({ elevation: NaN }), makePoint({ elevation: 0 })]);
     expect(readChartRows().map((point) => point.elevation)).toEqual([0, null, 0]);
-    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
+    expect(summaryValues()).toEqual(['—', '—', '—']);
   });
 
   it('renders climb, descent and the net (gain − loss) from stats', () => {
     const { container } = renderChart(POINTS, makeStats({ elevGain: 120, elevLoss: 45 }));
 
     const text = container.textContent ?? '';
-    expect(text).toContain('Gain');
-    expect(text).toContain('Loss');
-    expect(text).toContain('Net');
+    expect(text).toContain('Elevation gain (m)');
+    expect(text).toContain('Elevation loss (m)');
+    expect(text).toContain('Net elevation (m)');
     expect(text).toContain('120');
     expect(text).toContain('45');
     // Net = 120 − 45 = 75.
     expect(text).toContain('75');
   });
 
-  it('exposes gain and loss as semantic row headers instead of color-only arrows', () => {
+  it('labels each summary value with a self-explanatory term and unit inside the card', () => {
     renderChart();
-    expect(screen.getByRole('rowheader', { name: 'Gain' })).toBeInTheDocument();
-    expect(screen.getByRole('rowheader', { name: 'Loss' })).toBeInTheDocument();
+    const summary = screen.getByRole('group', { name: 'Elevation summary' });
+    for (const label of ['Elevation gain (m)', 'Elevation loss (m)', 'Net elevation (m)']) {
+      expect(within(summary).getByText(label).tagName).toBe('DT');
+    }
+    expect(screen.queryByRole('rowheader', { name: 'Gain' })).toBeNull();
   });
 });
 
@@ -517,6 +530,6 @@ describe('ElevationChart — empty & null-safety', () => {
 
     // The chart renders (no `stats.elevGain` crash) …
     expect(screen.getByTestId('composed-chart')).toBeInTheDocument();
-    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
+    expect(summaryValues()).toEqual(['—', '—', '—']);
   });
 });

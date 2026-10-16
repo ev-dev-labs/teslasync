@@ -9,8 +9,8 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { ChartCard } from '@/components/layout';
-import { Table, Text } from '@/components/ui';
+import { ChartCard, ChartSummary } from '@/components/layout';
+import { Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 
 import type { ChartDataPoint, DriveStats } from './types';
@@ -54,16 +54,19 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const hasChart = points.filter((point) => point.elevation != null).length > 1;
 
   return (
-    <FadeIn className="space-y-3">
-      <Table variant="embedded" aria-label={t('driveDetail.elevSummary', 'Elevation summary')}>
-        <tbody>
-          <tr><th scope="row">{t('driveDetail.gain', 'Gain')}</th><td>{elevGain != null ? `${fmtNumber(elevGain)} m` : '—'}</td></tr>
-          <tr><th scope="row">{t('driveDetail.loss', 'Loss')}</th><td>{elevLoss != null ? `${fmtNumber(elevLoss)} m` : '—'}</td></tr>
-          <tr><th scope="row">{t('driveDetail.net', 'Net')}</th><td>{elevNet != null ? `${fmtNumber(elevNet)} m` : '—'}</td></tr>
-        </tbody>
-      </Table>
-      {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
+    <FadeIn>
+      {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear in the card summary */}
       <ChartCard
+        summary={(
+          <ChartSummary
+            label={t('driveDetail.elevSummary', 'Elevation summary')}
+            items={[
+              { id: 'gain', label: t('driveDetail.elevationGain', 'Elevation gain'), unit: 'm', value: elevGain != null ? fmtNumber(elevGain) : '—' },
+              { id: 'loss', label: t('driveDetail.elevationLoss', 'Elevation loss'), unit: 'm', value: elevLoss != null ? fmtNumber(elevLoss) : '—' },
+              { id: 'net', label: t('driveDetail.elevationNet', 'Net elevation'), unit: 'm', value: elevNet != null ? fmtNumber(elevNet) : '—' },
+            ]}
+          />
+        )}
         title={t('driveDetail.elevProfile', 'Elevation profile')}
         ariaLabel={t('driveDetail.elevProfileAria', 'Elevation and speed area+line chart over the drive timeline')}
         chartKey="drive-detail-elevation"

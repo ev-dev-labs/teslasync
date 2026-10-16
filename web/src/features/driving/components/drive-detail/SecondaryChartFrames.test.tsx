@@ -91,10 +91,12 @@ describe('secondary detail charts using the actual shared chart-card chain', () 
 
   it('preserves independently visible elevation gain/loss/net evidence and the persistent legend key', () => {
     const { container } = mount(<ElevationChart chartData={points} stats={stats} />);
-    const table = screen.getByRole('table', { name: 'Elevation summary' });
-    expect(within(table).getByRole('rowheader', { name: 'Gain' })).toBeInTheDocument();
-    expect(within(table).getByRole('rowheader', { name: 'Loss' })).toBeInTheDocument();
-    expect(within(table).getByRole('rowheader', { name: 'Net' })).toBeInTheDocument();
+    const summary = screen.getByRole('group', { name: 'Elevation summary' });
+    expect(within(summary).getByText('Elevation gain (m)')).toBeInTheDocument();
+    expect(within(summary).getByText('Elevation loss (m)')).toBeInTheDocument();
+    expect(within(summary).getByText('Net elevation (m)')).toBeInTheDocument();
+    // The summary sits inside the elevation card, ahead of the chart.
+    expect(summary.closest('[data-card]')).toContainElement(container.querySelector('[data-chart-key="drive-detail-elevation"]') as HTMLElement);
     expect(container.querySelector('[data-chart-key="drive-detail-elevation"]')).not.toBeNull();
   });
 

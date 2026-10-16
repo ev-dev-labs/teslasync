@@ -216,7 +216,9 @@ function renderSection(over: { chartData?: ChartDataPoint[]; stats?: Partial<Dri
 
 /** Text of the value node for a metric label (its next sibling within the tile). */
 function cellValue(label: string): string {
-  const labelEl = screen.getByText(label);
+  // Units live in the summary label, e.g. "Outside temperature (°C)".
+  const labelEl = screen.getByText((_, el) => el?.tagName === 'DT'
+    && (el.textContent === label || (el.textContent ?? '').startsWith(`${label} (`)));
   const valueEl = labelEl.nextElementSibling;
   if (!valueEl) throw new Error(`no value cell for "${label}"`);
   return (valueEl.textContent ?? '').replace(/\s+/g, ' ').trim();
@@ -250,7 +252,7 @@ describe('TemperatureSection — chart chrome + a11y', () => {
     for (const [key, index] of Object.entries({ outsideTemp: 0, insideTemp: 2, driverTemp: 6, passengerTemp: 4 })) {
       expect(screen.getByTestId(`temperature-${key}`)).toHaveAttribute('data-stroke', chartTokens.series[index]);
     }
-    expect(cellValue('Outside temperature')).toBe('-5.00°C');
+    expect(cellValue('Outside temperature')).toBe('-5.00');
   });
   it('renders as a figure named by its title heading, with a role="img" chart body', () => {
     renderSection();
@@ -283,8 +285,8 @@ describe('TemperatureSection — outside + inside tiles', () => {
   it('shows the outside and inside averages with the °C label under metric preferences', () => {
     renderSection({ stats: { avgOutsideTemp: 15, avgInsideTemp: 21 } });
 
-    expect(cellValue('Outside temperature')).toBe('15.00°C');
-    expect(cellValue('Inside temperature')).toBe('21.00°C');
+    expect(cellValue('Outside temperature')).toBe('15.00');
+    expect(cellValue('Inside temperature')).toBe('21.00');
     expect(tSpy).toHaveBeenCalledWith('driveDetail.outsideTemp', 'Outside temperature');
     expect(tSpy).toHaveBeenCalledWith('driveDetail.insideTemp', 'Inside temperature');
   });
@@ -294,9 +296,10 @@ describe('TemperatureSection — outside + inside tiles', () => {
     renderSection({ stats: { avgOutsideTemp: 59, avgInsideTemp: 70 } });
 
     // Values are pre-converted upstream; the section only swaps the label.
-    expect(cellValue('Outside temperature')).toBe('59.00°F');
-    expect(cellValue('Inside temperature')).toBe('70.00°F');
-    expect(cellValue('Outside temperature')).not.toContain('°C');
+    expect(cellValue('Outside temperature')).toBe('59.00');
+    expect(cellValue('Inside temperature')).toBe('70.00');
+    expect(screen.getByText('Outside temperature (°F)')).toBeInTheDocument();
+    expect(screen.queryByText('Outside temperature (°C)')).toBeNull();
   });
 
   it('omits the outside/inside tiles when their average is null but the band still renders', () => {
@@ -307,7 +310,7 @@ describe('TemperatureSection — outside + inside tiles', () => {
     expect(cellValue('Outside temperature')).toBe('—');
     expect(cellValue('Inside temperature')).toBe('—');
     // …but a populated series keeps the band (and chart branch) alive.
-    expect(screen.getByText('Driver temperature')).toBeInTheDocument();
+    expect(screen.getByText(/^Driver temperature/)).toBeInTheDocument();
   });
 });
 
@@ -320,15 +323,15 @@ describe('TemperatureSection — driver + passenger averages', () => {
       },
     });
 
-    expect(cellValue('Driver temperature')).toBe('22.00°C');
-    expect(cellValue('Passenger temperature')).toBe('20.00°C');
+    expect(cellValue('Driver temperature')).toBe('22.00');
+    expect(cellValue('Passenger temperature')).toBe('20.00');
     expect(tSpy).toHaveBeenCalledWith('driveDetail.driverTemp', 'Driver temperature');
     expect(tSpy).toHaveBeenCalledWith('driveDetail.passengerTemp', 'Passenger temperature');
   });
 
   it('averages an uneven series without rounding drift', () => {
     renderSection({ stats: { driverTemps: [10, 11] } }); // mean 10.5
-    expect(cellValue('Driver temperature')).toBe('10.50°C');
+    expect(cellValue('Driver temperature')).toBe('10.50');
   });
 
   it('omits the driver/passenger tiles entirely when their series are empty', () => {
@@ -337,7 +340,7 @@ describe('TemperatureSection — driver + passenger averages', () => {
     expect(cellValue('Driver temperature')).toBe('—');
     expect(cellValue('Passenger temperature')).toBe('—');
     // The outside/inside tiles from the default stats are still present.
-    expect(screen.getByText('Outside temperature')).toBeInTheDocument();
+    expect(screen.getByText(/^Outside temperature/)).toBeInTheDocument();
   });
 });
 
@@ -414,7 +417,7 @@ describe('TemperatureSection — empty state', () => {
     renderSection({ chartData: [makePoint({ outsideTemp: 15 })], stats: { hasAnyTemp: true } });
 
     expect(screen.getByText(EMPTY_MESSAGE)).toBeInTheDocument();
-    expect(screen.getByText('Outside temperature')).toBeInTheDocument();
+    expect(screen.getByText(/^Outside temperature/)).toBeInTheDocument();
   });
 
   it('hides the decorative empty-state icon from assistive tech (regression: missing aria-hidden)', () => {
@@ -459,7 +462,7 @@ describe('TemperatureSection — null safety', () => {
       },
     });
 
-    expect(cellValue('Driver temperature')).toBe('10.00°C');
+    expect(cellValue('Driver temperature')).toBe('10.00');
     expect(cellValue('Passenger temperature')).toBe('—');
     expect(screen.queryByText(/NaN/)).toBeNull();
   });

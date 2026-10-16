@@ -6,10 +6,9 @@ import {
   LineChart, Line, Legend,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
+import { ChartCard, ChartSummary } from '@/components/layout';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { Table } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 
 import { LEGEND_STYLE } from './helpers';
@@ -87,17 +86,20 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
   );
 
   return (
-    <FadeIn className="space-y-3">
-      <Table variant="embedded" aria-label={t('driveDetail.tirePressure', 'Tire pressure during drive')}>
-        <tbody>{wheels.map((wheel) => (
-          <tr key={wheel.key}>
-            <th scope="row">{wheel.label}</th>
-            <td className="tabular-nums">{wheel.min != null && wheel.max != null ? `${fmtNumber(wheel.min)}–${fmtNumber(wheel.max)} ${pressureUnit}` : '—'}</td>
-          </tr>
-        ))}</tbody>
-      </Table>
-      {/* chart-a11y:no-table dense per-sample tire pressure trace; min/max stats appear above the chart in the per-wheel tiles */}
+    <FadeIn>
+      {/* chart-a11y:no-table dense per-sample tire pressure trace; per-wheel min-max ranges appear in the card summary */}
       <ChartCard
+        summary={(
+          <ChartSummary
+            label={t('driveDetail.tirePressure', 'Tire pressure during drive')}
+            items={wheels.map(wheel => ({
+              id: wheel.key,
+              label: t('driveDetail.tirePressureRange', '{{wheel}} pressure range', { wheel: wheel.label }),
+              unit: pressureUnit,
+              value: wheel.min != null && wheel.max != null ? `${fmtNumber(wheel.min)}–${fmtNumber(wheel.max)}` : '—',
+            }))}
+          />
+        )}
         title={t('driveDetail.tirePressure', 'Tire pressure during drive')}
         ariaLabel={t('driveDetail.tirePressureAria', 'Front and rear tire pressure lines over the drive timeline')}
         height={310}
