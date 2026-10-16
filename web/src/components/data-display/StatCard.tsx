@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, MetricValue, Text } from '@/components/ui';
 import { Skeleton } from '@/components/feedback/Skeleton';
@@ -28,6 +28,7 @@ export interface StatCardProps {
   sublabel?: string;
   loading?: boolean;
   className?: string;
+  style?: CSSProperties;
 }
 
 const TREND_GLYPH: Record<StatCardTrend['direction'], string> = {
@@ -48,7 +49,7 @@ function hasMeaningfulValue(value: StatCardProps['value']): value is string | nu
  * directional trend chip and sublabel. Purely presentational — callers own the
  * data fetching and pass already-formatted display strings.
  */
-export function StatCard({ label, value, kind, unit, icon, trend, sublabel, loading, className }: StatCardProps) {
+export function StatCard({ label, value, kind, unit, icon, trend, sublabel, loading, className, style }: StatCardProps) {
   const { t } = useTranslation();
   const { fmtNumber, fmtInt } = useNumberFormatting();
 
@@ -56,6 +57,7 @@ export function StatCard({ label, value, kind, unit, icon, trend, sublabel, load
     return (
       <Card
         className={className}
+        style={style}
         role="status"
         aria-busy="true"
         aria-label={t('statCard.loading', 'Loading')}
@@ -80,7 +82,7 @@ export function StatCard({ label, value, kind, unit, icon, trend, sublabel, load
         : t('statCard.trend.unchanged', 'no change');
 
   return (
-    <Card className={cn('flex min-h-28 flex-col gap-2 p-5', className)}>
+    <Card className={cn('flex min-h-28 flex-col gap-2 p-5', className)} style={style}>
       <div className="flex items-center justify-between gap-3">
         <Text as="span" size="sm" weight="medium" color="secondary">{label}</Text>
         {icon ? (
