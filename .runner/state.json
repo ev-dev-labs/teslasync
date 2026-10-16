@@ -6172,10 +6172,10 @@
       "web\\src\\features\\charging\\components\\WaitOraclePanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-tesla-charging-sessions-f11 | focused tests stalled; browser checks blocked by onboarding redirect | done so far: updated web\\src\\features\\charging\\components\\WaitOraclePanel.tsx and web\\src\\features\\charging\\components\\WaitOraclePanel.test.tsx Attempt 2: FAILED | fix-charging-tesla-charging-sessions-f11 | verification blocked by missing dependencies and locked esbuild binary | done so far: inspected existing implementation and tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-charging-tesla-charging-sessions-f11 | focused tests stalled; browser checks blocked by onboarding redirect | done so far: updated web\\src\\features\\charging\\components\\WaitOraclePanel.tsx and web\\src\\features\\charging\\components\\WaitOraclePanel.test.tsx Attempt 2: FAILED | fix-charging-tesla-charging-sessions-f11 | verification blocked by missing dependencies and locked esbuild binary | done so far: inspected existing implementation and tests; no source changes Focused WaitOraclePanel suite passes 43/43 and explicitly asserts min-h-11/min-w-11 mobile targets with md desktop restoration.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
