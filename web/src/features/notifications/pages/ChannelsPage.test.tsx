@@ -177,11 +177,12 @@ vi.mock('../components/channels/ChannelsGrid', () => ({
 
 vi.mock('../components/channels/ChannelProvidersPanel', () => ({
   ChannelProvidersPanel: function ChannelProvidersPanelMock({
-    channels,
+    channels, source,
   }: {
     channels: NotificationChannel[];
+    source?: DataState<NotificationChannel[]>;
   }) {
-    return <div data-testid="providers-panel" data-count={String(channels.length)} />;
+    return <div data-testid="providers-panel" data-count={String(channels.length)} data-source-status={source?.status} data-source-known={String(source?.hasData)} data-source-blocked={String(source?.isRefreshBlocked)} />;
   },
 }));
 
@@ -550,5 +551,23 @@ describe('ChannelsPage — header actions & a11y', () => {
     expect(within(actionsCluster()).getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'More info: Notification channels' }))
       .toHaveAttribute('aria-describedby');
+  });
+});
+
+
+describe('ChannelsPage provider source forwarding', () => {
+  it.each([
+    { name: 'loading', query: { data: undefined, isLoading: true }, status: 'initial', known: 'false', blocked: 'false' },
+    { name: 'paused', query: { data: undefined, isPending: true, fetchStatus: 'paused' }, status: 'initial', known: 'false', blocked: 'true' },
+    { name: 'authoritative empty', query: { data: [] }, status: 'ok', known: 'true', blocked: 'false' },
+  ])('forwards the real $name registry state to the provider catalog', ({ query, status, known, blocked }) => {
+    setChannels(query as Parameters<typeof setChannels>[0]);
+    renderPage();
+    const panel = screen.getByTestId('providers-panel');
+    expect(panel).toHaveAttribute('data-source-status', status);
+    expect(panel).toHaveAttribute('data-source-known', known);
+    expect(panel).toHaveAttribute('data-source-blocked', blocked);
+    expect(screen.getByTestId('channels-grid')).toBeInTheDocument();
+    expect(screen.getByTestId('stats-band')).toBeInTheDocument();
   });
 });

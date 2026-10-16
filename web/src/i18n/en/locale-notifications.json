@@ -2198,6 +2198,9 @@
       },
       "providers": {
         "configured": "{{count}} configured",
+        "countsFailed": "Provider counts are unavailable because the channel registry could not be loaded.",
+        "countsLoading": "Provider counts will appear when the channel registry finishes loading.",
+        "countsPaused": "Provider counts are unknown while the channel registry refresh is paused.",
         "notConfigured": "Not configured",
         "subtitle": "{{inUse}} of {{total}} provider types in use",
         "title": "Supported providers"

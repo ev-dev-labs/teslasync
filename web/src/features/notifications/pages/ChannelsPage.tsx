@@ -144,7 +144,7 @@ export default function ChannelsPage() {
               <BrowserPushChannelCard className="h-full p-4 sm:p-5" />
             </div>
             <div className="min-w-0 xl:col-span-2">
-              <ChannelProvidersPanel channels={channels} />
+              <ChannelProvidersPanel channels={channels} source={channelsState} />
             </div>
           </div>
         </section>

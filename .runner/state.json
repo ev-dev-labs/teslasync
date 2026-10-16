@@ -11887,10 +11887,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "failed",
+    "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": "| Channel checkpoint: ChannelsPage.test.tsx passes 23/23; duplicate responsive paused-status copy is asserted as present. Retry failed: ChannelProvidersPanel.test.tsx cannot find translated provider label Courriel; 1 failure. | 2026-10-16 repair group 17 retry: French provider regression now passes with real translation provider; ChannelsPage 23/23 and ChannelProvidersPanel 8/8 pass; catalog regenerated/check passes. Still FAILED after source review: ChannelsPage passes channelsQuery.data ?? [] to ChannelProvidersPanel without source state; loading/paused/fatal counts can appear authoritatively zero. Need source-aware provider counts and focused transitions before acceptance.",
+    "Notes": "| Channel checkpoint: ChannelsPage.test.tsx passes 23/23; duplicate responsive paused-status copy is asserted as present. Retry failed: ChannelProvidersPanel.test.tsx cannot find translated provider label Courriel; 1 failure. | 2026-10-16 repair group 17 retry: French provider regression now passes with real translation provider; ChannelsPage 23/23 and ChannelProvidersPanel 8/8 pass; catalog regenerated/check passes. Still FAILED after source review: ChannelsPage passes channelsQuery.data ?? [] to ChannelProvidersPanel without source state; loading/paused/fatal counts can appear authoritatively zero. Need source-aware provider counts and focused transitions before acceptance. | 2026-10-16 repair group 18 acceptance: channel DataState forwarded to provider catalog; initial loading/paused/fatal counts remain unknown with specific translated explanations and fatal Retry; retained empty/populated counts persist and clear warnings on recovery. Ten new cases red before production fix. Required ChannelsPage/ChannelProvidersPanel 41/41 pass; full notifications 1134 passed / 134 existing failures, zero new identities. tsc, scoped ESLint and regenerated split catalog --check pass. Accepted.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },

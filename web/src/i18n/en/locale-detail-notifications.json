@@ -425,6 +425,9 @@
       "testHint": "Save then click \"Send test\" to verify the configuration.",
       "providers": {
         "subtitle": "{{inUse}} of {{total}} provider types in use",
+        "countsLoading": "Provider counts will appear when the channel registry finishes loading.",
+        "countsPaused": "Provider counts are unknown while the channel registry refresh is paused.",
+        "countsFailed": "Provider counts are unavailable because the channel registry could not be loaded.",
         "configured": "{{count}} configured",
         "notConfigured": "Not configured",
         "title": "Supported providers"

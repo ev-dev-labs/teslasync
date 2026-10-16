@@ -9,21 +9,27 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, GlassPanel, Heading, Text } from '@/components/ui';
 import type { NotificationChannel } from '@/api/types';
+import type { DataState } from '@/api/dataState';
+import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { CHANNEL_TYPES } from './channelMeta';
 
 interface ChannelProvidersPanelProps {
   channels: NotificationChannel[];
+  source?: DataState<NotificationChannel[]>;
 }
 
-export function ChannelProvidersPanel({ channels }: ChannelProvidersPanelProps) {
+export function ChannelProvidersPanel({ channels, source }: ChannelProvidersPanelProps) {
   const { t } = useTranslation();
+  const countsKnown = source?.hasData ?? true;
+  const retainedChannels = source ? source.data : channels;
+  const sourceLabel = t('dataSources.labels.notificationChannels', 'Notification channels');
 
   // Derive per-kind counts + the number of provider types in use once per
   // `channels` change. Guard against a null/kind-less row so a single
   // malformed API entry can't crash the whole reference panel.
   const { counts, inUse } = useMemo(() => {
     const map = new Map<string, number>();
-    for (const ch of channels ?? []) {
+    for (const ch of retainedChannels ?? []) {
       if (!ch?.kind) continue;
       map.set(ch.kind, (map.get(ch.kind) ?? 0) + 1);
     }
@@ -32,7 +38,7 @@ export function ChannelProvidersPanel({ channels }: ChannelProvidersPanelProps) 
       0,
     );
     return { counts: map, inUse: used };
-  }, [channels]);
+  }, [retainedChannels]);
 
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
@@ -40,13 +46,22 @@ export function ChannelProvidersPanel({ channels }: ChannelProvidersPanelProps) 
         <Heading level="panel" as="h3">
           {t('notifications.channels.providers.title', 'Supported providers')}
         </Heading>
-        <Text as="p" variant="caption" className="mt-0.5">
-          {t('notifications.channels.providers.subtitle', '{{inUse}} of {{total}} provider types in use', {
+        <Text as="p" variant="caption" className="mt-0.5" role={!countsKnown ? 'status' : undefined}
+          aria-busy={!countsKnown && !source?.fatalError && !source?.isRefreshBlocked || undefined}>
+          {countsKnown ? t('notifications.channels.providers.subtitle', '{{inUse}} of {{total}} provider types in use', {
             inUse,
             total: CHANNEL_TYPES.length,
-          })}
+          }) : source?.fatalError
+            ? t('notifications.channels.providers.countsFailed', 'Provider counts are unavailable because the channel registry could not be loaded.')
+            : source?.isRefreshBlocked
+              ? t('notifications.channels.providers.countsPaused', 'Provider counts are unknown while the channel registry refresh is paused.')
+              : t('notifications.channels.providers.countsLoading', 'Provider counts will appear when the channel registry finishes loading.')}
         </Text>
       </div>
+
+      {source && <StaleRefreshWarning state={source} label={sourceLabel} />}
+      {source?.fatalError && <QueryError compact error={source.fatalError}
+        onRetry={source.retry ?? undefined} resourceName={sourceLabel} />}
 
       <ul className="grid list-none grid-cols-1 gap-2 sm:grid-cols-2 2xl:grid-cols-3">
         {CHANNEL_TYPES.map((p) => {
@@ -66,12 +81,12 @@ export function ChannelProvidersPanel({ channels }: ChannelProvidersPanelProps) 
               <div className="min-w-0 flex-1">
                 <Text as="p" variant="body" className="truncate">{t(p.i18nKey, p.label)}</Text>
                 <Text as="p" variant="caption">
-                  {count > 0
+                  {!countsKnown ? t('common.unknown', 'Unknown') : count > 0
                     ? t('notifications.channels.providers.configured', '{{count}} configured', { count })
                     : t('notifications.channels.providers.notConfigured', 'Not configured')}
                 </Text>
               </div>
-              {count > 0 && (
+              {countsKnown && count > 0 && (
                 // Decorative reinforcement of the "{{count}} configured"
                 // caption above; hidden from AT to avoid a duplicate reading.
                 <Badge variant="success" size="sm" aria-hidden="true">{count}</Badge>
