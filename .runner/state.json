@@ -13681,10 +13681,10 @@
       "web\\src\\features\\settings\\components\\sessions\\SessionsTable.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-active-sessions-as-01 | verification blocked by incomplete dependencies and Edge navigation timeout | done so far: updated web\\src\\features\\settings\\components\\sessions\\SessionsTable.tsx and web\\src\\features\\settings\\components\\sessions\\SessionsTable.test.tsx Attempt 2: FAILED | fix-settings-active-sessions-as-01 | test and Edge verification blocked by incomplete dependencies; restore failed with ENOTEMPTY | done so far: inspected and preserved prior SessionsTable implementation and tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-active-sessions-as-01 | verification blocked by incomplete dependencies and Edge navigation timeout | done so far: updated web\\src\\features\\settings\\components\\sessions\\SessionsTable.tsx and web\\src\\features\\settings\\components\\sessions\\SessionsTable.test.tsx Attempt 2: FAILED | fix-settings-active-sessions-as-01 | test and Edge verification blocked by incomplete dependencies; restore failed with ENOTEMPTY | done so far: inspected and preserved prior SessionsTable implementation and tests; no source changes Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13698,10 +13698,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: SessionsSummaryCards.test.tsx has 2 failures: expected IP 10.2.2.2 and four data-operational-metric wrappers are absent from the current summary face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13773,10 +13773,10 @@
       "web\\src\\features\\settings\\pages\\ActiveSessionsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-active-sessions-as-04 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx and web\\src\\features\\settings\\pages\\ActiveSessionsPage.test.tsx Attempt 2: FAILED | fix-settings-active-sessions-as-04 | missing dependencies and ENOTEMPTY restoration failures prevented regression verification | done so far: inspected and preserved prior page implementation and focused regressions; no new source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-active-sessions-as-04 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx and web\\src\\features\\settings\\pages\\ActiveSessionsPage.test.tsx Attempt 2: FAILED | fix-settings-active-sessions-as-04 | missing dependencies and ENOTEMPTY restoration failures prevented regression verification | done so far: inspected and preserved prior page implementation and focused regressions; no new source changes Retry failed: ActiveSessionsPage.test.tsx has 2 failures because exact IP text 10.0.0.2 appears more than once; the getByText query is ambiguous.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13788,10 +13788,10 @@
       "web\\src\\features\\settings\\pages\\ActiveSessionsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-active-sessions-as-03 | dependency failures prevented regression execution and typechecking | done so far: guards and regression cases added in web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx, web\\src\\features\\settings\\pages\\ActiveSessionsPage.test.tsx Attempt 2: FAILED | fix-settings-active-sessions-as-03 | dependency restoration failures prevented regression execution and typechecking | done so far: existing guards and regression cases reviewed; no source changes made",
+    "Notes": "Attempt 1: FAILED | fix-settings-active-sessions-as-03 | dependency failures prevented regression execution and typechecking | done so far: guards and regression cases added in web\\src\\features\\settings\\pages\\ActiveSessionsPage.tsx, web\\src\\features\\settings\\pages\\ActiveSessionsPage.test.tsx Attempt 2: FAILED | fix-settings-active-sessions-as-03 | dependency restoration failures prevented regression execution and typechecking | done so far: existing guards and regression cases reviewed; no source changes made Retry failed: ActiveSessionsPage.test.tsx has 2 failures because exact IP text 10.0.0.2 appears more than once; the getByText query is ambiguous.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13803,10 +13803,10 @@
       "web\\src\\api\\hooks\\useSessions.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-active-sessions-as-11 | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\api\\hooks\\useSessions.ts and web\\src\\api\\hooks\\useSessions.test.tsx with payload validation and lifecycle regression coverage Attempt 2: FAILED | fix-settings-active-sessions-as-11 | dependency restoration failed; required tests could not execute | done so far: corrected test registration and added unsafe-integer coverage in web\\src\\api\\hooks\\useSessions.test.tsx",
+    "Notes": "Attempt 1: FAILED | fix-settings-active-sessions-as-11 | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\api\\hooks\\useSessions.ts and web\\src\\api\\hooks\\useSessions.test.tsx with payload validation and lifecycle regression coverage Attempt 2: FAILED | fix-settings-active-sessions-as-11 | dependency restoration failed; required tests could not execute | done so far: corrected test registration and added unsafe-integer coverage in web\\src\\api\\hooks\\useSessions.test.tsx Retry failed: useSessions.test.tsx does not observe isRefetching=true in the active-refresh case (line 220); 1 failure.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13818,10 +13818,10 @@
       "web\\src\\api\\hooks\\useSessions.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-active-sessions-as-06 | validation blocked by missing dependencies; translation catalog prerequisite remains | done so far: updated web/src/api/hooks/useSessions.ts and web/src/api/hooks/useSessions.test.tsx Attempt 2: FAILED | fix-settings-active-sessions-as-06 | required tests blocked by missing dependencies and failed dependency restoration; translation key remains absent | done so far: existing hook and edge-case tests inspected; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-active-sessions-as-06 | validation blocked by missing dependencies; translation catalog prerequisite remains | done so far: updated web/src/api/hooks/useSessions.ts and web/src/api/hooks/useSessions.test.tsx Attempt 2: FAILED | fix-settings-active-sessions-as-06 | required tests blocked by missing dependencies and failed dependency restoration; translation key remains absent | done so far: existing hook and edge-case tests inspected; no source changes Retry failed: same useSessions.test.tsx active-refresh case does not observe isRefetching=true; 1 failure.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13835,10 +13835,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: same useSessions.test.tsx active-refresh case does not observe isRefetching=true; 1 failure.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13867,10 +13867,10 @@
       "web\\src\\features\\settings\\pages\\FleetSetupPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-fleet-setup-fs002 | verification blocked by missing dependencies and Windows file locks; catalog entries outstanding | done so far: fleet-scoped labels and disclosure plus regressions in the four expected files Attempt 2: FAILED | fix-settings-fleet-setup-fs002 | missing dependencies block regression execution; five catalog keys remain outstanding outside assigned scope | done so far: preserved existing fleet-scoped labels, disclosure, and regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-fleet-setup-fs002 | verification blocked by missing dependencies and Windows file locks; catalog entries outstanding | done so far: fleet-scoped labels and disclosure plus regressions in the four expected files Attempt 2: FAILED | fix-settings-fleet-setup-fs002 | missing dependencies block regression execution; five catalog keys remain outstanding outside assigned scope | done so far: preserved existing fleet-scoped labels, disclosure, and regressions; no source changes Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13898,10 +13898,10 @@
       "web\\src\\api\\hooks\\useSettings.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-fleet-setup-fs013 | dependency failures prevented regression verification | done so far: updated web/src/api/hooks/useSettings.ts and added web/src/api/hooks/useSettings.authRecovery.test.tsx Attempt 2: FAILED | fix-settings-fleet-setup-fs013 | missing Vite dependencies prevented regression verification | done so far: inspected and preserved existing useSettings.ts changes and useSettings.authRecovery.test.tsx; retried focused test; logs retained",
+    "Notes": "Attempt 1: FAILED | fix-settings-fleet-setup-fs013 | dependency failures prevented regression verification | done so far: updated web/src/api/hooks/useSettings.ts and added web/src/api/hooks/useSettings.authRecovery.test.tsx Attempt 2: FAILED | fix-settings-fleet-setup-fs013 | missing Vite dependencies prevented regression verification | done so far: inspected and preserved existing useSettings.ts changes and useSettings.authRecovery.test.tsx; retried focused test; logs retained Retry failed: useSettings.authRecovery.test.tsx historical-view/sudo replay expects {auth_url}; actual response differs (deep-equality mismatch at line 105).",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13945,10 +13945,10 @@
       "web\\src\\features\\onboarding\\components\\Stepper.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-fleet-setup-fs012 | verification blocked by missing dependencies and dev-server loading failure | done so far: caller sizing and regression assertions saved in all five expected files Attempt 2: FAILED | fix-settings-fleet-setup-fs012 | dependency failures block tests and Edge verification | done so far: preserved existing sizing and regression assertions in all five expected files",
+    "Notes": "Attempt 1: FAILED | fix-settings-fleet-setup-fs012 | verification blocked by missing dependencies and dev-server loading failure | done so far: caller sizing and regression assertions saved in all five expected files Attempt 2: FAILED | fix-settings-fleet-setup-fs012 | dependency failures block tests and Edge verification | done so far: preserved existing sizing and regression assertions in all five expected files Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13978,10 +13978,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13996,10 +13996,10 @@
       "web\\src\\components\\ui\\__tests__\\SignalConfigModal.viewport.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-fleet-setup-fs007 | regression execution blocked by missing dependencies and failed dependency restoration | done so far: complete contained diagnostic list and focused regressions added in web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupSubscribePanel.tsx, web\\src\\features\\settings\\components\\TeslaAccountSection.test.tsx Attempt 2: FAILED | fix-settings-fleet-setup-fs007 | required regression execution blocked by incomplete dependencies and failed restoration | done so far: existing complete contained diagnostic list and focused regressions preserved; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-settings-fleet-setup-fs007 | regression execution blocked by missing dependencies and failed dependency restoration | done so far: complete contained diagnostic list and focused regressions added in web\\src\\features\\settings\\components\\fleet-setup\\FleetSetupSubscribePanel.tsx, web\\src\\features\\settings\\components\\TeslaAccountSection.test.tsx Attempt 2: FAILED | fix-settings-fleet-setup-fs007 | required regression execution blocked by incomplete dependencies and failed restoration | done so far: existing complete contained diagnostic list and focused regressions preserved; no source files changed Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14012,10 +14012,10 @@
       "web\\src\\components\\ui\\SignalConfigModal.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-fleet-setup-fs006 | focused tests blocked by missing dependencies and restoration errors | done so far: updated both components and added regression tests in the three expected files Attempt 2: FAILED | fix-settings-fleet-setup-fs006 | focused tests blocked by missing dependencies and restoration ENOTEMPTY error | done so far: confirmed existing picker extension, caller adoption, and regression tests; no source changes made",
+    "Notes": "Attempt 1: FAILED | fix-settings-fleet-setup-fs006 | focused tests blocked by missing dependencies and restoration errors | done so far: updated both components and added regression tests in the three expected files Attempt 2: FAILED | fix-settings-fleet-setup-fs006 | focused tests blocked by missing dependencies and restoration ENOTEMPTY error | done so far: confirmed existing picker extension, caller adoption, and regression tests; no source changes made Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14047,10 +14047,10 @@
       "web\\src\\components\\ui\\__tests__\\SignalConfigModal.viewport.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-fleet-setup-fs004 | dependency failures prevented verification; isolated validation artifacts were removed | done so far: updated web/src/api/hooks/useFleetSetup.ts and web/src/api/hooks/useFleetSetup.test.tsx with envelope validation and regression cases Attempt 2: FAILED | fix-settings-fleet-setup-fs004 | missing dependencies prevent regression and TypeScript verification; restoration failed twice | done so far: inspected existing envelope validation and query-trust regressions; preserved prior implementation; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-fleet-setup-fs004 | dependency failures prevented verification; isolated validation artifacts were removed | done so far: updated web/src/api/hooks/useFleetSetup.ts and web/src/api/hooks/useFleetSetup.test.tsx with envelope validation and regression cases Attempt 2: FAILED | fix-settings-fleet-setup-fs004 | missing dependencies prevent regression and TypeScript verification; restoration failed twice | done so far: inspected existing envelope validation and query-trust regressions; preserved prior implementation; no source changes Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14092,10 +14092,10 @@
       "web\\src\\features\\settings\\components\\__tests__\\AISettings.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-helix-helix-03 | Tests and typecheck blocked by missing Vite and TypeScript dependencies | done so far: updated web\\src\\features\\settings\\components\\AISettings.tsx and web\\src\\features\\settings\\components\\__tests__\\AISettings.test.tsx Attempt 2: FAILED | fix-settings-helix-helix-03 | Required tests blocked by missing dependencies; restoration failed with EBUSY | done so far: reviewed existing implementation and coverage; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-helix-helix-03 | Tests and typecheck blocked by missing Vite and TypeScript dependencies | done so far: updated web\\src\\features\\settings\\components\\AISettings.tsx and web\\src\\features\\settings\\components\\__tests__\\AISettings.test.tsx Attempt 2: FAILED | fix-settings-helix-helix-03 | Required tests blocked by missing dependencies; restoration failed with EBUSY | done so far: reviewed existing implementation and coverage; no source changes Retry failed: AISettings.test.tsx has 7 failures; tests expect data-testid ai-settings-unsaved but the current component does not render it.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14107,10 +14107,10 @@
       "web\\src\\features\\settings\\components\\__tests__\\AISettings.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-helix-helix-02 | verification blocked by missing dependencies and Windows dependency-restoration errors | done so far: updated web\\src\\features\\settings\\components\\AISettings.tsx and web\\src\\features\\settings\\components\\__tests__\\AISettings.test.tsx Attempt 2: FAILED | fix-settings-helix-helix-02 | required regression blocked by missing dependencies and EBUSY during restoration | done so far: reviewed existing implementation and regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-helix-helix-02 | verification blocked by missing dependencies and Windows dependency-restoration errors | done so far: updated web\\src\\features\\settings\\components\\AISettings.tsx and web\\src\\features\\settings\\components\\__tests__\\AISettings.test.tsx Attempt 2: FAILED | fix-settings-helix-helix-02 | required regression blocked by missing dependencies and EBUSY during restoration | done so far: reviewed existing implementation and regressions; no source changes Retry failed: AISettings.test.tsx has 7 failures; tests expect data-testid ai-settings-unsaved but the current component does not render it.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14139,10 +14139,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14154,10 +14154,10 @@
       "web\\src\\features\\settings\\components\\AIProviderSection.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-helix-helix-04 | verification blocked by missing Vite and dependency restoration failures | done so far: updated web\\src\\features\\settings\\components\\AIProviderSection.tsx and web\\src\\features\\settings\\components\\AIProviderSection.test.tsx with identity guards and regression coverage Attempt 2: FAILED | fix-settings-helix-helix-04 | verification blocked by missing dependencies and failed restoration | done so far: confirmed existing identity guards and regression coverage; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-settings-helix-helix-04 | verification blocked by missing Vite and dependency restoration failures | done so far: updated web\\src\\features\\settings\\components\\AIProviderSection.tsx and web\\src\\features\\settings\\components\\AIProviderSection.test.tsx with identity guards and regression coverage Attempt 2: FAILED | fix-settings-helix-helix-04 | verification blocked by missing dependencies and failed restoration | done so far: confirmed existing identity guards and regression coverage; no source files changed Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14171,10 +14171,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14201,10 +14201,10 @@
       "web\\src\\features\\settings\\components\\HelixStatusStrip.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-helix-helix-08 | verification blocked by missing dependencies and restore errors | done so far: updated web\\src\\features\\settings\\components\\HelixStatusStrip.tsx, web\\src\\features\\settings\\components\\HelixStatusStrip.test.tsx Attempt 2: FAILED | fix-settings-helix-helix-08 | verification blocked by missing dependencies and restore errors | done so far: inspected existing implementation and coverage; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-helix-helix-08 | verification blocked by missing dependencies and restore errors | done so far: updated web\\src\\features\\settings\\components\\HelixStatusStrip.tsx, web\\src\\features\\settings\\components\\HelixStatusStrip.test.tsx Attempt 2: FAILED | fix-settings-helix-helix-08 | verification blocked by missing dependencies and restore errors | done so far: inspected existing implementation and coverage; no source changes Retry failed: HelixStatusStrip.test.tsx has 12 failures; direct card-face assertions cannot find Provider, Source available, and related summary fields in current collapsed brief rendering.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14216,10 +14216,10 @@
       "web\\src\\features\\settings\\components\\__tests__\\AIUsageCard.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-helix-helix-07 | focused test blocked by missing dependencies | done so far: updated web\\src\\features\\settings\\components\\AIUsageCard.tsx and web\\src\\features\\settings\\components\\__tests__\\AIUsageCard.test.tsx; scoped audit found 0 inline styles, raw controls, or forbidden imports Attempt 2: FAILED | fix-settings-helix-helix-07 | focused test blocked by missing dependencies and failed restoration | done so far: corrected hook setup in web\\src\\features\\settings\\components\\__tests__\\AIUsageCard.test.tsx; preserved existing USD formatting and populated-data cases",
+    "Notes": "Attempt 1: FAILED | fix-settings-helix-helix-07 | focused test blocked by missing dependencies | done so far: updated web\\src\\features\\settings\\components\\AIUsageCard.tsx and web\\src\\features\\settings\\components\\__tests__\\AIUsageCard.test.tsx; scoped audit found 0 inline styles, raw controls, or forbidden imports Attempt 2: FAILED | fix-settings-helix-helix-07 | focused test blocked by missing dependencies and failed restoration | done so far: corrected hook setup in web\\src\\features\\settings\\components\\__tests__\\AIUsageCard.test.tsx; preserved existing USD formatting and populated-data cases Retry failed: AIUsageCard.test.tsx has 5 failures; tests expect three dash values and visible Last updated metadata on the brief face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14248,10 +14248,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14263,10 +14263,10 @@
       "web\\src\\features\\settings\\components\\AIFeatureToggleList.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-helix-helix-10 | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\features\\settings\\components\\AIFeatureToggleList.tsx and web\\src\\features\\settings\\components\\AIFeatureToggleList.test.tsx with mobile sizing and regression tests Attempt 2: FAILED | fix-settings-helix-helix-10 | missing dependencies prevent test and browser verification; restoration failed twice with ENOTEMPTY | done so far: inspected and preserved existing mobile sizing and regression tests; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-settings-helix-helix-10 | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\features\\settings\\components\\AIFeatureToggleList.tsx and web\\src\\features\\settings\\components\\AIFeatureToggleList.test.tsx with mobile sizing and regression tests Attempt 2: FAILED | fix-settings-helix-helix-10 | missing dependencies prevent test and browser verification; restoration failed twice with ENOTEMPTY | done so far: inspected and preserved existing mobile sizing and regression tests; no source files changed Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14280,10 +14280,10 @@
       "web\\src\\lib\\__tests__\\cookieConsent.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-privacy-privacy-04 | dependency failures blocked verification | done so far: changed web\\src\\lib\\recentPages.ts, web\\src\\lib\\recentPages.test.ts, web\\src\\lib\\__tests__\\cookieConsent.test.ts Attempt 2: FAILED | fix-settings-privacy-privacy-04 | dependency failures blocked verification | done so far: existing acquisition guard and getter-failure regressions reviewed; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-settings-privacy-privacy-04 | dependency failures blocked verification | done so far: changed web\\src\\lib\\recentPages.ts, web\\src\\lib\\recentPages.test.ts, web\\src\\lib\\__tests__\\cookieConsent.test.ts Attempt 2: FAILED | fix-settings-privacy-privacy-04 | dependency failures blocked verification | done so far: existing acquisition guard and getter-failure regressions reviewed; no files changed Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14296,10 +14296,10 @@
       "web\\src\\features\\settings\\pages\\PrivacyPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-privacy-privacy-05 | verification blocked by missing dependencies and failed dependency restore | done so far: updated PrivacyPage.tsx, PrivacyOperationalBrief.tsx, and PrivacyPage.test.tsx with unknown-policy handling and focused regressions Attempt 2: FAILED | fix-settings-privacy-privacy-05 | focused verification blocked by missing Vite and failed dependency restoration | done so far: confirmed existing boolean guard, null metric, distinct unknown-policy and fatal-error reasons, and local-action regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-privacy-privacy-05 | verification blocked by missing dependencies and failed dependency restore | done so far: updated PrivacyPage.tsx, PrivacyOperationalBrief.tsx, and PrivacyPage.test.tsx with unknown-policy handling and focused regressions Attempt 2: FAILED | fix-settings-privacy-privacy-05 | focused verification blocked by missing Vite and failed dependency restoration | done so far: confirmed existing boolean guard, null metric, distinct unknown-policy and fatal-error reasons, and local-action regressions; no source changes Retry failed: PrivacyPage.test.tsx has 9 failures, including legacy KPI/detail assertions and missing Deployment policy unavailable copy in unknown/failure scenarios.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14335,10 +14335,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: PrivacyPage.test.tsx has 9 failures, including expected date-range explanation and a four-entry panel where only three render.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14350,10 +14350,10 @@
       "web\\src\\features\\settings\\pages\\PrivacyPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-privacy-privacy-01 | dependency restoration blocked; regression tests could not run | done so far: updated web\\src\\features\\settings\\pages\\PrivacyPage.tsx, web\\src\\features\\settings\\pages\\PrivacyPage.test.tsx, web\\src\\lib\\cookieConsent.ts, web\\src\\lib\\recentPages.ts Attempt 2: FAILED | fix-settings-privacy-privacy-01 | dependency restoration failed; focused regressions could not execute | done so far: inspected and preserved existing persistence-feedback fix and regression tests; no source changes made",
+    "Notes": "Attempt 1: FAILED | fix-settings-privacy-privacy-01 | dependency restoration blocked; regression tests could not run | done so far: updated web\\src\\features\\settings\\pages\\PrivacyPage.tsx, web\\src\\features\\settings\\pages\\PrivacyPage.test.tsx, web\\src\\lib\\cookieConsent.ts, web\\src\\lib\\recentPages.ts Attempt 2: FAILED | fix-settings-privacy-privacy-01 | dependency restoration failed; focused regressions could not execute | done so far: inspected and preserved existing persistence-feedback fix and regression tests; no source changes made Retry failed: PrivacyPage.test.tsx has 9 failures, including persistence feedback/layout assertions; suite still expects former card-face metrics and status.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14382,10 +14382,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14412,10 +14412,10 @@
       "web\\src\\features\\settings\\components\\SafetySettingCard.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-safety-ss-006 | missing dependencies blocked tests and browser validation | done so far: updated web\\src\\features\\settings\\components\\SafetySettingCard.tsx and web\\src\\features\\settings\\components\\SafetySettingCard.test.tsx with theme/system focus outlines and regressions Attempt 2: FAILED | fix-settings-safety-ss-006 | missing dependencies blocked tests and browser validation | done so far: confirmed existing focus implementation and regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-safety-ss-006 | missing dependencies blocked tests and browser validation | done so far: updated web\\src\\features\\settings\\components\\SafetySettingCard.tsx and web\\src\\features\\settings\\components\\SafetySettingCard.test.tsx with theme/system focus outlines and regressions Attempt 2: FAILED | fix-settings-safety-ss-006 | missing dependencies blocked tests and browser validation | done so far: confirmed existing focus implementation and regressions; no source changes Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14444,10 +14444,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14459,10 +14459,10 @@
       "web\\src\\features\\settings\\components\\TOTPEnrollmentSection.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-two-factor-auth-tfa-04 | Vitest startup blocked by missing dependencies | done so far: updated web\\src\\features\\settings\\components\\TOTPEnrollmentSection.tsx, web\\src\\features\\settings\\components\\TOTPEnrollmentSection.test.tsx Attempt 2: FAILED | fix-settings-two-factor-auth-tfa-04 | Scoped Vitest startup blocked by missing dependencies and Windows file locks | done so far: corrected test-suite nesting in web\\src\\features\\settings\\components\\TOTPEnrollmentSection.test.tsx; syntax diagnostics=0",
+    "Notes": "Attempt 1: FAILED | fix-settings-two-factor-auth-tfa-04 | Vitest startup blocked by missing dependencies | done so far: updated web\\src\\features\\settings\\components\\TOTPEnrollmentSection.tsx, web\\src\\features\\settings\\components\\TOTPEnrollmentSection.test.tsx Attempt 2: FAILED | fix-settings-two-factor-auth-tfa-04 | Scoped Vitest startup blocked by missing dependencies and Windows file locks | done so far: corrected test-suite nesting in web\\src\\features\\settings\\components\\TOTPEnrollmentSection.test.tsx; syntax diagnostics=0 Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14474,10 +14474,10 @@
       "web\\src\\features\\settings\\components\\TOTPEnrollmentSection.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-two-factor-auth-tfa-01 | scoped verification blocked by missing dependencies and failed restoration | done so far: updated web/src/features/settings/components/TOTPEnrollmentSection.tsx and web/src/features/settings/components/TOTPEnrollmentSection.test.tsx Attempt 2: FAILED | fix-settings-two-factor-auth-tfa-01 | scoped verification blocked by missing Vite dependencies and EPERM during restoration | done so far: inspected prior implementation and coverage; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-settings-two-factor-auth-tfa-01 | scoped verification blocked by missing dependencies and failed restoration | done so far: updated web/src/features/settings/components/TOTPEnrollmentSection.tsx and web/src/features/settings/components/TOTPEnrollmentSection.test.tsx Attempt 2: FAILED | fix-settings-two-factor-auth-tfa-01 | scoped verification blocked by missing Vite dependencies and EPERM during restoration | done so far: inspected prior implementation and coverage; no source files changed Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14491,10 +14491,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: useTotpEnrollmentFlow.test.tsx has 8 stale-lifecycle failures after status mode changes during pending work; confirm/dialog state differs from close/reset expectations.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14506,10 +14506,10 @@
       "web\\src\\features\\settings\\components\\twofactor\\useTotpEnrollmentFlow.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-two-factor-auth-tfa-03 | missing shared dependencies prevented verification | done so far: updated web\\src\\features\\settings\\components\\twofactor\\useTotpEnrollmentFlow.ts and web\\src\\features\\settings\\components\\twofactor\\useTotpEnrollmentFlow.test.tsx with pending guards, correlated settlement, and lifecycle tests Attempt 2: FAILED | fix-settings-two-factor-auth-tfa-03 | shared dependency failures prevented required test execution | done so far: inspected existing implementation and lifecycle tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-two-factor-auth-tfa-03 | missing shared dependencies prevented verification | done so far: updated web\\src\\features\\settings\\components\\twofactor\\useTotpEnrollmentFlow.ts and web\\src\\features\\settings\\components\\twofactor\\useTotpEnrollmentFlow.test.tsx with pending guards, correlated settlement, and lifecycle tests Attempt 2: FAILED | fix-settings-two-factor-auth-tfa-03 | shared dependency failures prevented required test execution | done so far: inspected existing implementation and lifecycle tests; no source changes Retry failed: useTotpEnrollmentFlow.test.tsx has 8 stale-lifecycle failures; stale completion after a status mode change interferes with the newer flow expected state.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14525,10 +14525,10 @@
       "web\\src\\features\\settings\\components\\twofactor\\TotpRecoveryPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-two-factor-auth-tfa-06 | dependency failures prevented test and TypeScript verification | done so far: updated all three assigned components and their regression tests; preserved content, credential states, and QR scanner backing Attempt 2: FAILED | fix-settings-two-factor-auth-tfa-06 | missing dependencies blocked tests and TypeScript; dependency restoration failed with ENOENT | done so far: confirmed existing neutral-role implementation and focused regressions; no source changes made",
+    "Notes": "Attempt 1: FAILED | fix-settings-two-factor-auth-tfa-06 | dependency failures prevented test and TypeScript verification | done so far: updated all three assigned components and their regression tests; preserved content, credential states, and QR scanner backing Attempt 2: FAILED | fix-settings-two-factor-auth-tfa-06 | missing dependencies blocked tests and TypeScript; dependency restoration failed with ENOENT | done so far: confirmed existing neutral-role implementation and focused regressions; no source changes made Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -14540,10 +14540,10 @@
       "web\\src\\features\\settings\\components\\twofactor\\TotpStatusHero.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-settings-two-factor-auth-tfa-08 | targeted tests blocked by missing local Vite/Vitest dependencies | done so far: updated TotpStatusHero.tsx and TotpStatusHero.test.tsx with safe-integer validation and boundary coverage Attempt 2: FAILED | fix-settings-two-factor-auth-tfa-08 | required tests blocked by incomplete dependencies; restoration failed with ENOENT | done so far: confirmed existing validation and boundary coverage; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-settings-two-factor-auth-tfa-08 | targeted tests blocked by missing local Vite/Vitest dependencies | done so far: updated TotpStatusHero.tsx and TotpStatusHero.test.tsx with safe-integer validation and boundary coverage Attempt 2: FAILED | fix-settings-two-factor-auth-tfa-08 | required tests blocked by incomplete dependencies; restoration failed with ENOENT | done so far: confirmed existing validation and boundary coverage; no source changes Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20445,10 +20445,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry verification passed in the settings batch; this items listed suite(s) passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
