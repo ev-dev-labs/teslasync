@@ -20,7 +20,8 @@ export const analyticsKeys = {
   dailyMileage: (vehicleId: string, days: number) => ['analytics', 'daily-mileage', vehicleId, days] as const,
   cost: (vehicleId: string) => ['analytics', 'cost', vehicleId] as const,
   timeline: (vehicleId: string) => ['analytics', 'timeline', vehicleId] as const,
-  stateSummary: (vehicleId: string) => ['analytics', 'state-summary', vehicleId] as const,
+  stateSummary: (vehicleId: string, start?: string, end?: string) =>
+    ['analytics', 'state-summary', vehicleId, start, end] as const,
   weeklyDigest: (vehicleId: string) => ['analytics', 'weekly-digest', vehicleId] as const,
   lifetime: (vehicleId?: string) => ['analytics', 'lifetime', vehicleId] as const,
   batteryCells: (vehicleId: string) => ['analytics', 'battery-cells', vehicleId] as const,
@@ -196,11 +197,17 @@ export interface VehicleStateSummaryResponse {
   by_state: VehicleStateSummaryRow[];
 }
 
-/** Restored signal-log summary; unwrap rows without converting seconds or percentages. */
-export function useStateSummary(vehicleId: string) {
+/**
+ * Restored signal-log summary; unwrap rows without converting seconds or percentages.
+ * Without `start`/`end` the handler applies its 7-day default window.
+ */
+export function useStateSummary(vehicleId: string, range: { start?: string; end?: string } = {}) {
+  const params = new URLSearchParams({ vehicle_id: vehicleId });
+  if (range.start) params.set('start', range.start);
+  if (range.end) params.set('end', range.end);
   return useQuery({
-    queryKey: analyticsKeys.stateSummary(vehicleId),
-    queryFn: ({ signal }) => request<VehicleStateSummaryResponse>(`/vehicle-states/summary?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
+    queryKey: analyticsKeys.stateSummary(vehicleId, range.start, range.end),
+    queryFn: ({ signal }) => request<VehicleStateSummaryResponse>(`/vehicle-states/summary?${params}`, { signal }),
     enabled: !!vehicleId,
     select: (data) => safeArray(data?.by_state),
   });

@@ -112,6 +112,15 @@ describe('analyticsKeys', () => {
       'analytics',
       'state-summary',
       '7',
+      undefined,
+      undefined,
+    ]);
+    expect(analyticsKeys.stateSummary('7', 'a', 'b')).toEqual([
+      'analytics',
+      'state-summary',
+      '7',
+      'a',
+      'b',
     ]);
     expect(analyticsKeys.weeklyDigest('7')).toEqual([
       'analytics',
