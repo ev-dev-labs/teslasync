@@ -176,6 +176,22 @@ Full local review and verification artifacts: `.runner/gates/disclosure-codemod-
 
 Concurrent changes to shared UI files and a DataFreshness rename appeared after the area runs. This commit isolates the codemod/helper/tests and this receipt from those unrelated staged/working changes, including additional edits in TeslaAccountPage.test.tsx. The reported checks describe their recorded run; they are not a verification claim for the concurrent UI changes.
 
+### Repair group 11: bulk unavailable-metric assertions (2026-10-16)
+
+Extended the reusable AST codemod with `--missing-metrics`. It proves the value reader scopes a label inside `[data-operational-metric]` and reads `[data-operational-value]`, then migrates only its positive em-dash expectations. The root and original label remain unchanged; measured numeric/zero expectations, negative assertions, unrelated formatters, fixtures and test cases remain untouched. It never returns a fabricated placeholder. The assertion requires one real evidence card, absence of that named measured tile and drawer group, and a counted hidden-field explanation. Controls reject treating measured zero or a pending skeleton as unavailable and retain the all-unavailable explanation.
+
+Reviewed and applied **24 assertions across three files** in one batch:
+
+| Suite | Fresh before | After |
+| --- | ---: | ---: |
+| BatteryDegradationPage | 84 passed / 41 failed | 103 passed / 22 failed |
+| ChargingDetailPage | 63 passed / 19 failed | 76 passed / 6 failed |
+| GlancePage | 52 passed / 7 failed | 56 passed / 3 failed |
+
+The combined result including ten helper cases is **245 passed / 31 failed across 276 tests**. Exact comparison: **36 existing failures resolved, zero new failing identities**, no original tests removed or skipped. Cumulative existing failures resolved across groups 1-11: **303**, plus 28 Vitest regression cases. Ten Node codemod checks pass, including three new unavailable-reader/import/idempotence cases. Typecheck and touched-file/tooling ESLint pass. No production, package or catalog changes belong to this group. Concurrent workspace UI changes remain outside this commit.
+
+Local reports: `.runner/gates/missing-metric-codemod-plan.json`, `missing-metric-codemod-applied.json`, `missing-metric-bulk-before.json`, `missing-metric-bulk-after.json`, `missing-metric-helper.json`. Remaining 31 failures are retained for context, unavailable-field classification and widget presentation review. Updated matching Phase 6 notes with current per-file counts and exact first diagnostic for still-failed items; acceptance totals remain **989 done / 287 failed / 0 pending / 0 excluded**.
+
 ## Current UI simplification checkpoint
 
 Working on `ui/simplification`. Rows 0-4 are complete and pushed; row 5 (charging) is in progress; row 6 (remaining features) is in progress. Shared dashboard headers cluster controls at the right, the freshness dot is the per-widget refresh action, hover-only expand controls sit to its left without reserving header width, and widget content avoids nested summary scroll areas. Climate no longer repeats an inner title; title-equal metric captions are hidden. Both StatStrip and OperationalBrief distribute metric rows evenly with `maxPerRow`. Captured Edge screenshots at 375px, 768px, and 1440px are committed under `docs/ui-simplification/`; the Battery widget freshness control measures the same 16px inset as its title at all three sizes. Focused shared/dashboard suites pass 111/111; focused vehicle suites pass 239/239 across seven files. Split catalog check, full lint, typecheck, and build pass on the last shared checkpoint (CSS parser and startup bundle warnings remain). Rows 5-7 and the full Vitest suite remain outstanding.

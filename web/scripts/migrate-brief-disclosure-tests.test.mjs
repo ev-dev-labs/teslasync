@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { migrateBriefDisclosureTests as migrate } from './migrate-brief-disclosure-tests.mjs';
+import { migrateBriefDisclosureTests as migrate, migrateMissingMetricTests } from './migrate-brief-disclosure-tests.mjs';
 
 test('moves an exact status assertion and preserves the measured value assertion', () => {
   const source = `import { expect } from 'vitest';
@@ -64,4 +64,41 @@ test('preserves non-rendering prop stubs but accepts wrappers around the real br
   assert.equal(migrate(stub).deferred.length, 1);
   const wrapper = `vi.mock('@/components/data-display', () => ({ OperationalBrief: props => <Actual.OperationalBrief {...props} /> }));\n${assertion}`;
   assert.equal(migrate(wrapper).edits.length, 1);
+});
+
+const valueReader = `function metricValue(region: HTMLElement, label: string) {
+  const tile = within(region).getByText(label).closest('[data-operational-metric]');
+  return tile?.querySelector('[data-operational-value]')?.textContent ?? '';
+}`;
+
+test('migrates unavailable values from proven DOM readers while preserving measured zero', () => {
+  const source = `${valueReader}
+expect(metricValue(kpiRegion(), 'Current SOH')).toBe('—');
+expect(metricValue(kpiRegion(), 'Capacity')).toContain('—');
+expect(metricValue(kpiRegion(), 'Cycles')).toBe('0');
+expect(metricValue(kpiRegion(), 'Measured capacity')).not.toBe('—');`;
+  const result = migrateMissingMetricTests(source);
+  assert.equal(result.edits.length, 2);
+  assert.match(result.output, /assertOperationalMetricUnavailable\(kpiRegion\(\), 'Current SOH'\)/);
+  assert.ok(result.output.includes("expect(metricValue(kpiRegion(), 'Cycles')).toBe('0');"));
+  assert.ok(result.output.includes("expect(metricValue(kpiRegion(), 'Measured capacity')).not.toBe('—');"));
+  assert.equal(migrateMissingMetricTests(result.output).edits.length, 0);
+});
+
+test('does not rewrite arbitrary formatters, unproven selectors or polling assertions', () => {
+  const source = `${valueReader}
+expect(formatDuration(raw, 'h')).toBe('—');
+await waitFor(() => expect(metricValue(band, 'Cycles')).toBe('—'));`;
+  const result = migrateMissingMetricTests(source);
+  assert.equal(result.output, source);
+  assert.equal(result.deferred.length, 1);
+});
+
+test('adds the unavailable assertion to an existing utility import without duplication', () => {
+  const source = `import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+${valueReader}
+expect(metricValue(band, 'Capacity')).toBe('—');`;
+  const result = migrateMissingMetricTests(source);
+  assert.match(result.output, /import \{ assertOperationalMetricUnavailable, assertOperationalBriefDisclosure \}/);
+  assert.equal(migrateMissingMetricTests(result.output).output, result.output);
 });

@@ -1,8 +1,9 @@
 /**
- * Conservative migration of repeated card-face status assertions.
+ * Conservative migration of repeated card-face status/placeholder assertions.
  * Dry-run by default. --write applies edits; --failures limits the input files
  * to a retained triage index. --report writes the complete review inventory.
- * Never edits values, test names/counts, fixtures, or assertions in waitFor.
+ * --missing-metrics migrates only placeholder checks using proven DOM value readers.
+ * Never edits known values, test names/counts, fixtures, or assertions in waitFor.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -119,6 +120,78 @@ export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx
   return { output, edits, deferred };
 }
 
+export function migrateMissingMetricTests(source, filename = 'example.test.tsx') {
+  const tree = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const readers = new Set();
+  function findReaders(node) {
+    const declaration = ts.isFunctionDeclaration(node) ? node
+      : ts.isVariableDeclaration(node) && node.initializer &&
+        (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer)) ? node.initializer : null;
+    const name = ts.isFunctionDeclaration(node) || ts.isVariableDeclaration(node) ? node.name : null;
+    if (declaration?.body && name && ts.isIdentifier(name) && declaration.parameters.length === 2) {
+      const [scope, label] = declaration.parameters.map(parameter => parameter.name.getText(tree));
+      let canonicalTile = false;
+      let canonicalValue = false;
+      let labelledScope = false;
+      function inspect(part) {
+        if (ts.isCallExpression(part) && ts.isPropertyAccessExpression(part.expression)) {
+          const selector = part.arguments[0];
+          if (['closest', 'querySelector'].includes(part.expression.name.text) && selector && ts.isStringLiteral(selector)) {
+            canonicalTile ||= selector.text === '[data-operational-metric]';
+            canonicalValue ||= selector.text === '[data-operational-value]';
+          }
+          if (part.expression.name.text === 'getByText' && part.arguments[0]?.getText(tree) === label &&
+            callNamed(part.expression.expression, 'within') &&
+            part.expression.expression.arguments[0]?.getText(tree) === scope) labelledScope = true;
+        }
+        ts.forEachChild(part, inspect);
+      }
+      inspect(declaration.body);
+      if (canonicalTile && canonicalValue && labelledScope) readers.add(name.text);
+    }
+    ts.forEachChild(node, findReaders);
+  }
+  findReaders(tree);
+  const edits = [];
+  const deferred = [];
+  function visit(node) {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
+      ['toBe', 'toEqual', 'toContain'].includes(node.expression.name.text) &&
+      node.arguments[0] && ts.isStringLiteral(node.arguments[0]) && node.arguments[0].text === '—' &&
+      callNamed(node.expression.expression, 'expect')) {
+      const argument = node.expression.expression.arguments[0];
+      if (argument && ts.isCallExpression(argument) && ts.isIdentifier(argument.expression) &&
+        readers.has(argument.expression.text) && argument.arguments.length === 2 && ts.isStringLiteral(argument.arguments[1])) {
+        const original = node.getText(tree);
+        const line = tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1;
+        if (hasNonRenderingBriefDouble(tree) || unsafeAncestor(node)) {
+          deferred.push({ line, original, reason: 'Mocked renderer or polling assertion: inspect manually' });
+        } else {
+          edits.push({ start: node.getStart(tree), end: node.end, line, original,
+            replacement: `assertOperationalMetricUnavailable(${argument.arguments.map(arg => arg.getText(tree)).join(', ')})` });
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(tree);
+  let output = source;
+  for (const edit of edits.toSorted((a, b) => b.start - a.start)) output = output.slice(0, edit.start) + edit.replacement + output.slice(edit.end);
+  if (edits.length) {
+    const existing = tree.statements.find(node => ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text === moduleName);
+    if (existing?.importClause?.namedBindings && ts.isNamedImports(existing.importClause.namedBindings)) {
+      const bindings = existing.importClause.namedBindings;
+      output = output.slice(0, bindings.getStart(tree) + 1) + ' assertOperationalMetricUnavailable,' + output.slice(bindings.getStart(tree) + 1);
+    } else {
+      const newline = source.includes('\r\n') ? '\r\n' : '\n';
+      const firstImport = tree.statements.find(ts.isImportDeclaration);
+      const at = firstImport ? firstImport.getStart(tree) : 0;
+      output = output.slice(0, at) + `import { assertOperationalMetricUnavailable } from '${moduleName}';${newline}` + output.slice(at);
+    }
+  }
+  return { output, edits, deferred };
+}
+
 function allTests(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
     const full = path.join(dir, entry.name);
@@ -136,7 +209,8 @@ function main() {
     : allTests(path.join(root, 'src')).sort();
   const inventory = [];
   for (const file of files) {
-    const result = migrateBriefDisclosureTests(fs.readFileSync(file, 'utf8'), file);
+    const migrate = args.includes('--missing-metrics') ? migrateMissingMetricTests : migrateBriefDisclosureTests;
+    const result = migrate(fs.readFileSync(file, 'utf8'), file);
     if (!result.edits.length && !result.deferred.length) continue;
     inventory.push({ file: path.relative(root, file).replaceAll('\\', '/'), edits: result.edits, deferred: result.deferred });
     if (args.includes('--write') && result.edits.length) fs.writeFileSync(file, result.output);

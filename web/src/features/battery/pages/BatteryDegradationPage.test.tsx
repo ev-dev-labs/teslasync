@@ -28,7 +28,7 @@
  *   - a11y + interaction: labelled region landmarks, the projection chart image
  *     label, without a duplicate vehicle-scope combobox.
  */
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalMetricUnavailable, assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -461,8 +461,8 @@ describe('BatteryDegradationPage — fitted evidence contract', () => {
     Reflect.set(source, 'estimated_capacity_wh', -1);
     mockHealth.mockReturnValue(makeQuery({ data: source }));
     renderPage();
-    expect(metricValue(kpiRegion(), 'Current SOH')).toContain('—');
-    expect(metricValue(kpiRegion(), 'Estimated capacity')).toContain('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Current SOH');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Estimated capacity');
     expect(screen.getByText('Battery health is not available yet.')).toBeInTheDocument();
     expect(screen.queryByText('Degraded')).not.toBeInTheDocument();
   });
@@ -529,7 +529,7 @@ describe('BatteryDegradationPage — fitted evidence contract', () => {
     renderPage();
     expect(screen.getByText(/Need a valid fit/)).toBeInTheDocument();
     expect(screen.queryByText(/in approximately/)).not.toBeInTheDocument();
-    expect(metricValue(kpiRegion(), 'Degradation rate')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Degradation rate');
   });
 
   it('does not infer fit validity from sample count or numeric zero', () => {
@@ -654,8 +654,8 @@ describe('BatteryDegradationPage — populated (km)', () => {
     renderPage();
     expect(within(kpiRegion()).getAllByText(/Nominal baseline evidence:/)[0])
       .toHaveTextContent('Observed current-capacity estimator unavailable');
-    expect(metricValue(kpiRegion(), 'Estimated capacity')).toBe('—');
-    expect(metricValue(kpiRegion(), 'Current SOH')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Estimated capacity');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Current SOH');
   });
 
   it('derives honest KPI tiles from /analytics/battery-health', () => {
@@ -677,7 +677,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
     mockHealth.mockReturnValue(makeQuery({ data: health }));
     renderPage();
     const kpi = kpiRegion();
-    expect(metricValue(kpi, 'Estimated capacity')).toBe('—');
+    assertOperationalMetricUnavailable(kpi, 'Estimated capacity');
     expect(within(kpi).getByText('Estimated capacity').closest('[data-operational-metric]'))
       .toHaveAttribute('data-value-state', 'missing');
     expect(within(kpi).queryByText('0.0 kWh', { exact: true })).not.toBeInTheDocument();
@@ -699,8 +699,8 @@ describe('BatteryDegradationPage — populated (km)', () => {
       current_soh_available: false, estimated_capacity_wh_available: false,
     } }));
     renderPage();
-    expect(metricValue(kpiRegion(), 'Current SOH')).toBe('—');
-    expect(metricValue(kpiRegion(), 'Estimated capacity')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Current SOH');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Estimated capacity');
     expect(within(heroRegion()).getByText('Battery health is not available yet.')).toBeInTheDocument();
     expect(within(heroRegion()).queryByText('Degraded')).not.toBeInTheDocument();
   });
@@ -721,7 +721,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
     (soh) => {
       mockHealth.mockReturnValue(makeQuery({ data: { ...HEALTH, current_soh: soh } }));
       renderPage();
-      expect(metricValue(kpiRegion(), 'Current SOH')).toBe('—');
+      assertOperationalMetricUnavailable(kpiRegion(), 'Current SOH');
       expect(within(heroRegion()).getByText('Battery health is not available yet.')).toBeInTheDocument();
     },
   );
@@ -740,7 +740,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
   it.each([Number.NaN, Number.POSITIVE_INFINITY])('keeps invalid capacity %s unknown', (capacity) => {
     mockHealth.mockReturnValue(makeQuery({ data: { ...HEALTH, estimated_capacity_wh: capacity } }));
     renderPage();
-    expect(metricValue(kpiRegion(), 'Estimated capacity')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Estimated capacity');
   });
 
   it('renders the SOH gauge verdict and the projection chart surface', () => {
@@ -930,7 +930,7 @@ describe('BatteryDegradationPage — SOH verdict + observation-duration branches
         makeQuery({ data: health }),
       );
       renderPage();
-      expect(metricValue(kpiRegion(), 'Observation duration')).toBe('—');
+      assertOperationalMetricUnavailable(kpiRegion(), 'Observation duration');
       expect(within(kpiRegion()).queryByText('0 months', { exact: true })).not.toBeInTheDocument();
       expect(kpiRegion()).not.toHaveTextContent('NaN');
     },
@@ -942,7 +942,7 @@ describe('BatteryDegradationPage — SOH verdict + observation-duration branches
       observation_started_at: null, observation_source: 'unavailable',
     } }));
     renderPage();
-    expect(metricValue(kpiRegion(), 'Observation duration')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Observation duration');
     expect(within(kpiRegion()).queryByText('Battery age')).not.toBeInTheDocument();
     expect(kpiRegion()).toHaveTextContent('it is not true pack age');
     expect(kpiRegion()).toHaveTextContent('source: unavailable');

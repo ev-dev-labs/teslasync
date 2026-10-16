@@ -36,6 +36,7 @@
  *     all four charts still render every sample, each announcing a
  *     full-resolution summary instead.
  */
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -598,7 +599,7 @@ describe('ChargingDetailPage — populated DC session', () => {
     // 50 kWh over 60 min → 50 kWh/h.
     expect(cardValue(kpi, 'kWh/h Avg')).toBe('50.00 kWh/h');
     // No odometer delta on this session → em-dash, never NaN.
-    expect(cardValue(kpi, 'Miles Added')).toBe('—');
+    assertOperationalMetricUnavailable(kpi, 'Miles Added');
   });
 
   it('prefers Tesla billed energy and cost on the KPI tiles without overwriting vehicle energy', () => {
@@ -1024,7 +1025,7 @@ describe('ChargingDetailPage — ongoing session', () => {
     renderPage();
 
     // No ended_at leaves duration unknown rather than reporting measured zero.
-    expect(cardValue(kpiRegion(), 'Duration')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Duration');
     const endedValue = screen.getByText('Ended').closest('p')?.nextElementSibling?.textContent ?? '';
     expect(endedValue).toBe('—');
     // Absent vehicle → "ID <vehicle_id>" fallback.
@@ -1082,8 +1083,8 @@ describe('ChargingDetailPage — unrounded charging-rate denominator', () => {
     mockSession.mockReturnValue(makeQuery({ data: makeSession(fields) }));
     renderPage();
 
-    expect(cardValue(kpiRegion(), 'Duration')).toBe('—');
-    expect(cardValue(kpiRegion(), 'kWh/h Avg')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Duration');
+    assertOperationalMetricUnavailable(kpiRegion(), 'kWh/h Avg');
     expect(gauge('Duration')).toHaveAttribute('data-value', 'null');
     expect(cardValue(kpiRegion(), 'Energy')).toBe('50.00 kWh');
   });
@@ -1096,7 +1097,7 @@ describe('ChargingDetailPage — unrounded charging-rate denominator', () => {
 
     expect(cardValue(kpiRegion(), 'Duration')).toBe('0.00 min');
     expect(gauge('Duration')).toHaveAttribute('data-value', '0');
-    expect(cardValue(kpiRegion(), 'kWh/h Avg')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'kWh/h Avg');
   });
 
   it.each([undefined, null, NaN, Infinity, -Infinity])(
@@ -1107,7 +1108,7 @@ describe('ChargingDetailPage — unrounded charging-rate denominator', () => {
       mockSession.mockReturnValue(makeQuery({ data: session }));
       renderPage();
 
-      expect(cardValue(kpiRegion(), 'kWh/h Avg')).toBe('—');
+      assertOperationalMetricUnavailable(kpiRegion(), 'kWh/h Avg');
       expect(cardValue(kpiRegion(), 'Duration')).toBe('60.00 min');
       expect(session.total_energy_added_wh).toBe(energy);
     },

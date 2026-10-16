@@ -32,6 +32,7 @@
  *   - a11y: labelled region landmarks, workspace-owned selection, and icon-only
  *     controls all expose accessible names.
  */
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -359,7 +360,7 @@ describe('GlancePage — vehicle guard', () => {
 
     expect(screen.getByText('Office')).toBeInTheDocument();
     expect(rowValue(liveRegion(), 'Place')).toBe('Home');
-    expect(cardValue(kpiRegion(), 'Battery')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Battery');
     expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(4);
     expect(within(controlsRegion()).getByRole('button', { name: 'Horn' })).toBeDisabled();
     expect(screen.queryByText('No vehicle available')).toBeNull();
@@ -545,7 +546,7 @@ describe('GlancePage — per-panel state handling', () => {
     // Hero + charging + security each render their own placeholder.
     expect(screen.getAllByText('No live data for this vehicle yet')).toHaveLength(3);
     // KPI tiles degrade to the em-dash rather than a misleading zero.
-    expect(cardValue(kpiRegion(), 'Battery')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Battery');
   });
 
   it('surfaces a QueryError per panel and retries on demand', async () => {
@@ -765,7 +766,7 @@ describe('GlancePage — null safety + idle branches', () => {
     expect(rowValue(live, 'ETA')).toBe('15.00 min');
     expect(within(live).getAllByRole('alert')).toHaveLength(3);
     expect(within(live).getAllByRole('button', { name: 'Retry' })).toHaveLength(3);
-    expect(cardValue(kpiRegion(), 'Battery')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Battery');
     expect(within(live).queryByText('Locked')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Security & location' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lock' })).toBeDisabled();
@@ -783,9 +784,9 @@ describe('GlancePage — null safety + idle branches', () => {
     const page = renderPage();
     const live = liveRegion();
     expect(screen.queryByRole('meter')).toBeNull();
-    expect(cardValue(kpiRegion(), 'Battery')).toBe('—');
-    expect(cardValue(kpiRegion(), 'Range')).toBe('—');
-    expect(cardValue(kpiRegion(), 'Speed')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Battery');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Range');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Speed');
     expect(units.formatDistance).toHaveBeenCalledWith(null);
     expect(units.formatSpeed).not.toHaveBeenCalledWith(null);
     expect(rowValue(live, 'Charger power')).toBe('—');

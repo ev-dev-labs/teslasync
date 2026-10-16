@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { OperationalBrief } from '@/components/data-display/OperationalBrief';
-import { assertOperationalBriefDisclosure } from './operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from './operationalBriefAssertions';
 
 function mount(statusLabel = 'Retained evidence') {
   return render(<div data-testid="outer">
@@ -50,5 +50,37 @@ describe('evidence disclosure assertion utility', () => {
     expect(() => assertOperationalBriefDisclosure(screen.getByTestId('two'), 'Returned evidence'))
       .toThrow(/exactly one evidence card/);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('unavailable operational metric assertion', () => {
+  function mountReadings(loading = false, allMissing = false) {
+    return render(<OperationalBrief title="Returned measurements" testId="measurements" metrics={[
+      ...(!allMissing ? [{ key: 'zero', label: 'Measured zero', value: '0', valueState: 'value' as const }] : []),
+      { key: 'missing', label: 'Unreported reading', value: '—', valueState: 'missing', rawValue: null, loading },
+    ]} />);
+  }
+
+  it('requires omitted evidence in both surfaces and preserves measured zero', () => {
+    mountReadings();
+    assertOperationalMetricUnavailable(screen.getByTestId('measurements'), 'Unreported reading');
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('rejects treating a measured zero as unavailable', () => {
+    mountReadings();
+    expect(() => assertOperationalMetricUnavailable(screen.getByTestId('measurements'), 'Measured zero')).toThrow();
+  });
+
+  it('rejects treating a pending source as a resolved unavailable value', () => {
+    mountReadings(true);
+    expect(() => assertOperationalMetricUnavailable(screen.getByTestId('measurements'), 'Unreported reading')).toThrow();
+  });
+
+  it('retains an explanatory surface when no readings are available', () => {
+    mountReadings(false, true);
+    assertOperationalMetricUnavailable(screen.getByTestId('measurements'), 'Unreported reading');
+    expect(screen.getByText('Values will appear when the source provides measurements.')).toBeInTheDocument();
   });
 });
