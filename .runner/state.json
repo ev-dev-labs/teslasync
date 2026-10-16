@@ -11042,10 +11042,10 @@
       "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-home-energy-whole-home-energy-f02 | Missing dependencies prevented verification within time box | done so far: updated orchestration hook, added regression test, updated source-contract assertions Attempt 2: FAILED | fix-home-energy-whole-home-energy-f02 | Missing dependencies prevent regression verification; restoration failed | done so far: updated web/src/features/home-energy/hooks/useHomeEnergyOrchestration.ts and extended web/src/features/home-energy/hooks/useHomeEnergyOrchestration.test.tsx to propagate explicit member staleness into source trust and freshness",
+    "Notes": "Attempt 1: FAILED | fix-home-energy-whole-home-energy-f02 | Missing dependencies prevented verification within time box | done so far: updated orchestration hook, added regression test, updated source-contract assertions Attempt 2: FAILED | fix-home-energy-whole-home-energy-f02 | Missing dependencies prevent regression verification; restoration failed | done so far: updated web/src/features/home-energy/hooks/useHomeEnergyOrchestration.ts and extended web/src/features/home-energy/hooks/useHomeEnergyOrchestration.test.tsx to propagate explicit member staleness into source trust and freshness useHomeEnergyOrchestration and account-state focused regressions pass.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11056,10 +11056,10 @@
       "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-home-energy-whole-home-energy-f03 | missing dependencies prevented regression execution | done so far: updated web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts and web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.test.tsx Attempt 2: FAILED | fix-home-energy-whole-home-energy-f03 | missing dependencies prevent regression execution | done so far: inspected existing SOC origin/observation-age implementation and regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-home-energy-whole-home-energy-f03 | missing dependencies prevented regression execution | done so far: updated web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts and web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.test.tsx Attempt 2: FAILED | fix-home-energy-whole-home-energy-f03 | missing dependencies prevent regression execution | done so far: inspected existing SOC origin/observation-age implementation and regressions; no source changes useHomeEnergyOrchestration and account-state focused regressions pass.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11114,10 +11114,10 @@
       "web\\src\\features\\home-energy\\components\\EnergyFlowChart.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-home-energy-whole-home-energy-f06 | verification blocked by missing/locked dependencies | done so far: updated web\\src\\features\\home-energy\\components\\EnergyFlowChart.tsx and web\\src\\features\\home-energy\\components\\EnergyFlowChart.test.tsx Attempt 2: FAILED | fix-home-energy-whole-home-energy-f06 | verification blocked by missing dependencies and locked Rollup binary | done so far: inspected existing implementation and coverage; attempted requested test and dependency restoration; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-home-energy-whole-home-energy-f06 | verification blocked by missing/locked dependencies | done so far: updated web\\src\\features\\home-energy\\components\\EnergyFlowChart.tsx and web\\src\\features\\home-energy\\components\\EnergyFlowChart.test.tsx Attempt 2: FAILED | fix-home-energy-whole-home-energy-f06 | verification blocked by missing dependencies and locked Rollup binary | done so far: inspected existing implementation and coverage; attempted requested test and dependency restoration; no source changes Retry failed: EnergyFlowChart.test.tsx has 7 failures; accessible/unknown measurements do not match expected unrounded numeric/sign display arrays.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11129,10 +11129,10 @@
       "web\\src\\features\\home-energy\\components\\EnergyFlowChart.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-home-energy-whole-home-energy-f07 | test startup blocked by missing dependencies and locked Rollup binary | done so far: updated EnergyFlowChart.tsx formatters and EnergyFlowChart.test.tsx assertions; raw exports preserved Attempt 2: FAILED | fix-home-energy-whole-home-energy-f07 | required test blocked by missing Vite dependencies | done so far: reviewed existing formatter implementation and edge-case tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-home-energy-whole-home-energy-f07 | test startup blocked by missing dependencies and locked Rollup binary | done so far: updated EnergyFlowChart.tsx formatters and EnergyFlowChart.test.tsx assertions; raw exports preserved Attempt 2: FAILED | fix-home-energy-whole-home-energy-f07 | required test blocked by missing Vite dependencies | done so far: reviewed existing formatter implementation and edge-case tests; no source changes Retry failed: EnergyFlowChart.test.tsx has 7 failures; accessible tooltip/table units and percent/power formatter outputs differ from expected values.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11172,10 +11172,10 @@
       "web\\src\\features\\home-energy\\components\\KpiSummary.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-home-energy-whole-home-energy-f10 | dependency failures prevented verification | done so far: updated web/src/features/home-energy/components/KpiSummary.tsx and web/src/features/home-energy/components/KpiSummary.test.tsx Attempt 2: FAILED | fix-home-energy-whole-home-energy-f10 | missing dependencies and locked binaries prevented verification | done so far: preserved existing KpiSummary.tsx formatting changes and KpiSummary.test.tsx regression tests; no new source changes",
+    "Notes": "Attempt 1: FAILED | fix-home-energy-whole-home-energy-f10 | dependency failures prevented verification | done so far: updated web/src/features/home-energy/components/KpiSummary.tsx and web/src/features/home-energy/components/KpiSummary.test.tsx Attempt 2: FAILED | fix-home-energy-whole-home-energy-f10 | missing dependencies and locked binaries prevented verification | done so far: preserved existing KpiSummary.tsx formatting changes and KpiSummary.test.tsx regression tests; no new source changes Retry failed: KpiSummary.test.tsx has 3 failures; planning horizon, modeled recommendation and essential-source status are expected on the brief face but are currently hidden in Review details.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
