@@ -305,6 +305,9 @@ function auditFile(path) {
       const openInfo = findOpenTagEnd(text, match.index);
       if (!openInfo) continue;
       const openTag = text.slice(match.index, openInfo.end);
+      // IconButton cannot compile without its required `label` (its accessible
+      // name and tooltip); audit:freshness-actions rejects an empty label.
+      if (tag === 'IconButton') continue;
       if (hasNameAttribute(openTag)) continue;
 
       // `<a>` without href is not an interactive control.
