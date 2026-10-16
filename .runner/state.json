@@ -10430,11 +10430,11 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
-    "Commit": "",
+    "Notes": "DONE | fix-driving-trip-planner-tp18 | driving DTO and hook tests pass; Go tripplanner race tests and split-i18n check pass (verified in this checkpoint).",
+    "Commit": "8666bb2e38",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -10695,11 +10695,11 @@
       "web\\src\\components\\charts\\BipolarBar.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-driving-dynamics-f08 | scoped tests blocked by missing Vite dependency | done so far: updated web\\src\\components\\charts\\BipolarBar.tsx and web\\src\\components\\charts\\BipolarBar.test.tsx Attempt 2: FAILED | fix-driving-driving-dynamics-f08 | required tests blocked by missing Vite; dependency restoration failed with ENOTEMPTY | done so far: reviewed existing implementation and regressions; no source files changed",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-driving-driving-dynamics-f08 | scoped tests blocked by missing Vite dependency | done so far: updated web\\src\\components\\charts\\BipolarBar.tsx and web\\src\\components\\charts\\BipolarBar.test.tsx Attempt 2: FAILED | fix-driving-driving-dynamics-f08 | required tests blocked by missing Vite; dependency restoration failed with ENOTEMPTY | done so far: reviewed existing implementation and regressions; no source files changed DONE | fix-driving-driving-dynamics-f08 | BipolarBar now separates display units accessibly and trims unit spacing; focused driving batch passes 186/186. Fix commit 8666bb2e38.",
+    "Commit": "8666bb2e38",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
