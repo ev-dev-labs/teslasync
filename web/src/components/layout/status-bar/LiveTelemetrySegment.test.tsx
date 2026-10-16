@@ -302,10 +302,10 @@ describe('LiveTelemetrySegment', () => {
 describe('LiveTelemetrySegment mobile sizing', () => {
   // Assert the responsive allocation, not browser-measured touch acceptance.
   const responsiveClasses = [
-    'inline-flex', 'min-h-11', 'min-w-11', 'max-w-full', 'shrink-0',
+    'inline-flex', 'min-h-11', 'min-w-11', 'shrink-0',
     'items-center', 'justify-center', 'gap-1.5', 'rounded-shape-sm',
-    'px-1.5', 'py-0.5', 'md:min-h-0', 'md:min-w-0', 'md:shrink',
-    'md:justify-start',
+    'px-1.5', 'py-0.5', 'xl:min-h-0', 'xl:min-w-0', 'whitespace-nowrap',
+    'xl:justify-start',
   ]
 
   it('allocates nonshrinking mobile sizing with md density restoration on the named link', () => {

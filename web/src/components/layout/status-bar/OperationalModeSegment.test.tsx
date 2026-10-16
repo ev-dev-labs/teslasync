@@ -99,7 +99,7 @@ describe('OperationalModeSegment mobile target', () => {
     // This proves responsive class allocation, not browser-measured touch geometry.
     expect(control).toHaveClass(
       'h-11', 'min-h-11', 'min-w-11', 'shrink-0',
-      'md:h-5', 'md:min-h-0', 'md:min-w-0', 'md:shrink',
+      'xl:h-5', 'xl:min-h-0', 'xl:min-w-0', 'whitespace-nowrap',
     );
     expect(control).not.toHaveClass('h-5');
     expect(control).not.toHaveClass('min-h-0');

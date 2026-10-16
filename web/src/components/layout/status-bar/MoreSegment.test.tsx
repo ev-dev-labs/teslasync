@@ -191,7 +191,7 @@ describe('MoreSegment owned accessibility and state preservation', () => {
   it('uses exact named geometry and scroll ownership with real mobile target classes', () => {
     render(<MoreSegment backgroundJobs={backgroundJobs()} onOpenAbout={openAbout} />);
     const trigger = screen.getByRole('button', { name: 'Open more status options' });
-    expect(trigger).toHaveClass('min-h-11', 'min-w-11', 'shrink-0', 'md:h-5', 'md:min-h-0');
+    expect(trigger).toHaveClass('h-11', 'min-h-11', 'min-w-11', 'shrink-0', 'whitespace-nowrap', 'xl:h-5', 'xl:min-h-0');
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');

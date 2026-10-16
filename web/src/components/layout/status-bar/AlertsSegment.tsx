@@ -161,7 +161,7 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
           aria-expanded={open}
           onClick={toggle}
           className={cn(
-            'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 leading-none',
+            'h-11 min-h-11 min-w-11 shrink-0 gap-1.5 whitespace-nowrap rounded px-1.5 py-0 leading-none xl:h-5 xl:min-h-0 xl:min-w-0',
             typography.size.xs,
             isError || hasCritical ? severityTokens.critical.fg : severityTokens.warn.fg,
           )}

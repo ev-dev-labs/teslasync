@@ -19,7 +19,8 @@
       "label": "Fleet"
     },
     "mode": {
-      "now": "Now"
+      "now": "Now",
+      "title": "Data time"
     },
     "connection": {
       "short": "API",
@@ -133,7 +134,8 @@
       "tooltip": "More status and help",
       "open": "Open more status options",
       "backgroundError": "Background work needs attention",
-      "backgroundComplete": "Background work completed"
+      "backgroundComplete": "Background work completed",
+      "statusTitle": "Status"
     },
     "help": {
       "short": "Help",

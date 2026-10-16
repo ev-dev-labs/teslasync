@@ -2,9 +2,11 @@ import {
   lazy,
   Suspense,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
+  type RefObject,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionSegment } from './status-bar/ConnectionSegment';
@@ -40,33 +42,43 @@ const HelixSidePanel = lazy(async () => {
 /**
  * StatusBar.
  *
- * Always-on footer pinned to the bottom of the viewport with prioritized
- * status segments:
+ * Always-on footer pinned to the bottom of the viewport. It is ONE row at
+ * every width: items never wrap and the bar never scrolls sideways.
  *
- *   API · Live telemetry · operational mode · alerts · recent pages · background jobs · help/about
+ *   API · Live telemetry · honesty · data time · alerts … recent · More · Helix
  *
  * Each segment is its own component (in `./status-bar/`) and is fed by a
  * dedicated hook so subscribers don't pay for the whole bar.
  *
- * Visibility & sizing:
- *   - On screens < `lg` (Tailwind 1024px) the bar collapses to icon-only.
- *   - It stacks ABOVE `<BottomTabBar>` for every width the tab bar is
- *     visible (`xl:hidden`, i.e. < 1280px). Using `lg` here used to pin
- *     both bars to `bottom-0` on tablet widths (1024–1279) and overlap.
- *   - Two scrollable rows below `md`; 24px at `md`, 28px at `xl`.
- *     Height and safe-area gutters come from the existing shell CSS owner.
- *   - The `compact` prop forces icon-only at any width.
- *   - User preference (`useStatusBarPrefs`) can hide the bar entirely or
- *     force icon-only at all widths.
- *   - Hidden in print stylesheets via `data-role="status-bar"` (rule lives
- *     in `web/src/index.css`).
+ * Priority overflow (tiers follow the shell's `md`/`xl` breakpoints):
+ *   - desktop (>= 1280px): every item with its label; background work,
+ *     presentation and help sit inline.
+ *   - tablet (768-1279px): API, Live and More keep labels; the remaining
+ *     items show icon + status dot only, labels move to tooltips.
+ *   - mobile (< 768px): API, Live, alerts and More stay in the bar; telemetry
+ *     honesty, data time, recent pages and Helix move into the More menu
+ *     with their labels and values.
+ *   - compact: last resort when even the mobile row does not fit; API and
+ *     Live drop their labels too.
+ *   If the row measures wider than the bar at any tier (long translations,
+ *   large text), it steps down a tier, so nothing is ever clipped: anything
+ *   not in the bar is reachable from More.
+ *
+ * Geometry: fixed row height (44px below `xl` for touch targets, 28px at
+ * `xl`) from `--shell-status-bar-row`; it stacks above `<BottomTabBar>`
+ * below `xl` and pads for the bottom safe area whenever it is the lowest
+ * bar (see `index.css`). Hidden in print via `data-role="status-bar"`.
+ *
+ * Preferences (`useStatusBarPrefs`) can hide the bar entirely or force
+ * icon-only labels; the `compact` prop forces icon-only too.
  *
  * Accessibility:
  *   - The root remains a normal footer landmark. A separate visually-hidden
  *     live region announces meaningful transitions without making every
  *     interactive control part of one large live region.
- *   - Color is never the sole encoder — every segment pairs color with an
- *     icon variation per state.
+ *   - Color is never the sole encoder: every segment pairs color with an
+ *     icon variation per state, and every icon-only item has a tooltip and
+ *     an accessible name.
  */
 
 export interface StatusBarProps {
@@ -78,15 +90,11 @@ export interface StatusBarProps {
 export function StatusBar({ compact = false, className }: StatusBarProps) {
   const { t } = useTranslation();
   const prefs = useStatusBarPrefs();
-  // Track viewport width so we can swap to icon-only on narrow screens
-  // without a Tailwind variant blow-up. The threshold matches the same
-  // `lg` (1024px) breakpoint Tailwind already uses for the sidebar.
-  const isNarrow = useNarrowViewport();
-  const showOverflow = useMediaQuery('(max-width: 1279px)');
+  const viewportTier = useViewportTier();
 
   if (!prefs.enabled) return null;
 
-  const iconOnly = compact || prefs.iconOnly || isNarrow;
+  const iconOnly = compact || prefs.iconOnly;
 
   return (
     <StatusBarProvider
@@ -96,8 +104,8 @@ export function StatusBar({ compact = false, className }: StatusBarProps) {
       )}
     >
       <StatusBarContent
-        iconOnly={iconOnly}
-        showOverflow={showOverflow}
+        forceIconOnly={iconOnly}
+        viewportTier={viewportTier}
         className={className}
       />
     </StatusBarProvider>
@@ -105,14 +113,14 @@ export function StatusBar({ compact = false, className }: StatusBarProps) {
 }
 
 interface StatusBarContentProps {
-  iconOnly: boolean;
-  showOverflow: boolean;
+  forceIconOnly: boolean;
+  viewportTier: StatusBarTier;
   className?: string;
 }
 
 function StatusBarContent({
-  iconOnly,
-  showOverflow,
+  forceIconOnly,
+  viewportTier,
   className,
 }: StatusBarContentProps) {
   const { t } = useTranslation();
@@ -120,17 +128,29 @@ function StatusBarContent({
   const [aboutOpen, setAboutOpen] = useState(false);
   const [helixOpen, setHelixOpen] = useState(false);
   const [helixMounted, setHelixMounted] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const tier = useFittedTier(viewportTier, rowRef);
   useBackgroundFailureAnnouncements(backgroundJobs);
+
+  const primaryIconOnly = forceIconOnly || tier === 'compact';
+  const secondaryIconOnly = forceIconOnly || tier !== 'desktop';
+  const overflowStatus = tier === 'mobile' || tier === 'compact';
+  const showOverflow = tier !== 'desktop';
+  const openHelix = () => {
+    setHelixMounted(true);
+    setHelixOpen(true);
+  };
 
   return (
     <>
       <footer
         data-role="status-bar"
         data-print-hide
+        data-status-tier={tier}
         className={cn(
-          'fixed left-0 right-0 z-shell-status-bar flex flex-col items-stretch justify-between md:flex-row md:items-center md:gap-2',
+          'fixed left-0 right-0 z-shell-status-bar',
           'border-t border-[var(--border-default)] bg-[var(--surface-1)]',
-          'px-3 lg:px-4',
+          'px-3 pb-[var(--shell-status-bar-safe-area)] lg:px-4',
           typography.size.xs,
           typography.color.secondary,
           'bottom-[var(--shell-tab-bar-height)] xl:bottom-0',
@@ -140,66 +160,82 @@ function StatusBarContent({
         aria-label={t('statusBar.aria', 'Application status')}
       >
         <div
-          role="group"
-          aria-label={t('statusBar.aria', 'Application status')}
-          className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden md:flex-initial md:overflow-visible"
+          ref={rowRef}
+          data-testid="status-bar-row"
+          className="flex h-[var(--shell-status-bar-row)] min-w-0 flex-nowrap items-center justify-between gap-2 xl:gap-3"
         >
-          <div className="flex h-full min-w-max items-center gap-2 p-1 md:min-w-0 md:gap-1 md:p-0">
-          <ConnectionSegment
-            iconOnly={iconOnly}
-            enableAdminDiagnostics
-          />
-          <Divider />
-          <LiveTelemetrySegment iconOnly={iconOnly} />
-          <HonestyMeterSegment iconOnly={iconOnly} />
-          <OperationalModeSegment iconOnly={iconOnly} />
-          <AlertsSegment iconOnly={iconOnly} />
-          </div>
-        </div>
-        <div
-          role="group"
-          aria-label={t('statusBar.aria', 'Application status')}
-          className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden md:flex-initial md:overflow-visible"
-        >
-          <div className="flex h-full min-w-max items-center gap-2 p-1 md:min-w-0 md:gap-1 md:p-0">
-          <RecentPagesSegment iconOnly={iconOnly} />
-          <Divider />
-          {showOverflow ? (
-            <MoreSegment
-              iconOnly={iconOnly}
-              backgroundJobs={backgroundJobs}
-              onOpenAbout={() => setAboutOpen(true)}
+          <div
+            role="group"
+            aria-label={t('statusBar.aria', 'Application status')}
+            className="flex shrink-0 flex-nowrap items-center gap-2 xl:gap-3"
+          >
+            <ConnectionSegment
+              iconOnly={primaryIconOnly}
+              enableAdminDiagnostics
             />
-          ) : (
-            <>
-              <BackgroundWorkSegment
-                iconOnly={iconOnly}
+            <LiveTelemetrySegment iconOnly={primaryIconOnly} />
+            {!overflowStatus && (
+              <>
+                <Divider />
+                <HonestyMeterSegment iconOnly={secondaryIconOnly} />
+                <OperationalModeSegment iconOnly={secondaryIconOnly} />
+              </>
+            )}
+            <AlertsSegment iconOnly={secondaryIconOnly} />
+          </div>
+          <div
+            role="group"
+            aria-label={t('statusBar.aria', 'Application status')}
+            className="flex shrink-0 flex-nowrap items-center gap-2 xl:gap-3"
+          >
+            {!overflowStatus && (
+              <>
+                <RecentPagesSegment iconOnly={secondaryIconOnly} />
+                <Divider />
+              </>
+            )}
+            {showOverflow ? (
+              <MoreSegment
+                iconOnly={primaryIconOnly}
                 backgroundJobs={backgroundJobs}
-              />
-              <PresentationModeSegment iconOnly={iconOnly} />
-              <HelpSegment
-                iconOnly={iconOnly}
                 onOpenAbout={() => setAboutOpen(true)}
+                overflowStatus={overflowStatus}
+                onOpenHelix={openHelix}
               />
-            </>
-          )}
-          <Divider />
-          <Tooltip content={t('statusBar.helix.open', 'Open Helix chat')} side="top">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label={t('statusBar.helix.open', 'Open Helix chat')}
-              aria-expanded={helixOpen}
-              onClick={() => {
-                setHelixMounted(true);
-                setHelixOpen(value => !value);
-              }}
-              className={cn('h-11 min-h-11 min-w-11 shrink-0 rounded px-1.5 py-0 md:h-5 md:min-h-0 md:min-w-0', typography.color.secondary)}
-            >
-              <HelixMark className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </Tooltip>
+            ) : (
+              <>
+                <BackgroundWorkSegment
+                  iconOnly={secondaryIconOnly}
+                  backgroundJobs={backgroundJobs}
+                />
+                <PresentationModeSegment iconOnly={secondaryIconOnly} />
+                <HelpSegment
+                  iconOnly={secondaryIconOnly}
+                  onOpenAbout={() => setAboutOpen(true)}
+                />
+              </>
+            )}
+            {!overflowStatus && (
+              <>
+                <Divider />
+                <Tooltip content={t('statusBar.helix.open', 'Open Helix chat')} side="top">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t('statusBar.helix.open', 'Open Helix chat')}
+                    aria-expanded={helixOpen}
+                    onClick={() => {
+                      setHelixMounted(true);
+                      setHelixOpen(value => !value);
+                    }}
+                    className={cn('h-11 min-h-11 min-w-11 shrink-0 rounded px-1.5 py-0 xl:h-5 xl:min-h-0 xl:min-w-0', typography.color.secondary)}
+                  >
+                    <HelixMark className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                </Tooltip>
+              </>
+            )}
           </div>
         </div>
       </footer>
@@ -252,19 +288,70 @@ function Divider() {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Viewport breakpoint hook
+// Width tiers
 // ────────────────────────────────────────────────────────────────────────────
 
+/** Ordered from most to least compact; see the component doc for each tier. */
+const STATUS_BAR_TIERS = ['compact', 'mobile', 'tablet', 'desktop'] as const;
+export type StatusBarTier = (typeof STATUS_BAR_TIERS)[number];
+
 /**
- * True when the viewport is narrower than Tailwind's `lg` (1024px) breakpoint —
- * the same threshold the sidebar uses to collapse. Delegates to the shared,
- * SSR/`matchMedia`-safe {@link useMediaQuery} so the status bar never assumes
- * `window.matchMedia` exists: older embedded webviews (and the jsdom test
- * environment) don't provide it, and an unguarded call throws a `TypeError`
- * that would crash the whole shell before the bar could render.
+ * Tier from the viewport, using the shell's `md` (768px) and `xl` (1280px)
+ * breakpoints. Delegates to the SSR/`matchMedia`-safe {@link useMediaQuery}
+ * so environments without `window.matchMedia` (older webviews, jsdom) fall
+ * back to the desktop tier instead of throwing.
  */
-function useNarrowViewport(): boolean {
-  return useMediaQuery('(max-width: 1023px)');
+function useViewportTier(): StatusBarTier {
+  const isMobile = useMediaQuery('(max-width: 767px)');
+  const isTablet = useMediaQuery('(max-width: 1279px)');
+  return isMobile ? 'mobile' : isTablet ? 'tablet' : 'desktop';
+}
+
+/**
+ * Steps down from the viewport tier while the row is wider than the bar.
+ * The width each tier needed is remembered, so a tier is only restored once
+ * the bar is at least that wide again, with no flip-flopping between tiers.
+ */
+function useFittedTier(
+  preferred: StatusBarTier,
+  rowRef: RefObject<HTMLElement | null>,
+): StatusBarTier {
+  const [width, setWidth] = useState(0);
+  const [neededWidth, setNeededWidth] = useState<Partial<Record<StatusBarTier, number>>>({});
+
+  useEffect(() => {
+    const row = rowRef.current;
+    if (!row || typeof ResizeObserver === 'undefined') return undefined;
+    const update = () => setWidth(row.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [rowRef]);
+
+  let index = STATUS_BAR_TIERS.indexOf(preferred);
+  while (index > 0 && width > 0 && width < (neededWidth[STATUS_BAR_TIERS[index]] ?? 0)) {
+    index -= 1;
+  }
+  const tier = STATUS_BAR_TIERS[index];
+
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row || index === 0 || row.clientWidth === 0) return;
+    // Sum the item groups' own boxes rather than `scrollWidth`, which also
+    // counts absolutely positioned descendants such as tooltip bubbles.
+    const groups = Array.from(row.children) as HTMLElement[];
+    const gap = Number.parseFloat(getComputedStyle(row).columnGap) || 0;
+    const needed = groups.reduce((sum, group) => sum + group.getBoundingClientRect().width, 0)
+      + gap * Math.max(0, groups.length - 1);
+    if (needed > row.clientWidth + 1) {
+      setNeededWidth(previous => (
+        (previous[tier] ?? 0) >= needed ? previous : { ...previous, [tier]: needed }
+      ));
+    }
+  });
+
+  return tier;
 }
 
 // ────────────────────────────────────────────────────────────────────────────

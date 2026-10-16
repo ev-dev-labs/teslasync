@@ -351,7 +351,7 @@ describe('ConnectionSegment', () => {
     expect(link).toHaveAttribute('href', '/system-status');
     expect(link).toHaveClass(
       'min-h-11', 'min-w-11', 'shrink-0',
-      'md:min-h-0', 'md:min-w-0', 'md:shrink',
+      'xl:min-h-0', 'xl:min-w-0', 'whitespace-nowrap',
       'inline-flex', 'items-center', 'px-1.5', 'py-0.5',
     );
     expect(link).not.toHaveClass('min-h-0');
@@ -384,7 +384,7 @@ describe('ConnectionSegment', () => {
     expect(link).toHaveAttribute('href', '/system-status');
     expect(link).toHaveClass(
       'min-h-11', 'min-w-11', 'shrink-0',
-      'md:min-h-0', 'md:min-w-0', 'md:shrink',
+      'xl:min-h-0', 'xl:min-w-0', 'whitespace-nowrap',
       'inline-flex', 'items-center', 'px-1.5', 'py-0.5',
     );
     expect(link).not.toHaveClass('min-h-0');
@@ -422,8 +422,8 @@ describe('ConnectionSegment', () => {
     expect(trigger.tagName).toBe('BUTTON');
     expect(trigger).toHaveAttribute('type', 'button');
     expect(trigger).toHaveClass(
-      'h-auto', 'min-h-11', 'min-w-11', 'shrink-0',
-      'md:min-h-5', 'md:min-w-0', 'md:shrink', 'px-1.5', 'py-0',
+      'h-11', 'min-h-11', 'min-w-11', 'shrink-0',
+      'xl:h-5', 'xl:min-h-5', 'xl:min-w-0', 'whitespace-nowrap', 'px-1.5', 'py-0',
     );
     expect(trigger).not.toHaveClass('min-h-5');
     expect(trigger).not.toHaveClass('min-w-0');

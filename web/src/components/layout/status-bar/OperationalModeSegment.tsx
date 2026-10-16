@@ -5,13 +5,19 @@ import { TIME_MACHINE_OPEN_PICKER_EVENT } from '../../feedback/TimeMachineBanner
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
+import { StatusOverflowRowContent, statusOverflowRowClass } from './StatusOverflowRow';
 
 interface OperationalModeSegmentProps {
   iconOnly?: boolean;
+  /** Render as a labelled row inside the More menu. */
+  embedded?: boolean;
+  onAction?: () => void;
 }
 
 export function OperationalModeSegment({
   iconOnly = false,
+  embedded = false,
+  onAction,
 }: OperationalModeSegmentProps) {
   const { t } = useTranslation();
   const operationalMode = useOperationalMode();
@@ -33,6 +39,33 @@ export function OperationalModeSegment({
     },
   }[operationalMode.mode];
   const Icon = config.Icon;
+  const modeLabel = operationalMode.mode === 'live'
+    ? t('statusBar.mode.now', 'Now')
+    : operationalMode.label;
+  const openPicker = () =>
+    window.dispatchEvent(new CustomEvent(TIME_MACHINE_OPEN_PICKER_EVENT));
+
+  if (embedded) {
+    return (
+      <button
+        type="button"
+        aria-label={operationalMode.description}
+        onClick={() => {
+          onAction?.();
+          openPicker();
+        }}
+        className={statusOverflowRowClass}
+      >
+        <StatusOverflowRowContent
+          dotClassName={config.dot}
+          icon={<Icon className={cn('h-4 w-4', config.tone)} aria-hidden="true" />}
+          label={t('statusBar.mode.title', 'Data time')}
+          value={modeLabel}
+          valueClassName={config.tone}
+        />
+      </button>
+    );
+  }
 
   return (
     <Tooltip content={operationalMode.description} side="top" multiline>
@@ -41,13 +74,9 @@ export function OperationalModeSegment({
         variant="ghost"
         size="sm"
         aria-label={operationalMode.description}
-        onClick={() =>
-          window.dispatchEvent(
-            new CustomEvent(TIME_MACHINE_OPEN_PICKER_EVENT),
-          )
-        }
+        onClick={openPicker}
         className={cn(
-          'h-11 min-h-11 min-w-11 shrink-0 gap-1.5 rounded-shape-sm px-1.5 py-0 leading-none md:h-5 md:min-h-0 md:min-w-0 md:shrink',
+          'h-11 min-h-11 min-w-11 shrink-0 gap-1.5 whitespace-nowrap rounded-shape-sm px-1.5 py-0 leading-none xl:h-5 xl:min-h-0 xl:min-w-0',
           typography.size.xs,
           config.tone,
         )}
@@ -58,10 +87,8 @@ export function OperationalModeSegment({
         />
         <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
         {!iconOnly && (
-          <span className={cn('min-w-0 max-w-32 truncate', typography.weight.medium)}>
-            {operationalMode.mode === 'live'
-              ? t('statusBar.mode.now', 'Now')
-              : operationalMode.label}
+          <span className={cn('max-w-32 truncate', typography.weight.medium)}>
+            {modeLabel}
           </span>
         )}
       </Button>

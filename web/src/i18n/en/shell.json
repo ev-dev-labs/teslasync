@@ -1972,13 +1972,15 @@
       "unknown": "Idle"
     },
     "mode": {
-      "now": "Now"
+      "now": "Now",
+      "title": "Data time"
     },
     "more": {
       "backgroundComplete": "Background work completed",
       "backgroundError": "Background work needs attention",
       "label": "More",
       "open": "Open more status options",
+      "statusTitle": "Status",
       "tooltip": "More status and help"
     },
     "presentation": {

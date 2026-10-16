@@ -118,11 +118,16 @@
   /* Fixed desktop shell geometry shared by the sidebar and overlays that
      center within the post-sidebar workspace. */
   --shell-sidebar-width: 17rem;
-  /* Bottom chrome: mobile tab bar (h-14) + status bar (h-6). At `xl` the
-     tab bar hides and the status bar grows to h-7. Overlays (Drawer, Modal
-     sheets) pin above this so footers never sit under the bars. */
+  /* Bottom chrome: mobile tab bar (h-14) + one-row status bar. Below `xl`
+     the status row is 44px so every item meets the touch-target minimum; at
+     `xl` the tab bar hides and the row is 28px. The status bar pads for the
+     bottom safe area only when it is the lowest bar (tab bar hidden).
+     Overlays (Drawer, Modal sheets) pin above this so footers never sit
+     under the bars. */
   --shell-tab-bar-height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
-  --shell-status-bar-height: 1.5rem;
+  --shell-status-bar-row: 2.75rem;
+  --shell-status-bar-safe-area: 0px;
+  --shell-status-bar-height: calc(var(--shell-status-bar-row) + var(--shell-status-bar-safe-area));
   --shell-chrome-bottom: calc(var(--shell-tab-bar-height) + var(--shell-status-bar-height));
   /*
    * Motion duration tokens (Phase-45 / Prompt 21).
@@ -452,12 +457,14 @@ select option:checked {
 @media (min-width: 1280px) {
   :root {
     --shell-tab-bar-height: 0px;
-    --shell-status-bar-height: 1.75rem;
+    --shell-status-bar-row: 1.75rem;
+    --shell-status-bar-safe-area: env(safe-area-inset-bottom, 0px);
   }
 }
 
 html[data-tab-bar='off'] {
   --shell-tab-bar-height: 0px;
+  --shell-status-bar-safe-area: env(safe-area-inset-bottom, 0px);
 }
 
 html[data-status-bar='off'] {
@@ -2088,13 +2095,8 @@ figure[data-print-card]:fullscreen p {
   }
 }
 
-/* Two mobile status rows share the shell's existing bottom-offset authority.
-   The html data-status-bar off selector retains higher specificity. */
+/* The one-row status bar keeps clear of phone side insets (landscape notch). */
 @media (width < 768px) {
-  :root {
-    --shell-status-bar-height: 7rem;
-  }
-
   [data-role='status-bar'] {
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));

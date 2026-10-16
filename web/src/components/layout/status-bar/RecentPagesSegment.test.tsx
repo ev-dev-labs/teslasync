@@ -345,8 +345,8 @@ describe('RecentPagesSegment', () => {
     const trigger = screen.getByTestId('status-bar-recent-trigger');
     expect(trigger).toHaveClass(
       'h-11', 'min-h-11', 'min-w-11', 'shrink-0',
-      'md:h-5', 'md:min-h-0', 'md:min-w-0', 'md:shrink',
-      'gap-1', 'px-1.5', 'py-0',
+      'xl:h-5', 'xl:min-h-0', 'xl:min-w-0', 'whitespace-nowrap',
+      'gap-1.5', 'px-1.5', 'py-0',
       'focus-visible:outline-2', 'focus-visible:outline-offset-2',
     );
     expect(trigger).not.toHaveClass('h-5', 'h-9', 'min-h-0');
@@ -380,13 +380,16 @@ describe('RecentPagesSegment', () => {
     }
     console.log('RAW MOBILE RECENT TRIGGER CSS\n' + css.toString());
     console.log('RAW 767/768 DENSITY', densityAt(767), densityAt(768));
-    expect(densityAt(767)).toEqual({
-      height: '2.75rem', 'min-height': '2.75rem', 'min-width': '2.75rem',
-      'flex-shrink': '0', 'outline-width': '2px', 'outline-offset': '2px',
-    });
-    expect(densityAt(768)).toEqual({
+    // Touch targets hold through tablet widths; desktop density starts at xl.
+    for (const width of [375, 767, 768, 1279]) {
+      expect(densityAt(width)).toEqual({
+        height: '2.75rem', 'min-height': '2.75rem', 'min-width': '2.75rem',
+        'flex-shrink': '0', 'outline-width': '2px', 'outline-offset': '2px',
+      });
+    }
+    expect(densityAt(1280)).toEqual({
       height: '1.25rem', 'min-height': '0px', 'min-width': '0px',
-      'flex-shrink': '1', 'outline-width': '2px', 'outline-offset': '2px',
+      'flex-shrink': '0', 'outline-width': '2px', 'outline-offset': '2px',
     });
     for (const [mobile, desktop] of [
       ['h-11', 'h-5'], ['min-h-11', 'min-h-0'], ['min-w-11', 'min-w-0'],

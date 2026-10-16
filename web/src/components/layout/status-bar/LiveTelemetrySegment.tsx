@@ -139,7 +139,7 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
         to="/signal-diff"
         aria-label={ariaLabel}
         className={cn(
-          'inline-flex min-h-11 min-w-11 max-w-full shrink-0 items-center justify-center gap-1.5 rounded-shape-sm px-1.5 py-0.5 md:min-h-0 md:min-w-0 md:shrink md:justify-start',
+          'inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-shape-sm px-1.5 py-0.5 leading-none xl:min-h-0 xl:min-w-0 xl:justify-start',
           typography.size.xs,
           'hover:bg-[var(--control-bg-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-[var(--surface-1)]',
           effectiveVariant.text,
@@ -160,11 +160,11 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
         />
         {!iconOnly && (
           <>
-            <Text variant="label" className={cn('min-w-0 break-words', effectiveVariant.text)}>
+            <Text variant="label" className={cn('whitespace-nowrap leading-none', effectiveVariant.text)}>
               {effectiveVariant.short}
             </Text>
             {status === 'connected' && lastMessageAt && (
-              <Text variant="caption" className="shrink-0">
+              <Text variant="caption" className="shrink-0 whitespace-nowrap leading-none">
                 · {ageSecondsLabel(lastMessageAt, now)}
               </Text>
             )}

@@ -90,7 +90,7 @@ function AdminConnectionControl({
           to="/system-status"
           aria-label={presentation.ariaLabel}
           className={cn(
-            'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5 md:min-h-0 md:min-w-0 md:shrink',
+            'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-shape-sm px-1.5 py-0.5 leading-none xl:min-h-0 xl:min-w-0',
             typography.size.xs,
             'hover:bg-[var(--control-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)]',
             presentation.tone,
@@ -156,7 +156,7 @@ function AdminConnectionControl({
           aria-expanded={open}
           onClick={toggle}
           className={cn(
-            'h-auto min-h-11 min-w-11 shrink-0 gap-1.5 rounded-shape-sm px-1.5 py-0 md:min-h-5 md:min-w-0 md:shrink',
+            'h-11 min-h-11 min-w-11 shrink-0 gap-1.5 whitespace-nowrap rounded-shape-sm px-1.5 py-0 leading-none xl:h-5 xl:min-h-5 xl:min-w-0',
             typography.size.xs,
             presentation.tone,
           )}
@@ -318,12 +318,12 @@ export function ConnectionSegment({
       <Icon icon={v.icon} size="xs" />
       {!iconOnly && (
         <>
-          <Text size="xs" weight="medium" className="min-w-0 break-words">{v.short}</Text>
+          <Text size="xs" weight="medium" className="whitespace-nowrap">{v.short}</Text>
           {status !== 'offline' && status !== 'unknown' && latencyMs != null && (
-            <Text size="xs" color="muted">· {latencyLabel}</Text>
+            <Text size="xs" color="muted" className="whitespace-nowrap">· {latencyLabel}</Text>
           )}
           {status === 'offline' && (
-            <Text size="xs" color="muted" className="min-w-0 break-words">· {stateLabel.offline}</Text>
+            <Text size="xs" color="muted" className="whitespace-nowrap">· {stateLabel.offline}</Text>
           )}
         </>
       )}
@@ -342,7 +342,7 @@ export function ConnectionSegment({
         to="/system-status"
         aria-label={ariaLabel}
         className={cn(
-          'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5 md:min-h-0 md:min-w-0 md:shrink',
+          'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-shape-sm px-1.5 py-0.5 leading-none xl:min-h-0 xl:min-w-0',
           typography.size.xs,
           'hover:bg-[var(--control-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)]',
           v.text,

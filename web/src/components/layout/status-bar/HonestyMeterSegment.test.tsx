@@ -101,7 +101,7 @@ describe('HonestyMeterSegment', () => {
     expect(link.tagName).toBe('A')
     expect(link).toHaveAttribute('href', '/')
     expect(link).toHaveClass('min-h-11', 'min-w-11', 'shrink-0')
-    expect(link).toHaveClass('md:min-h-0', 'md:min-w-0', 'md:shrink')
+    expect(link).toHaveClass('xl:min-h-0', 'xl:min-w-0', 'whitespace-nowrap')
     expect(link).not.toHaveClass('min-w-0')
     expect(link).toHaveClass('inline-flex', 'items-center', 'px-1.5', 'py-0.5')
     expect(link).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2')

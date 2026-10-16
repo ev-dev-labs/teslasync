@@ -11,6 +11,7 @@ import { cn } from '@/lib/cn'
 import { neonColorMap, typography } from '@/lib/tokens'
 import { PrefetchLink } from '../PrefetchLink'
 import { useStatusBarAnnouncer } from './StatusBarContext'
+import { StatusOverflowRowContent, statusOverflowRowClass } from './StatusOverflowRow'
 
 const STALE_AFTER_MS = 2 * 60_000
 
@@ -21,7 +22,21 @@ const TONE: Record<HonestyKind, string> = {
   missing: typography.color.secondary,
 }
 
-export function HonestyMeterSegment({ iconOnly = false }: { iconOnly?: boolean }) {
+const DOT: Record<HonestyKind, string> = {
+  live: neonColorMap.green.dot,
+  stale: neonColorMap.amber.dot,
+  guessed: neonColorMap.cyan.dot,
+  missing: neonColorMap.neutral.dot,
+}
+
+export interface HonestyMeterSegmentProps {
+  iconOnly?: boolean
+  /** Render as a labelled row inside the More menu. */
+  embedded?: boolean
+  onAction?: () => void
+}
+
+export function HonestyMeterSegment({ iconOnly = false, embedded = false, onAction }: HonestyMeterSegmentProps) {
   const { t } = useTranslation()
   const { status, lastMessageAt } = useLiveConnection()
   const vehiclesQuery = useVehicles()
@@ -69,27 +84,50 @@ export function HonestyMeterSegment({ iconOnly = false }: { iconOnly?: boolean }
     },
   )
 
+  const headlineLabel = headline === 'live'
+    ? t('statusBar.fleet.label', 'Fleet')
+    : t(`honesty.${headline}`, headline)
+  const ratio = vehicles.length > 0 ? `${counts.live}/${vehicles.length}` : null
+
+  if (embedded) {
+    return (
+      <PrefetchLink
+        to="/"
+        onClick={onAction}
+        aria-label={`${t('honesty.title', 'Telemetry honesty')}: ${headlineLabel}${ratio ? ` · ${ratio}` : ''}`}
+        className={statusOverflowRowClass}
+      >
+        <StatusOverflowRowContent
+          dotClassName={DOT[headline]}
+          icon={<Icon icon={Gauge} size="sm" className={TONE[headline]} />}
+          label={t('honesty.title', 'Telemetry honesty')}
+          value={ratio ? `${headlineLabel} · ${ratio}` : headlineLabel}
+          valueClassName={TONE[headline]}
+        />
+      </PrefetchLink>
+    )
+  }
+
   return (
     <Tooltip content={tooltip} side="top">
       <PrefetchLink
         to="/"
         aria-label={t('honesty.aria', 'Telemetry honesty meter')}
         className={cn(
-          'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5 md:min-h-0 md:min-w-0 md:shrink',
+          'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-shape-sm px-1.5 py-0.5 leading-none xl:min-h-0 xl:min-w-0',
           typography.size.xs,
           'hover:bg-[var(--surface-3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
           TONE[headline],
         )}
       >
+        <span className={cn('inline-block h-1.5 w-1.5 shrink-0 rounded-full', DOT[headline])} aria-hidden />
         <Icon icon={Gauge} size="xs" />
         {!iconOnly && (
-          <span className={cn('min-w-0 whitespace-normal break-words', typography.weight.medium)}>
-            {headline === 'live'
-              ? t('statusBar.fleet.label', 'Fleet')
-              : t(`honesty.${headline}`, headline)}
-            {vehicles.length > 0 && (
+          <span className={cn('whitespace-nowrap', typography.weight.medium)}>
+            {headlineLabel}
+            {ratio && (
               <span className={typography.color.muted}>
-                {' '}· {counts.live}/{vehicles.length}
+                {' '}· {ratio}
               </span>
             )}
           </span>
