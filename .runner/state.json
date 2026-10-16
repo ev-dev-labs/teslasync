@@ -15166,11 +15166,11 @@
       "web\\src\\api\\hooks\\useDataRepair.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-repair-dr08 | verification blocked by missing Vite dependencies | done so far: updated web\\src\\api\\hooks\\useDataRepair.ts and web\\src\\api\\hooks\\useDataRepair.test.tsx Attempt 2: FAILED | fix-system-data-repair-dr08 | regression verification blocked by missing Vite and failed dependency restoration | done so far: inspected and preserved prior hook and regression changes; no new source edits",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-repair-dr08 | verification blocked by missing Vite dependencies | done so far: updated web\\src\\api\\hooks\\useDataRepair.ts and web\\src\\api\\hooks\\useDataRepair.test.tsx Attempt 2: FAILED | fix-system-data-repair-dr08 | regression verification blocked by missing Vite and failed dependency restoration | done so far: inspected and preserved prior hook and regression changes; no new source edits | Verification completed 2026-10-15: scoped hook regressions 44/44; repair queue/quarantine/impact tests 43/43; workspace/header/quarantine tests 75/75; suggestion/stale row tests 45/45; split-i18n catalog check passes. Quarantine expansion now owns its controlled expanded-key state.",
+    "Commit": "cc222f01dd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15181,11 +15181,11 @@
       "web\\src\\api\\hooks\\useDataRepair.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-repair-dr07 | dependency failures prevented verification | done so far: updated web/src/api/hooks/useDataRepair.ts and added regressions in web/src/api/hooks/useDataRepair.test.tsx Attempt 2: FAILED | fix-system-data-repair-dr07 | dependency failures prevented verification | done so far: confirmed existing hook invalidation and focused regressions; no source changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-repair-dr07 | dependency failures prevented verification | done so far: updated web/src/api/hooks/useDataRepair.ts and added regressions in web/src/api/hooks/useDataRepair.test.tsx Attempt 2: FAILED | fix-system-data-repair-dr07 | dependency failures prevented verification | done so far: confirmed existing hook invalidation and focused regressions; no source changes | Verification completed 2026-10-15: scoped hook regressions 44/44; repair queue/quarantine/impact tests 43/43; workspace/header/quarantine tests 75/75; suggestion/stale row tests 45/45; split-i18n catalog check passes. Quarantine expansion now owns its controlled expanded-key state.",
+    "Commit": "cc222f01dd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15197,11 +15197,11 @@
       "web\\src\\api\\hooks\\useDataRepair.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-repair-dr01 | Missing/corrupt dependencies prevented verification | done so far: Implemented scoped retention adapter, consumer labels and write guards, and hook/consumer regression tests Attempt 2: FAILED | fix-system-data-repair-dr01 | Missing/corrupt dependencies prevent verification | done so far: inspected existing scoped retention, consumer write guards, and regression tests; no source changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-repair-dr01 | Missing/corrupt dependencies prevented verification | done so far: Implemented scoped retention adapter, consumer labels and write guards, and hook/consumer regression tests Attempt 2: FAILED | fix-system-data-repair-dr01 | Missing/corrupt dependencies prevent verification | done so far: inspected existing scoped retention, consumer write guards, and regression tests; no source changes | Verification completed 2026-10-15: scoped hook regressions 44/44; repair queue/quarantine/impact tests 43/43; workspace/header/quarantine tests 75/75; suggestion/stale row tests 45/45; split-i18n catalog check passes. Quarantine expansion now owns its controlled expanded-key state.",
+    "Commit": "cc222f01dd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15215,11 +15215,11 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
-    "Commit": "",
+    "Notes": " | Verification completed 2026-10-15: scoped hook regressions 44/44; repair queue/quarantine/impact tests 43/43; workspace/header/quarantine tests 75/75; suggestion/stale row tests 45/45; split-i18n catalog check passes. Quarantine expansion now owns its controlled expanded-key state.",
+    "Commit": "cc222f01dd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15236,11 +15236,11 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
-    "Commit": "",
+    "Notes": " | Verification completed 2026-10-15: scoped hook regressions 44/44; repair queue/quarantine/impact tests 43/43; workspace/header/quarantine tests 75/75; suggestion/stale row tests 45/45; split-i18n catalog check passes. Quarantine expansion now owns its controlled expanded-key state.",
+    "Commit": "cc222f01dd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15253,11 +15253,11 @@
       "web\\src\\features\\system\\components\\RepairQuarantinePanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-repair-dr03 | validation blocked by missing dependencies and failed dependency restoration | done so far: updated all four assigned files with response-authority gating and regression tests Attempt 2: FAILED | fix-system-data-repair-dr03 | required test blocked by missing Vite; dependency restoration failed twice | done so far: inspected existing gating and regression coverage, preserved all four files without changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-repair-dr03 | validation blocked by missing dependencies and failed dependency restoration | done so far: updated all four assigned files with response-authority gating and regression tests Attempt 2: FAILED | fix-system-data-repair-dr03 | required test blocked by missing Vite; dependency restoration failed twice | done so far: inspected existing gating and regression coverage, preserved all four files without changes | Verification completed 2026-10-15: scoped hook regressions 44/44; repair queue/quarantine/impact tests 43/43; workspace/header/quarantine tests 75/75; suggestion/stale row tests 45/45; split-i18n catalog check passes. Quarantine expansion now owns its controlled expanded-key state.",
+    "Commit": "cc222f01dd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15272,11 +15272,11 @@
       "web\\src\\features\\system\\components\\RepairQuarantinePanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-repair-dr02 | missing dependencies prevented verification | done so far: updated all six assigned files with query-state forwarding, retained warnings/retries and regression tests Attempt 2: FAILED | fix-system-data-repair-dr02 | missing dependencies prevented verification | done so far: inspected and preserved existing implementation and tests; attempted dependency restoration and required checks; no source changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-repair-dr02 | missing dependencies prevented verification | done so far: updated all six assigned files with query-state forwarding, retained warnings/retries and regression tests Attempt 2: FAILED | fix-system-data-repair-dr02 | missing dependencies prevented verification | done so far: inspected and preserved existing implementation and tests; attempted dependency restoration and required checks; no source changes | Verification completed 2026-10-15: scoped hook regressions 44/44; repair queue/quarantine/impact tests 43/43; workspace/header/quarantine tests 75/75; suggestion/stale row tests 45/45; split-i18n catalog check passes. Quarantine expansion now owns its controlled expanded-key state.",
+    "Commit": "cc222f01dd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {

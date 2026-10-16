@@ -493,3 +493,4 @@ Update `.runner/state.json` and this progress document after each group. This or
   RequiresAuth translation mock now handles the same fallback-string form as
   production. Ten matching system work items are marked done in state.json;
   commit `241c8977e4`.
+- Phase 6 system data-repair follow-up: verified scoped scan retention, mutation-family invalidation, scope/write guards, response-authority gating, query-state forwarding, count plurals, and scoped worklist language. Updated older expectations to match the informational no-metric state and details disclosure. Fixed quarantine row expansion by wiring `useTableExpansion`; expanded disclosure regression now passes. Focused suites: hooks **44/44**, queue/quarantine/impact **43/43**, workspace/header/quarantine **75/75**, suggestion/stale-row **45/45**; split-i18n check passes. Seven data-repair items marked done in state.json. Commits: `3a26ac248f`, `cc222f01dd` (plus hook test `d5d6caafd9`).
