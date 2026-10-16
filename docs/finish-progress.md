@@ -11,6 +11,42 @@ Resume file for whoever continues this work. Updated and pushed after every grou
 
 The web gates are build, `npx tsc --noEmit`, lint, and `node scripts/split-i18n-catalog.mjs --check`. Every new user-facing string must use `t()` and a complete-sentence `en.json` key; plurals use i18next `count`.
 
+## Test failure triage (2026-10-16, before repairs)
+
+The limited run used `npx vitest run --maxWorkers=4 --reporter=json --outputFile=../.runner/gates/vitest-triage-max4.json` on unchanged test/production code. The retained JSON, stderr log and classified assertion index are under `.runner/gates/` locally; these diagnostic artifacts are deliberately not committed.
+
+| Run | Passed tests | Failed tests | Skipped | Files | Failed files | Duration |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Previous default-worker run | 53,079 | 3,826 | 4 | 2,705 | 588 | 570.97 s |
+| Four-worker rerun | 53,079 | 3,826 | 4 | 2,705 | 587 | 1,619.8 s |
+| Documented pre-redesign gate (`fc1f2c5d3f`) | 55,308 | 1,536 | 4 | 2,702 | Not retained | Not retained |
+| Older archived pre-redesign log | 48,686 | 850 | 0 | 2,582 | 175 | 548.82 s |
+
+Limiting concurrency produced **no net reduction** in failed assertions. The all-pages nested-surface contract passed in the limited run, following its timeout/failure during the previous busy run; this identifies a resource-sensitive check, not an explanation for thousands of failures. The exact previous 3,826-case JSON was not retained, so aggregate equality does not prove identical failed test identities. An earlier structured report with 3,847 failures was recovered separately and is retained locally as `vitest-prior-structured.json`.
+
+Compared with the documented 1,536-failure baseline, the current total is **2,290 higher**, with 65 additional tests and three additional files. A per-category comparison to that exact baseline cannot be reconstructed from its aggregate receipt. The older 850-failure log retains 849 distinct failure identities: **629** also fail now and **220** are no longer failing or no longer present under the same name. Unmatched current identities must not automatically be called redesign regressions because the test sets and source revisions differ.
+
+The following is an exhaustive primary-diagnostic classification of the **3,826** failures. The assertion source and representative rendered output were inspected for each family. These are repair queues: remaining UI/state and value/API assertions still require focused diagnosis before deciding whether the test or production behavior is wrong.
+
+| Failure family | Current failures | Same identity in older archive | Evidence / repair approach |
+| --- | ---: | ---: | --- |
+| Evidence disclosure and card-face expectations | 930 | 28 | Status, bounds, source context and methodology queried before opening Review details; preserve those assertions in the relevant drawer and retain card-face value checks. |
+| Removed metric wrappers or unavailable-value tiles | 904 | 32 | Old nested label selectors, tile-count and placeholder assertions; migrate populated labels/values to the flat structure and check unavailable-state explanations without inventing measurements. Loading cases need separate behavior checks. |
+| Other UI copy, structure or state assertions | 673 | 99 | Missing labels, headings, narrative or state text whose cause is not established by the error alone; inspect the intended flow before editing. |
+| Value, API, formatting or behavior assertions | 543 | 94 | Incorrect expected arrays/values, query lifecycle, request shape or locale assumptions; reproduce and check the source contract. This count is not a count of confirmed product bugs. |
+| Catalog and source snapshot contracts | 452 | 271 | Physical-leaf hashes/counts and source-call fixtures lag changed source/catalogs. There are 154 distinct failing names, inflated to 452 executions by imports between test files. Preserve unique regression intent when separating fixture data. |
+| Action accessible-name or interaction queries | 128 | 54 | Button/link queries fail after action/header changes or before reaching the required flow; inspect accessible names and exercise the original action. |
+| Ambiguous text or role queries | 101 | 27 | Responsive copies, tooltip text or repeated regions match global queries; scope assertions to the intended surface and verify actual duplicate UI separately. |
+| Runtime errors and incomplete fixtures | 95 | 24 | Missing mocked exports/functions, undefined response fields and missing Recharts context; repair the fixture only after confirming the runtime contract. |
+| Explicit timeout failures | 0 | 0 | No timeout is the primary diagnostic in the limited run. Retained-refresh race candidates still need focused repeats. |
+| **Total** | **3,826** | **629** | |
+
+The largest established repair family combines evidence disclosure, flat metric structure and action queries (**1,962 failures**). Start with the nine vehicle-systems test files containing the obsolete `[data-operational-metric] > div:first-child` label selector: the limited baseline is **196 passed / 124 failed** across **320 tests**. Keep the same labels, values, unit conversions, query assertions and populated cases. Then work through drawer migrations, independent loading/missing-value behavior and the remaining families in descending size.
+
+Three assertions fail in the limited run but were absent from the earlier 3,847-failure report: JourneyAssurance departure-zone preference rerender, Fleet API retained rejected-refresh text, and GDPR manifest retained-refresh recovery. Source revisions differ, so these are timing/state candidates rather than confirmed new flakes. The governance cache test also fails before its cache assertions: it expects a rejected response containing `Plan recording failed` but receives an undefined-property error. Its existing item note therefore does not establish an invalidation bug.
+
+The separate **295-item Phase 6 reason breakdown** and every item ID are grouped in the appendix below. No status was changed during triage.
+
 ## Current UI simplification checkpoint
 
 Working on `ui/simplification`. Rows 0-4 are complete and pushed; row 5 (charging) is in progress; row 6 (remaining features) is in progress. Shared dashboard headers cluster controls at the right, the freshness dot is the per-widget refresh action, hover-only expand controls sit to its left without reserving header width, and widget content avoids nested summary scroll areas. Climate no longer repeats an inner title; title-equal metric captions are hidden. Both StatStrip and OperationalBrief distribute metric rows evenly with `maxPerRow`. Captured Edge screenshots at 375px, 768px, and 1440px are committed under `docs/ui-simplification/`; the Battery widget freshness control measures the same 16px inset as its title at all three sizes. Focused shared/dashboard suites pass 111/111; focused vehicle suites pass 239/239 across seven files. Split catalog check, full lint, typecheck, and build pass on the last shared checkpoint (CSS parser and startup bundle warnings remain). Rows 5-7 and the full Vitest suite remain outstanding.
