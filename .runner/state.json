@@ -15728,10 +15728,10 @@
       "web\\src\\features\\system\\components\\FSMTimelineChart.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-state-machine-debugger-f02 | required Vitest and TypeScript validation blocked by missing dependencies and ENOTEMPTY restoration failures | done so far: updated both source files and all three expected test files; source-builder boundary, all-time, and cap checks passed Attempt 2: FAILED | fix-system-state-machine-debugger-f02 | required Vitest and TypeScript checks blocked by missing dependencies; restoration failed with ENOTEMPTY and EBUSY | done so far: inspected retained implementation and regression tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-system-state-machine-debugger-f02 | required Vitest and TypeScript validation blocked by missing dependencies and ENOTEMPTY restoration failures | done so far: updated both source files and all three expected test files; source-builder boundary, all-time, and cap checks passed Attempt 2: FAILED | fix-system-state-machine-debugger-f02 | required Vitest and TypeScript checks blocked by missing dependencies; restoration failed with ENOTEMPTY and EBUSY | done so far: inspected retained implementation and regression tests; no source changes Retry failed: state-machine focused suites have 23 failures. FSMTimelineChart has 2 failures (exact-bound memoization returned undefined and expected series markers are missing); both StateMachineDebuggerPage suites fail fetching/paused unresolved-transition and skeleton assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15746,10 +15746,10 @@
       "web\\src\\features\\system\\components\\state-machine\\__tests__\\LiveControls.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-state-machine-debugger-f03 | Missing dependencies prevent regression verification | done so far: updated both source files and all three requested test files Attempt 2: FAILED | fix-system-state-machine-debugger-f03 | Missing dependencies prevent regression verification; restoration failed | done so far: inspected existing implementation and all three regression files; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-system-state-machine-debugger-f03 | Missing dependencies prevent regression verification | done so far: updated both source files and all three requested test files Attempt 2: FAILED | fix-system-state-machine-debugger-f03 | Missing dependencies prevent regression verification; restoration failed | done so far: inspected existing implementation and all three regression files; no source changes Retry failed: StateMachineDebuggerPage suites fail fetching/paused unresolved-transition assertions and skeleton assertions; 13 page assertions fail across the two test files.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15762,10 +15762,10 @@
       "web\\src\\features\\system\\pages\\__tests__\\StateMachineDebuggerPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-state-machine-debugger-f05 | dependency filesystem failures blocked regression execution | done so far: updated StateMachineDebuggerPage.tsx and both requested test files; tests remain unverified Attempt 2: FAILED | fix-system-state-machine-debugger-f05 | dependency filesystem failures blocked regression execution | done so far: inspected existing page changes and both focused regression files; attempted dependency restoration and retried requested tests; no new source edits",
+    "Notes": "Attempt 1: FAILED | fix-system-state-machine-debugger-f05 | dependency filesystem failures blocked regression execution | done so far: updated StateMachineDebuggerPage.tsx and both requested test files; tests remain unverified Attempt 2: FAILED | fix-system-state-machine-debugger-f05 | dependency filesystem failures blocked regression execution | done so far: inspected existing page changes and both focused regression files; attempted dependency restoration and retried requested tests; no new source edits Retry failed: StateMachineDebuggerPage suites fail fetching/paused unresolved-transition assertions and skeleton assertions; 13 page assertions fail across the two test files.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15778,10 +15778,10 @@
       "web\\src\\features\\system\\pages\\__tests__\\StateMachineDebuggerPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-state-machine-debugger-f06 | incomplete shared dependencies prevent required verification | done so far: mobile adapter, full-field access, accessible row actions, and regression tests persisted in the three assigned files Attempt 2: FAILED | fix-system-state-machine-debugger-f06 | missing dependencies block tests and browser verification | done so far: existing mobile adapter, full-field access, accessible row actions and regression tests preserved; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-system-state-machine-debugger-f06 | incomplete shared dependencies prevent required verification | done so far: mobile adapter, full-field access, accessible row actions, and regression tests persisted in the three assigned files Attempt 2: FAILED | fix-system-state-machine-debugger-f06 | missing dependencies block tests and browser verification | done so far: existing mobile adapter, full-field access, accessible row actions and regression tests preserved; no source changes Retry failed: StateMachineDebuggerPage suites fail fetching/paused unresolved-transition assertions and skeleton assertions; 13 page assertions fail across the two test files.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15820,10 +15820,10 @@
       "web\\src\\features\\system\\components\\state-machine\\SnapshotInspector.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-state-machine-debugger-f08 | Dependency failures prevented test verification | done so far: updated five assigned source files and six test files with saved-locale/timezone formatting, duration precision/null handling, and boundary/invalid-date coverage Attempt 2: FAILED | fix-system-state-machine-debugger-f08 | Dependency failures prevented verification | done so far: inspected existing locale/timezone formatting, duration precision/null handling, and boundary/invalid-date tests; preserved prior changes",
+    "Notes": "Attempt 1: FAILED | fix-system-state-machine-debugger-f08 | Dependency failures prevented test verification | done so far: updated five assigned source files and six test files with saved-locale/timezone formatting, duration precision/null handling, and boundary/invalid-date coverage Attempt 2: FAILED | fix-system-state-machine-debugger-f08 | Dependency failures prevented verification | done so far: inspected existing locale/timezone formatting, duration precision/null handling, and boundary/invalid-date tests; preserved prior changes Retry failed: state-machine focused suites have 23 failures; FSMOperationalBrief tests expect source bounds/freshness on the card face, while the shared brief now collapses details.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15839,10 +15839,10 @@
       "web\\src\\features\\system\\components\\FSMStateDiagram.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-state-machine-debugger-f09 | missing dependencies prevented regression execution and TypeScript validation | done so far: updated all three assigned components and their three regression test files Attempt 2: FAILED | fix-system-state-machine-debugger-f09 | missing dependencies blocked regression execution and TypeScript validation; restoration failed with ENOTEMPTY | done so far: inspected all six assigned files and confirmed prior implementation and regression tests are present; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-system-state-machine-debugger-f09 | missing dependencies prevented regression execution and TypeScript validation | done so far: updated all three assigned components and their three regression test files Attempt 2: FAILED | fix-system-state-machine-debugger-f09 | missing dependencies blocked regression execution and TypeScript validation; restoration failed with ENOTEMPTY | done so far: inspected all six assigned files and confirmed prior implementation and regression tests are present; no source changes Focused system regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15870,10 +15870,10 @@
       "web\\src\\features\\system\\pages\\__tests__\\StateMachineDebuggerPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-state-machine-debugger-f11 | Dependency failures prevented regression execution and typecheck verification | done so far: updated StateMachineDebuggerPage.tsx and both assigned test files Attempt 2: FAILED | fix-system-state-machine-debugger-f11 | Dependency failures prevented regression execution and typecheck verification | done so far: updated web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx, web\\src\\features\\system\\pages\\StateMachineDebuggerPage.test.tsx, web\\src\\features\\system\\pages\\__tests__\\StateMachineDebuggerPage.test.tsx",
+    "Notes": "Attempt 1: FAILED | fix-system-state-machine-debugger-f11 | Dependency failures prevented regression execution and typecheck verification | done so far: updated StateMachineDebuggerPage.tsx and both assigned test files Attempt 2: FAILED | fix-system-state-machine-debugger-f11 | Dependency failures prevented regression execution and typecheck verification | done so far: updated web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx, web\\src\\features\\system\\pages\\StateMachineDebuggerPage.test.tsx, web\\src\\features\\system\\pages\\__tests__\\StateMachineDebuggerPage.test.tsx Retry failed: StateMachineDebuggerPage suites fail fetching/paused unresolved-transition assertions and skeleton assertions; 13 page assertions fail across the two test files.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15917,10 +15917,10 @@
       "web\\src\\features\\system\\components\\FSMHealthPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-state-machine-debugger-f04 | verification blocked by missing dependencies; integration and catalog work outside scope | done so far: updated web\\src\\features\\system\\components\\FSMHealthPanel.tsx and web\\src\\features\\system\\components\\FSMHealthPanel.test.tsx Attempt 2: FAILED | fix-system-state-machine-debugger-f04 | verification blocked by missing dependencies and failed restoration | done so far: inspected existing implementation and regression tests; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-system-state-machine-debugger-f04 | verification blocked by missing dependencies; integration and catalog work outside scope | done so far: updated web\\src\\features\\system\\components\\FSMHealthPanel.tsx and web\\src\\features\\system\\components\\FSMHealthPanel.test.tsx Attempt 2: FAILED | fix-system-state-machine-debugger-f04 | verification blocked by missing dependencies and failed restoration | done so far: inspected existing implementation and regression tests; no source files changed Focused system regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15932,10 +15932,10 @@
       "web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-system-status-ss-001 | required tests could not execute because local dependencies are incomplete | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx with assessment gating and regression coverage Attempt 2: FAILED | fix-system-system-status-ss-001 | required tests blocked by incomplete dependencies | done so far: reviewed and preserved existing assessment gating and regression coverage; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-001 | required tests could not execute because local dependencies are incomplete | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx with assessment gating and regression coverage Attempt 2: FAILED | fix-system-system-status-ss-001 | required tests blocked by incomplete dependencies | done so far: reviewed and preserved existing assessment gating and regression coverage; no source changes Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15947,10 +15947,10 @@
       "web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-system-status-ss-002 | missing Vite and TypeScript dependencies prevented verification | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx Attempt 2: FAILED | fix-system-system-status-ss-002 | missing local dependencies prevented verification | done so far: inspected existing implementation and coverage; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-002 | missing Vite and TypeScript dependencies prevented verification | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx Attempt 2: FAILED | fix-system-system-status-ss-002 | missing local dependencies prevented verification | done so far: inspected existing implementation and coverage; no files changed Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15962,10 +15962,10 @@
       "web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-system-status-ss-003 | dependency failures prevented test execution | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx Attempt 2: FAILED | fix-system-system-status-ss-003 | missing dependencies prevented required test execution | done so far: existing implementation and coverage inspected; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-003 | dependency failures prevented test execution | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx Attempt 2: FAILED | fix-system-system-status-ss-003 | missing dependencies prevented required test execution | done so far: existing implementation and coverage inspected; no files changed Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16007,10 +16007,10 @@
       "web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-system-status-ss-010 | missing dependencies blocked test execution and typecheck | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx with query wiring and regressions Attempt 2: FAILED | fix-system-system-status-ss-010 | dependency restoration failed; required regression could not execute | done so far: inspected existing implementation and regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-010 | missing dependencies blocked test execution and typecheck | done so far: updated web\\src\\features\\system\\pages\\SystemStatusPage.tsx and web\\src\\features\\system\\pages\\SystemStatusPage.test.tsx with query wiring and regressions Attempt 2: FAILED | fix-system-system-status-ss-010 | dependency restoration failed; required regression could not execute | done so far: inspected existing implementation and regressions; no source changes Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16024,10 +16024,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16040,10 +16040,10 @@
       "web\\src\\features\\system\\components\\status\\__tests__\\IncidentsCard.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-system-status-ss-006 | Dependency restoration blocked by EPERM; tests and typecheck could not execute | done so far: updated IncidentsCard.tsx and both assigned test files with empty creation, paused state, retained failure and recovery coverage Attempt 2: FAILED | fix-system-system-status-ss-006 | Missing dependencies block tests and typecheck; restoration failed with EPERM | done so far: reviewed existing implementation and both assigned test files; preserved prior changes; no source edits",
+    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-006 | Dependency restoration blocked by EPERM; tests and typecheck could not execute | done so far: updated IncidentsCard.tsx and both assigned test files with empty creation, paused state, retained failure and recovery coverage Attempt 2: FAILED | fix-system-system-status-ss-006 | Missing dependencies block tests and typecheck; restoration failed with EPERM | done so far: reviewed existing implementation and both assigned test files; preserved prior changes; no source edits Focused system regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16056,10 +16056,10 @@
       "web\\src\\features\\system\\components\\status\\__tests__\\IncidentsCard.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-system-status-ss-009 | required form changes outside owned scope; validation blocked by missing dependencies | done so far: protected writes in web\\src\\api\\hooks\\useIncidents.ts; added tests in web\\src\\features\\system\\components\\status\\__tests__\\IncidentsCard.test.tsx Attempt 2: FAILED | fix-system-system-status-ss-009 | required form changes outside owned scope; tests blocked by missing Vitest | done so far: inspected existing live-only protections and prior tests; no new changes",
+    "Notes": "Attempt 1: FAILED | fix-system-system-status-ss-009 | required form changes outside owned scope; validation blocked by missing dependencies | done so far: protected writes in web\\src\\api\\hooks\\useIncidents.ts; added tests in web\\src\\features\\system\\components\\status\\__tests__\\IncidentsCard.test.tsx Attempt 2: FAILED | fix-system-system-status-ss-009 | required form changes outside owned scope; tests blocked by missing Vitest | done so far: inspected existing live-only protections and prior tests; no new changes Focused system regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16074,10 +16074,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused system regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16106,10 +16106,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused system regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16138,10 +16138,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: StatusHero.test.tsx has 5 failures; healthy state has no expected shadow marker, and degraded/unhealthy queries find multiple status roles.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16170,10 +16170,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused system regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16187,10 +16187,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused system regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16357,7 +16357,7 @@
     "Status": "pending",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu10 | dependency failures prevented tests and Edge verification | done so far: updated web\\src\\components\\forms\\RangePicker.tsx and web\\src\\components\\forms\\__tests__\\RangePicker.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu10 | dependency failures prevented targeted tests and Edge verification | done so far: preserved existing RangePicker implementation and tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-system-tesla-api-usage-tu10 | dependency failures prevented tests and Edge verification | done so far: updated web\\src\\components\\forms\\RangePicker.tsx and web\\src\\components\\forms\\__tests__\\RangePicker.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu10 | dependency failures prevented targeted tests and Edge verification | done so far: preserved existing RangePicker implementation and tests; no source changes Focused batch ran; screenshot/browser verification remains outstanding, so status stays pending.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
