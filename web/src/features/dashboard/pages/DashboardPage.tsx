@@ -23,8 +23,7 @@ import {
   Icon,
   Popover,
   PrintButton,
-  Text,
-} from '@/components/ui';
+  Text, IconButton } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, LiveStaleDataBanner, Skeleton, StaleRefreshWarning } from '@/components/feedback';
@@ -168,20 +167,7 @@ function DashboardMoreMenu({
 
   return (
     <>
-      <Button
-        ref={triggerRef}
-        type="button"
-        variant="ghost"
-        size="sm"
-        className={ACTION_TARGET}
-        onClick={() => setOpen((value) => !value)}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-label={t('dashboard.moreActions', 'More dashboard actions')}
-      >
-        <Icon icon={MoreHorizontal} />
-        <span className="hidden xl:inline">{t('dashboard.more', 'More')}</span>
-      </Button>
+      <IconButton ref={triggerRef} icon={<Icon icon={MoreHorizontal} />} label={t('dashboard.more', 'More')} onClick={() => setOpen((value) => !value)} aria-label={t('dashboard.moreActions', 'More dashboard actions')} aria-expanded={open} aria-haspopup="dialog" />
       <Popover
         open={open}
         onClose={() => setOpen(false)}
@@ -556,30 +542,13 @@ export default function DashboardPage() {
             <Icon icon={Plus} size="sm" className="sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add widget')}</span>
           </Button>
-          <Button variant="ghost" size="sm" className={ACTION_TARGET} onClick={autoArrange}
-            aria-label={t('dashboard.autoArrange', 'Auto arrange')}>
-            <Icon icon={LayoutGrid} size="sm" className="sm:me-1" />
-            <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto arrange')}</span>
-          </Button>
-          <Button variant="ghost" size="sm" wrapLabel className={ACTION_TARGET} onClick={() => void handleResetRequest()}>
-            <Icon icon={RotateCcw} size="sm" className="sm:me-1" />
-            {t('dashboard.reset', 'Reset')}
-          </Button>
+          <IconButton icon={<Icon icon={LayoutGrid} size="sm" className="sm:" />} label={t('dashboard.autoArrange', 'Auto arrange')} onClick={autoArrange} aria-label={t('dashboard.autoArrange', 'Auto arrange')} />
+          {/* confirm-step: handleResetRequest asks before resetting the layout */}
+          <IconButton icon={<Icon icon={RotateCcw} size="sm" className="sm:" />} label={t('dashboard.reset', 'Reset')} onClick={() => void handleResetRequest()} />
         </>
       ) : (
         <>
-          <Button
-            variant="secondary"
-            size="sm"
-            wrapLabel
-            className={ACTION_TARGET}
-            onClick={handleRefresh}
-            loading={isRefreshing}
-            icon={<Icon icon={RefreshCw} />}
-            aria-label={t('dashboard.refresh', 'Refresh data')}
-          >
-            <span>{t('dashboard.refreshShort', 'Refresh')}</span>
-          </Button>
+          <IconButton icon={<Icon icon={RefreshCw} />} label={t('dashboard.refreshShort', 'Refresh')} onClick={handleRefresh} busy={isRefreshing} aria-label={t('dashboard.refresh', 'Refresh data')} />
         </>
       )}
     </div>
@@ -620,17 +589,7 @@ export default function DashboardPage() {
           {t('dashboard.done', 'Done')}
         </Button>
       ) : vehicleList.length > 0 ? (
-        <Button
-          variant="primary"
-          size="sm"
-          wrapLabel
-          className={ACTION_TARGET}
-          onClick={() => setEditMode(true)}
-          data-tour="edit-mode-btn"
-        >
-          <Icon icon={Settings} />
-          <span>{t('dashboard.customize', 'Customize')}</span>
-        </Button>
+        <IconButton icon={<Icon icon={Settings} />} label={t('dashboard.customize', 'Customize')} variant="primary" onClick={() => setEditMode(true)} data-tour="edit-mode-btn" />
       ) : undefined}
       overflowActions={!editMode && vehicleList.length > 0 ? (
         <DashboardMoreMenu

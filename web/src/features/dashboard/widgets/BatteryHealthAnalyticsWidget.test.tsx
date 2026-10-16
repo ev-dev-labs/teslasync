@@ -30,7 +30,7 @@
  * is never touched and every query state is driven deterministically.
  * `react-i18next` is stubbed with a passthrough `t(key, default)` so assertions
  * read the English defaults. The shared WidgetShell / WidgetGaugeHero /
- * LinearGauge / DataFreshness / EmptyState primitives all run for real, so the
+ * LinearGauge / FreshnessDot / EmptyState primitives all run for real, so the
  * assertions exercise the true rendered DOM. `<MemoryRouter>` wraps every render
  * because the error branch's <QueryError> uses `useNavigate`.
  */
@@ -42,7 +42,7 @@ import BatteryHealthAnalyticsWidget from './BatteryHealthAnalyticsWidget';
 import { hasGaugeColor } from '@/test/gaugeTestUtils';
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via
-// <DataFreshness> → useMotionPreference) reads it during render. Install a
+// <FreshnessDot> → useMotionPreference) reads it during render. Install a
 // benign stub before any component mounts.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

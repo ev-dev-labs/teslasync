@@ -37,7 +37,7 @@
  * queries) without rendering the animated SVG / `AnimatedNumber` (which tween
  * from 0 and would make value assertions racy). `react-i18next` echoes each
  * `t(key, fallback)` fallback so assertions read against English copy.
- * `DataFreshness`'s display hooks are stubbed so the freshness/refresh chip
+ * `FreshnessDot`'s display hooks are stubbed so the freshness/refresh chip
  * renders without a Settings provider. A `<MemoryRouter>` wraps every render
  * because `EmptyState` reaches for `<Link>`.
  */
@@ -100,7 +100,7 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-// DataFreshness display hooks — stubbed so the freshness chip renders without a
+// FreshnessDot display hooks — stubbed so the freshness chip renders without a
 // Settings/QueryClient provider.
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({ formatTime: (v: unknown) => String(v) }),

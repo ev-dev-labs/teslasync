@@ -69,7 +69,7 @@ import type { WidgetSize } from './types';
 
 const mockUseBackupRuns = vi.mocked(useBackupRuns);
 
-// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <DataFreshness>
+// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <FreshnessDot>
 // inside <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
@@ -95,7 +95,7 @@ const tid = (key: string, fallback?: string, opts?: Record<string, unknown>): st
   return base;
 };
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

@@ -786,7 +786,7 @@ describe('TimelinePage', () => {
     await screen.findByText('10', {}, { timeout: 8000 })
 
     // The icon-only button carries a distinct accessible name (the a11y fix);
-    // it must not collide with the DataFreshness "Refresh" control.
+    // it must not collide with the FreshnessDot "Refresh" control.
     const refresh = screen.getByRole('button', { name: 'Refresh timeline' })
     expect(refresh).toBeInTheDocument()
 

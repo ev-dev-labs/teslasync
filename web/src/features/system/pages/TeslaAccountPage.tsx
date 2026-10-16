@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Button, Badge, StatusPill, Heading, Text, Label, Caption, HelperText, Icon } from '@/components/ui';
+import { GlassPanel, Button, Badge, StatusPill, Heading, Text, Label, Caption, HelperText, Icon, IconButton } from '@/components/ui';
 import { KVList, Avatar, Timeline } from '@/components/data-display';
 import { QueryError, EmptyState, Skeleton, StaleRefreshWarning, OperationalWriteNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -83,18 +83,7 @@ export default function TeslaAccountPage() {
   );
 
   const actions = (
-    <Button
-      onClick={refresh}
-      wrapLabel
-      className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
-      loading={refreshMutation.isPending}
-      disabled={!canWrite}
-      title={writeBlockReason ?? undefined}
-      icon={<Icon icon={RefreshCw} />}
-      aria-label={t('teslaAccount.refresh', 'Refresh from Tesla')}
-    >
-      {t('teslaAccount.refresh', 'Refresh from Tesla')}
-    </Button>
+    <IconButton icon={<Icon icon={RefreshCw} />} label={t('teslaAccount.refresh', 'Refresh from Tesla')} onClick={refresh} busy={refreshMutation.isPending} disabled={!canWrite} aria-label={t('teslaAccount.refresh', 'Refresh from Tesla')} />
   );
 
   return (
@@ -205,18 +194,7 @@ export default function TeslaAccountPage() {
                 )}
                 {syncStatus === 'synced' && <Caption className="mt-1 block">{formatDateTime(fetchedAt)}</Caption>}
               </div>
-              <Button
-                variant="primary"
-                wrapLabel
-                className="w-full min-h-11"
-                onClick={refresh}
-                loading={refreshMutation.isPending}
-                disabled={!canWrite}
-                title={writeBlockReason ?? undefined}
-                icon={<Icon icon={RefreshCw} />}
-              >
-                {t('teslaAccount.refresh', 'Refresh from Tesla')}
-              </Button>
+              <IconButton icon={<Icon icon={RefreshCw} />} label={t('teslaAccount.refresh', 'Refresh from Tesla')} onClick={refresh} busy={refreshMutation.isPending} disabled={!canWrite} />
               <HelperText>
                 {t('teslaAccount.sync.helper', 'Fetches your latest account profile from the Tesla Fleet API.')}
               </HelperText>

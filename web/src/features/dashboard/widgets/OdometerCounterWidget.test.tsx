@@ -33,7 +33,7 @@
  *   - `matchMedia` is stubbed to report `prefers-reduced-motion: reduce` so
  *     <AnimatedNumber> lands on its final value synchronously instead of easing
  *     over rAF frames — this makes the odometer readout assertable. The same
- *     stub keeps <DataFreshness>'s useMotionPreference (rendered transitively by
+ *     stub keeps <FreshnessDot>'s useMotionPreference (rendered transitively by
  *     <WidgetShell>) from touching an absent jsdom matchMedia.
  *
  * `@testing-library/user-event` is intentionally NOT a dependency of this
@@ -47,7 +47,7 @@ import type { ReactElement } from 'react';
 
 // jsdom lacks matchMedia. Install a stub reporting reduced-motion = true BEFORE
 // any import runs so <AnimatedNumber> skips its rAF tween and paints the final
-// value, and <DataFreshness>'s useMotionPreference resolves cleanly.
+// value, and <FreshnessDot>'s useMotionPreference resolves cleanly.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
     window.matchMedia = ((query: string) => ({

@@ -522,6 +522,7 @@ export function formatRelativeTime(
   if (Number.isNaN(then)) return '';
   const diffSec = Math.floor((now - then) / 1000);
 
+  // relative-time: watch face has no hover or focus, so the age must be visible
   if (diffSec < 60) return translate?.('watch.updated.justNow', 'just now') ?? 'just now';
   if (diffSec < 3600) {
     const count = Math.floor(diffSec / 60);

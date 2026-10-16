@@ -22,8 +22,7 @@ import {
   CopyButton,
   GlassPanel,
   PanelTitle,
-  Text,
-} from '@/components/ui';
+  Text, IconButton } from '@/components/ui';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import type {
@@ -164,19 +163,10 @@ export function BatteryPassportMasthead({
             </Text>
           </div>
           <div className="flex flex-wrap items-end justify-end gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              icon={<Download className="h-4 w-4" />}
-              onClick={onExport}
-              disabled={!passport}
-            >
-              {t(
+            <IconButton icon={<Download className="h-4 w-4" />} label={t(
                 'batteryPassport.actions.export',
                 'Export certificate',
-              )}
-            </Button>
+              )} onClick={onExport} disabled={!passport} />
           </div>
         </div>
 

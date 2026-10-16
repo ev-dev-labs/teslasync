@@ -130,6 +130,7 @@ export function timeSince(iso: string | null | undefined, t: Translate): string 
   const diff = Date.now() - new Date(iso).getTime();
   if (diff < 0) return '—';
   const seconds = Math.floor(diff / 1000);
+  // relative-time: when the security event happened
   if (seconds < 60) return t('admin.security.time.justNow', 'just now');
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return t('admin.security.time.minutesAgo', '{{count}}m ago', { count: minutes });

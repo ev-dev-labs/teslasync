@@ -461,8 +461,6 @@
     }
   },
   "freshness": {
-    "noData": "No recent data",
-    "offline": "Offline",
     "seconds": "{{s}}s ago"
   },
   "fsm": {

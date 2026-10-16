@@ -6,8 +6,7 @@ import {
   Button,
   ConfirmDialog,
   Text,
-  Toggle,
-} from '@/components/ui';
+  Toggle, IconButton } from '@/components/ui';
 import { LayoutCard, SourceContent, type SourceContentProps } from '@/components/layout';
 import { deriveDataState, type DataState } from '@/api/dataState';
 import { SearchInput } from '@/components/forms';
@@ -196,16 +195,7 @@ export function ChargingPlacesWorkspace({
       description={t('chargingPlaces.workspace.unifiedDescription', 'Review visited places, define their boundaries and charging purpose, and manage rates and session history.')}
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            wrapLabel
-            size="sm"
-            variant="ghost"
-            icon={<RefreshCw className={placesQuery.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />}
-            onClick={refreshAll}
-            disabled={placesQuery.isFetching}
-          >
-            {t('common.refresh', 'Refresh')}
-          </Button>
+          <IconButton icon={<RefreshCw className={placesQuery.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />} label={t('common.refresh', 'Refresh')} onClick={refreshAll} disabled={placesQuery.isFetching} />
           {onAdd && (
             <Button
               wrapLabel
@@ -317,16 +307,8 @@ export function ChargingPlacesWorkspace({
           bulkActions={
             onBulkDelete
               ? (selected) => (
-                  <Button
-                    wrapLabel
-                    size="sm"
-                    variant="danger"
-                    icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-                    onClick={() => void handleBulkDelete(selected)}
-                    loading={deletePending || bulkPending}
-                  >
-                    {t('geofences.bulk.delete', 'Delete')}
-                  </Button>
+                  /* confirm-step: handleBulkDelete asks in the shared ConfirmDialog first */
+                  <IconButton icon={<Trash2 className="h-4 w-4" aria-hidden="true" />} label={t('geofences.bulk.delete', 'Delete')} onClick={() => void handleBulkDelete(selected)} busy={deletePending || bulkPending} />
                 )
               : undefined
           }

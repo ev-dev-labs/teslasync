@@ -69,7 +69,7 @@ export default function DestinationETAWidget({ vehicleId, size }: WidgetProps) {
   // once a snapshot is on screen a transient background-refetch error must not
   // wipe otherwise-valid numbers; it is surfaced through the freshness
   // indicator's error state instead (WidgetShell forwards `isError` to
-  // <DataFreshness>).
+  // <FreshnessDot>).
   const blockingError = !snapshot && error ? String(error) : null;
 
   const shellProps = {

@@ -26,7 +26,7 @@
  * Both hooks are mocked at the hook boundary so no network is touched;
  * `importActual` keeps the module's other exports intact. `useDateFormat` is
  * mocked to a deterministic `formatDateTime` (so the >24h fall-through is
- * assertable) + `formatTime` (which <DataFreshness> inside <WidgetShell>
+ * assertable) + `formatTime` (which <FreshnessDot> inside <WidgetShell>
  * destructures). `react-i18next` is stubbed to echo the English fallback and
  * interpolate `{{var}}` tokens. `@testing-library/user-event` is not installed
  * in this repo (see the sibling ExportStatusWidget / LocationFavoritesWidget
@@ -42,7 +42,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 // i18n stub: echo the fallback string, interpolating {{var}} tokens from the
-// options bag so count-bearing copy ("{{minutes}}m ago", DataFreshness) renders
+// options bag so count-bearing copy ("{{minutes}}m ago", FreshnessDot) renders
 // as real text.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -71,7 +71,7 @@ vi.mock('@/api/hooks/useNotifications', async () => {
 });
 
 // Deterministic date formatting: the widget uses `formatDateTime` for the
-// >24h relative-time fall-through, and <DataFreshness> (inside <WidgetShell>)
+// >24h relative-time fall-through, and <FreshnessDot> (inside <WidgetShell>)
 // destructures `formatTime`. Both are stubbed so assertions never depend on
 // the ambient locale / timezone settings.
 vi.mock('@/hooks/useDateFormat', async () => {
@@ -97,7 +97,7 @@ const mockUseStats = vi.mocked(useNotificationStats);
 const mockUseLogs = vi.mocked(useNotificationLogs);
 const mockUseDateFormat = vi.mocked(useDateFormat);
 
-// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <DataFreshness>
+// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <FreshnessDot>
 // inside <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
@@ -112,7 +112,7 @@ if (typeof window.matchMedia !== 'function') {
   })) as unknown as typeof window.matchMedia;
 }
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

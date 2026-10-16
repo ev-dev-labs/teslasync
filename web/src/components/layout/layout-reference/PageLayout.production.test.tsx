@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
-import type { FreshnessQuery } from '@/components/data-display/DataFreshness';
+import type { FreshnessQuery } from '@/components/data-display/FreshnessDot';
 import { Button } from '@/components/ui/Button';
 import { PageLayout, type PageLayoutProps } from './PageLayout';
 
@@ -90,11 +90,12 @@ describe('PageLayout production composition', () => {
       </PageLayout>,
     );
     const actions = screen.getByRole('group', { name: 'Actions' });
-    expect(actions).toHaveClass('grid');
-    expect(within(actions).getAllByRole('button').map((button) => button.textContent)).toEqual(labels);
+    // Scope selectors first; then one cluster: freshness/metadata and every command.
+    expect(within(actions).getAllByRole('button').map((button) => button.textContent))
+      .toEqual([labels[1], labels[0], ...labels.slice(2)]);
     expect(Array.from(actions.querySelectorAll('[data-action-group]'))
       .map((group) => group.getAttribute('data-action-group')))
-      .toEqual(['metadata', 'context', 'secondary', 'destructive', 'overflow', 'primary']);
+      .toEqual(['context', 'metadata', 'secondary', 'destructive', 'overflow', 'primary']);
     labels.forEach((label, index) => {
       fireEvent.click(within(actions).getByRole('button', { name: label }));
       expect(handlers[index]).toHaveBeenCalledOnce();

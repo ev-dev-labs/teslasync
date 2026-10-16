@@ -183,7 +183,7 @@ describe('PageHeader', () => {
     expect(
       Array.from(container.querySelectorAll('[data-action-group]'))
         .map((group) => group.getAttribute('data-action-group')),
-    ).toEqual(['metadata', 'context', 'secondary', 'destructive', 'overflow', 'primary'])
+    ).toEqual(['context', 'metadata', 'secondary', 'destructive', 'overflow', 'primary'])
   })
 
   it('copies the current URL and shows a success toast + "Copied" state on click', async () => {

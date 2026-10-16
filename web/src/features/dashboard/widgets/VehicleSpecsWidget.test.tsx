@@ -84,7 +84,7 @@ import type { WidgetProps } from './types';
 const mockRequest = vi.mocked(request);
 const mockUseVehicles = vi.mocked(useVehicles);
 
-// jsdom lacks matchMedia; framer-motion (via <FadeIn> / <DataFreshness> inside
+// jsdom lacks matchMedia; framer-motion (via <FadeIn> / <FreshnessDot> inside
 // <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({

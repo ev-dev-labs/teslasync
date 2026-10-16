@@ -42,7 +42,7 @@
  * `convertPowerFromSI` run for real so the conversion math is genuinely
  * exercised. `react-i18next` is stubbed with a passthrough `t(key, default)` so
  * assertions read the English defaults. The shared WidgetShell /
- * WidgetChartSummary / DataFreshness / EmptyState primitives all run for real.
+ * WidgetChartSummary / FreshnessDot / EmptyState primitives all run for real.
  * `<MemoryRouter>` wraps every render because the error branch's <QueryError>
  * reaches for router context.
  */
@@ -54,7 +54,7 @@ import { chartMargin } from '@/components/charts';
 import type { SpeedProfileData, SpeedBucket } from '@/types/driving';
 import SpeedProfileWidget, { frequencyAxisWidth } from './SpeedProfileWidget';
 
-// jsdom lacks matchMedia; DataFreshness → useMotionPreference reads it during
+// jsdom lacks matchMedia; FreshnessDot → useMotionPreference reads it during
 // render. Install a benign stub before any component mounts.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

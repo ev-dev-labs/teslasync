@@ -672,7 +672,6 @@
     "refreshState": "Refresh data · {{state}}",
     "source": "Source: {{source}}",
     "stale": "Stale",
-    "staleWithAge": "Stale · {{age}}",
     "updating": "updating…",
     "updatingTooltip": "Updating…",
     "weeks": "{{w}}w ago"

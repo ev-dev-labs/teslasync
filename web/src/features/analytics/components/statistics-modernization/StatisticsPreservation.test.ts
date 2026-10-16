@@ -128,7 +128,7 @@ describe('statistics modernization source contracts', () => {
   });
 
   it('keeps freshness, saved views, refresh and both empty-state destinations', () => {
-    expect(page).toContain('<DataFreshnessAuto query={statsQuery} />');
+    expect(page).toContain('<FreshnessDotAuto query={statsQuery} />');
     expect(page).toContain('route="/statistics"');
     expect(page).toContain('currentQuery={savedView.currentQuery}');
     expect(page).toContain('onApply={savedView.apply}');

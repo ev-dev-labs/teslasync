@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Share2 } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
-import { BUTTON_BASE, BUTTON_VARIANTS, Button, Icon, PrintButton, Text } from '@/components/ui';
+import { BUTTON_BASE, BUTTON_VARIANTS, Icon, PrintButton, Text, IconButton } from '@/components/ui';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { AlertBanner, DataSourceNotice, QueryError, resolveDataSourceStatus, StaleRefreshWarning } from '@/components/feedback';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
@@ -114,10 +114,7 @@ export default function DriveDetailPage() {
       overflowActions={
         <div data-print-hide className="flex flex-wrap items-center gap-2">
           {id ? (
-            <Button variant="ghost" size="sm" wrapLabel className={actionTargetClassName}
-              onClick={() => setShareDialogOpen(true)} icon={<Icon icon={Share2} />}>
-              {t('driveDetail.share', 'Share')}
-            </Button>
+            <IconButton icon={<Icon icon={Share2} />} label={t('driveDetail.share', 'Share')} onClick={() => setShareDialogOpen(true)} />
           ) : null}
           <PrintButton className={actionTargetClassName} />
         </div>

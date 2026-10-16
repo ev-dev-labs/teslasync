@@ -142,6 +142,7 @@ export function formatRelative(iso: string | Date | null | undefined, opts?: For
     formatter = new Intl.RelativeTimeFormat('en-US', relativeOptions)
   }
   if (diff <= 0 && seconds < 60) {
+    // relative-time: shared event-time formatter
     if (formatter.resolvedOptions().locale.startsWith('en')) return 'just now'
     return formatter.format(0, 'second')
   }
@@ -328,6 +329,7 @@ export function formatRelativeTime(iso: string | Date | null | undefined, opts?:
   const d = new Date(iso)
   const diffMs = Date.now() - d.getTime()
   const diffMin = Math.floor(diffMs / 60_000)
+  // relative-time: shared event-time formatter
   if (diffMin < 1) return 'Just now'
   if (diffMin < 60) return `${diffMin}m ago`
   const diffHrs = Math.floor(diffMin / 60)

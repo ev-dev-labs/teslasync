@@ -25,8 +25,7 @@ import {
   Label,
   Text,
   HelperText,
-  type Column,
-} from '@/components/ui';
+  type Column, IconButton } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 import {
@@ -1091,16 +1090,7 @@ function ExportHistoryTable({
         className: 'w-24 text-right',
         render: (row) =>
           row.status === 'ready' ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Icons.download className="h-3.5 w-3.5" aria-hidden="true" />}
-              wrapLabel
-              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-              onClick={() => onDownload(row)}
-            >
-              {t('dataExport.download', 'Download')}
-            </Button>
+            <IconButton icon={<Icons.download className="h-3.5 w-3.5" aria-hidden="true" />} label={t('dataExport.download', 'Download')} onClick={() => onDownload(row)} />
           ) : row.status === 'failed' && row.error_message ? (
             <Text
               as="span"
@@ -1127,9 +1117,7 @@ function ExportHistoryTable({
             </Badge>
           )}
         </div>
-        <Button variant="ghost" size="sm" wrapLabel className="min-h-11 min-w-11 md:min-h-9 md:min-w-0" icon={<Icons.refresh className="h-3.5 w-3.5" aria-hidden="true" />} onClick={onRefresh}>
-          {t('dataExport.refresh', 'Refresh')}
-        </Button>
+        <IconButton icon={<Icons.refresh className="h-3.5 w-3.5" aria-hidden="true" />} label={t('dataExport.refresh', 'Refresh')} onClick={onRefresh} />
       </div>
 
       {error ? (
@@ -1391,16 +1379,7 @@ export default function DataExportPage() {
       title={t('dataExport.title', 'Data export')}
       subtitle={t('dataExport.subtitle', 'Export vehicle data in CSV or JSON format')}
       secondaryActions={
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
-          wrapLabel
-          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-          onClick={handleRefresh}
-        >
-          {t('dataExport.refresh', 'Refresh')}
-        </Button>
+        <IconButton icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />} label={t('dataExport.refresh', 'Refresh')} onClick={handleRefresh} />
       }
     >
       <StaleRefreshWarning state={jobsState} label={t('dataExport.exportHistory', 'Export history')} />

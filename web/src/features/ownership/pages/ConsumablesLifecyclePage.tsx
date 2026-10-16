@@ -14,7 +14,7 @@ import { AlertBanner } from '@/components/feedback';
 import { PageLayout } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { Accordion, Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text, Textarea } from '@/components/ui';
+import { Accordion, Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text, Textarea, IconButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -292,14 +292,8 @@ export default function ConsumablesLifecyclePage() {
       >
         {t('ownership.consumables.item.log', 'Log event')}
       </Button>
-      <Button
-        variant="ghost" size="sm" wrapLabel
-        icon={<Icon icon={Trash2} size="md" />}
-        loading={remove.isPending && remove.variables === row.id}
-        onClick={() => void handleRemove(row)}
-      >
-        {t('ownership.action.remove', 'Remove')}
-      </Button>
+      {/* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */}
+      <IconButton icon={<Icon icon={Trash2} size="md" />} label={t('ownership.action.remove', 'Remove')} onClick={() => void handleRemove(row)} busy={remove.isPending && remove.variables === row.id} />
     </div>
   );
 

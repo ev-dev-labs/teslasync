@@ -5,7 +5,7 @@ import { RefreshCw, Car, Clock } from 'lucide-react';
 
 import { PageLayout, Section, CardGrid, ChartCard } from '@/components/layout';
 import { Button, Text } from '@/components/ui';
-import { SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
+import { SavedViewMenu, FreshnessDotAuto } from '@/components/data-display';
 import {
   ChartTooltip, ChartLegend,
   chartGrid, axisTickSm,
@@ -153,7 +153,7 @@ export default function StatisticsPage() {
     <PageLayout
       title={t('statistics.title', 'Statistics')}
       subtitle={t('statistics.subtitle', 'Lifetime vehicle statistics and records')}
-      metadataActions={<DataFreshnessAuto query={statsQuery} />}
+      metadataActions={<FreshnessDotAuto query={statsQuery} />}
       secondaryActions={refreshAction}
       overflowActions={
         <SavedViewMenu

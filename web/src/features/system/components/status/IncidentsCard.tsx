@@ -49,6 +49,7 @@ function relativeFrom(now: number, iso: string): string {
   const t = Date.parse(iso)
   if (!Number.isFinite(t)) return ''
   const secs = Math.max(0, Math.floor((now - t) / 1000))
+  // relative-time: when the incident happened
   if (secs < 60) return 'just now'
   if (secs < 3600) return `${Math.floor(secs / 60)}m ago`
   if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`

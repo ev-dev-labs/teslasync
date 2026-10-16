@@ -23,12 +23,26 @@ describe('PageActions', () => {
       <PageActions layout="scope-first" metadata={<span>Fresh</span>}
         context={<Button>Day</Button>} overflow={<Button>Copy</Button>} />,
     );
-    expect(container.querySelector('[data-role="page-actions"]')).toHaveClass('grid', 'border-0', 'bg-transparent');
-    expect(container.querySelector('[data-action-group="context"]')).toHaveClass('sm:col-span-2', 'order-1');
-    expect(container.querySelector('[data-action-group="metadata"]')).toHaveClass('order-2');
-    expect(container.querySelector('[data-action-zone="commands"]')).toHaveClass('order-3');
+    expect(container.querySelector('[data-role="page-actions"]')).toHaveClass('border-0', 'bg-transparent');
+    // The scope row may take its own line below sm, then shares the row.
+    expect(container.querySelector('[data-action-group="context"]')).toHaveClass('w-full', 'sm:w-auto', 'sm:me-auto');
     rerender(<PageActions context={<Button>Day</Button>} />);
-    expect(container.querySelector('[data-role="page-actions"]')).not.toHaveClass('grid', 'border-0');
+    expect(container.querySelector('[data-role="page-actions"]')).not.toHaveClass('border-0');
+  });
+
+  it('keeps the freshness dot and every command in one non-wrapping, right-aligned group', () => {
+    const { container } = render(
+      <PageActions metadata={<span>Fresh</span>} context={<Button>Layout</Button>}
+        secondary={<Button>Refresh</Button>} overflow={<Button>More</Button>} primary={<Button>Customize</Button>} />,
+    );
+    const cluster = container.querySelector('[data-action-zone="commands"]');
+    expect(cluster).toHaveClass('ms-auto', 'flex', 'flex-nowrap', 'items-center', 'gap-1.5');
+    for (const group of ['metadata', 'secondary', 'overflow', 'primary']) {
+      expect(cluster?.querySelector(`[data-action-group="${group}"]`)).toHaveClass('flex-nowrap', 'shrink-0');
+    }
+    // The scope selector is its own zone, never inside the dot's group.
+    expect(cluster?.querySelector('[data-action-group="context"]')).toBeNull();
+    expect(container.querySelector('[data-action-zone="context"]')).toHaveTextContent('Layout');
   });
 
   it('renders semantic action groups in the canonical DOM order', () => {
@@ -50,14 +64,7 @@ describe('PageActions', () => {
     expect(
       Array.from(rail?.querySelectorAll('[data-action-group]') ?? [])
         .map((group) => group.getAttribute('data-action-group')),
-    ).toEqual([
-      'metadata',
-      'context',
-      'secondary',
-      'destructive',
-      'overflow',
-      'primary',
-    ]);
+).toEqual(['context', 'metadata', 'secondary', 'destructive', 'overflow', 'primary']);
     expect(screen.getByRole('button', { name: 'Sync' })).toBeInTheDocument();
   });
 
@@ -121,11 +128,12 @@ describe('PageActions', () => {
         />
       </div>,
     );
-    expect(container.querySelector('[data-role="page-actions"]')).toHaveClass('grid-cols-1');
-    expect(container.querySelector('[data-action-zone="commands"]')).toHaveClass('ms-auto', 'max-w-full');
+    expect(container.querySelector('[data-action-zone="commands"]')).toHaveClass('ms-auto', 'min-w-0');
     expect(container.querySelector('[data-action-zone="commands"]')).not.toHaveClass('ml-auto');
-    for (const group of container.querySelectorAll('[data-action-group]')) {
-      expect(group).toHaveClass('min-w-0', 'max-w-full', 'flex-wrap');
+    // Only the scope selectors wrap; the command cluster never splits.
+    expect(container.querySelector('[data-action-group="context"]')).toHaveClass('min-w-0', 'max-w-full', 'flex-wrap');
+    for (const group of container.querySelectorAll('[data-action-zone="commands"] [data-action-group]')) {
+      expect(group).toHaveClass('flex-nowrap');
       expect(group).not.toHaveClass('hidden');
     }
     expect(screen.getAllByRole('button')).toHaveLength(5);
@@ -170,24 +178,10 @@ describe('PageActions', () => {
     expect(screen.queryByRole('button', { name: 'Duplicate vehicle' })).toBeNull();
   });
 
-  it('uses the named scope grid only at sm and preserves caller grid overrides', () => {
-    const { container, rerender } = render(
-      <PageActions layout="scope-first" context={<Button>Day</Button>} />,
+  it('preserves caller layout overrides on the rail', () => {
+    const { container } = render(
+      <PageActions layout="scope-first" context={<Button>Day</Button>} className="sm:justify-between" />,
     );
-    const rail = container.querySelector('[data-role="page-actions"]');
-    expect(rail).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-page-actions-scope', 'xl:flex');
-    expect(rail).not.toHaveClass('sm:grid-cols-[minmax(0,1fr)_auto]');
-    rerender(
-      <PageActions layout="scope-first" context={<Button>Day</Button>} className="sm:grid-cols-2" />,
-    );
-    expect(rail).toHaveClass('grid-cols-1', 'sm:grid-cols-2', 'xl:flex');
-    expect(rail).not.toHaveClass('sm:grid-cols-page-actions-scope');
-    rerender(
-      <PageActions layout="scope-first" context={<Button>Day</Button>} className="sm:grid-cols-[1fr_2fr]" />,
-    );
-    expect(rail).toHaveClass('grid-cols-1', 'sm:grid-cols-[1fr_2fr]', 'xl:flex');
-    expect(rail).not.toHaveClass('sm:grid-cols-page-actions-scope');
-    rerender(<PageActions context={<Button>Day</Button>} />);
-    expect(rail).not.toHaveClass('grid-cols-1', 'sm:grid-cols-page-actions-scope');
+    expect(container.querySelector('[data-role="page-actions"]')).toHaveClass('sm:justify-between', 'border-0');
   });
 });

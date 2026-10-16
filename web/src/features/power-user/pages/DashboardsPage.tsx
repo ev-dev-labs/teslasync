@@ -40,7 +40,7 @@ import {
   type DashboardLayoutDraft,
 } from '@/components/ai';
 import { Grid, PageLayout } from '@/components/layout';
-import { Button, CopyButton, GlassPanel, Heading, HelperText, Icon, IconBox, Text, Textarea } from '@/components/ui';
+import { CopyButton, GlassPanel, Heading, HelperText, Icon, IconBox, Text, Textarea, IconButton } from '@/components/ui';
 import { InlineCallout, type CalloutVariant } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -322,10 +322,7 @@ export default function DashboardsPage() {
                   disabled={!canCopy}
                   label={t('powerDashboards.editor.copy', 'Copy to clipboard')}
                 />
-                <Button variant="secondary" wrapLabel onClick={handleClear} disabled={!canClear}>
-                  <Icon icon={Eraser} />
-                  {t('powerDashboards.editor.clear', 'Clear')}
-                </Button>
+                <IconButton icon={<Icon icon={Eraser} />} label={t('powerDashboards.editor.clear', 'Clear')} variant="secondary" onClick={handleClear} disabled={!canClear} confirm={{ title: t('confirm.clearEditor.title', 'Clear the editor?'), message: t('confirm.clearEditor.message', 'This removes the current text from the editor. It can’t be undone.') }} />
               </div>
               {status && (
                 <div className="mt-3">

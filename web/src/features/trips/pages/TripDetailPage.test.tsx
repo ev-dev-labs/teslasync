@@ -162,7 +162,7 @@ vi.mock('@/features/trips/components/TripDrivesTable', () => ({
 import TripDetailPage from './TripDetailPage';
 
 // jsdom lacks matchMedia (framer-motion's useReducedMotion via FadeIn +
-// DataFreshness). Provide a no-preference stub.
+// FreshnessDot). Provide a no-preference stub.
 if (!window.matchMedia) {
   window.matchMedia = ((query: string) => ({
     matches: false,

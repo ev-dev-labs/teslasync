@@ -51,7 +51,9 @@ export function PageHeader({
       <header
         className={cn(
           'relative mb-6 flex flex-col gap-4 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-e1 sm:p-6 xl:flex-row xl:items-center xl:justify-between',
-          compactHeader && 'mb-3 gap-2 overflow-visible rounded-none border-0 bg-transparent px-0 py-1 shadow-none sm:px-0 xl:gap-3',
+          // Same alignment as PageContainer: title first, one action group
+          // joining the row when it fits or wrapping below, right-aligned.
+          compactHeader && 'mb-3 flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2 overflow-visible rounded-none border-0 bg-transparent px-0 py-1 shadow-none sm:px-0',
         )}
         data-role="page-header"
       >

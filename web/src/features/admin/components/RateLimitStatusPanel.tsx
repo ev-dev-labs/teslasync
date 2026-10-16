@@ -15,7 +15,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, AlertTriangle } from 'lucide-react'
 
-import { GlassPanel, Button, Heading, Text, Caption } from '@/components/ui'
+import { GlassPanel, Heading, Text, Caption } from '@/components/ui'
 import { MetricBar } from '@/components/data-display'
 import { ListSkeleton } from '@/components/feedback'
 import { formatCurrencyValue } from '@/lib/currencyFormat'
@@ -26,6 +26,7 @@ import {
 } from '@/api/hooks/useSystem'
 import type { RateLimitSeverity, ScopeBudget } from '@/api/types'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { IconButton } from '@/components/ui/IconButton';
 
 // Severity → hex colour passed into MetricBar (which expects a raw
 // string for its dynamic gradient + glow). Using hex here rather than
@@ -176,18 +177,9 @@ export function RateLimitStatusPanel({ testHookOverride }: RateLimitStatusPanelP
             <Caption className="mt-2 block">{updatedLabel}</Caption>
           ) : null}
         </div>
-        <Button
-          variant="ghost"
-          onClick={() => {
+        <IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden />} label={t('rateLimitStatus.refresh', 'Refresh')} onClick={() => {
             void refetch()
-          }}
-          loading={isFetching && !isLoading}
-          disabled={isFetching}
-          icon={<RefreshCw className="h-4 w-4" aria-hidden />}
-          data-testid="rate-limit-refresh-button"
-        >
-          {t('rateLimitStatus.refresh', 'Refresh')}
-        </Button>
+          }} busy={isFetching && !isLoading} disabled={isFetching} data-testid="rate-limit-refresh-button" />
       </div>
 
       {warnings.length > 0 ? (

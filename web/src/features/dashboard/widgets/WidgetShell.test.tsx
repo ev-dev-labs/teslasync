@@ -9,7 +9,7 @@
  * the underlying data timestamp changes.
  *
  * The leaf children (`Skeleton`, `QueryError`, `HelpTooltip`, `PinButton`,
- * `DataFreshness`, `DataFreshnessAuto`) are mocked with lightweight stand-ins so
+ * `FreshnessDot`, `FreshnessDotAuto`) are mocked with lightweight stand-ins so
  * this suite asserts WidgetShell's own contract — which child renders and with
  * which props — without dragging in their QueryClient / Router / i18n trees or
  * ever touching the network.
@@ -22,7 +22,7 @@
  *   - title-less layout: freshness moves to an absolute overlay (compact), the
  *     actions row still renders, and help/pin are suppressed.
  *   - freshness resolution: `updatedAt` wins over `query`; `updatedAt === 0`
- *     collapses to a null timestamp; a bare `query` uses DataFreshnessAuto; and
+ *     collapses to a null timestamp; a bare `query` uses FreshnessDotAuto; and
  *     neither prop renders no chip. Omitted flags default to false; `onRefresh`
  *     is forwarded and fires.
  *   - pin: rendered only when title + widgetId + dashboardId are all present.
@@ -96,7 +96,7 @@ vi.mock('@/components/ui', () => ({
 }));
 
 vi.mock('@/components/data-display', () => ({
-  DataFreshness: (props: {
+  FreshnessDot: (props: {
     updatedAt: number | null;
     isFetching?: boolean;
     isStale?: boolean;
@@ -119,7 +119,7 @@ vi.mock('@/components/data-display', () => ({
       ) : null}
     </div>
   ),
-  DataFreshnessAuto: (props: {
+  FreshnessDotAuto: (props: {
     query?: { dataUpdatedAt?: number };
     compact?: boolean;
   }) => (
@@ -364,7 +364,7 @@ describe('WidgetShell — title-less layout', () => {
 });
 
 describe('WidgetShell — freshness resolution', () => {
-  it('uses granular DataFreshness and forwards flags when updatedAt is set', () => {
+  it('uses granular FreshnessDot and forwards flags when updatedAt is set', () => {
     render(
       <WidgetShell title="Battery" updatedAt={1234} isFetching isStale isError onRefresh={vi.fn()}>
         <Child />
@@ -403,7 +403,7 @@ describe('WidgetShell — freshness resolution', () => {
     expect(screen.getByTestId('data-freshness').getAttribute('data-updated-at')).toBe('null');
   });
 
-  it('uses DataFreshnessAuto when only a query is supplied', () => {
+  it('uses FreshnessDotAuto when only a query is supplied', () => {
     render(
       <WidgetShell title="Battery" query={makeQuery({ dataUpdatedAt: 999 })}>
         <Child />

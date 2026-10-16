@@ -36,15 +36,7 @@ import {
 } from 'lucide-react'
 
 import { PageLayout, LayoutCard, Masonry } from '@/components/layout'
-import {
-  GlassPanel,
-  Badge,
-  Button,
-  Input,
-  PanelTitle,
-  Text,
-  Caption,
-} from '@/components/ui'
+import { GlassPanel, Badge, Input, PanelTitle, Text, Caption } from '@/components/ui'
 import {
   ChartSkeleton,
   EmptyState,
@@ -73,6 +65,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { deriveDataState } from '@/api/dataState';
 import { CoverageCategory } from '../components/continuation-admin-3/CoverageCategory';
 import { CoverageOperationalBrief } from '../components/statstrip-coverage-flags-secrets/CoverageOperationalBrief';
+import { IconButton } from '@/components/ui/IconButton';
 
 export interface FleetTelemetryCoveragePageProps {
   /** Override the live hook for Storybook / tests. */
@@ -138,18 +131,9 @@ export default function FleetTelemetryCoveragePage({
       query={query}
       dataSources={[{ id: 'fleet-telemetry-coverage', label: t('coverage.pageTitle', 'Fleet Telemetry coverage'), query }]}
       secondaryActions={
-        <Button
-          variant="ghost"
-          onClick={() => {
+        <IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden />} label={t('coverage.refresh', 'Refresh')} onClick={() => {
             void refetch()
-          }}
-          loading={isFetching && !isLoading}
-          disabled={isFetching}
-          icon={<RefreshCw className="h-4 w-4" aria-hidden />}
-          data-testid="coverage-refresh-button"
-        >
-          {t('coverage.refresh', 'Refresh')}
-        </Button>
+          }} busy={isFetching && !isLoading} disabled={isFetching} data-testid="coverage-refresh-button" />
       }
     >
       {/* 1 — KPI band: full-width responsive metric grid */}

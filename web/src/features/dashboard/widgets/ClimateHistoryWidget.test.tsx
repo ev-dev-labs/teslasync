@@ -66,7 +66,7 @@ vi.mock('@/hooks/useUnits', () => ({
 }));
 
 // Deterministic date boundary so tick / tooltip-label formatting is assertable.
-// The widget reads `formatDateTime`; the shared `<DataFreshness>` chip in
+// The widget reads `formatDateTime`; the shared `<FreshnessDot>` chip in
 // `<WidgetShell>` reads `formatTime` — both must resolve to a function.
 vi.mock('@/hooks/useDateFormat', () => {
   const fmtDate = (v: string | Date | null | undefined) => `ts(${String(v)})`;

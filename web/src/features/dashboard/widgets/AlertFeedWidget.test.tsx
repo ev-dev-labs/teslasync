@@ -63,7 +63,7 @@ vi.mock('@/api/hooks/useNotifications', async (importActual) => {
   return { ...actual, useAlerts: vi.fn() };
 });
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshness>) reads it.
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,
@@ -84,7 +84,7 @@ import type { WidgetSize } from './types';
 
 const mockAlerts = vi.mocked(useAlerts);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

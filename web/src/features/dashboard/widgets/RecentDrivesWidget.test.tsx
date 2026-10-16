@@ -24,7 +24,7 @@
  * The network boundary (`request` from `@/api/client`) is mocked; TanStack Query
  * runs for real against it. `useVehicles`, `useUnits` and `useDateFormat` are
  * mocked at the hook boundary (the last provides `formatTime` too, which
- * `<DataFreshness>` inside `<WidgetShell>` also consumes). `react-i18next` is
+ * `<FreshnessDot>` inside `<WidgetShell>` also consumes). `react-i18next` is
  * stubbed to echo the English fallback. `@testing-library/user-event` is not
  * installed in this repo (see the sibling BackupMonitorWidget /
  * ChargeSessionChartWidget suites), so the one interaction goes through
@@ -75,7 +75,7 @@ vi.mock('@/hooks/useUnits', () => ({
 
 // Date formatting is deterministic. `formatDateShort` is a shared spy (so we
 // can assert it is fed the drive's `start_ts`); `formatTime` is supplied too
-// because <DataFreshness> inside <WidgetShell> reads it.
+// because <FreshnessDot> inside <WidgetShell> reads it.
 const { formatDateShortSpy } = vi.hoisted(() => ({
   formatDateShortSpy: vi.fn((_v: unknown) => 'May 1'),
 }));
@@ -106,7 +106,7 @@ const mockRequest = vi.mocked(request);
 const mockUseVehicles = vi.mocked(useVehicles);
 const mockUseUnits = vi.mocked(useUnits);
 
-// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <DataFreshness>
+// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <FreshnessDot>
 // inside <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({

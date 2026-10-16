@@ -8,8 +8,7 @@ import {
 import { PageLayout } from '@/components/layout';
 import {
   GlassPanel, Button, Badge, Icon,
-  PanelTitle, Caption, Text,
-} from '@/components/ui';
+  PanelTitle, Caption, Text, IconButton } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -266,17 +265,7 @@ export default function ApiLogsPage() {
       query={logsQuery}
       busy={logsQuery.isFetching}
       secondaryActions={
-        <Button
-          variant="ghost"
-          size="sm"
-          wrapLabel
-          className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
-          icon={<Icon icon={RefreshCw} />}
-          disabled={logsQuery.isFetching || statsQuery.isFetching || runtimeQuery.isFetching}
-          onClick={() => { void refetchLogs(); void refetchStats(); void refetchRuntime(); }}
-        >
-          {t('common.refresh', 'Refresh')}
-        </Button>
+        <IconButton icon={<Icon icon={RefreshCw} />} label={t('common.refresh', 'Refresh')} onClick={() => { void refetchLogs(); void refetchStats(); void refetchRuntime(); }} disabled={logsQuery.isFetching || statsQuery.isFetching || runtimeQuery.isFetching} />
       }
     >
       {/* 1 — KPI band: full-width responsive metric grid */}

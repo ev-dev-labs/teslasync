@@ -58,6 +58,7 @@ export function SupportBundlePanel() {
             label={t('supportBundle.copy', 'Copy bundle')}
             className="max-md:min-h-11 max-md:min-w-11"
           />
+          {/* flow-cta: downloading the bundle is this panel’s purpose */}
           <Button
             type="button"
             variant="secondary"

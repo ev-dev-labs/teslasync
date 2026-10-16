@@ -22,10 +22,10 @@
  *     3s; keyboard focus reveals it via `focus-within` (WCAG 2.4.7).
  *
  * i18n is stubbed with a passthrough `t(key, default, opts)` that also
- * interpolates `{{…}}` placeholders, matching the sibling DataFreshness /
+ * interpolates `{{…}}` placeholders, matching the sibling FreshnessDot /
  * DashboardSettingsModal convention. `useDateFormat` is mocked with
  * deterministic formatters so clock assertions don't depend on Intl output.
- * Fake timers (with a pinned system clock) mirror the DataFreshness test so
+ * Fake timers (with a pinned system clock) mirror the FreshnessDot test so
  * the clock tick and the exit-hint timeout are fully controlled.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

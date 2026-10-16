@@ -14,7 +14,7 @@ import { MetricBar } from '@/components/data-display';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, Card, ConfirmDialog, DataTable, Icon, Input, Select, Text, Textarea } from '@/components/ui';
+import { Badge, Button, Card, ConfirmDialog, DataTable, Icon, Input, Select, Text, Textarea, IconButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -483,16 +483,8 @@ export default function WarrantyCommandPage() {
           >
             {t('ownership.warranty.row.claim', 'Claim')}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-            icon={<Icon icon={Trash2} />}
-            loading={remove.isPending && remove.variables === row.id}
-            onClick={() => void handleRemove(row)}
-          >
-            {t('ownership.action.remove', 'Remove')}
-          </Button>
+          {/* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */}
+          <IconButton icon={<Icon icon={Trash2} />} label={t('ownership.action.remove', 'Remove')} onClick={() => void handleRemove(row)} busy={remove.isPending && remove.variables === row.id} />
         </div>
       ),
     },

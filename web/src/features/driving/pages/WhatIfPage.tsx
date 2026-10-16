@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, Button, Badge, Select, Slider, Toggle } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text, Badge, Select, Slider, Toggle, IconButton } from '@/components/ui';
 
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
@@ -250,10 +250,7 @@ export default function WhatIfPage() {
                     <Gauge className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
                     {t('whatIf.knobs', 'Knobs')}
                   </PanelTitle>
-                  <Button variant="ghost" onClick={() => setKnobs(DEFAULT_KNOBS)}>
-                    <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                    {t('whatIf.reset', 'Reset')}
-                  </Button>
+                  <IconButton icon={<RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />} label={t('whatIf.reset', 'Reset')} onClick={() => setKnobs(DEFAULT_KNOBS)} confirm={{ title: t('confirm.resetInputs.title', 'Reset all inputs?'), message: t('confirm.resetInputs.message', 'Your changes return to their default values.') }} />
                 </div>
 
                 <Text variant="caption" as="p" className="mb-4">

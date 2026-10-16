@@ -12,7 +12,7 @@
 
 import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { WifiOff } from 'lucide-react';
+import { CloudOff } from 'lucide-react';
 
 import { Grid, PageLayout, Section } from '@/components/layout';
 import { Badge, Icon } from '@/components/ui';
@@ -129,7 +129,7 @@ export default function LiveSignalMonitorPage() {
       }
     >
       {!live.connected && (
-        <AlertBanner variant="warning" icon={<Icon icon={WifiOff} size="lg" />}>
+        <AlertBanner variant="warning" icon={<Icon icon={CloudOff} size="lg" />}>
           {t(
             'liveMonitor.disconnectedBanner',
             'Live stream disconnected — attempting to reconnect. Figures below reflect the last buffered signals.',

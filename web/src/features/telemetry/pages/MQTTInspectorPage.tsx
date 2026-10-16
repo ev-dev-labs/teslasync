@@ -2,12 +2,18 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
-  Radio, Wifi, WifiOff, RefreshCw, AlertTriangle, AlertCircle,
-  Activity, Server, Clock,
+  Radio,
+  CloudOff,
+  RefreshCw,
+  AlertTriangle,
+  AlertCircle,
+  Activity,
+  Server,
+  Clock,
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Badge, Button, DataTable, Icon, PanelTitle, Text, Caption, type Column } from '@/components/ui';
+import { GlassPanel, Badge, DataTable, Icon, PanelTitle, Text, Caption, type Column, IconButton } from '@/components/ui';
 import { OperationalBrief, useIsStale } from '@/components/data-display';
 import {
   ChartTooltip, ChartGradient,
@@ -270,9 +276,9 @@ export default function MQTTInspectorPage() {
           </Caption>
           <Badge variant={connected === true ? 'success' : 'neutral'} dot>
             {connected === true
-              ? <><Icon icon={Wifi} size="xs" /> {t('mqtt.connected', 'Connected')}</>
+              ? <><Icon icon={Radio} size="xs" /> {t('mqtt.connected', 'Connected')}</>
               : connected === false
-                ? <><Icon icon={WifiOff} size="xs" /> {t('mqtt.disconnected', 'Disconnected')}</>
+                ? <><Icon icon={CloudOff} size="xs" /> {t('mqtt.disconnected', 'Disconnected')}</>
                 : t('common.unknown', 'Unknown')}
           </Badge>
         </div>
@@ -283,11 +289,7 @@ export default function MQTTInspectorPage() {
           <AlertBanner variant="danger" icon={<Icon icon={AlertCircle} size="lg" />}>
             {t('mqtt.fetchError', 'Unable to load MQTT status')}: {(error as Error)?.message ?? String(error)}
             <div className="mt-3">
-              <Button variant="secondary" icon={<Icon icon={RefreshCw} />}
-                className="min-h-11" onClick={statusState.retry ?? undefined}
-                disabled={!statusState.retry || statusQuery.isFetching}>
-                {t('common.refresh', 'Refresh')}
-              </Button>
+              <IconButton icon={<Icon icon={RefreshCw} />} label={t('common.refresh', 'Refresh')} onClick={statusState.retry ?? undefined} disabled={!statusState.retry || statusQuery.isFetching} />
             </div>
           </AlertBanner>
         </FadeIn>

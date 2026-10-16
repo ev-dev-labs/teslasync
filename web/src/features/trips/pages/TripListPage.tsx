@@ -10,7 +10,7 @@ import {
   GlassPanel, PanelTitle, Pagination, Caption, Badge, Button, Text, MetricLabel, Icon,
 } from '@/components/ui';
 import {
-  MetricBar, InlineMetric, SavedViewMenu, DataFreshnessAuto,
+  MetricBar, InlineMetric, SavedViewMenu, FreshnessDotAuto,
 } from '@/components/data-display';
 import {
   ChartTooltip,
@@ -143,7 +143,7 @@ export default function TripListPage() {
       title={t('trips.title', 'Trips')}
       subtitle={t('trips.subtitle', 'Multi-drive trip reports with distance and cost tracking')}
       busy={isLoading && !source.isRefreshBlocked}
-      metadataActions={<DataFreshnessAuto query={tripsQuery} />}
+      metadataActions={<FreshnessDotAuto query={tripsQuery} />}
       dataSources={[{ id: 'trips', label: t('trips.title', 'Trips'), query: tripsQuery }]}
       overflowActions={
         <div className="flex flex-wrap items-center justify-end gap-3">

@@ -15,8 +15,7 @@ import {
   PanelTitle,
   Text,
   Label,
-  type Column,
-} from '@/components/ui';
+  type Column, IconButton } from '@/components/ui';
 import { MetricBar, TimeStamp, type StatMetric } from '@/components/data-display';
 import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary';
 import {
@@ -1029,14 +1028,7 @@ export default function BackupRestorePage() {
               onClick={() => setRunsOffset((offset) => offset + RUNS_LIMIT)}>
               {t('common.next', 'Next')}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Icons.refresh className="h-4 w-4" />}
-              onClick={() => qc.invalidateQueries({ queryKey: ['backup-runs'] })}
-            >
-              {t('backup.refresh', 'Refresh')}
-            </Button>
+            <IconButton icon={<Icons.refresh className="h-4 w-4" />} label={t('backup.refresh', 'Refresh')} onClick={() => qc.invalidateQueries({ queryKey: ['backup-runs'] })} />
           </>
           }
         >

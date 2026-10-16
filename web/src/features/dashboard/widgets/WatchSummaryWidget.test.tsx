@@ -35,8 +35,8 @@
  * never touched and every query state / unit preference is deterministic.
  * `react-i18next` is stubbed with a passthrough `t(key, default)` so assertions
  * read the English defaults. `@/hooks/useDateFormat` + `@/hooks/useTimeFormatPreference`
- * are stubbed so the real `<TimeStamp>` / `<DataFreshness>` render without a
- * settings QueryClient. The shared WidgetShell / DataFreshness / LinearGauge /
+ * are stubbed so the real `<TimeStamp>` / `<FreshnessDot>` render without a
+ * settings QueryClient. The shared WidgetShell / FreshnessDot / LinearGauge /
  * StatusBadge / WidgetBigNumber / Badge / EmptyState primitives and the real
  * `convertDistanceFromSI` / `convertTempFromSI` all run for real, so assertions
  * exercise the true rendered DOM.
@@ -51,7 +51,7 @@ import WatchSummaryWidget, { getBatteryColor } from './WatchSummaryWidget';
 import { BADGE_VARIANTS } from '@/components/ui';
 import { hasGaugeColor } from '@/test/gaugeTestUtils';
 
-// jsdom lacks matchMedia; DataFreshness → useMotionPreference and AnimatedNumber
+// jsdom lacks matchMedia; FreshnessDot → useMotionPreference and AnimatedNumber
 // read it during render. Report reduced-motion = true so AnimatedNumber skips
 // its rAF tween and lands on the target value synchronously — making every
 // rendered number deterministic under `render`. All other queries report false.
@@ -114,7 +114,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-// TimeStamp (last-seen cell) and DataFreshness read the user's settings via
+// TimeStamp (last-seen cell) and FreshnessDot read the user's settings via
 // these hooks, which are otherwise backed by TanStack Query. Stub them so the
 // real components render deterministically without a settings QueryClient.
 vi.mock('@/hooks/useDateFormat', () => ({

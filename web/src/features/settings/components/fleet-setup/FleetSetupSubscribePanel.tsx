@@ -1,3 +1,4 @@
+import { IconButton } from '@/components/ui/IconButton';
 /**
  * Guided fleet_telemetry_config subscribe for one VIN.
  * Host / port / CA stay optional — backend fills FLEET_TELEMETRY_HOST + LE CA.
@@ -276,17 +277,8 @@ export function FleetSetupSubscribePanel() {
               })
             : t('fleetSetup.subscribe.cta', 'Subscribe selected vehicle')}
         </Button>
-        <Button
-          variant="danger"
-          wrapLabel
-          className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
-          icon={<Trash2 className="h-4 w-4" />}
-          onClick={() => void handleRemove()}
-          loading={unsubscribe.isPending}
-          disabled={!canSubmit || !summary.hostname}
-        >
-          {t('fleetSetup.subscribe.remove', 'Remove config')}
-        </Button>
+        {/* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */}
+        <IconButton icon={<Trash2 className="h-4 w-4" />} label={t('fleetSetup.subscribe.remove', 'Remove config')} onClick={() => void handleRemove()} busy={unsubscribe.isPending} disabled={!canSubmit || !summary.hostname} />
       </div>
       <HelperText>
         {t(

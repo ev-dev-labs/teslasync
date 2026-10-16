@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 
 import { PageLayout } from '@/components/layout'
-import { Button } from '@/components/ui'
+
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
 
@@ -18,6 +18,7 @@ import { ImpersonationStatusPanel } from '../components/ImpersonationStatusPanel
 import { ImpersonationPolicyPanel } from '../components/ImpersonationPolicyPanel'
 import { deriveDataState } from '@/api/dataState';
 import { SubjectsOperationalBrief } from '../components/operationalbrief-r-z/SubjectsOperationalBrief';
+import { IconButton } from '@/components/ui/IconButton';
 
 /**
  * Admin Subjects page — modern-UI, full-width cockpit for the impersonation
@@ -76,16 +77,7 @@ export default function UsersPage() {
       : t('impersonation.users.kpi.idle', 'Idle')
 
   const actions = (
-    <Button
-      variant="secondary"
-      size="sm"
-      icon={<RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} aria-hidden="true" />}
-      onClick={onRefresh}
-      disabled={refreshing}
-      aria-label={t('impersonation.users.refresh', 'Refresh')}
-    >
-      {t('impersonation.users.refresh', 'Refresh')}
-    </Button>
+    <IconButton icon={<RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} aria-hidden="true" />} label={t('impersonation.users.refresh', 'Refresh')} onClick={onRefresh} disabled={refreshing} aria-label={t('impersonation.users.refresh', 'Refresh')} />
   )
 
   return (

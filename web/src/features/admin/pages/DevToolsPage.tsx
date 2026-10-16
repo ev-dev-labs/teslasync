@@ -1,10 +1,11 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Globe, Radio, Server, Wrench, BookOpen, RefreshCw, AlertCircle,
 } from 'lucide-react'
 import { PageLayout } from '@/components/layout'
-import { TabNav, Button, Icon } from '@/components/ui'
+import { TabNav, Icon } from '@/components/ui'
 import { AlertBanner, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -70,15 +71,7 @@ export default function DevToolsPage() {
   )
 
   const actions = (
-    <Button
-      variant="ghost"
-      onClick={refreshOverview}
-      loading={overviewFetching}
-      aria-label={t('devtools.refreshStatus', 'Refresh developer tools status')}
-      icon={<Icon icon={RefreshCw} />}
-    >
-      {t('common.refresh', 'Refresh')}
-    </Button>
+    <IconButton icon={<Icon icon={RefreshCw} />} label={t('common.refresh', 'Refresh')} onClick={refreshOverview} busy={overviewFetching} aria-label={t('devtools.refreshStatus', 'Refresh developer tools status')} />
   )
 
   return (

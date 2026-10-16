@@ -26,7 +26,7 @@
  *   - `react-i18next` is stubbed to resolve the developer fallback string (and
  *     interpolate `{{vars}}`) so assertions read the shipped English copy.
  *   - The real <AchievementBadge> renders so the strip is covered end-to-end.
- *   - `matchMedia` is stubbed before any import because <DataFreshness>'s
+ *   - `matchMedia` is stubbed before any import because <FreshnessDot>'s
  *     `useMotionPreference` (rendered transitively by <WidgetShell>) reads it on
  *     first paint and jsdom does not provide it.
  *
@@ -39,7 +39,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
-// jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference reads it on
+// jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference reads it on
 // first paint. Install a no-op (reduced-motion = false) BEFORE any import.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

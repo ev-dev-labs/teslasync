@@ -23,8 +23,13 @@ import { chartTokens } from '@/lib/tokens';
 
 import { PageLayout, CardGrid, LayoutCard, type CardGridItem } from '@/components/layout';
 import {
-  GlassPanel, Badge, HelpTooltip, PrintButton, Button,
-  SectionTitle, Text,
+  GlassPanel,
+  Badge,
+  HelpTooltip,
+  PrintButton,
+  SectionTitle,
+  Text,
+  IconButton,
 } from '@/components/ui';
 import {
   MetricBar, InlineMetric, KVList,
@@ -482,15 +487,7 @@ export default function ChargingDetailPage() {
       overflowActions={
         <div data-print-hide className="flex flex-wrap items-center gap-2">
           {id && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="min-h-11 min-w-11 md:min-h-9"
-              onClick={() => setShareDialogOpen(true)}
-              icon={<Share2 className="h-4 w-4" aria-hidden="true" />}
-            >
-              {t('charging.detail.share', 'Share')}
-            </Button>
+            <IconButton icon={<Share2 className="h-4 w-4" aria-hidden="true" />} label={t('charging.detail.share', 'Share')} onClick={() => setShareDialogOpen(true)} />
           )}
           <PrintButton />
         </div>

@@ -1,3 +1,4 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Moon, Plus, Trash2, Pencil, X, Check } from 'lucide-react'
@@ -495,28 +496,9 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        wrapLabel
-                        size="sm"
-                        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-                        icon={<Pencil className="h-3.5 w-3.5" />}
-                        onClick={() => void startEdit(w)}
-                        disabled={saveInFlight || save.isPending}
-                      >
-                        {t('quietHours.edit', 'Edit')}
-                      </Button>
-                      <Button
-                        variant="danger"
-                        wrapLabel
-                        size="sm"
-                        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-                        icon={<Trash2 className="h-3.5 w-3.5" />}
-                        onClick={() => void removeWindow(w)}
-                        loading={remove.isPending && remove.variables === w.id}
-                      >
-                        {t('quietHours.delete', 'Delete')}
-                      </Button>
+                      <IconButton icon={<Pencil className="h-3.5 w-3.5" />} label={t('quietHours.edit', 'Edit')} variant="secondary" onClick={() => void startEdit(w)} disabled={saveInFlight || save.isPending} />
+                      {/* confirm-step: removeWindow asks in the shared ConfirmDialog before deleting */}
+                      <IconButton icon={<Trash2 className="h-3.5 w-3.5" />} label={t('quietHours.delete', 'Delete')} onClick={() => void removeWindow(w)} busy={remove.isPending && remove.variables === w.id} />
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">

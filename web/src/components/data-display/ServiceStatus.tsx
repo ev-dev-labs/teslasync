@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from '@/components/motion'
-import { WifiOff } from 'lucide-react'
+import { CloudOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { cn } from '@/lib/cn'
@@ -40,7 +40,7 @@ export function ServiceStatusBanner() {
               neonColorMap.neutral.text,
             )}
           >
-            <WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <CloudOff className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span className="min-w-0 break-words">
               {t(
                 'serviceStatus.offline',

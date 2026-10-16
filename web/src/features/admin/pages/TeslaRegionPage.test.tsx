@@ -131,7 +131,7 @@ const overviewRegion = () =>
 const aboutRegion = () =>
   screen.getByRole('region', { name: 'About your region' })
 
-// PageContainer also renders a keyboard-operable DataFreshness refresh button.
+// PageContainer also renders a keyboard-operable FreshnessDot refresh button.
 // Its accessible name begins "Refresh data", so the exact "Refresh" matcher
 // below continues to identify the page-level command.
 function headerRefreshButton(): HTMLButtonElement {

@@ -39,7 +39,7 @@
  * never touched and every query state / unit preference is driven
  * deterministically. `react-i18next` is stubbed with a passthrough
  * `t(key, default)` so assertions read the English defaults. The shared
- * WidgetShell / DataFreshness / Badge / EmptyState / WidgetBigNumber primitives
+ * WidgetShell / FreshnessDot / Badge / EmptyState / WidgetBigNumber primitives
  * and the real `convertDistanceFromSI` all run for real, so assertions exercise
  * the true rendered DOM. `<MemoryRouter>` wraps every render because the error
  * branch's <QueryError> uses `useNavigate`.
@@ -55,7 +55,7 @@ it.each([1, 2, 3])('identifies destination ETA at %i columns', (cols) => {
   expect(screen.getByRole('heading', { name: 'Destination ETA' })).toBeInTheDocument();
 });
 
-// jsdom lacks matchMedia; AnimatedNumber (ETA countdown) and DataFreshness read
+// jsdom lacks matchMedia; AnimatedNumber (ETA countdown) and FreshnessDot read
 // it during render. Report reduced-motion = true so AnimatedNumber skips its
 // rAF tween and lands on the target value synchronously — making the ETA
 // number deterministic under `render`. All other media queries report false.

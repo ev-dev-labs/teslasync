@@ -12,8 +12,7 @@ import {
   Text,
   ConfirmDialog,
   type Column,
-  type MobileDataTablePresentation,
-} from '@/components/ui';
+  type MobileDataTablePresentation, IconButton } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { AIPiiRedactionSharedExports } from '@/components/ai';
@@ -329,16 +328,8 @@ export default function ExportsPage() {
                   selectedKeys={selectedKeys}
                   onSelectionChange={setSelectedKeys}
                   bulkActions={(rows) => (
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      className="min-h-11 min-w-11"
-                      icon={<Icons.delete className="h-3.5 w-3.5" aria-hidden="true" />}
-                      loading={bulkDelete.isPending}
-                      onClick={() => void handleBulkDelete(rows.map((r) => r.id))}
-                    >
-                      {t('exportsList.bulk.delete', 'Delete')}
-                    </Button>
+                    /* confirm-step: handleBulkDelete asks in the shared ConfirmDialog first */
+                    <IconButton icon={<Icons.delete className="h-3.5 w-3.5" aria-hidden="true" />} label={t('exportsList.bulk.delete', 'Delete')} onClick={() => void handleBulkDelete(rows.map((r) => r.id))} busy={bulkDelete.isPending} />
                   )}
                 />
               )}

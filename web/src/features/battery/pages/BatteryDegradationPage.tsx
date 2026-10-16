@@ -13,7 +13,7 @@ import { capacityEvidence, observationEvidence, driveDropEvidence, predictionInt
 import {
   GlassPanel, Badge, DataTable, Text, Caption, HelpTooltip, type Column,
 } from '@/components/ui';
-import { MetricBar, DataFreshnessAuto } from '@/components/data-display';
+import { MetricBar, FreshnessDotAuto } from '@/components/data-display';
 import {
   LinearGauge, ChartLegend, ChartTooltip, EmbeddedChart, renderAnnotationLines,
   chartGrid, axisTickSm,
@@ -351,7 +351,7 @@ export default function BatteryDegradationPage() {
       metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           {/* Battery health analytics derive from a daily cagg; force amber after 24h. */}
-          <DataFreshnessAuto query={healthQuery} forceStaleAfterMs={24 * 60 * 60 * 1000} />
+          <FreshnessDotAuto query={healthQuery} forceStaleAfterMs={24 * 60 * 60 * 1000} />
         </div>
       }
     >

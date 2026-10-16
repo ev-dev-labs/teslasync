@@ -21,7 +21,7 @@
  * the `{ precision: 1 }` override, and the null-placeholder path are all exact and
  * inspectable. `react-i18next` is echo-mocked (returns the English fallback);
  * `useSettings` / `useTimezone` come from the global stub in src/test-setup.ts.
- * `matchMedia` is polyfilled because `<DataFreshness>` reads it via
+ * `matchMedia` is polyfilled because `<FreshnessDot>` reads it via
  * `useMotionPreference`.
  *
  * Facets covered:
@@ -88,7 +88,7 @@ const units = vi.hoisted(() => ({
 }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => units }));
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshness>) reads it.
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,
@@ -121,7 +121,7 @@ const GREEN = '#10b981';
 const AMBER = '#f59e0b';
 const RED = '#ef4444';
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

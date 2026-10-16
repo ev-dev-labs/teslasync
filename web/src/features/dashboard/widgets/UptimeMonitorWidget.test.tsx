@@ -40,7 +40,7 @@
  * `@/api/hooks/useAdmin` is mocked so the network is never touched and every
  * query state is driven deterministically. `react-i18next` is stubbed with a
  * passthrough `t(key, default)` so assertions read the English defaults. The
- * shared WidgetShell / DataFreshness / Badge / EmptyState primitives all run for
+ * shared WidgetShell / FreshnessDot / Badge / EmptyState primitives all run for
  * real, so the assertions exercise the true rendered DOM. `<MemoryRouter>` wraps
  * every render because the error branch's <QueryError> reaches for react-router.
  */
@@ -50,7 +50,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { SystemHealth, SystemHealthComponent } from '@/types/admin';
 import UptimeMonitorWidget from './UptimeMonitorWidget';
 
-// jsdom lacks matchMedia; DataFreshness → useMotionPreference (framer-motion's
+// jsdom lacks matchMedia; FreshnessDot → useMotionPreference (framer-motion's
 // useReducedMotion) reads it during render. Install a benign stub before any
 // component mounts.
 vi.hoisted(() => {

@@ -35,6 +35,7 @@ export default function NotificationStatsWidget({ size }: WidgetProps) {
       // renders an em-dash rather than "NaNm ago".
       if (Number.isNaN(ms)) return formatDateTime(isoStr);
       const diffMin = Math.floor((Date.now() - ms) / 60_000);
+      // relative-time: when the notification was sent
       if (diffMin < 1) return t('widget.notificationStats.justNow', 'Just now');
       if (diffMin < 60)
         return t('widget.notificationStats.minutesAgo', '{{minutes}}m ago', { minutes: fmtInt(diffMin) });

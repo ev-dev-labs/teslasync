@@ -39,7 +39,7 @@
  * 0×0 in jsdom) with prop-recording stubs so the derived rows / axes / formatters
  * are observable; `./shared` is replaced with the REAL `WidgetChartSummary`
  * (imported straight from its file so the leaflet-laden barrel never loads);
- * the real `WidgetShell` + `DataFreshness` are exercised with their display
+ * the real `WidgetShell` + `FreshnessDot` are exercised with their display
  * hooks stubbed; `react-i18next` echoes each `t(key, fallback)` fallback; and a
  * `<MemoryRouter>` wraps every render because `EmptyState` reaches for `<Link>`.
  */
@@ -101,7 +101,7 @@ vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: { temperature: unitState.temperature } }),
 }));
 
-// Date + motion display hooks — stubbed so DataFreshness renders without a
+// Date + motion display hooks — stubbed so FreshnessDot renders without a
 // Settings provider. `formatDateTime` returns a recognizable marker so the
 // axis / tooltip formatter wiring is assertable.
 vi.mock('@/hooks/useDateFormat', () => ({

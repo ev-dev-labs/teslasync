@@ -1,3 +1,4 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, Columns3, RotateCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -167,23 +168,7 @@ export function DataTableColumnMenu({
       {trigger ? (
         trigger(() => setOpen((v) => !v))
       ) : (
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          aria-label={triggerLabel}
-          className={cn(
-            'inline-flex min-h-11 items-center gap-2 rounded-shape-sm px-3 py-2 md:min-h-9',
-            'border border-[var(--control-border)] bg-[var(--control-bg)]',
-            'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]',
-            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
-            'transition-colors duration-fast ease-standard motion-reduce:transition-none',
-          )}
-        >
-          <Icon icon={Columns3} size="sm" />
-          <Text variant="bodySm">{t('table.columns.button', 'Columns')}</Text>
-        </button>
+        <IconButton icon={<Icon icon={Columns3} size="sm" />} label={t('table.columns.button', 'Columns')} onClick={() => setOpen((v) => !v)} aria-label={triggerLabel} aria-expanded={open} aria-haspopup="menu" />
       )}
 
       {open && (

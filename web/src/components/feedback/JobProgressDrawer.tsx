@@ -316,6 +316,7 @@ function JobRow({ job }: { job: ExportJobSummary }) {
         )}
       </div>
       {job.status === 'ready' && (
+        /* flow-cta: the finished export is this drawer’s result */
         <a
           href={exportDownloadUrl(job.id)}
           target="_blank"

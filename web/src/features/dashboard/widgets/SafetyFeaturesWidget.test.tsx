@@ -27,8 +27,8 @@
  *     widget calls `useTranslation('dashboard')`, so the stub ignores the
  *     namespace argument.
  *   - The global test-setup already mocks `useSettings` (km / °C) and
- *     `useTimezone` (UTC), which the transitive <DataFreshness> header needs.
- *   - `matchMedia` is stubbed before any import runs because <DataFreshness>'s
+ *     `useTimezone` (UTC), which the transitive <FreshnessDot> header needs.
+ *   - `matchMedia` is stubbed before any import runs because <FreshnessDot>'s
  *     `useMotionPreference` (rendered transitively by <WidgetShell>) touches it
  *     on first paint and jsdom does not provide it.
  *   - Renders are wrapped in <MemoryRouter> because <QueryError> (shown on the
@@ -43,7 +43,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
-// jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference reads it on
+// jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference reads it on
 // first paint. Install a no-op (reduced-motion = false) BEFORE any import.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

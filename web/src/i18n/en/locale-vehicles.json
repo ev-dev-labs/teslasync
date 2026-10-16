@@ -2397,8 +2397,6 @@
       "minutes": "{{count}}m ago",
       "seconds": "{{count}}s ago"
     },
-    "noData": "No recent data",
-    "offline": "Offline",
     "seconds": "{{s}}s ago"
   },
   "fsm": {

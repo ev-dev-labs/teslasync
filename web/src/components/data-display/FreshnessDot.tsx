@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 
 /**
- * `<DataFreshness>` — query-result-driven freshness indicator.
- *
- * Renders a tiny status dot + icon + relative time string ("3m ago",
- * "updating…", "error") that surfaces the health of a data fetch. Designed
- * to live inside a widget header or page header, **not** next to the value
- * itself. For per-datum freshness (timestamp of a specific reading), use
- * `<FreshnessIndicator>` instead.
+ * `<FreshnessDot>` — the one freshness indicator: an icon-only state dot
+ * that is also the refresh action. Age, status and source live in its
+ * tooltip and accessible name (hover and focus), never as visible text.
+ * Designed for widget, card, table and page headers, clustered with the
+ * other icon actions at the right.
  *
  * Four states (mapped from TanStack Query):
  * - `fresh` — `dataUpdatedAt > 0`, no fetch in flight, data not stale
@@ -23,11 +19,11 @@ import { IconButton } from '@/components/ui/IconButton';
  * - `stale` — `isStale === true` (TanStack Query past `staleTime`)
  * - `error` — `isError === true`
  *
- * For most callers, prefer `<DataFreshnessAuto query={query} />` which takes
+ * For most callers, prefer `<FreshnessDotAuto query={query} />` which takes
  * the entire `useQuery()` result and wires every prop in one line.
 
  */
-export interface DataFreshnessProps {
+export interface FreshnessDotProps {
   /** When the data was last successfully fetched (ms timestamp or null) */
   updatedAt: number | null;
   /** Is TanStack Query currently fetching? */
@@ -38,10 +34,6 @@ export interface DataFreshnessProps {
   isError: boolean;
   /** Manual refresh callback */
   onRefresh?: () => void;
-  /** Compact mode (condensed icon, no text) for small widgets */
-  compact?: boolean;
-  /** Dashboard widget header: a single freshness dot with optional age and a separate refresh action. */
-  variant?: 'chip' | 'widget';
   /** Optional data-source label shown in the hover and accessible detail. */
   source?: string;
   /** Force stale once the successful update is older than this duration. */
@@ -67,26 +59,10 @@ export const FRESHNESS_COLORS = {
 } as const;
 
 const STATUS_CONFIG = {
-  fresh: {
-    icon: Wifi,
-    color: FRESHNESS_COLORS.fresh.text,
-    dotColor: FRESHNESS_COLORS.fresh.dot,
-  },
-  fetching: {
-    icon: RefreshCw,
-    color: FRESHNESS_COLORS.fetching.text,
-    dotColor: FRESHNESS_COLORS.fetching.dot,
-  },
-  stale: {
-    icon: Wifi,
-    color: FRESHNESS_COLORS.stale.text,
-    dotColor: FRESHNESS_COLORS.stale.dot,
-  },
-  error: {
-    icon: WifiOff,
-    color: FRESHNESS_COLORS.error.text,
-    dotColor: FRESHNESS_COLORS.error.dot,
-  },
+  fresh: { dotColor: FRESHNESS_COLORS.fresh.dot },
+  fetching: { dotColor: FRESHNESS_COLORS.fetching.dot },
+  stale: { dotColor: FRESHNESS_COLORS.stale.dot },
+  error: { dotColor: FRESHNESS_COLORS.error.dot },
 } as const;
 
 const STATUS_LABEL = {
@@ -131,7 +107,8 @@ function formatRelativeTime(
 ): string {
   const seconds = Math.floor((Date.now() - ms) / 1000);
   // Hold a stable "just now" for the whole first minute rather than ticking
-  // 5s → 6s → 7s every second, which is visually distracting in headers.
+  // 5s → 6s → 7s every second.
+  // relative-time: the dot's age, shown only in its tooltip and accessible name
   if (seconds < 60) return t('freshness.justNow', 'just now');
   if (seconds < 3600)
     return t('freshness.minutes', '{{m}}m ago', {
@@ -150,19 +127,17 @@ function formatRelativeTime(
   });
 }
 
-export function DataFreshness({
+export function FreshnessDot({
   updatedAt,
   isFetching,
   isStale,
   isError,
   onRefresh,
-  compact = false,
-  variant = 'chip',
   source,
   forceStaleAfterMs,
   refreshIntervalMs,
   manual = false,
-}: DataFreshnessProps) {
+}: FreshnessDotProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
   const { formatTime } = useDateFormat();
@@ -193,32 +168,18 @@ export function DataFreshness({
     const hadPreviousValue = previousUpdatedAt.current != null;
     const timestampAdvanced = hadPreviousValue && updatedAt != null && previousUpdatedAt.current !== updatedAt;
     previousUpdatedAt.current = updatedAt;
-    if (variant !== 'widget' || status !== 'fresh' || !timestampAdvanced) {
+    if (status !== 'fresh' || !timestampAdvanced) {
       setPingNewData(false);
       return;
     }
     setPingNewData(true);
     const timeout = setTimeout(() => setPingNewData(false), 1600);
     return () => clearTimeout(timeout);
-  }, [status, updatedAt, variant]);
+  }, [status, updatedAt]);
 
   const cfg = STATUS_CONFIG[status];
-  const Icon = cfg.icon;
-
-  // Retain the background-refetch identity without decorative dot loops.
-  const isBackgroundRefetch = isFetching && updatedAt != null;
 
   const ageLabel = updatedAt ? formatRelativeTime(updatedAt, t) : '';
-  const relativeTime =
-    updatedAt && !isFetching
-      ? status === 'stale'
-        ? t('freshness.staleWithAge', 'Stale · {{age}}', { age: ageLabel })
-        : ageLabel
-      : isFetching
-        ? t('freshness.updating', 'updating…')
-        : isError
-          ? t('freshness.error', 'error')
-          : '';
 
   const handleClick = useCallback(() => {
     if (onRefresh && !isFetching) onRefresh();
@@ -235,7 +196,6 @@ export function DataFreshness({
   const sourceTitle = source
     ? t('freshness.source', 'Source: {{source}}', { source })
     : null;
-  const title = [updateTitle, sourceTitle].filter(Boolean).join(' · ');
   const statusLabel = t(STATUS_LABEL[status].key, STATUS_LABEL[status].fallback);
   const stateLabel = ageLabel
     ? t('freshness.ariaLabel', '{{status}} · {{age}}', {
@@ -249,112 +209,38 @@ export function DataFreshness({
   const ariaLabel = onRefresh
     ? t('freshness.refreshState', 'Refresh data · {{state}}', { state: accessibleState })
     : t('a11y.dataFreshness', 'Data freshness: {{state}}', { state: accessibleState });
-  const rootClassName = cn(
-    'inline-flex min-w-0 items-center border-0 bg-transparent leading-normal transition-colors duration-fast ease-standard motion-reduce:transition-none',
-    compact
-      ? 'gap-1 text-xs'
-      : 'gap-1.5 py-1.5 text-xs',
-    cfg.color,
-    onRefresh && !isFetching && 'cursor-pointer hover:text-[var(--text-secondary)]',
-  );
-
-  const content = (
-    <>
-      <span
-        className={cn('rounded-full h-1.5 w-1.5 shrink-0', cfg.dotColor)}
-        aria-hidden="true"
-      />
-
-      <Icon
-        className={cn(
-          'h-3 w-3 shrink-0',
-          status === 'fetching' && !reduce && 'animate-spin',
-        )}
-        aria-hidden="true"
-      />
-      {/* Reserve a stable width so the label changing (e.g. "just now" →
-          "updating…" → "5m ago") never reflows neighbouring header items. */}
-      {!compact && (
-        <span className="inline-block min-w-freshness-age break-words text-start tabular-nums">
-          {relativeTime}
+  return (
+    <IconButton
+      icon={(
+        <span
+          className={cn(
+            'relative h-2.5 w-2.5 shrink-0 rounded-full',
+            status === 'stale'
+              ? 'border border-[var(--semantic-warning)] bg-transparent'
+              : cfg.dotColor,
+            status === 'error' && !reduce && 'animate-[pulse_2s_ease-in-out_infinite]',
+            status === 'fetching' && !reduce && 'animate-pulse',
+          )}
+          aria-hidden="true"
+        >
+          {pingNewData && status === 'fresh' && !reduce && (
+            <span className={cn('absolute inset-0 animate-ping [animation-iteration-count:2] rounded-full opacity-60', cfg.dotColor)} />
+          )}
         </span>
       )}
-    </>
-  );
-
-  if (variant === 'widget') {
-    return (
-      <IconButton
-        icon={(
-          <span
-            className={cn(
-              'relative h-2.5 w-2.5 shrink-0 rounded-full',
-              status === 'stale'
-                ? 'border border-[var(--semantic-warning)] bg-transparent'
-                : cfg.dotColor,
-              status === 'error' && !reduce && 'animate-[pulse_2s_ease-in-out_infinite]',
-              status === 'fetching' && !reduce && 'animate-pulse',
-            )}
-            aria-hidden="true"
-          >
-            {pingNewData && status === 'fresh' && !reduce && (
-              <span className={cn('absolute inset-0 animate-ping [animation-iteration-count:2] rounded-full opacity-60', cfg.dotColor)} />
-            )}
-          </span>
-        )}
-        label={ariaLabel}
-        aria-label={ariaLabel}
-        variant="ghost"
-        onClick={onRefresh ? handleClick : undefined}
-        busy={isFetching}
-        disabled={!onRefresh || isFetching}
-        className="!h-7 !w-7 !min-h-0 !min-w-0 !p-0"
-      />
-    );
-  }
-
-  if (onRefresh) {
-    return (
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className={cn(
-          rootClassName,
-          '!min-h-11 !min-w-11 md:!min-h-0 md:!min-w-0',
-          compact ? '!h-auto !p-0' : '!h-auto !px-0 !py-1.5',
-          'hover:!bg-transparent disabled:!bg-transparent disabled:!opacity-100',
-        )}
-        onClick={handleClick}
-        disabled={isFetching}
-        title={title}
-        aria-live="polite"
-        aria-atomic="true"
-        aria-label={ariaLabel}
-        data-bg-refetch={isBackgroundRefetch ? 'true' : undefined}
-      >
-        {content}
-      </Button>
-    );
-  }
-
-  return (
-    <span
-      className={rootClassName}
-      title={title}
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
+      label={[ariaLabel, updateTitle].join(' · ')}
       aria-label={ariaLabel}
-      data-bg-refetch={isBackgroundRefetch ? 'true' : undefined}
-    >
-      {content}
-    </span>
+      variant="ghost"
+      onClick={onRefresh ? handleClick : undefined}
+      busy={isFetching}
+      disabled={!onRefresh || isFetching}
+      className="!h-7 !w-7 !min-h-0 !min-w-0 !p-0"
+    />
   );
 }
 
 /**
- * Subset of `UseQueryResult` that `<DataFreshnessAuto>` consumes. Kept loose
+ * Subset of `UseQueryResult` that `<FreshnessDotAuto>` consumes. Kept loose
  * (`unknown` data, `unknown` error) so the wrapper accepts any TanStack Query
  * result without leaking generics into call sites.
  */
@@ -363,12 +249,9 @@ export type FreshnessQuery = Pick<
   'isFetching' | 'isStale' | 'isError' | 'dataUpdatedAt' | 'refetch'
 >;
 
-export interface DataFreshnessAutoProps {
+export interface FreshnessDotAutoProps {
   /** Pass the entire TanStack Query result (the object returned by `useQuery`). */
   query: FreshnessQuery;
-  /** Compact mode (icon-only, no relative time text). */
-  compact?: boolean;
-  variant?: DataFreshnessProps['variant'];
   /**
  * Default `true`: clicking the indicator triggers `query.refetch()`. Set
  * `false` for read-only displays where a manual refresh would be confusing
@@ -392,37 +275,33 @@ export interface DataFreshnessAutoProps {
 }
 
 /**
- * `<DataFreshnessAuto>` — convenience wrapper that derives every
- * `<DataFreshness>` prop from a TanStack Query result. Collapses the
+ * `<FreshnessDotAuto>` — convenience wrapper that derives every
+ * `<FreshnessDot>` prop from a TanStack Query result. Collapses the
  * widget/page boilerplate from four props to one:
  *
  * ```tsx
  * const q = useChargingHistory(...)
- * <DataFreshnessAuto query={q} compact />
+ * <FreshnessDotAuto query={q} compact />
  * ```
  *
- * Preferred over `<DataFreshness>` for any caller that already has a
+ * Preferred over `<FreshnessDot>` for any caller that already has a
  * `useQuery()` result handy. .
  */
-export function DataFreshnessAuto({
+export function FreshnessDotAuto({
   query,
-  compact,
-  variant,
   refetchable = true,
   forceStaleAfterMs,
   source,
   refreshIntervalMs,
   manual,
-}: DataFreshnessAutoProps) {
+}: FreshnessDotAutoProps) {
   return (
-    <DataFreshness
+    <FreshnessDot
       updatedAt={query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null}
       isFetching={query.isFetching}
       isStale={query.isStale}
       isError={query.isError}
       onRefresh={refetchable ? () => { void query.refetch(); } : undefined}
-      compact={compact}
-      variant={variant}
       source={source}
       forceStaleAfterMs={forceStaleAfterMs}
       refreshIntervalMs={refreshIntervalMs}

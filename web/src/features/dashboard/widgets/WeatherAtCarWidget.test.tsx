@@ -31,7 +31,7 @@
  * Network is never touched — `useVehicles` / `useVehicleState` are mocked and
  * driven per-test, `useUnits` is mocked so the temperature preference can be
  * flipped, and `react-i18next` is stubbed to echo fallback strings. The real
- * `WidgetShell` / `DataFreshness` / `QueryError` / `EmptyState` render, so those
+ * `WidgetShell` / `FreshnessDot` / `QueryError` / `EmptyState` render, so those
  * surfaces are exercised for real. The real `convertTempFromSI` / `fmtInt`
  * (unmocked) prove the conversion + rounding maths end-to-end.
  */

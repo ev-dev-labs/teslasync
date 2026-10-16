@@ -82,6 +82,7 @@ function formatTimestamp(iso: string | undefined, t: (k: string, fb: string) => 
     if (isNaN(date.getTime())) return '—';
     const now = Date.now();
     const diffMin = Math.round((now - date.getTime()) / 60_000);
+    // relative-time: reading age, shown only in the caption tooltip
     if (diffMin < 1) return t('widget.tireJustNow', 'Just now');
     if (diffMin < 60) return `${diffMin}m ${t('widget.ago', 'ago')}`;
     const diffHrs = Math.round(diffMin / 60);
@@ -194,8 +195,8 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
                 : hasDanger || hasWarning ? t('widget.tireWarning', 'Check pressure') : t('hero.unknownStatus', 'Unknown')}
             </Badge>
             {hasUnknown && (hasWarning || hasDanger) && <Text variant="caption">{t('hero.unknownStatus', 'Unknown')}</Text>}
-            <Text variant="caption">
-              {pressureUnit} · {formatTimestamp(latestReading, t)}
+            <Text variant="caption" title={formatTimestamp(latestReading, t)}>
+              {pressureUnit}
             </Text>
           </div>
         </div>

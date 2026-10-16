@@ -36,7 +36,7 @@
  * SI→display derivation is asserted through visible values. `useUnits` is mocked
  * so the distance preference is deterministic. `react-i18next` echoes each
  * `t(key, fallback)` fallback (interpolating `{{var}}`) so assertions read
- * against English copy. `DataFreshness`'s display hooks are stubbed so the
+ * against English copy. `FreshnessDot`'s display hooks are stubbed so the
  * freshness/refresh chip renders without a Settings provider. A `<MemoryRouter>`
  * wraps every render because `EmptyState` reaches for `<Link>`.
  */
@@ -127,7 +127,7 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-// DataFreshness display hooks — stubbed so the freshness chip renders without a
+// FreshnessDot display hooks — stubbed so the freshness chip renders without a
 // Settings/QueryClient provider.
 vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
   // wrapped-real-hook: keep every real formatter, override only what this file controls.

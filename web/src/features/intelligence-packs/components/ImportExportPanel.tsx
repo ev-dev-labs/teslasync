@@ -9,7 +9,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FileJson, Upload } from 'lucide-react';
-import { Button, Input, Text, Textarea } from '@/components/ui';
+import { Button, Input, Text, Textarea, IconButton } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { FormSection } from '@/components/forms';
 import { useInstalledPacks } from '../hooks/useInstalledPacks';
@@ -122,9 +122,7 @@ export function ImportExportPanel() {
                     <FileJson className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
                     <span className="truncate">{r.envelope.manifest.name} · v{r.envelope.manifest.version}</span>
                   </span>
-                  <Button variant="ghost" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={() => downloadEnvelope(r.envelope)}>
-                    {t('intelPacks.export.download', 'Export')}
-                  </Button>
+                  <IconButton icon={<Download className="h-3.5 w-3.5" />} label={t('intelPacks.export.download', 'Export')} onClick={() => downloadEnvelope(r.envelope)} />
                 </li>
               ))}
             </ul>

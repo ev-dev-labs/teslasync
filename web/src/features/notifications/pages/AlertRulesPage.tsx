@@ -17,8 +17,7 @@ import {
   ConfirmDialog,
   useSortToggle,
   type Column,
-  type MobileDataTablePresentation,
-} from '@/components/ui';
+  type MobileDataTablePresentation, IconButton } from '@/components/ui';
 import { OperationalBrief, DataProvenanceBadge, MetricBar, SeverityBadge, type StatMetric } from '@/components/data-display';
 import {
   PieChart,
@@ -325,16 +324,8 @@ export default function AlertRulesPage() {
           >
             {t('alertRules.bulk.disable', 'Disable')}
           </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-            wrapLabel
-            icon={<Icon icon={Trash2} />}
-            onClick={() => handleBulkDelete(ids)}
-          >
-            {t('alertRules.bulk.delete', 'Delete')}
-          </Button>
+          {/* confirm-step: handleBulkDelete asks in the shared ConfirmDialog first */}
+          <IconButton icon={<Icon icon={Trash2} />} label={t('alertRules.bulk.delete', 'Delete')} onClick={() => handleBulkDelete(ids)} />
         </>
       );
     },

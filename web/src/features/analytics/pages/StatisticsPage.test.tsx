@@ -1357,7 +1357,7 @@ describe('StatisticsPage', () => {
     renderPage();
     await screen.findByRole('region', { name: 'Statistics' });
 
-    // Both the toolbar <button> and the DataFreshness chip expose a "Refresh"
+    // Both the toolbar <button> and the FreshnessDot chip expose a "Refresh"
     // accessible name; target the real <button> element.
     const toolbarRefresh = screen
       .getAllByRole('button', { name: 'Refresh' })
@@ -1421,7 +1421,7 @@ describe('StatisticsPage', () => {
       }),
     ).toBeInTheDocument();
     // The toolbar exposes a labelled refresh <button> (distinct from the
-    // DataFreshness chip which also carries a "Refresh" accessible name).
+    // FreshnessDot chip which also carries a "Refresh" accessible name).
     expect(
       screen
         .getAllByRole('button', { name: 'Refresh' })

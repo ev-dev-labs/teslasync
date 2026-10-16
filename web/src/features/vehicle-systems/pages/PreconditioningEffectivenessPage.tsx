@@ -8,7 +8,7 @@ import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import { PageLayout } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 import { FadeIn } from '@/components/motion';
-import { Button, Icon } from '@/components/ui';
+import { Icon, IconButton } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -186,22 +186,10 @@ export default function PreconditioningEffectivenessPage() {
       busy={refreshing && vehicleId != null}
       secondaryActions={(
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            wrapLabel
-            className="min-h-11 md:min-h-9"
-            onClick={refreshAll}
-            disabled={vehicleId == null}
-            loading={refreshing && vehicleId != null}
-            icon={<Icon icon={RefreshCw} />}
-          >
-            {t(
+          <IconButton icon={<Icon icon={RefreshCw} />} label={t(
               'preconditioningEffectiveness.actions.refresh',
               'Refresh evidence',
-            )}
-          </Button>
+            )} onClick={refreshAll} busy={refreshing && vehicleId != null} disabled={vehicleId == null} />
         </div>
       )}
     >

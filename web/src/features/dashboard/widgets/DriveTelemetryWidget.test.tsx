@@ -112,7 +112,7 @@ vi.mock('@/components/charts', async (importOriginal) => {
   };
 });
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshness>) reads it.
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,
@@ -138,7 +138,7 @@ const mockDrives = vi.mocked(useDrives);
 const mockTelemetry = vi.mocked(useDriveTelemetry);
 const mockUnits = vi.mocked(useUnits);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

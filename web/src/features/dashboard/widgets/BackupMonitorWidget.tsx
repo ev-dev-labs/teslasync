@@ -79,6 +79,7 @@ export function fmtRelativeTime(iso: string | null, t: TranslateFn): string {
   if (Number.isNaN(d.getTime())) return '—';
   const diffMs = Date.now() - d.getTime();
   const mins = Math.floor(diffMs / 60_000);
+  // relative-time: when the last backup ran
   if (diffMs < 0 || mins < 1) return t('widget.backupMonitor.relativeNow', 'just now');
   if (mins < 60) return t('widget.backupMonitor.relativeMinutes', '{{count}}m ago', { count: mins });
   const hrs = Math.floor(mins / 60);

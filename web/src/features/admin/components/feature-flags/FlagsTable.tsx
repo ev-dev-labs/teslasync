@@ -13,12 +13,12 @@ import { VisuallyHidden } from '@/components/a11y';
 import { Pencil, Trash2 } from 'lucide-react';
 
 import {
-  Button,
   DataTable,
   Text,
   useSortToggle,
   type Column,
   type PaginationConfig,
+  IconButton,
 } from '@/components/ui';
 import type { FeatureFlagEntry } from '@/types/admin-diagnostics';
 import { TableSkeleton } from '@/components/feedback';
@@ -141,28 +141,13 @@ export function FlagsTable({
         visibleOnMobile: true,
         render: (row) => (
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
-              aria-label={t('admin.flags.actions.editFlag', 'Edit flag {{key}}', {
+            <IconButton icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />} label={t('admin.flags.actions.edit', 'Edit')} variant="secondary" onClick={() => onEdit(row)} aria-label={t('admin.flags.actions.editFlag', 'Edit flag {{key}}', {
                 key: row.key,
-              })}
-              onClick={() => onEdit(row)}
-            >
-              {t('admin.flags.actions.edit', 'Edit')}
-            </Button>
-            <Button
-              size="sm"
-              variant="danger"
-              icon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
-              aria-label={t('admin.flags.actions.deleteFlag', 'Delete flag {{key}}', {
+              })} />
+            {/* confirm-step: opens the delete-flag confirmation dialog */}
+            <IconButton icon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />} label={t('admin.flags.actions.delete', 'Delete')} onClick={() => onAskDelete(row)} aria-label={t('admin.flags.actions.deleteFlag', 'Delete flag {{key}}', {
                 key: row.key,
-              })}
-              onClick={() => onAskDelete(row)}
-            >
-              {t('admin.flags.actions.delete', 'Delete')}
-            </Button>
+              })} />
           </div>
         ),
       },

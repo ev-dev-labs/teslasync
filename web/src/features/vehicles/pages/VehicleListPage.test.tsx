@@ -193,7 +193,7 @@ const mockPinned = vi.mocked(usePinned);
 const mockTogglePin = vi.mocked(useTogglePin);
 const mockFleetWorkOrders = vi.mocked(useFleetWorkOrders);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

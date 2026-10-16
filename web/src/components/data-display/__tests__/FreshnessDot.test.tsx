@@ -2,11 +2,11 @@ import { act, render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
-  DataFreshness,
-  DataFreshnessAuto,
+  FreshnessDot,
+  FreshnessDotAuto,
   FRESHNESS_COLORS,
   type FreshnessQuery,
-} from '../DataFreshness'
+} from '../FreshnessDot'
 import {
   formatDate,
   formatDateTime,
@@ -30,7 +30,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-// `<DataFreshness>` consults useReducedMotion via
+// `<FreshnessDot>` consults useReducedMotion via
 // `useMotionPreference()`. We mock framer-motion's hook so individual tests
 // can drive both motion-allowed and reduced-motion code paths without
 // touching window.matchMedia (framer-motion v12 caches that at module load).
@@ -39,7 +39,7 @@ vi.mock('framer-motion', () => ({
   useReducedMotion: () => reducedMotionMock(),
 }))
 
-// `<DataFreshness>` reads locale + tz via `useDateFormat()` for its
+// `<FreshnessDot>` reads locale + tz via `useDateFormat()` for its
 // `title` attribute. Mock the hook so tests don't need a TanStack Query
 // provider or a Router (both required by `useSettings` + `useTimezone`).
 vi.mock('@/hooks/useDateFormat', () => ({
@@ -67,11 +67,11 @@ describe('FRESHNESS_COLORS', () => {
   })
 })
 
-describe('DataFreshness widget variant', () => {
+describe('FreshnessDot widget variant', () => {
   it('uses the freshness dot itself as the icon-only refresh action', () => {
     const onRefresh = vi.fn()
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now()}
         isFetching={false}
         isStale={false}
@@ -97,9 +97,9 @@ describe('DataFreshness widget variant', () => {
     const props = { updatedAt: Date.now(), isFetching: false, isStale: false, isError: false }
     const { unmount } = render(
       <>
-        <DataFreshness {...props} />
-        <DataFreshness {...props} />
-        <DataFreshness {...props} />
+        <FreshnessDot {...props} />
+        <FreshnessDot {...props} />
+        <FreshnessDot {...props} />
       </>,
     )
     expect(setIntervalSpy).toHaveBeenCalledTimes(1)
@@ -112,9 +112,9 @@ describe('DataFreshness widget variant', () => {
   it('pulses the widget dot twice when new data arrives', () => {
     vi.useFakeTimers()
     const props = { updatedAt: Date.now(), isFetching: false, isStale: false, isError: false, variant: 'widget' as const }
-    const { container, rerender } = render(<DataFreshness {...props} />)
+    const { container, rerender } = render(<FreshnessDot {...props} />)
     expect(container.querySelector('.animate-ping')).not.toBeInTheDocument()
-    rerender(<DataFreshness {...props} updatedAt={props.updatedAt + 1} />)
+    rerender(<FreshnessDot {...props} updatedAt={props.updatedAt + 1} />)
     expect(container.querySelector('.animate-ping')).toBeInTheDocument()
     expect(container.querySelector('.animate-ping')).toHaveClass('[animation-iteration-count:2]')
     act(() => vi.advanceTimersByTime(1600))
@@ -124,12 +124,12 @@ describe('DataFreshness widget variant', () => {
 
   it('uses an outlined warning ring for stale data and a slow pulse for errors', () => {
     const props = { updatedAt: Date.now(), isFetching: false, isStale: false, isError: false, variant: 'widget' as const }
-    const { container, rerender } = render(<DataFreshness {...props} isStale />)
+    const { container, rerender } = render(<FreshnessDot {...props} isStale />)
     expect(screen.getByRole('button').querySelector('span.rounded-full')).toHaveClass(
       'border-[var(--semantic-warning)]',
       'bg-transparent',
     )
-    rerender(<DataFreshness {...props} isError />)
+    rerender(<FreshnessDot {...props} isError />)
     expect(screen.getByRole('button').querySelector('span.rounded-full')).toHaveClass(
       'animate-[pulse_2s_ease-in-out_infinite]',
     )
@@ -137,11 +137,11 @@ describe('DataFreshness widget variant', () => {
   })
 })
 
-describe('DataFreshness age thresholds', () => {
+describe('FreshnessDot age thresholds', () => {
   it('marks automatically refreshed data stale at exactly two intervals', () => {
     const now = Date.now()
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={now - 2 * 60_000}
         isFetching={false}
         isStale={false}
@@ -155,7 +155,7 @@ describe('DataFreshness age thresholds', () => {
   it('uses the 15-minute manual freshness window when no polling cadence is supplied', () => {
     const now = Date.now()
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={now - 15 * 60_000}
         isFetching={false}
         isStale={false}
@@ -167,7 +167,7 @@ describe('DataFreshness age thresholds', () => {
   })
 })
 
-describe('DataFreshness', () => {
+describe('FreshnessDot', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-02T00:00:00Z'))
@@ -179,7 +179,7 @@ describe('DataFreshness', () => {
 
   it('renders the fresh state when data is recent and not fetching', () => {
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 2_000}
         isFetching={false}
         isStale={false}
@@ -198,7 +198,7 @@ describe('DataFreshness', () => {
 
   it('formats a 5-minute-old timestamp as "5m ago"', () => {
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 5 * 60_000}
         isFetching={false}
         isStale={false}
@@ -210,7 +210,7 @@ describe('DataFreshness', () => {
 
   it('formats a 3-hour-old timestamp as "3h ago"', () => {
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 3 * 3600 * 1000}
         isFetching={false}
         isStale={false}
@@ -222,7 +222,7 @@ describe('DataFreshness', () => {
 
   it('formats a 2-day-old timestamp as "2d ago"', () => {
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 2 * 86_400 * 1000}
         isFetching={false}
         isStale={false}
@@ -234,7 +234,7 @@ describe('DataFreshness', () => {
 
   it('formats a 3-week-old timestamp as "3w ago"', () => {
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 3 * 604_800 * 1000}
         isFetching={false}
         isStale={false}
@@ -246,7 +246,7 @@ describe('DataFreshness', () => {
 
   it('shows "updating…" while fetching', () => {
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 1000}
         isFetching
         isStale={false}
@@ -259,7 +259,7 @@ describe('DataFreshness', () => {
 
   it('shows "error" with red dot when isError', () => {
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={null}
         isFetching={false}
         isStale={false}
@@ -272,7 +272,7 @@ describe('DataFreshness', () => {
 
   it('flags stale state with amber dot', () => {
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 60_000}
         isFetching={false}
         isStale
@@ -284,7 +284,7 @@ describe('DataFreshness', () => {
 
   it('hides relative time text in compact mode', () => {
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 1000}
         isFetching={false}
         isStale={false}
@@ -299,7 +299,7 @@ describe('DataFreshness', () => {
   it('calls onRefresh when clicked and not fetching', () => {
     const onRefresh = vi.fn()
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 1000}
         isFetching={false}
         isStale={false}
@@ -317,7 +317,7 @@ describe('DataFreshness', () => {
   it('does not call onRefresh while fetching', () => {
     const onRefresh = vi.fn()
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 1000}
         isFetching
         isStale={false}
@@ -334,7 +334,7 @@ describe('DataFreshness', () => {
 
   it.each([false, true])('keeps mobile refresh targets with compact=%s', (compact) => {
     const { rerender } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 60_000}
         isFetching={false}
         isStale
@@ -354,7 +354,7 @@ describe('DataFreshness', () => {
     expect(refresh).toHaveClass(...(compact ? ['!p-0'] : ['!px-0', '!py-1.5']))
 
     rerender(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 60_000}
         isFetching
         isStale
@@ -369,7 +369,7 @@ describe('DataFreshness', () => {
 
   it.each([false, true])('does not enlarge read-only status with compact=%s', (compact) => {
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 1000}
         isFetching={false}
         isStale={false}
@@ -386,7 +386,7 @@ describe('DataFreshness', () => {
     const user = userEvent.setup()
     const onRefresh = vi.fn()
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 1000}
         isFetching={false}
         isStale={false}
@@ -403,7 +403,7 @@ describe('DataFreshness', () => {
 
   it('spells out stale status instead of relying on the amber dot alone', () => {
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 5 * 60_000}
         isFetching={false}
         isStale
@@ -415,7 +415,7 @@ describe('DataFreshness', () => {
 
   it('includes source provenance in the hover and accessible detail', () => {
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 1000}
         isFetching={false}
         isStale={false}
@@ -432,7 +432,7 @@ describe('DataFreshness', () => {
 
   it('retains the last successful age and source when a refresh fails', () => {
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 5 * 60_000}
         isFetching={false}
         isStale
@@ -452,7 +452,7 @@ describe('DataFreshness', () => {
   it('keeps error precedence while fetching and the native refresh disabled', () => {
     const onRefresh = vi.fn()
     render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 60_000}
         isFetching
         isStale
@@ -473,7 +473,7 @@ describe('DataFreshness', () => {
   it('identifies background refetch without decorative dot loops', () => {
     reducedMotionMock.mockReturnValue(false)
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 30_000}
         isFetching
         isStale={false}
@@ -490,7 +490,7 @@ describe('DataFreshness', () => {
   it('does not pulse during the initial fetch (no prior data)', () => {
     reducedMotionMock.mockReturnValue(false)
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={null}
         isFetching
         isStale={false}
@@ -504,7 +504,7 @@ describe('DataFreshness', () => {
   it('suppresses the pulse when prefers-reduced-motion is set', () => {
     reducedMotionMock.mockReturnValue(true)
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 30_000}
         isFetching
         isStale={false}
@@ -520,7 +520,7 @@ describe('DataFreshness', () => {
   it('falls back to an "Updating…" tooltip when reduced-motion + fetching', () => {
     reducedMotionMock.mockReturnValue(true)
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 30_000}
         isFetching
         isStale={false}
@@ -534,7 +534,7 @@ describe('DataFreshness', () => {
   it('keeps the standard "Last updated" tooltip when reduced-motion but not fetching', () => {
     reducedMotionMock.mockReturnValue(true)
     const { container } = render(
-      <DataFreshness
+      <FreshnessDot
         updatedAt={Date.now() - 30_000}
         isFetching={false}
         isStale={false}
@@ -557,7 +557,7 @@ function makeQuery(overrides: Partial<FreshnessQuery> = {}): FreshnessQuery {
   } as FreshnessQuery
 }
 
-describe('DataFreshnessAuto', () => {
+describe('FreshnessDotAuto', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-02T00:00:00Z'))
@@ -568,14 +568,14 @@ describe('DataFreshnessAuto', () => {
   })
 
   it('renders fresh state from a healthy query', () => {
-    const { container } = render(<DataFreshnessAuto query={makeQuery()} />)
+    const { container } = render(<FreshnessDotAuto query={makeQuery()} />)
     expect(container.getElementsByClassName(FRESHNESS_COLORS.fresh.dot)[0]).toBeInTheDocument()
   })
 
   it('passes refetch through as the click handler by default', () => {
     const refetch = vi.fn().mockResolvedValue(undefined)
     render(
-      <DataFreshnessAuto query={makeQuery({ refetch: refetch as unknown as FreshnessQuery['refetch'] })} />,
+      <FreshnessDotAuto query={makeQuery({ refetch: refetch as unknown as FreshnessQuery['refetch'] })} />,
     )
     fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }))
     expect(refetch).toHaveBeenCalledTimes(1)
@@ -583,7 +583,7 @@ describe('DataFreshnessAuto', () => {
 
   it('omits the click handler when refetchable is false', () => {
     const { container } = render(
-      <DataFreshnessAuto query={makeQuery()} refetchable={false} />,
+      <FreshnessDotAuto query={makeQuery()} refetchable={false} />,
     )
     expect(container.querySelector('button')).toBeNull()
   })
@@ -594,7 +594,7 @@ describe('DataFreshnessAuto', () => {
       isStale: false,
     })
     const { container } = render(
-      <DataFreshnessAuto query={query} forceStaleAfterMs={5 * 60_000} />,
+      <FreshnessDotAuto query={query} forceStaleAfterMs={5 * 60_000} />,
     )
     expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
   })
@@ -602,7 +602,7 @@ describe('DataFreshnessAuto', () => {
   it('does not force stale when forceStaleAfterMs is below the data age', () => {
     const query = makeQuery({ dataUpdatedAt: Date.now() - 1000 })
     const { container } = render(
-      <DataFreshnessAuto query={query} forceStaleAfterMs={5 * 60_000} />,
+      <FreshnessDotAuto query={query} forceStaleAfterMs={5 * 60_000} />,
     )
     expect(container.getElementsByClassName(FRESHNESS_COLORS.fresh.dot)[0]).toBeInTheDocument()
   })
@@ -610,7 +610,7 @@ describe('DataFreshnessAuto', () => {
   it('transitions to forced stale as the successful update ages', () => {
     const query = makeQuery({ dataUpdatedAt: Date.now() })
     const { container } = render(
-      <DataFreshnessAuto query={query} forceStaleAfterMs={60_000} />,
+      <FreshnessDotAuto query={query} forceStaleAfterMs={60_000} />,
     )
     expect(container.getElementsByClassName(FRESHNESS_COLORS.fresh.dot)[0]).toBeInTheDocument()
 
@@ -624,7 +624,7 @@ describe('DataFreshnessAuto', () => {
 
   it('treats dataUpdatedAt=0 (never fetched) as null updatedAt', () => {
     const query = makeQuery({ dataUpdatedAt: 0 })
-    render(<DataFreshnessAuto query={query} />)
+    render(<FreshnessDotAuto query={query} />)
     // No relative-time text should appear, but the dot still renders
     expect(screen.queryByText(/ago/)).not.toBeInTheDocument()
     expect(screen.queryByText('just now')).not.toBeInTheDocument()
@@ -632,7 +632,7 @@ describe('DataFreshnessAuto', () => {
 
   it('shows error state when query.isError is true', () => {
     const { container } = render(
-      <DataFreshnessAuto query={makeQuery({ isError: true })} />,
+      <FreshnessDotAuto query={makeQuery({ isError: true })} />,
     )
     expect(container.getElementsByClassName(FRESHNESS_COLORS.error.dot)[0]).toBeInTheDocument()
   })

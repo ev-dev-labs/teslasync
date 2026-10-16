@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, HelperText } from '@/components/ui';
+import { Badge, HelperText, IconButton } from '@/components/ui';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { Timeline } from '@/components/data-display';
 import { useDataState } from '@/hooks/useDataState';
@@ -86,9 +86,7 @@ export function AuditTrailPanel({ refreshToken }: AuditTrailPanelProps) {
     <LayoutCard title={t('resaleVault.audit.title', 'Audit trail')}
       actions={
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={() => void load()} icon={<RefreshCw className="h-3.5 w-3.5" />}>
-            {t('resaleVault.audit.refresh', 'Refresh')}
-          </Button>
+          <IconButton icon={<RefreshCw className="h-3.5 w-3.5" />} label={t('resaleVault.audit.refresh', 'Refresh')} onClick={() => void load()} />
           <History className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
         </div>}
     >

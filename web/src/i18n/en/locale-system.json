@@ -2891,8 +2891,6 @@
     }
   },
   "freshness": {
-    "noData": "No recent data",
-    "offline": "Offline",
     "seconds": "{{s}}s ago"
   },
   "fsm": {
@@ -4002,7 +4000,6 @@
     },
     "reauthenticate": "Re-authenticate",
     "refreshAria": "Refresh (R)",
-    "refreshHint": "Press r to refresh",
     "releaseNotes": "Release notes",
     "reliabilityHistory": "Reliability & history",
     "resourcesCopy": {

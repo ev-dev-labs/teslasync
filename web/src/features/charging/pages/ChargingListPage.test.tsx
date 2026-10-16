@@ -264,7 +264,7 @@ const OPTIMIZER: ChargingOptimizerData = {
   weekly_heatmap: [],
 };
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

@@ -212,6 +212,7 @@ function SectionRowItem({ row, onRequestReset, busy }: SectionRowItemProps) {
           {row.description}
         </HelperText>
       </div>
+      {/* flow-cta: the reset flow’s call to action; onRequestReset confirms */}
       <Button
         variant="ghost"
         wrapLabel

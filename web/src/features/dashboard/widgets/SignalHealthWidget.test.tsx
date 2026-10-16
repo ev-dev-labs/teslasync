@@ -38,7 +38,7 @@
  * i18n is stubbed to echo the English fallback (interpolating {{count}}) so
  * every copy assertion is real; `Date.now` is pinned so relative-time output is
  * deterministic; and the three telemetry hooks + `useVehicles` are mocked so no
- * network is ever touched. The real <WidgetShell> / <DataFreshness> /
+ * network is ever touched. The real <WidgetShell> / <FreshnessDot> /
  * <StatCard> / <EmptyState> render so chrome + a11y are exercised end-to-end.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

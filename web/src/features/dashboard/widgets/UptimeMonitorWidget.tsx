@@ -140,7 +140,7 @@ export default function UptimeMonitorWidget({ size }: WidgetProps) {
   // refetches on an interval, so once data is on screen a transient
   // background-refetch failure must not blank out otherwise-valid status — it is
   // surfaced through the freshness indicator's error state instead (WidgetShell
-  // forwards `isError` to <DataFreshness>).
+  // forwards `isError` to <FreshnessDot>).
   const blockingError = sourceTrust.fatalError?.message;
 
   return (

@@ -35,7 +35,7 @@
  * is observable without rendering the heavy animated SVG. `buildTwinState` runs
  * for real so the security→badge mapping is exercised end to end. `react-i18next`
  * echoes each `t(key, fallback)` fallback so assertions read against English copy.
- * `DataFreshness`'s display hooks are stubbed so the freshness/refresh chip
+ * `FreshnessDot`'s display hooks are stubbed so the freshness/refresh chip
  * renders without a Settings provider. A `<MemoryRouter>` wraps every render
  * because the widget renders `<Link>` and `EmptyState` renders a `<Link>`.
  */
@@ -86,7 +86,7 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-// DataFreshness display hooks — stubbed so the freshness chip renders without a
+// FreshnessDot display hooks — stubbed so the freshness chip renders without a
 // Settings/QueryClient provider.
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({ formatTime: (v: unknown) => String(v) }),

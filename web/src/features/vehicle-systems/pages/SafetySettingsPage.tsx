@@ -17,7 +17,7 @@ import {
   type Column,
 } from '@/components/ui';
 
-import { TimeStamp, DataFreshnessAuto } from '@/components/data-display';
+import { TimeStamp, FreshnessDotAuto } from '@/components/data-display';
 import {
   LinearGauge,
   LineChart,
@@ -482,7 +482,7 @@ export default function SafetySettingsPage() {
     <PageLayout
       title={t('safety.title', 'Safety settings')}
       subtitle={t('safety.subtitle', 'ADAS features, safety score, and driving stats')}
-      metadataActions={<DataFreshnessAuto query={latestQuery} />}
+      metadataActions={<FreshnessDotAuto query={latestQuery} />}
       busy={latestQuery.isFetching || historyQuery.isFetching || securityQuery.isFetching}
       dataSources={[
         { id: 'safety', label: t('safety.adasFeatures', 'ADAS features'), query: latestQuery, enabled: !noVehicle },
@@ -622,7 +622,7 @@ export default function SafetySettingsPage() {
             <Text variant="bodySm">
               {t('safety.settings.signalExplanation', 'Last reported security and occupant state; separate from configuration settings. No live verification command is sent.')}
             </Text>
-            <DataFreshnessAuto query={securityQuery} />
+            <FreshnessDotAuto query={securityQuery} />
             <TimeStamp value={securityData?.ts} />
             {noVehicle ? (
               <EmptyState
@@ -830,7 +830,7 @@ export default function SafetySettingsPage() {
         <LayoutCard title={t('safety.statesOverTime', 'Safety states over time')}>
           <VehicleSourceContent source={historySource} enabled={!noVehicle}
             label={t('safety.statesOverTime', 'Safety states over time')}>
-          <DataFreshnessAuto query={historyQuery} />
+          <FreshnessDotAuto query={historyQuery} />
           <Caption className="mb-3 block">
             {t('safety.settings.historyExplanation', 'Recorded configuration snapshots, not intervention events. Gaps represent unknown states; the full history table follows below.')}
           </Caption>
@@ -918,7 +918,7 @@ export default function SafetySettingsPage() {
         <LayoutCard title={t('safety.historyTitle', 'Safety settings history')}>
           <VehicleSourceContent source={historySource} enabled={!noVehicle}
             label={t('safety.historyTitle', 'Safety settings history')}>
-          <DataFreshnessAuto query={historyQuery} />
+          <FreshnessDotAuto query={historyQuery} />
           {noVehicle ? (
             <EmptyState
               icon={<Icon icon={Icons.vehicle} size="xl" />}

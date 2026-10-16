@@ -33,7 +33,7 @@
  * `useFormatting` and `useUnits` are mocked so formatting is deterministic and
  * the SI-meter contract is observable via spies. `react-i18next` uses the real
  * English catalog for session pluralization and echoes other fallbacks with
- * interpolation. `DataFreshness`'s display hooks are stubbed. A
+ * interpolation. `FreshnessDot`'s display hooks are stubbed. A
  * `<MemoryRouter>` wraps every render because the error panel navigates.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -97,7 +97,7 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-// DataFreshness display hooks — stubbed so the freshness chip renders without a
+// FreshnessDot display hooks — stubbed so the freshness chip renders without a
 // Settings/QueryClient provider.
 vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
   // wrapped-real-hook: keep every real formatter, override only what this file controls.

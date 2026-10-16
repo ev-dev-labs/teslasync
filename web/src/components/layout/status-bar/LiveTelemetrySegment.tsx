@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Wifi, WifiOff } from 'lucide-react';
+import { Loader2, Radio, CloudOff } from 'lucide-react';
 import { Tooltip } from '@/components/ui/runtime';
 import { Icon } from '@/components/ui/Icon';
 import { Text } from '@/components/ui/Typography';
@@ -29,7 +29,7 @@ interface LiveTelemetrySegmentProps {
 }
 
 interface VariantConfig {
-  icon: typeof Wifi;
+  icon: typeof Radio;
   text: string;
   dot: string;
   /** Short label, e.g. "Live". */
@@ -76,7 +76,7 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
 
   const cfg: Record<LiveConnectionStatus, VariantConfig> = {
     connected: {
-      icon: Wifi,
+      icon: Radio,
       text: neonColorMap.green.text,
       dot: neonColorMap.green.dot,
       short: t('statusBar.live.short', 'Live'),
@@ -89,13 +89,13 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
       spin: true,
     },
     disconnected: {
-      icon: WifiOff,
+      icon: CloudOff,
       text: neonColorMap.neutral.text,
       dot: neonColorMap.neutral.dot,
       short: t('statusBar.live.offline', 'Offline'),
     },
     unknown: {
-      icon: WifiOff,
+      icon: CloudOff,
       text: neonColorMap.neutral.text,
       dot: neonColorMap.neutral.dot,
       short: t('statusBar.live.unknown', 'Idle'),
@@ -107,7 +107,7 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
   const v = cfg[status] ?? cfg.unknown;
   const effectiveVariant: VariantConfig = stale
     ? {
-        icon: WifiOff,
+        icon: CloudOff,
         text: neonColorMap.amber.text,
         dot: neonColorMap.amber.dot,
         short: t('statusBar.live.stale', 'Stale'),

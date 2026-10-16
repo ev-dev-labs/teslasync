@@ -12,7 +12,7 @@ import { Send, Square, History as HistoryIcon } from 'lucide-react';
 import { HelixMark } from '@/components/branding/HelixMark';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Button, Drawer, Textarea, Text, Icon, IconBox } from '@/components/ui';
+import { GlassPanel, Button, Drawer, Textarea, Text, Icon, IconBox, IconButton } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { VisuallyHidden } from '@/components/a11y';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -795,16 +795,7 @@ export default function ChatbotPage() {
       metadataActions={<AIChatbotIndicator />}
       secondaryActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            onClick={() => setShowSessions((s) => !s)}
-            variant="ghost"
-            size="sm"
-            icon={<Icon icon={HistoryIcon} />}
-            aria-pressed={showSessions}
-            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-          >
-            {t('chatbot.history', 'History')}
-          </Button>
+          <IconButton icon={<Icon icon={HistoryIcon} />} label={t('chatbot.history', 'History')} onClick={() => setShowSessions((s) => !s)} aria-pressed={showSessions} />
         </div>
       }
     >

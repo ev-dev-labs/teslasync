@@ -38,7 +38,7 @@
  * network is never touched and every query state is driven deterministically.
  * `react-i18next` is stubbed with a passthrough `t(key, default)` so assertions
  * read the English defaults. The shared WidgetShell / WidgetChartSummary /
- * DataFreshness / Badge / EmptyState primitives all run for real, so assertions
+ * FreshnessDot / Badge / EmptyState primitives all run for real, so assertions
  * exercise the true rendered DOM. `<MemoryRouter>` wraps every render because the
  * error branch's <QueryError> uses `useNavigate`.
  */
@@ -58,7 +58,7 @@ it.each([1, 2, 3])('identifies charge session detail at %i columns', (cols) => {
 });
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via
-// <DataFreshness> → useMotionPreference) reads it during render. Install a
+// <FreshnessDot> → useMotionPreference) reads it during render. Install a
 // benign stub before any component mounts.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

@@ -40,7 +40,7 @@
  * so the conversion math is genuinely exercised. `react-i18next` is stubbed with
  * a passthrough `t(key, default, opts)` that also resolves `{{interpolation}}`
  * so assertions read the English defaults. The shared WidgetShell / StatCard /
- * AnimatedNumber / DataFreshness / EmptyState primitives all run for real, so
+ * AnimatedNumber / FreshnessDot / EmptyState primitives all run for real, so
  * assertions exercise the true rendered DOM. `<MemoryRouter>` wraps every render
  * because the error branch's <QueryError> uses `useNavigate`.
  */
@@ -55,7 +55,7 @@ it.each([1, 2, 3])('identifies mileage statistics at %i columns', (cols) => {
   expect(screen.getByRole('heading', { name: 'Mileage stats' })).toBeInTheDocument();
 });
 
-// jsdom lacks matchMedia; AnimatedNumber (compact big number) and DataFreshness
+// jsdom lacks matchMedia; AnimatedNumber (compact big number) and FreshnessDot
 // both read it during render. Report `prefers-reduced-motion: reduce` so the
 // AnimatedNumber tween is skipped and the value lands on its target
 // synchronously — that makes the compact numeric assertions deterministic and

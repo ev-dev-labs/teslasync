@@ -90,7 +90,7 @@ const mockRequest = vi.mocked(request);
 const mockUseVehicles = vi.mocked(useVehicles);
 const mockUseUnits = vi.mocked(useUnits);
 
-// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <DataFreshness>
+// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <FreshnessDot>
 // inside <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({

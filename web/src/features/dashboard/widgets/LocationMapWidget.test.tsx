@@ -31,9 +31,9 @@
  *   - `react-i18next` is stubbed to resolve the developer fallback string so
  *     assertions read the real English copy.
  *   - The global test-setup already mocks `useSettings` (km / °C) and
- *     `useTimezone` (UTC), which the transitive <DataFreshness> header depends
+ *     `useTimezone` (UTC), which the transitive <FreshnessDot> header depends
  *     on. `matchMedia` is stubbed before any import runs because
- *     <DataFreshness>'s `useMotionPreference` touches it on first paint and
+ *     <FreshnessDot>'s `useMotionPreference` touches it on first paint and
  *     jsdom does not provide it.
  *
  * `@testing-library/user-event` is intentionally NOT a dependency of this
@@ -45,7 +45,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement, ReactNode } from 'react';
 
-// jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference reads it on
+// jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference reads it on
 // first paint. Install a stub (reduced-motion = true) BEFORE any import runs.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

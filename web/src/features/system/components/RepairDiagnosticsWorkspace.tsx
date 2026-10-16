@@ -6,7 +6,7 @@ import {
   useStaleSessions,
 } from '@/api/hooks/useDataRepair';
 import { AIDataRepairSuggestions } from '@/components/ai';
-import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, Text, IconButton } from '@/components/ui';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { RepairDiagnosisOverview } from './RepairDiagnosisOverview';
@@ -90,17 +90,7 @@ export function RepairDiagnosticsWorkspace({
               </Text>
             </div>
           </div>
-          <Button
-            variant="secondary"
-            onClick={refreshAll}
-            loading={isRefreshing}
-            icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
-            className="min-h-11 shrink-0"
-            data-testid="data-repair-refresh"
-            aria-label={t('common.refresh', 'Refresh')}
-          >
-            {t('common.refresh', 'Refresh')}
-          </Button>
+          <IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />} label={t('common.refresh', 'Refresh')} onClick={refreshAll} busy={isRefreshing} aria-label={t('common.refresh', 'Refresh')} data-testid="data-repair-refresh" />
         </div>
       </GlassPanel>
 

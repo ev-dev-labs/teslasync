@@ -25,7 +25,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Button, Code, ConfirmDialog, DataTable, Icon, Input, Select, Text, Toggle, useSortToggle } from '@/components/ui';
+import { Button, Code, ConfirmDialog, DataTable, Icon, Input, Select, Text, Toggle, useSortToggle, IconButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useChartPalette } from '@/hooks/useChartPalette';
@@ -641,16 +641,8 @@ export default function InsuranceTelematicsPage() {
                   })}{' · '}{tz}
                 </Text>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="min-h-11 md:min-h-9"
-                loading={remove.isPending && remove.variables === policy.id}
-                icon={<Icon icon={Trash2} size="md" />}
-                onClick={() => void handleRemove(policy)}
-              >
-                {t('ownership.action.remove', 'Remove')}
-              </Button>
+              {/* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */}
+              <IconButton icon={<Icon icon={Trash2} size="md" />} label={t('ownership.action.remove', 'Remove')} onClick={() => void handleRemove(policy)} busy={remove.isPending && remove.variables === policy.id} />
             </div>
           ) : null}
           <MutationError error={remove.error} />

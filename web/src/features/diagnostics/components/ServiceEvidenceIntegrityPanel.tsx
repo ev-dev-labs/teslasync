@@ -102,6 +102,7 @@ export function ServiceEvidenceIntegrityPanel({
                 when: formatDateTime(pack.generatedAt),
               })}
             </Caption>
+            {/* flow-cta: exporting the evidence pack is this panel’s purpose */}
             <Button
               type="button"
               variant="secondary"

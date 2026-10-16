@@ -3,8 +3,16 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { VisuallyHidden } from '@/components/a11y';
 import {
-  Battery, Thermometer, Lock, Shield, Wifi, Car,
-  Gauge, ArrowLeftRight, Info, Calendar,
+  Battery,
+  Thermometer,
+  Lock,
+  Shield,
+  Radio,
+  Car,
+  Gauge,
+  ArrowLeftRight,
+  Info,
+  Calendar,
 } from 'lucide-react';
 
 import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
@@ -267,7 +275,7 @@ function VehicleStatusCard({
         </StatusRow>
 
         {/* Status */}
-        <StatusRow icon={<Wifi className="h-4 w-4" />} label={t('comparison.status', 'Status')} evidence={unverified}>
+        <StatusRow icon={<Radio className="h-4 w-4" />} label={t('comparison.status', 'Status')} evidence={unverified}>
           <span className={cn(
             'inline-flex items-center rounded-full border px-2 py-0.5',
             isOnline

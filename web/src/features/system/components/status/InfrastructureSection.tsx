@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Globe, Wifi, WifiOff, Database, Activity, Clock } from 'lucide-react';
+import { Globe, Radio, CloudOff, Database, Activity, Clock } from 'lucide-react';
 import { Grid } from '@/components/layout';
 import { Badge, Card, CardHeader } from '@/components/ui';
 import { InlineMetric, KVList } from '@/components/data-display';
@@ -88,9 +88,9 @@ export function InfrastructureSection() {
               title={t('systemStatus.infrastructure.sseTitle', 'SSE connection')}
               action={
                 sseConnected ? (
-                  <Wifi aria-hidden="true" className="h-4 w-4 text-green-400" />
+                  <Radio aria-hidden="true" className="h-4 w-4 text-green-400" />
                 ) : (
-                  <WifiOff aria-hidden="true" className="h-4 w-4 text-red-400" />
+                  <CloudOff aria-hidden="true" className="h-4 w-4 text-red-400" />
                 )
               }
             />

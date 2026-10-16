@@ -296,7 +296,7 @@ export const DAY_LOG_ICON: Record<string, ComponentType<{ className?: string }>>
   parked: Icons.parking,
   online: Icons.activity,
   asleep: Icons.moon,
-  offline: Icons.wifiOff,
+  offline: Icons.cloudOff,
   state_change: Icons.info,
   locked: Icons.locked,
   unlocked: Icons.unlocked,

@@ -63,9 +63,11 @@ function hasActionContent(node: ReactNode): boolean {
 /**
  * Canonical page-level action rail.
  *
- * Context and freshness controls stay left; commands stay right in the
- * stable order secondary -> destructive -> overflow -> primary. Rare
- * destructive actions should normally live inside the overflow control.
+ * Scope selectors form their own zone and may wrap onto a row of their own.
+ * The freshness dot and every command form ONE right-aligned, non-wrapping
+ * group (dot -> secondary -> destructive -> overflow -> primary), so the dot
+ * never separates from the icons on narrow screens. Rare destructive actions
+ * should normally live inside the overflow control.
  */
 export function PageActions({
   metadata,
@@ -90,8 +92,7 @@ export function PageActions({
   const visibleDestructive = pruneManagedControls(destructive, hiddenKinds);
   const visibleOverflow = pruneManagedControls(overflow, hiddenKinds);
   const visiblePrimary = pruneManagedControls(primary, hiddenKinds);
-  const hasContext =
-    hasActionContent(visibleMetadata) || hasActionContent(visibleContext);
+  const hasContext = hasActionContent(visibleContext);
   const hasCommands = [
     visibleSecondary,
     visibleDestructive,
@@ -101,54 +102,56 @@ export function PageActions({
     hasActionContent,
   );
 
-  if (!hasContext && !hasCommands) return null;
+
+  const hasControls = hasActionContent(visibleMetadata) || hasCommands;
+  if (!hasContext && !hasControls) return null;
 
   return (
     <div
       role="group"
       aria-label={t('common.actions', 'Actions')}
       className={cn(
-        'flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 rounded-shape-lg border border-[var(--border-subtle)] bg-surface-2 p-2 sm:w-fit xl:justify-end',
-        scopeFirst && 'grid grid-cols-1 gap-x-3 gap-y-1 rounded-none border-0 bg-transparent p-0 sm:w-full sm:grid-cols-page-actions-scope xl:flex xl:w-fit xl:gap-3',
+        'flex w-full min-w-0 max-w-full flex-wrap items-center justify-end gap-x-3 gap-y-2 rounded-shape-lg border border-[var(--border-subtle)] bg-surface-2 p-2 sm:w-fit',
+        scopeFirst && 'rounded-none border-0 bg-transparent p-0 sm:w-full xl:w-fit',
         className,
       )}
       data-role="page-actions"
       data-action-order="context-secondary-destructive-overflow-primary"
     >
-      {hasContext && (
+      {/* Scope selectors (vehicle, range, layout) may take their own row. */}
+      {hasActionContent(visibleContext) && (
         <div
-          className={cn('flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:flex-initial', scopeFirst && 'contents')}
+          className={cn('flex min-w-0 max-w-full flex-wrap items-center gap-2', scopeFirst ? 'w-full sm:me-auto sm:w-auto' : 'me-auto')}
           data-action-zone="context"
+          data-action-group="context"
         >
-          {hasActionContent(visibleMetadata) && (
-            <div className={cn('flex min-w-0 max-w-full flex-wrap items-center gap-2 break-words', typography.color.secondary, scopeFirst && 'order-2 xl:order-1')} data-action-group="metadata">
-              {visibleMetadata}
-            </div>
-          )}
-          {hasActionContent(visibleContext) && (
-            <div className={cn('flex min-w-0 max-w-full flex-wrap items-center gap-2', scopeFirst && 'order-1 sm:col-span-2 xl:order-2')} data-action-group="context">
-              {visibleContext}
-            </div>
-          )}
+          {visibleContext}
         </div>
       )}
 
-      {hasCommands && (
+      {/* One inline group that never splits: freshness dot and metadata
+          first, then secondary -> destructive -> overflow -> primary. */}
+      {hasControls && (
         <div
-          className={cn('ms-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2', scopeFirst && 'order-3')}
+          className="ms-auto flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1.5"
           data-action-zone="commands"
         >
+          {hasActionContent(visibleMetadata) && (
+            <div className={cn('flex shrink-0 flex-nowrap items-center gap-1.5', typography.color.secondary)} data-action-group="metadata">
+              {visibleMetadata}
+            </div>
+          )}
           {hasActionContent(visibleSecondary) && (
-            <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2" data-action-group="secondary">
+            <div className="flex shrink-0 flex-nowrap items-center gap-1.5" data-action-group="secondary">
               {visibleSecondary}
             </div>
           )}
           {hasActionContent(visibleDestructive) && (
             <div
               className={cn(
-                'flex min-w-0 max-w-full flex-wrap items-center gap-2',
+                'flex shrink-0 flex-nowrap items-center gap-1.5',
                 hasActionContent(visibleSecondary) &&
-                  'border-s border-[var(--border-default)] ps-2',
+                  'border-s border-[var(--border-default)] ps-1.5',
               )}
               data-action-group="destructive"
             >
@@ -156,12 +159,12 @@ export function PageActions({
             </div>
           )}
           {hasActionContent(visibleOverflow) && (
-            <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2" data-action-group="overflow">
+            <div className="flex shrink-0 flex-nowrap items-center gap-1.5" data-action-group="overflow">
               {visibleOverflow}
             </div>
           )}
           {hasActionContent(visiblePrimary) && (
-            <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:ms-1" data-action-group="primary">
+            <div className="flex shrink-0 flex-nowrap items-center gap-1.5" data-action-group="primary">
               {visiblePrimary}
             </div>
           )}

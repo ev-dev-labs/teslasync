@@ -23,7 +23,7 @@ const CATEGORY_PRESENTATION: Record<
     dot: 'bg-emerald-500',
   },
   offline: {
-    icon: Icons.wifiOff,
+    icon: Icons.cloudOff,
     tone: 'text-slate-700 dark:text-slate-300',
     dot: 'bg-slate-400',
   },

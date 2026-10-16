@@ -1,6 +1,7 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { useTranslation } from 'react-i18next'
 import { useTeslaUserRegion, useRefreshTeslaRegion } from '@/api/hooks/useUser'
-import { GlassPanel, Button, IconBox } from '@/components/ui'
+import { GlassPanel, IconBox } from '@/components/ui'
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
@@ -35,18 +36,10 @@ export function RegionSettings() {
                 {t('region.lastSynced', 'Synced')} {formatDateTime(regionConfig.fetched_at)}
               </span>
             )}
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<RefreshCw className={cn('h-3.5 w-3.5', regionRefresh.isPending && 'animate-spin')} aria-hidden="true" />}
-              onClick={() => regionRefresh.mutate(undefined, {
+            <IconButton icon={<RefreshCw className={cn('h-3.5 w-3.5', regionRefresh.isPending && 'animate-spin')} aria-hidden="true" />} label={t('region.refresh', 'Refresh')} onClick={() => regionRefresh.mutate(undefined, {
                 onSuccess: () => toast.success(t('toast.regionRefreshed', 'Region info refreshed')),
                 onError: (err: Error) => toast.error(t('toast.regionFailed', 'Failed to refresh region'), err.message),
-              })}
-              disabled={regionRefresh.isPending}
-            >
-              {t('region.refresh', 'Refresh')}
-            </Button>
+              })} disabled={regionRefresh.isPending} />
           </div>
         </div>
 

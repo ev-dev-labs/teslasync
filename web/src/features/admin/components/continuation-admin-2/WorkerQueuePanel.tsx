@@ -4,7 +4,7 @@ import { RefreshCw } from 'lucide-react';
 import type { useQueueStatus } from '@/api/hooks/useSystemQueues';
 import { deriveDataState } from '@/api/dataState';
 import { LayoutCard } from '@/components/layout';
-import { Button, Caption, Text } from '@/components/ui';
+import { Caption, Text, IconButton } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { formatRelative } from '@/lib/dateFormat';
 import { WorkerJobsDrawer } from './WorkerJobsDrawer';
@@ -21,8 +21,7 @@ export function WorkerQueuePanel({ query }: { query: ReturnType<typeof useQueueS
     <div data-testid="queue-status-panel" className="min-w-0">
       <LayoutCard title={t('queueStatus.title', 'Background workers')}
         description={t('queueStatus.subtitle', 'Live view of the notification, export, and automation worker queues. Heartbeat colour switches from green to amber after 60 seconds and to red after 5 minutes of silence; "down" means the worker has never reported in.')}
-        actions={<Button variant="ghost" wrapLabel onClick={() => { void query.refetch(); }} loading={query.isFetching && !query.isLoading} disabled={query.isFetching}
-          icon={<RefreshCw className="h-4 w-4" aria-hidden />} data-testid="queue-refresh-button">{t('queueStatus.refresh', 'Refresh')}</Button>}>
+        actions={<IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden />} label={t('queueStatus.refresh', 'Refresh')} onClick={() => { void query.refetch(); }} busy={query.isFetching && !query.isLoading} disabled={query.isFetching} data-testid="queue-refresh-button" />}>
         {source.data?.generated_at && <Caption>{t('queueStatus.lastUpdated', 'Updated {{when}}', { when: formatRelative(source.data.generated_at) })}</Caption>}
         <AdminSourceContent source={source} fatalTestId="queue-error" retryOnRetained={false} label={t('queueStatus.title', 'Background workers')} emptyMessage={t('queueStatus.empty', 'No workers are currently registered. The notification, export, and automation processes report here once they start.')}
           fatalMessage={<Text variant="error">{t('queueStatus.error', 'Could not load worker status. Check API logs and try again.')}</Text>}

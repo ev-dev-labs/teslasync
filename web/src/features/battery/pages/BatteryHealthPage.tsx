@@ -18,7 +18,7 @@ import {
 import { gaugeTone, severityTokens, typography, type GaugeTone, type Severity } from '@/lib/tokens';
 import { LinearGauge } from '@/components/charts';
 import {
-  DataFreshnessAuto,
+  FreshnessDotAuto,
   DataProvenanceBadge,
   MetricBar,
   OperationalBrief,
@@ -486,7 +486,7 @@ export default function BatteryHealthPage() {
               status={healthDataState.status}
               updatedAt={healthDataState.updatedAt}
             />
-            <DataFreshnessAuto
+            <FreshnessDotAuto
               query={healthQuery}
               source={t('operations.battery.analyticsSource', 'Battery analytics')}
             />

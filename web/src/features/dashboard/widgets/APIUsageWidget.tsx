@@ -40,7 +40,7 @@ export default function APIUsageWidget({ size }: WidgetProps) {
   // refetches on an interval, so once we have data a transient
   // background-refetch failure must not blank out otherwise-valid numbers —
   // it is surfaced through the freshness indicator's error state instead
-  // (WidgetShell forwards `isError` to <DataFreshness>).
+  // (WidgetShell forwards `isError` to <FreshnessDot>).
   const blockingError = state.fatalError?.message;
 
   const coreStats = useMemo((): StatMetric[] => {

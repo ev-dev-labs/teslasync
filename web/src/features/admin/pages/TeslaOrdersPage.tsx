@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw, ShoppingCart, LayoutGrid, ListOrdered } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Button, Icon } from '@/components/ui';
+import { Icon, IconButton } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { SectionErrorBoundary } from '@/components/feedback';
 import { typography } from '@/lib/tokens';
@@ -97,19 +97,7 @@ export default function TeslaOrdersPage() {
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      <Button
-        variant="secondary"
-        size="sm"
-        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-        icon={<Icon icon={RefreshCw} size="sm" />}
-        onClick={refreshOrders}
-        loading={ordersRefresh.isPending}
-        disabled={ordersRefresh.isPending}
-        aria-busy={ordersRefresh.isPending || undefined}
-        wrapLabel
-      >
-        {t('admin.teslaOrders.refresh', 'Refresh')}
-      </Button>
+      <IconButton icon={<Icon icon={RefreshCw} size="sm" />} label={t('admin.teslaOrders.refresh', 'Refresh')} onClick={refreshOrders} busy={ordersRefresh.isPending} disabled={ordersRefresh.isPending} />
     </div>
   );
 

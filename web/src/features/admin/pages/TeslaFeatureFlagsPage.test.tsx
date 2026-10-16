@@ -190,7 +190,7 @@ const overviewRegion = () => screen.getByRole('region', { name: 'Feature overvie
 
 /**
  * The header Refresh control is a real <button>. PageContainer also renders a
- * DataFreshness chip with role="button"/aria-label="Refresh", so filter down to
+ * FreshnessDot chip with role="button"/aria-label="Refresh", so filter down to
  * the actual button element.
  */
 function getRefreshButton(): HTMLButtonElement {

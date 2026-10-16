@@ -25,7 +25,7 @@
  * request contract and the `enabled` gate are exercised end-to-end. `useVehicles`
  * and `useUnits` are mocked at the hook boundary (the latter lets us assert km vs
  * mi maths); `useSettings` / `useTimezone` come from the global test-setup stub
- * so the real `useDateFormat` inside `<WidgetShell>`'s `<DataFreshness>` works.
+ * so the real `useDateFormat` inside `<WidgetShell>`'s `<FreshnessDot>` works.
  * `react-i18next` is stubbed to echo the English fallback. `user-event` is not
  * installed in this repo (see sibling widget suites), so the interaction uses
  * `fireEvent`. `matchMedia` is forced to reduced-motion so `<AnimatedNumber>`
@@ -95,7 +95,7 @@ const YEAR = new Date().getFullYear();
 
 /**
  * Force reduced motion so <AnimatedNumber> renders its final value immediately
- * (no rAF tween) and framer-motion inside <DataFreshness> skips animations.
+ * (no rAF tween) and framer-motion inside <FreshnessDot> skips animations.
  */
 function installReducedMotionMatchMedia() {
   Object.defineProperty(window, 'matchMedia', {

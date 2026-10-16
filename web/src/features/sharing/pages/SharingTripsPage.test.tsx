@@ -147,7 +147,7 @@ vi.mock('@/components/ai/AITripPostcardShareCardImageGeneration', () => ({
 import SharingTripsPage from './SharingTripsPage';
 
 // jsdom lacks matchMedia (framer-motion's useReducedMotion via FadeIn +
-// DataFreshness). Install a permissive stub before any render.
+// FreshnessDot). Install a permissive stub before any render.
 if (!window.matchMedia) {
   window.matchMedia = ((query: string) => ({
     matches: false,

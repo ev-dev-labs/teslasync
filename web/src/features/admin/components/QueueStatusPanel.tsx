@@ -31,6 +31,7 @@ import type { QueueHeartbeatSeverity, QueueStat } from '@/api/types'
 
 import { QueueJobDrawer } from './QueueJobDrawer'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { IconButton } from '@/components/ui/IconButton';
 
 // Severity → hex colour passed into MetricBar (which expects a raw
 // string for its dynamic gradient + glow). Hex rather than CSS
@@ -229,18 +230,9 @@ export function QueueStatusPanel({ testHookOverride }: QueueStatusPanelProps = {
             <Caption className="mt-2 block">{updatedLabel}</Caption>
           ) : null}
         </div>
-        <Button
-          variant="ghost"
-          onClick={() => {
+        <IconButton icon={<RefreshCw className="h-4 w-4" aria-hidden />} label={t('queueStatus.refresh', 'Refresh')} onClick={() => {
             void refetch()
-          }}
-          loading={isFetching && !isLoading}
-          disabled={isFetching}
-          icon={<RefreshCw className="h-4 w-4" aria-hidden />}
-          data-testid="queue-refresh-button"
-        >
-          {t('queueStatus.refresh', 'Refresh')}
-        </Button>
+          }} busy={isFetching && !isLoading} disabled={isFetching} data-testid="queue-refresh-button" />
       </div>
 
       {isLoading ? (

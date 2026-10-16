@@ -156,6 +156,7 @@ export function DriveDnaGenomePanel({
           <KVList items={stats} columns={1} className="mt-4" />
         </DriveDnaSectionBody>
 
+        {/* flow-cta: the genome download is this panel’s primary action */}
         <Button
           type="button"
           variant="secondary"

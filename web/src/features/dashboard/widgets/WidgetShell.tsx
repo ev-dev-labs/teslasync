@@ -6,8 +6,8 @@ import { HelpTooltip, PinButton } from '@/components/ui';
 import type { DataState } from '@/api/dataState';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import {
-  DataFreshness,
-  DataFreshnessAuto,
+  FreshnessDot,
+  FreshnessDotAuto,
   type FreshnessQuery,
 } from '@/components/data-display';
 import type { WidgetHelp } from './types';
@@ -31,7 +31,7 @@ export interface WidgetShellProps {
   actions?: ReactNode;
   /**
    * Convenience: pass an entire TanStack Query result and the shell will
-   * render `<DataFreshnessAuto query={query} />` in the header. Mutually
+   * render `<FreshnessDotAuto query={query} />` in the header. Mutually
    * exclusive with the granular `updatedAt`/`isFetching`/`isStale`/`isError`/
    * `onRefresh` props (those win when supplied for backward compatibility).
    */
@@ -80,14 +80,11 @@ export function WidgetShell({
   const degradedContent = Boolean(
     isStale || isError || query?.isStale || query?.isError || dataState?.status === 'stale',
   );
-  // Compact (dot-only) when widget has no title (typically 1×1 widgets)
-  const freshnessCompact = !title;
-
   let freshnessEl: ReactNode = null;
   if (showFreshness) {
     if (updatedAt !== undefined) {
       freshnessEl = (
-        <DataFreshness
+        <FreshnessDot
           updatedAt={updatedAt > 0 ? updatedAt : null}
           isFetching={isFetching ?? false}
           isStale={isStale ?? false}
@@ -95,13 +92,11 @@ export function WidgetShell({
           onRefresh={retry}
           refreshIntervalMs={refreshIntervalMs}
           manual={refreshIntervalMs == null}
-          compact={freshnessCompact}
-          variant="widget"
         />
       );
     } else if (query) {
         freshnessEl = (
-        <DataFreshnessAuto query={query} compact={freshnessCompact} variant="widget" refreshIntervalMs={refreshIntervalMs} manual={refreshIntervalMs == null} />
+        <FreshnessDotAuto query={query} refreshIntervalMs={refreshIntervalMs} manual={refreshIntervalMs == null} />
       );
     }
   }

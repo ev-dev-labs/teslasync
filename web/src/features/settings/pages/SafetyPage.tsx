@@ -47,7 +47,7 @@ import {
 
 import { PageLayout } from '@/components/layout'
 import { Button, GlassPanel, Heading, Text, type BadgeProps } from '@/components/ui'
-import { DataFreshness, type StatMetric } from '@/components/data-display'
+import { FreshnessDot, type StatMetric } from '@/components/data-display'
 import { SettingsSummaryBrief } from '../components/operationalbrief-all/SettingsSummaryBrief'
 import { FadeIn } from '@/components/motion'
 import { DataStateNotice, QueryError } from '@/components/feedback'
@@ -310,7 +310,7 @@ export default function SafetyPage() {
             metrics={metrics} loading={settingsState?.status === 'initial'}
             unavailable={unavailable} retained={settingsState?.status === 'stale'}
             freshness={!unavailable && settingsState?.updatedAt != null ? (
-              <DataFreshness updatedAt={settingsState.updatedAt}
+              <FreshnessDot updatedAt={settingsState.updatedAt}
                 isFetching={settingsState.isRefreshing}
                 isStale={settingsState.status === 'stale'}
                 isError={settingsState.refreshError != null}

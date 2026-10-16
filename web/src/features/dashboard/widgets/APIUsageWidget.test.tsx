@@ -27,7 +27,7 @@
  * `@/api/hooks/useAdmin` is mocked so the network is never touched and every
  * query state is driven deterministically. `react-i18next` is stubbed with a
  * passthrough `t(key, default)` so assertions read the English defaults. The
- * shared WidgetShell / DataFreshness / StatCard / EmptyState primitives all run
+ * shared WidgetShell / FreshnessDot / StatCard / EmptyState primitives all run
  * for real, so the assertions exercise the true rendered DOM. `<MemoryRouter>`
  * wraps every render because the error branch's <QueryError> uses `useNavigate`.
  */
@@ -38,7 +38,7 @@ import type { APICallLogStats } from '@/types/admin';
 import APIUsageWidget from './APIUsageWidget';
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via
-// <DataFreshness>) reads it during render. Install a benign stub before any
+// <FreshnessDot>) reads it during render. Install a benign stub before any
 // component mounts.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

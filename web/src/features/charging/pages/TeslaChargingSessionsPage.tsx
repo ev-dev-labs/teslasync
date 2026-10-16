@@ -15,8 +15,7 @@ import {
   Text,
   Code,
   Icon,
-  type Column,
-} from '@/components/ui';
+  type Column, IconButton } from '@/components/ui';
 import {
   type StatMetric,
   MetricBar,
@@ -701,16 +700,7 @@ export default function TeslaChargingSessionsPage() {
   );
 
   const primaryAction = (
-    <Button
-      wrapLabel
-      onClick={handleRefresh}
-      disabled={importBlocked}
-      loading={refreshMutation.isPending}
-      className="min-h-11 min-w-11"
-      icon={<Icon icon={RefreshCw} />}
-    >
-      {t('tesla_sessions.refresh', 'Refresh from Tesla')}
-    </Button>
+    <IconButton icon={<Icon icon={RefreshCw} />} label={t('tesla_sessions.refresh', 'Refresh from Tesla')} onClick={handleRefresh} busy={refreshMutation.isPending} disabled={importBlocked} />
   );
   const summaryMetrics: StatMetric[] = [
     { metricId: 'count', occurrenceId: 'sessions', label: t('tesla_sessions.stats.sessions', 'Total sessions'),

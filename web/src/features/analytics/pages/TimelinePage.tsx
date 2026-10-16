@@ -11,7 +11,7 @@ import { Badge, Button, DataTable, Text, Caption, Icon, type Column } from '@/co
 import { useRangeState } from '@/hooks/useRangeState';
 import { useTimezone } from '@/lib/timezone';
 import {
-  DataFreshnessAuto,
+  FreshnessDotAuto,
   EntityPreviewDrawer,
   MetricBar,
   CompositionRail,
@@ -429,7 +429,7 @@ export default function TimelinePage() {
     <PageLayout
       title={t('timeline.title', 'Timeline')}
       subtitle={t('timeline.subtitle', 'Vehicle state history and transitions')}
-      metadataActions={<DataFreshnessAuto query={timelineQuery} refetchable={enabled && !timelineState.isRefreshBlocked} />}
+      metadataActions={<FreshnessDotAuto query={timelineQuery} refetchable={enabled && !timelineState.isRefreshBlocked} />}
       secondaryActions={actions}
     >
       {vehiclesError && (
@@ -458,7 +458,7 @@ export default function TimelinePage() {
         />
         <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
           <Caption>{t('timeline.kpis', 'Summary metrics')}</Caption>
-          <DataFreshnessAuto query={summaryQuery}
+          <FreshnessDotAuto query={summaryQuery}
             source={t('timeline.kpis', 'Summary metrics')}
             refetchable={enabled && !summaryState.isRefreshBlocked}
           />

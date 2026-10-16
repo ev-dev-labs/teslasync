@@ -101,7 +101,7 @@ vi.mock('react-i18next', async () => {
 });
 
 // Deterministic, network-free date formatter (also consumed transitively by
-// the page-header DataFreshness chip).
+// the page-header FreshnessDot chip).
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({
     opts: { locale: 'en-US', tz: 'UTC' },
@@ -158,7 +158,7 @@ vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
 
 import DigitalTwinPage, { statusNeon, capitalize } from './DigitalTwinPage';
 
-// framer-motion's useReducedMotion (via FadeIn / Spinner / DataFreshness /
+// framer-motion's useReducedMotion (via FadeIn / Spinner / FreshnessDot /
 // VehicleTwin) reads matchMedia, which jsdom lacks. Chart/observer polyfills
 // already live in test-setup.ts.
 if (!window.matchMedia) {

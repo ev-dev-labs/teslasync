@@ -1,3 +1,4 @@
+import { IconButton } from '@/components/ui/IconButton';
 /**
  * TeslaRegionPage — Tesla account Region & Fleet API endpoint surface.
  *
@@ -11,7 +12,7 @@
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 import { PageLayout } from '@/components/layout'
-import { Button, Icon } from '@/components/ui'
+import { Icon } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { OperationalWriteNotice } from '@/components/feedback'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -63,20 +64,7 @@ export default function TeslaRegionPage() {
           : null
 
   const actions = (
-    <Button
-      variant="secondary"
-      size="sm"
-      wrapLabel
-      className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-      icon={<Icon icon={RefreshCw} size="sm" />}
-      loading={regionRefresh.isPending}
-      onClick={refresh}
-      disabled={regionRefresh.isPending || !canWrite}
-      title={writeBlockReason ?? undefined}
-      aria-busy={regionRefresh.isPending || undefined}
-    >
-      {t('region.refresh', 'Refresh')}
-    </Button>
+    <IconButton icon={<Icon icon={RefreshCw} size="sm" />} label={t('region.refresh', 'Refresh')} onClick={refresh} busy={regionRefresh.isPending} disabled={regionRefresh.isPending || !canWrite} />
   )
 
   return (

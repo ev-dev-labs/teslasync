@@ -27,7 +27,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle, IconButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -303,16 +303,8 @@ export default function TariffLabPage() {
       key: 'actions',
       header: t('ownership.action.header', 'Actions'),
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
-          icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-          loading={remove.isPending && remove.variables === row.id}
-          onClick={() => void handleRemove(row)}
-        >
-          {t('ownership.action.remove', 'Remove')}
-        </Button>
+        /* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */
+        <IconButton icon={<Trash2 className="h-4 w-4" aria-hidden="true" />} label={t('ownership.action.remove', 'Remove')} onClick={() => void handleRemove(row)} busy={remove.isPending && remove.variables === row.id} />
       ),
     },
   ];
@@ -950,21 +942,12 @@ export default function TariffLabPage() {
                       }
                     />
                     <div className="flex items-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-                        disabled={draft.rates.length <= 1}
-                        onClick={() =>
+                      <IconButton icon={<Trash2 className="h-4 w-4" aria-hidden="true" />} label={t('ownership.action.remove', 'Remove')} onClick={() =>
                           setDraft((current) => ({
                             ...current,
                             rates: current.rates.filter((_, itemIndex) => itemIndex !== index),
                           }))
-                        }
-                      >
-                        {t('ownership.action.remove', 'Remove')}
-                      </Button>
+                        } disabled={draft.rates.length <= 1} />
                     </div>
                   </div>
                 ))}

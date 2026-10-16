@@ -178,7 +178,7 @@ vi.mock('@/api/hooks/useAnnotations', async (importOriginal) => {
 import BatteryCellsPage, { cellColor, buildHistogram } from './BatteryCellsPage';
 
 // jsdom lacks matchMedia (framer-motion's useReducedMotion via FadeIn /
-// DataFreshness). The chart/observer polyfills already live in test-setup.ts.
+// FreshnessDot). The chart/observer polyfills already live in test-setup.ts.
 if (!window.matchMedia) {
   window.matchMedia = ((query: string) => ({
     matches: false,

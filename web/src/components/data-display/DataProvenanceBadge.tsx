@@ -80,7 +80,7 @@ const PROVENANCE_CONFIG: Record<
  * `inferred`, `repaired`, or honestly `unknown`.
  *
  * Provenance and freshness are separate axes and this component keeps them
- * that way: `<DataFreshness>` answers "how old", this answers "how was it
+ * that way: `<FreshnessDot>` answers "how old", this answers "how was it
  * produced". An inferred value that arrived one second ago is still an
  * estimate, and a historical value that is an hour old is not stale — it is
  * history. Collapsing the two is how an estimate ends up being read as a

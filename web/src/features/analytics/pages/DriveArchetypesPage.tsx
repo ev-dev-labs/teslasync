@@ -6,7 +6,7 @@ import { useDriveHistory } from '@/api/hooks/useDriving';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Button, Icon } from '@/components/ui';
+import { Icon, IconButton } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
@@ -102,19 +102,7 @@ export default function DriveArchetypesPage() {
       query={vehicleId != null ? historyQuery : undefined}
       secondaryActions={(
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="min-h-11 min-w-11 md:min-h-9"
-            onClick={refresh}
-            disabled={vehicleId == null}
-            loading={historyQuery.isFetching && vehicleId != null}
-            icon={<Icon icon={RefreshCw} />}
-            wrapLabel
-          >
-            {t('archetypes.actions.refresh', 'Refresh evidence')}
-          </Button>
+          <IconButton icon={<Icon icon={RefreshCw} />} label={t('archetypes.actions.refresh', 'Refresh evidence')} onClick={refresh} busy={historyQuery.isFetching && vehicleId != null} disabled={vehicleId == null} />
         </div>
       )}
     >

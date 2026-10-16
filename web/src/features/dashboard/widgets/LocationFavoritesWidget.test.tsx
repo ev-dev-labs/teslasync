@@ -84,7 +84,7 @@ const mockUseLocations = vi.mocked(useLocations);
 const mockUseVehicles = vi.mocked(useVehicles);
 const mockUseSnapshot = vi.mocked(useLocationSnapshotLatest);
 
-// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <DataFreshness>
+// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <FreshnessDot>
 // inside <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
@@ -103,7 +103,7 @@ if (typeof window.matchMedia !== 'function') {
 const tid = (key: string, fallback?: string): string =>
   typeof fallback === 'string' ? fallback : key;
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

@@ -41,7 +41,7 @@
  * stubbed (via importOriginal, keeping every other export real) so
  * `useThemeChartPalette()` — which the widget calls unconditionally — resolves
  * a deterministic palette without a ThemeProvider ancestor. The shared
- * WidgetShell / LinearGauge / Badge / DataFreshness / EmptyState primitives all
+ * WidgetShell / LinearGauge / Badge / FreshnessDot / EmptyState primitives all
  * run for real, so assertions exercise the true rendered DOM. `<MemoryRouter>`
  * wraps every render because the error branch's <QueryError> uses `useNavigate`.
  */
@@ -58,7 +58,7 @@ import { useMeasuredAxisWidth } from '@/components/charts';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// jsdom lacks matchMedia; DataFreshness → useMotionPreference reads it during
+// jsdom lacks matchMedia; FreshnessDot → useMotionPreference reads it during
 // render. Install a benign stub before any component mounts.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

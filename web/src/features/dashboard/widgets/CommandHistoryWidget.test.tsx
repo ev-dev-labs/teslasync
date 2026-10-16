@@ -33,7 +33,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 // i18n stub: echo the fallback string, interpolating {{var}} tokens from the
-// options bag so any count/time-bearing copy (DataFreshness, WidgetEventFeed)
+// options bag so any count/time-bearing copy (FreshnessDot, WidgetEventFeed)
 // renders as real text.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -83,7 +83,7 @@ import type { WidgetSize } from './types';
 const mockUseCommandHistory = vi.mocked(useCommandHistory);
 const mockUseVehicles = vi.mocked(useVehicles);
 
-// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <DataFreshness>
+// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <FreshnessDot>
 // inside <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
@@ -101,7 +101,7 @@ if (typeof window.matchMedia !== 'function') {
 /** Identity translate matching the widget's `TranslateFn` contract. */
 const tid = (_key: string, fallback: string): string => fallback;
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): ReturnType<typeof useCommandHistory> {
   return {
     data: [],

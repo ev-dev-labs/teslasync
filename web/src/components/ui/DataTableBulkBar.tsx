@@ -1,9 +1,9 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { tableTokens } from '@/lib/tokens'
-import { Button } from './Button'
 import { Icon } from './Icon'
 import { Text } from './Typography'
 
@@ -39,18 +39,8 @@ export function DataTableBulkBar({ count, onClear, children, className }: DataTa
       </Text>
       <div className="ms-auto flex min-w-0 max-w-full flex-wrap items-center gap-2">
         {children}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          wrapLabel
-          onClick={onClear}
-          className="min-h-11 md:min-h-9 text-[var(--text-secondary)]"
-          icon={<Icon icon={X} size="xs" />}
-          aria-label={t('table.bulkActions.clear', 'Clear selection')}
-        >
-          {t('table.bulkActions.clear', 'Clear selection')}
-        </Button>
+        {/* not-destructive: clears the row selection only; nothing is lost */}
+        <IconButton icon={<Icon icon={X} size="xs" />} label={t('table.bulkActions.clear', 'Clear selection')} onClick={onClear} aria-label={t('table.bulkActions.clear', 'Clear selection')} />
       </div>
     </div>
   )

@@ -33,8 +33,8 @@
  * other telemetry hooks intact for any transitive importer) so no network is
  * touched. <TimeStamp> is stubbed via a partial mock of `@/components/data-display`
  * (its real implementation reaches the un-stubbed `@/api/hooks/useSettings`
- * TanStack query through `useTimeFormatPreference`); `DataFreshness` /
- * `DataFreshnessAuto` are preserved from the actual module so <WidgetShell>'s
+ * TanStack query through `useTimeFormatPreference`); `FreshnessDot` /
+ * `FreshnessDotAuto` are preserved from the actual module so <WidgetShell>'s
  * freshness/refresh control renders for real. `react-i18next` is stubbed to echo
  * the English fallback and interpolate `{{var}}` tokens. `@testing-library/user-event`
  * is not installed in this repo (see the sibling widget suites), so interactions
@@ -90,7 +90,7 @@ vi.mock('@/api/hooks/useTelemetry', async () => {
 // Stub only <TimeStamp> (its real impl reaches the un-stubbed
 // `@/api/hooks/useSettings` query via useTimeFormatPreference). The stub echoes
 // the raw `value` so we can assert each feed row is threaded its `last_seen`.
-// DataFreshness / DataFreshnessAuto are preserved so <WidgetShell>'s freshness
+// FreshnessDot / FreshnessDotAuto are preserved so <WidgetShell>'s freshness
 // + refresh control renders for real.
 vi.mock('@/components/data-display', async () => {
   const actual = await vi.importActual<typeof import('@/components/data-display')>(
@@ -119,7 +119,7 @@ import {
 } from '@/api/hooks/useTelemetry';
 import type { WidgetSize } from './types';
 
-// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <DataFreshness>
+// jsdom lacks matchMedia; framer-motion's useReducedMotion (via <FreshnessDot>
 // inside <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
@@ -134,7 +134,7 @@ if (typeof window.matchMedia !== 'function') {
   })) as unknown as typeof window.matchMedia;
 }
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}) {
   return {
     data: undefined,

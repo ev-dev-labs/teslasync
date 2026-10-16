@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RotateCw, Pencil, Check, X } from 'lucide-react';
-import { Button, CopyButton, Text, Textarea } from '@/components/ui';
+import { Button, CopyButton, Text, Textarea, IconButton } from '@/components/ui';
 import { Avatar } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -269,17 +269,7 @@ export function ChatMessageItem({
               </Button>
             )}
             {isUser && isLastUser && onEditAndResend && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={startEdit}
-                className="min-h-11 min-w-11 md:min-h-8 md:min-w-0"
-                wrapLabel
-                icon={<Pencil className="h-3.5 w-3.5" />}
-                aria-label={t('chatbot.aria.edit', 'Edit and resend')}
-              >
-                {t('chatbot.actions.edit', 'Edit')}
-              </Button>
+              <IconButton icon={<Pencil className="h-3.5 w-3.5" />} label={t('chatbot.actions.edit', 'Edit')} onClick={startEdit} aria-label={t('chatbot.aria.edit', 'Edit and resend')} />
             )}
           </div>
         )}

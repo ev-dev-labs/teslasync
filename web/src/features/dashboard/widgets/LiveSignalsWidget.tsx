@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Wifi, Cog, Thermometer, CircleDot } from 'lucide-react';
+import { Radio, Cog, Thermometer, CircleDot } from 'lucide-react';
 import { Badge, Subhead } from '@/components/ui';
 import { KVList } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -78,7 +78,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
   return (
     <WidgetShell
       title={t('widget.liveSignals', 'Live signals')}
-      icon={<Wifi className="h-3.5 w-3.5 text-neon-cyan" />}
+      icon={<Radio className="h-3.5 w-3.5 text-neon-cyan" />}
       dataState={{
         ...dataState, retry: handleRefresh, data: motor ?? climate ?? security ?? tires, hasData: Boolean(hasData),
         fatalError: hasData ? null : motorState.fatalError ?? climateState.fatalError ?? securityState.fatalError ?? tiresState.fatalError,
@@ -92,7 +92,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
     >
       {!hasData ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Wifi className="h-5 w-5" />}
+          icon={<Radio className="h-5 w-5" />}
           message={t('widget.noSignals', 'No live signal data')}
           className="py-4"
         />

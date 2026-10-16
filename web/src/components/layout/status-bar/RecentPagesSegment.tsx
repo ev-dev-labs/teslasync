@@ -58,6 +58,7 @@ function iconForKind(kind: RecentPageKind): ReactNode {
 function formatRelative(visitedAt: number, now: number, t: TFunction): string {
   const diffMs = Math.max(0, now - visitedAt);
   const minutes = Math.floor(diffMs / 60_000);
+  // relative-time: when the page was visited
   if (minutes < 1) return t('recentPages.justNow', 'Just now');
   if (minutes < 60) return `${minutes}${t('recentPages.shortMinute', 'm')}`;
   const hours = Math.floor(minutes / 60);

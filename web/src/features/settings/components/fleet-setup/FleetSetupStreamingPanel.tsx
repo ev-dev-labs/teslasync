@@ -2,7 +2,7 @@
  * Streaming confirmation — live telemetry health from onboarding status.
  * Never hidden: waiting / stale / healthy all render in the same panel.
  */
-import { Wifi } from 'lucide-react'
+import { Radio } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge, GlassPanel, HelperText, IconBox, PanelTitle, Text } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
@@ -46,7 +46,7 @@ export function FleetSetupStreamingPanel({ onboarding, state = 'ready', error, o
     <GlassPanel id="fleet-setup-stream" className="h-full space-y-4 p-4 sm:p-5">
       <div className="flex items-center gap-3">
         <IconBox color="green">
-          <Wifi className="h-5 w-5" aria-hidden="true" />
+          <Radio className="h-5 w-5" aria-hidden="true" />
         </IconBox>
         <div>
           <PanelTitle>{t('fleetSetup.stream.title', 'Streaming')}</PanelTitle>
@@ -84,7 +84,7 @@ export function FleetSetupStreamingPanel({ onboarding, state = 'ready', error, o
         />
       ) : (
         <EmptyState
-          icon={<Wifi className="h-8 w-8" aria-hidden="true" />}
+          icon={<Radio className="h-8 w-8" aria-hidden="true" />}
           message={
             health === 'stale'
               ? t(

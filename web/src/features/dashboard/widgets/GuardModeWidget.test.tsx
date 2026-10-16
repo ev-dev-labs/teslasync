@@ -40,7 +40,7 @@
  * `@/api/hooks/useVehicles` is fully mocked, so the network is never touched
  * and every query state is driven deterministically. `react-i18next` is stubbed
  * with a passthrough `t(key, default)` so assertions read the English defaults.
- * The shared WidgetShell / DataFreshness / Badge / EmptyState / WidgetEventFeed
+ * The shared WidgetShell / FreshnessDot / Badge / EmptyState / WidgetEventFeed
  * primitives all run for real, so assertions exercise the true rendered DOM.
  * `<MemoryRouter>` wraps every render because the event-feed rows and the error
  * branch's <QueryError> reach for react-router.
@@ -51,7 +51,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { GuardConfig, GuardEvent } from '@/api/hooks/useGuard';
 import GuardModeWidget from './GuardModeWidget';
 
-// jsdom lacks matchMedia; DataFreshness → useMotionPreference (framer-motion's
+// jsdom lacks matchMedia; FreshnessDot → useMotionPreference (framer-motion's
 // useReducedMotion) reads it during render. Install a benign stub before any
 // component mounts.
 vi.hoisted(() => {

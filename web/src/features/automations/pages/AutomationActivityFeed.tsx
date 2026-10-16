@@ -18,7 +18,14 @@ import { SourceContent } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  CheckCircle, XCircle, SkipForward, Activity, Clock, Wifi, WifiOff, Zap,
+  CheckCircle,
+  XCircle,
+  SkipForward,
+  Activity,
+  Clock,
+  Radio,
+  CloudOff,
+  Zap,
 } from 'lucide-react';
 import type { AutomationHistory, AutomationHistoryStats } from '@/api/types';
 import type { AutomationActivityEvent } from '@/hooks/useAutomationEvents';
@@ -186,12 +193,12 @@ export function AutomationActivityFeed({
             <SectionTitle>{t('automations.recentActivity', 'Recent activity')}</SectionTitle>
             {connectionState === 'connected' ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5">
-                <Wifi className="h-3 w-3 shrink-0 text-emerald-300" aria-hidden="true" />
+                <Radio className="h-3 w-3 shrink-0 text-emerald-300" aria-hidden="true" />
                 <Caption className="text-emerald-300">{t('automations.live', 'Live')}</Caption>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5">
-                <WifiOff className="h-3 w-3 shrink-0 animate-pulse text-amber-300" aria-hidden="true" />
+                <CloudOff className="h-3 w-3 shrink-0 animate-pulse text-amber-300" aria-hidden="true" />
                 <Caption className="text-amber-300">{t('automations.reconnecting', 'Reconnecting')}</Caption>
               </span>
             )}

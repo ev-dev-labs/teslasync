@@ -19,9 +19,9 @@ import { Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSetBreadcrumbOverrides } from './BreadcrumbOverridesContext';
 import {
-  DataFreshnessAuto,
+  FreshnessDotAuto,
   type FreshnessQuery,
-} from '@/components/data-display/DataFreshness';
+} from '@/components/data-display/FreshnessDot';
 import { OperationalModeBadge } from '@/components/data-display/OperationalModeBadge';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
@@ -93,13 +93,13 @@ export interface PageContainerProps {
    */
   copyLink?: boolean;
   /**
-   * When provided, renders `<DataFreshnessAuto>` in the header metadata zone.
+   * When provided, renders `<FreshnessDotAuto>` in the header metadata zone.
    * Pass either a single `useQuery()` result
    * or an array; arrays surface the most-degraded state via
    * `pickWorstQuery` so a single chip can stand in for the whole page.
    *
    * Pages that need finer control (e.g. `forceStaleAfterMs` for cagg-driven
-   * data) should mount `<DataFreshnessAuto>` via `metadataActions`.
+   * data) should mount `<FreshnessDotAuto>` via `metadataActions`.
    */
   query?: FreshnessQuery | readonly FreshnessQuery[];
   /**
@@ -166,7 +166,9 @@ export function PageContainer({
         className={cn(
           'relative flex flex-col gap-5 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-5 shadow-e1 sm:px-6 xl:flex-row xl:items-center xl:justify-between',
           actionLayout === 'scope-first' && 'gap-3 px-4 py-4 sm:px-6 sm:py-5',
-          compactHeader && 'gap-2 overflow-visible rounded-none border-0 bg-transparent px-0 py-1 shadow-none sm:px-0 xl:gap-3',
+          // Title first; the single action group joins its row when it fits,
+          // otherwise wraps below it, right-aligned.
+          compactHeader && 'flex-row flex-wrap items-center justify-between gap-x-3 gap-y-2 overflow-visible rounded-none border-0 bg-transparent px-0 py-1 shadow-none sm:px-0',
         )}
         data-role="page-header"
       >
@@ -219,7 +221,7 @@ export function PageContainer({
             resolvedQuery || metadataActions || operationalMode.isReadOnly
               ? <>
                   {operationalMode.isReadOnly && <OperationalModeBadge />}
-                  {resolvedQuery && <DataFreshnessAuto query={resolvedQuery} />}
+                  {resolvedQuery && <FreshnessDotAuto query={resolvedQuery} />}
                   {metadataActions}
                 </>
               : undefined

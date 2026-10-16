@@ -27,7 +27,7 @@
  *     `useUnits` reads — that is why distance renders in "km" and the km→display
  *     passthrough is exercised by the render tests, while the miles branch is
  *     covered directly through the pure `toDistanceDisplay`.
- *   - `matchMedia` is stubbed before any import runs because <DataFreshness>'s
+ *   - `matchMedia` is stubbed before any import runs because <FreshnessDot>'s
  *     `useMotionPreference` (rendered transitively by <WidgetShell>) touches it
  *     on first paint and jsdom does not provide it.
  *
@@ -40,7 +40,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
-// jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference reads it on
+// jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference reads it on
 // first paint. Install a no-op (reduced-motion = false) BEFORE any import.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

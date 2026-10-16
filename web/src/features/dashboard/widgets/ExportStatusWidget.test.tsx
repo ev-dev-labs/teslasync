@@ -40,7 +40,7 @@ import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // i18n stub: echo the fallback string, interpolating {{var}} tokens from the
-// options bag so any count/time-bearing copy (DataFreshness) renders as text.
+// options bag so any count/time-bearing copy (FreshnessDot) renders as text.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string, opts?: Record<string, unknown>) => {
@@ -94,7 +94,7 @@ const mockUseExportJobs = vi.mocked(useExportJobs);
 
 // jsdom lacks matchMedia. Report reduced motion so <AnimatedNumber> (inside the
 // compact <WidgetBigNumber>) skips its tween and lands on the target value
-// synchronously, and framer-motion's useReducedMotion (via <DataFreshness>)
+// synchronously, and framer-motion's useReducedMotion (via <FreshnessDot>)
 // suppresses its pulse. Only the reduce-motion query matches so nothing else
 // is inadvertently toggled.
 if (typeof window.matchMedia !== 'function') {
@@ -110,7 +110,7 @@ if (typeof window.matchMedia !== 'function') {
   })) as unknown as typeof window.matchMedia;
 }
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): any {
   return {
     data: [],

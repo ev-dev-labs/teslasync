@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Zap, RefreshCw } from 'lucide-react';
 import { CardGrid, LayoutCard, PageLayout } from '@/components/layout';
-import { Button, Icon } from '@/components/ui';
+import { Icon, IconButton } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -29,13 +29,7 @@ export default function EnergyProductsPage() {
       title={t('energy.products.title', 'Energy Products')}
       subtitle={t('energy.products.subtitle', 'Powerwalls, Solar Panels & Wall Connectors discovered from Tesla')}
       query={sitesQuery}
-      primaryAction={<Button onClick={() => refreshMutation.mutate()}
-        loading={refreshMutation.isPending} disabled={refreshMutation.isPending}
-        wrapLabel className="min-h-11 min-w-11 md:min-h-10"
-        icon={<Icon icon={RefreshCw} />}
-        aria-label={t('energy.products.refresh', 'Refresh from Tesla')}>
-        {t('energy.products.refresh', 'Refresh from Tesla')}
-      </Button>}
+      primaryAction={<IconButton icon={<Icon icon={RefreshCw} />} label={t('energy.products.refresh', 'Refresh from Tesla')} onClick={() => refreshMutation.mutate()} busy={refreshMutation.isPending} disabled={refreshMutation.isPending} aria-label={t('energy.products.refresh', 'Refresh from Tesla')} />}
     >
       <SourceTrustNotice source={source} label={t('energy.products.title', 'Energy Products')} />
       <FadeIn>

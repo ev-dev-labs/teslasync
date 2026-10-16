@@ -27,7 +27,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text, IconButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -480,16 +480,8 @@ export default function SubscriptionROIPage() {
       key: 'actions',
       header: t('ownership.action.header', 'Actions'),
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<Icon icon={Trash2} size="md" />}
-          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-          loading={remove.isPending && remove.variables === row.id}
-          onClick={() => void handleRemove(row)}
-        >
-          {t('ownership.action.remove', 'Remove')}
-        </Button>
+        /* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */
+        <IconButton icon={<Icon icon={Trash2} size="md" />} label={t('ownership.action.remove', 'Remove')} onClick={() => void handleRemove(row)} busy={remove.isPending && remove.variables === row.id} />
       ),
     },
   ];

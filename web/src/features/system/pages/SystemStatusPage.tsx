@@ -29,7 +29,7 @@ import {
 
 import { PageLayout, SourceContent, Masonry } from '@/components/layout'
 import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback'
-import { GlassPanel, Button, BUTTON_BASE, BUTTON_VARIANTS, Badge, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
+import { GlassPanel, BUTTON_BASE, BUTTON_VARIANTS, Badge, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
 import { KVList } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
 import {
@@ -67,6 +67,7 @@ import {
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
 import { AiSpendWatch } from '../components/status/AiSpendWatch'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { IconButton } from '@/components/ui/IconButton';
 
 // Shared cadence
 const STATUS_REFRESH_MS = 30_000
@@ -512,20 +513,7 @@ export default function SystemStatusPage() {
       metadataActions={<LiveStatusPill state={liveState} lastUpdateAt={liveLastUpdate} now={now} />}
       secondaryActions={
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isFetching}
-            className="gap-2"
-            aria-label={t('systemStatus.refreshAria', 'Refresh (r)')}
-            aria-busy={isFetching}
-            title={t('systemStatus.refreshHint', 'Press r to refresh')}
-            wrapLabel
-          >
-            <RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />
-            {t('common.refresh', 'Refresh')}
-          </Button>
+          <IconButton icon={<RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />} label={t('common.refresh', 'Refresh')} onClick={handleRefresh} disabled={isFetching} aria-label={t('systemStatus.refreshAria', 'Refresh (r)')} />
         </div>
       }
     >

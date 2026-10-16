@@ -12,8 +12,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, Pause, Play, Radio, Trash2 } from 'lucide-react';
 
-import { GlassPanel, Badge, Button, Input, DataTable, PanelTitle, Text, Code, type Column } from '@/components/ui';
-import { FreshnessIndicator, type StatMetric } from '@/components/data-display';
+import { GlassPanel, Badge, Button, Input, DataTable, PanelTitle, Text, Code, type Column, IconButton } from '@/components/ui';
+import { FreshnessDot, type StatMetric } from '@/components/data-display';
 import { TelemetrySummaryBrief } from './operationalbrief-all/TelemetrySummaryBrief';
 import { FadeIn } from '@/components/motion';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -119,7 +119,7 @@ export function LiveSignalTail({
       key: 'freshness',
       header: t('liveMonitor.freshness', 'Freshness'),
       // Tail timestamps describe frames/receipt, not verified field observations.
-      render: () => <FreshnessIndicator timestamp={null} size="sm" />,
+      render: () => <FreshnessDot updatedAt={null} isFetching={false} isStale={false} isError={false} />,
     },
   ], [t, formatTime]);
 
@@ -183,16 +183,7 @@ export function LiveSignalTail({
             >
               {t('liveMonitor.autoScroll', 'Auto-scroll')}
             </Button>
-            <Button
-              onClick={onClear}
-              variant="danger"
-              size="sm"
-              className="min-h-11 md:min-h-0"
-              wrapLabel
-              icon={<Trash2 className="h-3.5 w-3.5" />}
-            >
-              {t('liveMonitor.clear', 'Clear')}
-            </Button>
+            <IconButton icon={<Trash2 className="h-3.5 w-3.5" />} label={t('liveMonitor.clear', 'Clear')} onClick={onClear} confirm={{ title: t('confirm.clearStream.title', 'Clear the stream?'), message: t('confirm.clearStream.message', 'This removes the lines shown so far. New lines keep arriving.') }} />
           </div>
         </div>
 

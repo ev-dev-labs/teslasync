@@ -9,7 +9,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pencil, TestTube, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Badge, Button, GlassPanel, Heading, Text, Toggle } from '@/components/ui';
+import { Badge, Button, GlassPanel, Heading, Text, Toggle, IconButton } from '@/components/ui';
 import { useToast } from '@/components/feedback';
 import {
   useDeleteChannel, useTestChannel, useToggleChannel,
@@ -150,14 +150,7 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
         >
           {testMut.isPending || webhookTestMut.isPending ? t('notifications.channels.testing', 'Testing…') : t('notifications.channels.testShort', 'Test')}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
-          onClick={() => onEdit(channel)}
-        >
-          {t('common.edit', 'Edit')}
-        </Button>
+        <IconButton icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />} label={t('common.edit', 'Edit')} onClick={() => onEdit(channel)} />
         <Button
           variant="danger"
           size="sm"

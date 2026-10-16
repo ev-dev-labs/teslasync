@@ -41,6 +41,7 @@ export function formatTimeAgo(input: Date | number | string | null | undefined):
   const ms = input instanceof Date ? input.getTime() : new Date(input).getTime();
   if (!Number.isFinite(ms)) return '—';
   const mins = Math.floor((Date.now() - ms) / 60_000);
+  // relative-time: when the activity happened
   if (mins < 1) return 'Just now';
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);

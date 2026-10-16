@@ -186,6 +186,7 @@ export function ExportReportPanel({ report, sources = [], retainedExport, onSign
         <Button wrapLabel size="sm" onClick={() => void handleSign()} loading={isSigning} disabled={!canSign || isSigning}>
           {t('resaleVault.export.sign', 'Sign report')}
         </Button>
+        {/* flow-cta: downloads the signed report after the sign step */}
         <Button wrapLabel size="sm" variant="secondary" onClick={() => void handleDownload()} disabled={!signed || isSigning || blocked} icon={<Download className="h-3.5 w-3.5" />}>
           {t('resaleVault.export.download', 'Download JSON')}
         </Button>

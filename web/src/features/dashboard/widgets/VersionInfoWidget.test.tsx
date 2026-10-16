@@ -91,7 +91,7 @@ const COMPACT: WidgetSize = { cols: 1, rows: 2 };
 const STANDARD: WidgetSize = { cols: 2, rows: 2 };
 const WIDE: WidgetSize = { cols: 4, rows: 2 };
 
-/** Minimal `UseQueryResult` stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult` stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

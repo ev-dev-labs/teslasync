@@ -124,7 +124,7 @@ const mockVehicles = vi.mocked(useVehicles);
 const mockRules = vi.mocked(useAlertRules);
 const mockLogs = vi.mocked(useNotificationLogs);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

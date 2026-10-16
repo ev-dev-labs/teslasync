@@ -73,7 +73,7 @@ vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   };
 });
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshness>) and
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) and
 // framer-motion both read it. Report reduced-motion so animations settle.
 window.matchMedia = ((query: string) => ({
   matches: /prefers-reduced-motion/.test(query),
@@ -102,7 +102,7 @@ const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 const FULL: WidgetSize = { cols: 2, rows: 1 };
 const TALL: WidgetSize = { cols: 2, rows: 2 };
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

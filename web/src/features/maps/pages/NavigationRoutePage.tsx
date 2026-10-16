@@ -15,17 +15,7 @@ import {
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 
-import {
-  GlassPanel,
-  Badge,
-  Button,
-  DataTable,
-  Text,
-  Caption,
-  MetricValue,
-  Icon,
-  type Column,
-} from '@/components/ui';
+import { GlassPanel, Badge, DataTable, Text, Caption, MetricValue, Icon, type Column, IconButton } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
 import {
@@ -551,15 +541,7 @@ export default function NavigationRoutePage() {
       ]}
       secondaryActions={
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="min-h-11 md:min-h-9"
-            icon={<Icon icon={RefreshCw} />}
-            onClick={handleRefresh}
-          >
-            {t('nav.refresh', 'Refresh')}
-          </Button>
+          <IconButton icon={<Icon icon={RefreshCw} />} label={t('nav.refresh', 'Refresh')} onClick={handleRefresh} />
         </div>
       }
     >

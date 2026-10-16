@@ -110,7 +110,7 @@ const mockRecords = vi.mocked(useServiceRecords);
 const mockForecast = vi.mocked(useMaintenanceForecast);
 const mockUnits = vi.mocked(useUnits);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

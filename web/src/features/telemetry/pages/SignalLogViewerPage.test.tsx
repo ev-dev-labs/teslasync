@@ -112,7 +112,7 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   return { ...actual, useSelectedVehicle: vi.fn() };
 });
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshnessAuto>) reads it.
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDotAuto>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,

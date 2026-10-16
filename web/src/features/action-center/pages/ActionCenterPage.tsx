@@ -8,7 +8,7 @@ import {
 import { StaleRefreshWarning, useToast } from '@/components/feedback';
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Button, Pagination } from '@/components/ui';
+import { Pagination, IconButton } from '@/components/ui';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -205,17 +205,7 @@ export default function ActionCenterPage() {
         status={actionCenterState.status}
         updatedAt={actionCenterState.updatedAt}
       />
-      <Button
-        type="button"
-        variant="secondary"
-        wrapLabel
-        className="min-h-11 md:min-h-10"
-        icon={<RefreshIcon className="h-4 w-4" aria-hidden="true" />}
-        onClick={() => void query.refetch()}
-        loading={query.isFetching}
-      >
-        {t('actionCenter.actions.refresh', 'Refresh evidence')}
-      </Button>
+      <IconButton icon={<RefreshIcon className="h-4 w-4" aria-hidden="true" />} label={t('actionCenter.actions.refresh', 'Refresh evidence')} onClick={() => void query.refetch()} busy={query.isFetching} />
     </div>
   );
 

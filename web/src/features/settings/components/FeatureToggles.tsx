@@ -1,7 +1,8 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTeslaFeatureConfig, useRefreshTeslaFeatureConfig } from '@/api/hooks/useUser'
-import { GlassPanel, Button, IconBox, Badge, DataTable, Text, type Column } from '@/components/ui'
+import { GlassPanel, IconBox, Badge, DataTable, Text, type Column } from '@/components/ui'
 import { EmptyState, Skeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { cn } from '@/lib/cn'
@@ -97,16 +98,7 @@ export function FeatureToggles() {
                 {t('featureConfig.lastSynced', 'Synced')} {formatDateTime(featureConfig.fetched_at)}
               </span>
             )}
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />}
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              data-testid="feature-toggles-refresh"
-            >
-              {t('featureConfig.refresh', 'Refresh')}
-            </Button>
+            <IconButton icon={<RefreshCw className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin')} />} label={t('featureConfig.refresh', 'Refresh')} onClick={handleRefresh} disabled={isRefreshing} data-testid="feature-toggles-refresh" />
           </div>
         </div>
 

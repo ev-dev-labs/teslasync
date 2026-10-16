@@ -39,7 +39,7 @@
  * preference is driven deterministically. `convertDistanceFromSI` runs for real
  * so the conversion math is genuinely exercised. `react-i18next` is stubbed with
  * a passthrough `t(key, default)` so assertions read the English defaults. The
- * shared WidgetShell / WidgetBigNumber / AnimatedNumber / Badge / DataFreshness /
+ * shared WidgetShell / WidgetBigNumber / AnimatedNumber / Badge / FreshnessDot /
  * EmptyState primitives all run for real, so assertions exercise the true
  * rendered DOM. `<MemoryRouter>` wraps every render because a couple of shared
  * primitives reach for router context.
@@ -50,7 +50,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ProjectedRangeData } from '@/types/energy';
 import ProjectedRangeWidget from './ProjectedRangeWidget';
 
-// jsdom lacks matchMedia; AnimatedNumber (the range big number) and DataFreshness
+// jsdom lacks matchMedia; AnimatedNumber (the range big number) and FreshnessDot
 // both read it during render. Report `prefers-reduced-motion: reduce` so the
 // AnimatedNumber tween is skipped and the value lands on its target
 // synchronously — that makes the numeric assertions deterministic and disables

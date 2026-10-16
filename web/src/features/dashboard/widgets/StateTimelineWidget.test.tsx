@@ -22,7 +22,7 @@
  *
  * Network is never touched — the two analytics hooks and `useVehicles` are
  * mocked and driven per-test. `react-i18next` is stubbed to echo fallback
- * strings. The real `WidgetShell` / `DataFreshness` / `EmptyState` render, so
+ * strings. The real `WidgetShell` / `FreshnessDot` / `EmptyState` render, so
  * the freshness control and empty state are exercised for real.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';

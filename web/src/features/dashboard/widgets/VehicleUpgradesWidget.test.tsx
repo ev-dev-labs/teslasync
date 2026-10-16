@@ -22,7 +22,7 @@
  *     never touched and every render is deterministic.
  *   - `react-i18next` is stubbed to resolve the developer fallback (2nd arg) and
  *     interpolate `{{vars}}`, so assertions read the real English copy (and the
- *     transitive <DataFreshness> header resolves).
+ *     transitive <FreshnessDot> header resolves).
  *   - `useDateFormat` is stubbed with an echoing `formatDate` so the
  *     nearest-expiry assertion verifies the widget selects the *soonest* link,
  *     decoupled from the platform date-format details.
@@ -36,7 +36,7 @@ import { act, cleanup, render, screen, fireEvent, within } from '@testing-librar
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
-// jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference touches it on
+// jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference touches it on
 // first paint. Install a no-op reporting no reduced-motion before any import.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

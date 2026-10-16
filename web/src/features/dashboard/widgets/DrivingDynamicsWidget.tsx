@@ -78,7 +78,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
   // data, a transient background-refetch failure must not blank out
   // otherwise-valid numbers — it is surfaced through the freshness
   // indicator's error state instead (WidgetShell forwards `isError` to
-  // <DataFreshness>).
+  // <FreshnessDot>).
   const trust = useDataState({
     data: dynamics ?? distData, error: dynError ?? distError, isLoading: dynLoading, isFetching,
     isError: dynIsError || distIsError, isStale: dynStale || distStale, dataUpdatedAt: updatedAt, refetch: dynRefetch,

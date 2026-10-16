@@ -196,7 +196,7 @@ const mockStats = vi.mocked(useEnergyStats);
 const mockFlow = vi.mocked(useEnergyFlow);
 const mockSelectedVehicle = vi.mocked(useSelectedVehicle);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

@@ -16,7 +16,7 @@
  *   - `react-i18next` is stubbed to resolve the developer fallback string and
  *     interpolate `{{vars}}`, so assertions read the real English copy.
  *   - The global test-setup already mocks `useSettings` (km / °C) and
- *     `useTimezone` (UTC), which the transitive <DataFreshness> header needs.
+ *     `useTimezone` (UTC), which the transitive <FreshnessDot> header needs.
  *   - Renders are wrapped in <MemoryRouter> because <QueryError> (shown on the
  *     error branch) calls `useNavigate`.
  *
@@ -30,7 +30,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
 // jsdom lacks matchMedia; framer-motion (read transitively by
-// useMotionPreference inside <DataFreshness>) touches it on first paint.
+// useMotionPreference inside <FreshnessDot>) touches it on first paint.
 // Install a no-op before any import runs.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

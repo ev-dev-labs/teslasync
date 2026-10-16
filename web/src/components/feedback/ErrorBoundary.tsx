@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react'
-import { AlertTriangle, RefreshCw, Home, WifiOff } from 'lucide-react'
+import { AlertTriangle, RefreshCw, Home, CloudOff } from 'lucide-react'
 import i18n from 'i18next'
 import { Button } from '../ui/Button'
 import { Heading, Text } from '../ui/Typography'
@@ -186,7 +186,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="text-center max-w-md min-w-0">
             <div className="mx-auto mb-6 rounded-shape-md bg-[var(--semantic-danger-bg)] p-5 border border-[var(--semantic-danger-border)] w-fit">
               {isNetworkError ? (
-                <WifiOff className="h-10 w-10 text-[var(--semantic-danger)]" aria-hidden="true" />
+                <CloudOff className="h-10 w-10 text-[var(--semantic-danger)]" aria-hidden="true" />
               ) : (
                 <AlertTriangle className="h-10 w-10 text-[var(--semantic-danger)]" aria-hidden="true" />
               )}

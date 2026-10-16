@@ -18,7 +18,7 @@ vi.mock('@/hooks/useSettings', () => ({
 
 // `useRangeLabel` is the only export that reaches for i18n. Mock `react-i18next`
 // with a spy that returns the `t()` fallback (repo convention — see
-// DataFreshness.test.tsx) so we can assert BOTH the resolved label string and
+// FreshnessDot.test.tsx) so we can assert BOTH the resolved label string and
 // the exact translation key the hook selects for each preference.
 const { tSpy } = vi.hoisted(() => ({
   tSpy: vi.fn((_key: string, fallback: string) => fallback),

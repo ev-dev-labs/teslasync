@@ -52,6 +52,7 @@ export function formatRelativeTime(isoStr: string, t: TFunction): string {
   const ms = new Date(isoStr).getTime();
   if (!Number.isFinite(ms)) return t('widget.anomalyDetector.relative.unknown', '—');
   const diffMs = Date.now() - ms;
+  // relative-time: when the anomaly was detected
   if (diffMs < 0) return t('widget.anomalyDetector.relative.justNow', 'Just now');
   const diffMin = Math.floor(diffMs / 60_000);
   if (diffMin < 1) return t('widget.anomalyDetector.relative.justNow', 'Just now');

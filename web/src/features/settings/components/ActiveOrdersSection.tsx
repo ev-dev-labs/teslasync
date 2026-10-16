@@ -1,6 +1,7 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { useTranslation } from 'react-i18next'
 import { useTeslaUserOrders, useRefreshTeslaOrders } from '@/api/hooks/useUser'
-import { GlassPanel, Button, IconBox, Badge } from '@/components/ui'
+import { GlassPanel, IconBox, Badge } from '@/components/ui'
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
@@ -55,18 +56,10 @@ export function ActiveOrdersSection() {
                 {t('orders.lastSynced', 'Synced')} {formatDateTime(ordersData.fetched_at)}
               </span>
             )}
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<RefreshCw className={cn('h-3.5 w-3.5', ordersRefresh.isPending && 'animate-spin')} />}
-              onClick={() => ordersRefresh.mutate(undefined, {
+            <IconButton icon={<RefreshCw className={cn('h-3.5 w-3.5', ordersRefresh.isPending && 'animate-spin')} />} label={t('orders.refresh', 'Refresh')} onClick={() => ordersRefresh.mutate(undefined, {
                 onSuccess: () => toast.success(t('toast.ordersRefreshed', 'Orders refreshed')),
                 onError: (err: Error) => toast.error(t('toast.ordersFailed', 'Failed to refresh orders'), err.message),
-              })}
-              disabled={ordersRefresh.isPending}
-            >
-              {t('orders.refresh', 'Refresh')}
-            </Button>
+              })} disabled={ordersRefresh.isPending} />
           </div>
         </div>
 

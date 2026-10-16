@@ -27,7 +27,7 @@
  *
  * Network is never touched — the two energy hooks and `useVehicles` are mocked
  * and driven per-test. `react-i18next` is stubbed to echo fallback strings. The
- * real `WidgetShell` / `DataFreshness` / `EmptyState` / `StatCard` / `Sparkline`
+ * real `WidgetShell` / `FreshnessDot` / `EmptyState` / `StatCard` / `Sparkline`
  * / `WidgetEventFeed` render, so those surfaces are exercised for real.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';

@@ -33,7 +33,7 @@
  * controllable via hoisted mocks. `react-i18next` echoes each `t(key, fallback)`
  * fallback so assertions read against English copy. `useDateFormat` is stubbed
  * to a deterministic `fmt:<value>` formatter (and a `formatTime` used by the
- * freshness chip). `useMotionPreference` is stubbed so `DataFreshness` renders
+ * freshness chip). `useMotionPreference` is stubbed so `FreshnessDot` renders
  * without a provider. A `<MemoryRouter>` wraps every render because the error
  * panel (`QueryError`) calls `useNavigate` and `EmptyState` can render a `<Link>`.
  * The repo does not ship `@testing-library/user-event`, so interactions use
@@ -78,7 +78,7 @@ vi.mock('@/hooks/useDateFormat', () => ({
   }),
 }));
 
-// DataFreshness reads motion preference; stub so the chip renders provider-free.
+// FreshnessDot reads motion preference; stub so the chip renders provider-free.
 vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: false, durationMs: 250 }),
 }));

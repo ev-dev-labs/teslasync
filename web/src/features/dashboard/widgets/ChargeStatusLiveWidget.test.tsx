@@ -17,7 +17,7 @@
  *   - `react-i18next` is stubbed to resolve the developer fallback string so
  *     assertions read the real English copy.
  *   - The global test-setup already mocks `useSettings` (km / °C) and
- *     `useTimezone` (UTC), which `useUnits` and the transitive <DataFreshness>
+ *     `useTimezone` (UTC), which `useUnits` and the transitive <FreshnessDot>
  *     header depend on. That is why the charge-rate cell reads in "km/h".
  *   - `matchMedia` is stubbed to report `prefers-reduced-motion: reduce` so
  *     <AnimatedNumber> lands on its final value synchronously instead of
@@ -34,7 +34,7 @@ import type { ReactElement } from 'react';
 
 // jsdom lacks matchMedia. Install a stub reporting reduced-motion = true BEFORE
 // any import runs so <AnimatedNumber> skips its rAF tween and paints the final
-// value, and <DataFreshness>'s useMotionPreference resolves cleanly.
+// value, and <FreshnessDot>'s useMotionPreference resolves cleanly.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
     window.matchMedia = ((query: string) => ({

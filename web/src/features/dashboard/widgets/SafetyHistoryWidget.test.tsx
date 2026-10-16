@@ -142,7 +142,7 @@ vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   return { ...actual, useVehicles: vi.fn() };
 });
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshness>) reads it.
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) reads it.
 // Report reduced-motion so the freshness chip settles on its final visual.
 window.matchMedia = ((query: string) => ({
   matches: /prefers-reduced-motion/.test(query),
@@ -172,7 +172,7 @@ const mockVehicles = vi.mocked(useVehicles);
 /** Echo translator matching the `(key, fallback)` overload — returns fallback. */
 const echo = (_k: string, fb: string) => fb;
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

@@ -12,7 +12,7 @@ import {
   ShieldX,
   TimerOff,
   TriangleAlert,
-  WifiOff,
+  CloudOff,
 } from 'lucide-react'
 // Direct module path, NOT the `@/components/ui` category barrel. The barrel
 // pulls in `ui/SignalConfigModal`, which imports the feedback barrel, so a
@@ -247,7 +247,7 @@ export function StatusAwareError({
       break
     case 'offline':
       state = {
-        Icon: WifiOff,
+        Icon: CloudOff,
         role: 'status',
         tone: 'warning',
         title: t('error.network.offlineTitle', "You're offline"),

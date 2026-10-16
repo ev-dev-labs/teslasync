@@ -29,7 +29,7 @@
  * Strategy: `useClimateLatest` + `useVehicles` are the network boundary and are
  * fully controllable via hoisted mocks. `useUnits` is mocked so the temperature
  * preference is observable. `react-i18next` echoes each `t(key, fallback)`
- * fallback so assertions read against English copy. `DataFreshness`'s display
+ * fallback so assertions read against English copy. `FreshnessDot`'s display
  * hooks are stubbed so the freshness chip renders without a Settings provider.
  * A `<MemoryRouter>` wraps every render because `EmptyState` renders a `<Link>`.
  */
@@ -71,7 +71,7 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-// DataFreshness display hooks — stubbed so the freshness chip renders without a
+// FreshnessDot display hooks — stubbed so the freshness chip renders without a
 // Settings/QueryClient provider.
 vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
   // wrapped-real-hook: keep every real formatter, override only what this file controls.

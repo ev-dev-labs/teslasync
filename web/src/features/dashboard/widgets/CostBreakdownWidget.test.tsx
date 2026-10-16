@@ -169,7 +169,7 @@ const mockCost = vi.mocked(useCostBreakdown);
 const mockVehicles = vi.mocked(useVehicles);
 const mockUnits = vi.mocked(useUnits);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

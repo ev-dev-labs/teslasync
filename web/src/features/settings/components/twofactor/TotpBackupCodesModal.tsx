@@ -58,6 +58,7 @@ export function TotpBackupCodesModal({ open, codes, onDownload, onClose }: TotpB
                 ))}
               </ul>
               <div className="flex flex-wrap items-center justify-end gap-2">
+                {/* flow-cta: saving backup codes is this dialog’s task */}
                 <Button
                   type="button"
                   variant="ghost"

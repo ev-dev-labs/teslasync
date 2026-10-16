@@ -65,7 +65,7 @@ vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   return { ...actual, useVehicles: vi.fn(), useVehicleState: vi.fn() };
 });
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshness>) reads it.
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,
@@ -94,7 +94,7 @@ const mockVehicleState = vi.mocked(useVehicleState);
 
 const SIZE: WidgetSize = { cols: 1, rows: 1 };
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

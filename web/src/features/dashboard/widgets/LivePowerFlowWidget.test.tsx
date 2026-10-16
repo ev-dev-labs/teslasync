@@ -32,7 +32,7 @@
  * Strategy mirrors EnergyFlowWidget.test.tsx: `@/api/hooks/useEnergy` is the
  * network boundary (hoisted mocks); `WidgetFlowDiagram` is a prop-recording
  * stub that also mirrors nodes/arrows into the DOM; `react-i18next` echoes each
- * `t(key, fallback)` fallback; `DataFreshness`'s display hooks are stubbed so
+ * `t(key, fallback)` fallback; `FreshnessDot`'s display hooks are stubbed so
  * the refresh chip renders without a Settings provider; `<MemoryRouter>` wraps
  * every render because `EmptyState` can reach for `<Link>`.
  */
@@ -109,7 +109,7 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-// DataFreshness display hooks — stubbed so the freshness chip renders without a
+// FreshnessDot display hooks — stubbed so the freshness chip renders without a
 // Settings/QueryClient provider.
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({ formatTime: (v: unknown) => String(v) }),

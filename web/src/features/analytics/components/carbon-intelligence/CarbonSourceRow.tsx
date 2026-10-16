@@ -2,7 +2,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { deriveDataState } from '@/api/dataState';
-import { DataFreshness } from '@/components/data-display';
+import { FreshnessDot } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { Badge, Button, Text } from '@/components/ui';
 import type { CarbonQueryState, CarbonQueryStates } from './types';
@@ -114,7 +114,7 @@ export function CarbonSourceRow({
           <Text as="p" variant="label">{name}</Text>
           <Text as="p" variant="caption">{scope}</Text>
           {state.enabled && source.updatedAt != null ? (
-            <DataFreshness
+            <FreshnessDot
               updatedAt={source.updatedAt}
               isFetching={source.isRefreshing}
               isStale={state.isStale === true || source.status === 'stale'}

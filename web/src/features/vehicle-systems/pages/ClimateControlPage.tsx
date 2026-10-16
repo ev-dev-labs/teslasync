@@ -37,7 +37,6 @@ import {
 import {
   GlassPanel,
   Badge,
-  Button,
   DataTable,
   useSortToggle,
   Text,
@@ -46,6 +45,7 @@ import {
   Icon,
   type Column,
   type MobileDataTablePresentation,
+  IconButton,
 } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import {
@@ -723,20 +723,9 @@ export default function ClimateControlPage() {
       dataSources={dataSources}
       secondaryActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="min-h-11 min-w-11 md:min-h-9"
-            wrapLabel
-            icon={<Icon icon={RefreshCw} />}
-            disabled={!canRefresh}
-            aria-describedby={!canRefresh ? 'climate-refresh-prerequisite' : undefined}
-            onClick={() => {
+          <IconButton icon={<Icon icon={RefreshCw} />} label={t('common.refresh', 'Refresh')} onClick={() => {
               if (canRefresh) void refetch();
-            }}
-          >
-            {t('common.refresh', 'Refresh')}
-          </Button>
+            }} disabled={!canRefresh} aria-describedby={!canRefresh ? 'climate-refresh-prerequisite' : undefined} />
           {!canRefresh && (
             <Caption id="climate-refresh-prerequisite">
               {t('vehicleManagement.state.vehicleRequired', 'Select a vehicle')}

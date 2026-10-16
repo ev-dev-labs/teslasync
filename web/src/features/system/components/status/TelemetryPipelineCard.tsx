@@ -27,7 +27,7 @@
 
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, Battery, Car, ExternalLink, Radio, Wifi, WifiOff } from 'lucide-react'
+import { Activity, Battery, Car, ExternalLink, Radio, CloudOff } from 'lucide-react'
 
 import { getPollingStatus, type VehiclePollingStatus } from '@/api/polling'
 import { useMQTTStatus } from '@/api/hooks/useTelemetry'
@@ -318,7 +318,7 @@ export function TelemetryPipelineCard({
             </span>
           ) : mqttConnected === false ? (
             <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
-              <WifiOff className="h-3 w-3 shrink-0" aria-hidden="true" />
+              <CloudOff className="h-3 w-3 shrink-0" aria-hidden="true" />
               {t('systemStatus.pipeline.brokerDisconnected', 'MQTT broker disconnected')}
             </span>
           ) : (
@@ -335,7 +335,7 @@ export function TelemetryPipelineCard({
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
-                <WifiOff className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <CloudOff className="h-3 w-3 shrink-0" aria-hidden="true" />
                 {t('systemStatus.pipeline.pollingDisabled', 'polling engine disabled')}
               </span>
             )
@@ -418,7 +418,7 @@ export function TelemetryPipelineCard({
                 {/* Liveness chip + last/next poll */}
                 <div className="flex min-w-0 flex-col items-start gap-0.5 sm:w-52 sm:items-end">
                   <Text size="xs" className={`inline-flex flex-wrap items-center gap-1 rounded-md px-1.5 py-0.5 ${cls.chip}`}>
-                    {source === 'stream' ? <Radio className="h-3 w-3 shrink-0" aria-hidden /> : <Wifi className="h-3 w-3 shrink-0" aria-hidden />}
+                    {source === 'stream' ? <Radio className="h-3 w-3 shrink-0" aria-hidden /> : <Radio className="h-3 w-3 shrink-0" aria-hidden />}
                     {livenessLabels[level]}
                     {sourceLabel && (
                       <Caption className="ms-1">{sourceLabel}</Caption>

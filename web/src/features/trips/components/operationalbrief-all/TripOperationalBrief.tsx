@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { DataFreshness, DataProvenanceBadge, OperationalBrief } from '@/components/data-display';
+import { FreshnessDot, DataProvenanceBadge, OperationalBrief } from '@/components/data-display';
 import { DataSourceNotice } from '@/components/feedback';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
 
@@ -42,7 +42,7 @@ export function TripOperationalBrief({ source, loading, ...props }: TripOperatio
         statusTone={source.fatalError ? 'danger' : source.status === 'stale' || source.status === 'partial' ? 'warning' : 'neutral'}
         freshness={<>
           <DataProvenanceBadge provenance={source.provenance} status={source.status} updatedAt={source.updatedAt} />
-          <DataFreshness updatedAt={source.updatedAt} isFetching={source.isRefreshing}
+          <FreshnessDot updatedAt={source.updatedAt} isFetching={source.isRefreshing}
             isStale={source.status === 'stale'} isError={source.refreshError !== null || source.fatalError !== null} />
         </>}
       />

@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { Button, Icon, HelperText } from '@/components/ui';
+import { Icon, HelperText, IconButton } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useTeslaFeatureConfig, useRefreshTeslaFeatureConfig } from '@/api/hooks/useUser';
@@ -60,19 +60,7 @@ export default function TeslaFeatureFlagsPage() {
 
   const actions = (
     <div className="flex min-w-0 flex-col items-start gap-2">
-      <Button
-        variant="secondary"
-        size="sm"
-        wrapLabel
-        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-        icon={<Icon icon={RefreshCw} />}
-        loading={refresh.isPending}
-        onClick={() => canWrite && !refresh.isPending && refresh.mutate()}
-        disabled={!canWrite || refresh.isPending}
-        aria-describedby={writeBlockReason ? 'tesla-feature-refresh-reason' : undefined}
-      >
-        {t('featureConfig.refresh', 'Refresh')}
-      </Button>
+      <IconButton icon={<Icon icon={RefreshCw} />} label={t('featureConfig.refresh', 'Refresh')} onClick={() => canWrite && !refresh.isPending && refresh.mutate()} busy={refresh.isPending} disabled={!canWrite || refresh.isPending} aria-describedby={writeBlockReason ? 'tesla-feature-refresh-reason' : undefined} />
       {writeBlockReason && (
         <HelperText id="tesla-feature-refresh-reason">{writeBlockReason}</HelperText>
       )}

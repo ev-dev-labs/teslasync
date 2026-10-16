@@ -18,7 +18,7 @@
  *      whether or not the user prefers reduced motion (the FadeIn branch).
  *
  * jsdom has no `matchMedia` and framer-motion v12 caches it at module load, so
- * (per the repo convention in DataFreshness.test.tsx) we mock only
+ * (per the repo convention in FreshnessDot.test.tsx) we mock only
  * `useReducedMotion` and keep the real `motion.div`. react-i18next is stubbed
  * to echo the English fallback so assertions read real copy.
  */

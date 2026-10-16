@@ -51,7 +51,7 @@ vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 vi.mock('@/hooks/useVehicleLive', () => ({ useVehicleLive: vi.fn() }));
 // Override the global setup's useSettings stub with a controllable spy while
 // preserving the module's other (re-exported) members so transitive callers
-// — WidgetShell → DataFreshness → useDateFormat — keep working.
+// — WidgetShell → FreshnessDot → useDateFormat — keep working.
 vi.mock('@/hooks/useSettings', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
   return { ...actual, useSettings: vi.fn() };

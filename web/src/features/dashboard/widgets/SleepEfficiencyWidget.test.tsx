@@ -84,7 +84,7 @@ const mockRequest = vi.mocked(request);
 const mockUseVehicles = vi.mocked(useVehicles);
 
 // jsdom lacks matchMedia; framer-motion / useMotionPreference (via
-// <DataFreshness> inside <WidgetShell>) reads it.
+// <FreshnessDot> inside <WidgetShell>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,

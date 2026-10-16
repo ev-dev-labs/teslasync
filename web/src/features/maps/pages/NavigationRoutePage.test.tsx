@@ -173,7 +173,7 @@ vi.mock('@/hooks/useLiveConnection', () => ({
 
 // The three data hooks the page reads are stubbed to synchronous, per-test
 // controllable query-shaped objects (the latest one supplies the freshness
-// fields PageContainer's DataFreshnessAuto reads).
+// fields PageContainer's FreshnessDotAuto reads).
 vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useVehicles')>();
   return {

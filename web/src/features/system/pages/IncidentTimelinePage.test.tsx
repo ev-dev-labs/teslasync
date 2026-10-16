@@ -144,7 +144,7 @@ function baseIncident(overrides?: Partial<Incident>): Incident {
 }
 
 /** A resolved TanStack-Query-shaped result the page can consume + forward to
- *  PageContainer's `query` (DataFreshness) prop. */
+ *  PageContainer's `query` (FreshnessDot) prop. */
 type IncidentFixture = Omit<Incident, 'updates' | 'affected_components'> & {
   updates?: Incident['updates'] | null;
   affected_components?: Incident['affected_components'] | null;

@@ -27,6 +27,7 @@ export function PlanExportPanel({ input, result }: PlanExportPanelProps) {
           'Download the full recommendation — inputs, per-slot schedule, and scores — as a versioned JSON document. Nothing is sent to any vehicle, Powerwall, or utility.',
         )}
       </Caption>
+      {/* flow-cta: downloading the plan is this panel’s purpose */}
       <Button wrapLabel size="sm" variant="primary" icon={<Download className="h-3.5 w-3.5" />} onClick={handleExport}>
         <FileJson className="h-3.5 w-3.5" />
         {t('homeEnergy.export.download', 'Download canonical JSON plan')}

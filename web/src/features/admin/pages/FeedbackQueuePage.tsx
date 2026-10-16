@@ -1,3 +1,4 @@
+import { IconButton } from '@/components/ui/IconButton';
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Archive, Bug, CheckCircle, ExternalLink, PieChart, RefreshCw, RotateCcw, Workflow } from 'lucide-react'
@@ -331,16 +332,7 @@ export default function FeedbackQueuePage() {
   )
 
   const actions = (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={handleRefreshAll}
-      loading={isRefreshing}
-      aria-label={t('common.refresh', 'Refresh')}
-      icon={<Icon icon={RefreshCw} />}
-    >
-      {t('common.refresh', 'Refresh')}
-    </Button>
+    <IconButton icon={<Icon icon={RefreshCw} />} label={t('common.refresh', 'Refresh')} onClick={handleRefreshAll} busy={isRefreshing} aria-label={t('common.refresh', 'Refresh')} />
   )
 
   return (

@@ -7,7 +7,7 @@ import {
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { VisuallyHidden } from '@/components/a11y';
-import { Badge, Button, Caption, Icon } from '@/components/ui';
+import { Badge, Caption, Icon, IconButton } from '@/components/ui';
 
 import { KVList, Energy, type StatMetric } from '@/components/data-display';
 import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
@@ -230,16 +230,7 @@ export default function PowerFlowDashboardPage() {
 
   const actions = (
     <>
-      <Button
-        wrapLabel
-        variant="secondary"
-        className="min-h-11 min-w-11 md:min-h-10"
-        onClick={() => refreshMutation.mutate(siteId)}
-        loading={refreshMutation.isPending}
-        icon={<Icon icon={RefreshCw} />}
-      >
-        {t('powerFlow.refresh', 'Refresh from Tesla')}
-      </Button>
+      <IconButton icon={<Icon icon={RefreshCw} />} label={t('powerFlow.refresh', 'Refresh from Tesla')} onClick={() => refreshMutation.mutate(siteId)} busy={refreshMutation.isPending} />
     </>
   );
 

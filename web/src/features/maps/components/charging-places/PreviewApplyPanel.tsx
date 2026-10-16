@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calculator, Play, RefreshCw } from 'lucide-react';
 
-import { Button, Input, ConfirmDialog, Badge, Text } from '@/components/ui';
+import { Button, Input, ConfirmDialog, Badge, Text, IconButton } from '@/components/ui';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 import { Skeleton, EmptyState, QueryError, InlineCallout } from '@/components/feedback';
@@ -110,16 +110,7 @@ export function PreviewApplyPanel({ geofenceId, rate }: PreviewApplyPanelProps) 
           <Badge variant="neutral" size="sm">
             {formatRatePerWh(rate.rate_per_wh, rate.currency, locale)} / {t('chargingPlaces.kwh', 'kWh')}
           </Badge>
-        <Button
-          wrapLabel
-          size="sm"
-          variant="ghost"
-          icon={<RefreshCw className={preview.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />}
-          onClick={() => void preview.refetch()}
-          disabled={preview.isFetching}
-        >
-          {t('chargingPlaces.previewApply.refresh', 'Refresh preview')}
-        </Button>
+        <IconButton icon={<RefreshCw className={preview.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />} label={t('chargingPlaces.previewApply.refresh', 'Refresh preview')} onClick={() => void preview.refetch()} disabled={preview.isFetching} />
       </div>
     }>
       <Text as="p" size="sm" color="muted" className="mb-3">

@@ -132,7 +132,7 @@ beforeEach(() => {
   unitsMock.mockReturnValue({ unitPrefs: { distance: 'mi' } });
   dateFormatMock.mockReturnValue({
     // `formatDate` powers the widget's Expiry-Date row; the rest satisfy the
-    // shared <DataFreshness> chip in the WidgetShell header (it destructures
+    // shared <FreshnessDot> chip in the WidgetShell header (it destructures
     // `formatTime`). Passthrough strings keep the visible copy deterministic.
     formatDate: (v: unknown) => (v ? 'formatted-date' : ''),
     formatDateTime: () => 'formatted-datetime',

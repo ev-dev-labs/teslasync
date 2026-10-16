@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { RotateCcw, RefreshCw, Bookmark } from 'lucide-react';
-import { Slider, Toggle, Select, Button, Caption } from '@/components/ui';
+import { Slider, Toggle, Select, Button, Caption, IconButton } from '@/components/ui';
 import { FormSection } from '@/components/forms';
 import { Grid } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
@@ -52,9 +52,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
           <Button wrapLabel size="sm" className="min-h-11 md:min-h-9" variant="secondary" icon={<Bookmark className="h-3.5 w-3.5" />} onClick={onCommitBaseline}>
             {t('homeEnergy.scenario.commitBaseline', 'Save as stability baseline')}
           </Button>
-          <Button wrapLabel size="sm" className="min-h-11 md:min-h-9" variant="outline" icon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => resetScenario()}>
-            {t('homeEnergy.scenario.reset', 'Reset to defaults')}
-          </Button>
+          <IconButton icon={<RotateCcw className="h-3.5 w-3.5" />} label={t('homeEnergy.scenario.reset', 'Reset to defaults')} onClick={() => resetScenario()} confirm={{ title: t('confirm.resetInputs.title', 'Reset all inputs?'), message: t('confirm.resetInputs.message', 'Your changes return to their default values.') }} />
         </div>
       </div>
 

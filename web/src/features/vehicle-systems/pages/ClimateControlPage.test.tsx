@@ -211,7 +211,7 @@ const mockClimateHistory = vi.mocked(useClimateHistory);
 const mockCharging = vi.mocked(useChargingTelemetryLatest);
 const mockSelectedVehicle = vi.mocked(useSelectedVehicle);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,

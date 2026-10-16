@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Lock, RefreshCw, ShieldCheck, Unlock } from 'lucide-react';
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Badge, Button, Card, Heading, HelperText, PanelTitle } from '@/components/ui';
+import { Badge, Button, Card, Heading, HelperText, PanelTitle, IconButton } from '@/components/ui';
 import { AlertBanner, EmptyState, QueryError, TableSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -171,9 +171,7 @@ export default function RbacMatrixPage() {
         aria-label={t('rbac.actions.refresh', 'Refresh')} title={t('rbac.actions.refresh', 'Refresh')}>
         <RefreshCw className={cn('h-4 w-4', matrixQuery.isFetching && 'animate-spin')} aria-hidden />
       </Button>
-      <Button variant="secondary" onClick={handleEnterEdit} data-testid="rbac-edit-button">
-        <Unlock className="h-4 w-4" aria-hidden />{t('rbac.actions.edit', 'Edit')}
-      </Button>
+      <IconButton icon={<Unlock className="h-4 w-4" aria-hidden />} label={t('rbac.actions.edit', 'Edit')} variant="secondary" onClick={handleEnterEdit} data-testid="rbac-edit-button" />
     </div>
   );
 

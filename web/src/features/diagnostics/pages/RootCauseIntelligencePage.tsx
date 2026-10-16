@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout } from '@/components/layout';
-import { DataFreshnessAuto, type StatMetric } from '@/components/data-display';
+import { FreshnessDotAuto, type StatMetric } from '@/components/data-display';
 import { HelpTooltip } from '@/components/ui';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -167,7 +167,7 @@ export default function RootCauseIntelligencePage() {
       )}
       busy={workspace.signalsQuery.isFetching || workspace.evidenceBundle.isFetching || isLoading}
       announce={false}
-      metadataActions={<DataFreshnessAuto
+      metadataActions={<FreshnessDotAuto
         query={workspace.signalsQuery}
         source={t('rootCauseIntelligence.picker.title', 'Choose a signal to investigate')}
       />}

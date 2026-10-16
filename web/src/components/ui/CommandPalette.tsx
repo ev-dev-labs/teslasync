@@ -293,6 +293,7 @@ function recentPageIcon(kind: RecentPageKind): React.ReactNode {
 function formatRecentVisitedAgo(t: TFunction, visitedAt: number, now: number): string {
   const diffMs = Math.max(0, now - visitedAt)
   const diffMin = Math.floor(diffMs / 60_000)
+  // relative-time: when the recent item was used
   if (diffMin < 1) return t('palette.recent.justNow', 'Just now')
   if (diffMin < 60) return t('palette.recent.minutesAgo', { count: diffMin, defaultValue: `${diffMin}m ago` })
   const diffHr = Math.floor(diffMin / 60)

@@ -74,6 +74,7 @@ export function PresentationModeSegment({
           </Text>
         </span>
       </Button>
+      {/* flow-cta: a labelled option in the presentation popover list */}
       <Button
         type="button"
         variant="ghost"

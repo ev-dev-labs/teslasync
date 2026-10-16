@@ -22,7 +22,7 @@ import {
   type GrafanaPanelDraft,
 } from '@/components/ai';
 import { Grid, PageLayout } from '@/components/layout';
-import { Button, Code, CopyButton, GlassPanel, Icon, PanelTitle, Text, Textarea } from '@/components/ui';
+import { Code, CopyButton, GlassPanel, Icon, PanelTitle, Text, Textarea, IconButton } from '@/components/ui';
 import { OperationalBrief, OrderedStepList, type StatMetric } from '@/components/data-display';
 import { EmptyState, InlineCallout, type CalloutVariant } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -354,16 +354,7 @@ export default function GrafanaPanelPage() {
                     disabled={!canCopy}
                     label={t('powerGrafana.editor.copy', 'Copy to clipboard')}
                   />
-                  <Button
-                    variant="secondary"
-                    wrapLabel
-                    className="min-h-11 md:min-h-10"
-                    onClick={handleClear}
-                    disabled={!canCopy}
-                    icon={<Icon icon={Trash2} />}
-                  >
-                    {t('powerGrafana.editor.clear', 'Clear')}
-                  </Button>
+                  <IconButton icon={<Icon icon={Trash2} />} label={t('powerGrafana.editor.clear', 'Clear')} variant="secondary" onClick={handleClear} disabled={!canCopy} confirm={{ title: t('confirm.clearEditor.title', 'Clear the editor?'), message: t('confirm.clearEditor.message', 'This removes the current text from the editor. It can’t be undone.') }} />
                 </div>
                 {status && (
                   <InlineCallout variant={status.variant}>{status.message}</InlineCallout>

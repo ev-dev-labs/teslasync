@@ -43,7 +43,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) and PageContainer's
-// <DataFreshness> chip read it at module load. Install before any import
+// <FreshnessDot> chip read it at module load. Install before any import
 // evaluates so the mount doesn't throw.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

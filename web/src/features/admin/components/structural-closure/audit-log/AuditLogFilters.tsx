@@ -1,6 +1,6 @@
 import { Search, X as XIcon } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
-import { Button, Caption, Input, Select } from '@/components/ui';
+import { Button, Caption, Input, Select, IconButton } from '@/components/ui';
 import type { useAuditLogPage } from '../../../hooks/useAuditLogPage';
 import { LIMIT_OPTIONS } from './helpers';
 
@@ -82,10 +82,8 @@ export function AuditLogFilters({ controller }: Props) {
                 }}
               />
               <div className="flex items-end gap-2 sm:col-span-2 3xl:col-span-1">
-                <Button variant="ghost" size="md" className="min-h-11" onClick={handleReset}>
-                  <XIcon className="mr-1 h-4 w-4" aria-hidden="true" />
-                  {t('admin.auditLog.resetFilters', 'Reset')}
-                </Button>
+                {/* not-destructive: resets the log filters only; nothing is lost */}
+                <IconButton icon={<XIcon className="h-4 w-4" aria-hidden="true" />} label={t('admin.auditLog.resetFilters', 'Reset')} onClick={handleReset} />
                 <Button
                   variant="primary"
                   size="md"

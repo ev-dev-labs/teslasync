@@ -75,7 +75,7 @@ vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 vi.mock('@/hooks/useDateFormat', () => {
   // Deterministic, timezone-independent formatters mirroring the real "—"
   // fallback. The widget only reads formatDateShort; the rest exist because
-  // WidgetShell's <DataFreshness> reaches for formatTime.
+  // WidgetShell's <FreshnessDot> reaches for formatTime.
   const short = (v: unknown) => (v == null || v === '' ? '—' : String(v).slice(0, 10));
   const asString = (v: unknown) => (v == null || v === '' ? '—' : String(v));
   return {

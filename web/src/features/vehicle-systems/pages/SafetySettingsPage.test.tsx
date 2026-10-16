@@ -55,7 +55,7 @@ import type { FormatOptions } from '@/hooks/useUnits';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) + PageContainer + the
-// DataFreshness chip's useMotionPreference read it at module load.
+// FreshnessDot chip's useMotionPreference read it at module load.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
     window.matchMedia = ((query: string) => ({

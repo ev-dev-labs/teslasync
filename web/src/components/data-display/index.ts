@@ -56,16 +56,16 @@ export { MetricBar } from './MetricBar';
 export { TimelineItem, type TimelineItemProps } from './TimelineItem';
 export { FSMBadge } from './FSMBadge';
 export { TransitionArrow, type TransitionArrowProps } from './TransitionArrow';
-export { FreshnessIndicator, useIsStale } from './FreshnessIndicator';
+export { useIsStale } from './useIsStale';
 export {
-  DataFreshness,
-  DataFreshnessAuto,
+  FreshnessDot,
+  FreshnessDotAuto,
   FRESHNESS_COLORS,
-  type DataFreshnessProps,
-  type DataFreshnessAutoProps,
+  type FreshnessDotProps,
+  type FreshnessDotAutoProps,
   type FreshnessStatus,
   type FreshnessQuery,
-} from './DataFreshness';
+} from './FreshnessDot';
 export {
   DataProvenanceBadge,
   type DataProvenanceBadgeProps,

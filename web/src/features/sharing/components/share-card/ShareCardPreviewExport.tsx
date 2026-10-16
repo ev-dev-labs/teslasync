@@ -28,6 +28,7 @@ export function ShareCardPreviewExport({
         title={t('shareCard.preview.title', 'Full preview and export')}
         description={t('shareCard.preview.subtitle', 'Accessible preview of the exact local SVG payload')}
         actions={(
+          /* flow-cta: the SVG download is this preview’s output */
           <Button
             type="button"
             variant="secondary"

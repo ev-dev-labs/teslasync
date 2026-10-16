@@ -36,7 +36,7 @@ import {
 } from '@/components/feedback';
 import {
   Currency,
-  DataFreshnessAuto,
+  FreshnessDotAuto,
   DataProvenanceBadge,
   SavedViewMenu,
   MetricTile,
@@ -901,7 +901,7 @@ export default function EnergyPage() {
               status={statsDataState.status}
               updatedAt={statsDataState.updatedAt}
             />
-            <DataFreshnessAuto
+            <FreshnessDotAuto
               query={statsQuery}
               source={t('operations.energy.consumptionSource', 'Drive consumption')}
             />

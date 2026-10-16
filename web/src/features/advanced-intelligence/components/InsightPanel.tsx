@@ -2,7 +2,7 @@ import { type ReactNode } from 'react';
 import { Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
-import { DataFreshness } from '@/components/data-display';
+import { FreshnessDot } from '@/components/data-display';
 import { Text } from '@/components/ui';
 import { LayoutCard, SourceContent, type SourceState } from '@/components/layout';
 import type { DataStateSource } from '@/api/dataState';
@@ -59,7 +59,7 @@ export function InsightPanel({
   return (
     <div className={cn('min-w-0 break-words', className)}>
       <LayoutCard title={title} description={description} actions={query && dataState.hasData ? (
-        <DataFreshness
+        <FreshnessDot
           source={title}
           updatedAt={dataState.updatedAt}
           isFetching={dataState.isRefreshing}

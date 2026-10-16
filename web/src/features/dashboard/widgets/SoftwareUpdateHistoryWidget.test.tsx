@@ -19,9 +19,9 @@
  *     is deterministic.
  *   - `react-i18next` is stubbed to resolve the developer fallback (2nd arg) and
  *     interpolate `{{vars}}` from the 3rd options arg, so assertions read the
- *     real English copy (and the transitive <DataFreshness> header resolves).
+ *     real English copy (and the transitive <FreshnessDot> header resolves).
  *   - The global test-setup already mocks `useSettings` (km / °C) and
- *     `useTimezone` (UTC), which the transitive <DataFreshness> / <WidgetEventFeed>
+ *     `useTimezone` (UTC), which the transitive <FreshnessDot> / <WidgetEventFeed>
  *     date formatters depend on.
  *
  * `@testing-library/user-event` is intentionally NOT a dependency of this
@@ -33,7 +33,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
-// jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference touches it on
+// jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference touches it on
 // first paint. Install a no-op reporting no reduced-motion before any import.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

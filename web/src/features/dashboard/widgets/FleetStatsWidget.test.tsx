@@ -113,7 +113,7 @@ const mockRequest = vi.mocked(request);
 
 const SIZE: WidgetSize = { cols: 5, rows: 1 };
 
-/** Minimal analytics `UseQueryResult` stub (incl. the DataFreshness fields). */
+/** Minimal analytics `UseQueryResult` stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

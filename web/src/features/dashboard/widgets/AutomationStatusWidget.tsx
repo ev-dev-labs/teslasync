@@ -25,6 +25,7 @@ function formatRelativeTime(dateStr: string | null, t: (k: string, f: string) =>
   // past-tense "Just now".
   const future = diff < 0;
   const minutes = Math.floor(Math.abs(diff) / 60_000);
+  // relative-time: last or next automation run
   if (minutes < 1) return t('widget.justNow', 'Just now');
   const value =
     minutes < 60

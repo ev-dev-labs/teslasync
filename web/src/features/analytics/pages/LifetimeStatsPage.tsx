@@ -12,7 +12,7 @@ import {
   GlassPanel, Text, Caption, HelpTooltip, Icon,
 } from '@/components/ui';
 import {
-  AnimatedNumber, DataFreshnessAuto, Currency, KVList,
+  AnimatedNumber, FreshnessDotAuto, Currency, KVList,
 } from '@/components/data-display';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -144,7 +144,7 @@ export default function LifetimeStatsPage() {
       metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {/* Lifetime stats are cagg-driven; force amber after 6h. */}
-          <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={LIFETIME_MAX_AGE_MS} />
+          <FreshnessDotAuto query={lifetimeQuery} forceStaleAfterMs={LIFETIME_MAX_AGE_MS} />
           <HelpTooltip
             i18nKey="lifetime.brief.description"
             defaultValue="Server lifetime aggregates with recorded driving hours, charging sessions, and savings versus gasoline."

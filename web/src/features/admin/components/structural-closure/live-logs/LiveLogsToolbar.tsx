@@ -1,5 +1,5 @@
 import { Download, Pause, Play, RefreshCw, Trash2 } from 'lucide-react';
-import { Button, Toggle } from '@/components/ui';
+import { Button, Toggle, IconButton } from '@/components/ui';
 import type { useLiveLogsPage } from '../../../hooks/useLiveLogsPage';
 
 type Props = { controller: ReturnType<typeof useLiveLogsPage> };
@@ -33,25 +33,8 @@ export function LiveLogsToolbar({ controller }: Props) {
           ? t('liveLogs.controls.resume', 'Resume')
           : t('liveLogs.controls.pause', 'Pause')}
       </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleClear}
-        icon={<Trash2 className="h-4 w-4" aria-hidden />}
-        data-testid="livelogs-clear-button"
-      >
-        {t('liveLogs.controls.clear', 'Clear buffer')}
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleDownload}
-        disabled={filteredEvents.length === 0}
-        icon={<Download className="h-4 w-4" aria-hidden />}
-        data-testid="livelogs-download-button"
-      >
-        {t('liveLogs.controls.download', 'Download visible (.txt)')}
-      </Button>
+      <IconButton icon={<Trash2 className="h-4 w-4" aria-hidden />} label={t('liveLogs.controls.clear', 'Clear buffer')} onClick={handleClear} data-testid="livelogs-clear-button" confirm={{ title: t('confirm.clearStream.title', 'Clear the stream?'), message: t('confirm.clearStream.message', 'This removes the lines shown so far. New lines keep arriving.') }} />
+      <IconButton icon={<Download className="h-4 w-4" aria-hidden />} label={t('liveLogs.controls.download', 'Download visible (.txt)')} onClick={handleDownload} disabled={filteredEvents.length === 0} data-testid="livelogs-download-button" />
       <Button
         variant="ghost"
         size="sm"

@@ -31,7 +31,7 @@
  * unit-conversion lib are exercised end-to-end; only `<Delta>` (the row change
  * indicator) is replaced with a prop-recording stub so the widget's computed
  * current/previous/direction stay observable at full precision, while the real
- * `<DataFreshness>` is kept so the refresh control is genuinely clicked.
+ * `<FreshnessDot>` is kept so the refresh control is genuinely clicked.
  * `react-i18next` echoes each `t(key, fallback)` so assertions read as English.
  * A `<MemoryRouter>` wraps every render because the error panel navigates.
  */
@@ -77,7 +77,7 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-// DataFreshness leaf display hooks — stubbed so the freshness chip renders
+// FreshnessDot leaf display hooks — stubbed so the freshness chip renders
 // without a Settings / QueryClient provider.
 vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
   // wrapped-real-hook: keep every real formatter, override only what this file controls.
@@ -106,12 +106,12 @@ interface StubDeltaProps {
 }
 
 // Replace only <Delta> in the data-display barrel with a prop-recorder, while
-// keeping the real <DataFreshness>/<DataFreshnessAuto> (WidgetShell needs them)
+// keeping the real <FreshnessDot>/<FreshnessDotAuto> (WidgetShell needs them)
 // by importing their own lightweight module rather than the heavy barrel.
 vi.mock('@/components/data-display', async () => {
   const actual = await vi.importActual<typeof import('@/components/data-display')>('@/components/data-display');
-  const df = await vi.importActual<typeof import('@/components/data-display/DataFreshness')>(
-    '@/components/data-display/DataFreshness',
+  const df = await vi.importActual<typeof import('@/components/data-display/FreshnessDot')>(
+    '@/components/data-display/FreshnessDot',
   );
   const { StatCard } = await vi.importActual<typeof import('@/components/data-display/StatCard')>(
     '@/components/data-display/StatCard',
@@ -119,8 +119,8 @@ vi.mock('@/components/data-display', async () => {
   return {
     ...actual,
     StatCard,
-    DataFreshness: df.DataFreshness,
-    DataFreshnessAuto: df.DataFreshnessAuto,
+    FreshnessDot: df.FreshnessDot,
+    FreshnessDotAuto: df.FreshnessDotAuto,
     Delta: ({ metric, current, previous, display }: StubDeltaProps) => (
       <span
         data-testid="delta"

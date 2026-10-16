@@ -6,10 +6,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PageContainer } from '../PageContainer';
 import { PageHeader } from '../PageHeader';
 import { Button } from '@/components/ui/Button';
-import type { FreshnessQuery } from '@/components/data-display/DataFreshness';
+import type { FreshnessQuery } from '@/components/data-display/FreshnessDot';
 import { typography } from '@/lib/tokens';
 
-// Mock react-i18next so PageContainer + DataFreshnessAuto get fallback strings
+// Mock react-i18next so PageContainer + FreshnessDotAuto get fallback strings
 // without booting the full i18n runtime.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -26,7 +26,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 // Stub framer-motion's useReducedMotion via the same pattern used in
-// `useMotionPreference.test.ts` so DataFreshness can hit the motion-allowed
+// `useMotionPreference.test.ts` so FreshnessDot can hit the motion-allowed
 // path without touching window.matchMedia.
 vi.mock('framer-motion', () => ({
   useReducedMotion: () => false,
@@ -126,9 +126,9 @@ describe('PageContainer', () => {
     expect(container.querySelector('[data-role="page-actions"]')).toHaveClass('bg-transparent', 'border-0', 'p-0');
   });
 
-  // ── page-tier DataFreshnessAuto wiring ───────
+  // ── page-tier FreshnessDotAuto wiring ───────
 
-  it('mounts <DataFreshnessAuto> in the header when a query prop is provided', () => {
+  it('mounts <FreshnessDotAuto> in the header when a query prop is provided', () => {
     const query = makeQuery();
     const { container } = renderWith(
       <PageContainer title="Drives" query={query}>
@@ -136,20 +136,20 @@ describe('PageContainer', () => {
       </PageContainer>,
     );
     // The chip's status dot uses bg-[var(--semantic-success)] for the fresh state, which
-    // is unique enough to confirm DataFreshnessAuto rendered. We also check
+    // is unique enough to confirm FreshnessDotAuto rendered. We also check
     // The shared Button keeps refresh keyboard-operable because refetchable
     // defaults to true.
     expect(container.querySelector('[class~="bg-[var(--semantic-success)]"]')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Refresh data/ })).toBeInTheDocument();
   });
 
-  it('does not render <DataFreshnessAuto> when query is omitted', () => {
+  it('does not render <FreshnessDotAuto> when query is omitted', () => {
     const { container } = renderWith(
       <PageContainer title="Drives">
         <div>body</div>
       </PageContainer>,
     );
-    // No DataFreshnessAuto means no freshness-tier dot colors AND no refresh
+    // No FreshnessDotAuto means no freshness-tier dot colors AND no refresh
     // button hidden inside the header chrome.
     expect(container.querySelector('[class~="bg-[var(--semantic-success)]"]')).toBeNull();
     expect(container.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
@@ -221,7 +221,8 @@ describe('PageContainer', () => {
       </PageContainer>,
     );
     // semantic-warning is stale; takes priority over fetching (info) and fresh (success).
-    expect(container.querySelector('[class~="bg-[var(--semantic-warning)]"]')).toBeInTheDocument();
+    // Stale renders the dot as an outlined warning ring.
+    expect(container.querySelector('[class~="border-[var(--semantic-warning)]"]')).toBeInTheDocument();
     expect(container.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
     expect(container.querySelector('[class~="bg-[var(--semantic-success)]"]')).toBeNull();
   });

@@ -12,7 +12,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Pagination, Text, Textarea } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Pagination, Text, Textarea, IconButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -346,17 +346,8 @@ export default function ChargingReconciliationPage() {
           >
             {t('ownership.reconcile.invoice.audit', 'Audit')}
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
-            wrapLabel
-            icon={<Icon icon={Trash2} />}
-            loading={remove.isPending && remove.variables === row.id}
-            onClick={() => void handleRemove(row)}
-          >
-            {t('ownership.action.remove', 'Remove')}
-          </Button>
+          {/* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */}
+          <IconButton icon={<Icon icon={Trash2} />} label={t('ownership.action.remove', 'Remove')} onClick={() => void handleRemove(row)} busy={remove.isPending && remove.variables === row.id} />
         </div>
       ),
     },

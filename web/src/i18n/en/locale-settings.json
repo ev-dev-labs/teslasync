@@ -2087,8 +2087,6 @@
     "unsavedSettings": "You have unsaved settings."
   },
   "freshness": {
-    "noData": "No recent data",
-    "offline": "Offline",
     "seconds": "{{s}}s ago"
   },
   "fsm": {

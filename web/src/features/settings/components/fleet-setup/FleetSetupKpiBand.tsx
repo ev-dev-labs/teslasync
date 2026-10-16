@@ -6,7 +6,7 @@
  */
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { KeyRound, Radio, ShieldCheck, ShieldAlert, Wifi, WifiOff } from 'lucide-react'
+import { KeyRound, Radio, ShieldCheck, ShieldAlert, CloudOff } from 'lucide-react'
 import type { StatMetric } from '@/components/data-display'
 import { SettingsSummaryBrief } from '../operationalbrief-all/SettingsSummaryBrief'
 import type { NeonColor } from '@/lib/tokens'
@@ -127,9 +127,9 @@ export function FleetSetupKpiBand({
     color: health === 'healthy' ? 'green' : health === 'stale' ? 'amber' : 'cyan',
     icon:
       health === 'healthy' ? (
-        <Wifi className="h-5 w-5" aria-hidden="true" />
+        <Radio className="h-5 w-5" aria-hidden="true" />
       ) : (
-        <WifiOff className="h-5 w-5" aria-hidden="true" />
+        <CloudOff className="h-5 w-5" aria-hidden="true" />
       ),
   }
 

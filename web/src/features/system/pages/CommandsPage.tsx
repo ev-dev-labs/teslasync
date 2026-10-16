@@ -9,11 +9,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { History, Wifi } from 'lucide-react';
+import { History, Radio } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { StaleRefreshWarning } from '@/components/feedback';
-import { Badge, Button, GlassPanel, Heading, Icon, Text } from '@/components/ui';
+import { Badge, Button, GlassPanel, Heading, Icon, Text, IconButton } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -86,7 +86,7 @@ export default function CommandsPage() {
             size="lg"
             className="min-h-11"
           >
-            <Icon icon={Wifi} size="sm" />
+            <Icon icon={Radio} size="sm" />
             {t(
               'commands.lastKnownActiveCount',
               '{{active}}/{{total}} last reported active',
@@ -100,16 +100,7 @@ export default function CommandsPage() {
       }
       secondaryActions={
         <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="min-h-11"
-            icon={<Icon icon={History} />}
-            onClick={() => navigate('/command-history')}
-          >
-            {t('commands.viewHistory', 'View history')}
-          </Button>
+          <IconButton icon={<Icon icon={History} />} label={t('commands.viewHistory', 'View history')} onClick={() => navigate('/command-history')} />
         </div>
       }
     >

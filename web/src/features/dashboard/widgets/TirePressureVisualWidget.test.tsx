@@ -25,7 +25,7 @@
  * against the global `useSettings` stub (metric → bar) from src/test-setup.ts,
  * so the Pa→bar conversion is exercised end-to-end. `react-i18next` is
  * echo-mocked (returns the English fallback); `matchMedia` is polyfilled because
- * `<DataFreshness>` reads it via `useMotionPreference`.
+ * `<FreshnessDot>` reads it via `useMotionPreference`.
  *
  * Facets covered:
  *   - vehicle resolution: explicit prop wins → first vehicle → 0, always with
@@ -77,7 +77,7 @@ vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   return { ...actual, useVehicles: vi.fn(), useLatestTirePressure: vi.fn() };
 });
 
-// jsdom lacks matchMedia; useMotionPreference (via <DataFreshness>) reads it.
+// jsdom lacks matchMedia; useMotionPreference (via <FreshnessDot>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,
@@ -108,7 +108,7 @@ const AMBER = '#f59e0b'; // warning
 const RED = '#ef4444'; // danger
 const GREY = '#6b7280'; // neutral / unknown
 
-/** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
+/** Minimal `UseQueryResult`-shaped stub (incl. the FreshnessDot fields). */
 function qr(over: Record<string, unknown> = {}): never {
   return {
     data: undefined,

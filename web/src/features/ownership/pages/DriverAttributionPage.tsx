@@ -29,7 +29,7 @@ import { AlertBanner } from '@/components/feedback';
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { MetricBar } from '@/components/data-display';
-import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text, Toggle, useSortToggle } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text, Toggle, useSortToggle, IconButton } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -427,17 +427,8 @@ export default function DriverAttributionPage() {
       key: 'actions',
       header: t('ownership.action.header', 'Actions'),
       render: (row) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<Icon icon={Trash2} />}
-          className="min-h-11 min-w-11 md:min-h-9"
-          wrapLabel
-          loading={deleteProfile.isPending && deleteProfile.variables === row.id}
-          onClick={() => void handleRemove(row)}
-        >
-          {t('ownership.action.remove', 'Remove')}
-        </Button>
+        /* confirm-step: handleRemove asks in the shared ConfirmDialog before removing */
+        <IconButton icon={<Icon icon={Trash2} />} label={t('ownership.action.remove', 'Remove')} onClick={() => void handleRemove(row)} busy={deleteProfile.isPending && deleteProfile.variables === row.id} />
       ),
     },
   ];

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { SearchX } from 'lucide-react';
 import { Badge, Button, GlassPanel, Heading, Text } from '@/components/ui';
 import { AlertBanner, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
-import { DataFreshness } from '@/components/data-display';
+import { FreshnessDot } from '@/components/data-display';
 import type { DataState } from '@/api/dataState';
 import type { isVehicleStateFieldCurrent } from '@/api/hooks/useVehicles';
 import type { CommandLogEntry } from '@/api/hooks/useCommands';
@@ -167,7 +167,7 @@ export function CommandWorkspace({
             ) : (
               <>
                 <StaleRefreshWarning state={latestState} label={t('commands.activity.title', 'Recent command activity')} />
-                <DataFreshness
+                <FreshnessDot
                   updatedAt={latestState.updatedAt}
                   isFetching={latestState.isRefreshing}
                   isStale={latestState.status !== 'ok'}

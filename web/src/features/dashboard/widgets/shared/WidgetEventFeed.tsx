@@ -61,6 +61,7 @@ export function WidgetEventFeed({
       const ms = new Date(isoStr).getTime();
       if (Number.isNaN(ms)) return TIME_FALLBACK;
       const diffMin = Math.floor((Date.now() - ms) / 60_000);
+      // relative-time: when the feed event happened
       if (diffMin < 1) return t('widget.eventFeed.justNow', 'Just now');
       if (diffMin < 60)
         return t('widget.eventFeed.minutesAgo', '{{minutes}}m ago', { minutes: diffMin });

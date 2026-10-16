@@ -20,7 +20,7 @@
  *     real endpoint is ever touched and each render is deterministic.
  *   - `react-i18next` is stubbed to resolve the developer fallback (2nd arg) and
  *     interpolate `{{vars}}`, so assertions read the real English copy and the
- *     transitive <DataFreshness> header resolves.
+ *     transitive <FreshnessDot> header resolves.
  *   - The global test-setup (src/test-setup.ts) already mocks `useSettings`
  *     (km / °C / **bar** / precision 2 / en-US) and `useTimezone` (UTC), so the
  *     REAL `usePressureFormat` (Pa → display units) and `useDateFormat` run — this test
@@ -38,7 +38,7 @@ import { convertPressureFromSI, PASCALS_PER_KPA } from '@/lib/unitConversion';
 import { camelCaseKeys } from '@/lib/resilience';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
-// jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference touches it on
+// jsdom lacks matchMedia; <FreshnessDot>'s useMotionPreference touches it on
 // first paint. Install a no-op reporting no reduced-motion before any import.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {

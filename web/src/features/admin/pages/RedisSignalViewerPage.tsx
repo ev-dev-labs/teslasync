@@ -28,7 +28,7 @@ import {
   type Column,
 } from '@/components/ui'
 import {
-  DataFreshnessAuto,
+  FreshnessDotAuto,
   KVList,
   MetricBar,
 } from '@/components/data-display'
@@ -50,6 +50,7 @@ import { RedisDiagnosticEmptyState, type DiagnosticErrorProps } from '../compone
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { deriveDataState } from '@/api/dataState';
 import { RedisOperationalBrief } from '../components/statstrip-ingest-dlq-redis/RedisOperationalBrief';
+import { IconButton } from '@/components/ui/IconButton';
 
 /* ─── signal categorization ─────────────────────────────────────────── */
 
@@ -394,17 +395,8 @@ export default function RedisSignalViewerPage() {
         checked={autoRefresh}
         onChange={setAutoRefresh}
       />
-      {selectedVehicleId !== null && <DataFreshnessAuto query={signalQuery} />}
-      <Button
-        type="button"
-        variant="ghost"
-        aria-label={t('redis.refresh', 'Refresh')}
-        onClick={() => refetch()}
-        disabled={selectedVehicleId === null || isFetching}
-      >
-        <Icon icon={RefreshCw} className={isFetching ? 'animate-spin motion-reduce:animate-none' : undefined} />
-        <span className="hidden sm:inline">{t('redis.refresh', 'Refresh')}</span>
-      </Button>
+      {selectedVehicleId !== null && <FreshnessDotAuto query={signalQuery} />}
+      <IconButton icon={<Icon icon={RefreshCw} className={isFetching ? 'animate-spin motion-reduce:animate-none' : undefined} />} label={t('redis.refresh', 'Refresh')} onClick={() => refetch()} disabled={selectedVehicleId === null || isFetching} aria-label={t('redis.refresh', 'Refresh')} />
     </div>
   )
 

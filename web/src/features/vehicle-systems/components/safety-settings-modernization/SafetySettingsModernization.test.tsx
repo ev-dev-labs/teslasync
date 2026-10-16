@@ -101,7 +101,7 @@ vi.mock('@/components/data-display', async importOriginal => ({
   MetricCard: ({ label, value, subtitle }: { label: string; value: ReactNode; subtitle?: string }) =>
     createElement('div', null, label, createElement('span', null, value), subtitle),
   TimeStamp: ({ value }: { value?: string }) => createElement('span', null, value ?? '—'),
-  DataFreshnessAuto: () => null,
+  FreshnessDotAuto: () => null,
 }));
 vi.mock('@/components/feedback', () => ({
   Skeleton: () => createElement('div', { 'data-testid': 'skeleton' }),

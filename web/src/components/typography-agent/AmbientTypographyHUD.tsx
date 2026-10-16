@@ -10,8 +10,7 @@ import {
   Select,
   Slider,
   Text,
-  type SelectOption,
-} from '@/components/ui';
+  type SelectOption, IconButton } from '@/components/ui';
 import { RATIO_VALUES } from '@/lib/typography-agent/harmonizer';
 import { DEFAULT_TYPOGRAPHY_SPEC } from '@/lib/typography-agent/orchestrator';
 import type { DensityMode, ModularRatio } from '@/lib/typography-agent/types';
@@ -201,14 +200,7 @@ export function AmbientTypographyHUD() {
           )}
 
           <div className="pt-1">
-            <Button
-              variant="ghost"
-              onClick={() => void dispatch({ ...DEFAULT_TYPOGRAPHY_SPEC })}
-              className="w-full justify-center"
-            >
-              <RotateCcw className="h-4 w-4" aria-hidden />
-              {t('settings.typographyAgent.reset', 'Reset to defaults')}
-            </Button>
+            <IconButton icon={<RotateCcw className="h-4 w-4" aria-hidden />} label={t('settings.typographyAgent.reset', 'Reset to defaults')} onClick={() => void dispatch({ ...DEFAULT_TYPOGRAPHY_SPEC })} confirm={{ title: t('confirm.resetTypography.title', 'Reset typography?'), message: t('confirm.resetTypography.message', 'Typography settings return to their defaults.') }} />
           </div>
         </div>
       </GlassPanel>
