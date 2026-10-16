@@ -1,4 +1,4 @@
-import { forwardRef, useId } from 'react';
+import { forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Text } from '@/components/ui/Typography';
@@ -70,7 +70,6 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
     },
     ref,
   ) {
-    const descriptionId = useId();
     const { t } = useTranslation();
     const posSpan = Number.isFinite(max) && max > 0 ? max : 0;
     const negSpanRaw = min === undefined ? posSpan : min;
@@ -101,6 +100,7 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
 
     const isNegative = reading !== undefined && reading < 0;
     const color = isNegative ? negativeColor : positiveColor;
+    const displayUnit = unit?.trim();
     const { fmtNumber, fmtInt } = useNumberFormatting();
     const isCount = kind === 'count' || (kind == null && !unit && Number.isInteger(reading));
     const display = reading === undefined ? '—' : decimals == null && isCount
@@ -109,7 +109,7 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
       'Reading outside displayed scale ({{min}} to {{max}} {{unit}})', {
         min: fmtNumber(lowerBound, decimals),
         max: fmtNumber(posSpan, decimals),
-        unit: unit ?? '',
+        unit: displayUnit ?? '',
       }) : undefined;
 
     return (
@@ -120,19 +120,21 @@ export const BipolarBar = forwardRef<HTMLDivElement, BipolarBarProps>(
         aria-valuenow={hasMeter ? reading : undefined}
         aria-valuemin={hasMeter ? lowerBound : undefined}
         aria-valuemax={hasMeter ? posSpan : undefined}
-        aria-valuetext={hasMeter ? unit ? `${display}${unit}` : display : undefined}
-        aria-describedby={!hasMeter && reading !== undefined ? descriptionId : undefined}
+        aria-valuetext={hasMeter ? displayUnit ? `${display} ${displayUnit}` : display : undefined}
+        aria-description={scaleContext
+          ? `${display}${displayUnit ? ` ${displayUnit}` : ''} ${scaleContext}`
+          : undefined}
         className={cn('flex w-full flex-col gap-1.5', className)}
       >
         <div className="flex items-baseline justify-between gap-2">
           <Text as="span" size="xs" weight="medium" color="muted">
             {label}
           </Text>
-          <Text id={descriptionId} as="span" size="lg" weight="bold" color="primary">
+          <Text as="span" size="lg" weight="bold" color="primary">
             {display}
-            {reading !== undefined && unit && (
+            {reading !== undefined && displayUnit && (
               <Text as="span" size="xs" weight="regular" color="muted">
-                {unit}
+                {' '}{displayUnit}
               </Text>
             )}
             {scaleContext && (
