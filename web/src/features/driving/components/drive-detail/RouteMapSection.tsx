@@ -241,6 +241,7 @@ export function RouteMapSection({
         {endpointPins.length === 2 && (
           <Polyline positions={endpointTrail} pathOptions={{ color: chartTokens.axisStroke, weight: 3, opacity: 0.8, dashArray: '6 8' }} />
         )}
+        {/* marker-cluster:no exactly two semantic Start/End endpoints; clustering would hide route direction */}
         {endpointPins.map((pin) => (
           <CircleMarker key={pin.kind} center={pin.position} radius={8} pathOptions={pin.kind === 'start' ? startMarker : endMarker}>
             <Popup><span className="text-xs font-bold">{pin.kind === 'start' ? t('driveDetail.start', 'Start') : t('driveDetail.end', 'End')}</span></Popup>
