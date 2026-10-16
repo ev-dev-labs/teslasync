@@ -197,7 +197,8 @@ describe('BatteryGaugeWidget — states', () => {
     expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveTextContent('Previously loaded data remains visible');
-    fireEvent.click(warning.querySelector('button')!);
+    expect(warning.querySelector('button')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -263,14 +264,15 @@ describe('BatteryGaugeWidget — states', () => {
 // ── Populated gauge (full size) ──────────────────────────────────────────────
 
 describe('BatteryGaugeWidget — populated', () => {
-  it('renders the gauge with the battery level, label and unit', () => {
+  it('renders the gauge with the battery level and unit without repeating its widget title', () => {
     useVehicleStateMock.mockReturnValue(
       makeResult({ data: { state: makeState({ battery_level: 72 }), live: true } }),
     );
     renderWidget();
     expect(screen.getByText('72.00')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
-    expect(screen.getAllByText('Battery')).toHaveLength(2);
+    expect(screen.getAllByText('Battery', { exact: true })).toHaveLength(1);
+    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
     expect(screen.getByText('%')).toBeInTheDocument();
   });
 

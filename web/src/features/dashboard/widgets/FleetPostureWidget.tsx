@@ -57,7 +57,7 @@ export default function FleetPostureWidget({ vehicleId }: WidgetProps) {
       title={t('dashboard.fleetPosture.title', 'Fleet posture')}
       noPadding
     >
-      <div className="h-full overflow-auto px-4 pb-4">
+      <div className="px-4 pb-4">
         <FleetOperationsBrief
           vehicles={vehicles}
           selectedVehicle={selectedVehicle}

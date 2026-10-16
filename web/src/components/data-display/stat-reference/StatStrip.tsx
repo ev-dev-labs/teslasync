@@ -5,6 +5,7 @@ import { Heading, Text } from '@/components/ui/Typography';
 import { cn } from '@/lib/cn';
 import { StatTile } from './StatTile';
 import { useMetricPreferences } from './useMetricPreferences';
+import { metricBanks } from '../metricBanks';
 import type { StatStripProps } from './types';
 import styles from './statReference.module.css';
 
@@ -22,14 +23,7 @@ export function StatStrip({
   const contextInHeader = periodInHeader && periodContextInHeader && Boolean(periodHeaderId);
   const items = metrics ?? [];
   const facts = breakdown ?? [];
-  const rowCount = Math.ceil(items.length / maxPerRow);
-  const baseRows = rowCount > 0 ? Math.floor(items.length / rowCount) : 0;
-  const expandedRows = rowCount > 0 ? items.length % rowCount : 0;
-  const banks = Array.from({ length: rowCount }, (_, index) => {
-    const count = baseRows + (index < expandedRows ? 1 : 0);
-    const start = index * baseRows + Math.min(index, expandedRows);
-    return items.slice(start, start + count);
-  });
+  const banks = metricBanks(items, maxPerRow);
   return <section id={id} data-testid={testId} data-stat-strip={id ?? `stat-${generatedId}`} data-period-kind={period.kind} data-max-per-row={maxPerRow} data-retained={retained}
     aria-busy={loading} aria-describedby={periodInHeader ? periodHeaderId : undefined}
     className={cn(styles.root, variant === 'standalone' &&

@@ -22,6 +22,27 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('OperationalBrief', () => {
+  it('balances metric rows so six items render as three plus three and four items never orphan one', () => {
+    const metrics = Array.from({ length: 6 }, (_, index) => ({
+      key: `metric-${index}`,
+      label: `Metric ${index + 1}`,
+      value: index + 1,
+      detail: `Metric ${index + 1} source detail.`,
+      valueState: 'value' as const,
+    }));
+    const { rerender, container } = render(<OperationalBrief eyebrow="Evidence" title="Balanced rows"
+      description="Source metrics" statusLabel="Returned" metrics={metrics} />);
+
+    expect(container.querySelector('[data-max-per-row]')).toHaveAttribute('data-max-per-row', '3');
+    expect(Array.from(container.querySelectorAll('[data-operational-metric-bank]'), row => row.getAttribute('data-columns')))
+      .toEqual(['3', '3']);
+
+    rerender(<OperationalBrief eyebrow="Evidence" title="Balanced rows" description="Source metrics"
+      statusLabel="Returned" maxPerRow={3} metrics={metrics.slice(0, 4)} />);
+    expect(Array.from(container.querySelectorAll('[data-operational-metric-bank]'), row => row.getAttribute('data-columns')))
+      .toEqual(['2', '2']);
+  });
+
   it.each(['success', 'info', 'warning', 'danger', 'neutral'] as const)(
     'keeps %s metric tone and complete captions in the summary and drawer using semantic foregrounds',
     (tone) => {

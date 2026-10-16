@@ -144,6 +144,8 @@ describe('DashboardGrid — render paths', () => {
     expect(screen.getAllByRole('button', { name: /^Expand /i })).toHaveLength(2);
     expect(screen.getByRole('button', { name: `Expand ${W1_NAME}` })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Expand ${W2_NAME}` })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Expand ${W1_NAME}` })).toHaveClass('right-12');
+    expect(container.querySelector('.widget-container')).not.toHaveClass('[--dashboard-widget-chrome-inset:4rem]');
   });
 
   it('renders the mobile flex stack (not RGL) on a narrow viewport', () => {

@@ -51,7 +51,8 @@ export default function BatteryGaugeWidget({ vehicleId, size }: WidgetProps) {
             preserveReadingAndScale
             value={batteryLevel}
             max={100}
-            label={t('widget.battery', 'Battery')}
+            label=""
+            ariaLabel={t('widget.battery', 'Battery')}
             unit="%"
             color={batteryColor(batteryLevel)}
             size={isCompact ? 70 : 110}

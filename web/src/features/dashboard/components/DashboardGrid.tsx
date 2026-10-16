@@ -614,7 +614,6 @@ export function DashboardGrid({
         data-widget-id={widget.id}
         className={cn(
           'widget-container relative group',
-          !editMode && '[--dashboard-widget-chrome-inset:4rem]',
           // Mobile: become a flex column so the GlassPanel + nested
           // `h-full` widget content resolve to the wrapper's min-height.
           mobile && 'flex flex-col min-h-[12rem]',
@@ -639,7 +638,7 @@ export function DashboardGrid({
             variant="ghost"
             size="sm"
             onClick={() => setFullscreenWidget(widget.id)}
-            className="absolute top-2 right-2 z-10 h-11 w-11 p-0 rounded-lg bg-[var(--surface-overlay)]
+            className="absolute top-2 right-12 z-10 h-11 w-11 p-0 rounded-lg bg-[var(--surface-overlay)]
               text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-overlay)]
               opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
             aria-label={t('dashboard.grid.expandLabel', 'Expand {{name}}', { name: def.name })}

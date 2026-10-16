@@ -66,8 +66,8 @@ vi.mock('@/components/feedback', () => ({
       {onRetry && <button onClick={onRetry}>Retry query</button>}
     </div>
   ),
-  StaleRefreshWarning: ({ state }: { state: { status: string } }) =>
-    state.status === 'ok' ? null : <div data-testid="trust-warning">{state.status}</div>,
+  StaleRefreshWarning: ({ state, hideRetry }: { state: { status: string }; hideRetry?: boolean }) =>
+    state.status === 'ok' ? null : <div data-testid="trust-warning" data-hide-retry={String(hideRetry)}>{state.status}</div>,
 }));
 
 vi.mock('@/components/ui', () => ({
@@ -166,6 +166,18 @@ describe('WidgetShell — state machine', () => {
     expect(screen.getByTestId('child')).toBeInTheDocument();
     expect(screen.getByTestId('trust-warning')).toHaveTextContent('stale');
     expect(screen.queryByTestId('query-error')).not.toBeInTheDocument();
+  });
+
+  it('uses the widget freshness dot as the retained-data retry and hides the duplicate warning action', () => {
+    const refetch = vi.fn();
+    const state = deriveDataState({ data: [0], isError: true, error: new Error('offline'), refetch });
+    render(<WidgetShell title="Battery" dataState={state} updatedAt={1_700_000_000_000}>
+      <Child />
+    </WidgetShell>);
+
+    expect(screen.getByTestId('trust-warning')).toHaveAttribute('data-hide-retry', 'true');
+    fireEvent.click(screen.getByTestId('freshness-refresh'));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it('offers retry and preserves the header on initial failure', () => {
@@ -317,6 +329,7 @@ describe('WidgetShell — title-less layout', () => {
     const overlay = chip.parentElement as HTMLElement;
     expect(overlay.className).toContain('absolute');
     expect(overlay.className).toContain('top-1.5');
+    expect(overlay.className).toContain('right-4');
     // Content still renders under the overlay.
     expect(root(container)).toContainElement(screen.getByTestId('child'));
   });

@@ -16,6 +16,7 @@ import { IconButton } from '@/components/ui/IconButton'
 import type { OperationalNarrative } from '@/types/operationalNarrative'
 import type { MetricRaw } from '@/lib/metric-reference'
 import { OperationalNarrativeDetails } from './OperationalNarrativeDetails'
+import { metricBanks } from './metricBanks'
 
 export type OperationalTone =
   | 'success'
@@ -59,6 +60,8 @@ export interface OperationalBriefProps {
   className?: string
   testId?: string
   metricColumns?: 2 | 3 | 4
+  /** Maximum number of metric tiles per row; remaining rows are balanced. */
+  maxPerRow?: 2 | 3 | 4
   /** Show a short scope chip on the card only when the range differs from the page filter. */
   showRange?: boolean
   /** Dense layout for pages where the evidence grid follows a compact page header. */
@@ -142,6 +145,8 @@ export function OperationalBrief({
   compact = false,
   hideHeading = false,
   variant = 'standalone',
+  metricColumns,
+  maxPerRow,
   loading = false,
 }: OperationalBriefProps) {
   const { t } = useTranslation()
@@ -150,6 +155,8 @@ export function OperationalBrief({
   const primaryAttention = attention[0]
   const metricStates = metrics.map(metricState)
   const visibleMetrics = loading ? metrics : metrics.filter((_, index) => metricStates[index] === 'value')
+  const resolvedMaxPerRow = maxPerRow ?? metricColumns ?? 3
+  const metricRows = metricBanks(visibleMetrics, resolvedMaxPerRow)
   const emptyMetrics = !loading && metrics.length > 0 && visibleMetrics.length === 0
     && metricStates.every((state) => state === metricStates[0])
   const hiddenMetricCount = metrics.length - visibleMetrics.length
@@ -189,8 +196,8 @@ export function OperationalBrief({
             </div>
 
             <div
-              role="list"
-              className={cn('flex flex-wrap gap-x-5 gap-y-3', compact ? 'mt-2' : 'mt-4')}
+              className={cn('flex min-w-0 flex-col gap-y-3', compact ? 'mt-2' : 'mt-4')}
+              data-max-per-row={resolvedMaxPerRow}
             >
               {emptyMetrics ? (
                 <div className="min-w-0 flex-[1_1_200px] py-2" role="listitem">
@@ -200,28 +207,33 @@ export function OperationalBrief({
                     {metrics.map((metric) => <span key={metric.key} className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{metric.label}</span>)}
                   </div>
                 </div>
-              ) : visibleMetrics.map((metric) => (
-                <div
-                  key={metric.key}
-                  role="listitem"
-                  data-operational-metric={metric.key}
-                  data-value-state={metric.valueState}
-                  className="min-w-0 flex-[1_1_200px] py-1"
-                >
-                  <MetricLabel>{metric.label}</MetricLabel>
-                  <MetricValue
-                      data-operational-value={(metric.loading ?? loading) ? undefined : true}
-                      aria-busy={(metric.loading ?? loading) || undefined}
-                      className={cn(
-                        compact ? 'mt-1 min-w-0 text-base sm:text-lg' : 'mt-1 text-xl sm:text-2xl',
-                        '[overflow-wrap:normal] break-normal',
-                        TONE_TEXT[metric.tone ?? 'neutral'],
-                      )}
+              ) : metricRows.map((row, rowIndex) => (
+                <div key={rowIndex} role="list" className="flex min-w-0 flex-wrap gap-x-5 gap-y-3"
+                  data-operational-metric-bank data-columns={row.length}>
+                  {row.map((metric) => (
+                    <div
+                      key={metric.key}
+                      role="listitem"
+                      data-operational-metric={metric.key}
+                      data-value-state={metric.valueState}
+                      className="min-w-0 flex-[1_1_200px] py-1"
                     >
-                      {(metric.loading ?? loading) ? (
-                        <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
-                      ) : metric.value}
-                    </MetricValue>
+                      <MetricLabel>{metric.label}</MetricLabel>
+                      <MetricValue
+                        data-operational-value={(metric.loading ?? loading) ? undefined : true}
+                        aria-busy={(metric.loading ?? loading) || undefined}
+                        className={cn(
+                          compact ? 'mt-1 min-w-0 text-base sm:text-lg' : 'mt-1 text-xl sm:text-2xl',
+                          '[overflow-wrap:normal] break-normal',
+                          TONE_TEXT[metric.tone ?? 'neutral'],
+                        )}
+                      >
+                        {(metric.loading ?? loading) ? (
+                          <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
+                        ) : metric.value}
+                      </MetricValue>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>

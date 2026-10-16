@@ -92,7 +92,7 @@ export function WidgetShell({
           isFetching={isFetching ?? false}
           isStale={isStale ?? false}
           isError={isError ?? false}
-          onRefresh={onRefresh}
+          onRefresh={retry}
           refreshIntervalMs={refreshIntervalMs}
           manual={refreshIntervalMs == null}
           compact={freshnessCompact}
@@ -154,7 +154,7 @@ export function WidgetShell({
         <>
           {/* Overlay freshness indicator for title-less widgets */}
           {freshnessEl && (
-            <div className="absolute top-1.5 right-[var(--dashboard-widget-chrome-inset,0.375rem)] z-[5]">
+            <div className="absolute top-1.5 right-4 z-[5]">
               {freshnessEl}
             </div>
           )}
@@ -183,7 +183,8 @@ export function WidgetShell({
           </div>
         ) : (
           <>
-            {dataState && <StaleRefreshWarning state={dataState} className="mb-2" />}
+            {dataState && <StaleRefreshWarning state={dataState} className="mb-2"
+              hideRetry={showFreshness && Boolean(retry || query?.refetch)} />}
             <WidgetTitleContext.Provider value={title}>{children}</WidgetTitleContext.Provider>
           </>
         )}
