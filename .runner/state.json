@@ -16232,10 +16232,10 @@
       "web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageHistory.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu01 | verification blocked by missing dependencies and EPERM during restoration | done so far: updated TeslaApiUsageHistory.tsx and TeslaApiUsageHistory.test.tsx; scoped source checks found 0 inline styles, raw controls, or wrong imports Attempt 2: FAILED | fix-system-tesla-api-usage-tu01 | verification blocked by missing Vite dependencies and ENOENT during restoration | done so far: existing fix and focused regressions preserved; no source files changed",
+    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu01 | verification blocked by missing dependencies and EPERM during restoration | done so far: updated TeslaApiUsageHistory.tsx and TeslaApiUsageHistory.test.tsx; scoped source checks found 0 inline styles, raw controls, or wrong imports Attempt 2: FAILED | fix-system-tesla-api-usage-tu01 | verification blocked by missing Vite dependencies and ENOENT during restoration | done so far: existing fix and focused regressions preserved; no source files changed | Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16247,10 +16247,10 @@
       "web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageHistory.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu02 | focused tests blocked by missing Vite; dependency restoration failed | done so far: updated web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx and web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageHistory.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu02 | required tests blocked by missing Vitest; dependency restoration failed with ENOTEMPTY | done so far: inspected existing fix and regression coverage; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu02 | focused tests blocked by missing Vite; dependency restoration failed | done so far: updated web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx and web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageHistory.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu02 | required tests blocked by missing Vitest; dependency restoration failed with ENOTEMPTY | done so far: inspected existing fix and regression coverage; no source changes | Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16262,10 +16262,10 @@
       "web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageHistory.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu03 | dependency failures prevented verification | done so far: updated web/src/features/system/components/status/TeslaApiUsageHistory.tsx and web/src/features/system/components/status/__tests__/TeslaApiUsageHistory.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu03 | missing dependencies prevented verification | done so far: updated web/src/features/system/components/status/TeslaApiUsageHistory.tsx and web/src/features/system/components/status/__tests__/TeslaApiUsageHistory.test.tsx",
+    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu03 | dependency failures prevented verification | done so far: updated web/src/features/system/components/status/TeslaApiUsageHistory.tsx and web/src/features/system/components/status/__tests__/TeslaApiUsageHistory.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu03 | missing dependencies prevented verification | done so far: updated web/src/features/system/components/status/TeslaApiUsageHistory.tsx and web/src/features/system/components/status/__tests__/TeslaApiUsageHistory.test.tsx | Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16277,10 +16277,10 @@
       "web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageHistory.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu07 | verification blocked by external missing rollup/parseAst | done so far: updated web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx and web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageHistory.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu07 | verification blocked by missing vite and vite-plugin-pwa dependencies | done so far: confirmed existing reactive palette/mode implementation and regression; no new changes",
+    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu07 | verification blocked by external missing rollup/parseAst | done so far: updated web\\src\\features\\system\\components\\status\\TeslaApiUsageHistory.tsx and web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageHistory.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu07 | verification blocked by missing vite and vite-plugin-pwa dependencies | done so far: confirmed existing reactive palette/mode implementation and regression; no new changes | Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16294,10 +16294,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16309,11 +16309,11 @@
       "web\\src\\features\\system\\pages\\TeslaApiUsagePage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu04 | verification blocked by missing dependencies and failed npm restoration | done so far: updated web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx and web\\src\\features\\system\\pages\\TeslaApiUsagePage.test.tsx with independent retry and state/recovery coverage Attempt 2: FAILED | fix-system-tesla-api-usage-tu04 | missing dependencies prevented test execution; dependency restoration failed | done so far: confirmed existing independent retry and state/recovery tests; no source files changed",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu04 | verification blocked by missing dependencies and failed npm restoration | done so far: updated web\\src\\features\\system\\pages\\TeslaApiUsagePage.tsx and web\\src\\features\\system\\pages\\TeslaApiUsagePage.test.tsx with independent retry and state/recovery coverage Attempt 2: FAILED | fix-system-tesla-api-usage-tu04 | missing dependencies prevented test execution; dependency restoration failed | done so far: confirmed existing independent retry and state/recovery tests; no source files changed | Verification completed 2026-10-15: TeslaApiUsagePage.test.tsx passes as part of the focused usage suite.",
+    "Commit": "f19ae5dccd",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -16324,10 +16324,10 @@
       "web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageCard.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu05 | dependency failures prevent verification | done so far: updated web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx and web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageCard.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu05 | dependency failures prevent regression verification | done so far: confirmed existing USD fix and regression coverage; no source files changed",
+    "Notes": " Attempt 1: FAILED | fix-system-tesla-api-usage-tu05 | dependency failures prevent verification | done so far: updated web\\src\\features\\system\\components\\status\\TeslaApiUsageCard.tsx and web\\src\\features\\system\\components\\status\\__tests__\\TeslaApiUsageCard.test.tsx Attempt 2: FAILED | fix-system-tesla-api-usage-tu05 | dependency failures prevent regression verification | done so far: confirmed existing USD fix and regression coverage; no source files changed | Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
