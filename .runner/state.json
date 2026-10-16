@@ -20166,10 +20166,10 @@
       "web\\src\\components\\ai\\AIWatchFaceNLResponse.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-watch-watch-face-f01 | out-of-scope dashboard consumer still requires range_km; frontend validation blocked by dependencies | done so far: nine assigned files updated with meter-based conversions, display preference wiring and regressions; backend race tests passed Attempt 2: FAILED | fix-watch-watch-face-f01 | existing implementation could not be verified because frontend dependencies and Go toolchain are unavailable | done so far: inspected prior meter-based implementation and focused regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-watch-watch-face-f01 | out-of-scope dashboard consumer still requires range_km; frontend validation blocked by dependencies | done so far: nine assigned files updated with meter-based conversions, display preference wiring and regressions; backend race tests passed Attempt 2: FAILED | fix-watch-watch-face-f01 | existing implementation could not be verified because frontend dependencies and Go toolchain are unavailable | done so far: inspected prior meter-based implementation and focused regressions; no source changes Retry failed: WatchFacePage.test.tsx has 2 failures because expected “Cached vehicle data” and “Historical vehicle data” text is duplicated between visible content and tooltip accessible text; getByText is ambiguous.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20181,10 +20181,10 @@
       "web\\src\\features\\watch\\pages\\WatchFacePage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-watch-watch-face-f06 | missing dependencies prevented verification | done so far: updated web\\src\\features\\watch\\pages\\WatchFacePage.tsx, web\\src\\features\\watch\\pages\\WatchFacePage.test.tsx Attempt 2: FAILED | fix-watch-watch-face-f06 | dependency restoration failed; focused tests could not execute | done so far: confirmed existing no-data paused/operational states and regressions; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-watch-watch-face-f06 | missing dependencies prevented verification | done so far: updated web\\src\\features\\watch\\pages\\WatchFacePage.tsx, web\\src\\features\\watch\\pages\\WatchFacePage.test.tsx Attempt 2: FAILED | fix-watch-watch-face-f06 | dependency restoration failed; focused tests could not execute | done so far: confirmed existing no-data paused/operational states and regressions; no files changed Retry failed: WatchFacePage.test.tsx has 2 failures because expected “Cached vehicle data” and “Historical vehicle data” text is duplicated between visible content and tooltip accessible text; getByText is ambiguous.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20226,10 +20226,10 @@
       "web\\src\\features\\watch\\pages\\WatchFacePage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-watch-watch-face-f10 | dependency failures prevented verification | done so far: updated web\\src\\features\\watch\\pages\\WatchFacePage.tsx, web\\src\\features\\watch\\pages\\WatchFacePage.test.tsx Attempt 2: FAILED | fix-watch-watch-face-f10 | missing dependencies prevented verification | done so far: updated web\\src\\features\\watch\\pages\\WatchFacePage.tsx, web\\src\\features\\watch\\pages\\WatchFacePage.test.tsx",
+    "Notes": "Attempt 1: FAILED | fix-watch-watch-face-f10 | dependency failures prevented verification | done so far: updated web\\src\\features\\watch\\pages\\WatchFacePage.tsx, web\\src\\features\\watch\\pages\\WatchFacePage.test.tsx Attempt 2: FAILED | fix-watch-watch-face-f10 | missing dependencies prevented verification | done so far: updated web\\src\\features\\watch\\pages\\WatchFacePage.tsx, web\\src\\features\\watch\\pages\\WatchFacePage.test.tsx Retry failed: WatchFacePage.test.tsx has 2 failures because expected “Cached vehicle data” and “Historical vehicle data” text is duplicated between visible content and tooltip accessible text; getByText is ambiguous.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
