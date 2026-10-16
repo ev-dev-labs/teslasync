@@ -12878,10 +12878,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: GrafanaPanelPage.test.tsx cannot find Bundled builder catalog – all entries in the static catalog evidence section; 1 failure.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12895,10 +12895,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused power-user regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12957,10 +12957,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused power-user regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12972,10 +12972,10 @@
       "web\\src\\components\\ai\\AIThinkingIndicator.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-power-user-sql-playground-sql07 | verification blocked by missing dependencies and locked binaries | done so far: updated web/src/components/ai/AIThinkingIndicator.tsx and web/src/components/ai/AIThinkingIndicator.test.tsx Attempt 2: FAILED | fix-power-user-sql-playground-sql07 | verification blocked by missing dependencies and locked esbuild binary | done so far: confirmed existing implementation and focused regression coverage; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-power-user-sql-playground-sql07 | verification blocked by missing dependencies and locked binaries | done so far: updated web/src/components/ai/AIThinkingIndicator.tsx and web/src/components/ai/AIThinkingIndicator.test.tsx Attempt 2: FAILED | fix-power-user-sql-playground-sql07 | verification blocked by missing dependencies and locked esbuild binary | done so far: confirmed existing implementation and focused regression coverage; no source files changed Focused power-user regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12987,10 +12987,10 @@
       "web\\src\\lib\\__tests__\\workspaceScope.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-power-user-sql-playground-sql08 | required regression blocked by broken dependencies | done so far: updated web/src/lib/workspaceScope.ts and web/src/lib/__tests__/workspaceScope.test.ts Attempt 2: FAILED | fix-power-user-sql-playground-sql08 | required regression blocked by missing Vite dependencies | done so far: existing scope fix and focused regression preserved; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-power-user-sql-playground-sql08 | required regression blocked by broken dependencies | done so far: updated web/src/lib/workspaceScope.ts and web/src/lib/__tests__/workspaceScope.test.ts Attempt 2: FAILED | fix-power-user-sql-playground-sql08 | required regression blocked by missing Vite dependencies | done so far: existing scope fix and focused regression preserved; no files changed Focused power-user regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13002,10 +13002,10 @@
       "web\\src\\components\\ai\\AINLSqlPlayground.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-power-user-sql-playground-sql09 | incomplete dependencies prevented verification | done so far: updated web/src/components/ai/AINLSqlPlayground.tsx and web/src/components/ai/AINLSqlPlayground.test.tsx with typed preview and focused regressions Attempt 2: FAILED | fix-power-user-sql-playground-sql09 | dependency restoration failed; focused tests could not start | done so far: reviewed existing typed preview and regressions; no source changes made",
+    "Notes": "Attempt 1: FAILED | fix-power-user-sql-playground-sql09 | incomplete dependencies prevented verification | done so far: updated web/src/components/ai/AINLSqlPlayground.tsx and web/src/components/ai/AINLSqlPlayground.test.tsx with typed preview and focused regressions Attempt 2: FAILED | fix-power-user-sql-playground-sql09 | dependency restoration failed; focused tests could not start | done so far: reviewed existing typed preview and regressions; no source changes made Focused power-user regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13019,10 +13019,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused power-user regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
