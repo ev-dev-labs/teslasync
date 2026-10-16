@@ -4949,10 +4949,10 @@
       "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-charging-thermal-tax-ctt-s01 | verification blocked by missing dependencies; explicit unsupported-heater UI wording remains | done so far: adapter and regressions added in web\\src\\api\\hooks\\useCharging.ts, web\\src\\features\\charging\\pages\\__tests__\\ChargingHeatmapPage.test.tsx Attempt 2: FAILED | fix-charging-charging-thermal-tax-ctt-s01 | required verification blocked by missing dependencies and failed npm restoration | done so far: inspected existing adapter, unsupported-heater UI and focused regressions; no source changes CHECKPOINT 2026-10-15: thermal-tax page + modernization suites passed (5 files, 42 tests); individual item acceptance remains open.",
+    "Notes": " Attempt 1: FAILED | fix-charging-charging-thermal-tax-ctt-s01 | verification blocked by missing dependencies; explicit unsupported-heater UI wording remains | done so far: adapter and regressions added in web\\src\\api\\hooks\\useCharging.ts, web\\src\\features\\charging\\pages\\__tests__\\ChargingHeatmapPage.test.tsx Attempt 2: FAILED | fix-charging-charging-thermal-tax-ctt-s01 | required verification blocked by missing dependencies and failed npm restoration | done so far: inspected existing adapter, unsupported-heater UI and focused regressions; no source changes CHECKPOINT 2026-10-15: thermal-tax page + modernization suites passed (5 files, 42 tests); individual item acceptance remains open. | Retry verification failed 2026-10-15: required charging heatmap regression command ran, but the two ChargingHeatmapPage suites contain 10 failing assertions about unavailable/missing-summary card wrappers (suite total 341 passed/44 failed). Underlying helper/grid tests pass; reported first errors are `toHaveAttribute` receiving null for missing metric state and unable to find visible `Avg Duration` in summary.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -4967,10 +4967,10 @@
       "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-charging-smart-charge-sc-f01 | missing dependencies prevented verification | done so far: updated web\\src\\api\\hooks\\useCharging.ts and added regressions in web\\src\\features\\charging\\pages\\__tests__\\ChargingHeatmapPage.test.tsx Attempt 2: FAILED | fix-charging-smart-charge-sc-f01 | missing dependencies and ENOTEMPTY errors prevented verification | done so far: confirmed existing implementation and focused regressions; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-charging-smart-charge-sc-f01 | missing dependencies prevented verification | done so far: updated web\\src\\api\\hooks\\useCharging.ts and added regressions in web\\src\\features\\charging\\pages\\__tests__\\ChargingHeatmapPage.test.tsx Attempt 2: FAILED | fix-charging-smart-charge-sc-f01 | missing dependencies and ENOTEMPTY errors prevented verification | done so far: confirmed existing implementation and focused regressions; no source changes | Retry verification failed 2026-10-15: required charging heatmap regression command ran, but the two ChargingHeatmapPage suites contain 10 failing assertions about unavailable/missing-summary card wrappers (suite total 341 passed/44 failed). Underlying helper/grid tests pass; reported first errors are `toHaveAttribute` receiving null for missing metric state and unable to find visible `Avg Duration` in summary.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
