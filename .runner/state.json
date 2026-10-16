@@ -2664,10 +2664,10 @@
       "web\\src\\features\\automations\\pages\\AutomationsListPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-automations-automations-list-f03 | required tests blocked by external catalog and toolchain failures | done so far: updated useAutomations.ts, dtos.go, AutomationsListPage.tsx, and AutomationsListPage.test.tsx Attempt 2: FAILED | fix-automations-automations-list-f03 | required tests blocked by missing tools and dependency restore failure | done so far: inspected existing implementation and coverage; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-automations-automations-list-f03 | required tests blocked by external catalog and toolchain failures | done so far: updated useAutomations.ts, dtos.go, AutomationsListPage.tsx, and AutomationsListPage.test.tsx Attempt 2: FAILED | fix-automations-automations-list-f03 | required tests blocked by missing tools and dependency restore failure | done so far: inspected existing implementation and coverage; no source changes Retry failed: automation selected suites have 12 failures across AutomationListPage (2), AutomationsListPage (7), and RoutineWizard (3). Examples: active-refetch never reaches expected state, malformed catalog payload fails to reject as expected, no Active row text, and RoutineWizard expected section heading is replaced by the current empty-state explanation.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -2680,10 +2680,10 @@
       "web\\src\\features\\automations\\pages\\AutomationsListPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-automations-automations-list-f05 | verification blocked by missing and locked dependencies | done so far: changed web\\src\\api\\hooks\\useAutomations.ts, web\\src\\features\\automations\\pages\\AutomationsListPage.tsx, web\\src\\features\\automations\\pages\\AutomationsListPage.test.tsx with validated pin queries and failure/retention/recovery tests Attempt 2: FAILED | fix-automations-automations-list-f05 | verification blocked by missing dependencies | done so far: inspected and preserved previous hook validation, page state handling, and regression tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-automations-automations-list-f05 | verification blocked by missing and locked dependencies | done so far: changed web\\src\\api\\hooks\\useAutomations.ts, web\\src\\features\\automations\\pages\\AutomationsListPage.tsx, web\\src\\features\\automations\\pages\\AutomationsListPage.test.tsx with validated pin queries and failure/retention/recovery tests Attempt 2: FAILED | fix-automations-automations-list-f05 | verification blocked by missing dependencies | done so far: inspected and preserved previous hook validation, page state handling, and regression tests; no source changes Retry failed: automation selected suites have 12 failures across AutomationListPage (2), AutomationsListPage (7), and RoutineWizard (3). Examples: active-refetch never reaches expected state, malformed catalog payload fails to reject as expected, no Active row text, and RoutineWizard expected section heading is replaced by the current empty-state explanation.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -2743,10 +2743,10 @@
       "web\\src\\features\\automations\\components\\RoutineWizard.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-automations-automation-list-al-s04 | Verification blocked within time box | done so far: updated four assigned components and four matching test files; scoped pattern audit counts zero Attempt 2: FAILED | fix-automations-automation-list-al-s04 | Required scoped tests blocked by unresponsive PowerShell execution | done so far: read instructions and inspected existing implementation and tests; preserved prior changes; no new edits Attempt 1: FAILED | fix-automations-automation-list-al-s04 | Required tests blocked before collection by external generated i18n catalog validation | done so far: inspected and preserved prior implementation and four test files; scoped pattern scan found zero matches; no new edits",
+    "Notes": "Attempt 1: FAILED | fix-automations-automation-list-al-s04 | Verification blocked within time box | done so far: updated four assigned components and four matching test files; scoped pattern audit counts zero Attempt 2: FAILED | fix-automations-automation-list-al-s04 | Required scoped tests blocked by unresponsive PowerShell execution | done so far: read instructions and inspected existing implementation and tests; preserved prior changes; no new edits Attempt 1: FAILED | fix-automations-automation-list-al-s04 | Required tests blocked before collection by external generated i18n catalog validation | done so far: inspected and preserved prior implementation and four test files; scoped pattern scan found zero matches; no new edits Retry failed: automation selected suites have 12 failures across AutomationListPage (2), AutomationsListPage (7), and RoutineWizard (3). Examples: active-refetch never reaches expected state, malformed catalog payload fails to reject as expected, no Active row text, and RoutineWizard expected section heading is replaced by the current empty-state explanation.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -2764,10 +2764,10 @@
       "web\\src\\features\\automations\\components\\RoutineWizard.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-automations-automation-list-al-s06 | Test execution stalled and browser verification blocked by onboarding redirect | done so far: updated web/src/features/automations/pages/AutomationListTable.tsx, web/src/features/automations/pages/AutomationListTable.test.tsx, web/src/features/automations/components/RoutineWizard.tsx, web/src/features/automations/components/RoutineWizard.test.tsx Attempt 2: FAILED | fix-automations-automation-list-al-s06 | Tests, TypeScript and Edge verification blocked by incomplete dependencies; dependency restoration failed | done so far: inspected existing mobile/detail adoption and preservation tests; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-automations-automation-list-al-s06 | Test execution stalled and browser verification blocked by onboarding redirect | done so far: updated web/src/features/automations/pages/AutomationListTable.tsx, web/src/features/automations/pages/AutomationListTable.test.tsx, web/src/features/automations/components/RoutineWizard.tsx, web/src/features/automations/components/RoutineWizard.test.tsx Attempt 2: FAILED | fix-automations-automation-list-al-s06 | Tests, TypeScript and Edge verification blocked by incomplete dependencies; dependency restoration failed | done so far: inspected existing mobile/detail adoption and preservation tests; no source files changed Retry failed: automation selected suites have 12 failures across AutomationListPage (2), AutomationsListPage (7), and RoutineWizard (3). Examples: active-refetch never reaches expected state, malformed catalog payload fails to reject as expected, no Active row text, and RoutineWizard expected section heading is replaced by the current empty-state explanation.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
