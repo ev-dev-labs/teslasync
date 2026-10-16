@@ -6560,10 +6560,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "failed",
-    "WorkAttempts": 2,
+    "Status": "done",
+    "WorkAttempts": 3,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-dashcam-dashcam-intelligence-dc011 | regression execution incomplete; external catalog drift | done so far: changed web\\src\\features\\dashcam\\lib\\eventDetection.ts, web\\src\\features\\dashcam\\components\\dashcam\\EventEvidencePanel.tsx, added web\\src\\features\\dashcam\\components\\dashcam\\EventEvidencePanel.test.tsx, updated web\\src\\i18n\\en.json and regenerated web\\src\\i18n\\en Attempt 2: FAILED | fix-dashcam-dashcam-intelligence-dc011 | regression and catalog check incomplete within time box; external TypeScript failures | done so far: preserved existing eventDetection.ts, EventEvidencePanel.tsx and colocated regression; regenerated web\\src\\i18n\\en",
+    "Notes": " Attempt 1: FAILED | fix-dashcam-dashcam-intelligence-dc011 | regression execution incomplete; external catalog drift | done so far: changed web\\src\\features\\dashcam\\lib\\eventDetection.ts, web\\src\\features\\dashcam\\components\\dashcam\\EventEvidencePanel.tsx, added web\\src\\features\\dashcam\\components\\dashcam\\EventEvidencePanel.test.tsx, updated web\\src\\i18n\\en.json and regenerated web\\src\\i18n\\en Attempt 2: FAILED | fix-dashcam-dashcam-intelligence-dc011 | regression and catalog check incomplete within time box; external TypeScript failures | done so far: preserved existing eventDetection.ts, EventEvidencePanel.tsx and colocated regression; regenerated web\\src\\i18n\\en | 2026-10-16 repair group 17 acceptance retry: real I18nextProvider hook restored; exact persisted descriptor translation, raw quoted/ampersand metadata, edited/legacy basis, export facts and separate reconstruction guidance all pass. eventDetection 11/11, EventEvidencePanel 3/3, RedactionEditor 10/10; catalog regenerated and --check passes. Reviewed source implementation from d2cb6396ac; accepted.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -6577,10 +6577,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "failed",
-    "WorkAttempts": 1,
+    "Status": "done",
+    "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: timeout after 25 minutes (changes left on disk) Retry failed: EventEvidencePanel.test.tsx has 1 localization regression; saved descriptor text with quotes/ampersand is not found after language change. RedactionEditor and eventDetection suites pass.",
+    "Notes": "Attempt 1: timeout after 25 minutes (changes left on disk) Retry failed: EventEvidencePanel.test.tsx has 1 localization regression; saved descriptor text with quotes/ampersand is not found after language change. RedactionEditor and eventDetection suites pass. | 2026-10-16 repair group 17 acceptance retry: real I18nextProvider hook restored; exact persisted descriptor translation, raw quoted/ampersand metadata, edited/legacy basis, export facts and separate reconstruction guidance all pass. eventDetection 11/11, EventEvidencePanel 3/3, RedactionEditor 10/10; catalog regenerated and --check passes. Reviewed source implementation from d2cb6396ac; accepted.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11888,9 +11888,9 @@
     ],
     "DependsOn": [],
     "Status": "failed",
-    "WorkAttempts": 0,
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": "| Channel checkpoint: ChannelsPage.test.tsx passes 23/23; duplicate responsive paused-status copy is asserted as present. Retry failed: ChannelProvidersPanel.test.tsx cannot find translated provider label Courriel; 1 failure.",
+    "Notes": "| Channel checkpoint: ChannelsPage.test.tsx passes 23/23; duplicate responsive paused-status copy is asserted as present. Retry failed: ChannelProvidersPanel.test.tsx cannot find translated provider label Courriel; 1 failure. | 2026-10-16 repair group 17 retry: French provider regression now passes with real translation provider; ChannelsPage 23/23 and ChannelProvidersPanel 8/8 pass; catalog regenerated/check passes. Still FAILED after source review: ChannelsPage passes channelsQuery.data ?? [] to ChannelProvidersPanel without source state; loading/paused/fatal counts can appear authoritatively zero. Need source-aware provider counts and focused transitions before acceptance.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },

@@ -20,6 +20,9 @@ import {
 } from '../VehicleMultiSelect';
 import type { Vehicle } from '@/types/vehicle';
 
+// Locale-provider regressions must exercise the real context-aware hook.
+vi.unmock('react-i18next');
+
 function makeVehicle(id: number, name: string, vin = `VIN${id}AAAA`): Vehicle {
   return {
     id,

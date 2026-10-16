@@ -16,7 +16,7 @@
  * needed. The side-effect i18n import initialises translations so `t(key,
  * default)` resolves to the English fallbacks (these keys aren't in en.json).
  */
-import { describe, expect, it } from 'vitest';
+import { vi, describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
@@ -25,6 +25,9 @@ import '../../../../i18n';
 import { ChannelProvidersPanel } from './ChannelProvidersPanel';
 import { CHANNEL_TYPES } from './channelMeta';
 import type { NotificationChannel, NotificationChannelKind } from '@/api/types';
+
+// Locale-provider regressions require the real context-aware hook.
+vi.unmock('react-i18next');
 
 // The panel only reads `.kind` off each channel, so a minimal cast-through
 // stub is sufficient and keeps the fixtures readable across all seven kinds.

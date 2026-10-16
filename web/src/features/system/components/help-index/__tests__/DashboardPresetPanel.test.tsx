@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { createInstance } from 'i18next'
 import { I18nextProvider } from 'react-i18next'
@@ -17,6 +17,9 @@ import {
   requestDashboardPresetApplication,
   setAppliedDashboardPresetRole,
 } from '@/lib/dashboardPresets'
+
+// Locale-provider regressions require the real context-aware hook.
+vi.unmock('react-i18next');
 
 /**
  * HELP-11 picker honesty (correction round).

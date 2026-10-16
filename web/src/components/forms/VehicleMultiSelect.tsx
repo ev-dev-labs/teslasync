@@ -426,6 +426,7 @@ export function VehicleMultiSelect({
                       )}
                     </Text>
                   </span>
+                  {' '}
                   <Badge variant="warning" size="sm">
                     {t(
                       'notifications.alertStudio.editor.vehiclesUnknownBadge',

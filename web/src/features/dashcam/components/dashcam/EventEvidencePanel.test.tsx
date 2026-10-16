@@ -8,6 +8,9 @@ import { buildIncidentManifest } from '../../lib/redactionExport';
 import type { ClipRecord, EventCandidate } from '../../lib/types';
 import english from '@/i18n/en.json';
 
+// Locale-provider regressions require the real context-aware hook.
+vi.unmock('react-i18next');
+
 vi.mock('@/hooks/useNumberFormatting', () => ({
   useNumberFormatting: () => ({ fmtNumber: (value: number) => value.toFixed(2) }),
 }));
