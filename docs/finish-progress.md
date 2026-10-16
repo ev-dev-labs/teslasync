@@ -13,7 +13,7 @@ The web gates are build, `npx tsc --noEmit`, lint, and `node scripts/split-i18n-
 
 ## Current UI simplification checkpoint
 
-Working on `ui/simplification`. Rows 0–3 are complete and pushed. Row 4 (vehicles) is in progress. Initial gates now pass after regenerating the stale usage manifest: catalog check, full lint, standalone typecheck, and production build. The build retains its existing CSS parser and startup bundle warnings. Focused vehicle work remains in progress; full Vitest is deferred until the UI simplification is complete.
+Working on `ui/simplification`. Rows 0-3 are complete and pushed. Row 4 (vehicles) is in progress. Gates pass after regenerating the stale usage manifest: catalog check, full lint, standalone typecheck, and production build. The build retains its existing CSS parser and startup bundle warnings. Focused vehicle suites currently pass for EvidenceBrief (10/10), charging telemetry (10/10), battery range (13/13), Vehicle Access (33/33), and Physics Cockpit (17/17). Tesla Physics has 26 failures (41/67 passing) and Vehicle List has 21 failures (101/122 passed); their card-face metadata and missing-field assertions still need migration. Full Vitest remains deferred until UI simplification is complete.
 ## Where things are
 
 - Active branch: `ui/simplification`, based on `fix/dashboard-followups`.
