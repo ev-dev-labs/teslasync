@@ -143,6 +143,7 @@ export function CommandCenterHero({
 
         <OperationalBrief
           compact
+          variant="embedded"
           eyebrow={t('system.brief.eyebrow', 'System evidence')}
           title={title}
           description={description}

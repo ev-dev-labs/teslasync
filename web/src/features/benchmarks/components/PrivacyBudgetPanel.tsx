@@ -62,6 +62,7 @@ export function PrivacyBudgetPanel({
     <LayoutCard title={t('benchmarks.budget.title', 'Privacy budget')}>
       <OperationalBrief
         compact
+        variant="embedded"
         eyebrow={t('benchmarks.brief.budgetEyebrow', 'Private participation accounting')}
         title={t('benchmarks.budget.title', 'Privacy budget')}
         description={caption}

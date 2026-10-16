@@ -150,7 +150,7 @@ function DecisionBody({
   return (
     <div className="space-y-3">
       <Caption>{socLine}</Caption>
-      <OperationalBrief compact testId="vehicle-next-charge-summary" {...brief}
+      <OperationalBrief compact variant="embedded" testId="vehicle-next-charge-summary" {...brief}
         eyebrow={t('nextCharge.resource', 'Next charge decision')}
         title={t('vehicles.detail.brief.chargeTitle', 'Charging options')}
         description={reason} metrics={metrics}

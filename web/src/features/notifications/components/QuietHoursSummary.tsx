@@ -169,6 +169,7 @@ export function QuietHoursSummary({ query }: QuietHoursSummaryProps) {
       <StaleRefreshWarning state={source} label={sectionLabel} />
       <OperationalBrief
         compact
+        variant="embedded"
         testId="quiet-hours-brief"
         eyebrow={t('notifications.quietHours.summary.brief.eyebrow', 'Quiet-hours policy')}
         title={t('notifications.quietHours.summary.brief.title', 'Schedules, delivery status, and bypass policy')}

@@ -132,6 +132,7 @@ export function MetricComparisonGrid({
       {source && <StaleRefreshWarning state={source} />}
       <OperationalBrief
         compact
+        variant="embedded"
         eyebrow={t('benchmarks.brief.eyebrow', 'Bounded private comparisons')}
         title={t('benchmarks.metrics.title', 'Private comparisons')}
         description={description}

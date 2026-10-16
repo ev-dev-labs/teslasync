@@ -198,6 +198,7 @@ export function AutomationActivityFeed({
           </div>
           <OperationalBrief
             compact
+            variant="embedded"
             testId="automation-activity-brief"
             eyebrow={t('automations.activityBrief.eyebrow', 'Execution history')}
             title={t('automations.historyPage.summary', 'Execution summary')}

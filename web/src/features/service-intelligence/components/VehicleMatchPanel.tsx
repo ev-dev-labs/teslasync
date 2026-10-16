@@ -133,6 +133,7 @@ export function VehicleMatchPanel({
           <Text as="p" variant="helper">{context?.build_match_basis ?? unavailable}</Text>
           <OperationalBrief
             compact
+            variant="embedded"
             testId="service-intelligence-summary"
             eyebrow={t('serviceIntelligence.page.title', 'Recall & service intelligence')}
             title={t('serviceIntelligence.brief.title', 'Service match summary')}

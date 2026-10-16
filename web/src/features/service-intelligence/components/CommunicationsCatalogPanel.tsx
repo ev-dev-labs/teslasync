@@ -106,6 +106,7 @@ export function CommunicationsCatalogPanel({
         <div className="space-y-4">
           <OperationalBrief
             compact
+            variant="embedded"
             testId="service-intelligence-catalog-summary"
             eyebrow={t('serviceIntelligence.catalog.title', 'Official NHTSA TSB catalog')}
             title={t('serviceIntelligence.catalog.brief.title', 'Catalog coverage summary')}
