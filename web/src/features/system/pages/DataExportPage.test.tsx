@@ -537,7 +537,6 @@ describe('DataExportPage — Project Apex elevation', () => {
     await waitFor(() => expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'value'));
     const summary = screen.getByRole('region', { name: 'Export summary metrics' });
     expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(within(metricCard('Most exported')).getByText('By count')).toBeInTheDocument();
     expect(metricCard('Total size')).toHaveAttribute('data-value-state', 'value');
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
@@ -554,13 +553,14 @@ describe('DataExportPage — Project Apex elevation', () => {
     fireEvent.click(within(history).getByRole('button', { name: 'Refresh' }));
     await screen.findByTestId('stale-refresh-warning');
     const summary = screen.getByRole('region', { name: 'Export summary metrics' });
-    expect(within(summary).getByText('Retained source')).toBeInTheDocument();
     expect(within(metricCard('Total exports')).getByText('3')).toBeInTheDocument();
     expect(within(metricCard('Total size')).getByText('4.77 MB')).toBeInTheDocument();
     expect(within(metricCard('Most exported')).getByText('drives')).toBeInTheDocument();
     expect(metricCard('Last export')).toHaveAttribute('data-value-state', 'value');
     expect(screen.getByRole('button', { name: 'Start export' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('Retained source')).toBeInTheDocument();
   });
 
   it('submits a new export with the chosen type, format and default 30-day window', async () => {
@@ -768,8 +768,12 @@ describe('DataExportPage — Project Apex elevation', () => {
     expect(await screen.findByText('Failed to load export jobs')).toBeInTheDocument();
     // The wizard (fed by the still-successful vehicles query) keeps working.
     expect(screen.getByText('New export')).toBeInTheDocument();
-    expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'missing');
-    expect(metricCard('Total size')).toHaveAttribute('data-value-state', 'missing');
+    const summary = screen.getByRole('region', { name: 'Export summary metrics' });
+    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(within(summary).getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(within(summary).getByText('Values will appear when the source provides measurements.')).toBeInTheDocument();
+    const history = screen.getByRole('region', { name: 'Export history' });
+    expect(within(history).getByRole('button', { name: 'Refresh' })).toBeEnabled();
   });
 
   it('opens the artifact URL for a ready job', async () => {

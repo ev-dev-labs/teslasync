@@ -44,9 +44,10 @@ vi.mock('@/api/client', async () => {
 // without booting a full i18next instance for every render.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: { defaultValue?: string; [k: string]: unknown }) => {
+    t: (key: string, opts?: string | { defaultValue?: string; [k: string]: unknown }) => {
       const template =
-        typeof opts?.defaultValue === 'string' ? opts.defaultValue : key;
+        typeof opts === 'string' ? opts
+          : typeof opts?.defaultValue === 'string' ? opts.defaultValue : key;
       if (!opts) return template;
       return template.replace(/\{\{(\w+)\}\}/g, (_match, varName: string) => {
         const value = (opts as Record<string, unknown>)[varName];
@@ -151,7 +152,7 @@ describe('<RequiresAuth>', () => {
       </RequiresAuth>,
       { wrapper },
     );
-    const retry = await screen.findByRole('button', { name: 'error.retry' });
+    const retry = await screen.findByRole('button', { name: 'Retry' });
     expect(screen.queryByTestId('requires-auth-empty-rbac')).not.toBeInTheDocument();
     expect(screen.queryByTestId('protected-children')).not.toBeInTheDocument();
     fireEvent.click(retry);
