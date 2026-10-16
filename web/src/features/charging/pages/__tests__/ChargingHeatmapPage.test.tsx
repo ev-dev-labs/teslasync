@@ -22,6 +22,7 @@
  * state, and settings-driven unit/format hooks all run for real so the SI →
  * display conversion and active-vehicle fallback are genuinely exercised.
  */
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, renderHook, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
@@ -809,7 +810,7 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     await screen.findByText('No vehicle selected');
     expect(chargingCalls()).toHaveLength(0);
     expect(screen.getAllByRole('button', { name: 'Refresh' }).some((button) => (button as HTMLButtonElement).disabled)).toBe(true);
-    expect(kpiValue('Total Sessions')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Charging summary' }), 'Total Sessions');
     expect(screen.queryByText('No charging sessions in this range')).not.toBeInTheDocument();
   });
 
@@ -851,7 +852,7 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     renderPage('/charging-heatmap?vehicle_id=10');
     await screen.findByText('Loading is paused. Charging history will appear when the connection resumes.');
     expect(chargingCalls()).toHaveLength(0);
-    expect(kpiValue('Total Sessions')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Charging summary' }), 'Total Sessions');
     for (const name of ['Weekly Charging Heatmap', 'Charging Insights', 'Top Charging Locations', 'Sessions by Day of Week']) {
       expect(screen.getByRole('heading', { name })).toBeInTheDocument();
     }
@@ -951,7 +952,7 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
       ).toBeGreaterThanOrEqual(2),
     );
     expect(kpiValue('Total Sessions')).toBe('0');
-    expect(kpiValue('Total Energy')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Charging summary' }), 'Total Energy');
     expect(
       screen.getByText('Insights appear once you have charging history'),
     ).toBeInTheDocument();

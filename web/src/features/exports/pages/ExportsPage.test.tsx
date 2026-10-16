@@ -31,6 +31,7 @@
  *     rejection) and the multi-select is PRESERVED so the user can retry.
  *   - refresh: the header refresh control re-invokes the query's refetch.
  */
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -811,7 +812,7 @@ describe('ExportsPage — refresh', () => {
     const region = kpiRegion();
     const total = within(region).getByText('Total exports').closest('[data-operational-metric]');
     expect(total).toHaveAttribute('data-value-state', 'missing');
-    expect(kpiValue('Total exports')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total exports');
     expect(within(kpiRegion()).getByText('Export-job source failed')).toBeInTheDocument();
     expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
   });
@@ -840,7 +841,7 @@ describe('ExportsPage — refresh', () => {
     mockJobs.mockReturnValue(makeQuery({ fetchStatus }));
     renderPage();
     expect(screen.getAllByText(message)).toHaveLength(2);
-    expect(kpiValue('Total exports')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total exports');
     expect(screen.queryByText('No exports yet')).not.toBeInTheDocument();
     expect(screen.queryByText('Storage used')).not.toBeInTheDocument();
     expect(screen.getByTestId('ai-advisor-stub')).toBeInTheDocument();
@@ -885,7 +886,7 @@ describe('ExportsPage — refresh', () => {
       expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
       expect(screen.queryByText('No exports yet')).not.toBeInTheDocument();
-      expect(kpiValue('Total exports')).toBe('—');
+      assertOperationalMetricUnavailable(kpiRegion(), 'Total exports');
 
       fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' }).at(-1)!);
       expect(refetch).toHaveBeenCalledOnce();

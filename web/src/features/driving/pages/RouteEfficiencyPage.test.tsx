@@ -27,6 +27,7 @@
  *     with the new dates without a duplicate page picker.
  *   - AI panel receives the selected vehicle id (or none when unselected).
  */
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation, useSearchParams } from 'react-router-dom';
@@ -372,7 +373,7 @@ describe('RouteEfficiencyPage — no vehicle selected', () => {
     expect(screen.getAllByText('Select a vehicle to see route efficiency').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByTestId('chart-loading')).not.toBeInTheDocument();
     expect(within(cardsRegion()).queryByText('Beach')).not.toBeInTheDocument();
-    expect(kpiValue('Routes')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Routes');
     expect(within(kpiRegion()).getByText('Routes').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
     expect(screen.getByTestId('ai-suggestions')).toHaveAttribute('data-vehicle-id', '');
   });
@@ -414,7 +415,7 @@ describe('RouteEfficiencyPage — error', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
 
     expect(within(kpiRegion()).getByText('Total Trips').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
-    expect(kpiValue('Total Trips')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total Trips');
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
   });
 
@@ -622,7 +623,7 @@ describe('RouteEfficiencyPage — route cards pagination', () => {
 });
 
 
-describe('RouteEfficiencyPage � isolated widgets and restrained metrics', () => {
+describe('RouteEfficiencyPage � isolated widgets and restrained metrics', () => {
   it('isolates a failed comparison while keeping summary, AI, metrics and route cards', () => {
     renderFailures.comparison = true;
     const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);

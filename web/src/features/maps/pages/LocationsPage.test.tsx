@@ -25,6 +25,7 @@
  *     a city and used to inflate the unique-city count).
  */
 
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -351,7 +352,7 @@ describe('LocationsPage — KPI band', () => {
     mockRequest.mockResolvedValue([]);
     renderPage();
     await waitFor(() => expect(kpiValue('Total visits')).toBe('0'));
-    expect(kpiValue('Most visited')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Most visited');
   });
 });
 
@@ -541,7 +542,7 @@ describe('LocationsPage — header vehicle scope', () => {
     expect(screen.getByTestId('lb-empty-Visits')).toHaveTextContent('No vehicle selected');
     expect(screen.getByTestId('lb-empty-Hours')).toHaveTextContent('No vehicle selected');
     expect(screen.queryByText('No visited locations recorded yet')).not.toBeInTheDocument();
-    expect(kpiValue('Total visits')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total visits');
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
     expect(mockRequest).not.toHaveBeenCalled();
   });
@@ -622,7 +623,7 @@ describe('LocationsPage — unresolved trust and honest paging', () => {
     expect(screen.getByTestId('lb-empty-Hours')).toHaveTextContent('The request is paused');
     expect(captured.panels['Visits'].emptyActionLabel).toBeUndefined();
     expect(captured.panels['Hours'].onResetFilters).toBeUndefined();
-    expect(kpiValue('Total visits')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total visits');
     expect(screen.queryByText('No visited locations recorded yet')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
     expect(screen.getByText('Page 1 of Unknown')).toBeInTheDocument();
@@ -689,7 +690,7 @@ describe('LocationsPage — unresolved trust and honest paging', () => {
     expect(screen.getByText('Page 3 of Unknown')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'First page' })).toBeEnabled();
-    expect(kpiValue('Unique places')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Unique places');
   });
 });
 

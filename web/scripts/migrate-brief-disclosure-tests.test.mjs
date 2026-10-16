@@ -122,3 +122,43 @@ expect(within(summary).getByText('Source available')).toBeInTheDocument();`;
   assert.match(result.output, /import \{ assertOperationalBriefDisclosure, assertOperationalMetricUnavailable \}/);
   assert.equal(migrate(result.output).output, result.output);
 });
+
+
+test('resolves single-label readers only with a direct independent region', () => {
+  for (const scope of ["kpiRegion()", "screen.getByRole('region', { name: 'Journey evidence and summary' })"]) {
+    const reader = `function metricValue(label: string) {
+      return within(${scope}).getByText(label).closest('[data-operational-metric]')
+        ?.querySelector('[data-operational-value]')?.textContent ?? '';
+    }`;
+    const source = `${reader}
+expect(metricValue('Capacity')).toBe('—');
+expect(metricValue('Cycles')).toBe('0');
+expect(metricValue('Measured')).not.toBe('—');`;
+    const result = migrateMissingMetricTests(source);
+    assert.equal(result.edits.length, 1);
+    assert.ok(result.output.includes(`assertOperationalMetricUnavailable(${scope}, 'Capacity')`));
+    assert.ok(result.output.includes("expect(metricValue('Cycles')).toBe('0');"));
+    assert.ok(result.output.includes("expect(metricValue('Measured')).not.toBe('—');"));
+    assert.equal(migrateMissingMetricTests(result.output).edits.length, 0);
+  }
+});
+
+test('rejects label-dependent regions, local aliases, global queries and duplicate readers', () => {
+  for (const scope of ["screen.getByRole('region', { name: label })", 'localRegion', 'findAnything()']) {
+    const source = `function metricValue(label: string) {
+      const localRegion = kpiRegion();
+      return within(${scope}).getByText(label).closest('[data-operational-metric]')
+        ?.querySelector('[data-operational-value]')?.textContent ?? '';
+    }
+expect(metricValue('Capacity')).toBe('—');`;
+    assert.equal(migrateMissingMetricTests(source).output, source);
+  }
+  const duplicate = `${valueReader}\n${valueReader}\nexpect(metricValue(band, 'Capacity')).toBe('—');`;
+  assert.equal(migrateMissingMetricTests(duplicate).output, duplicate);
+  const global = `function metricValue(label: string) {
+    return screen.getByText(label).closest('[data-operational-metric]')
+      ?.querySelector('[data-operational-value]')?.textContent ?? '';
+  }
+expect(metricValue('Capacity')).toBe('—');`;
+  assert.equal(migrateMissingMetricTests(global).output, global);
+});

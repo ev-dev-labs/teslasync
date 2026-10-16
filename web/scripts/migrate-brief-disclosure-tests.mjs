@@ -142,14 +142,18 @@ export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx
 
 export function migrateMissingMetricTests(source, filename = 'example.test.tsx') {
   const tree = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const readers = new Set();
+  const readers = new Map();
+  const ambiguousReaders = new Set();
   function findReaders(node) {
     const declaration = ts.isFunctionDeclaration(node) ? node
       : ts.isVariableDeclaration(node) && node.initializer &&
         (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer)) ? node.initializer : null;
     const name = ts.isFunctionDeclaration(node) || ts.isVariableDeclaration(node) ? node.name : null;
-    if (declaration?.body && name && ts.isIdentifier(name) && declaration.parameters.length === 2) {
-      const [scope, label] = declaration.parameters.map(parameter => parameter.name.getText(tree));
+    if (declaration?.body && name && ts.isIdentifier(name) && [1, 2].includes(declaration.parameters.length)) {
+      const parameters = declaration.parameters.map(parameter => parameter.name.getText(tree));
+      const [scope, label] = parameters.length === 2 ? parameters : [null, parameters[0]];
+      let fixedScope;
+      let conflictingScope = false;
       let canonicalTile = false;
       let canonicalValue = false;
       let labelledScope = false;
@@ -162,12 +166,37 @@ export function migrateMissingMetricTests(source, filename = 'example.test.tsx')
           }
           if (part.expression.name.text === 'getByText' && part.arguments[0]?.getText(tree) === label &&
             callNamed(part.expression.expression, 'within') &&
-            part.expression.expression.arguments[0]?.getText(tree) === scope) labelledScope = true;
+            part.expression.expression.arguments.length === 1) {
+            const root = part.expression.expression.arguments[0];
+            if (scope && root.getText(tree) === scope) labelledScope = true;
+            if (!scope) {
+              // Only a direct, label-independent DOM scope can move to the call site.
+              // Local aliases and arbitrary global text readers require manual review.
+              const rootText = root.getText(tree);
+              const directScope = callNamed(root, 'kpiRegion') || callNamed(root, 'statsRegion') ||
+                (ts.isCallExpression(root) && ts.isPropertyAccessExpression(root.expression) &&
+                  root.expression.expression.getText(tree) === 'screen' && root.expression.name.text === 'getByRole');
+              let dependsOnLabel = false;
+              function inspectDependency(child) {
+                if (ts.isIdentifier(child) && child.text === label) dependsOnLabel = true;
+                ts.forEachChild(child, inspectDependency);
+              }
+              inspectDependency(root);
+              if (directScope && !dependsOnLabel) {
+                conflictingScope ||= Boolean(fixedScope && fixedScope !== rootText);
+                fixedScope = rootText;
+                labelledScope = true;
+              }
+            }
+          }
         }
         ts.forEachChild(part, inspect);
       }
       inspect(declaration.body);
-      if (canonicalTile && canonicalValue && labelledScope) readers.add(name.text);
+      if (canonicalTile && canonicalValue && labelledScope && !conflictingScope) {
+        if (readers.has(name.text)) ambiguousReaders.add(name.text);
+        readers.set(name.text, { arguments: parameters.length, fixedScope });
+      }
     }
     ts.forEachChild(node, findReaders);
   }
@@ -181,14 +210,19 @@ export function migrateMissingMetricTests(source, filename = 'example.test.tsx')
       callNamed(node.expression.expression, 'expect')) {
       const argument = node.expression.expression.arguments[0];
       if (argument && ts.isCallExpression(argument) && ts.isIdentifier(argument.expression) &&
-        readers.has(argument.expression.text) && argument.arguments.length === 2 && ts.isStringLiteral(argument.arguments[1])) {
+        readers.has(argument.expression.text) && !ambiguousReaders.has(argument.expression.text) &&
+        argument.arguments.length === readers.get(argument.expression.text).arguments &&
+        ts.isStringLiteral(argument.arguments.at(-1))) {
+        const reader = readers.get(argument.expression.text);
+        const scope = reader.fixedScope ?? argument.arguments[0].getText(tree);
+        const label = argument.arguments.at(-1).getText(tree);
         const original = node.getText(tree);
         const line = tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1;
         if (hasNonRenderingBriefDouble(tree) || unsafeAncestor(node)) {
           deferred.push({ line, original, reason: 'Mocked renderer or polling assertion: inspect manually' });
         } else {
           edits.push({ start: node.getStart(tree), end: node.end, line, original,
-            replacement: `assertOperationalMetricUnavailable(${argument.arguments.map(arg => arg.getText(tree)).join(', ')})` });
+            replacement: `assertOperationalMetricUnavailable(${scope}, ${label})` });
         }
       }
     }

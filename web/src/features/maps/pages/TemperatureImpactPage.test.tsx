@@ -29,6 +29,7 @@
  *   - out-of-range clamping (bug fix): extreme temps land in the nearest EDGE
  *     bucket, not the middle one.
  */
+import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, within, fireEvent, type RenderResult } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -427,7 +428,7 @@ describe('TemperatureImpactPage — measured values and preserved alternatives',
         </QueryClientProvider>
       </MemoryRouter>,
     );
-    expect(kpiValue('Total data points')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total data points');
     expect(screen.getByText('Monthly seasonal trend')).toBeInTheDocument();
 
     mockTempImpact.mockReturnValue(makeQuery({ data: fullData(), fetchStatus: 'paused' }));
@@ -454,7 +455,7 @@ describe('TemperatureImpactPage — no vehicle selected', () => {
     // Every point-based section plus the seasonal panel prompt for a vehicle.
     expect(empties.length).toBeGreaterThanOrEqual(5);
     // KPIs degrade to placeholders, not stale numbers.
-    expect(kpiValue('Avg efficiency')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Avg efficiency');
     // The AI narrator is handed no id when the fleet is unselected.
     expect(screen.getByTestId('ai-narrative')).toHaveAttribute('data-vehicle-id', '');
     // The query hook is scoped to the empty vehicle (disabled upstream).
@@ -494,8 +495,8 @@ describe('TemperatureImpactPage — error with no data', () => {
     // The error takes precedence over the empty copy (never both).
     expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
     // An unavailable source cannot claim a measured zero sample count.
-    expect(kpiValue('Total data points')).toBe('—');
-    expect(kpiValue('Avg efficiency')).toBe('—');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Total data points');
+    assertOperationalMetricUnavailable(kpiRegion(), 'Avg efficiency');
   });
 });
 
@@ -578,7 +579,7 @@ describe('TemperatureImpactPage — populated (km)', () => {
       expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
       expect(screen.queryByText('Select a vehicle to view temperature impact')).not.toBeInTheDocument();
       expect(screen.queryByText(/device is offline/i)).not.toBeInTheDocument();
-      expect(kpiValue('Total data points')).toBe('—');
+      assertOperationalMetricUnavailable(kpiRegion(), 'Total data points');
       const retry = within(blocked[0] as HTMLElement).getByRole('button', { name: 'Retry' });
       fireEvent.click(retry);
       expect(refetch).toHaveBeenCalledTimes(1);

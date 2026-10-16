@@ -1,4 +1,4 @@
-import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
+import { assertOperationalMetricUnavailable, assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
@@ -581,7 +581,7 @@ describe('JourneyFragmentationPage', () => {
     expectOneRecoveryControl();
     expect(screen.queryByText('No data available')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
-    expect(metricValue('Observed journeys')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Journey evidence and summary' }), 'Observed journeys');
     assertOperationalBriefDisclosure(elapsedBrief(), 'Source unavailable');
     expect(elapsedValues()).toEqual(['—', '—', '—']);
   });
@@ -769,7 +769,7 @@ describe('JourneyFragmentationPage', () => {
     };
     renderPage();
     expectPersistentAnalyticalShells();
-    expect(metricValue('Observed journeys')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Journey evidence and summary' }), 'Observed journeys');
     expect(screen.queryByText('Loading')).not.toBeInTheDocument();
     expect(elapsedBrief()).not.toHaveAttribute('aria-busy');
     assertOperationalBriefDisclosure(elapsedBrief(), 'Source unavailable');
@@ -788,7 +788,7 @@ describe('JourneyFragmentationPage', () => {
     h.history = { data: undefined, isLoading: false, isPending: true, isError: false, error: null, refetch, fetchStatus: 'paused' };
     const { rerenderPage } = renderPage();
     expectOneRecoveryControl();
-    expect(metricValue('Observed journeys')).toBe('—');
+    assertOperationalMetricUnavailable(screen.getByRole('region', { name: 'Journey evidence and summary' }), 'Observed journeys');
     h.history = { ...h.history, fetchStatus: 'idle', isPending: false, isError: true, error: new Error('network') };
     rerenderPage();
     expectPersistentAnalyticalShells();
