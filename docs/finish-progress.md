@@ -13,13 +13,13 @@ The web gates are build, `npx tsc --noEmit`, lint, and `node scripts/split-i18n-
 
 ## Current UI simplification checkpoint
 
-Working on `ui/simplification`. Rows 0-4 are complete and pushed. Shared dashboard headers now cluster controls at the right, use the freshness dot itself as the per-widget refresh action, and avoid nested shell scrolling; Climate no longer repeats an inner title. Dashboard KPI rows are balanced with `maxPerRow=3`, and analytics fleet briefs render embedded within their section surfaces. Focused dashboard/data-display suites pass 144/144; focused vehicle suites pass 239/239 across seven files. Split catalog check, full lint, typecheck, and build pass (the known CSS parser and startup bundle warnings remain). Requested browser screenshots at 375px, 768px, and desktop could not be captured because no in-app browser tool is available. Rows 5-7 and the full Vitest suite remain outstanding.
+Working on `ui/simplification`. Rows 0-4 are complete and pushed; row 5 (charging) is in progress. Shared dashboard headers now cluster controls at the right, use the freshness dot itself as the per-widget refresh action, and avoid nested shell scrolling; Climate no longer repeats an inner title. Dashboard KPI rows are balanced with `maxPerRow=3`, and analytics fleet briefs render embedded within their section surfaces. Focused dashboard/data-display suites pass 144/144; focused vehicle suites pass 239/239 across seven files. Split catalog check, full lint, typecheck, and build pass (the known CSS parser and startup bundle warnings remain). Requested browser screenshots at 375px, 768px, and desktop could not be captured because no in-app browser tool is available. Rows 5-7 and the full Vitest suite remain outstanding.
 
 Nested-surface follow-up: `FleetSectionBrief` now renders embedded because its analytics overview/driving/charging/battery summaries sit inside the analytics Section, and some are also inside `AnalyticsPanel`. An AnalyticsPage regression confirms the brief has an embedded surface and no standalone one. The exit check requires a repository-wide audit of every `OperationalBrief` call through composed parents, plus a `StatStrip`/metric-grid check for `maxPerRow`; shared `StatStrip` defaults to 3 and its six-item test verifies 3 + 3. The focused assertions pass. Wider AnalyticsPage + StatStrip execution exposed six copy/state/date failures in AnalyticsPage that are unrelated to these surface and row-layout changes; leave them for the scheduled full-suite repair.
 ## Where things are
 
 - Active branch: `ui/simplification`, based on `fix/dashboard-followups`.
-- Current UI checkpoint: rows 0-4 complete; rows 5-7 remain.
+- Current UI checkpoint: rows 0-4 complete; row 5 charging in progress; rows 6-7 remain.
 - Phase 6 is deliberately paused until the UI task and full Vitest repair finish. The latest requested inventory was 312 pending and 114 failed; reconcile with `.runner/state.json` when Phase 6 resumes. No Phase 6 items have been updated in this continuation.
 - Preserve the uncommitted Analytics hook edits and the untracked `docs/ui-simplification-task.md`; they predate or belong to the user's workspace context. Do not stage them as part of UI vehicle commits.
 ## How each group is done
@@ -348,6 +348,24 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
 - Charging heatmap grid and page suites passed in prior focused runs. The broader charging-focused batch last reported **958 passed /43 failed** across 27 files; this checkpoint fixed 2 tests in the focused selector/detail suites and a Powershare page regression. Smart Charge still has 7 failing tests; charging list still has 2. The group remains incomplete and the remaining failing files are recorded in the pending charging work items.
 - Source/test commits pushed during this group: `a2a1fc3e84`, `089f2ba49b`, `93e30c8c97`, `90bac3bc1f`, `79b480b40b`.
 - No new catalog strings were added in this checkpoint.
+
+### UI simplification: charging surface checkpoint (2026-10-15)
+
+- `ChargingSummaryBrief` now forwards an overridable `variant` and defaults
+  to `embedded`, which keeps its audited wrapper call sites from adding a
+  bordered surface inside their surrounding summary cards, sections, or
+  widgets. Its focused regression suite passes **8/8**.
+- Grepped every charging `OperationalBrief`/`ChargingSummaryBrief` call.
+  The two direct page briefs are page-level sibling sections; the shared
+  charging wrapper is embedded by default. No charging `maxPerRow` grids
+  need an additional cap; shared StatStrip already defaults to three tiles
+  per row and has a six-item 3+3 regression.
+- Charging feature suite result: **1,812 passed / 252 failed** across 125
+  files. Catalog split check, `npm run lint`, and `npx tsc --noEmit` pass.
+  The row remains in progress while the existing charging failures are
+  triaged. Browser screenshots remain unavailable in this execution
+  environment; Playwright is present in the repository but browser binaries
+  are not exposed as a callable browser session.
 
 ### Phase 6 group: system checkpoint (2026-10-15)
 

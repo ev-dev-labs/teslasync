@@ -11,7 +11,7 @@ interface Props extends StatStripProps {
 
 /** Charging summaries retain their independent source periods and specialist displays. */
 export function ChargingSummaryBrief({
-  metrics, period, preferences, title, id, testId, loading = false, retained = false,
+  metrics, period, preferences, title, id, testId, loading = false, retained = false, variant = 'embedded',
   secondary, footer, emptyContent, className, comparisonLabel, description, sourceStatus, periodHeaderId, metricTones,
 }: Props) {
   const { t } = useTranslation();
@@ -37,6 +37,7 @@ export function ChargingSummaryBrief({
       data-retained={retained || undefined} aria-busy={loading || undefined}>
       <OperationalBrief
         compact
+        variant={variant}
         testId={testId}
         eyebrow={t('charging.brief.eyebrow', 'Charging evidence')}
         title={periodHeaderId && title

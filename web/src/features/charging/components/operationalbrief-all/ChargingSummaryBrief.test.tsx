@@ -43,24 +43,29 @@ function metric(container: HTMLElement, key: string) {
   return found;
 }
 
+function reviewDetails() {
+  fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+  return within(screen.getByRole('dialog'));
+}
+
 describe('charging summaries use the real compact OperationalBrief and numeric bridge', () => {
   it('passes interruption model copy and prior-only status through the brief without hiding evidence', () => {
     const summary = analyzeChargeInterruptions([]);
     const { container } = render(<ChargeInterruptionStats summary={summary}
       loading={false} retained={false} error={null} onRetry={vi.fn()} />, { wrapper });
-    expect(screen.getByText(
+    const details = reviewDetails();
+    expect(details.getAllByText(
       'Modeled interruption probabilities from indirect session evidence, not measured failures or a hardware diagnosis.',
-    )).toBeInTheDocument();
+    ).length).toBeGreaterThan(0);
     expect(screen.getAllByText(
       'No evaluable sessions; this is the model prior, not an evidence-based estimate.',
     ).length).toBeGreaterThan(0);
     expect(screen.queryByText('Source measurements available')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
     expect(metric(container, 'charge-interruption-overall-risk')).toHaveTextContent('50');
     expect(metric(container, 'charge-interruption-evaluable-sessions')).toHaveTextContent('0');
     expect(screen.getByText('Indirect evidence, not a hardware diagnosis')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getAllByText(
+    expect(details.getAllByText(
       'Selected vehicle · up to 1,000 returned sessions. Coverage and time bounds are not reported; this model does not use the workspace date range.',
     ).length).toBeGreaterThan(0);
   });
@@ -71,7 +76,7 @@ describe('charging summaries use the real compact OperationalBrief and numeric b
     };
     const props = { summary, loading: false, retained: false, error: null, onRetry: vi.fn() };
     const { container, rerender } = render(<ChargeInterruptionStats {...props} />, { wrapper });
-    expect(screen.getByText('Interruption estimate based on evaluable sessions')).toBeInTheDocument();
+    expect(reviewDetails().getAllByText('Interruption estimate based on evaluable sessions').length).toBeGreaterThan(0);
     expect(metric(container, 'charge-interruption-overall-risk')).toHaveTextContent('25');
     expect(metric(container, 'charge-interruption-suspected')).toHaveTextContent('2');
     expect(metric(container, 'charge-interruption-loaded-sessions')).toHaveTextContent('8');
@@ -127,6 +132,8 @@ describe('charging summaries use the real compact OperationalBrief and numeric b
     expect(metric(container, 'invoice')).toHaveTextContent('EUR12.75');
     expect(metric(container, 'delta')).toHaveTextContent('-1250 Wh');
     expect(metric(container, 'rate')).toHaveTextContent('44.49 kWh/h');
+    expect(container.querySelector('[data-operational-brief-surface="embedded"]')).not.toBeNull();
+    expect(container.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
   });
   it('opens the built-in Review details drawer with source limitations, rich help and comparisons', () => {
     render(<ChargingSummaryBrief title="Charging evidence" period={period} preferences={preferences}
@@ -148,7 +155,7 @@ describe('charging summaries use the real compact OperationalBrief and numeric b
     rerender(<ChargingSummaryBrief loading retained metrics={metrics} period={period}
       preferences={preferences} footer={<Button type="button" onClick={retry}>Retry source</Button>} />);
     expect(metric(container, 'energy')).toHaveTextContent('42.62 kWh');
-    expect(screen.getByText('Retained source measurements')).toBeInTheDocument();
+    expect(reviewDetails().getByText('Retained source measurements')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry source' }));
     expect(retry).toHaveBeenCalledOnce();
   });
@@ -156,8 +163,8 @@ describe('charging summaries use the real compact OperationalBrief and numeric b
     const { container } = render(<ChargingSummaryBrief metrics={[{ ...metrics[0], rawValue: null }]}
       period={period} emptyContent={<p>Reconnect to load charging history.</p>} />, { wrapper });
     expect(container.querySelector('[data-operational-brief]')).not.toBeNull();
-    expect(metric(container, 'energy')).toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="energy"]')).toBeNull();
     expect(screen.getByText('Reconnect to load charging history.')).toBeInTheDocument();
-    expect(screen.getByText('No source measurements')).toBeInTheDocument();
+    expect(reviewDetails().getByText('No source measurements')).toBeInTheDocument();
   });
 });
