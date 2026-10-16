@@ -6640,10 +6640,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 1,
-    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk)",
+    "Notes": "Attempt 1: timeout after 25 minutes (changes left on disk) Retry failed: ServiceEvidencePackPage.test.tsx has 9 failures; graph swatch lookup returns undefined and expected Last updated metadata is absent from the summary face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -6731,10 +6731,10 @@
       "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-diagnostics-service-evidence-pack-sep-source-007 | external catalog/dependency failures blocked verification | done so far: updated web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx and web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.test.tsx Attempt 2: FAILED | fix-diagnostics-service-evidence-pack-sep-source-007 | external missing Vite and Playwright dependencies blocked verification | done so far: inspected inherited implementation and tests; no files changed Attempt 1: FAILED | fix-diagnostics-service-evidence-pack-sep-source-007 | external i18n startup failure and first-run setup blocked verification | done so far: inspected inherited ServiceEvidenceIntegrityPanel.tsx and ServiceEvidencePackPage.test.tsx implementation; preserved both files unchanged",
+    "Notes": "Attempt 1: FAILED | fix-diagnostics-service-evidence-pack-sep-source-007 | external catalog/dependency failures blocked verification | done so far: updated web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx and web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.test.tsx Attempt 2: FAILED | fix-diagnostics-service-evidence-pack-sep-source-007 | external missing Vite and Playwright dependencies blocked verification | done so far: inspected inherited implementation and tests; no files changed Attempt 1: FAILED | fix-diagnostics-service-evidence-pack-sep-source-007 | external i18n startup failure and first-run setup blocked verification | done so far: inspected inherited ServiceEvidenceIntegrityPanel.tsx and ServiceEvidencePackPage.test.tsx implementation; preserved both files unchanged Retry failed: ServiceEvidencePackPage.test.tsx has 9 failures; graph swatch lookup returns undefined and snapshot timestamp is not visible on the summary face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -6746,10 +6746,10 @@
       "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-diagnostics-service-evidence-pack-sep-source-009 | validation blocked by missing dependencies and failed restoration | done so far: extracted two page-specific components and added regression; preserved existing content and tests Attempt 2: FAILED | fix-diagnostics-service-evidence-pack-sep-source-009 | required test blocked by missing dependencies; restoration failed on locked Rollup binary | done so far: confirmed existing focused extraction, snapshot guards, sections/actions and regression; no source edits",
+    "Notes": "Attempt 1: FAILED | fix-diagnostics-service-evidence-pack-sep-source-009 | validation blocked by missing dependencies and failed restoration | done so far: extracted two page-specific components and added regression; preserved existing content and tests Attempt 2: FAILED | fix-diagnostics-service-evidence-pack-sep-source-009 | required test blocked by missing dependencies; restoration failed on locked Rollup binary | done so far: confirmed existing focused extraction, snapshot guards, sections/actions and regression; no source edits Retry failed: ServiceEvidencePackPage.test.tsx has 9 failures; snapshot timestamp and source details are not visible on the summary face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -6860,10 +6860,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: AnomalyTimelineCard.test.tsx has 17 failures; authoritative readings/units (for example 0.5 km and -4.5 km/h) are not present in the visible card text.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -6940,10 +6940,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 1,
-    "Notes": "",
+    "Notes": "Retry failed: RemainingUsefulLifePage.test.tsx has 15 failures; localized battery labels are missing from expected Health forecast headings and source-status assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -6957,10 +6957,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-diagnostics-remaining-useful-life-rul-05 | targeted tests blocked by external generated-catalog startup failure | done so far: updated web/src/features/diagnostics/pages/RemainingUsefulLifePage.tsx, web/src/features/diagnostics/pages/RemainingUsefulLifePage.test.tsx, web/src/features/diagnostics/components/operationalbrief-all/NextServiceBrief.tsx",
+    "Notes": "Attempt 1: FAILED | fix-diagnostics-remaining-useful-life-rul-05 | targeted tests blocked by external generated-catalog startup failure | done so far: updated web/src/features/diagnostics/pages/RemainingUsefulLifePage.tsx, web/src/features/diagnostics/pages/RemainingUsefulLifePage.test.tsx, web/src/features/diagnostics/components/operationalbrief-all/NextServiceBrief.tsx Retry failed: RemainingUsefulLifePage.test.tsx has 15 failures; localized battery labels and independent source details fail page assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -6977,10 +6977,10 @@
       "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-diagnostics-root-cause-intelligence-rc01 | scoped tests stalled; verification incomplete within 20-minute timebox | done so far: updated all seven expected files with range integration and regression coverage Attempt 2: FAILED | fix-diagnostics-root-cause-intelligence-rc01 | verification stalled in shared catalog startup; TypeScript unfinished | done so far: inspected and preserved existing range integration and regression coverage; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-diagnostics-root-cause-intelligence-rc01 | scoped tests stalled; verification incomplete within 20-minute timebox | done so far: updated all seven expected files with range integration and regression coverage Attempt 2: FAILED | fix-diagnostics-root-cause-intelligence-rc01 | verification stalled in shared catalog startup; TypeScript unfinished | done so far: inspected and preserved existing range integration and regression coverage; no files changed Retry failed: RootCauseIntelligencePage.test.tsx has 12 failures; paused-state test cannot find its expected data-state marker and effect values are not in the expected display format.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7035,10 +7035,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 1,
-    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk)",
+    "Notes": "Attempt 1: timeout after 25 minutes (changes left on disk) Retry failed: rootCauseIntelligence.test.ts has 3 failures; expected leads/concurrent classification differs and expected 300000 ms is 420000 ms.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7070,10 +7070,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk)",
+    "Notes": "Attempt 1: timeout after 25 minutes (changes left on disk) Retry failed: rootCauseIntelligence.test.ts has 3 failures; expected leads/concurrent classification differs and expected 300000 ms is 420000 ms.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
