@@ -37,7 +37,15 @@ pm run build` passed (one existing CSS parse warning and a non-failing startup-J
 | 6 | remaining `features/*/**` | all remaining routes | evidence cards, repeated actions, nested cards | in progress | todo | todo | todo | per row | 1 | in progress |
 | 7 | grep exit check, full gates and browser/e2e | app-wide | leftovers / summary | verify | verify | verify | verify | confirm | 0 | todo |
 
-Exit-check inventory: `rg -n '<(OperationalBrief|DashboardSourceBrief|ChargingSummaryBrief|VehicleEvidenceBrief)' web/src` and review each enclosing card, section surface, or widget for `variant="embedded"` or removal of the outer surface. Check tile row caps with `rg -n 'maxPerRow|data-max-per-row' web/src`; six-tile groups should use three per row and short rows must remain balanced. Trace composed component parents for every brief and similar card, not only its immediate JSX file. Validate every metric grid's `maxPerRow` cap and balanced rows; six tiles should render 3 + 3, with no orphan tile row.
+Exit-check inventory (run from `web/`):
+
+```sh
+rg -n '<(OperationalBrief|DashboardSourceBrief|ChargingSummaryBrief|VehicleEvidenceBrief|DrivingSummaryBrief|FleetSectionBrief|SystemSummaryBrief|BatteryEvidenceBrief|VehicleOperationalBrief|TripOperationalBrief|SettingsSummaryBrief)' src
+rg -n '<(GlassPanel|LayoutCard|Card|Panel|Section|WidgetShell)|data-operational-brief-surface=' src
+rg -n 'maxPerRow|data-max-per-row|data-operational-metric-bank|data-columns=' src
+```
+
+Trace each result through composed parents and verify no block has more than one bordered/raised surface. Every nested brief must use `variant="embedded"` (including wrapper forwarding) or the outer surface must be removed. Review similar evidence-card wrappers beyond this named list as part of the `*Brief` usage inventory. Validate every metric grid's `maxPerRow` cap and balanced rows; six-tile groups render 3 + 3 and short rows have no orphan tile.
 
 ## Progress checkpoints
 
