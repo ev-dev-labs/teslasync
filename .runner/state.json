@@ -15641,10 +15641,10 @@
       "web\\src\\features\\system\\pages\\SearchPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-search-ss02 | Required tests blocked by missing Go and broken frontend dependencies | done so far: completeness metadata, hook passthrough, UI warnings, regressions, and localized catalog updates persisted Attempt 2: FAILED | fix-system-search-ss02 | Required tests blocked by missing Go and frontend dependency restoration failure | done so far: existing completeness metadata, UI warnings, and regressions inspected; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-system-search-ss02 | Required tests blocked by missing Go and broken frontend dependencies | done so far: completeness metadata, hook passthrough, UI warnings, regressions, and localized catalog updates persisted Attempt 2: FAILED | fix-system-search-ss02 | Required tests blocked by missing Go and frontend dependency restoration failure | done so far: existing completeness metadata, UI warnings, and regressions inspected; no source changes | Retry verification failed 2026-10-15: `api/types.test.ts` passes and `go test -race ./internal/api/search` passes; `useSearch.test.tsx` passes. `SearchPage.test.tsx` remains 5/?? failed: its legacy summary/card assertions expect hidden fields in the collapsed OperationalBrief (3 results under Top match; Total results/Top match cards for empty or paused data; retained query/facet scope wording in collapsed summary). The current UI exposes those details in the Review details disclosure; coverage/missing-data assertions need migration to that contract.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15660,10 +15660,10 @@
       "internal\\api\\search\\handler_test.go"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-search-ss03 | palette UI alignment requires prohibited shared-component edits; frontend and race checks blocked by environment | done so far: updated six expected files with shared Unicode hook/page gating and regressions; non-race Go tests passed Attempt 2: FAILED | fix-system-search-ss03 | palette alignment requires prohibited shared-component edits; required checks blocked by missing Vite and Go | done so far: inspected inherited Unicode gating and regressions; preserved all files unchanged",
+    "Notes": " Attempt 1: FAILED | fix-system-search-ss03 | palette UI alignment requires prohibited shared-component edits; frontend and race checks blocked by environment | done so far: updated six expected files with shared Unicode hook/page gating and regressions; non-race Go tests passed Attempt 2: FAILED | fix-system-search-ss03 | palette alignment requires prohibited shared-component edits; required checks blocked by missing Vite and Go | done so far: inspected inherited Unicode gating and regressions; preserved all files unchanged | Retry verification failed 2026-10-15: `api/types.test.ts` passes and `go test -race ./internal/api/search` passes; `useSearch.test.tsx` passes. `SearchPage.test.tsx` remains 5/?? failed: its legacy summary/card assertions expect hidden fields in the collapsed OperationalBrief (3 results under Top match; Total results/Top match cards for empty or paused data; retained query/facet scope wording in collapsed summary). The current UI exposes those details in the Review details disclosure; coverage/missing-data assertions need migration to that contract.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15677,10 +15677,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | Retry verification failed 2026-10-15: `api/types.test.ts` passes and `go test -race ./internal/api/search` passes; `useSearch.test.tsx` passes. `SearchPage.test.tsx` remains 5/?? failed: its legacy summary/card assertions expect hidden fields in the collapsed OperationalBrief (3 results under Top match; Total results/Top match cards for empty or paused data; retained query/facet scope wording in collapsed summary). The current UI exposes those details in the Review details disclosure; coverage/missing-data assertions need migration to that contract.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
