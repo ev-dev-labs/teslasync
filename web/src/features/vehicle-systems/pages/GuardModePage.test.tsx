@@ -34,34 +34,6 @@ import type { ReactNode } from 'react';
 import type { GuardConfig, GuardEvent } from '@/api/hooks/useGuard';
 import type { Geofence } from '@/types/location';
 
-/* ── react-i18next: deterministic English-fallback rendering ─────────────── */
-vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  return {
-    ...actual,
-    useTranslation: () => ({
-      t: (key: string, fallbackOrOpts?: unknown, maybeOpts?: unknown) => {
-        const fallback = typeof fallbackOrOpts === 'string' ? fallbackOrOpts : undefined;
-        const opts =
-          typeof fallbackOrOpts === 'object' && fallbackOrOpts !== null
-            ? (fallbackOrOpts as Record<string, unknown>)
-            : (maybeOpts as Record<string, unknown> | undefined);
-        const interpolate = (s: string) =>
-          opts
-            ? Object.keys(opts).reduce(
-                (acc, k) => acc.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(opts[k])),
-                s,
-              )
-            : s;
-        if (opts && typeof opts.defaultValue === 'string') return interpolate(opts.defaultValue);
-        if (fallback != null) return interpolate(fallback);
-        return key;
-      },
-      i18n: { language: 'en', changeLanguage: vi.fn() },
-    }),
-    Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  };
-});
 
 /* ── Hoisted mutable state shared with the (hoisted) vi.mock factories ────── */
 const H = vi.hoisted(() => ({
@@ -247,6 +219,16 @@ function renderPage() {
 
 const kpi = () => within(screen.getByRole('region', { name: 'Guard status overview' }));
 
+function expectMissingMetric(label: string) {
+  const overview = screen.getByRole('region', { name: 'Guard status overview' });
+  expect(within(overview).queryByText(label, { selector: '[data-operational-metric] > :first-child' })).not.toBeInTheDocument();
+}
+function expectPendingMetric(label: string) {
+  const tile = metric(label);
+  expect(tile.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+  expect(tile.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+}
+
 function section(name: string) {
   const element = document.querySelector(`[data-guard-section="${name}"]`);
   if (!(element instanceof HTMLElement)) throw new Error(`Missing guard ${name} section`);
@@ -337,25 +319,24 @@ describe('GuardModePage — status surfaces', () => {
 
     expect(section('status').getByText('Lock state unavailable')).toBeInTheDocument();
     expect(section('status').getByText('Sentry status unavailable')).toBeInTheDocument();
-    expect(metric('Lock state')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('Sentry mode')).toHaveAttribute('data-value-state', 'missing');
+    expectMissingMetric('Lock state');
+    expectMissingMetric('Sentry mode');
     expect(screen.queryByText('Vehicle unlocked')).not.toBeInTheDocument();
     expect(screen.queryByText('Sentry mode off')).not.toBeInTheDocument();
     expect(screen.getByText('Current vehicle location unavailable')).toBeInTheDocument();
     expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
   });
 
-  it('renders KPI skeletons (no metric labels) while the config is loading', () => {
+  it('renders labelled KPI skeletons while config loads without masking returned sources', () => {
     install({ config: makeQuery<GuardConfig>({ isLoading: true, data: undefined }) });
     renderPage();
 
     // Shared stats retain their labelled shell. A loading policy cannot erase
     // the independently resolved live readings or event counts.
     expect(screen.getByRole('region', { name: 'Guard status overview' })).toBeInTheDocument();
-    expect(metric('Guard state')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('Guard state')).toHaveTextContent('Updating…');
+    expectPendingMetric('Guard state');
     expect(metric('Guard state')).not.toHaveTextContent('Armed');
-    expect(metric('Sensitivity')).toHaveAttribute('data-value-state', 'missing');
+    expectPendingMetric('Sensitivity');
     expect(metric('Lock state')).toHaveTextContent('Locked');
     expect(metric('Total events')).toHaveTextContent('0');
     expect(document.querySelector('[data-guard-section="settings"] [class*="--skeleton-bg"]')).toBeInTheDocument();

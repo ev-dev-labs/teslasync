@@ -102,7 +102,10 @@ describe('SoftwareUpdatesPage presentation preservation (fake inputs only)', () 
   });
   it('keeps unknown counts distinct from a successful observed empty page', () => {
     const view = render(<SoftwareUpdatesPage />, { wrapper: RouterWrapper });
-    expect(summaryMetric('Total updates').getByText('—')).toBeTruthy();
+    expect(within(screen.getByTestId('software-update-summary')).queryByText('Total updates', {
+      selector: '[data-operational-metric] > :first-child',
+    })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('software-update-summary')).getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(screen.getByText('By status')).toBeTruthy();
     expect(screen.getByText('Update timeline')).toBeTruthy();
     fake.query.data = [];
@@ -120,7 +123,10 @@ describe('SoftwareUpdatesPage presentation preservation (fake inputs only)', () 
       fireEvent.click(within(status).getByRole('button', { name: 'Refresh' }));
     }
     expect(fake.query.refetch).toHaveBeenCalledTimes(3);
-    expect(summaryMetric('Total updates').getByText('—')).toBeTruthy();
+    expect(within(screen.getByTestId('software-update-summary')).queryByText('Total updates', {
+      selector: '[data-operational-metric] > :first-child',
+    })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('software-update-summary')).getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Release notes/ })).toBeNull();
   });
   it('offers vehicle management from every unavailable surface when no vehicle is selected', () => {
@@ -130,7 +136,10 @@ describe('SoftwareUpdatesPage presentation preservation (fake inputs only)', () 
     expect(links).toHaveLength(3);
     for (const link of links) expect(link).toHaveAttribute('href', '/vehicles');
     expect(fake.query.refetch).not.toHaveBeenCalled();
-    expect(summaryMetric('Total updates').getByText('—')).toBeTruthy();
+    expect(within(screen.getByTestId('software-update-summary')).queryByText('Total updates', {
+      selector: '[data-operational-metric] > :first-child',
+    })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('software-update-summary')).getByText('No metric values are available yet.')).toBeInTheDocument();
   });
   it('retains exact row identities, release-note link, vehicle and AI scope on refresh failure', () => {
     fake.query.data = [row];

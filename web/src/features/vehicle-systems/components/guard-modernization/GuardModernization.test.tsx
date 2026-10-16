@@ -37,20 +37,6 @@ vi.mock('@/api/client', async importOriginal => ({
   request: vi.fn(() => Promise.reject(new Error('Unexpected request in guard presentation test'))),
 }));
 
-vi.mock('react-i18next', async importOriginal => {
-  const actual = await importOriginal<typeof import('react-i18next')>();
-  return { ...actual, useTranslation: () => ({
-    t: (key: string, second?: unknown, third?: unknown) => {
-      const opts = second != null && typeof second === 'object'
-        ? second as Record<string, unknown>
-        : third != null && typeof third === 'object' ? third as Record<string, unknown> : {};
-      const fallback = typeof second === 'string' ? second
-        : typeof opts.defaultValue === 'string' ? opts.defaultValue : key;
-      return Object.entries(opts).reduce((s, [k, v]) => s.replaceAll(`{{${k}}}`, String(v)), fallback);
-    },
-    i18n: { language: 'en' },
-  }) };
-});
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: H.vehicleId, vehicle: { display_name: 'Test vehicle' } }),
 }));
@@ -158,6 +144,24 @@ function metric(label: string) {
   expect(tile.querySelectorAll(selector)).toHaveLength(1);
   return tile;
 }
+function expectMissingMetric(label: string) {
+  const overview = screen.getByRole('region', { name: 'Guard status overview' });
+  expect(within(overview).queryByText(label, { selector: '[data-operational-metric] > :first-child' })).not.toBeInTheDocument();
+}
+function expectPendingMetric(label: string) {
+  const tile = metric(label);
+  expect(tile.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+  expect(tile.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+}
+
+function expectOverviewMetadata(text: string) {
+  const overview = screen.getByRole('region', { name: 'Guard status overview' });
+  fireEvent.click(within(overview).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  expect(within(dialog).getByText(text)).toBeInTheDocument();
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+
 function section(name: string) {
   const el = document.querySelector(`[data-guard-section="${name}"]`);
   if (!(el instanceof HTMLElement)) throw new Error(`Missing ${name} section`);
@@ -364,9 +368,9 @@ describe('guard live modernization preservation', () => {
     }
     expect(section('settings').getAllByRole('status')).toHaveLength(2);
     expect(section('events').queryByText('No guard events yet')).not.toBeInTheDocument();
-    expect(metric('Guard state')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('Total events')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('Lock state')).toHaveAttribute('data-value-state', 'missing');
+    expectMissingMetric('Guard state');
+    expectMissingMetric('Total events');
+    expectMissingMetric('Lock state');
     expect(section('settings').getByRole('button', { name: 'Save settings' })).toBeDisabled();
     expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
     fireEvent.click(section('events').getByRole('button', { name: 'Refresh' }));
@@ -464,17 +468,18 @@ describe('guard live modernization preservation', () => {
     expect(H.state.refetch).not.toHaveBeenCalled();
   });
 
-  it('keeps every panel, six metrics and the single card grid when sources fail independently', () => {
+  it('keeps every panel, reported metrics and the single card grid when sources fail independently', () => {
     H.config = query(undefined, { error: new Error('config unavailable'), isError: true });
     H.events = query(undefined, { error: new Error('events unavailable'), isError: true });
     renderPage();
     for (const name of ['map', 'arming', 'panic', 'settings', 'status', 'events'])
       expect(document.querySelector(`[data-guard-section="${name}"]`)).toBeInTheDocument();
-    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    expectOverviewMetadata('4 empty fields are hidden.');
     expect(document.querySelectorAll('[data-card-grid]')).toHaveLength(1);
     expect(screen.getByTestId('guard-map')).toBeInTheDocument();
     expect(metric('Lock state')).toHaveTextContent('Locked');
-    expect(metric('Total events')).toHaveAttribute('data-value-state', 'missing');
+    expectMissingMetric('Total events');
     expect(document.querySelector('[data-initial-deferred]')).not.toBeInTheDocument();
     expect(H.setConfig.mutate).not.toHaveBeenCalled();
     expect(H.panic.mutate).not.toHaveBeenCalled();
@@ -485,8 +490,8 @@ describe('guard live modernization preservation', () => {
     H.config = query(undefined);
     H.events = query(undefined);
     const view = renderPage();
-    expect(metric('Guard state')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('Unacknowledged')).toHaveAttribute('data-value-state', 'missing');
+    expectMissingMetric('Guard state');
+    expectMissingMetric('Unacknowledged');
     expect(section('status').queryByText('No active alerts')).not.toBeInTheDocument();
     H.config = query(config({ enabled: false }));
     H.events = query([]);
@@ -499,7 +504,7 @@ describe('guard live modernization preservation', () => {
   it('accepts null unsaved config without inventing a saved disabled policy', () => {
     H.config = query(null);
     renderPage();
-    expect(metric('Guard state')).toHaveAttribute('data-value-state', 'missing');
+    expectMissingMetric('Guard state');
     expect(section('settings').getByText('No saved guard policy yet')).toBeInTheDocument();
     fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
     expect(H.setConfig.mutate).toHaveBeenCalledWith({
@@ -514,32 +519,43 @@ describe('guard live modernization preservation', () => {
     expect(metric('Lock state')).toHaveTextContent('Unlocked');
     H.state = query(state({ freshness: 'stale' }));
     view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
-    expect(metric('Sentry mode')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('Lock state')).toHaveAttribute('data-value-state', 'missing');
+    expectMissingMetric('Sentry mode');
+    expectMissingMetric('Lock state');
     expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
   });
 
   it('does not coerce a verified but absent boolean into false', () => {
     H.state = query(state({ state: { vehicle_id: 42 } }));
     renderPage();
-    expect(metric('Sentry mode')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('Lock state')).toHaveAttribute('data-value-state', 'missing');
+    expectMissingMetric('Sentry mode');
+    expectMissingMetric('Lock state');
   });
 
   it('does not trust unverified fields despite a fresh stream and numeric coordinates', () => {
     H.state = query(state({ verifiedFields: [] }));
     renderPage();
-    expect(metric('Sentry mode')).toHaveAttribute('data-value-state', 'missing');
-    expect(metric('Lock state')).toHaveAttribute('data-value-state', 'missing');
+    expectMissingMetric('Sentry mode');
+    expectMissingMetric('Lock state');
     expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
+  });
+
+  it('keeps a returned triggered event while the saved policy is initially loading', () => {
+    H.config = query(undefined, { isLoading: true, isFetching: true, dataUpdatedAt: 0 });
+    H.events = query([event()]);
+    renderPage();
+    expect(metric('Guard state')).toHaveTextContent('Triggered');
+    expect(metric('Unacknowledged')).toHaveTextContent('1');
+    expect(metric('Lock state')).toHaveTextContent('Locked');
+    expectPendingMetric('Sensitivity');
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
   });
 
   it('marks independent initial source loading without masking already available live fields', () => {
     H.events = query(undefined, { isLoading: true });
     H.config = query(undefined, { isLoading: true });
     renderPage();
-    expect(metric('Total events')).toHaveTextContent('Updating…');
-    expect(metric('Guard state')).toHaveTextContent('Updating…');
+    expectPendingMetric('Total events');
+    expectPendingMetric('Guard state');
     expect(metric('Lock state')).toHaveTextContent('Locked');
     expect(section('events').queryByText('No guard events yet')).not.toBeInTheDocument();
     expect(document.querySelector('[data-initial-deferred]')).not.toBeInTheDocument();
@@ -553,17 +569,17 @@ describe('guard live modernization preservation', () => {
     const view = renderPage();
     const overview = () => screen.getByRole('region', { name: 'Guard status overview' });
     expect(overview()).toHaveAttribute('aria-busy', 'true');
-    expect(within(overview()).getByText('Loading source')).toBeInTheDocument();
+    expectOverviewMetadata('Loading source');
     expect(overview().querySelectorAll('[data-operational-value]')).toHaveLength(0);
 
     H.events = query([]);
     view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><GuardModePage /></QueryClientProvider></MemoryRouter>);
     expect(overview()).not.toHaveAttribute('aria-busy');
-    expect(within(overview()).getByText('Returned evidence')).toBeInTheDocument();
+    expectOverviewMetadata('Returned evidence');
     expect(metric('Total events')).toHaveTextContent('0');
     expect(metric('Unacknowledged')).toHaveAttribute('data-value-state', 'value');
-    expect(metric('Guard state')).toHaveTextContent('Updating…');
-    expect(metric('Lock state')).toHaveTextContent('Updating…');
+    expectPendingMetric('Guard state');
+    expectPendingMetric('Lock state');
   });
 
   it.each(['config', 'events', 'state'] as const)(
@@ -574,7 +590,8 @@ describe('guard live modernization preservation', () => {
       renderPage();
       const overview = screen.getByRole('region', { name: 'Guard status overview' });
       expect(overview).not.toHaveAttribute('aria-busy');
-      expect(within(overview).getByText('Returned evidence')).toBeInTheDocument();
+      expectOverviewMetadata('Returned evidence');
+      for (const label of ({ config: ['Guard state', 'Sensitivity'], events: ['Total events', 'Unacknowledged'], state: ['Lock state', 'Sentry mode'] }[source])) expectPendingMetric(label);
       if (source !== 'config') {
         expect(metric('Guard state')).toHaveTextContent('Disarmed');
         expect(metric('Sensitivity')).toHaveTextContent('High');
@@ -596,8 +613,10 @@ describe('guard live modernization preservation', () => {
     renderPage();
     const overview = screen.getByRole('region', { name: 'Guard status overview' });
     expect(overview).not.toHaveAttribute('aria-busy');
-    expect(metric('Guard state')).toHaveTextContent('No saved guard policy yet');
-    expect(metric('Lock state')).toHaveTextContent('Lock state unavailable');
+    expectMissingMetric('Guard state');
+    expect(section('settings').getByText('No saved guard policy yet')).toBeInTheDocument();
+    expectMissingMetric('Lock state');
+    expect(section('status').getByText('Lock state unavailable')).toBeInTheDocument();
     expect(metric('Total events')).toHaveTextContent('0');
   });
 

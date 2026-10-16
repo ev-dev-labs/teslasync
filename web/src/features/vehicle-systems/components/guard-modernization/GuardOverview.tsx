@@ -20,6 +20,7 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
   const metrics: StatMetric[] = [
     {
       metricId: 'status', occurrenceId: 'guard-state',
+      loading: configLoading && !m.isTriggered,
       label: t('guard.kpiState', 'Guard state'),
       description: policyContext,
       rawValue: m.isTriggered ? t('guard.triggered', 'Triggered') : m.guardConfig != null ? m.policyLabel : null,
@@ -30,6 +31,7 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
     },
     {
       metricId: 'status', occurrenceId: 'guard-sentry',
+      loading: vehicleLoading,
       label: t('guard.kpiSentry', 'Sentry mode'),
       description: t('guard.kpiSentry', 'Sentry mode'),
       rawValue: m.sentryOn == null ? null : m.sentryOn ? t('guard.on', 'On') : t('guard.off', 'Off'),
@@ -37,6 +39,7 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
     },
     {
       metricId: 'status', occurrenceId: 'guard-lock',
+      loading: vehicleLoading,
       label: t('guard.kpiLock', 'Lock state'),
       description: t('guard.kpiLock', 'Lock state'),
       rawValue: m.isLocked == null ? null : m.isLocked ? t('guard.locked', 'Locked') : t('guard.unlocked', 'Unlocked'),
@@ -44,6 +47,7 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
     },
     {
       metricId: 'text', occurrenceId: 'guard-sensitivity',
+      loading: configLoading,
       label: t('guard.kpiSensitivity', 'Sensitivity'),
       description: t('guard.modernization.sensitivityPolicy', 'Saved movement threshold policy; automatic detection is not established.'),
       rawValue: m.guardConfig != null ? m.sensitivityLabel : null,
@@ -53,6 +57,7 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
     },
     {
       metricId: 'count', occurrenceId: 'guard-unacknowledged',
+      loading: eventsLoading,
       label: t('guard.kpiUnack', 'Unacknowledged'),
       description: t('guard.modernization.eventsCoverage', 'Counts cover the returned security event history, not a theft detection assessment.'),
       rawValue: m.eventsKnown ? m.unacknowledgedCount : null,
@@ -60,6 +65,7 @@ export function GuardOverview({ model: m }: { model: GuardPageModel }) {
     },
     {
       metricId: 'count', occurrenceId: 'guard-total',
+      loading: eventsLoading,
       label: t('guard.kpiTotal', 'Total events'),
       description: t('guard.modernization.eventsCoverage', 'Counts cover the returned security event history, not a theft detection assessment.'),
       rawValue: m.eventsKnown ? m.events.length : null,

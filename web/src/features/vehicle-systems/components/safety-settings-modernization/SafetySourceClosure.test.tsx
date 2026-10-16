@@ -128,7 +128,14 @@ describe('safety closure with real source, configuration and live components', (
       .toHaveAttribute('aria-valuenow', '6');
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(within(panel('Driving statistics')).getByText('0.00 km')).toBeInTheDocument();
-    expect(within(panel('Driving statistics')).getByText('—')).toBeInTheDocument();
+    expect(within(panel('Driving statistics')).queryByText('Self-driving distance', {
+      selector: '[data-operational-metric] > :first-child',
+    })).not.toBeInTheDocument();
+    expect(panel('Driving statistics').querySelectorAll('[data-operational-value]')).toHaveLength(1);
+    fireEvent.click(within(panel('Driving statistics')).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog');
+    expect(within(details).getByText('1 empty field is hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(details, { key: 'Escape' });
     expect(screen.queryByRole('button', { name: /save settings|apply settings/i })).not.toBeInTheDocument();
 
     H.security = query(security);
@@ -171,7 +178,9 @@ describe('safety closure with real source, configuration and live components', (
     H.latest = query({ ...settings, automatic_emergency_braking_off: null });
     view.refreshView();
     expect(statValue('Unknown')).toBe('1');
-    expect(statValue('Enabled feature share')).toBe('—');
+    expect(within(panel('Safety summary')).queryByText('Enabled feature share', {
+      selector: '[data-operational-metric] > :first-child',
+    })).not.toBeInTheDocument();
     expect(screen.queryByRole('meter', { name: 'Enabled feature share' })).not.toBeInTheDocument();
     expect(within(panel('Configuration coverage')).getByText('Feature share unavailable: some settings are unknown.'))
       .toBeInTheDocument();

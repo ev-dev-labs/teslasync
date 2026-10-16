@@ -36,24 +36,6 @@ import type { ReactNode } from 'react';
 
 vi.unmock('@/lib/timezone');
 
-// i18n stub with {{var}} interpolation so assertions target the final copy.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: unknown, opts?: Record<string, unknown>) => {
-      let s = typeof fallback === 'string' ? fallback : key;
-      if (opts && typeof opts === 'object') {
-        for (const [k, v] of Object.entries(opts)) {
-          s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v));
-        }
-      }
-      return s;
-    },
-    i18n: { language: 'en', changeLanguage: vi.fn() },
-  }),
-  Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  initReactI18next: { type: '3rdParty', init: () => undefined },
-}));
-
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) reads it.
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
@@ -244,9 +226,20 @@ function kpiBand(): HTMLElement {
 /** Scope a shared stat tile by its unique summary label. */
 function kpiCard(label: string): HTMLElement {
   const band = kpiBand();
-  const el = within(band).getByText(label).closest<HTMLElement>('[data-operational-metric]');
+  const el = within(band).getByText(label, { selector: '[data-operational-metric] > :first-child' }).closest<HTMLElement>('[data-operational-metric]');
   if (!el) throw new Error(`Stat tile not found for "${label}"`);
   return el;
+}
+
+function expectMissingKpi(label: string) {
+  expect(within(kpiBand()).queryByText(label, { selector: '[data-operational-metric] > :first-child' })).not.toBeInTheDocument();
+}
+function expectKpiMetadata(text: string, present = true) {
+  fireEvent.click(within(kpiBand()).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  if (present) expect(within(dialog).getByText(text)).toBeInTheDocument();
+  else expect(within(dialog).queryByText(text)).not.toBeInTheDocument();
+  fireEvent.keyDown(dialog, { key: 'Escape' });
 }
 
 /**
@@ -343,7 +336,7 @@ describe('SoftwareUpdatesPage — selected date presentation', () => {
       { month: '2025-02', label: 'Feb. 25', count: 1 },
     ]);
     expect(within(kpiCard('Last installed')).getByText('28. Feb. 2025')).toBeInTheDocument();
-    expect(within(kpiCard('Avg cadence')).getByText('—')).toBeInTheDocument();
+    expectMissingKpi('Avg cadence');
     const timeline = screen.getByRole('list', { name: 'Update timeline' });
     expect(within(timeline).getAllByRole('listitem')).toHaveLength(3);
     expect(within(timeline).getByText('Installed —')).toBeInTheDocument();
@@ -358,8 +351,8 @@ describe('SoftwareUpdatesPage — selected date presentation', () => {
     ];
     renderPage();
     await screen.findByText('No update activity in this range');
-    expect(within(kpiCard('Last installed')).getByText('—')).toBeInTheDocument();
-    expect(within(kpiCard('Avg cadence')).getByText('—')).toBeInTheDocument();
+    expectMissingKpi('Last installed');
+    expectMissingKpi('Avg cadence');
     expect(within(screen.getByRole('list', { name: 'Update timeline' })).getAllByRole('listitem')).toHaveLength(2);
   });
 });
@@ -509,8 +502,8 @@ describe('SoftwareUpdatesPage — resilience states', () => {
       expect(updatePaths()).toHaveLength(0);
       expect(kpiBand()).not.toHaveAttribute('aria-busy', 'true');
       for (const label of ['Total updates', 'Installed', 'Pending']) {
-        expect(within(kpiCard(label)).getByText('—')).toBeInTheDocument();
-        expect(within(kpiCard(label)).queryByText('0')).not.toBeInTheDocument();
+        expectMissingKpi(label);
+        expect(kpiBand().querySelector('[data-operational-value]')).not.toBeInTheDocument();
       }
       expect(container.querySelector('[data-chart-state="loading"]')).not.toBeInTheDocument();
       expect(screen.queryByText('Update history is not available. Select a vehicle to load its history.')).not.toBeInTheDocument();
@@ -727,7 +720,7 @@ describe('SoftwareUpdatesPage — shared trust preservation', () => {
     fireEvent.click(refreshButton());
 
     expect(await screen.findByText('Update history could not be refreshed. Retry to recover.')).toBeInTheDocument();
-    expect(within(kpiBand()).getByText('Retained evidence')).toBeInTheDocument();
+    expectKpiMetadata('Retained evidence');
     expect(within(kpiCard('Current version')).getByText('2025.20.1')).toBeInTheDocument();
     expect(screen.getByTestId('cadence-chart')).toBeInTheDocument();
     expect(screen.getByTestId('status-breakdown')).toHaveAttribute('data-total', '3');
@@ -738,7 +731,7 @@ describe('SoftwareUpdatesPage — shared trust preservation', () => {
     api.mode = 'data';
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
     await waitFor(() => expect(screen.queryByText('Update history could not be refreshed. Retry to recover.')).not.toBeInTheDocument());
-    expect(within(kpiBand()).queryByText('Retained evidence')).not.toBeInTheDocument();
+    expectKpiMetadata('Retained evidence', false);
     expect(within(kpiCard('Total updates')).getByText('3')).toBeInTheDocument();
     expect(screen.getByTestId('cadence-chart')).toBeInTheDocument();
     expect(screen.getByTestId('status-breakdown')).toHaveAttribute('data-total', '3');
@@ -754,7 +747,8 @@ describe('SoftwareUpdatesPage — shared trust preservation', () => {
       act(() => onlineManager.setOnline(false));
       fireEvent.click(refreshButton());
 
-      await waitFor(() => expect(within(kpiBand()).getByText('Retained evidence')).toBeInTheDocument());
+      await waitFor(() => expect(kpiBand().closest('[data-source-retained]')).toHaveAttribute('data-source-retained', 'true'));
+      expectKpiMetadata('Retained evidence');
       expect(kpiBand().closest('[data-source-period-kind]')).toHaveAttribute('data-source-retained', 'true');
       expect(screen.getAllByText(/Previously loaded data remains visible while affected sources recover/)).toHaveLength(4);
       expect(screen.getByTestId('cadence-chart')).toBeInTheDocument();
@@ -778,7 +772,8 @@ describe('SoftwareUpdatesPage — shared trust preservation', () => {
     expect(screen.getAllByRole('heading', { name: 'Update cadence' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('heading', { name: 'By status' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('heading', { name: 'Update timeline' }).length).toBeGreaterThan(0);
-    expect(within(kpiCard('Total updates')).queryByText('0')).not.toBeInTheDocument();
+    expectMissingKpi('Total updates');
+    expect(kpiBand().querySelector('[data-operational-value]')).not.toBeInTheDocument();
     expect(screen.queryByTestId('cadence-chart')).not.toBeInTheDocument();
     expect(screen.queryByTestId('status-breakdown')).not.toBeInTheDocument();
     expect(screen.getByTestId('ai-summarizer')).toBeInTheDocument();

@@ -893,7 +893,7 @@ describe('MaintenancePage workspace preview scope', () => {
     expect(retryItems).not.toHaveBeenCalled();
 
     const costBrief = screen.getByRole('region', { name: 'Estimated annual cost evidence' });
-    expect(within(costBrief).getByText('Retained evidence')).toBeInTheDocument();
+    expect(costBrief.closest('[data-source-retained]')).toHaveAttribute('data-source-retained', 'true');
     expect(costBrief.parentElement).not.toBeNull();
     expect(within(costBrief.parentElement as HTMLElement).getByRole('status'))
       .toHaveTextContent('Showing retained measurements');
