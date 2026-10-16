@@ -13037,10 +13037,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused resale-vault regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13053,10 +13053,10 @@
       "web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f07 | dependency failures prevented verification | done so far: changed web\\src\\features\\resale-vault\\lib\\reportVerifier.ts, web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.tsx, web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.test.tsx Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f07 | dependency failures prevented verification | done so far: inspected existing fix and regression coverage; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f07 | dependency failures prevented verification | done so far: changed web\\src\\features\\resale-vault\\lib\\reportVerifier.ts, web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.tsx, web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.test.tsx Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f07 | dependency failures prevented verification | done so far: inspected existing fix and regression coverage; no source files changed Focused resale-vault regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13068,10 +13068,10 @@
       "web\\src\\features\\resale-vault\\hooks\\useVaultEvidence.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f09 | Missing dependencies and locked binaries prevented verification | done so far: updated web\\src\\features\\resale-vault\\hooks\\useVaultEvidence.ts and web\\src\\features\\resale-vault\\hooks\\useVaultEvidence.test.tsx with pending-state handling and recovery coverage Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f09 | Missing dependencies prevented targeted test execution | done so far: inspected existing implementation and coverage; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f09 | Missing dependencies and locked binaries prevented verification | done so far: updated web\\src\\features\\resale-vault\\hooks\\useVaultEvidence.ts and web\\src\\features\\resale-vault\\hooks\\useVaultEvidence.test.tsx with pending-state handling and recovery coverage Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f09 | Missing dependencies prevented targeted test execution | done so far: inspected existing implementation and coverage; no source files changed Retry failed: useVaultEvidence.test.tsx has 5 lifecycle failures: active first read is reported as not loading, paused first read does not remain pending, and successful empty/zero data expectations disagree with the combined hook state.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13102,10 +13102,10 @@
       "web\\src\\features\\resale-vault\\components\\ExportReportPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f13 | Required tests blocked by missing dependencies | done so far: updated both panels and their tests; preserved canonical signed/exported values Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f13 | Required tests blocked by incomplete dependencies; restoration failed with ENOTEMPTY | done so far: inspected existing panel changes and date-boundary coverage; preserved all files unchanged",
+    "Notes": "Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f13 | Required tests blocked by missing dependencies | done so far: updated both panels and their tests; preserved canonical signed/exported values Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f13 | Required tests blocked by incomplete dependencies; restoration failed with ENOTEMPTY | done so far: inspected existing panel changes and date-boundary coverage; preserved all files unchanged Focused resale-vault regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13119,10 +13119,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused resale-vault regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13136,10 +13136,10 @@
       "web\\src\\features\\resale-vault\\lib\\signingKeyRepository.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f11 | page tests and typecheck blocked by missing dependencies | done so far: reconciliation, pending guards, scope-aware settlements, and regression tests persisted in the four expected files plus web\\src\\features\\resale-vault\\components\\ExportReportPanel.tsx Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f11 | Missing dependencies prevent required tests and typecheck; restoration failed | done so far: repaired three nested regression tests in web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.test.tsx; preserved prior implementation",
+    "Notes": "Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f11 | page tests and typecheck blocked by missing dependencies | done so far: reconciliation, pending guards, scope-aware settlements, and regression tests persisted in the four expected files plus web\\src\\features\\resale-vault\\components\\ExportReportPanel.tsx Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f11 | Missing dependencies prevent required tests and typecheck; restoration failed | done so far: repaired three nested regression tests in web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.test.tsx; preserved prior implementation Retry failed: WarrantyResaleVaultPage.test.tsx has 13 failures; signing-key actions stay disabled in automatic-generation, rotation, and stale vehicle-scope cases.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13153,10 +13153,10 @@
       "web\\src\\features\\resale-vault\\components\\ExportReportPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f10 | dependency corruption prevented verification | done so far: updated both assigned components and both regression test files Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f10 | dependency corruption prevented verification | done so far: reviewed existing implementation and regression coverage; no changes made",
+    "Notes": "Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f10 | dependency corruption prevented verification | done so far: updated both assigned components and both regression test files Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f10 | dependency corruption prevented verification | done so far: reviewed existing implementation and regression coverage; no changes made Retry failed: WarrantyResaleVaultPage.test.tsx has 13 failures; signing-key actions stay disabled in rotation and stale vehicle-scope cases.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13183,10 +13183,10 @@
       "web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f05 | nullable counts require prohibited shared report-type changes; requested tests blocked by missing Vitest | done so far: inspected normalizers and consumers; no files changed Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f05 | nullable independent counts require prohibited shared report-type changes; required tests blocked by missing Vite dependencies | done so far: read contract and conventions, confirmed unresolved normalizer behavior and consumer contracts, ran requested test command; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f05 | nullable counts require prohibited shared report-type changes; requested tests blocked by missing Vitest | done so far: inspected normalizers and consumers; no files changed Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f05 | nullable independent counts require prohibited shared report-type changes; required tests blocked by missing Vite dependencies | done so far: read contract and conventions, confirmed unresolved normalizer behavior and consumer contracts, ran requested test command; no source files changed Focused resale-vault regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13213,10 +13213,10 @@
       "web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f03 | integration and exception-copy files outside ownership; focused tests blocked by missing dependencies | done so far: updated web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.ts and web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.test.ts Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f03 | focused tests blocked by missing dependencies; exception copy outside ownership | done so far: inspected and preserved existing normalizer changes and regressions; no source edits",
+    "Notes": "Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f03 | integration and exception-copy files outside ownership; focused tests blocked by missing dependencies | done so far: updated web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.ts and web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.test.ts Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f03 | focused tests blocked by missing dependencies; exception copy outside ownership | done so far: inspected and preserved existing normalizer changes and regressions; no source edits Focused resale-vault regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13228,10 +13228,10 @@
       "web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f01 | dependency failures blocked verification; canonical copy keys need catalog integration | done so far: updated WarrantyResaleVaultPage.tsx and added focused regression in WarrantyResaleVaultPage.test.tsx; preserved existing tests Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f01 | missing pathe blocked regression execution; canonical copy keys require catalog integration | done so far: preserved existing page disclosure changes, focused regression, and populated-data coverage",
+    "Notes": "Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f01 | dependency failures blocked verification; canonical copy keys need catalog integration | done so far: updated WarrantyResaleVaultPage.tsx and added focused regression in WarrantyResaleVaultPage.test.tsx; preserved existing tests Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f01 | missing pathe blocked regression execution; canonical copy keys require catalog integration | done so far: preserved existing page disclosure changes, focused regression, and populated-data coverage Retry failed: WarrantyResaleVaultPage.test.tsx has 13 failures; signing-key recovery actions remain disabled after automatic key generation rejects.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13245,10 +13245,10 @@
       "web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f02 | verification blocked by missing dependencies and failed restoration | done so far: updated both assigned source files and both test files; new warning catalog entry outstanding Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f02 | missing dependencies prevent verification; warning catalog entry remains outstanding outside assigned scope | done so far: inspected and preserved prior implementation and tests; attempted dependency restoration and reran scoped verification; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-resale-vault-warranty-resale-vault-f02 | verification blocked by missing dependencies and failed restoration | done so far: updated both assigned source files and both test files; new warning catalog entry outstanding Attempt 2: FAILED | fix-resale-vault-warranty-resale-vault-f02 | missing dependencies prevent verification; warning catalog entry remains outstanding outside assigned scope | done so far: inspected and preserved prior implementation and tests; attempted dependency restoration and reran scoped verification; no source changes Retry failed: WarrantyResaleVaultPage.test.tsx has 13 failures; signing-key recovery actions remain disabled through stale vehicle scope changes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
