@@ -15323,10 +15323,10 @@
       "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-01 | verification blocked by missing dependencies and failed restoration | done so far: changed web\\src\\lib\\workspaceScope.ts, web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx, web\\src\\lib\\__tests__\\workspaceScope.test.ts, web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-01 | verification blocked by missing dependencies and failed restoration (ENOTEMPTY) | done so far: confirmed existing route, bounded history requests, cancellation, cache keys, and range tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-01 | verification blocked by missing dependencies and failed restoration | done so far: changed web\\src\\lib\\workspaceScope.ts, web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx, web\\src\\lib\\__tests__\\workspaceScope.test.ts, web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-01 | verification blocked by missing dependencies and failed restoration (ENOTEMPTY) | done so far: confirmed existing route, bounded history requests, cancellation, cache keys, and range tests; no source changes Retry failed: SignalCorrelationPage.test.tsx has 10 failures in the correlation page assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15410,10 +15410,10 @@
       "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-change-points-scp002 | Missing dependencies and Windows file locks blocked verification | done so far: updated TelemetrySummaryBrief.tsx and TelemetrySummaryBrief.test.tsx with metadata handling and regression tests Attempt 2: FAILED | fix-telemetry-signal-change-points-scp002 | Missing Vitest and dependency restoration ENOTEMPTY blocked verification | done so far: inspected existing metadata handling and regression tests; preserved both source files unchanged",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-change-points-scp002 | Missing dependencies and Windows file locks blocked verification | done so far: updated TelemetrySummaryBrief.tsx and TelemetrySummaryBrief.test.tsx with metadata handling and regression tests Attempt 2: FAILED | fix-telemetry-signal-change-points-scp002 | Missing Vitest and dependency restoration ENOTEMPTY blocked verification | done so far: inspected existing metadata handling and regression tests; preserved both source files unchanged Retry failed: TelemetrySummaryBrief.test.tsx has 20 failures; the brief face no longer exposes the source/date/metric fields asserted directly by these tests.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15425,10 +15425,10 @@
       "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-deadband-f002 | Missing dependencies blocked targeted tests; restoration failed | done so far: updated web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx and web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.test.tsx Attempt 2: FAILED | fix-telemetry-signal-deadband-f002 | Missing dependencies prevent required test execution; restoration blocked by EPERM | done so far: inspected existing implementation and regression tests; preserved prior changes; no source edits",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-deadband-f002 | Missing dependencies blocked targeted tests; restoration failed | done so far: updated web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx and web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.test.tsx Attempt 2: FAILED | fix-telemetry-signal-deadband-f002 | Missing dependencies prevent required test execution; restoration blocked by EPERM | done so far: inspected existing implementation and regression tests; preserved prior changes; no source edits Retry failed: TelemetrySummaryBrief.test.tsx has 20 failures; direct brief-face source/date/metric assertions are missing.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16369,10 +16369,10 @@
       "web\\src\\features\\telemetry\\hooks\\useLiveSignalStream.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-live-signal-monitor-lsm-f01 | dependency failures prevented regression verification | done so far: updated useLiveSignalStream.ts, useLiveSignalStream.test.ts, LiveSignalTail.tsx, LiveSignalTail.test.tsx with provenance, unknown observation freshness, and regressions Attempt 2: FAILED | fix-telemetry-live-signal-monitor-lsm-f01 | missing dependencies prevented required regression verification | done so far: inspected existing provenance fix and regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-live-signal-monitor-lsm-f01 | dependency failures prevented regression verification | done so far: updated useLiveSignalStream.ts, useLiveSignalStream.test.ts, LiveSignalTail.tsx, LiveSignalTail.test.tsx with provenance, unknown observation freshness, and regressions Attempt 2: FAILED | fix-telemetry-live-signal-monitor-lsm-f01 | missing dependencies prevented required regression verification | done so far: inspected existing provenance fix and regressions; no source changes Focused telemetry regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16386,10 +16386,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused telemetry regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16403,10 +16403,10 @@
       "web\\src\\features\\telemetry\\components\\LiveThroughputPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-live-signal-monitor-lsm-f03 | validation blocked by missing dependencies and external TypeScript errors | done so far: updated both consumers and both regression test files; preserved raw UTC values; scoped pattern scans passed Attempt 2: FAILED | fix-telemetry-live-signal-monitor-lsm-f03 | dependency corruption blocks tests, TypeScript and Edge verification | done so far: repaired nested mobile regression test in web/src/features/telemetry/components/LiveSignalTail.test.tsx; existing formatter adoption preserved",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-live-signal-monitor-lsm-f03 | validation blocked by missing dependencies and external TypeScript errors | done so far: updated both consumers and both regression test files; preserved raw UTC values; scoped pattern scans passed Attempt 2: FAILED | fix-telemetry-live-signal-monitor-lsm-f03 | dependency corruption blocks tests, TypeScript and Edge verification | done so far: repaired nested mobile regression test in web/src/features/telemetry/components/LiveSignalTail.test.tsx; existing formatter adoption preserved Retry failed: LiveSignalTail.test.tsx has 2 failures in retained/live signal tail behavior.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16420,10 +16420,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused telemetry regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16435,10 +16435,10 @@
       "web\\src\\components\\data-display\\__tests__\\MetricBar.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-live-signal-monitor-lsm-f05 | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\components\\data-display\\MetricBar.tsx and web\\src\\components\\data-display\\__tests__\\MetricBar.test.tsx Attempt 2: FAILED | fix-telemetry-live-signal-monitor-lsm-f05 | required tests blocked by missing dependencies; restoration failed with ENOTEMPTY | done so far: reviewed existing MetricBar implementation and regression coverage; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-live-signal-monitor-lsm-f05 | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\components\\data-display\\MetricBar.tsx and web\\src\\components\\data-display\\__tests__\\MetricBar.test.tsx Attempt 2: FAILED | fix-telemetry-live-signal-monitor-lsm-f05 | required tests blocked by missing dependencies; restoration failed with ENOTEMPTY | done so far: reviewed existing MetricBar implementation and regression coverage; no source changes Focused telemetry regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16484,10 +16484,10 @@
       "web\\src\\features\\telemetry\\lib\\signalCorrelation.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-02 | Page verification blocked by missing dependencies; catalog registration outside scope | done so far: updated both assigned source files and both test files; 32 library tests passed Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-02 | targeted verification blocked by missing dependencies and failed dependency restoration | done so far: inspected existing implementation and covering tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-02 | Page verification blocked by missing dependencies; catalog registration outside scope | done so far: updated both assigned source files and both test files; 32 library tests passed Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-02 | targeted verification blocked by missing dependencies and failed dependency restoration | done so far: inspected existing implementation and covering tests; no source changes Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16501,10 +16501,10 @@
       "web\\src\\features\\telemetry\\lib\\signalCorrelation.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-05 | Missing dependencies prevented regression execution and TypeScript validation; dependency restoration failed | done so far: updated SignalCorrelationPage.tsx, signalCorrelation.ts, SignalCorrelationPage.test.tsx, and signalCorrelation.test.ts with named independent coverage and focused regressions Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-05 | Missing dependencies block regression and TypeScript validation; restoration failed with ENOTEMPTY | done so far: confirmed existing named independent A/B coverage and focused regressions; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-05 | Missing dependencies prevented regression execution and TypeScript validation; dependency restoration failed | done so far: updated SignalCorrelationPage.tsx, signalCorrelation.ts, SignalCorrelationPage.test.tsx, and signalCorrelation.test.ts with named independent coverage and focused regressions Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-05 | Missing dependencies block regression and TypeScript validation; restoration failed with ENOTEMPTY | done so far: confirmed existing named independent A/B coverage and focused regressions; no source files changed Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16516,10 +16516,10 @@
       "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-07 | dependency failures prevented test and TypeScript verification | done so far: updated web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx and web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-07 | missing dependency files prevent required test verification | done so far: inspected existing implementation and regression coverage; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-07 | dependency failures prevented test and TypeScript verification | done so far: updated web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx and web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-07 | missing dependency files prevent required test verification | done so far: inspected existing implementation and regression coverage; no source changes Retry failed: SignalCorrelationPage.test.tsx has 10 failures in the page source/range assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16550,10 +16550,10 @@
       "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-06 | verification blocked by missing dependencies; canonical translation integration pending | done so far: updated the four assigned files with screening qualifications, methodology disclosures, and focused regressions Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-06 | missing dependencies block verification; canonical translation integration pending outside assigned scope | done so far: inspected and preserved existing qualifications and regressions in all four assigned files; attempted dependency restoration and required tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-06 | verification blocked by missing dependencies; canonical translation integration pending | done so far: updated the four assigned files with screening qualifications, methodology disclosures, and focused regressions Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-06 | missing dependencies block verification; canonical translation integration pending outside assigned scope | done so far: inspected and preserved existing qualifications and regressions in all four assigned files; attempted dependency restoration and required tests; no source changes Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16567,10 +16567,10 @@
       "web\\src\\features\\telemetry\\lib\\signalCorrelation.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-04 | missing test/compiler dependencies and required catalog entries | done so far: updated both assigned source files and both test files; calculations preserved; scoped audit clean Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-04 | missing validation dependencies and required catalog entries outside assigned scope | done so far: existing implementation and covering tests reviewed; scoped audit clean; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-04 | missing test/compiler dependencies and required catalog entries | done so far: updated both assigned source files and both test files; calculations preserved; scoped audit clean Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-04 | missing validation dependencies and required catalog entries outside assigned scope | done so far: existing implementation and covering tests reviewed; scoped audit clean; no source changes Retry failed: CorrelationStatStrip.test.tsx has 21 failures; detail metrics and labels are asserted directly on the collapsed brief face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16584,10 +16584,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: SignalDeadbandPage.test.tsx has 3 failures in deadband page assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16631,10 +16631,10 @@
       "web\\src\\features\\telemetry\\components\\SignalDiffBreakdown.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-diff-sd-01 | verification blocked by missing dependencies and failed restoration | done so far: trust-state wiring and regression tests added in all four assigned files Attempt 2: FAILED | fix-telemetry-signal-diff-sd-01 | required tests blocked by missing Vite dependencies; restoration failed with EPERM | done so far: inspected existing trust-state wiring and regression coverage in all four assigned files; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-01 | verification blocked by missing dependencies and failed restoration | done so far: trust-state wiring and regression tests added in all four assigned files Attempt 2: FAILED | fix-telemetry-signal-diff-sd-01 | required tests blocked by missing Vite dependencies; restoration failed with EPERM | done so far: inspected existing trust-state wiring and regression coverage in all four assigned files; no source changes Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16648,10 +16648,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16667,10 +16667,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16729,10 +16729,10 @@
       "web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-diff-sd-07 | canonical catalog requires separate owner; focused tests blocked by missing rollup | done so far: updated web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx and web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-diff-sd-07 | canonical copy requires separate catalog owner; focused tests blocked by missing Vite dependencies | done so far: strengthened web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx regression; preserved existing page changes and populated-data cases",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-07 | canonical catalog requires separate owner; focused tests blocked by missing rollup | done so far: updated web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx and web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-diff-sd-07 | canonical copy requires separate catalog owner; focused tests blocked by missing Vite dependencies | done so far: strengthened web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx regression; preserved existing page changes and populated-data cases Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16744,10 +16744,10 @@
       "web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-diff-sd-08 | targeted tests blocked by missing Vite dependency | done so far: updated web/src/features/telemetry/pages/SignalDiffPage.tsx and web/src/features/telemetry/pages/SignalDiffPage.test.tsx; implementation and regression coverage saved, verification incomplete Attempt 2: FAILED | fix-telemetry-signal-diff-sd-08 | targeted tests blocked by missing Vite dependencies | done so far: confirmed existing implementation and regression coverage; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-08 | targeted tests blocked by missing Vite dependency | done so far: updated web/src/features/telemetry/pages/SignalDiffPage.tsx and web/src/features/telemetry/pages/SignalDiffPage.test.tsx; implementation and regression coverage saved, verification incomplete Attempt 2: FAILED | fix-telemetry-signal-diff-sd-08 | targeted tests blocked by missing Vite dependencies | done so far: confirmed existing implementation and regression coverage; no source files changed Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16759,10 +16759,10 @@
       "web\\src\\features\\telemetry\\components\\SignalDiffBreakdown.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-diff-sd-11 | verification blocked by missing Vite and TypeScript dependencies | done so far: updated SignalDiffBreakdown.tsx palette and solid fills; added regression in SignalDiffBreakdown.test.tsx Attempt 2: FAILED | fix-telemetry-signal-diff-sd-11 | focused verification blocked by missing Vite dependencies and failed dependency restoration | done so far: confirmed existing restrained token palette, solid fills, and focused regression; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-11 | verification blocked by missing Vite and TypeScript dependencies | done so far: updated SignalDiffBreakdown.tsx palette and solid fills; added regression in SignalDiffBreakdown.test.tsx Attempt 2: FAILED | fix-telemetry-signal-diff-sd-11 | focused verification blocked by missing Vite dependencies and failed dependency restoration | done so far: confirmed existing restrained token palette, solid fills, and focused regression; no source changes Retry failed: SignalDiffBreakdown.test.tsx has one failure in diff breakdown output.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16778,10 +16778,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16793,10 +16793,10 @@
       "web\\src\\features\\telemetry\\components\\SignalDiffTable.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-diff-sd-09 | required browser verification blocked by existing server timeouts | done so far: updated web\\src\\features\\telemetry\\components\\SignalDiffTable.tsx, web\\src\\features\\telemetry\\components\\SignalDiffTable.test.tsx; isolated tests 32 passed Attempt 2: FAILED | fix-telemetry-signal-diff-sd-09 | test startup dependency failure and existing dev-server timeouts prevent verification | done so far: inspected retained implementation and tests; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-09 | required browser verification blocked by existing server timeouts | done so far: updated web\\src\\features\\telemetry\\components\\SignalDiffTable.tsx, web\\src\\features\\telemetry\\components\\SignalDiffTable.test.tsx; isolated tests 32 passed Attempt 2: FAILED | fix-telemetry-signal-diff-sd-09 | test startup dependency failure and existing dev-server timeouts prevent verification | done so far: inspected retained implementation and tests; no files changed Focused telemetry regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16808,10 +16808,10 @@
       "web\\src\\components\\data-display\\__tests__\\SourceLayerBadge.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-diff-sd-10 | dependency failures prevented verification | done so far: updated web\\src\\components\\data-display\\SourceLayerBadge.tsx and web\\src\\components\\data-display\\__tests__\\SourceLayerBadge.test.tsx Attempt 2: FAILED | fix-telemetry-signal-diff-sd-10 | dependency restoration failed; required regression could not run | done so far: inspected existing implementation and tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-10 | dependency failures prevented verification | done so far: updated web\\src\\components\\data-display\\SourceLayerBadge.tsx and web\\src\\components\\data-display\\__tests__\\SourceLayerBadge.test.tsx Attempt 2: FAILED | fix-telemetry-signal-diff-sd-10 | dependency restoration failed; required regression could not run | done so far: inspected existing implementation and tests; no source changes Focused telemetry regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16823,10 +16823,10 @@
       "web\\src\\components\\data-display\\SavedViewMenu.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-telemetry-signal-diff-sd-13 | validation blocked by missing dependencies and time-box limit | done so far: updated web\\src\\components\\data-display\\SavedViewMenu.tsx and web\\src\\components\\data-display\\SavedViewMenu.test.tsx Attempt 2: FAILED | fix-telemetry-signal-diff-sd-13 | validation blocked by missing dependencies and failed restoration | done so far: inspected and preserved existing SavedViewMenu.tsx and SavedViewMenu.test.tsx implementation; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-13 | validation blocked by missing dependencies and time-box limit | done so far: updated web\\src\\components\\data-display\\SavedViewMenu.tsx and web\\src\\components\\data-display\\SavedViewMenu.test.tsx Attempt 2: FAILED | fix-telemetry-signal-diff-sd-13 | validation blocked by missing dependencies and failed restoration | done so far: inspected and preserved existing SavedViewMenu.tsx and SavedViewMenu.test.tsx implementation; no source changes Focused telemetry regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
