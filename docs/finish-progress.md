@@ -474,3 +474,9 @@ Update `.runner/state.json` and this progress document after each group. This or
   variant while recognized `insufficient` remains danger. The matching pending
   Phase 6 item `fix-advanced-road-hazard-mesh-rhm-04` is completed; its focused
   suite passes **20/20**. Commit recorded in `.runner/state.json`.
+- Full-suite triage fixed two Helix evidence-trail gaps: recognized tool IDs
+  now show translated names while raw IDs remain available in title metadata
+  and unknown IDs stay raw; completion summaries use complete localized
+  sentences with i18next count plurals. The two corresponding Phase 6 items
+  are complete. Split-i18n check passes and the combined focused suites pass
+  **58/58**. Changes are in `81c281aa49`.

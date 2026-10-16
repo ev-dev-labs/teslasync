@@ -20394,11 +20394,11 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": "",
-    "Commit": "",
+    "Notes": " | completed during post-simplification suite triage: known tools now use translated display labels while raw IDs remain in title metadata and unknown identifiers remain raw; summary sentences use i18next count plurals and formatted counts. Split catalog check passed; focused AI evidence suites passed 58/58.",
+    "Commit": "81c281aa49",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -20411,11 +20411,11 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": "",
-    "Commit": "",
+    "Notes": " | completed during post-simplification suite triage: known tools now use translated display labels while raw IDs remain in title metadata and unknown identifiers remain raw; summary sentences use i18next count plurals and formatted counts. Split catalog check passed; focused AI evidence suites passed 58/58.",
+    "Commit": "81c281aa49",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
