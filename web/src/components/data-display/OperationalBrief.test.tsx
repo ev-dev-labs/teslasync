@@ -8,8 +8,16 @@ vi.mock('react-i18next', () => ({
     t: (
       _key: string,
       fallback: string,
-      options?: Record<string, string>,
-    ) => fallback.replace('{{title}}', options?.title ?? ''),
+      options?: Record<string, unknown>,
+    ) => {
+      const pluralFallback = options?.count === 1
+        ? String(options.defaultValue_one ?? fallback)
+        : String(options?.defaultValue_other ?? fallback)
+      return Object.entries(options ?? {}).reduce(
+        (value, [key, replacement]) => value.replaceAll(`{{${key}}}`, String(replacement)),
+        pluralFallback,
+      )
+    },
   }),
 }));
 
@@ -26,7 +34,7 @@ describe('OperationalBrief', () => {
       const summary = screen.getByRole('region', { name: 'Semantic evidence' });
       expect(within(summary).getByText('0', { exact: true })).toHaveClass(expectedTone);
       expect(within(summary).getByRole('listitem')).toHaveAttribute('data-value-state', 'value');
-      expect(within(summary).getByText('Complete retained-source explanation')).toBeVisible();
+      expect(within(summary).queryByText('Complete retained-source explanation')).not.toBeInTheDocument();
       fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
       const drawer = screen.getByRole('dialog', { name: 'Semantic evidence details' });
       expect(within(drawer).getByText('0', { exact: true })).toHaveClass(expectedTone);
@@ -34,7 +42,7 @@ describe('OperationalBrief', () => {
       expect(within(drawer).getByText('Retained')).toBeVisible();
     },
   );
-  it('isolates primitive scope and freshness as distinct unstyled elements in the summary and drawer header', () => {
+  it('keeps primitive scope and freshness in the drawer header, off the card face', () => {
     const scope = 'Period A: Last 30 days · Period B: Last 90 days';
     const freshness = 'Last confirmed at 2026-01-02T04:05:06Z';
     render(<OperationalBrief eyebrow="Evidence" title="Primitive context"
@@ -54,7 +62,8 @@ describe('OperationalBrief', () => {
       expect(freshnessElement).toBeVisible();
     };
     const summary = screen.getByRole('region', { name: 'Primitive context' });
-    checkMetadata(summary);
+    expect(within(summary).queryByText(scope, { exact: true })).not.toBeInTheDocument();
+    expect(within(summary).queryByText(freshness, { exact: true })).not.toBeInTheDocument();
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Primitive context details' });
     const header = drawer.querySelector<HTMLElement>('[data-drawer-header]');
@@ -76,7 +85,7 @@ describe('OperationalBrief', () => {
         metrics={[{ key: 'source', label: 'Source reading', value: 'retained-value',
           detail: 'Source caption remains visible', rawValue: 'retained-value', valueState: 'value', loading: override }]} />);
       const summary = screen.getByRole('region', { name: 'Loading compatibility' });
-      expect(within(summary).getByText('Source caption remains visible')).toBeVisible();
+      expect(within(summary).queryByText('Source caption remains visible')).not.toBeInTheDocument();
       expect(summary.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value');
       expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(pending ? 0 : 1);
       if (pending) {
@@ -99,7 +108,7 @@ describe('OperationalBrief', () => {
     });
   });
 
-  it('retains exact rich source bounds and freshness in both the summary and real drawer', () => {
+  it('retains exact rich source bounds and freshness in the real drawer only', () => {
     render(
       <OperationalBrief
         eyebrow="Source evidence"
@@ -127,7 +136,7 @@ describe('OperationalBrief', () => {
       expect(queries.getByText('Confirmed empty result')).toBeVisible();
     };
     const summary = screen.getByRole('region', { name: 'Returned bounds' });
-    checkContext(summary);
+    expect(within(summary).queryByText('Source bounds unknown; no interval supplied')).not.toBeInTheDocument();
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Returned bounds details' });
     checkContext(drawer);
@@ -142,8 +151,8 @@ describe('OperationalBrief', () => {
       scope="Source bounds unknown; no interval supplied"
       freshness="Observation time unknown" metrics={[]} />);
     const summary = screen.getByRole('region', { name: 'Unknown context' });
-    expect(summary).toHaveTextContent('Source bounds unknown; no interval supplied');
-    expect(summary).toHaveTextContent('Observation time unknown');
+    expect(summary).not.toHaveTextContent('Source bounds unknown; no interval supplied');
+    expect(summary).not.toHaveTextContent('Observation time unknown');
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Unknown context details' });
     const header = drawer.querySelector('[data-drawer-header]');
@@ -172,13 +181,13 @@ describe('OperationalBrief', () => {
       description="Caller supplied numeric metadata." statusLabel="Unknown"
       scope={0} freshness={0} metrics={[]} />);
     const summary = screen.getByRole('region', { name: 'Zero context' });
-    expect(summary).toHaveTextContent('Unknown00');
+    expect(summary).not.toHaveTextContent('Unknown00');
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Zero context details' });
     expect(drawer.querySelector('[data-drawer-header]')).toHaveTextContent('Unknown00');
   });
 
-  it('preserves complete captions, rich context and long values in the summary and details', () => {
+  it('keeps long values on the card and moves complete captions into details', () => {
     render(<OperationalBrief compact eyebrow="Source posture" title="Source evidence"
       description="Actual source context" statusLabel="Unknown"
       metrics={[{ key: 'status', label: 'Endpoint', value: 'A complete source-provided endpoint status',
@@ -188,8 +197,11 @@ describe('OperationalBrief', () => {
     expect(item).toHaveAttribute('data-operational-metric', 'status');
     expect(item).toHaveAttribute('data-value-state', 'value');
     expect(item.querySelector('[data-operational-value]')).toHaveTextContent('A complete source-provided endpoint status');
-    expect(screen.getByText('Complete explanatory caption').parentElement).not.toHaveClass('line-clamp-2');
-    expect(screen.getByText('Retained source context')).toBeVisible();
+    expect(screen.queryByText('Complete explanatory caption')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Source evidence details' });
+    expect(within(drawer).getByText('Complete explanatory caption').parentElement).not.toHaveClass('line-clamp-2');
+    expect(within(drawer).getByText('Retained source context')).toBeVisible();
   });
   it('marks loading without inventing measurements or removing metric labels and captions', () => {
     const { container } = render(<OperationalBrief loading eyebrow="Snapshot" title="Live source"
@@ -197,10 +209,10 @@ describe('OperationalBrief', () => {
       metrics={[{ key: 'calls', label: 'Calls', value: '—', detail: 'No measurement supplied' }]} />);
     expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByText('Calls')).toBeVisible();
-    expect(screen.getByText('No measurement supplied')).toBeVisible();
+    expect(screen.queryByText('No measurement supplied')).not.toBeInTheDocument();
     expect(container.querySelector('[data-operational-value]')).toBeNull();
   });
-  it('consolidates compact metrics without hiding their explanations', () => {
+  it('renders compact metrics as flat tiles and keeps explanations in details', () => {
     render(
       <OperationalBrief
         compact
@@ -214,11 +226,49 @@ describe('OperationalBrief', () => {
         ]}
       />,
     );
-    expect(screen.getByRole('list')).toHaveClass('md:grid-cols-3', '3xl:grid-cols-6');
-    expect(screen.getByText('Total distance in your display unit.')).toBeVisible();
-    expect(screen.getByText('Both drives include measured energy.')).toBeVisible();
+    expect(screen.getByRole('list')).toHaveClass('flex', 'flex-wrap');
+    const tiles = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(tiles).toHaveLength(2);
+    tiles.forEach((tile) => expect(tile).toHaveClass('flex-[1_1_200px]'));
+    expect(screen.queryByText('Total distance in your display unit.')).not.toBeInTheDocument();
     expect(screen.getByText('64 mi')).toHaveClass('text-[var(--semantic-success)]');
-    expect(screen.getByText('Driving posture')).not.toHaveClass('uppercase', 'capitalize');
+    expect(screen.getByText('Activity in context')).not.toHaveClass('uppercase', 'capitalize');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Activity in context details' });
+    expect(within(drawer).getByText('Total distance in your display unit.')).toBeVisible();
+    expect(within(drawer).getByText('Both drives include measured energy.')).toBeVisible();
+  });
+
+  it('replaces a fully empty metric row with a sentence and metric chips', () => {
+    render(<OperationalBrief eyebrow="Charging" title="Charging options"
+      description="Current option estimates." statusLabel="No prices"
+      metrics={[
+        { key: 'home', label: 'Home now', value: '-', detail: 'Price unavailable', valueState: 'missing' },
+        { key: 'wait', label: 'Wait window', value: '-', detail: 'Price unavailable', valueState: 'missing' },
+      ]} />);
+    const summary = screen.getByRole('region', { name: 'Charging options' });
+    expect(within(summary).getByText('No metric values are available yet.')).toBeVisible();
+    expect(within(summary).getByText('Values will appear when the source provides measurements.')).toBeVisible();
+    expect(within(summary).getByText('Home now')).toBeVisible();
+    expect(within(summary).getByText('Wait window')).toBeVisible();
+    expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+  });
+
+  it('hides empty metric rows in details and reports the count in a full sentence', () => {
+    render(<OperationalBrief eyebrow="Evidence" title="Partial readings"
+      description="Available source readings." statusLabel="Partial"
+      metrics={[
+        { key: 'count', label: 'Count', value: 3, detail: 'Measured count.', valueState: 'value' },
+        { key: 'distance', label: 'Distance', value: '-', detail: 'Not provided', valueState: 'missing' },
+      ]} />);
+    const summary = screen.getByRole('region', { name: 'Partial readings' });
+    expect(within(summary).getByText('Count')).toBeVisible();
+    expect(within(summary).queryByText('Distance')).not.toBeInTheDocument();
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Partial readings details' });
+    expect(within(drawer).getByText('Count')).toBeVisible();
+    expect(within(drawer).queryByText('Distance')).not.toBeInTheDocument();
+    expect(within(drawer).getByText('1 empty field is hidden.')).toBeVisible();
   });
 
   it('renders decision context, evidence, and workflow actions', () => {
@@ -258,10 +308,10 @@ describe('OperationalBrief', () => {
     );
 
     expect(screen.getByRole('region', { name: 'Battery posture' })).toBeInTheDocument();
-    expect(screen.getByText('Monitor')).toBeInTheDocument();
+    expect(screen.queryByText('Monitor')).not.toBeInTheDocument();
     expect(screen.getByText('Pack score')).toBeInTheDocument();
     expect(screen.getByText('Projection changed')).toBeInTheDocument();
-    expect(screen.getByRole('list')).toHaveClass('md:grid-cols-2');
+    expect(screen.getByRole('list')).toHaveClass('flex', 'flex-wrap');
 
     fireEvent.click(screen.getByRole('button', { name: 'Open battery workspace' }));
     expect(onOpen).toHaveBeenCalledOnce();
@@ -269,6 +319,7 @@ describe('OperationalBrief', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Battery posture details' });
     expect(drawer).toBeInTheDocument();
+    expect(within(drawer).getByText('Monitor')).toBeVisible();
     expect(
       screen.getByText('Battery-health snapshots and charging history'),
     ).toBeInTheDocument();

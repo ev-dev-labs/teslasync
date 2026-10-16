@@ -2760,7 +2760,11 @@
       "title": "Cost, reliability, and battery-friendly behavior"
     },
     "detailTitle": "{{title}} details",
+    "emptyFieldsHidden": "{{count}} empty fields are hidden.",
+    "emptyFieldsHidden_one": "1 empty field is hidden.",
+    "emptyFieldsHidden_other": "{{count}} empty fields are hidden.",
     "evidence": "Evidence",
+    "metricValuesAppear": "Values will appear when the source provides measurements.",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -2787,6 +2791,7 @@
       "whyUnavailable": "No defensible impact statement is available."
     },
     "noAttention": "No current attention items.",
+    "noMetricValues": "No metric values are available yet.",
     "reviewAll": "Review all",
     "reviewDetails": "Review details",
     "status": {

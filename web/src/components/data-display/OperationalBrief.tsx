@@ -12,6 +12,7 @@ import {
 } from '../ui/Typography'
 import { cn } from '@/lib/cn'
 import { Icons } from '@/lib/icons'
+import { IconButton } from '@/components/ui/IconButton'
 import type { OperationalNarrative } from '@/types/operationalNarrative'
 import type { MetricRaw } from '@/lib/metric-reference'
 import { OperationalNarrativeDetails } from './OperationalNarrativeDetails'
@@ -58,6 +59,8 @@ export interface OperationalBriefProps {
   className?: string
   testId?: string
   metricColumns?: 2 | 3 | 4
+  /** Show a short scope chip on the card only when the range differs from the page filter. */
+  showRange?: boolean
   /** Dense layout for pages where the evidence grid follows a compact page header. */
   compact?: boolean
   loading?: boolean
@@ -71,10 +74,22 @@ const TONE_TEXT: Record<OperationalTone, string> = {
   neutral: 'text-[var(--text-primary)]',
 }
 
-const METRIC_COLUMNS: Record<NonNullable<OperationalBriefProps['metricColumns']>, string> = {
-  2: 'md:grid-cols-2',
-  3: 'md:grid-cols-3',
-  4: 'md:grid-cols-4',
+function metricState(metric: OperationalBriefMetric): NonNullable<OperationalBriefMetric['valueState']> {
+  if (metric.valueState) return metric.valueState
+  if (metric.value == null) return 'missing'
+  if (typeof metric.value === 'string' && ['-', '\u2014', 'Not provided', 'No measurement supplied'].includes(metric.value.trim())) return 'missing'
+  return 'value'
+}
+
+function hasMetricExplanation(detail: ReactNode): boolean {
+  if (typeof detail !== 'string') return detail != null
+  return ![
+    'not provided',
+    'no confidence basis was supplied.',
+    'no measurement supplied',
+    'no supporting records were supplied.',
+    'calculation provenance was not supplied.',
+  ].includes(detail.trim().toLowerCase())
 }
 
 function renderMetadata(value: ReactNode): ReactNode {
@@ -84,7 +99,6 @@ function renderMetadata(value: ReactNode): ReactNode {
 }
 
 export function OperationalBrief({
-  eyebrow,
   title,
   description,
   statusLabel,
@@ -98,7 +112,7 @@ export function OperationalBrief({
   narrative,
   className,
   testId,
-  metricColumns = 4,
+  showRange = false,
   compact = false,
   loading = false,
 }: OperationalBriefProps) {
@@ -106,6 +120,11 @@ export function OperationalBrief({
   const titleId = useId()
   const [detailsOpen, setDetailsOpen] = useState(false)
   const primaryAttention = attention[0]
+  const metricStates = metrics.map(metricState)
+  const visibleMetrics = loading ? metrics : metrics.filter((_, index) => metricStates[index] === 'value')
+  const emptyMetrics = !loading && metrics.length > 0 && visibleMetrics.length === 0
+    && metricStates.every((state) => state === metricStates[0])
+  const hiddenMetricCount = metrics.length - visibleMetrics.length
   const resolvedNarrative: OperationalNarrative = narrative ?? {
     whatChanged: description,
     whyItMatters: primaryAttention?.description ?? null,
@@ -131,67 +150,48 @@ export function OperationalBrief({
           )}
         >
           <div className={cn(compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
-            <div className={cn('flex flex-col xl:flex-row xl:justify-between', compact ? 'gap-2 xl:items-start' : 'gap-4 xl:items-start')}>
-              <div className={cn('min-w-0', compact ? 'flex-1' : 'max-w-3xl')}>
-                <div className={cn('flex flex-wrap items-center gap-2', !compact && 'mb-2')}>
-                  <Text
-                    as="span"
-                    size="xs"
-                    weight="medium"
-                    color="muted"
-                  >
-                    {eyebrow}
-                  </Text>
-                  <Badge variant={statusTone} size="sm" dot>
-                    {statusLabel}
-                  </Badge>
-                  {renderMetadata(scope)}
-                  {renderMetadata(freshness)}
-                </div>
-                <PanelTitle id={titleId} className={compact ? 'mt-1 text-base' : undefined}>{title}</PanelTitle>
-                <Text as="p" variant="bodySm" className={cn('mt-1', compact ? 'basis-full text-xs leading-snug' : 'max-w-2xl')}>
-                  {description}
-                </Text>
-              </div>
-
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <PanelTitle id={titleId} className={cn('min-w-0 flex-1 truncate', compact ? 'text-base' : undefined)} title={title}>{title}</PanelTitle>
+              {showRange && scope && <span className="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{scope}</span>}
+              <div className="flex shrink-0 items-center gap-2">
                 {actions}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  wrapLabel
-                  className="min-h-11 md:min-h-9"
+                <IconButton
                   icon={<Icons.activity className="h-4 w-4" aria-hidden="true" />}
+                  label={t('operations.reviewDetails', 'Review details')}
+                  aria-label={t('operations.reviewDetails', 'Review details')}
+                  variant="ghost"
                   onClick={() => setDetailsOpen(true)}
-                >
-                  {t('operations.reviewDetails', 'Review details')}
-                </Button>
+                />
               </div>
             </div>
 
             <div
               role="list"
-              className={cn(
-                compact ? 'mt-2 grid grid-cols-1 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)] sm:grid-cols-2' : 'mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)]',
-                compact ? 'md:grid-cols-3 3xl:grid-cols-6' : METRIC_COLUMNS[metricColumns],
-              )}
+              className={cn('flex flex-wrap gap-x-5 gap-y-3', compact ? 'mt-2' : 'mt-4')}
             >
-              {metrics.map((metric) => (
+              {emptyMetrics ? (
+                <div className="min-w-0 flex-[1_1_200px] py-2" role="listitem">
+                  <Text as="p" size="sm" weight="medium">{t('operations.noMetricValues', 'No metric values are available yet.')}</Text>
+                  <Text as="p" size="xs" color="muted" className="mt-1">{t('operations.metricValuesAppear', 'Values will appear when the source provides measurements.')}</Text>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {metrics.map((metric) => <span key={metric.key} className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{metric.label}</span>)}
+                  </div>
+                </div>
+              ) : visibleMetrics.map((metric) => (
                 <div
                   key={metric.key}
                   role="listitem"
                   data-operational-metric={metric.key}
                   data-value-state={metric.valueState}
-                  className={cn('min-w-0 bg-[var(--surface-2)]', compact ? 'p-2.5 sm:p-3' : 'p-3 sm:p-4')}
+                  className="min-w-0 flex-[1_1_200px] py-1"
                 >
-                  <div className={cn(compact && 'flex items-baseline justify-between gap-3')}>
-                    <MetricLabel className={compact ? 'min-w-0 text-xs' : undefined}>{metric.label}</MetricLabel>
-                    <MetricValue
+                  <MetricLabel>{metric.label}</MetricLabel>
+                  <MetricValue
                       data-operational-value={(metric.loading ?? loading) ? undefined : true}
                       aria-busy={(metric.loading ?? loading) || undefined}
                       className={cn(
-                        compact ? 'min-w-0 break-words text-base sm:text-lg' : 'mt-1 break-words text-xl sm:text-2xl',
+                        compact ? 'mt-1 min-w-0 text-base sm:text-lg' : 'mt-1 text-xl sm:text-2xl',
+                        '[overflow-wrap:normal] break-normal',
                         TONE_TEXT[metric.tone ?? 'neutral'],
                       )}
                     >
@@ -199,10 +199,6 @@ export function OperationalBrief({
                         <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
                       ) : metric.value}
                     </MetricValue>
-                  </div>
-                  <Text as="div" size="xs" color="muted" className="mt-1 break-words">
-                    {metric.detail}
-                  </Text>
                 </div>
               ))}
             </div>
@@ -261,7 +257,13 @@ export function OperationalBrief({
 
           <div className="space-y-3">
             <PanelTitle>{t('operations.metrics', 'Operational metrics')}</PanelTitle>
-            {metrics.map((metric) => (
+            {emptyMetrics ? (
+              <div className="space-y-2">
+                <Text as="p" size="sm">{t('operations.noMetricValues', 'No metric values are available yet.')}</Text>
+                <Text as="p" size="xs" color="muted">{t('operations.metricValuesAppear', 'Values will appear when the source provides measurements.')}</Text>
+                <div className="flex flex-wrap gap-1.5">{metrics.map((metric) => <span key={metric.key} className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{metric.label}</span>)}</div>
+              </div>
+            ) : visibleMetrics.map((metric) => (
               <div
                 key={metric.key}
                 className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
@@ -280,11 +282,22 @@ export function OperationalBrief({
                     ) : metric.value}
                   </Text>
                 </div>
-                <Text as="div" size="xs" color="muted" className="mt-1">
-                  {metric.detail}
-                </Text>
+                {hasMetricExplanation(metric.detail) && (
+                  <Text as="div" size="xs" color="muted" className="mt-1">
+                    {metric.detail}
+                  </Text>
+                )}
               </div>
             ))}
+            {hiddenMetricCount > 0 && (
+              <Text as="p" size="xs" color="muted">
+                {t('operations.emptyFieldsHidden', '{{count}} empty fields are hidden.', {
+                  count: hiddenMetricCount,
+                  defaultValue_one: '{{count}} empty field is hidden.',
+                  defaultValue_other: '{{count}} empty fields are hidden.',
+                })}
+              </Text>
+            )}
           </div>
 
           <div className="space-y-3">

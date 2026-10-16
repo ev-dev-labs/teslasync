@@ -4828,6 +4828,11 @@
     "reviewAll": "Review all",
     "detailTitle": "{{title}} details",
     "metrics": "Operational metrics",
+    "noMetricValues": "No metric values are available yet.",
+    "metricValuesAppear": "Values will appear when the source provides measurements.",
+    "emptyFieldsHidden": "{{count}} empty fields are hidden.",
+    "emptyFieldsHidden_one": "1 empty field is hidden.",
+    "emptyFieldsHidden_other": "{{count}} empty fields are hidden.",
     "attention": "Attention",
     "noAttention": "No current attention items.",
     "narrative": {
