@@ -20243,10 +20243,10 @@
       "web\\src\\i18n\\catalog-split.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Catalog split check passes (57 bundles, 181 fallbacks, 1,266 shell keys, 0 missing); catalog-split.test.ts passes 131/131.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20260,10 +20260,10 @@
       "web\\src\\i18n\\catalog-split.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Catalog split check passes (57 bundles, 181 fallbacks, 1,266 shell keys, 0 missing); catalog-split.test.ts passes 131/131.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20277,10 +20277,10 @@
       "web\\src\\i18n\\catalog-split.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Catalog split check passes (57 bundles, 181 fallbacks, 1,266 shell keys, 0 missing); catalog-split.test.ts passes 131/131.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20294,10 +20294,10 @@
       "web\\src\\i18n\\catalog-split.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Catalog split check passes (57 bundles, 181 fallbacks, 1,266 shell keys, 0 missing); catalog-split.test.ts passes 131/131.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20311,10 +20311,10 @@
       "web\\src\\i18n\\catalog-split.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Catalog split check passes (57 bundles, 181 fallbacks, 1,266 shell keys, 0 missing); catalog-split.test.ts passes 131/131.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20328,10 +20328,10 @@
       "web\\src\\i18n\\catalog-split.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Catalog split check passes (57 bundles, 181 fallbacks, 1,266 shell keys, 0 missing); catalog-split.test.ts passes 131/131.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20345,10 +20345,10 @@
       "web\\src\\i18n\\catalog-split.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Catalog split check passes (57 bundles, 181 fallbacks, 1,266 shell keys, 0 missing); catalog-split.test.ts passes 131/131.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20362,10 +20362,10 @@
       "web\\src\\i18n\\catalog-split.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Catalog split check passes (57 bundles, 181 fallbacks, 1,266 shell keys, 0 missing); catalog-split.test.ts passes 131/131.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
