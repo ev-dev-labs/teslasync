@@ -485,3 +485,11 @@ Update `.runner/state.json` and this progress document after each group. This or
   The remaining failures are concentrated in old card-face/missing-metric
   assertions and unrelated Phase 6 contract/catalog fixtures; no production
   type, lint, catalog, build, or Go gate regressed.
+- Phase 6 system data-export group: reverified DataExportPage,
+  ScheduledExportsPanel, JobProgressDrawer, and RequiresAuth. Focused tests
+  pass **151/151**. Updated the DataExport regressions to read retained source
+  and per-metric context from the details drawer, and to assert the existing
+  explanatory all-metrics-missing state with a reachable history retry. The
+  RequiresAuth translation mock now handles the same fallback-string form as
+  production. Ten matching system work items are marked done in state.json;
+  commit `241c8977e4`.

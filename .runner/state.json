@@ -14918,11 +14918,11 @@
       "web\\src\\components\\feedback\\JobProgressDrawer.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-export-f15 | Missing dependencies and unresponsive dev server prevented verification | done so far: responsive sizing and wrapping implemented; keyboard regression tests added in all six assigned files Attempt 2: FAILED | fix-system-data-export-f15 | Missing dependencies, failed dependency restoration and unresponsive existing dev server blocked verification | done so far: confirmed inherited responsive sizing, desktop density, wrapping and keyboard regression coverage; no source changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-export-f15 | Missing dependencies and unresponsive dev server prevented verification | done so far: responsive sizing and wrapping implemented; keyboard regression tests added in all six assigned files Attempt 2: FAILED | fix-system-data-export-f15 | Missing dependencies, failed dependency restoration and unresponsive existing dev server blocked verification | done so far: confirmed inherited responsive sizing, desktop density, wrapping and keyboard regression coverage; no source changes | verification completed after prior runner-blocked attempts: focused DataExportPage, ScheduledExportsPanel, JobProgressDrawer and RequiresAuth suites pass 151/151. DataExport contract assertions now read moved metadata from the details drawer and verify the informational all-missing state plus the history retry.",
+    "Commit": "241c8977e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -14965,11 +14965,11 @@
       "web\\src\\features\\system\\pages\\ScheduledExportsPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-export-f09 | verification blocked by missing dependencies and Windows filesystem errors | done so far: updated web/src/features/system/pages/ScheduledExportsPanel.tsx and web/src/features/system/pages/ScheduledExportsPanel.test.tsx Attempt 2: FAILED | fix-system-data-export-f09 | verification blocked by missing dependencies and Windows filesystem errors | done so far: inspected existing implementation and regressions; no source files changed",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-export-f09 | verification blocked by missing dependencies and Windows filesystem errors | done so far: updated web/src/features/system/pages/ScheduledExportsPanel.tsx and web/src/features/system/pages/ScheduledExportsPanel.test.tsx Attempt 2: FAILED | fix-system-data-export-f09 | verification blocked by missing dependencies and Windows filesystem errors | done so far: inspected existing implementation and regressions; no source files changed | verification completed after prior runner-blocked attempts: focused DataExportPage, ScheduledExportsPanel, JobProgressDrawer and RequiresAuth suites pass 151/151. DataExport contract assertions now read moved metadata from the details drawer and verify the informational all-missing state plus the history retry.",
+    "Commit": "241c8977e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -14980,11 +14980,11 @@
       "web\\src\\features\\system\\pages\\ScheduledExportsPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-export-f08 | verification blocked by missing dependencies | done so far: updated web/src/features/system/pages/ScheduledExportsPanel.tsx and web/src/features/system/pages/ScheduledExportsPanel.test.tsx with lifecycle guards and regression coverage Attempt 2: FAILED | fix-system-data-export-f08 | verification blocked by missing dependencies and npm filesystem errors | done so far: inspected existing lifecycle guards and regression coverage; no source changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-export-f08 | verification blocked by missing dependencies | done so far: updated web/src/features/system/pages/ScheduledExportsPanel.tsx and web/src/features/system/pages/ScheduledExportsPanel.test.tsx with lifecycle guards and regression coverage Attempt 2: FAILED | fix-system-data-export-f08 | verification blocked by missing dependencies and npm filesystem errors | done so far: inspected existing lifecycle guards and regression coverage; no source changes | verification completed after prior runner-blocked attempts: focused DataExportPage, ScheduledExportsPanel, JobProgressDrawer and RequiresAuth suites pass 151/151. DataExport contract assertions now read moved metadata from the details drawer and verify the informational all-missing state plus the history retry.",
+    "Commit": "241c8977e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15010,11 +15010,11 @@
       "web\\src\\features\\system\\pages\\DataExportPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-export-f06 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\system\\pages\\DataExportPage.tsx and web\\src\\features\\system\\pages\\DataExportPage.test.tsx; command evidence in logs\\fix-system-data-export-f06.log Attempt 2: FAILED | fix-system-data-export-f06 | missing dependencies prevented regression verification | done so far: confirmed existing implementation and regressions; no source files changed",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-export-f06 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\system\\pages\\DataExportPage.tsx and web\\src\\features\\system\\pages\\DataExportPage.test.tsx; command evidence in logs\\fix-system-data-export-f06.log Attempt 2: FAILED | fix-system-data-export-f06 | missing dependencies prevented regression verification | done so far: confirmed existing implementation and regressions; no source files changed | verification completed after prior runner-blocked attempts: focused DataExportPage, ScheduledExportsPanel, JobProgressDrawer and RequiresAuth suites pass 151/151. DataExport contract assertions now read moved metadata from the details drawer and verify the informational all-missing state plus the history retry.",
+    "Commit": "241c8977e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15027,11 +15027,11 @@
       "web\\src\\features\\system\\pages\\ScheduledExportsPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-export-f05 | Dependency failures prevented test and TypeScript verification | done so far: updated both assigned components and both regression test files; changes remain unverified Attempt 2: FAILED | fix-system-data-export-f05 | Missing dependencies prevented regression tests and TypeScript verification | done so far: inspected and preserved prior changes in both components and regression files; no new source edits",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-export-f05 | Dependency failures prevented test and TypeScript verification | done so far: updated both assigned components and both regression test files; changes remain unverified Attempt 2: FAILED | fix-system-data-export-f05 | Missing dependencies prevented regression tests and TypeScript verification | done so far: inspected and preserved prior changes in both components and regression files; no new source edits | verification completed after prior runner-blocked attempts: focused DataExportPage, ScheduledExportsPanel, JobProgressDrawer and RequiresAuth suites pass 151/151. DataExport contract assertions now read moved metadata from the details drawer and verify the informational all-missing state plus the history retry.",
+    "Commit": "241c8977e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15042,11 +15042,11 @@
       "web\\src\\features\\system\\pages\\DataExportPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-export-f04 | verification blocked by missing test dependencies | done so far: updated web\\src\\features\\system\\pages\\DataExportPage.tsx and web\\src\\features\\system\\pages\\DataExportPage.test.tsx Attempt 2: FAILED | fix-system-data-export-f04 | required regression run blocked by missing dependencies and npm ENOENT failures | done so far: inspected existing fix and loading/error/empty/unknown-target regressions; no source changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-export-f04 | verification blocked by missing test dependencies | done so far: updated web\\src\\features\\system\\pages\\DataExportPage.tsx and web\\src\\features\\system\\pages\\DataExportPage.test.tsx Attempt 2: FAILED | fix-system-data-export-f04 | required regression run blocked by missing dependencies and npm ENOENT failures | done so far: inspected existing fix and loading/error/empty/unknown-target regressions; no source changes | verification completed after prior runner-blocked attempts: focused DataExportPage, ScheduledExportsPanel, JobProgressDrawer and RequiresAuth suites pass 151/151. DataExport contract assertions now read moved metadata from the details drawer and verify the informational all-missing state plus the history retry.",
+    "Commit": "241c8977e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15072,11 +15072,11 @@
       "web\\src\\features\\system\\pages\\DataExportPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-export-f02 | verification blocked by missing Vite dependency | done so far: updated web\\src\\features\\system\\pages\\DataExportPage.tsx and web\\src\\features\\system\\pages\\DataExportPage.test.tsx Attempt 2: FAILED | fix-system-data-export-f02 | verification blocked by missing Vite dependencies and ENOTEMPTY installation failures | done so far: inspected existing implementation and regression; no source files changed",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-export-f02 | verification blocked by missing Vite dependency | done so far: updated web\\src\\features\\system\\pages\\DataExportPage.tsx and web\\src\\features\\system\\pages\\DataExportPage.test.tsx Attempt 2: FAILED | fix-system-data-export-f02 | verification blocked by missing Vite dependencies and ENOTEMPTY installation failures | done so far: inspected existing implementation and regression; no source files changed | verification completed after prior runner-blocked attempts: focused DataExportPage, ScheduledExportsPanel, JobProgressDrawer and RequiresAuth suites pass 151/151. DataExport contract assertions now read moved metadata from the details drawer and verify the informational all-missing state plus the history retry.",
+    "Commit": "241c8977e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15121,11 +15121,11 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": "",
-    "Commit": "",
+    "Notes": " | verification completed after prior runner-blocked attempts: focused DataExportPage, ScheduledExportsPanel, JobProgressDrawer and RequiresAuth suites pass 151/151. DataExport contract assertions now read moved metadata from the details drawer and verify the informational all-missing state plus the history retry.",
+    "Commit": "241c8977e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15136,11 +15136,11 @@
       "web\\src\\components\\feedback\\JobProgressDrawer.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-export-f11 | dependency failures prevented test verification | done so far: updated web\\src\\components\\feedback\\JobProgressDrawer.tsx and web\\src\\components\\feedback\\JobProgressDrawer.test.tsx Attempt 2: FAILED | fix-system-data-export-f11 | dependency failures prevented required test verification | done so far: inspected existing implementation and regression coverage; no source changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-export-f11 | dependency failures prevented test verification | done so far: updated web\\src\\components\\feedback\\JobProgressDrawer.tsx and web\\src\\components\\feedback\\JobProgressDrawer.test.tsx Attempt 2: FAILED | fix-system-data-export-f11 | dependency failures prevented required test verification | done so far: inspected existing implementation and regression coverage; no source changes | verification completed after prior runner-blocked attempts: focused DataExportPage, ScheduledExportsPanel, JobProgressDrawer and RequiresAuth suites pass 151/151. DataExport contract assertions now read moved metadata from the details drawer and verify the informational all-missing state plus the history retry.",
+    "Commit": "241c8977e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -15151,11 +15151,11 @@
       "web\\src\\components\\feedback\\RequiresAuth.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
-    "WorkAttempts": 0,
+    "Status": "done",
+    "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-data-export-f16 | missing dependencies prevented verification | done so far: updated web\\src\\components\\feedback\\RequiresAuth.tsx and web\\src\\components\\feedback\\RequiresAuth.test.tsx Attempt 2: FAILED | fix-system-data-export-f16 | dependency corruption prevented required regression verification | done so far: inspected existing RequiresAuth implementation and regressions; no source changes made",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-data-export-f16 | missing dependencies prevented verification | done so far: updated web\\src\\components\\feedback\\RequiresAuth.tsx and web\\src\\components\\feedback\\RequiresAuth.test.tsx Attempt 2: FAILED | fix-system-data-export-f16 | dependency corruption prevented required regression verification | done so far: inspected existing RequiresAuth implementation and regressions; no source changes made | verification completed after prior runner-blocked attempts: focused DataExportPage, ScheduledExportsPanel, JobProgressDrawer and RequiresAuth suites pass 151/151. DataExport contract assertions now read moved metadata from the details drawer and verify the informational all-missing state plus the history retry.",
+    "Commit": "241c8977e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
