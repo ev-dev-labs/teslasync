@@ -480,3 +480,8 @@ Update `.runner/state.json` and this progress document after each group. This or
   sentences with i18next count plurals. The two corresponding Phase 6 items
   are complete. Split-i18n check passes and the combined focused suites pass
   **58/58**. Changes are in `81c281aa49`.
+- A structured full-suite rerun after those fixes is **53,029 passed / 3,852
+  failed / 4 skipped** across **2,704 files** (2,107 passed, 597 failed).
+  The remaining failures are concentrated in old card-face/missing-metric
+  assertions and unrelated Phase 6 contract/catalog fixtures; no production
+  type, lint, catalog, build, or Go gate regressed.
