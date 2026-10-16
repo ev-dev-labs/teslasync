@@ -325,6 +325,9 @@ describe('WeeklyDigestPage — scaffolding + a11y', () => {
     ]) {
       expect(section(id)).toBeInTheDocument();
     }
+    const fsdBrief = within(section('fsd-section')).getByTestId('weekly-fsd-brief');
+    expect(fsdBrief.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(fsdBrief.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
     expect(screen.getByRole('button', { name: 'Previous' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
     expect(screen.getByTestId('ai-narration')).toBeInTheDocument();

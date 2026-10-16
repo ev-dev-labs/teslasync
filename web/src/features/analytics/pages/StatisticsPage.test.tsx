@@ -929,6 +929,8 @@ describe('StatisticsPage', () => {
     mockBattery.mockReturnValue(qr({ data: battery }));
     renderPage();
     const brief = screen.getByTestId('statistics-battery-brief');
+    expect(brief.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
     expect(within(brief).getByText(expected)).toBeInTheDocument();
     expect(battery.battery_age_months).toBe(age);
   });

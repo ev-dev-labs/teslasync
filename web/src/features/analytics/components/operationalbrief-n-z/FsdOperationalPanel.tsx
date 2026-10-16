@@ -47,7 +47,7 @@ export function FsdOperationalPanel({
   const honesty = t('analytics.weeklyDigest.fsdHonesty', 'These are cumulative counter changes, not exact FSD engagement. Absence is not zero.');
   return <LayoutCard title={t('analytics.weeklyDigest.fsdSection', 'Supervised driving')}>
     <div data-testid="fsd-weekly-section" className="flex min-w-0 flex-col gap-3">
-      <OperationalBrief compact testId="weekly-fsd-brief"
+      <OperationalBrief compact variant="embedded" testId="weekly-fsd-brief"
         eyebrow={t('analytics.weeklyDigest.title', 'Weekly digest')}
         title={t('analytics.weeklyDigest.brief.fsdTitle', 'Supervised-driving evidence')}
         description={honesty} metrics={operationalMetrics} loading={Boolean(isLoading && !insights)}

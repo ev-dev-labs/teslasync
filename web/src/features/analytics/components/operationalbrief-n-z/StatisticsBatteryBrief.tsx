@@ -64,7 +64,7 @@ export function StatisticsBatteryBrief({ query }: ComponentProps<typeof BatteryS
           label={t('statistics.health', 'Health')} unit="%" tone="neutral" size={140} className="max-w-xs" />
       </div>}
     </StatisticsSource>
-    <OperationalBrief compact testId="statistics-battery-brief"
+    <OperationalBrief compact variant="embedded" testId="statistics-battery-brief"
       eyebrow={t('statistics.batteryHealth', 'Battery health')}
       title={t('statistics.brief.batteryTitle', 'Battery estimate evidence')}
       description={t('statistics.brief.batteryDescription', 'Capacity, annual degradation rate, cycle count and source-reported age retain their distinct units.')}
