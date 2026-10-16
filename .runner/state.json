@@ -12288,10 +12288,10 @@
       "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-insurance-telematics-f01 | required tests blocked by missing dependencies, locked esbuild executable, and unavailable Go toolchain | done so far: updated web/src/features/ownership/pages/InsuranceTelematicsPage.tsx, internal/app/ownershipintelsvc/insurance.go, web/src/features/ownership/pages/InsuranceTelematicsPage.test.tsx Attempt 2: FAILED | fix-ownership-insurance-telematics-f01 | required tests blocked by missing frontend dependencies, failed dependency restoration, and unavailable Go toolchain | done so far: inspected and preserved previous implementation and test coverage; no new source changes",
+    "Notes": "Attempt 1: FAILED | fix-ownership-insurance-telematics-f01 | required tests blocked by missing dependencies, locked esbuild executable, and unavailable Go toolchain | done so far: updated web/src/features/ownership/pages/InsuranceTelematicsPage.tsx, internal/app/ownershipintelsvc/insurance.go, web/src/features/ownership/pages/InsuranceTelematicsPage.test.tsx Attempt 2: FAILED | fix-ownership-insurance-telematics-f01 | required tests blocked by missing frontend dependencies, failed dependency restoration, and unavailable Go toolchain | done so far: inspected and preserved previous implementation and test coverage; no new source changes Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures, including missing Recorded bounds/percentile metrics from direct summary-card-face queries; details are behind Review details.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12338,10 +12338,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures, including missing Recorded bounds/percentile metrics from direct summary-card-face queries; details are behind Review details.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12385,10 +12385,10 @@
       "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-insurance-telematics-f07 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx and added regression in web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.test.tsx Attempt 2: FAILED | fix-ownership-insurance-telematics-f07 | missing dependencies prevent regression verification; dependency restoration failed with ENOTEMPTY | done so far: inspected existing implementation and regression; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-ownership-insurance-telematics-f07 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx and added regression in web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.test.tsx Attempt 2: FAILED | fix-ownership-insurance-telematics-f07 | missing dependencies prevent regression verification; dependency restoration failed with ENOTEMPTY | done so far: inspected existing implementation and regression; no source changes Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures; locale/timezone date assertions read summary metadata that is no longer on the card face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12403,10 +12403,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures; direct summary-card assertions cannot find values and source bounds in the collapsed brief.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12421,10 +12421,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures; direct summary-card assertions cannot find localized source details in the collapsed brief.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12437,10 +12437,10 @@
       "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-insurance-telematics-f15 | frontend validation and race tests blocked by missing dependencies/toolchain; translation catalog follow-up required | done so far: updated InsuranceTelematicsPage.tsx and insurance.go; added focused cases in InsuranceTelematicsPage.test.tsx; non-race Go tests passed Attempt 2: FAILED | fix-ownership-insurance-telematics-f15 | missing Vitest dependency, Go toolchain and owned translation catalog follow-up | done so far: confirmed existing proxy labels, bounds explanation and focused regressions; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-ownership-insurance-telematics-f15 | frontend validation and race tests blocked by missing dependencies/toolchain; translation catalog follow-up required | done so far: updated InsuranceTelematicsPage.tsx and insurance.go; added focused cases in InsuranceTelematicsPage.test.tsx; non-race Go tests passed Attempt 2: FAILED | fix-ownership-insurance-telematics-f15 | missing Vitest dependency, Go toolchain and owned translation catalog follow-up | done so far: confirmed existing proxy labels, bounds explanation and focused regressions; no files changed Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures; direct summary-card assertions cannot find source measure details in the collapsed brief.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12482,10 +12482,10 @@
       "web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-model-trust-mt03 | focused tests blocked by missing dependencies and Windows file locks | done so far: updated web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx and web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx with coverage and selected-model quality regressions Attempt 2: FAILED | fix-ownership-model-trust-mt03 | focused tests blocked by missing dependencies; restoration failed with ENOENT | done so far: confirmed existing coverage percent/unknown handling, selected-model quality/window/reasons, separate portfolio evidence, preserved raw chart values and regression tests",
+    "Notes": "Attempt 1: FAILED | fix-ownership-model-trust-mt03 | focused tests blocked by missing dependencies and Windows file locks | done so far: updated web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx and web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx with coverage and selected-model quality regressions Attempt 2: FAILED | fix-ownership-model-trust-mt03 | focused tests blocked by missing dependencies; restoration failed with ENOENT | done so far: confirmed existing coverage percent/unknown handling, selected-model quality/window/reasons, separate portfolio evidence, preserved raw chart values and regression tests Retry failed: ModelTrustPage.test.tsx has 5 failures; tests expect portfolio band and selected-model score details on the summary face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12497,10 +12497,10 @@
       "web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-model-trust-mt04 | verification blocked by missing dependencies | done so far: changed web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx and web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx; froze pending fields and added lifecycle coverage Attempt 2: FAILED | fix-ownership-model-trust-mt04 | targeted verification blocked by missing dependencies and failed dependency restoration | done so far: inspected existing implementation and lifecycle coverage; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-ownership-model-trust-mt04 | verification blocked by missing dependencies | done so far: changed web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx and web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx; froze pending fields and added lifecycle coverage Attempt 2: FAILED | fix-ownership-model-trust-mt04 | targeted verification blocked by missing dependencies and failed dependency restoration | done so far: inspected existing implementation and lifecycle coverage; no source files changed Retry failed: ModelTrustPage.test.tsx has 5 failures; draft preservation/entry tests cannot find summary detail values and use duplicate Close button queries.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12512,10 +12512,10 @@
       "web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-model-trust-mt05 | shared EvidencePanel fix prohibited; validation blocked by incomplete dependencies | done so far: updated web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx and web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx Attempt 2: FAILED | fix-ownership-model-trust-mt05 | shared EvidencePanel requires an out-of-scope change; required test blocked by missing Vitest | done so far: preserved prior ModelTrustPage.tsx and ModelTrustPage.test.tsx changes; no new edits",
+    "Notes": "Attempt 1: FAILED | fix-ownership-model-trust-mt05 | shared EvidencePanel fix prohibited; validation blocked by incomplete dependencies | done so far: updated web\\src\\features\\ownership\\pages\\ModelTrustPage.tsx and web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx Attempt 2: FAILED | fix-ownership-model-trust-mt05 | shared EvidencePanel requires an out-of-scope change; required test blocked by missing Vitest | done so far: preserved prior ModelTrustPage.tsx and ModelTrustPage.test.tsx changes; no new edits Retry failed: ModelTrustPage.test.tsx has 5 failures; locale/timezone and raw score details are queried from the collapsed summary face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12542,10 +12542,10 @@
       "web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-tariff-lab-tl10 | missing dependencies blocked regression execution and typecheck | done so far: changed web/src/features/ownership/pages/TariffLabPage.tsx, web/src/features/ownership/pages/TariffLabPage.test.tsx Attempt 2: FAILED | fix-ownership-tariff-lab-tl10 | missing dependencies blocked regression execution and typecheck; dependency restoration failed | done so far: existing success-only deletion cleanup, explicit clear selection, and unloaded/partial-page retention regressions inspected; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-ownership-tariff-lab-tl10 | missing dependencies blocked regression execution and typecheck | done so far: changed web/src/features/ownership/pages/TariffLabPage.tsx, web/src/features/ownership/pages/TariffLabPage.test.tsx Attempt 2: FAILED | fix-ownership-tariff-lab-tl10 | missing dependencies blocked regression execution and typecheck; dependency restoration failed | done so far: existing success-only deletion cleanup, explicit clear selection, and unloaded/partial-page retention regressions inspected; no source files changed Retry failed: TariffLabPage.test.tsx has 32 failures; assertions expect former summary content such as Not computed and Source returned on the card face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12559,10 +12559,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: TariffLabPage.test.tsx has 32 failures; assertions expect former summary labels/status on the card face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12574,10 +12574,10 @@
       "web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-tariff-lab-tl05 | dependency failures prevented verification | done so far: updated web/src/features/ownership/pages/TariffLabPage.tsx and web/src/features/ownership/pages/TariffLabPage.test.tsx Attempt 2: FAILED | fix-ownership-tariff-lab-tl05 | dependency failures prevented verification; no tests executed | done so far: inspected and preserved prior TariffLabPage.tsx and TariffLabPage.test.tsx implementation; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-ownership-tariff-lab-tl05 | dependency failures prevented verification | done so far: updated web/src/features/ownership/pages/TariffLabPage.tsx and web/src/features/ownership/pages/TariffLabPage.test.tsx Attempt 2: FAILED | fix-ownership-tariff-lab-tl05 | dependency failures prevented verification; no tests executed | done so far: inspected and preserved prior TariffLabPage.tsx and TariffLabPage.test.tsx implementation; no source changes Retry failed: TariffLabPage.test.tsx has 32 failures; retained source/publication metadata is queried from the collapsed summary face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12589,10 +12589,10 @@
       "web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-tariff-lab-tl04 | dependency failures prevented verification | done so far: updated web\\src\\features\\ownership\\pages\\TariffLabPage.tsx and web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx with paging and regression coverage Attempt 2: FAILED | fix-ownership-tariff-lab-tl04 | missing dependencies and EPERM prevented verification | done so far: inspected existing paging and regression coverage; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-ownership-tariff-lab-tl04 | dependency failures prevented verification | done so far: updated web\\src\\features\\ownership\\pages\\TariffLabPage.tsx and web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx with paging and regression coverage Attempt 2: FAILED | fix-ownership-tariff-lab-tl04 | missing dependencies and EPERM prevented verification | done so far: inspected existing paging and regression coverage; no source changes Retry failed: TariffLabPage.test.tsx has 32 failures; assertions expect former summary content and status on the card face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12619,10 +12619,10 @@
       "web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-tariff-lab-tl02 | verification blocked by missing dependencies and failed dependency restore | done so far: updated web\\src\\features\\ownership\\pages\\TariffLabPage.tsx and web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx Attempt 2: FAILED | fix-ownership-tariff-lab-tl02 | focused verification blocked by broken dependencies and failed restore attempts | done so far: confirmed existing implementation and regression coverage; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-ownership-tariff-lab-tl02 | verification blocked by missing dependencies and failed dependency restore | done so far: updated web\\src\\features\\ownership\\pages\\TariffLabPage.tsx and web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx Attempt 2: FAILED | fix-ownership-tariff-lab-tl02 | focused verification blocked by broken dependencies and failed restore attempts | done so far: confirmed existing implementation and regression coverage; no source files changed Retry failed: TariffLabPage.test.tsx has 32 failures; summary currency/economics assertions query the collapsed card face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12634,10 +12634,10 @@
       "web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-tariff-lab-tl01 | dependency failures blocked tests and browser verification | done so far: updated web\\src\\features\\ownership\\pages\\TariffLabPage.tsx and web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx Attempt 2: FAILED | fix-ownership-tariff-lab-tl01 | missing dependencies and failed restoration blocked tests and Edge verification | done so far: inspected and preserved prior TariffLabPage.tsx and TariffLabPage.test.tsx implementation; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-ownership-tariff-lab-tl01 | dependency failures blocked tests and browser verification | done so far: updated web\\src\\features\\ownership\\pages\\TariffLabPage.tsx and web\\src\\features\\ownership\\pages\\TariffLabPage.test.tsx Attempt 2: FAILED | fix-ownership-tariff-lab-tl01 | missing dependencies and failed restoration blocked tests and Edge verification | done so far: inspected and preserved prior TariffLabPage.tsx and TariffLabPage.test.tsx implementation; no source changes Retry failed: TariffLabPage.test.tsx has 32 failures; mobile-field assertions query former summary content without opening Review details.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12648,10 +12648,10 @@
       "web\\src\\api\\hooks\\useOwnership.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-warranty-command-wc-02 | validation blocked by missing dependencies and locked Rollup binary | done so far: updated web\\src\\api\\hooks\\useOwnership.ts and added web\\src\\api\\hooks\\useOwnership.test.tsx; regressions not executed Attempt 2: FAILED | fix-ownership-warranty-command-wc-02 | dependency restoration failed with ENOTEMPTY; Vitest and TypeScript unavailable | done so far: inspected existing hook changes and regression file; attempted focused validation and dependency restoration",
+    "Notes": "Attempt 1: FAILED | fix-ownership-warranty-command-wc-02 | validation blocked by missing dependencies and locked Rollup binary | done so far: updated web\\src\\api\\hooks\\useOwnership.ts and added web\\src\\api\\hooks\\useOwnership.test.tsx; regressions not executed Attempt 2: FAILED | fix-ownership-warranty-command-wc-02 | dependency restoration failed with ENOTEMPTY; Vitest and TypeScript unavailable | done so far: inspected existing hook changes and regression file; attempted focused validation and dependency restoration Retry verification passed: relevant hook/dialog/panel regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12694,10 +12694,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: OwnershipBrief.test.tsx has 14 failures; direct brief assertions cannot find recorded bounds and quality details before opening Review details.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12709,10 +12709,10 @@
       "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-tariff-lab-tl07 | missing validation dependencies; second evidence adapter outside permitted scope | done so far: updated OwnershipBrief.tsx and OwnershipBrief.test.tsx with saved-date formatting and regression coverage Attempt 2: FAILED | fix-ownership-tariff-lab-tl07 | second adapter outside permitted scope; validation dependencies missing | done so far: preserved existing OwnershipBrief implementation and regression tests; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-ownership-tariff-lab-tl07 | missing validation dependencies; second evidence adapter outside permitted scope | done so far: updated OwnershipBrief.tsx and OwnershipBrief.test.tsx with saved-date formatting and regression coverage Attempt 2: FAILED | fix-ownership-tariff-lab-tl07 | second adapter outside permitted scope; validation dependencies missing | done so far: preserved existing OwnershipBrief implementation and regression tests; no files changed Retry failed: OwnershipBrief.test.tsx has 14 failures; direct brief assertions cannot find date/freshness details before opening Review details.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12741,10 +12741,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry verification passed: relevant hook/dialog/panel regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12786,10 +12786,10 @@
       "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-warranty-command-wc-08 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx and web\\src\\features\\ownership\\pages\\WarrantyCommandPage.test.tsx with enum labels and focused regressions Attempt 2: FAILED | fix-ownership-warranty-command-wc-08 | missing dependencies prevented regression verification | done so far: inspected existing enum mappings and regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-ownership-warranty-command-wc-08 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx and web\\src\\features\\ownership\\pages\\WarrantyCommandPage.test.tsx with enum labels and focused regressions Attempt 2: FAILED | fix-ownership-warranty-command-wc-08 | missing dependencies prevented regression verification | done so far: inspected existing enum mappings and regressions; no source changes Retry failed: WarrantyCommandPage.test.tsx has 19 failures; coverage/claim editor labels are unavailable in current test flow before assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12831,10 +12831,10 @@
       "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-warranty-command-wc-04 | focused tests blocked by missing dependencies | done so far: updated web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx and web\\src\\features\\ownership\\pages\\WarrantyCommandPage.test.tsx Attempt 2: FAILED | fix-ownership-warranty-command-wc-04 | focused tests blocked by missing dependencies; restoration failed with ENOENT | done so far: confirmed existing implementation and regression cases; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-ownership-warranty-command-wc-04 | focused tests blocked by missing dependencies | done so far: updated web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx and web\\src\\features\\ownership\\pages\\WarrantyCommandPage.test.tsx Attempt 2: FAILED | fix-ownership-warranty-command-wc-04 | focused tests blocked by missing dependencies; restoration failed with ENOENT | done so far: confirmed existing implementation and regression cases; no source files changed Retry failed: WarrantyCommandPage.test.tsx has 19 failures; battery retention/headroom details fail their existing page assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12846,10 +12846,10 @@
       "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-warranty-command-wc-03 | Shared dependency failures blocked tests and browser acceptance | done so far: updated web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx and web\\src\\features\\ownership\\pages\\WarrantyCommandPage.test.tsx Attempt 2: FAILED | fix-ownership-warranty-command-wc-03 | Missing dependencies block targeted tests; existing dev server is unresponsive, blocking browser acceptance | done so far: reviewed and preserved prior page/test implementation; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-ownership-warranty-command-wc-03 | Shared dependency failures blocked tests and browser acceptance | done so far: updated web\\src\\features\\ownership\\pages\\WarrantyCommandPage.tsx and web\\src\\features\\ownership\\pages\\WarrantyCommandPage.test.tsx Attempt 2: FAILED | fix-ownership-warranty-command-wc-03 | Missing dependencies block targeted tests; existing dev server is unresponsive, blocking browser acceptance | done so far: reviewed and preserved prior page/test implementation; no files changed Retry failed: WarrantyCommandPage.test.tsx has 19 failures; mobile details/action coverage does not reach expected editor labels.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -12861,10 +12861,10 @@
       "web\\src\\features\\ownership\\pages\\WarrantyCommandPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-warranty-command-wc-01 | dependency failures prevented test execution | done so far: updated WarrantyCommandPage.tsx and WarrantyCommandPage.test.tsx with scope and stale-completion protections Attempt 2: FAILED | fix-ownership-warranty-command-wc-01 | dependency failures prevented test execution | done so far: inspected existing scope protections and regression coverage; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-ownership-warranty-command-wc-01 | dependency failures prevented test execution | done so far: updated WarrantyCommandPage.tsx and WarrantyCommandPage.test.tsx with scope and stale-completion protections Attempt 2: FAILED | fix-ownership-warranty-command-wc-01 | dependency failures prevented test execution | done so far: inspected existing scope protections and regression coverage; no source changes Retry failed: WarrantyCommandPage.test.tsx has 19 failures; draft-scope cases cannot find coverage/claim editor labels in the current flow.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20606,10 +20606,10 @@
       "web\\src\\api\\hooks\\useOwnership.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-live-write-request-policy | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\api\\hooks\\useOwnership.ts; added web\\src\\api\\hooks\\useOwnership.liveWritePolicy.test.tsx with 53 unexecuted cases Attempt 2: FAILED | fix-ownership-live-write-request-policy | focused tests blocked by missing dependencies and failed restoration | done so far: preserved existing protection in web\\src\\api\\hooks\\useOwnership.ts and 53 unexecuted cases in web\\src\\api\\hooks\\useOwnership.liveWritePolicy.test.tsx; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-ownership-live-write-request-policy | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\api\\hooks\\useOwnership.ts; added web\\src\\api\\hooks\\useOwnership.liveWritePolicy.test.tsx with 53 unexecuted cases Attempt 2: FAILED | fix-ownership-live-write-request-policy | focused tests blocked by missing dependencies and failed restoration | done so far: preserved existing protection in web\\src\\api\\hooks\\useOwnership.ts and 53 unexecuted cases in web\\src\\api\\hooks\\useOwnership.liveWritePolicy.test.tsx; no source changes Retry verification passed: relevant hook/dialog/panel regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20654,10 +20654,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: OwnershipBrief.test.tsx has 14 failures; quality/status detail assertions such as Future failures are hidden until Review details is opened.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20669,10 +20669,10 @@
       "web\\src\\features\\ownership\\components\\OwnershipPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-ownership-shared-paused-source-notice | External dependency failures prevented verification | done so far: updated web\\src\\features\\ownership\\components\\OwnershipPanel.tsx and web\\src\\features\\ownership\\components\\OwnershipPanel.test.tsx Attempt 2: FAILED | fix-ownership-shared-paused-source-notice | External dependency failures prevented verification | done so far: inspected existing implementation and coverage; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-ownership-shared-paused-source-notice | External dependency failures prevented verification | done so far: updated web\\src\\features\\ownership\\components\\OwnershipPanel.tsx and web\\src\\features\\ownership\\components\\OwnershipPanel.test.tsx Attempt 2: FAILED | fix-ownership-shared-paused-source-notice | External dependency failures prevented verification | done so far: inspected existing implementation and coverage; no files changed Retry verification passed: relevant hook/dialog/panel regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
