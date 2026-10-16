@@ -275,13 +275,16 @@ describe('Toggle — size variants', () => {
 });
 
 describe('Toggle — visual state', () => {
-  it('uses the semantic on track when checked and the neutral off track when unchecked', () => {
+  it('paints the exact accent on track when checked and the neutral off track when unchecked', () => {
     const { rerender } = render(
       <Toggle checked={false} onChange={() => {}} aria-label="Sync" />,
     );
     expect(getTrack(screen.getByRole('switch')).className).toContain('bg-[var(--control-track-off)]');
+    expect(getThumb(screen.getByRole('switch')).className).toContain('bg-[var(--control-thumb)]');
     rerender(<Toggle checked onChange={() => {}} aria-label="Sync" />);
-    expect(getTrack(screen.getByRole('switch')).className).toContain('bg-[var(--semantic-info)]');
+    expect(getTrack(screen.getByRole('switch')).className).toContain('bg-[var(--theme-primary)]');
+    // Contrast comes from the on-accent thumb, never from shifting the accent.
+    expect(getThumb(screen.getByRole('switch')).className).toContain('bg-[var(--theme-on-primary)]');
   });
 
   it('rests the thumb at the start when off and translates it fully when on (md)', () => {

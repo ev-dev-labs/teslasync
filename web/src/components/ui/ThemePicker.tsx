@@ -230,7 +230,8 @@ export function ThemePicker({
               <div
                 className="h-6 w-6 rounded-full mb-3"
                 style={{
-                  background: `linear-gradient(135deg, ${thm.primary}, ${thm.accent})`,
+                  // The swatch is the exact hex the app applies.
+                  background: thm.primary,
                 }}
               />
               <p className="text-xs font-medium text-[var(--text-primary)]">{thm.name}</p>
@@ -261,7 +262,7 @@ export function ThemePicker({
               <div
                 className="h-6 w-6 rounded-full mb-3"
                 style={{
-                  background: `linear-gradient(135deg, ${customPrimary}, ${customAccent})`,
+                  background: customPrimary,
                 }}
               />
               <p className="text-xs font-medium text-[var(--text-primary)]">{t('theme.custom', 'Custom')}</p>

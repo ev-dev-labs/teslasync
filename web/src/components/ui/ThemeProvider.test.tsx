@@ -205,7 +205,8 @@ describe('initial state resolution', () => {
     expect(screen.getByTestId('mode-bg')).toHaveTextContent('#0b0d12')
 
     const root = document.documentElement
-    expect(root.style.getPropertyValue('--theme-primary')).toBe('#91b4d2')
+    // The token is the default preset's exact hex, never a derived shade.
+    expect(root.style.getPropertyValue('--theme-primary')).toBe('#3b82f6')
     expect(root.style.getPropertyValue('--bg')).toBe('#0b0d12')
     expect(root.style.getPropertyValue('--bg-app')).toBe('#0b0d12')
     expect(
@@ -223,7 +224,7 @@ describe('initial state resolution', () => {
   })
 
   describe('restrained presentation without preference migration', () => {
-    it('preserves raw custom colors while deriving accessible dark and light fills', async () => {
+    it('applies raw custom colors exactly in every mode, choosing only a readable foreground', async () => {
       localStorage.setItem('teslasync-theme', 'custom')
       localStorage.setItem('teslasync-custom-primary', '#00ff41')
       localStorage.setItem('teslasync-custom-accent', '#ff00ff')
@@ -236,7 +237,8 @@ describe('initial state resolution', () => {
         expect(localStorage.getItem('teslasync-custom-primary')).toBe('#00ff41')
         expect(localStorage.getItem('teslasync-custom-accent')).toBe('#ff00ff')
         const css = document.documentElement.style
-        expect(css.getPropertyValue('--theme-primary')).not.toBe('#00ff41')
+        expect(css.getPropertyValue('--theme-primary')).toBe('#00ff41')
+        expect(css.getPropertyValue('--theme-accent')).toBe('#ff00ff')
         expect(css.getPropertyValue('--text-primary')).not.toBe('#ffffff')
         for (const fill of ['primary', 'accent']) {
           expect(contrastRatio(css.getPropertyValue(`--theme-on-${fill}`), css.getPropertyValue(`--theme-${fill}`))).toBeGreaterThanOrEqual(4.5)
@@ -254,7 +256,8 @@ describe('initial state resolution', () => {
         expect(localStorage.getItem('teslasync-mode')).toBe(modeId)
         const css = document.documentElement.style
         for (const surface of ['--bg', '--surface-1', '--surface-2', '--surface-3']) {
-          for (const foreground of ['--text-primary', '--text-secondary', '--text-muted', '--theme-primary']) {
+          // The accent is the user's exact hex, so only text tokens carry a surface-contrast guarantee.
+          for (const foreground of ['--text-primary', '--text-secondary', '--text-muted']) {
             expect(contrastRatio(css.getPropertyValue(foreground), css.getPropertyValue(surface)), `${modeId}: ${foreground} / ${surface}`).toBeGreaterThanOrEqual(4.5)
           }
           const focus = result.current.mode.colorScheme === 'dark' ? '#91b4d2' : '#385e7e'
@@ -409,7 +412,8 @@ describe('setTheme / setMode / setCustomColors', () => {
     expect(localStorage.getItem('teslasync-custom-primary')).toBe('#123456')
     expect(localStorage.getItem('teslasync-custom-accent')).toBe('#abcdef')
     // hexToRGB('#123456') → "18, 52, 86" reaches the CSS custom property.
-    expect(document.documentElement.style.getPropertyValue('--theme-primary-rgb')).not.toBe('18, 52, 86')
+    expect(document.documentElement.style.getPropertyValue('--theme-primary')).toBe('#123456')
+    expect(document.documentElement.style.getPropertyValue('--theme-primary-rgb')).toBe('18, 52, 86')
     expect(busMock.broadcast).toHaveBeenCalledWith({
       type: 'theme.customColors',
       primary: '#123456',

@@ -83,7 +83,9 @@ function readableForeground(hex: string): string {
   const darkForeground = '#0b0d12'
   if (contrastRatio(darkForeground, hex) >= 4.5) return darkForeground
   if (contrastRatio('#ffffff', hex) >= 4.5) return '#ffffff'
-  return '#000000'
+  // Mid-tones may meet neither threshold: take the stronger of the two rather
+  // than ever altering the accent itself.
+  return contrastRatio(darkForeground, hex) >= contrastRatio('#ffffff', hex) ? darkForeground : '#ffffff'
 }
 
 function mixHex(from: string, to: string, amount: number): string {
@@ -130,25 +132,6 @@ function presentationMode(mode: ModeTheme): ModeTheme {
     textSecondary: highContrast ? mode.textSecondary : base.textSecondary,
     textMuted: highContrast ? mode.textMuted : mode.colorScheme === 'dark' ? '#8490a2' : '#64748b',
   }
-}
-
-function presentationAccent(raw: string, mode: ModeTheme): string {
-  const rgb = parseHexColor(raw)
-  if (!rgb) return mode.colorScheme === 'dark' ? '#91b4d2' : '#385e7e'
-  const [r, g, b] = rgb.map(channel => channel / 255)
-  const max = Math.max(r, g, b)
-  const min = Math.min(r, g, b)
-  const delta = max - min
-  if (delta < 0.05) return mode.textSecondary
-  const hue = ((max === r ? (g - b) / delta : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4) + 6) % 6
-  const lightness = mode.colorScheme === 'dark' ? 0.7 : 0.36
-  const amplitude = 0.25 * Math.min(lightness, 1 - lightness)
-  const channels = [0, 8, 4].map(offset => {
-    const k = (offset + hue * 2) % 12
-    return Math.round(255 * (lightness - amplitude * Math.max(-1, Math.min(k - 3, 9 - k, 1))))
-  })
-  const candidate = `#${channels.map(channel => channel.toString(16).padStart(2, '0')).join('')}`
-  return accessibleMutedForeground({ ...mode, textMuted: candidate })
 }
 
 const defaultCustomPrimary = '#00b4d8'
@@ -349,12 +332,16 @@ export function useTheme() {
   return ctx
 }
 
+/**
+ * The primary/accent tokens are exactly the hex the user selected (preset or
+ * custom): never darkened, lightened, snapped to a palette or contrast-shifted.
+ * Contrast is handled only by choosing the text/icon colour drawn on top
+ * (`--theme-on-primary` / `--theme-on-accent`).
+ */
 function applyThemeCSS(theme: ColorTheme, savedMode: ModeTheme) {
   const mode = presentationMode(savedMode)
-  const primary = theme.id === 'neon-cyan'
-    ? mode.colorScheme === 'dark' ? '#91b4d2' : '#385e7e'
-    : presentationAccent(theme.primary, mode)
-  const accent = presentationAccent(theme.accent, mode)
+  const primary = theme.primary.toLowerCase()
+  const accent = theme.accent.toLowerCase()
   const root = document.documentElement
   root.style.setProperty('--theme-primary', primary)
   root.style.setProperty('--theme-primary-rgb', hexToRGB(primary))

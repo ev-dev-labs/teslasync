@@ -50,7 +50,7 @@ export function TabNav({ tabs, active, onChange, ariaLabel, className }: TabNavP
               typography.size.sm, typography.weight.medium,
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-1)] forced-colors:focus-visible:outline forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-offset-2 forced-colors:focus-visible:outline-[Highlight]',
               selected
-                ? cn('border-[var(--border-strong)] bg-[var(--surface-3)] forced-colors:border-[Highlight] forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]', typography.color.primary)
+                ? cn('border-[var(--theme-primary)] bg-[var(--surface-3)] forced-colors:border-[Highlight] forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]', typography.color.primary)
                 : cn('hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)] forced-colors:text-[ButtonText]', typography.color.muted),
             )}
           >

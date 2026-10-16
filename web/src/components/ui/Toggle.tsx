@@ -112,13 +112,15 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
               'forced-colors:border forced-colors:border-[ButtonBorder]',
               trackSize[size],
               isChecked
-                ? 'bg-[var(--semantic-info)]'
+                ? 'bg-[var(--theme-primary)]'
                 : 'bg-[var(--control-track-off)]',
             )}
           >
             <span
               className={cn(
-                'pointer-events-none inline-block rounded-full bg-[var(--control-thumb)] transition-transform duration-fast ease-standard motion-reduce:transition-none',
+                'pointer-events-none inline-block rounded-full transition-transform duration-fast ease-standard motion-reduce:transition-none',
+                // The thumb takes the readable on-accent colour; the track keeps the exact accent.
+                isChecked ? 'bg-[var(--theme-on-primary)]' : 'bg-[var(--control-thumb)]',
                 'forced-colors:border forced-colors:border-[ButtonBorder]',
                 thumbSize[size],
                 'translate-x-0',

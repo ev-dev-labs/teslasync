@@ -415,13 +415,15 @@ function expectNoInlineSelectionShadows(container: HTMLElement) {
   }
 }
 
-function expectRawGradient(button: HTMLElement, primary: string, accent: string) {
+/** Each swatch is painted solid with the one source hex the app applies. */
+function expectSourceSwatch(button: HTMLElement, primary: string) {
   const swatch = button.querySelector<HTMLElement>('div.rounded-full')
   const expected = document.createElement('div')
-  expected.style.background = `linear-gradient(135deg, ${primary}, ${accent})`
+  expected.style.background = primary
   expect(expected.style.background).not.toBe('')
   expect(swatch).toBeInTheDocument()
   expect(swatch?.style.background).toBe(expected.style.background)
+  expect(swatch?.style.background).not.toContain('gradient')
 }
 
 function expectRawModePreview(button: HTMLElement, mode: ModeTheme) {
@@ -471,7 +473,7 @@ describe.each([
     expectNoInlineSelectionShadows(container)
   })
 
-  it('uses the derived selection role for every raw preset hue without changing gradients, identities or toast names', () => {
+  it('uses the derived selection role for every raw preset hue with one exact source swatch per preset, identities and toast names', () => {
     const onChange = vi.fn()
     const { container, spies } = renderPicker({ picker: { compact, onChange } })
     const presets = Object.values(THEMES).filter(theme => theme.id !== 'custom')
@@ -486,11 +488,11 @@ describe.each([
       for (const theme of presets) {
         const preset = screen.getByRole('button', { name: theme.name })
         expectSelectionChrome(preset, theme.id === selected.id)
-        expectRawGradient(preset, theme.primary, theme.accent)
+        expectSourceSwatch(preset, theme.primary)
       }
       const custom = screen.getByRole('button', { name: 'Custom' })
       expectSelectionChrome(custom, false)
-      expectRawGradient(custom, DEFAULT_PRIMARY, DEFAULT_ACCENT)
+      expectSourceSwatch(custom, DEFAULT_PRIMARY)
       expectNoInlineSelectionShadows(container)
     }
     expect(spies.setCustomColors).not.toHaveBeenCalled()
@@ -506,7 +508,7 @@ describe.each([
     const { container, spies } = renderPicker({ picker: { compact, onChange } })
     const custom = screen.getByRole('button', { name: 'Custom' })
     expectSelectionChrome(custom, false)
-    expectRawGradient(custom, savedPrimary, savedAccent)
+    expectSourceSwatch(custom, savedPrimary)
     expectNoInlineSelectionShadows(container)
 
     custom.focus()
@@ -516,7 +518,7 @@ describe.each([
     expect(toastInfo).toHaveBeenLastCalledWith('Theme: Custom')
     expectSelectionChrome(custom, true)
     expectSelectionChrome(screen.getByRole('button', { name: 'Neon Cyan' }), false)
-    expectRawGradient(custom, savedPrimary, savedAccent)
+    expectSourceSwatch(custom, savedPrimary)
     expect(screen.getByLabelText('Primary')).toHaveValue(savedPrimary)
     expect(screen.getByLabelText('Accent')).toHaveValue(savedAccent)
     expect(custom).toHaveFocus()
@@ -525,7 +527,7 @@ describe.each([
     fireEvent.change(screen.getByLabelText('Primary'), { target: { value: '#00ff99' } })
     expect(spies.setCustomColors).toHaveBeenLastCalledWith('#00ff99', savedAccent)
     expect(onChange).toHaveBeenLastCalledWith('custom')
-    expectRawGradient(custom, '#00ff99', savedAccent)
+    expectSourceSwatch(custom, '#00ff99')
     expectSelectionChrome(custom, true)
     expectNoInlineSelectionShadows(container)
 
@@ -534,7 +536,7 @@ describe.each([
     expect(onChange).toHaveBeenLastCalledWith('custom')
     expect(screen.getByLabelText('Primary')).toHaveValue('#00ff99')
     expect(screen.getByLabelText('Accent')).toHaveValue('#ff0044')
-    expectRawGradient(custom, '#00ff99', '#ff0044')
+    expectSourceSwatch(custom, '#00ff99')
     expectSelectionChrome(custom, true)
     expectNoInlineSelectionShadows(container)
 
@@ -543,7 +545,7 @@ describe.each([
     expect(onChange).toHaveBeenLastCalledWith('matrix-green')
     expect(toastInfo).toHaveBeenLastCalledWith('Theme: Matrix Green')
     expectSelectionChrome(custom, false)
-    expectRawGradient(custom, '#00ff99', '#ff0044')
+    expectSourceSwatch(custom, '#00ff99')
     expect(screen.queryByLabelText('Primary')).not.toBeInTheDocument()
     fireEvent.click(custom)
     expect(spies.setCustomColors).toHaveBeenLastCalledWith('#00ff99', '#ff0044')
