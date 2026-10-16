@@ -363,6 +363,14 @@ afterEach(() => {
   setGlobalLocale(originalFormatterPreferences.locale);
 });
 
+function expectEvidenceDetail(id: string, text: string, present = true) {
+  fireEvent.click(within(screen.getByTestId(id)).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  if (present) expect(within(dialog).getByText(text)).toBeInTheDocument();
+  else expect(within(dialog).queryByText(text)).not.toBeInTheDocument();
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+
 describe('PreconditioningEffectivenessPage', () => {
   it('passes shared rolling and timezone-aware custom bounds to both sources without another picker', () => {
     const view = renderPage();
@@ -438,9 +446,7 @@ describe('PreconditioningEffectivenessPage', () => {
     expect(within(windowLabel.parentElement!).getByText(
       `${display} applicable or excluded`,
     )).toBeInTheDocument();
-    expect(within(screen.getByTestId('preconditioning-kpis')).getByText(
-      `${display} classified departures`,
-    )).toBeInTheDocument();
+    expectEvidenceDetail('preconditioning-kpis', `${display} classified departures`);
     expect(screen.getByTestId('preconditioning-hourly-profile')).toHaveTextContent(
       `${display} active · ${display} control`,
     );
@@ -468,9 +474,7 @@ describe('PreconditioningEffectivenessPage', () => {
     expect(within(windowLabel.parentElement!).getByText(
       `${localized} applicable or excluded`,
     )).toBeInTheDocument();
-    expect(within(screen.getByTestId('preconditioning-kpis')).getByText(
-      `${localized} classified departures`,
-    )).toBeInTheDocument();
+    expectEvidenceDetail('preconditioning-kpis', `${localized} classified departures`);
     expect(screen.getByTestId('preconditioning-hourly-profile')).toHaveTextContent(
       `${localized} active · ${localized} control`,
     );
@@ -687,8 +691,7 @@ describe('PreconditioningEffectivenessPage', () => {
     )).not.toBeInTheDocument();
     expect(within(screen.getByTestId('preconditioning-availability'))
       .getAllByText('Resolved')).toHaveLength(2);
-    expect(within(screen.getByTestId('preconditioning-availability'))
-      .queryByText('Retained evidence')).not.toBeInTheDocument();
+    expectEvidenceDetail('preconditioning-availability-summary', 'Retained evidence', false);
     expect(screen.getAllByText('+9.0 °C').length).toBeGreaterThan(0);
   });
 
@@ -791,13 +794,11 @@ describe('PreconditioningEffectivenessPage', () => {
         .getAllByText('Paused offline')).toHaveLength(pausedCount);
       const availability = within(screen.getByTestId('preconditioning-availability'));
       expect(availability.getAllByText('Paused offline')).toHaveLength(pausedCount);
-      expect(availability.getByText('Retained evidence')).toBeInTheDocument();
+      expectEvidenceDetail('preconditioning-availability-summary', 'Retained evidence');
       expect(availability.getByText('Within-stratum overlap present')).toBeInTheDocument();
-      expect(within(screen.getByTestId('preconditioning-departure-disposition'))
-        .getByText('Retained evidence')).toBeInTheDocument();
+      expectEvidenceDetail('preconditioning-departure-disposition', 'Retained evidence');
       if (source !== 'drives') {
-        expect(within(screen.getByTestId('preconditioning-climate-disposition'))
-          .getByText('Retained evidence')).toBeInTheDocument();
+        expectEvidenceDetail('preconditioning-climate-disposition', 'Retained evidence');
       }
       expect(screen.queryByText('Climate-history query failed')).not.toBeInTheDocument();
       expect(screen.queryByText('Drive-history query failed')).not.toBeInTheDocument();
@@ -826,7 +827,7 @@ describe('PreconditioningEffectivenessPage', () => {
     const availability = within(screen.getByTestId('preconditioning-availability'));
     expect(availability.getAllByText('Paused offline')).toHaveLength(2);
     expect(availability.getAllByText('0')).toHaveLength(9);
-    expect(availability.getByText('Retained evidence')).toBeInTheDocument();
+    expectEvidenceDetail('preconditioning-availability-summary', 'Retained evidence');
   });
 
   it('clears the paused notice after sources resume without losing sections', () => {
@@ -853,7 +854,7 @@ describe('PreconditioningEffectivenessPage', () => {
       .getAllByText('Loaded')).toHaveLength(2);
     const availability = within(screen.getByTestId('preconditioning-availability'));
     expect(availability.getAllByText('Resolved')).toHaveLength(2);
-    expect(availability.queryByText('Retained evidence')).not.toBeInTheDocument();
+    expectEvidenceDetail('preconditioning-availability-summary', 'Retained evidence', false);
   });
 
   it('preserves negative observational temperature differences in Fahrenheit', () => {

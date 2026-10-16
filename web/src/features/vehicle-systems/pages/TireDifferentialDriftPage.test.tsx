@@ -64,7 +64,8 @@ vi.mock('@/hooks/useDateFormat', () => ({
     formatTime: value => formatTime(value, { tz: h.tz, locale: h.locale }),
   } satisfies Pick<UseDateFormatResult, 'tz' | 'locale' | 'formatDateTime' | 'formatRelative' | 'formatTime'>),
 }));
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/motion')>(),
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 // Keep canonical cards, trust, brief, data tables and export/help controls real.
@@ -124,6 +125,14 @@ function everySection() {
   for (const name of sections) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
   expect(screen.getByRole('heading', { level: 1, name: 'Tire differential drift' })).toBeInTheDocument();
 }
+function expectBriefDetail(text: string | RegExp, label?: string) {
+  fireEvent.click(within(brief()).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  const target = label ? within(dialog).getByRole('group', { name: label }) : dialog;
+  expect(within(target).getByText(text)).toBeInTheDocument();
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+
 function brief() { return screen.getByTestId('tire-differential-drift-summary'); }
 
 beforeEach(() => {
@@ -216,7 +225,7 @@ describe('TireDifferentialDriftPage', () => {
     expect(screen.queryByTestId('slope-plot')).not.toBeInTheDocument();
     expect(screen.getByText(/At least two usable four-corner samples/)).toBeInTheDocument();
     expect(within(brief()).getByText('Samples analyzed')).toBeInTheDocument();
-    expect(within(brief()).getByText(new RegExp(`${mode === 'empty' ? 0 : 1} raw rows`))).toBeInTheDocument();
+    expectBriefDetail(new RegExp(`${mode === 'empty' ? 0 : 1} raw rows`), 'Samples analyzed');
   });
 
   it('keeps a single measured residual and offset but does not invent a fitted slope or projection', () => {
@@ -251,7 +260,7 @@ describe('TireDifferentialDriftPage', () => {
       ? { isError: true, error: new Error('Refresh failed') }
       : { fetchStatus: 'paused' });
     renderPage(); everySection();
-    expect(within(brief()).getByText('Retained evidence')).toBeInTheDocument();
+    expectBriefDetail('Retained evidence');
     expect(screen.getByText('Showing retained measurements')).toBeInTheDocument();
     expect(screen.getByTestId('residual-plot')).toBeInTheDocument();
     expect(screen.getByTestId('slope-plot')).toBeInTheDocument();

@@ -31,23 +31,6 @@ const h = vi.hoisted(() => ({
 }));
 const refetch = vi.fn();
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (_key: string, fallback?: unknown, options?: unknown) => {
-      const text = typeof fallback === 'string' ? fallback : _key;
-      const values =
-        options && typeof options === 'object'
-          ? (options as Record<string, unknown>)
-          : {};
-      return text.replace(
-        /\{\{\s*(\w+)\s*\}\}/g,
-        (_match, name: string) =>
-          values[name] != null ? String(values[name]) : '',
-      );
-    },
-    i18n: { language: 'en-US', changeLanguage: vi.fn() },
-  }),
-}));
 
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
   useClimateHistory: (vehicleId: string, range?: { start?: string; end?: string }) => {
@@ -201,6 +184,13 @@ function expectEverySection(): void {
   }
 }
 
+function withEvidenceDetails(check: (dialog: HTMLElement) => void) {
+  fireEvent.click(within(screen.getByTestId('hvac-cycling-kpis')).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  check(dialog);
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+
 function evidenceMetric(label: string): HTMLElement {
   const metric = within(screen.getByTestId('hvac-cycling-kpis'))
     .getAllByRole('listitem')
@@ -340,17 +330,26 @@ describe('HvacCyclingPage', () => {
       climate(0, { hvacPower: true }),
       climate(1, { hvacPower: false }),
     ]],
-  ])('keeps all six evidence icons muted for %s', (_name, data) => {
+  ])('keeps reported evidence icons muted for %s', (name, data) => {
     h.history = query({ data });
     renderPage();
 
+    const knownCount = name === 'empty evidence' ? 4 : name === 'censored active run' ? 5 : 6;
     const metrics = within(screen.getByTestId('hvac-cycling-kpis')).getAllByRole('listitem');
-    expect(metrics).toHaveLength(6);
+    expect(metrics).toHaveLength(knownCount);
+    const labels = ['Returned rows', 'Known-state samples', 'Observed intervals', 'Observed duration', 'Observed on duty', 'Qualified short-cycle rate'];
     const icons = ['database', 'activity', 'binary', 'clock3', 'gauge', 'rotate-cw'];
-    metrics.forEach((metric, index) => {
-      const icon = metric.querySelector('svg');
-      expect(icon).toHaveClass(`lucide-${icons[index]}`, typography.color.muted);
-      expect(icon).not.toHaveClass(severityTokens.warn.fg);
+    withEvidenceDetails(dialog => {
+      labels.forEach((label, index) => {
+        if (index >= knownCount) {
+          expect(within(dialog).queryByRole('group', { name: label })).not.toBeInTheDocument();
+          return;
+        }
+        const metric = within(dialog).getByRole('group', { name: label });
+        const icon = metric.querySelector('svg');
+        expect(icon).toHaveClass(`lucide-${icons[index]}`, typography.color.muted);
+        expect(icon).not.toHaveClass(severityTokens.warn.fg);
+      });
     });
   });
 
@@ -364,13 +363,18 @@ describe('HvacCyclingPage', () => {
 
     const metrics = within(screen.getByTestId('hvac-cycling-kpis')).getAllByRole('listitem');
     expect(metrics).toHaveLength(6);
-    metrics.slice(0, 5).forEach(metric => {
-      expect(metric.querySelector('svg')).toHaveClass(typography.color.muted);
-    });
     const rate = evidenceMetric('Qualified short-cycle rate');
-    expect(rate.querySelector('svg')).toHaveClass('lucide-rotate-cw', severityTokens.warn.fg);
-    expect(rate.querySelector('svg')).not.toHaveClass(typography.color.muted);
     expect(within(rate).getByText(/^100(?:\.0+)?%$/)).toBeInTheDocument();
+    withEvidenceDetails(dialog => {
+      const groups = within(dialog).getAllByRole('group');
+      expect(groups).toHaveLength(6);
+      groups.slice(0, 5).forEach(metric => {
+        expect(metric.querySelector('svg')).toHaveClass(typography.color.muted);
+      });
+      const detail = within(dialog).getByRole('group', { name: 'Qualified short-cycle rate' });
+      expect(detail.querySelector('svg')).toHaveClass('lucide-rotate-cw', severityTokens.warn.fg);
+      expect(detail.querySelector('svg')).not.toHaveClass(typography.color.muted);
+    });
   });
 
   it.each([
@@ -624,7 +628,7 @@ describe('HvacCyclingPage', () => {
     expect(screen.getByText(
       'The denominator is zero: every active fragment is left-censored, right-censored, or both. No short-cycle rate is published.',
     )).toBeInTheDocument();
-    expect(within(evidenceMetric('Qualified short-cycle rate')).getByText('—')).toBeInTheDocument();
-    expect(evidenceMetric('Qualified short-cycle rate')).toHaveAttribute('data-value-state', 'missing');
+    expect(within(screen.getByTestId('hvac-cycling-kpis')).queryByText('Qualified short-cycle rate', { selector: '[data-operational-metric] > :first-child' })).not.toBeInTheDocument();
+    withEvidenceDetails(dialog => expect(within(dialog).getByText('1 empty field is hidden.')).toBeInTheDocument());
   });
 });

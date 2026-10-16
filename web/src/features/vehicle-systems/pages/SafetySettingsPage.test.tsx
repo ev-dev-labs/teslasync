@@ -497,7 +497,10 @@ describe('SafetySettingsPage', () => {
 
     expect(within(features).getByText('7.46 mi')).toBeInTheDocument(); // 12000 m → 7.46 mi
     expect(within(features).getByText('1.86 mi')).toBeInTheDocument(); // 3000 m → 1.86 mi
-    expect(within(features).getByText('(autopilot)')).toBeInTheDocument(); // unit is already in value
+    fireEvent.click(within(features).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(within(dialog).getByRole('group', { name: 'Self-driving distance' })).getByText('(autopilot)')).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' }); // unit is already in value
   });
 
   it('feeds the ascending chart derivation to the LineChart + labels it for a11y', () => {
