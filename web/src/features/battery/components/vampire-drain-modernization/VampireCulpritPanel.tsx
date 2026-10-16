@@ -63,7 +63,7 @@ export function VampireCulpritPanel({ vehicleId }: { vehicleId: string | undefin
           <Skeleton className="h-28" />
         ) : (
           <>
-            <BatteryEvidenceBrief title={t('vampireDrain.observed.summary', 'Independent Park and historical SOC-loss evidence')} description={description} metrics={metrics} period={period}
+            <BatteryEvidenceBrief variant="embedded" title={t('vampireDrain.observed.summary', 'Independent Park and historical SOC-loss evidence')} description={description} metrics={metrics} period={period}
               retained={(parkState.hasData && parkState.status !== 'ok') || (splitState.hasData && splitState.status !== 'ok')} />
             <div className="flex flex-wrap gap-2">
               <Badge variant="neutral" size="sm">

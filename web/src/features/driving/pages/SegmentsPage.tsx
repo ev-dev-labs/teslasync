@@ -443,7 +443,7 @@ export default function SegmentsPage() {
               {/* Keep the summary and both independent chart shells mounted. */}
               <div className="flex flex-col gap-5">
                 {/* Winner banner + the two attempts */}
-                <DrivingSummaryBrief
+                <DrivingSummaryBrief variant="embedded"
                   id="segment-ghost-brief"
                   title={t('segments.ghost.title', 'Ghost Race')}
                   description={t('segments.brief.description', 'Recorded attempt durations and the original winner result for the selected segment.')}

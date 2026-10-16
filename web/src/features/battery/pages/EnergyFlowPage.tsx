@@ -489,7 +489,7 @@ export default function EnergyFlowPage() {
           <LayoutCard title={t('energyFlow.kpis', 'Energy summary metrics')}>
             {/* Keep all six metric labels/shells even before a source resolves.
                 Recovery and trust notices are independent of those facts. */}
-            <BatteryEvidenceBrief title={t('energyFlow.kpis', 'Energy summary metrics')} metrics={summaryMetrics} period={period}
+            <BatteryEvidenceBrief variant="embedded" title={t('energyFlow.kpis', 'Energy summary metrics')} metrics={summaryMetrics} period={period}
               loading={!noVehicle && !statsState.hasData && statsLoading}
               retained={statsState.status === 'stale'} />
             <SectionState
@@ -685,7 +685,7 @@ export default function EnergyFlowPage() {
               onRetry={() => { void refetchStats(); }}
               skeletonHeight={240}
             >
-              <BatteryEvidenceBrief title={t('energyFlow.metrics.title', 'Efficiency metrics')} metrics={efficiencyMetrics} period={period}
+              <BatteryEvidenceBrief variant="embedded" title={t('energyFlow.metrics.title', 'Efficiency metrics')} metrics={efficiencyMetrics} period={period}
                 retained={statsState.status === 'stale'} />
             </SectionState>
           </LayoutCard>

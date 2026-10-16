@@ -31,6 +31,12 @@ const props = {
 };
 
 describe('system source summaries use the real raw bridge and review drawer', () => {
+  it('renders an embedded brief without a second surface inside its host card', () => {
+    const { container } = render(<MemoryRouter><SystemSummaryBrief {...props} variant="embedded" /></MemoryRouter>);
+    expect(container.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
   it('keeps raw count and bytes numeric and does not substitute a missing duration with zero', () => {
     const { result } = renderHook(() => useOperationalMetrics(measurements));
     expect(result.current.map(metric => metric.rawValue)).toEqual([0, 2048, null]);

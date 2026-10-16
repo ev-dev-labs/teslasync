@@ -82,7 +82,7 @@ export function ParkingCoverageMethodology({
           </Badge>
         </div>
 
-        <VehicleEvidenceBrief id="parking-coverage-summary"
+        <VehicleEvidenceBrief variant="embedded" id="parking-coverage-summary"
           title={t('parking.coverage.title', 'Coverage & method')}
           description={t('parking.briefDescription', 'Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.')}
           status={status === 'ok' && hasCapEvidence && coverage.possiblyCapped ? 'partial' : status}

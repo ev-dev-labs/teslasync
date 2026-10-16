@@ -94,6 +94,12 @@ function summary(extra: Partial<ComponentProps<typeof DrivingSummaryBrief>> = {}
 }
 
 describe('DrivingSummaryBrief — real OperationalBrief and numerical bridge', () => {
+  it('renders an embedded brief without its own surface in a host card', () => {
+    const { container } = render(summary({ variant: 'embedded' }));
+    expect(container.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
   it('consumes metric types through the public data-display category without internal dependencies', () => {
     expect(summarySource).toMatch(/import type \{ StatMetric \} from '@\/components\/data-display';/);
     expect(summarySource).toMatch(/import type \{ MetricPreferences \} from '@\/components\/data-display';/);

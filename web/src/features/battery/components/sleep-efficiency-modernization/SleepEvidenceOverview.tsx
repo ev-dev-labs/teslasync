@@ -113,6 +113,7 @@ export function SleepEvidenceOverview({ analysis, state, trust }: SleepEfficienc
               aria-label={loading ? t('sleep.states.loadingAria', 'Loading sleep evidence') : undefined}
             >
               <BatteryEvidenceBrief
+                variant="embedded"
                 id="sleep-efficiency-evidence"
                 title={t('sleep.kpi.title', 'Evidence overview')}
                 metrics={metrics}

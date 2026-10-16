@@ -103,6 +103,7 @@ export function SupportBundlePanel() {
 
       <div className="mt-4">
         <SystemSummaryBrief
+          variant="embedded"
           title={t('supportBundle.title', 'Support bundle')}
           description={t('supportBundle.subtitle', 'A redacted technical summary of this browser session. Copy or download it to attach to a support conversation.')}
           scope={t('supportBundle.brief.scope', 'Current browser-session bundle; exact redacted contents remain available below.')}

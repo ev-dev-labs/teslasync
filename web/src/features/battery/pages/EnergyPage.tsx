@@ -1028,6 +1028,7 @@ export default function EnergyPage() {
           {isLoading ? <ChartBlockSkeleton height={200} /> : peakEfficiencyDay != null && bestEfficiencyDay != null ? (
             <>
               <BatteryEvidenceBrief
+                variant="embedded"
                 title={t('energy.drivers.title', 'Efficiency driver investigation')}
                 period={{ kind: 'unknown', label: t('operations.scope.days', '{{count}} days', { count: periodDays }),
                   reason: t('energy.drivers.contextNotCause', 'Context only, not causal attribution') }}
@@ -1139,6 +1140,7 @@ export default function EnergyPage() {
             {liveChargingQuery.isLoading && !liveChargingDataState.hasData && <Skeleton className="mb-3 h-16 rounded-xl" />}
             {liveChargingDataState.fatalError && <QueryError error={liveChargingDataState.fatalError} onRetry={() => { void liveChargingQuery.refetch(); }} />}
             <BatteryEvidenceBrief
+              variant="embedded"
               title={t('energy.lifetime.title', 'Lifetime metrics')}
               retained={liveChargingDataState.status === 'stale' || sessionsDataState.status === 'stale'}
               period={{ kind: 'unknown', label: t('energy.lifetime.brief.scope', 'Lifetime BMS reading and selected charging window'),

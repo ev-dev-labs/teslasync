@@ -81,6 +81,7 @@ export function AIUsageCard({ enabled = true, showSourceNotice = true }: {
         </Badge>
       </div>
       <SettingsSummaryBrief title={t('ai.settings.usage.brief.title', 'Audited usage totals')}
+        variant="embedded"
         description={t('ai.settings.usage.brief.description', 'Input tokens, output tokens and estimated cost from the existing daily usage audit. Small non-zero costs retain six-decimal precision.')}
         source={t('ai.settings.usage.brief.source', 'Helix daily usage audit')}
         scope={t('ai.settings.usage.utc', 'Today · UTC')}

@@ -766,6 +766,7 @@ export default function BatteryHealthPage() {
                 {t('battery.newVsNow.title', 'Capacity & Range: New vs Now')}
               </PanelTitle>
               <BatteryEvidenceBrief
+                variant="embedded"
                 title={t('battery.newVsNow.brief.summary', 'Capacity and range evidence')}
                 retained={healthDataState.status === 'stale'}
                 period={{ kind: 'unknown', label: t('battery.newVsNow.brief.scope', 'Reference capacity and first / latest range snapshots'),

@@ -141,6 +141,7 @@ export function PackCapacityRowAccounting({
         </Text>
         <PackCapacitySectionBody result={result} state={state} requirement="none">
           <BatteryEvidenceBrief
+            variant="embedded"
             id="pack-capacity-accounting-summary"
             title={t('packCapacity.modernization.accountingSummary', 'Charging-row summary')}
             metrics={metrics}

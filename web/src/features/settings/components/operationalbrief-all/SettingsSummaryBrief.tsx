@@ -19,11 +19,12 @@ interface Props {
   retained?: boolean
   testId?: string
   freshness?: ReactNode
+  variant?: 'standalone' | 'embedded'
 }
 
 export function SettingsSummaryBrief({
   title, description, source, scope, metrics, loading = false,
-  unavailable = false, retained = false, testId, freshness,
+  unavailable = false, retained = false, testId, freshness, variant = 'standalone',
 }: Props) {
   const { t } = useTranslation('settings')
   const bridged = useOperationalMetrics(metrics.map(metric => ({
@@ -39,7 +40,7 @@ export function SettingsSummaryBrief({
         : t('summaryBrief.available', 'Source available')
 
   return (
-    <OperationalBrief compact title={title} description={description}
+    <OperationalBrief compact variant={variant} title={title} description={description}
       eyebrow={source} statusLabel={statusLabel}
       statusTone={retained || unavailable ? 'warning' : 'neutral'}
       metrics={bridged.map((metric, index) => ({ ...metric, loading: metrics[index]?.loading }))}

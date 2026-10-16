@@ -91,7 +91,7 @@ export function BatteryPassportKpiBand({
             'Direct certificate fields and server-derived proxies; no calibration, causality, or remaining-life claim.',
           )}>
         <BatteryPassportSectionBody state={state}>
-          <BatteryEvidenceBrief title={t('batteryPassport.kpis.title', 'Certificate-reported KPI band')} metrics={summary} loading={state.isLoading} retained={Boolean(state.refreshError)}
+          <BatteryEvidenceBrief variant="embedded" title={t('batteryPassport.kpis.title', 'Certificate-reported KPI band')} metrics={summary} loading={state.isLoading} retained={Boolean(state.refreshError)}
             timestampContext={state.timestampContext}
             period={{ kind: 'snapshot', label: formatDateTime(state.passport?.issued_at, state.timestampContext),
               observedAt: state.passport?.issued_at ?? null,

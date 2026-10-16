@@ -16,11 +16,13 @@ interface Props {
   hasEvidence?: boolean;
   secondary?: string;
   timestampContext?: FormatOptions;
+  variant?: 'standalone' | 'embedded';
 }
 
 /** Keep source-window limitations beside the readings and in the real review drawer. */
 export function BatteryEvidenceBrief({
   id, title, description, metrics, period, loading = false, retained = false, hasEvidence, secondary, timestampContext,
+  variant = 'standalone',
 }: Props) {
   const { t } = useTranslation();
   const scopeReason = period.kind === 'unknown' ? period.reason : period.provenance;
@@ -39,6 +41,7 @@ export function BatteryEvidenceBrief({
     <div id={id} className="min-w-0 break-words">
     <OperationalBrief
       compact
+      variant={variant}
       testId={id}
       eyebrow={t('battery.brief.eyebrow', 'Battery and energy evidence')}
       title={title}

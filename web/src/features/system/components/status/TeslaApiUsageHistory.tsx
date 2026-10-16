@@ -125,6 +125,7 @@ export function TeslaApiUsageHistory() {
       />}
       <GlassPanel className="p-4 sm:p-6">
       <SystemSummaryBrief
+        variant="embedded"
         title={t('teslaUsage.selectedEstimate', 'Selected range estimate')}
         description={t('teslaUsage.historyDisclaimer', 'Local observations only, not a Tesla invoice. Missing deliveries or audit logs can undercount; these UTC windows are not Tesla calendar-month billing cycles.')}
         scope={`${range.start} – ${range.end} UTC`}

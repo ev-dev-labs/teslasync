@@ -52,7 +52,7 @@ export function VampireSplitPanel({ vehicleId, dateOptions }: {
         ) : split ? (
           <>
             <Text as="p" variant="caption">{split.honesty}</Text>
-            <BatteryEvidenceBrief title={t('vampireDrain.modernization.splitSummary', 'Observed drain split')} description={split.honesty} period={period} retained={state.status !== 'ok'} metrics={[
+            <BatteryEvidenceBrief variant="embedded" title={t('vampireDrain.modernization.splitSummary', 'Observed drain split')} description={split.honesty} period={period} retained={state.status !== 'ok'} metrics={[
               { metricId: 'percent', occurrenceId: 'vampire-plugged', rawValue: split.complete_plugged_drain_pct, label: t('vampireDrain.split.completePct', 'At-limit plugged') },
               { metricId: 'percent', occurrenceId: 'vampire-unplugged', rawValue: split.unplugged_drain_pct, label: t('vampireDrain.split.unpluggedPct', 'After unplug') },
             ]} />

@@ -137,7 +137,7 @@ export function DrivetrainSummary(props: Props) {
         </SourceBoundary>
       </LayoutCard> },
       { id: 'drive-statistics', size: 'third', content: <LayoutCard title={t('drivetrain.driveStats', 'Drive Statistics')}>
-        <DrivingSummaryBrief metrics={statistics} title={t('drivetrain.modernization.allReturnedStats', 'Vehicle drive statistics')}
+        <DrivingSummaryBrief variant="embedded" metrics={statistics} title={t('drivetrain.modernization.allReturnedStats', 'Vehicle drive statistics')}
           description={statisticsCopy.provenance}
           scope={statisticsCopy.scope}
           provenance={statisticsCopy.provenance}

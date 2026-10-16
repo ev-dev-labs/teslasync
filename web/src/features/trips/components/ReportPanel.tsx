@@ -67,7 +67,7 @@ export function ReportPanel({ session }: { session: JourneySession }) {
 
   return (
     <LayoutCard title={t('journey.report.title', 'Trip report')}>
-      <TripOperationalBrief source={reportState} loading={reportQuery.isLoading && !reportState.hasData}
+      <TripOperationalBrief variant="embedded" source={reportState} loading={reportQuery.isLoading && !reportState.hasData}
         metrics={operationalMetrics} scope={scope}
         eyebrow={t('trips.brief.report.eyebrow', 'Journey debrief')}
         title={t('trips.brief.report.title', 'Journey report summary')}

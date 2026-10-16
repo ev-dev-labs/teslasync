@@ -98,7 +98,7 @@ export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponent
       'Charge advisor guidance and evidence summary',
     )}>
       <LayoutCard title={t('chargeAdvisor.kpis.title', 'Observed charge planning evidence')}>
-        <BatteryEvidenceBrief title={t('chargeAdvisor.kpis.title', 'Observed charge planning evidence')} metrics={metrics} retained={Boolean(state.refreshError)}
+        <BatteryEvidenceBrief variant="embedded" title={t('chargeAdvisor.kpis.title', 'Observed charge planning evidence')} metrics={metrics} retained={Boolean(state.refreshError)}
           period={{ kind: 'unknown', label: t('chargeAdvisor.kpis.title', 'Observed charge planning evidence'),
             reason: t('chargeAdvisor.summaryScope', 'History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot.') }} />
 

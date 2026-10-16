@@ -85,6 +85,7 @@ export function CommandReadinessStrip({
       data-testid="command-readiness"
     >
       <SystemSummaryBrief
+        variant="embedded"
         title={t('commands.readiness.title', 'Command readiness')}
         description={t('commands.readiness.description', 'Connection, telemetry, and motion context before a remote request is sent.')}
         scope={vehicle.display_name ?? vehicle.vin}

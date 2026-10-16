@@ -48,6 +48,7 @@ export function ActivityOverview({ items, total, offset, loading, error, timezon
               {pageCoverage}
             </Text>
             <SystemSummaryBrief
+              variant="embedded"
               title={t('activity.timeline.overview.mix', 'Event types on this page')}
               description={t('activity.timeline.brief.mixDescription', 'Counts by event type describe only the loaded page, not the entire selected range.')}
               scope={`${scope ?? t('activity.timeline.brief.scope', 'Selected range and current loaded page have different coverage.')} · ${pageCoverage}`}

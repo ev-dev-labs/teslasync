@@ -21,16 +21,17 @@ interface DrivingSummaryBriefProps {
   statusLabel?: string;
   preferences?: MetricPreferences;
   showError?: boolean;
+  variant?: 'standalone' | 'embedded';
 }
 
 export function DrivingSummaryBrief({
   metrics, title, eyebrow, description, scope, provenance, loading = false,
-  error, retained = false, onRetry, testId, statusLabel, preferences, showError = true,
+  error, retained = false, onRetry, testId, statusLabel, preferences, showError = true, variant = 'standalone',
 }: DrivingSummaryBriefProps) {
   const { t } = useTranslation();
   const values = useOperationalMetrics(metrics, preferences);
   return <>
-    <OperationalBrief compact
+    <OperationalBrief compact variant={variant}
       eyebrow={eyebrow ?? t('driving.brief.eyebrow', 'Driving evidence')}
       title={title}
       description={description}

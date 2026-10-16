@@ -194,6 +194,7 @@ export function SLOTrackingCard() {
       >
       <div className="mt-3" aria-live="polite">
         <SystemSummaryBrief
+          variant="embedded"
           title={t('systemStatus.slo.metricsTitle', 'Uptime evidence')}
           description={data?.note ?? t('systemStatus.slo.briefDescription', 'Historical uptime is shown only for a series-backed response; current component health is separate snapshot evidence.')}
           scope={hasHistory ? windowLabels[win] : t('systemStatus.currentHealthOnly', 'Current component health')}

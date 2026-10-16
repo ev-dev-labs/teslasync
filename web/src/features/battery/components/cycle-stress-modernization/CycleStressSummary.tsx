@@ -119,7 +119,7 @@ export function CycleStressSummary({
               onChange={event => onExponentChange(Number(event.target.value))} />
           </div>
         </div>
-        <BatteryEvidenceBrief id="cycle-stress-summary" title={t('cycleStress.kpis.title', 'Reconstructed cycle evidence')} metrics={metrics} period={period}
+        <BatteryEvidenceBrief variant="embedded" id="cycle-stress-summary" title={t('cycleStress.kpis.title', 'Reconstructed cycle evidence')} metrics={metrics} period={period}
           loading={state.isLoading}
           retained={trust.sources.some(source => source.trust.hasData
             && Boolean(source.trust.refreshError || source.trust.isRefreshBlocked))} />

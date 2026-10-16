@@ -173,6 +173,7 @@ export function PackCapacitySummary({
         }
       >
         <BatteryEvidenceBrief
+          variant="embedded"
           id="pack-capacity-summary"
           title={t('packCapacity.kpis.title', 'Capacity evidence under filter assumptions')}
           metrics={metrics}

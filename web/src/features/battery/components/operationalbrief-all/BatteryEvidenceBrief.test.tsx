@@ -27,6 +27,15 @@ function Provider({ children }: { children: ReactNode }) {
 }
 
 describe('battery source evidence through the real OperationalBrief and bridge', () => {
+  it('renders an embedded brief without its own surface when hosted inside a card', () => {
+    const view = render(<BatteryEvidenceBrief variant="embedded" title="Embedded evidence"
+      metrics={[{ metricId: 'count', label: 'Sessions', rawValue: 1 }]}
+      period={{ kind: 'unknown', label: 'Returned window', reason: 'Source bounds are unknown' }} />,
+    { wrapper: Provider });
+    expect(view.container.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(view.container.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
   it.each([
     { locale: 'de-DE', tz: 'America/Los_Angeles' },
     { locale: 'ja-JP', tz: 'Asia/Tokyo' },

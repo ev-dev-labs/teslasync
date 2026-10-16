@@ -407,3 +407,29 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
 4. Complete every remaining Phase 6 work item: work all pending items area by area and retry every failed item once using its notes. Exclude only when the exact change is replaced by UI simplification, documenting its replacement commit and reason. Leave unresolved retried failures as failed with exact errors. List every excluded and failed item with its reason in this document.
 
 Update `.runner/state.json` and this progress document after each group. This order supersedes previous scheduling notes.
+
+### UI simplification: cross-feature nested evidence surfaces (2026-10-15)
+
+- Completed the call-site sweep for shared evidence wrappers across battery,
+  driving, settings, system, trips, vehicle methodology, analytics, charging,
+  and dashboard placements. Wrappers that previously created a second
+  bordered box now accept/forward `variant="embedded"`; nested callers use
+  it explicitly. Vehicle methodology wrappers were already variant-aware.
+- Added wrapper regressions proving embedded mode omits the standalone
+  surface. Split catalog check, repository lint, `npx tsc --noEmit`, and
+  production build pass. The build retains its existing CSS minifier warning
+  and 404.8 KB startup bundle warning.
+- A repo-wide grep of `OperationalBrief`, `*Brief`, and operational panels
+  was paired with parent-surface tracing; nested wrapper matches found in
+  this batch are now embedded or have a single outer surface. Shared metric
+  banks default to three per row and balance the last rows (six becomes 3+3);
+  existing explicit caps and regressions remain in place. The exit checklist
+  includes call-site, surface-marker, and max-per-row greps.
+- Visual review of Analytics/Driving screenshots at 375px, 768px, and 1440px
+  confirmed a single surface per block and balanced six-metric rows. Files:
+  `docs/ui-simplification/row6-analytics-driving-after-{375,768,1440}.png`.
+- The affected broad area test run remains at 189 failed / 346 passed across
+  27 suites; failures are existing evidence-card expectation drift (hidden
+  missing metrics and drawer-only metadata), plus unrelated stale caller
+  expectations. New embedded-mode assertions pass. Full suite repair remains
+  scheduled after simplification.

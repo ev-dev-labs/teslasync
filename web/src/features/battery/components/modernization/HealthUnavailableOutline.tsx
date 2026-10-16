@@ -108,7 +108,8 @@ export function HealthUnavailableOutline({ loading, summary, thermal, links }: H
         {thermal}
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle>{t('battery.newVsNow.title', 'Capacity & Range: New vs Now')}</PanelTitle>
-          <BatteryEvidenceBrief
+        <BatteryEvidenceBrief
+          variant="embedded"
             title={t('battery.newVsNow.brief.summary', 'Capacity and range evidence')}
             description={unavailable}
             metrics={comparisonMetrics}

@@ -16,11 +16,12 @@ interface DrivingSummaryBriefProps {
   freshness?: ReactNode;
   actions?: ReactNode;
   sourceStatus?: string;
+  variant?: 'standalone' | 'embedded';
 }
 
 export function DrivingSummaryBrief({
   id, title, description, metrics, scope, provenance,
-  loading = false, unavailable = false, retained = false, freshness, actions, sourceStatus,
+  loading = false, unavailable = false, retained = false, freshness, actions, sourceStatus, variant = 'standalone',
 }: DrivingSummaryBriefProps) {
   const { t } = useTranslation();
   const operationalMetrics = useOperationalMetrics(metrics);
@@ -35,6 +36,7 @@ export function DrivingSummaryBrief({
   return (
     <OperationalBrief
       compact
+      variant={variant}
       testId={id}
       eyebrow={t('driving.brief.eyebrow', 'Driving evidence')}
       title={title}

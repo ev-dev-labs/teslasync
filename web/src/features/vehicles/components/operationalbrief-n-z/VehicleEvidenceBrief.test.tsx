@@ -40,12 +40,12 @@ const metrics: readonly StatMetric[] = [
   { metricId: 'count', occurrenceId: 'coverage', label: 'Covered records', rawValue: 0, display: { countTotal: 4 } },
 ];
 
-function briefElement(status: DataStatus = 'ok', sourceMetrics = metrics, loading?: boolean) {
+function briefElement(status: DataStatus = 'ok', sourceMetrics = metrics, loading?: boolean, variant?: 'standalone' | 'embedded') {
   return <MemoryRouter><VehicleEvidenceBrief
     id="test-evidence" title="Returned vehicle evidence"
     description="Independent measurements, no shared observation timestamp."
     status={status} scope="Bounded to returned records"
-    provenance="Historical source" metrics={sourceMetrics} loading={loading} />
+    provenance="Historical source" metrics={sourceMetrics} loading={loading} variant={variant} />
   </MemoryRouter>;
 }
 
@@ -59,6 +59,12 @@ function openDetails(brief: HTMLElement) {
 }
 
 describe('VehicleEvidenceBrief raw operational bridge', () => {
+  it('renders without a surface when embedded inside a host card', () => {
+    const { container } = render(briefElement('ok', metrics, undefined, 'embedded'));
+    expect(container.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
   it('retains numeric raw inputs, signed specialist units, real zero counts and missing states', () => {
     const { result } = renderHook(() => useOperationalMetrics(metrics));
     expect(result.current.map(metric => metric.rawValue)).toEqual([0, null, -1.25, 0]);

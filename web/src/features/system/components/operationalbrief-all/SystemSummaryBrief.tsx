@@ -17,11 +17,12 @@ interface SystemSummaryBriefProps {
   freshness?: ReactNode;
   testId?: string;
   metricTones?: Readonly<Record<string, OperationalTone>>;
+  variant?: 'standalone' | 'embedded';
 }
 
 export function SystemSummaryBrief({
   title, description, scope, metrics, textMetrics = [], loading = false,
-  available, retained = false, statusLabel, freshness, testId, metricTones,
+  available, retained = false, statusLabel, freshness, testId, metricTones, variant = 'standalone',
 }: SystemSummaryBriefProps) {
   const { t } = useTranslation();
   const values = useOperationalMetrics(metrics);
@@ -37,6 +38,7 @@ export function SystemSummaryBrief({
   return (
     <OperationalBrief
       compact
+      variant={variant}
       eyebrow={t('system.brief.eyebrow', 'System evidence')}
       title={title}
       description={description}

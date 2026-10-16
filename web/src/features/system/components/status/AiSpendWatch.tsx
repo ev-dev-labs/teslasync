@@ -39,6 +39,7 @@ export function AiSpendWatch() {
         <PanelTitle>{t('systemStatus.aiSpend.title', 'Helix spend watch')}</PanelTitle>
       </div>
       <SystemSummaryBrief
+        variant="embedded"
         title={t('systemStatus.aiSpend.title', 'Helix spend watch')}
         description={t('systemStatus.aiSpend.caveat', 'Based on recorded AI calls only. Delayed or missing audit records can undercount; projections assume today’s pace continues.')}
         scope={t('systemStatus.aiSpend.briefScope', 'Audited today (UTC), prior seven-day daily average, and projected UTC midnight spend are different windows.')}

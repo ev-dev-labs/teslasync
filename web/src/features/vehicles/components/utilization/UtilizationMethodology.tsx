@@ -198,7 +198,7 @@ export function UtilizationMethodology({
         </Badge>
       </div>
 
-      <VehicleEvidenceBrief id="utilization-coverage-summary"
+      <VehicleEvidenceBrief variant="embedded" id="utilization-coverage-summary"
         title={t('utilization.method.title', 'Coverage & methodology')}
         description={t('utilization.method.window', 'The observed window begins at the first eligible returned drive, avoiding claims about time before the first in-range record.')}
         status={status === 'ok' && accounting.historyCapReached ? 'partial' : status}

@@ -16,11 +16,12 @@ const preferences = vi.hoisted(() => ({
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({ unitPrefs: preferences.units }) }));
 vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }));
 
-function renderBrief(metrics: readonly StatMetric[], loading = false) {
+function renderBrief(metrics: readonly StatMetric[], loading = false, variant?: 'standalone' | 'embedded') {
   return render(<MemoryRouter><DrivingSummaryBrief
     id="test-driving-brief" title="Selected-window evidence" description="Returned rows only"
     scope="2026-01-01 — 2026-02-01" provenance="Recorded drives" metrics={metrics}
     loading={loading}
+    variant={variant}
   /></MemoryRouter>);
 }
 
@@ -29,6 +30,13 @@ beforeEach(() => {
 });
 
 describe('DrivingSummaryBrief — real OperationalBrief and raw metric bridge', () => {
+  it('renders an embedded brief without its own surface inside an existing card', () => {
+    renderBrief([{ metricId: 'count', label: 'Drives', rawValue: 1 }], false, 'embedded');
+    const brief = screen.getByTestId('test-driving-brief');
+    expect(brief.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
   it.each([
     ['regen-efficiency-modernization', 'RankedDriveEvidence', 'LayoutCard', 'layout'],
     ['regen-efficiency-modernization', 'RecoveryContext', 'LayoutCard', 'layout'],

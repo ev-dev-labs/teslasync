@@ -23,6 +23,15 @@ vi.mock('@/hooks/useDateFormat', () => ({
 }))
 
 describe('settings summaries use the real compact Brief and raw bridge', () => {
+  it('renders an embedded brief without adding a second surface inside its host card', () => {
+    const { container } = render(<MemoryRouter><SettingsSummaryBrief title="Configuration"
+      description="Independent settings sources" source="Saved settings" scope="Latest configuration"
+      metrics={[{ metricId: 'count', occurrenceId: 'setting-count', rawValue: 1, label: 'Enabled' }]}
+      variant="embedded" /></MemoryRouter>)
+    expect(container.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument()
+    expect(container.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull()
+  })
+
   it('retains raw numeric values, explicit count totals, source units and rich drawer context', () => {
     const costFormatter = vi.fn((raw: number) => ({ value: `€${raw.toFixed(4)}`, unit: '/ kWh' }))
     const { container } = render(<MemoryRouter>

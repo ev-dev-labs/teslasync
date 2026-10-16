@@ -173,6 +173,7 @@ export function CycleStressAccounting({ result, state, retained = false, locale 
         </Text>
         <CycleStressSectionBody result={result} state={state} requirement="none">
           <BatteryEvidenceBrief
+            variant="embedded"
             title={t('cycleStress.modernization.accountingSummary', 'Drive and charging row summary')}
             retained={retained || Boolean(state.refreshError)}
             period={{ kind: 'unknown', label: t('cycleStress.modernization.period', 'Returned vehicle histories · bounded evidence'),
