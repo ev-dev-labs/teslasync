@@ -18,7 +18,9 @@ vi.mock('react-i18next', () => {
       : typeof bag.defaultValue === 'string' ? bag.defaultValue : key
     const plural = typeof bag.count === 'number'
       ? bag.count === 1 ? bag.defaultValue_one : bag.defaultValue_other : undefined
-    return interpolate(typeof plural === 'string' ? plural : fallback, bag)
+    const values = bag.replace && typeof bag.replace === 'object'
+      ? bag.replace as Record<string, unknown> : bag
+    return interpolate(typeof plural === 'string' ? plural : fallback, values)
   }
   return {
     useTranslation: () => ({ t, i18n: { language: 'en', changeLanguage: vi.fn() } }),

@@ -10,13 +10,6 @@ import { ComfortConsistencyEvidenceKpiLedger } from './comfort-consistency/Comfo
 import { HvacCyclingEvidenceKpiLedger } from './hvac-cycling/HvacCyclingEvidenceKpiLedger';
 import { PreconditioningEvidenceLedger } from './preconditioning-effectiveness/PreconditioningEvidenceLedger';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (_key: string, fallback: string, values?: Record<string, unknown>) =>
-      fallback.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => String(values?.[key] ?? '')),
-    i18n: { language: 'en' },
-  }),
-}));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: {
     distance: 'km', speed: 'km/h', energy: 'kWh', power: 'kW', temperature: '°C',
@@ -36,29 +29,29 @@ const sourceState = (resolved: boolean, retained: boolean) => ({
 interface Fixture {
   name: string;
   title: string;
-  zeroValueIndex: number;
-  missingValueIndex: number;
+  knownIds: string[];
+  hiddenIds: string[];
   render: (resolved: boolean, retained: boolean) => ReactElement;
 }
 
 const fixtures: Fixture[] = [
   {
-    name: 'cabin thermal', title: 'Thermal evidence ledger', zeroValueIndex: 0, missingValueIndex: 5,
+    name: 'cabin thermal', title: 'Thermal evidence ledger', knownIds: ['returned', 'normalized', 'candidates', 'accepted', 'rejected'].map(id => `cabin-thermal-${id}`), hiddenIds: ['cabin-thermal-tau'],
     render: (resolved, retained) => <CabinThermalEvidenceStats summary={summarizeCabinThermal([])}
       state={sourceState(resolved, retained)} formatDuration={formatDuration} />,
   },
   {
-    name: 'comfort consistency', title: 'Evidence KPI ledger', zeroValueIndex: 1, missingValueIndex: 4,
+    name: 'comfort consistency', title: 'Evidence KPI ledger', knownIds: ['analyzed-samples', 'observed-active-duration'], hiddenIds: ['consistency-score', 'within-band-share', 'weighted-deviation', 'stabilization-share'],
     render: (resolved, retained) => <ComfortConsistencyEvidenceKpiLedger summary={summarizeComfortConsistency([])}
       state={sourceState(resolved, retained)} formatDuration={formatDuration} formatDelta={formatDelta} />,
   },
   {
-    name: 'HVAC cycling', title: 'Evidence KPI ledger', zeroValueIndex: 0, missingValueIndex: 4,
+    name: 'HVAC cycling', title: 'Evidence KPI ledger', knownIds: ['returned-rows', 'known-state-samples', 'observed-intervals', 'observed-duration'], hiddenIds: ['on-duty', 'short-cycle-rate'],
     render: (resolved, retained) => <HvacCyclingEvidenceKpiLedger summary={summarizeHvacCycling([])}
       state={sourceState(resolved, retained)} formatDuration={formatDuration} />,
   },
   {
-    name: 'preconditioning', title: 'KPI and evidence ledger', zeroValueIndex: 0, missingValueIndex: 3,
+    name: 'preconditioning', title: 'KPI and evidence ledger', knownIds: ['classified-departures', 'hvac-off-control'], hiddenIds: ['hvac-active-share', 'readiness-difference', 'improvement-difference', 'comparison-confidence'],
     render: (resolved, retained) => <PreconditioningEvidenceLedger
       summary={summarizePreconditioningEffectiveness([], [])}
       state={{ vehicleSelected: true, climate: sourceState(resolved, retained), drives: sourceState(resolved, false), onRefresh: vi.fn() }}
@@ -67,15 +60,17 @@ const fixtures: Fixture[] = [
 ];
 
 describe.each(fixtures)('$name actual operational evidence brief', fixture => {
-  it('preserves all six unknown metrics before resolution and does not invent a period', () => {
+  it('explains all six unavailable fields before resolution and does not invent a period', () => {
     const { container } = render(fixture.render(false, false));
     const metrics = container.querySelectorAll('[data-operational-metric]');
-    expect(metrics).toHaveLength(6);
-    for (const metric of metrics) {
-      expect(metric).toHaveAttribute('data-value-state', 'missing');
-      expect(metric.querySelector('[data-operational-value]')).toHaveTextContent('—');
-      expect(metric).toHaveAttribute('role', 'listitem');
-    }
+    expect(metrics).toHaveLength(0);
+    expect(container.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+    expect(within(container).getByText('No metric values are available yet.')).toBeInTheDocument();
+    expect(within(container).getByText('Values will appear when the source provides measurements.')).toBeInTheDocument();
+    fireEvent.click(within(container).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('6 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(container.querySelector('[data-source-period-kind]')).toHaveAttribute('data-source-period-kind', 'unknown');
     expect(container.querySelector('[data-operational-brief]')).toBeInTheDocument();
     expect(within(container).getAllByRole('heading')).toHaveLength(1);
@@ -85,16 +80,23 @@ describe.each(fixtures)('$name actual operational evidence brief', fixture => {
   it('distinguishes successful observed zero from withheld inference and retains both on refresh failure', () => {
     const view = render(fixture.render(true, false));
     const before = view.container.querySelectorAll('[data-operational-metric]');
-    expect(before).toHaveLength(6);
-    expect(before[fixture.zeroValueIndex]).toHaveAttribute('data-value-state', 'value');
-    expect(before[fixture.zeroValueIndex].querySelector('[data-operational-value]')).toHaveTextContent('0');
-    expect(before[fixture.missingValueIndex]).toHaveAttribute('data-value-state', 'missing');
-    expect(before[fixture.missingValueIndex].querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(before).toHaveLength(fixture.knownIds.length);
+    expect(fixture.knownIds.length + fixture.hiddenIds.length).toBe(6);
+    for (const id of fixture.knownIds) {
+      const metric = view.container.querySelector(`[data-operational-metric="${id}"]`);
+      expect(metric).toHaveAttribute('data-value-state', 'value');
+      expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent('0');
+    }
+    for (const id of fixture.hiddenIds) expect(view.container.querySelector(`[data-operational-metric="${id}"]`)).not.toBeInTheDocument();
+    fireEvent.click(within(view.container).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(fixture.hiddenIds.length === 1 ? '1 empty field is hidden.' : `${fixture.hiddenIds.length} empty fields are hidden.`)).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
     const values = [...before].map(metric => metric.querySelector('[data-operational-value]')?.textContent);
     const states = [...before].map(metric => metric.getAttribute('data-value-state'));
     view.rerender(fixture.render(true, true));
     const after = view.container.querySelectorAll('[data-operational-metric]');
-    expect(after).toHaveLength(6);
+    expect(after).toHaveLength(fixture.knownIds.length);
     expect([...after].map(metric => metric.querySelector('[data-operational-value]')?.textContent)).toEqual(values);
     expect([...after].map(metric => metric.getAttribute('data-value-state')))
       .toEqual(states);
@@ -105,7 +107,7 @@ describe.each(fixtures)('$name actual operational evidence brief', fixture => {
   it('opens the real retained evidence drawer with every existing measurement label and caption', () => {
     const view = render(fixture.render(true, true));
     const labels = [...view.container.querySelectorAll('[data-operational-metric]')]
-      .map(metric => metric.firstElementChild?.firstElementChild?.textContent);
+      .map(metric => metric.firstElementChild?.textContent);
     fireEvent.click(within(view.container).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     for (const label of labels) {

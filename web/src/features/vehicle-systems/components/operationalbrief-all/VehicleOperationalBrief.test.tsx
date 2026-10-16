@@ -20,19 +20,22 @@ vi.mock('@/hooks/useUnits', () => ({
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ currencySymbol: '€' }),
 }));
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string, values?: Record<string, unknown>) =>
-      (fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(values?.[name] ?? '')),
-    i18n: { language: 'en' },
-  }),
-}));
 
 const period = {
   kind: 'unknown' as const,
   label: 'Returned climate rows',
   reason: 'Seven-day climate source and independently limited drive history; not complete coverage.',
 };
+
+function withDetails(check: (dialog: HTMLElement) => void) {
+  fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  check(dialog);
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+function expectMetadata(text: string) {
+  withDetails(dialog => expect(within(dialog).getByText(text)).toBeInTheDocument());
+}
 
 describe('real vehicle OperationalBrief and numeric bridge', () => {
   it('preserves the media slot fallback and public CardGrid placement without adding a panel', () => {
@@ -99,12 +102,13 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
     const brief = view.container.querySelector('[data-operational-brief]');
     expect(brief).toBeInTheDocument();
     expect(brief).not.toHaveAttribute('aria-busy');
-    expect(brief?.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief?.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(brief?.querySelector('[data-operational-metric="pressure"] [data-operational-value]')).toHaveTextContent('2.80 bar');
     expect(brief?.querySelector('[data-operational-metric="volume"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief?.querySelector('[data-operational-metric="volume"] [data-operational-value]')).toHaveTextContent('source:0');
-    expect(brief?.querySelector('[data-operational-metric="unknown"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(brief?.querySelector('[data-operational-metric="invalid"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(brief?.querySelector('[data-operational-metric="unknown"]')).not.toBeInTheDocument();
+    expect(brief?.querySelector('[data-operational-metric="invalid"]')).not.toBeInTheDocument();
+    expectMetadata('2 empty fields are hidden.');
     expect(sourceFormatter.mock.calls.map(call => call[0])).not.toContainEqual(Number.NaN);
     expect(metrics[0].rawValue).toBe(280);
   });
@@ -168,19 +172,24 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
       historySource={deriveDataState({ data: [row], dataUpdatedAt: readAt }, { provenance: 'historical', partial: true })}
       mediaSource={deriveDataState({ data: latest, dataUpdatedAt: readAt })}
       start="2026-06-01" end="2026-07-01" />);
-    for (const id of ['media-unique-tracks', 'media-top-source', 'media-average-volume']) {
-      const metric = view.container.querySelector(`[data-operational-metric="${id}"]`);
-      expect(metric).toHaveTextContent('Partial evidence');
-      expect(metric).toHaveTextContent('Returned history: 2026-06-01 – 2026-07-01');
-      expect(metric).not.toHaveTextContent('Latest media snapshot');
-    }
+    withDetails(dialog => {
+      for (const name of ['Unique tracks', 'Top source', 'Avg volume']) {
+        const metric = within(dialog).getByRole('group', { name });
+        expect(metric).toHaveTextContent('Partial evidence');
+        expect(metric).toHaveTextContent('Returned history: 2026-06-01 – 2026-07-01');
+        expect(metric).not.toHaveTextContent('Latest media snapshot');
+      }
+      const step = within(dialog).getByRole('group', { name: 'Volume step' });
+      expect(step).toHaveTextContent('Latest media snapshot');
+      expect(step).not.toHaveTextContent('Partial evidence');
+      expect(within(dialog).getByText('Not a live-state observation')).toBeInTheDocument();
+      expect(dialog.querySelector('time')).not.toBeInTheDocument();
+      expect(dialog).not.toHaveTextContent(/Up to date|Fresh|2026-10-14/);
+    });
     const step = view.container.querySelector('[data-operational-metric="media-volume-step"]');
-    expect(step).toHaveTextContent('Latest media snapshot');
-    expect(step).not.toHaveTextContent('Partial evidence');
     expect(step?.querySelector('[data-operational-value]')).toHaveTextContent('0');
     expect(view.container.querySelector('[data-operational-metric="media-average-volume"] [data-operational-value]'))
       .toHaveTextContent('0');
-    expect(screen.getByText('Not a live-state observation')).toBeInTheDocument();
     expect(view.container.querySelector('time')).not.toBeInTheDocument();
     expect(view.container).not.toHaveTextContent(/Up to date|Fresh|2026-10-14/);
   });
@@ -191,16 +200,16 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
       now_playing_title: 'Recorded track', playback_source: 'Spotify', audio_volume: 6,
       audio_volume_increment: 0.5,
     };
-    const view = render(<MediaStats filtered={[row]} history={[row]} latest={row}
+    render(<MediaStats filtered={[row]} history={[row]} latest={row}
       hasVehicle historyLoading={false} mediaLoading={false} historyError={null} mediaError={null}
       mediaSource={deriveDataState({ data: row, fetchStatus: 'paused' })}
       start="2026-06-01" end="2026-07-01" />);
-    expect(view.container.querySelector('[data-operational-metric="media-volume-step"]'))
-      .toHaveTextContent('Retained evidence');
-    for (const id of ['media-unique-tracks', 'media-top-source', 'media-average-volume']) {
-      expect(view.container.querySelector(`[data-operational-metric="${id}"]`))
-        .not.toHaveTextContent('Retained evidence');
-    }
+    withDetails(dialog => {
+      expect(within(dialog).getByRole('group', { name: 'Volume step' })).toHaveTextContent('Retained evidence');
+      for (const name of ['Unique tracks', 'Top source', 'Avg volume']) {
+        expect(within(dialog).getByRole('group', { name })).not.toHaveTextContent('Retained evidence');
+      }
+    });
     expect(screen.getByRole('status')).toHaveTextContent('Showing retained measurements');
   });
 
@@ -213,7 +222,7 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
     const view = render(<MediaStats {...props} />);
     const brief = () => view.container.querySelector('[data-operational-brief]');
     expect(brief()).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByText('Loading source')).toBeInTheDocument();
+    expectMetadata('Loading source');
     expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(view.container.querySelector('[data-operational-value]')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
@@ -223,7 +232,7 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
     view.rerender(<MediaStats {...props} historyLoading={false} mediaLoading={false}
       historyError={new Error('History failed')} mediaError={new Error('Latest failed')} />);
     expect(brief()).not.toHaveAttribute('aria-busy');
-    expect(screen.getByText('Source unavailable')).toBeInTheDocument();
+    expectMetadata('Source unavailable');
     expect(screen.getByRole('alert')).toHaveTextContent('This source is unavailable');
 
     const zero: MediaSnapshot = { id: 1, vehicle_id: 7, created_at: props.start, audio_volume_increment: 0 };
@@ -231,14 +240,14 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
       history={[]} latest={zero} />);
     expect(brief()).not.toHaveAttribute('aria-busy');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.getByText('Returned evidence')).toBeInTheDocument();
+    expectMetadata('Returned evidence');
     for (const id of ['media-unique-tracks', 'media-volume-step']) {
       expect(view.container.querySelector(`[data-operational-metric="${id}"] [data-operational-value]`))
         .toHaveTextContent('0');
     }
     for (const id of ['media-top-source', 'media-average-volume']) {
       expect(view.container.querySelector(`[data-operational-metric="${id}"]`))
-        .toHaveAttribute('data-value-state', 'missing');
+        .not.toBeInTheDocument();
     }
   });
 
@@ -249,10 +258,12 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
       mediaSource={deriveDataState<MediaSnapshot>({ fetchStatus: 'paused' })}
       start="2026-06-01" end="2026-07-01" />);
     expect(view.container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy');
-    expect(screen.getByText('Evidence unresolved')).toBeInTheDocument();
+    expectMetadata('Evidence unresolved');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(view.container).not.toHaveTextContent('Loading this source');
-    expect(view.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expectMetadata('4 empty fields are hidden.');
   });
 
   it('keeps disabled no-vehicle sources unresolved instead of loading or fatal', () => {
@@ -261,9 +272,11 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
       historyError={new Error('Disabled history')} mediaError={new Error('Disabled latest')}
       start="2026-06-01" end="2026-07-01" />);
     expect(view.container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy');
-    expect(screen.getByText('Evidence unresolved')).toBeInTheDocument();
+    expectMetadata('Evidence unresolved');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(view.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument();
+    expectMetadata('4 empty fields are hidden.');
   });
 
   it.each(['history', 'latest'] as const)('keeps independent %s metrics through initial loading, failure, retained refresh and recovery', source => {
@@ -301,7 +314,7 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
     view.rerender(<MediaStats {...props} historyLoading={false} mediaLoading={false} history={[row]} latest={row} filtered={[row]} />);
     expect(value()).toHaveTextContent('0');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(screen.getByText('Returned evidence')).toBeInTheDocument();
+    expectMetadata('Returned evidence');
     expect(view.container.querySelector('[data-source-retained]')).not.toBeInTheDocument();
   });
 });

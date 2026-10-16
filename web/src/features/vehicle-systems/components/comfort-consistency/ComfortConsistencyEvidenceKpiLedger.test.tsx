@@ -10,6 +10,7 @@ import { summarizeComfortConsistency } from '../../lib/comfortConsistency';
 import { ComfortConsistencyDataAvailability } from './ComfortConsistencyDataAvailability';
 import { ComfortConsistencyEvidenceKpiLedger } from './ComfortConsistencyEvidenceKpiLedger';
 import type { ComfortConsistencyQueryState } from './types';
+import { formatMetric } from '@/lib/metric-reference';
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: {
@@ -20,14 +21,6 @@ vi.mock('@/hooks/useUnits', () => ({
 }));
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ currencySymbol: '€' }),
-}));
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string, values?: Record<string, unknown>) =>
-      (fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
-        String(values?.[name] ?? '')),
-    i18n: { language: 'en' },
-  }),
 }));
 
 const originalPreferences = getFormatterPreferences();
@@ -58,8 +51,7 @@ function renderScores(score: number | null | undefined) {
   </>);
   const metrics = ['consistency-score', 'score'].map(id => {
     const metric = view.container.querySelector(`[data-operational-metric="${id}"]`);
-    expect(metric).not.toBeNull();
-    return metric!;
+    return metric;
   });
   return { ...view, summary, metrics };
 }
@@ -75,8 +67,9 @@ describe('comfort consistency integer score displays', () => {
   ])('formats measured score %s at both sites without changing the raw score', (raw, display) => {
     const { metrics, summary } = renderScores(raw);
     for (const metric of metrics) {
+      expect(metric).toBeInTheDocument();
       expect(metric).toHaveAttribute('data-value-state', 'value');
-      expect(metric.querySelector('[data-operational-value]')?.textContent).toBe(display);
+      expect(metric?.querySelector('[data-operational-value]')?.textContent).toBe(display);
     }
     expect(summary.consistencyScore).toBe(raw);
   });
@@ -90,9 +83,12 @@ describe('comfort consistency integer score displays', () => {
   ])('keeps absent or invalid score %s distinct from measured zero', (raw, valueState) => {
     const { metrics, summary } = renderScores(raw);
     for (const metric of metrics) {
-      expect(metric).toHaveAttribute('data-value-state', valueState);
-      expect(metric.querySelector('[data-operational-value]')?.textContent).not.toBe('0');
+      expect(metric).not.toBeInTheDocument();
     }
+    expect(formatMetric('number', raw, {
+      units: { distance: 'km', speed: 'km/h', energy: 'kWh', power: 'kW', temperature: '°C', pressure: 'bar', duration: 'h', precision: 3, locale: 'de-DE' },
+      currency: { kind: 'symbol', value: '€' },
+    }).state).toBe(valueState);
     expect(summary.consistencyScore).toBe(raw);
   });
 
@@ -103,7 +99,8 @@ describe('comfort consistency integer score displays', () => {
       setGlobalPrecision(5);
     });
     for (const metric of metrics) {
-      expect(metric.querySelector('[data-operational-value]')?.textContent).toBe('1,235');
+      expect(metric).toBeInTheDocument();
+      expect(metric?.querySelector('[data-operational-value]')?.textContent).toBe('1,235');
     }
     expect(summary.consistencyScore).toBe(1234.6);
   });

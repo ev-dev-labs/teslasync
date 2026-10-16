@@ -48,6 +48,20 @@ describe('test-setup — plural fallback parity', () => {
   })
 })
 
+describe('test-setup — replacement interpolation parity', () => {
+  it.each(['0', '1,234'])('matches i18next replacement values for %s', async count => {
+    const english = createInstance()
+    await english.init({ lng: 'en', resources: { en: { translation: {} } } })
+    const { result } = renderHook(() => useTranslation())
+    const fallback = 'Counts are evaluated against {{count}} recorded rows.'
+    const options = { replace: { count } }
+    expect(result.current.t('test.denominator', fallback, options))
+      .toBe(english.t('test.denominator', fallback, options))
+    expect(result.current.t('test.denominator', { ...options, defaultValue: fallback }))
+      .toBe(english.t('test.denominator', { ...options, defaultValue: fallback }))
+  })
+})
+
 describe('test-setup — IntersectionObserver polyfill', () => {
   it('installs a global IntersectionObserver constructor under jsdom', () => {
     expect(typeof globalThis.IntersectionObserver).toBe('function')

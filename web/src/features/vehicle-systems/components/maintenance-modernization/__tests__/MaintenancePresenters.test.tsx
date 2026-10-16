@@ -373,14 +373,18 @@ describe('complete maintenance presenters', () => {
     expect(screen.getByText('No service records logged yet.')).toBeInTheDocument();
   });
 
-  it('distinguishes all six missing KPI values from authoritative zero counts', () => {
+  it('distinguishes all seven missing KPI values from authoritative zero counts', () => {
     const { rerender } = mount(<MaintenanceSummary source={deriveDataState(query<MaintenanceItem[]>(undefined, {
       isError: true, error: new Error('Unavailable'),
     }))} enabled />);
     const missing = within(screen.getByRole('region', { name: 'Maintenance summary' }));
     expect(missing.queryByText('0')).not.toBeInTheDocument();
-    const missingValues = screen.getAllByText('—', { selector: '[data-operational-value="true"]' });
-    expect(missingValues).toHaveLength(7);
+    expect(screen.queryAllByText('—', { selector: '[data-operational-value="true"]' })).toHaveLength(0);
+    expect(missing.getByText('No metric values are available yet.')).toBeInTheDocument();
+    fireEvent.click(missing.getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('7 empty fields are hidden.')).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
     rerender(<MaintenanceSummary source={deriveDataState(query<MaintenanceItem[]>([]))} enabled />);
     expect(screen.getAllByText('0')).toHaveLength(7);
     expect(h.request).not.toHaveBeenCalled();

@@ -10,13 +10,6 @@ import { HvacCyclingExactAccounting } from '../hvac-cycling/HvacCyclingExactAcco
 import { PreconditioningSourceCoverage } from '../preconditioning-effectiveness/PreconditioningSourceCoverage';
 import { SourceAvailabilityBrief } from './SourceAvailabilityBrief';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: string, values?: Record<string, unknown> & { replace?: Record<string, unknown> }) =>
-      (fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(values?.replace?.[name] ?? values?.[name] ?? '')),
-    i18n: { language: 'en' },
-  }),
-}));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: { duration: 's', locale: 'en-US', precision: 2 } }),
 }));
@@ -91,11 +84,11 @@ describe('secondary banks use the actual Brief without replacing accounting iden
       formatDuration={duration} locale="en-US" />);
     const climate = screen.getByTestId('preconditioning-climate-source-summary');
     const drives = screen.getByTestId('preconditioning-drive-source-summary');
-    expect([...climate.querySelectorAll('[data-operational-metric]')]
-      .every(metric => metric.getAttribute('data-value-state') === 'missing')).toBe(true);
+    expect(climate.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+    expect(within(climate).getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(drives.querySelector('[data-operational-metric="returned"]')).toHaveAttribute('data-value-state', 'value');
     expect(drives.querySelector('[data-operational-metric="returned"] [data-operational-value]')).toHaveTextContent('0');
-    expect(drives.querySelector('[data-operational-metric="overlap"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(drives.querySelector('[data-operational-metric="overlap"]')).not.toBeInTheDocument();
     view.rerender(<PreconditioningSourceCoverage summary={summary}
       state={{ vehicleSelected: true, climate: source(true, true), drives: source(true), onRefresh: vi.fn() }}
       formatDuration={duration} locale="en-US" />);
