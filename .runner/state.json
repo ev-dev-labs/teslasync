@@ -1173,10 +1173,10 @@
       "web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-analytics-analytics-f12 | canonical SI cutover requires out-of-scope consumers and missing Phase-48 methodology | done so far: read instructions and traced endpoint, response type, hooks and populated-data consumers Attempt 2: FAILED | fix-analytics-analytics-f12 | atomic SI cutover requires out-of-scope consumers and missing Phase-48 methodology | done so far: read contracts and instructions, verified legacy endpoint/type/consumer dependencies, attempted both required test commands; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-analytics-analytics-f12 | canonical SI cutover requires out-of-scope consumers and missing Phase-48 methodology | done so far: read instructions and traced endpoint, response type, hooks and populated-data consumers Attempt 2: FAILED | fix-analytics-analytics-f12 | atomic SI cutover requires out-of-scope consumers and missing Phase-48 methodology | done so far: read contracts and instructions, verified legacy endpoint/type/consumer dependencies, attempted both required test commands; no files changed Retry failed: AnalyticsPage.test.tsx has 6 failures for partial-source/load state copy and Analytics/Statistics suites include collapsed-brief details missing on the face.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1909,10 +1909,10 @@
       "web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-analytics-statistics-stat-qa-08 | Required verification blocked by missing dependencies and locked native modules | done so far: Updated StatisticsPeriodBrief.tsx, StatisticsSource.test.tsx, and StatisticsPage.test.tsx with disclosures and focused regressions Attempt 2: FAILED | fix-analytics-statistics-stat-qa-08 | Required tests blocked by missing dependencies; restoration blocked by locked Rollup native module | done so far: Confirmed existing disclosures and focused regressions; no source changes Attempt 1: FAILED | fix-analytics-statistics-stat-qa-08 | Required verification stalled without output | done so far: Confirmed existing disclosures and regressions in StatisticsPeriodBrief.tsx, StatisticsSource.test.tsx, and StatisticsPage.test.tsx; preserved all files",
+    "Notes": "Attempt 1: FAILED | fix-analytics-statistics-stat-qa-08 | Required verification blocked by missing dependencies and locked native modules | done so far: Updated StatisticsPeriodBrief.tsx, StatisticsSource.test.tsx, and StatisticsPage.test.tsx with disclosures and focused regressions Attempt 2: FAILED | fix-analytics-statistics-stat-qa-08 | Required tests blocked by missing dependencies; restoration blocked by locked Rollup native module | done so far: Confirmed existing disclosures and focused regressions; no source changes Attempt 1: FAILED | fix-analytics-statistics-stat-qa-08 | Required verification stalled without output | done so far: Confirmed existing disclosures and regressions in StatisticsPeriodBrief.tsx, StatisticsSource.test.tsx, and StatisticsPage.test.tsx; preserved all files Retry failed: StatisticsPage.test.tsx has 48 failures; mixed-window, CO2 methodology and other source/context details are expected on the card face but are behind Review details.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
