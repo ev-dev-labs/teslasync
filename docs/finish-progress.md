@@ -454,6 +454,18 @@ Update `.runner/state.json` and this progress document after each group. This or
   `docs/ui-simplification/row6-analytics-driving-after-{375,768,1440}.png`.
 - The broader selected area batch reported **426 passed / 95 failed** across
   13 suites. The failures remain existing data-placeholder, card-face
-  metadata, and timing/chart expectation drift; the full-suite triage is still
-  scheduled after simplification. A full lint run is being repeated after the
-  new audit registry entry, followed by a fresh production build.
+  metadata, and timing/chart expectation drift.
+- After the repository-wide nested-surface sweep commit `df9481f020`, the full
+  Vitest suite completed: **2,104 files passed / 600 failed**; **53,020 tests
+  passed, 3,861 failed, 4 skipped**, with 3 runner errors. Failures occur
+  across unrelated feature areas, including stale evidence-card expectations,
+  provider/context setup, chart/jsdom behavior, and localized output checks.
+  The failure detail is retained in the run output; triage is pending.
+- Phase 7 gates rerun at `df9481f020`: split-i18n check **pass** (57 bundles,
+  181 fallbacks, 1,264 shell keys, 0 missing); `npm run lint` **pass**;
+  `npx tsc --noEmit` **pass**; `npm run build` **pass**; `go build ./...`
+  **pass**; `go test ./...` **pass**. Build reports the existing CSS minifier
+  warning (`hue.bg-$`) and startup bundle warning (405.0 KB vs 400 KB budget),
+  neither is a build failure.
+- User-owned edits in `web/src/api/hooks/useAnalytics.ts` and its test remain
+  uncommitted and untouched.
