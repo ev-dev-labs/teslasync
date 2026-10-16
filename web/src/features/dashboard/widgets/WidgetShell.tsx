@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useEffect, useRef } from 'react';
+import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
@@ -71,39 +71,14 @@ export function WidgetShell({
   widgetId, dashboardId,
 }: WidgetShellProps) {
   const { t } = useTranslation();
-  // Pulse animation on data change
-  const [justUpdated, setJustUpdated] = useState(false);
-  const prevUpdatedAt = useRef<number | undefined>(undefined);
-
-  // Resolve the effective updatedAt for the pulse-on-change effect: the
-  // explicit prop wins, otherwise we fall back to the query's value.
-  const effectiveUpdatedAt = updatedAt ?? query?.dataUpdatedAt;
-
-  useEffect(() => {
-    if (
-      effectiveUpdatedAt &&
-      effectiveUpdatedAt > 0 &&
-      prevUpdatedAt.current !== undefined &&
-      prevUpdatedAt.current !== effectiveUpdatedAt
-    ) {
-      setJustUpdated(true);
-      const timer = setTimeout(() => setJustUpdated(false), 1500);
-      prevUpdatedAt.current = effectiveUpdatedAt;
-      return () => clearTimeout(timer);
-    }
-    prevUpdatedAt.current = effectiveUpdatedAt;
-    // Clear any lingering pulse when the effective timestamp is reset or left
-    // unchanged (e.g. a refetch regresses dataUpdatedAt back to 0). The pending
-    // timer from a prior pulse is cancelled by this effect's cleanup, so
-    // without this reset the green glow would stay stuck on.
-    setJustUpdated(false);
-  }, [effectiveUpdatedAt]);
-
   const initialLoading = dataState ? dataState.status === 'initial' : loading;
   const fatalError = dataState ? dataState.fatalError : error ? new Error(error) : null;
   const retry = onRefresh ?? dataState?.retry ?? (query ? () => { void query.refetch(); } : undefined);
 
   const showFreshness = updatedAt !== undefined || query !== undefined;
+  const degradedContent = Boolean(
+    isStale || isError || query?.isStale || query?.isError || dataState?.status === 'stale',
+  );
   // Compact (dot-only) when widget has no title (typically 1×1 widgets)
   const freshnessCompact = !title;
 
@@ -134,8 +109,7 @@ export function WidgetShell({
     <div
       className={cn(
         dashboardTokens.shell,
-        'min-h-0 flex-1 transition-shadow duration-slow',
-        justUpdated && 'shadow-[0_0_12px_rgba(34,197,94,0.15)] motion-reduce:shadow-none',
+        'min-h-0 flex-1',
         className,
       )}
       aria-busy={Boolean(initialLoading || dataState?.isRefreshing)}
@@ -146,7 +120,7 @@ export function WidgetShell({
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-start gap-2">
               {icon && <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--text-secondary)] [&>svg]:size-4">{icon}</span>}
-              <h3 className={cn(dashboardTokens.title, 'min-w-0 break-words')}>{title}</h3>
+              <h3 className={cn(dashboardTokens.title, 'min-w-0 truncate')} title={title}>{title}</h3>
               {help && (
                 <HelpTooltip
                   size="xs"
@@ -192,7 +166,14 @@ export function WidgetShell({
           )}
         </>
       )}
-      <div className={cn(dashboardTokens.body, !noPadding ? 'px-4 pb-3 overflow-auto' : 'flex flex-col overflow-hidden')}>
+      <div
+        className={cn(
+          dashboardTokens.body,
+          !noPadding ? 'px-4 pb-3 overflow-auto' : 'flex flex-col overflow-hidden',
+          degradedContent && 'opacity-[0.45] transition-opacity duration-fast motion-reduce:transition-none',
+        )}
+        data-content-degraded={degradedContent || undefined}
+      >
         {initialLoading ? (
           loadingContent ?? <Skeleton className="h-full min-h-24 rounded-xl" />
         ) : fatalError ? (

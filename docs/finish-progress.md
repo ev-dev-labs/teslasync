@@ -2,6 +2,23 @@
 
 Resume file for whoever continues this work. Updated and pushed after every group.
 
+## Current priority order (latest handoff)
+
+1. Keep the `ui/simplification` branch based on `fix/dashboard-followups` and
+   complete `docs/ui-simplification-task.md` from section 0.
+2. After UI simplification, run the full Vitest suite and fix failures.
+3. Resume Phase 6 from `.runner/state.json`: complete every pending item and
+   retry every failed item once using its notes. Exclude only an exact change
+   replaced by a UI simplification commit; record the specific replacement and
+   commit. Leave any remaining failed item with its exact error.
+4. Update this file and `.runner/state.json` after each Phase 6 group. At final
+   handoff, list every excluded and failed item with its reason here.
+
+The frontend gates from `web/` are build, `npx tsc --noEmit`, lint, and
+`node scripts/split-i18n-catalog.mjs --check`. Every new user-facing string
+must use `t()` and a complete-sentence key in `en.json`; plural strings use
+i18next `count`.
+
 ## Where things are
 
 - Branches: work is committed on `fix/dashboard-followups-finish` and pushed to

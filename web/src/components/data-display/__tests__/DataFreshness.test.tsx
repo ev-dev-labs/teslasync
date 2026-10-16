@@ -110,14 +110,31 @@ describe('DataFreshness widget variant', () => {
     setIntervalSpy.mockRestore()
   })
 
-  it('pulses the widget dot once when its status changes', () => {
+  it('pulses the widget dot twice when new data arrives', () => {
+    vi.useFakeTimers()
     const props = { updatedAt: Date.now(), isFetching: false, isStale: false, isError: false, variant: 'widget' as const }
     const { container, rerender } = render(<DataFreshness {...props} />)
     expect(container.querySelector('.animate-ping')).not.toBeInTheDocument()
-    rerender(<DataFreshness {...props} isError />)
+    rerender(<DataFreshness {...props} updatedAt={props.updatedAt + 1} />)
     expect(container.querySelector('.animate-ping')).toBeInTheDocument()
-    rerender(<DataFreshness {...props} isError />)
+    expect(container.querySelector('.animate-ping')).toHaveClass('[animation-iteration-count:2]')
+    act(() => vi.advanceTimersByTime(1600))
     expect(container.querySelector('.animate-ping')).not.toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('uses an outlined warning ring for stale data and a slow pulse for errors', () => {
+    const props = { updatedAt: Date.now(), isFetching: false, isStale: false, isError: false, variant: 'widget' as const }
+    const { container, rerender } = render(<DataFreshness {...props} isStale />)
+    expect(screen.getByRole('status').querySelector('span.rounded-full')).toHaveClass(
+      'border-[var(--semantic-warning)]',
+      'bg-transparent',
+    )
+    rerender(<DataFreshness {...props} isError />)
+    expect(screen.getByRole('status').querySelector('span.rounded-full')).toHaveClass(
+      'animate-[pulse_2s_ease-in-out_infinite]',
+    )
+    expect(container.querySelector('svg.lucide-wifi, svg.lucide-wifi-off')).not.toBeInTheDocument()
   })
 })
 

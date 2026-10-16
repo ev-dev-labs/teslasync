@@ -27,12 +27,11 @@
  *     is forwarded and fires.
  *   - pin: rendered only when title + widgetId + dashboardId are all present.
  *   - padding: `noPadding` swaps the scroll container classes.
- *   - pulse effect: no glow on mount, glow on timestamp change, auto-clear after
- *     1500ms, and the regression where a timestamp regressing to 0 mid-pulse
- *     used to leave the glow stuck on.
+ *   - freshness/content state: timestamps reach the shared indicator, stale
+ *     retained values are dimmed, and headings expose their full title.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { deriveDataState } from '@/api/dataState';
 
@@ -491,8 +490,8 @@ describe('WidgetShell — content padding', () => {
   });
 });
 
-describe('WidgetShell — pulse-on-change effect', () => {
-  it('does not glow on the initial mount', () => {
+describe('WidgetShell - freshness and content state', () => {
+  it('keeps the widget surface still on the initial mount', () => {
     const { container } = render(
       <WidgetShell title="Battery" updatedAt={100}>
         <Child />
@@ -502,7 +501,7 @@ describe('WidgetShell — pulse-on-change effect', () => {
     expect(root(container).className).not.toContain('shadow-[0_0_12px');
   });
 
-  it('glows when the effective timestamp advances to a new value', () => {
+  it('forwards an advanced timestamp to the freshness indicator without pulsing the whole shell', () => {
     const { container, rerender } = render(
       <WidgetShell title="Battery" updatedAt={100}>
         <Child />
@@ -515,34 +514,33 @@ describe('WidgetShell — pulse-on-change effect', () => {
         <Child />
       </WidgetShell>,
     );
-    expect(root(container).className).toContain('shadow-[0_0_12px');
+    expect(screen.getByTestId('data-freshness')).toHaveAttribute('data-updated-at', '200');
+    expect(root(container).className).not.toContain('shadow-[0_0_12px');
   });
 
-  it('clears the glow after the 1500ms window elapses', () => {
-    vi.useFakeTimers();
-    try {
-      const { container, rerender } = render(
-        <WidgetShell title="Battery" updatedAt={100}>
-          <Child />
-        </WidgetShell>,
-      );
-      rerender(
-        <WidgetShell title="Battery" updatedAt={200}>
-          <Child />
-        </WidgetShell>,
-      );
-      expect(root(container).className).toContain('shadow-[0_0_12px');
-
-      act(() => {
-        vi.advanceTimersByTime(1500);
-      });
-      expect(root(container).className).not.toContain('shadow-[0_0_12px');
-    } finally {
-      vi.useRealTimers();
-    }
+  it('reduces retained widget content to 45 percent opacity when data is stale', () => {
+    render(
+      <WidgetShell title="Battery" updatedAt={100} isStale>
+        <Child />
+      </WidgetShell>,
+    );
+    const content = screen.getByTestId('child').parentElement;
+    expect(content).toHaveClass('opacity-[0.45]');
+    expect(content).toHaveAttribute('data-content-degraded', 'true');
   });
 
-  it('clears a mid-pulse glow when the timestamp regresses to 0 (stuck-glow regression)', () => {
+  it('adds a full-title tooltip and truncation to long widget headings', () => {
+    render(
+      <WidgetShell title="A long dashboard widget title">
+        <Child />
+      </WidgetShell>,
+    );
+    const heading = screen.getByRole('heading', { name: 'A long dashboard widget title' });
+    expect(heading).toHaveClass('truncate');
+    expect(heading).toHaveAttribute('title', 'A long dashboard widget title');
+  });
+
+  it('does not degrade content when the timestamp resets to zero', () => {
     const { container, rerender } = render(
       <WidgetShell title="Battery" updatedAt={100}>
         <Child />
@@ -553,15 +551,15 @@ describe('WidgetShell — pulse-on-change effect', () => {
         <Child />
       </WidgetShell>,
     );
-    expect(root(container).className).toContain('shadow-[0_0_12px');
+    expect(root(container).className).not.toContain('shadow-[0_0_12px');
 
-    // A refetch resetting dataUpdatedAt back to 0 cancels the pending timer via
-    // cleanup; without the explicit reset in the effect the glow stayed stuck.
+    // Resetting the query timestamp never makes retained values appear degraded.
     rerender(
       <WidgetShell title="Battery" updatedAt={0}>
         <Child />
       </WidgetShell>,
     );
-    expect(root(container).className).not.toContain('shadow-[0_0_12px');
+    expect(screen.getByTestId('data-freshness')).toHaveAttribute('data-updated-at', 'null');
+    expect(root(container).querySelector('[data-content-degraded="true"]')).not.toBeInTheDocument();
   });
 });

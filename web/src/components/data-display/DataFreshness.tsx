@@ -1,4 +1,4 @@
-import { useCallback, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -187,9 +187,20 @@ export function DataFreshness({
       : isStale || forcedStale
         ? 'stale'
         : 'fresh';
-  const previousStatus = useRef<FreshnessStatus | null>(null);
-  const statusChanged = previousStatus.current != null && previousStatus.current !== status;
-  previousStatus.current = status;
+  const previousUpdatedAt = useRef(updatedAt);
+  const [pingNewData, setPingNewData] = useState(false);
+  useEffect(() => {
+    const hadPreviousValue = previousUpdatedAt.current != null;
+    const timestampAdvanced = hadPreviousValue && updatedAt != null && previousUpdatedAt.current !== updatedAt;
+    previousUpdatedAt.current = updatedAt;
+    if (variant !== 'widget' || status !== 'fresh' || !timestampAdvanced) {
+      setPingNewData(false);
+      return;
+    }
+    setPingNewData(true);
+    const timeout = setTimeout(() => setPingNewData(false), 1600);
+    return () => clearTimeout(timeout);
+  }, [status, updatedAt, variant]);
 
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
@@ -273,7 +284,7 @@ export function DataFreshness({
 
   if (variant === 'widget') {
     return (
-      <span className="inline-flex min-w-0 items-center gap-2">
+      <span className="group/freshness inline-flex min-w-0 items-center gap-2">
         {onRefresh && (
           <IconButton
             icon={<RefreshCw className={cn('h-4 w-4', isFetching && !reduce && 'animate-spin')} aria-hidden="true" />}
@@ -287,7 +298,7 @@ export function DataFreshness({
           />
         )}
         <span
-          className="inline-flex min-w-0 items-center gap-1.5 text-xs text-[var(--text-secondary)]"
+          className={cn('inline-flex min-w-0 items-center gap-1.5 text-xs', cfg.color)}
           title={title}
           role="status"
           aria-live="polite"
@@ -295,13 +306,29 @@ export function DataFreshness({
           aria-label={ariaLabel}
           data-bg-refetch={isBackgroundRefetch ? 'true' : undefined}
         >
-          {!compact && relativeTime && <span className="tabular-nums">{relativeTime}</span>}
+          {!compact && relativeTime && (
+            <span className={cn(
+              'tabular-nums transition-opacity motion-reduce:transition-none',
+              status === 'fresh'
+                ? 'invisible opacity-0 group-hover/freshness:visible group-hover/freshness:opacity-100 group-focus-within/freshness:visible group-focus-within/freshness:opacity-100'
+                : 'visible opacity-100',
+            )}>
+              {relativeTime}
+            </span>
+          )}
           <span
-            className={cn('relative h-2 w-2 shrink-0 rounded-full', cfg.dotColor)}
+            className={cn(
+              'relative h-2 w-2 shrink-0 rounded-full',
+              status === 'stale'
+                ? 'border border-[var(--semantic-warning)] bg-transparent'
+                : cfg.dotColor,
+              status === 'error' && !reduce && 'animate-[pulse_2s_ease-in-out_infinite]',
+              status === 'fetching' && !reduce && 'animate-pulse',
+            )}
             aria-hidden="true"
           >
-            {statusChanged && !reduce && (
-              <span className={cn('absolute inset-0 animate-ping rounded-full opacity-60', cfg.dotColor)} />
+            {pingNewData && status === 'fresh' && !reduce && (
+              <span className={cn('absolute inset-0 animate-ping [animation-iteration-count:2] rounded-full opacity-60', cfg.dotColor)} />
             )}
           </span>
         </span>
