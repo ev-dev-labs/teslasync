@@ -34,6 +34,7 @@ describe('RepairCaseWorkspaceHeader neutral chrome and preservation', () => {
     const { props, rerender } = renderHeader({ statisticsState: state });
     expect(screen.getByText('Refresh paused')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByText('Retained source')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getByText('4')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
@@ -54,7 +55,7 @@ describe('RepairCaseWorkspaceHeader neutral chrome and preservation', () => {
     });
     expect(screen.getByText('Refresh paused')).toBeInTheDocument();
     const metrics = within(screen.getByRole('region', { name: 'Repair case metrics' }));
-    expect(metrics.getAllByText('—')).toHaveLength(4);
+    expect(metrics.getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(metrics.queryByText('0')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
   });
@@ -111,6 +112,7 @@ describe('RepairCaseWorkspaceHeader neutral chrome and preservation', () => {
     for (const value of ['4', '2', '3', '6']) {
       expect(metrics.getByText(value)).toBeInTheDocument();
     }
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getAllByText(
       'Repair case statistics response; separate from the filtered queue and diagnosis scan.',
     ).length).toBeGreaterThan(0);
@@ -140,6 +142,7 @@ describe('RepairCaseWorkspaceHeader neutral chrome and preservation', () => {
     expect(screen.getByText(
       'Previously loaded data remains visible while affected sources recover.',
     )).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByText('Retained source')).toBeInTheDocument();
     expect(screen.getByText(`Last scan: ${formatDateTime(statistics.last_scan_at!)}`)).toBeInTheDocument();
     const metrics = within(screen.getByRole('region', { name: 'Repair case metrics' }));
@@ -154,7 +157,7 @@ describe('RepairCaseWorkspaceHeader neutral chrome and preservation', () => {
     const { props } = renderHeader({ statistics: undefined, statisticsError: new Error('Metrics failed') });
     expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
     const metrics = within(screen.getByRole('region', { name: 'Repair case metrics' }));
-    expect(metrics.getAllByText('—')).toHaveLength(4);
+    expect(metrics.getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(metrics.queryByText('0')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(props.onRetryStatistics).toHaveBeenCalledOnce();
@@ -163,7 +166,7 @@ describe('RepairCaseWorkspaceHeader neutral chrome and preservation', () => {
 
   it('distinguishes absent statistics, authoritative zeros and an absent completed scan', () => {
     const { rerender, props } = renderHeader({ statistics: undefined });
-    expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText('—')).toHaveLength(4);
+    expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getByText('No metric values are available yet.')).toBeInTheDocument();
     expect(screen.queryByText('No completed scan recorded yet')).toBeNull();
     rerender(<MemoryRouter><RepairCaseWorkspaceHeader {...props} statistics={{
       ...statistics, open: 0, in_review: 0, quarantined: 0, last_scan_at: null,

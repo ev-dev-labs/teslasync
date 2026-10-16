@@ -300,7 +300,7 @@ describe('RepairCaseWorkspace', () => {
       expect(screen.queryByText('No repair cases match these filters.')).not.toBeInTheDocument();
       expect(screen.queryByText('0 cases on this page')).not.toBeInTheDocument();
       expect(screen.queryByTestId('repair-case-queue-skeleton')).not.toBeInTheDocument();
-      expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getAllByText('—')).toHaveLength(4);
+      expect(within(screen.getByRole('region', { name: 'Repair case metrics' })).getByText('No metric values are available yet.')).toBeInTheDocument();
       await act(async () => { onlineManager.setOnline(true); });
       expect(await screen.findByText('Case #7')).toBeInTheDocument();
       client.clear();
