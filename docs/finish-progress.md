@@ -2,12 +2,12 @@
 
 Resume file for whoever continues this work. Updated and pushed after every group.
 
-## Current priority order (2026-10-15 handoff)
+## Current priority order (2026-10-16 test triage)
 
-1. Pass build, `npx tsc --noEmit`, lint, and split-i18n catalog check; defer the full Vitest suite.
-2. Follow `docs/ui-simplification-task.md` from section 0 on `ui/simplification`, branched from `fix/dashboard-followups`.
-3. After simplification, run the full Vitest suite and repair failures.
-4. Complete every Phase 6 pending item and retry every failed item once using its notes. Exclude only exact changes replaced by simplification commits, with the replacement and commit recorded. Update `.runner/state.json` and this file after each group, then list all excluded and failed items with specific reasons.
+1. Rerun the full Vitest suite with `--maxWorkers=4`, retaining a structured report and comparing its numbers with the previous 3,826 failures before changing code.
+2. Classify the remaining failures by cause and compare with the pre-redesign baseline; record counts and uncertainty here.
+3. Repair the largest groups first: migrate outdated UI assertions while preserving their intent, fix confirmed behavior bugs, and stabilize reproduced flakes. Commit and push each group to `ui/simplification`.
+4. Separately categorize the 295 failed Phase 6 items by their latest recorded reason. Update this file and `.runner/state.json` as each repair group changes its verification evidence.
 
 The web gates are build, `npx tsc --noEmit`, lint, and `node scripts/split-i18n-catalog.mjs --check`. Every new user-facing string must use `t()` and a complete-sentence `en.json` key; plurals use i18next `count`.
 
@@ -541,300 +541,334 @@ Final gates: split-i18n check **pass** (57 bundles, 181 fallbacks, 1,266 shell k
 
 None.
 
-### Failed items after retry
+### Failed Phase 6 items: reason triage (2026-10-16)
 
-- `fix-admin-feedback-queue-fq005` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-admin-fleet-telemetry-coverage-f04` — validation exceeded time box
-- `fix-admin-gas-price-auto-poll-gas-03` — Focused npx vitest run and direct runner retry stalled without output; stopped both, verification incomplete
-- `fix-admin-gas-price-auto-poll-gas-05` — verification commands stalled without output
-- `fix-admin-vehicle-cost-f03` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-admin-ingest-xray-xray-01` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-admin-live-signal-inspector-lsi-06` — frontend regression tests stalled before producing output
-- `fix-admin-redis-signal-viewer-f01` — scoped tests stalled without output; behavior verification incomplete
-- `fix-admin-redis-signal-viewer-f03` — scoped tests blocked before collection by external generated-catalog failure
-- `fix-admin-redis-signal-viewer-f09` — focused test verification incomplete within time box; local tools exist, so broken dependencies are not established
-- `fix-admin-redis-signal-viewer-f06` — shared-type edit prohibition blocks typed adapter alignment
-- `fix-admin-slow-queries-sq-002` — regression and browser verification blocked by unresponsive commands
-- `fix-admin-vehicle-cost-f06` — browser layout verification and final catalog check incomplete within time box
-- `fix-advanced-behavioral-sentinel-bs003` — Focused regressions did not finish within time box
-- `fix-advanced-charging-forensics-cf-03` — scoped tests blocked by external catalog validation; Edge layout checks timed out
-- `fix-advanced-emergency-resilience-er-f03` — targeted tests blocked before collection by external locale-battery.json catalog preflight failure
-- `fix-advanced-emergency-resilience-er-f05` — focused verification blocked by external i18n catalog startup failure
-- `fix-advanced-emergency-resilience-er-f06` — command execution unavailable; verification blocked
-- `fix-advanced-federated-learning-fl003` — verification blocked by stalled test and catalog commands
-- `fix-advanced-federated-learning-fl005` — validation runners stalled without output
-- `fix-advanced-twin-lab-f04` — external catalog validation blocked test startup
-- `fix-advanced-twin-lab-f05` — runtime verification blocked
-- `fix-analytics-analytics-f12` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-analytics-analytics-f05` — required frontend regressions blocked by external i18n catalog startup failure
-- `fix-analytics-analytics-f07` — Required validation blocked by unavailable/stalled PowerShell execution
-- `fix-analytics-analytics-f10` — required tests stalled without output; completion unverified
-- `fix-analytics-analytics-f11` — missing dependencies block tests, catalog regeneration/check and typecheck; restoration failed twice
-- `fix-analytics-drive-archetypes-da-003` — Targeted Vitest and TypeScript stalled without verification results, including direct Vitest execution
-- `fix-analytics-drive-calendar-dc01` — Required regression blocked before collection by external i18n catalog validation
-- `fix-analytics-drive-calendar-dc05` — command execution stalled without output, blocking regression tests and catalog regeneration/check
-- `fix-analytics-fleet-compare-f08` — verification exceeded time box; initial test startup failed on external catalog drift, regenerated --check and scoped test retry did not finish
-- `fix-analytics-fleet-compare-f09` — focused Vitest stalled without output for 120 seconds via both npx and direct local invocation; verification blocked
-- `fix-analytics-lifetime-stats-ls-03` — focused regression execution stalled without output
-- `fix-analytics-lifetime-stats-ls-04` — weekday identity absent from assigned component; verification blocked by external catalog drift
-- `fix-analytics-mileage-f02` — required test startup stalled; browser verification blocked by onboarding redirect
-- `fix-analytics-statistics-stat-qa-03` — prerequisite state hook/key bounds support missing outside assigned scope
-- `fix-analytics-statistics-stat-qa-06` — required tests blocked by external i18n catalog startup failure
-- `fix-analytics-statistics-stat-qa-08` — Required verification stalled without output
-- `fix-analytics-timeline-tl-05` — focused tests blocked before collection by external i18n catalog validation
-- `fix-analytics-true-cost-tc-qa-01` — targeted tests blocked by external generated-catalog startup failure
-- `fix-analytics-true-cost-tc-qa-06` — required full-file verification incomplete
-- `fix-analytics-true-cost-tc-qa-02` — required Vitest verification stalled within time box
-- `fix-analytics-weekly-digest-wd-qa-01` — required regression validation could not complete because command execution stalled
-- `fix-analytics-weekly-digest-wd-qa-02` — regression verification stalled without results
-- `fix-analytics-year-review-f08` — required frontend verification blocked by external generated-catalog startup failure
-- `fix-automations-automation-list-al-s01` — required frontend tests blocked before collection by external generated i18n catalog drift
-- `fix-automations-automation-list-al-s07` — focused regression execution blocked by external i18n catalog validation
-- `fix-automations-automation-list-al-s08` — required verification blocked by unavailable PowerShell
-- `fix-automations-automations-list-f01` — required frontend regression blocked by external i18n startup failure
-- `fix-automations-automations-list-f03` — required tests blocked by missing tools and dependency restore failure
-- `fix-automations-automations-list-f05` — verification blocked by missing dependencies
-- `fix-automations-automation-list-al-s03` — recovery test failed; four-file verification incomplete within time box
-- `fix-automations-automation-list-al-s04` — Required tests blocked before collection by external generated i18n catalog validation
-- `fix-automations-automation-list-al-s06` — Tests, TypeScript and Edge verification blocked by incomplete dependencies; dependency restoration failed
-- `fix-automations-automations-list-f08` — missing existing duplicate/export contracts and builder draft handoff outside assigned scope
-- `fix-automations-automation-history-ahqa-08` — scoped Vitest execution stalled without output
-- `fix-battery-battery-degradation-bd-01` — shared energy-type alignment remains incomplete and prohibited by prompt
-- `fix-battery-battery-degradation-bd-02` — frontend verification blocked by external generated-i18n startup failure and stalled checks
-- `fix-battery-battery-degradation-bd-03` — frontend regression verification blocked by startup stalls and alternate-loader config error
-- `fix-battery-battery-degradation-bd-05` — runtime verification blocked: Vitest stalled and Go unavailable
-- `fix-battery-battery-degradation-bd-06` — required verification blocked by missing dependencies, locked Rollup binary, and unavailable Go runtime
-- `fix-battery-battery-degradation-bd-07` — required regressions blocked by missing frontend dependencies and C compiler
-- `fix-battery-battery-degradation-bd-08` — frontend verification blocked by broken dependencies; restoration attempts failed
-- `fix-battery-battery-degradation-bd-09` — required tests blocked by missing frontend dependencies and C compiler
-- `fix-battery-battery-degradation-bd-10` — required verification blocked by missing Go and broken frontend dependencies
-- `fix-battery-battery-degradation-bd-11` — required validation blocked by missing Vitest, npm ENOTEMPTY errors, and unavailable Go toolchain
-- `fix-battery-battery-degradation-bd-13` — required tests blocked by missing frontend dependencies and GCC; dependency restoration failed
-- `fix-battery-battery-passport-f04` — tests blocked before collection by external generated-i18n validation failure
-- `fix-battery-battery-passport-f07` — validation runners stalled without results
-- `fix-battery-cells-bc-qa-008` — required frontend tests blocked before collection by external generated i18n catalog validation
-- `fix-battery-charge-advisor-ca-s05` — complete energy filtering requires prohibited backend edits; test execution blocked by unavailable PowerShell
-- `fix-battery-charge-advisor-ca-s10` — focused Vitest verification blocked by nonresponsive shell
-- `fix-battery-energy-flow-f01` — required backend edits prohibited; test execution blocked by unavailable PowerShell
-- `fix-battery-power-flow-dashboard-f01` — required server changes prohibited by web-only rule
-- `fix-battery-sleep-efficiency-q01` — required backend filtering conflicts with explicit web-only edit restriction
-- `fix-battery-vampire-drain-vd08` — frontend verification blocked by missing dependencies and failed restoration
-- `fix-battery-energy-flow-f03` — Required Vitest blocked before test execution by external generated-catalog validation
-- `fix-battery-energy-flow-f05` — verification incomplete within time box; page test visibility assertion failed
-- `fix-battery-power-flow-dashboard-f06` — validation stalled without test output using both npx and the direct local Vitest runner; stopped both processes
-- `fix-battery-projected-range-prange-qa-006` — focused test stalled; catalog freshness check failed
-- `fix-battery-sleep-efficiency-q08` — scoped tests blocked by external generated-i18n catalog startup failure; no tests executed
-- `fix-battery-sleep-efficiency-q14` — focused tests blocked by external generated-catalog startup failure
-- `fix-battery-vampire-drain-vd05` — scoped verification stalled without output
-- `fix-battery-vampire-drain-vd06` — tests stalled and browser checks blocked
-- `fix-charging-charge-interruption-f3` — focused regression blocked by catalog validation; retries exceeded remaining time
-- `fix-charging-charging-curve-f08` — targeted tests blocked by external i18n catalog startup failure
-- `fix-charging-charging-curve-f05` — regression rerun blocked by external catalog drift
-- `fix-charging-charging-curve-f04` — focused tests blocked before collection by external generated-localization validation
-- `fix-charging-charging-detail-f04` — external catalog startup failure prevented test execution
-- `fix-charging-charging-detail-f05` — required suite blocked by catalog drift; isolated suite has two unrelated distance failures
-- `fix-charging-charging-detail-f09` — verification incomplete due to external catalog drift and time box
-- `fix-charging-charging-heatmap-chh003` — verification blocked by external i18n catalog startup failure
-- `fix-charging-charging-heatmap-chh004` — scoped regression execution blocked by external i18n catalog startup failure
-- `fix-charging-charging-heatmap-chh006` — test verification exceeded time box
-- `fix-charging-charging-thermal-tax-ctt-s01` — required verification blocked by missing dependencies and failed npm restoration
-- `fix-charging-smart-charge-sc-f01` — missing dependencies and ENOTEMPTY errors prevented verification
-- `fix-charging-tesla-charging-history-th02` — required tests stalled without output
-- `fix-charging-tesla-charging-history-th03` — focused tests could not execute: shell startup failure and direct runner stalled
-- `fix-charging-tesla-charging-history-th04` — targeted Vitest blocked by external catalog validation; behavior unverified
-- `fix-charging-tesla-charging-history-th05` — server filtering and page wiring require unassigned files; requested tests blocked by missing Vite dependencies
-- `fix-charging-tesla-charging-history-th06` — Missing dependencies prevent regression and TypeScript verification
-- `fix-charging-tesla-charging-history-th07` — validation blocked by PowerShell startup timeout and unresponsive catalog command
-- `fix-charging-tesla-charging-history-th08` — verification blocked by missing Vite dependencies and unsuccessful dependency restoration
-- `fix-charging-tesla-charging-history-th10` — verification blocked by missing dependencies and failed dependency restoration
-- `fix-charging-tesla-charging-history-th12` — dependency restoration failed; scoped tests and TypeScript verification could not run
-- `fix-charging-tesla-charging-sessions-f02` — Backend GET lacks date-bound support outside allowed scope; focused tests stalled
-- `fix-charging-tesla-charging-sessions-f03` — focused Vitest verification stalled without results
-- `fix-charging-tesla-charging-sessions-f15` — verification incomplete within time box
-- `fix-charging-charging-list-cl14` — focused tests blocked by external i18n catalog startup failure
-- `fix-charging-charging-list-cl16` — verification exceeded timebox
-- `fix-charging-charging-thermal-tax-ctt-h01` — command execution blocked; required tests and catalog verification incomplete
-- `fix-charging-charging-thermal-tax-ctt-h03` — corrected regression remains unverified within time box
-- `fix-charging-charging-thermal-tax-ctt-s05` — composed theme/forced-colors verification blocked by onboarding redirect; regression blocked by external catalog startup failure
-- `fix-charging-cost-analysis-ca04` — required tests blocked before collection by external generated-i18n catalog validation
-- `fix-charging-cost-analysis-ca08` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-charging-cost-analysis-ca06` — regression verification blocked by generated catalog startup failures
-- `fix-charging-cost-analysis-ca13` — Required render-boundary change is outside assigned files
-- `fix-charging-powershare-ps-f05` — focused Vitest verification stalled without output
-- `fix-charging-smart-charge-sc-f04` — targeted tests stalled without output
-- `fix-charging-smart-charge-sc-f08` — external i18n catalog startup failure prevented regression verification
-- `fix-charging-smart-charge-sc-f10` — command execution unavailable; required test and browser verification blocked
-- `fix-charging-smart-charge-sc-f06` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-charging-tesla-charging-sessions-f12` — focused Vitest run stalled without output
-- `fix-charging-tesla-charging-sessions-f07` — targeted tests blocked by external i18n startup failure
-- `fix-dashboard-glance-f02` — scoped Vitest stalled; no test results or exit code
-- `fix-dashboard-glance-f04` — scoped tests stalled and onboarding redirects blocked browser verification
-- `fix-dashboard-quick-stats-qs-004` — verification blocked by external generated-i18n startup failure
-- `fix-dashboard-quick-stats-qs-002` — scoped verification stalled without output; no test exit status available
-- `fix-dashcam-dashcam-intelligence-dc002` — verification blocked by command execution timeouts
-- `fix-dashcam-dashcam-intelligence-dc012` — command execution unavailable; required regeneration and tests unverified
-- `fix-dashcam-dashcam-intelligence-dc014` — Scoped test and browser verification incomplete within time limit
-- `fix-dashcam-dashcam-intelligence-dc011` — regression and catalog check incomplete within time box; external TypeScript failures
-- `fix-dashcam-dashcam-intelligence-dc016` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-diagnostics-root-cause-intelligence-rc04` — scoped test execution stalled without output
-- `fix-diagnostics-root-cause-intelligence-rc08` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-diagnostics-service-evidence-pack-sep-source-004` — dependencies broken: targeted Vitest and direct runner stalled without output; verification could not complete
-- `fix-diagnostics-service-evidence-pack-sep-source-007` — external i18n startup failure and first-run setup blocked verification
-- `fix-diagnostics-service-evidence-pack-sep-source-009` — required test blocked by missing dependencies; restoration failed on locked Rollup binary
-- `fix-dashcam-dashcam-intelligence-dc015` — Required focused Vitest command stalled without output; verification remains incomplete
-- `fix-diagnostics-anomaly-dashboard-f01` — required verification blocked by PowerShell startup timeouts and stalled commands
-- `fix-diagnostics-anomaly-dashboard-f03` — required frontend verification blocked by external i18n catalog startup failure
-- `fix-diagnostics-anomaly-dashboard-f05` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-diagnostics-remaining-useful-life-rul-01` — focused regression verification incomplete
-- `fix-diagnostics-remaining-useful-life-rul-03` — Required scoped tests stalled without output using both npx and direct local Vitest; verification incomplete
-- `fix-diagnostics-remaining-useful-life-rul-04` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-diagnostics-remaining-useful-life-rul-05` — targeted tests blocked by external generated-catalog startup failure
-- `fix-diagnostics-root-cause-intelligence-rc01` — verification stalled in shared catalog startup; TypeScript unfinished
-- `fix-diagnostics-root-cause-intelligence-rc05` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-diagnostics-root-cause-intelligence-rc06` — required regression blocked by unavailable/unresponsive PowerShell
-- `fix-diagnostics-service-evidence-pack-sep-source-006` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-explore-explore-f02` — verification blocked by missing Vite dependencies and locked Rollup binary
-- `fix-explore-explore-f03` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-explore-explore-f04` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-explore-explore-f06` — focused tests blocked by broken dependency installation
-- `fix-exports-exports-ex03` — validation blocked by missing dependencies, locked dependency file and non-rendering dev application
-- `fix-exports-exports-ex05` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-exports-exports-ex07` — verification blocked by missing dependencies and failed restoration
-- `fix-fleet-ops-fleet-operations-f01` — verification blocked by missing dependencies and Windows filesystem errors
-- `fix-fleet-ops-fleet-operations-f03` — dependency failures blocked verification
-- `fix-fleet-ops-fleet-operations-f05` — missing dependencies and npm ENOTDIR prevented test and TypeScript verification
-- `fix-home-energy-whole-home-energy-f06` — verification blocked by missing dependencies and locked Rollup binary
-- `fix-home-energy-whole-home-energy-f07` — required test blocked by missing Vite dependencies
-- `fix-home-energy-whole-home-energy-f10` — missing dependencies and locked binaries prevented verification
-- `fix-intelligence-packs-intelligence-pack-marketplace-f04` — verification blocked by missing dependencies and Windows file locks
-- `fix-intelligence-packs-intelligence-pack-marketplace-f13` — Required test blocked: Vitest missing; dependency restoration failed with locked Rollup module (EPERM), then ENOENT
-- `fix-intelligence-packs-intelligence-pack-marketplace-f14` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-maps-navigation-route-nav-qa-005` — tests blocked by missing Vite; dependency restoration blocked by locked Rollup binary
-- `fix-notifications-archived-f01` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-notifications-archived-f05` — missing dependencies prevented required regression verification; restoration failed with ENOTDIR and ENOTEMPTY
-- `fix-notifications-archived-f08` — missing dependencies and unresponsive localhost:5173 blocked verification
-- `fix-notifications-archived-f12` — dependency restoration and runtime verification blocked
-- `fix-notifications-channels-nc002` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-notifications-channels-nc011` — dependency restoration failed; required regression and TypeScript verification blocked
-- `fix-notifications-channels-nc013` — focused tests blocked by missing Vite dependencies and locked Rollup binary
-- `fix-notifications-channels-nc014` — required regressions blocked by broken dependencies; restoration failed
-- `fix-notifications-channels-nc015` — required tests blocked by missing dependencies; restore failed with EBUSY
-- `fix-notifications-notification-health-nh-02` — verification blocked by missing Vite dependencies and npm restoration ENOENT
-- `fix-notifications-notification-health-nh-04` — required regression could not execute because dependencies are missing and restoration failed
-- `fix-notifications-notification-health-nh-07` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-notifications-notification-health-nh-09` — dependency restoration failures prevented verification
-- `fix-notifications-notification-health-nh-11` — Dependency restoration blocked test and TypeScript verification
-- `fix-notifications-notification-health-nh-12` — verification blocked by missing dependencies and Windows restoration error
-- `fix-notifications-notification-health-nh-13` — dependency failures prevented regression verification
-- `fix-notifications-notification-health-nh-14` — required test blocked by missing dependencies; both restoration attempts failed with ENOTEMPTY
-- `fix-notifications-notification-health-nh-15` — canonical catalog prerequisite outside scope; missing Vite and TypeScript block verification
-- `fix-ownership-insurance-telematics-f01` — required tests blocked by missing frontend dependencies, failed dependency restoration, and unavailable Go toolchain
-- `fix-ownership-insurance-telematics-f04` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-ownership-insurance-telematics-f07` — missing dependencies prevent regression verification; dependency restoration failed with ENOTEMPTY
-- `fix-ownership-insurance-telematics-f08` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-ownership-insurance-telematics-f09` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-ownership-insurance-telematics-f15` — missing Vitest dependency, Go toolchain and owned translation catalog follow-up
-- `fix-ownership-model-trust-mt03` — focused tests blocked by missing dependencies; restoration failed with ENOENT
-- `fix-ownership-model-trust-mt04` — targeted verification blocked by missing dependencies and failed dependency restoration
-- `fix-ownership-model-trust-mt05` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-ownership-tariff-lab-tl10` — missing dependencies blocked regression execution and typecheck; dependency restoration failed
-- `fix-ownership-tariff-lab-tl08` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-ownership-tariff-lab-tl05` — dependency failures prevented verification; no tests executed
-- `fix-ownership-tariff-lab-tl04` — missing dependencies and EPERM prevented verification
-- `fix-ownership-tariff-lab-tl02` — focused verification blocked by broken dependencies and failed restore attempts
-- `fix-ownership-tariff-lab-tl01` — missing dependencies and failed restoration blocked tests and Edge verification
-- `fix-ownership-tariff-lab-tl09` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-ownership-tariff-lab-tl07` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-ownership-warranty-command-wc-08` — missing dependencies prevented regression verification
-- `fix-ownership-warranty-command-wc-04` — focused tests blocked by missing dependencies; restoration failed with ENOENT
-- `fix-ownership-warranty-command-wc-03` — Missing dependencies block targeted tests; existing dev server is unresponsive, blocking browser acceptance
-- `fix-ownership-warranty-command-wc-01` — dependency failures prevented test execution
-- `fix-power-user-grafana-panel-f01` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-resale-vault-warranty-resale-vault-f09` — Missing dependencies prevented targeted test execution
-- `fix-resale-vault-warranty-resale-vault-f11` — Missing dependencies prevent required tests and typecheck; restoration failed
-- `fix-resale-vault-warranty-resale-vault-f10` — dependency corruption prevented verification
-- `fix-resale-vault-warranty-resale-vault-f01` — missing pathe blocked regression execution; canonical copy keys require catalog integration
-- `fix-resale-vault-warranty-resale-vault-f02` — missing dependencies prevent verification; warning catalog entry remains outstanding outside assigned scope
-- `fix-science-science-lab-sci-009` — required tests blocked by missing dependencies and failed restoration
-- `fix-science-science-lab-sci-008` — Missing dependencies block verification; restoration failed
-- `fix-science-science-lab-sci-007` — required regression verification blocked by missing dependencies
-- `fix-science-science-lab-sci-006` — missing/broken dependencies prevented test and TypeScript verification
-- `fix-science-science-lab-sci-005` — verification blocked by incomplete dependencies and two failed restoration attempts
-- `fix-science-science-lab-sci-003` — Dependency restoration failed and existing server became unresponsive, blocking required verification
-- `fix-science-science-lab-sci-004` — dependency failures prevented test execution
-- `fix-science-science-lab-sci-002` — missing dependencies prevented verification
-- `fix-science-science-lab-sci-001` — Required /science registration is absent from web\src\lib\workspaceScope.ts, outside the owned files and prohibited routing scope
-- `fix-service-intelligence-service-intelligence-si11` — tests and typecheck blocked by missing dependencies; restoration failed with ENOTEMPTY and EBUSY
-- `fix-service-intelligence-service-intelligence-si09` — Required verification blocked by missing dependencies and failed restoration
-- `fix-service-intelligence-service-intelligence-si08` — missing dependencies block regression tests and TypeScript; restoration failed
-- `fix-service-intelligence-service-intelligence-si06` — Required verification blocked by missing dependencies and unresponsive existing dev server
-- `fix-service-intelligence-service-intelligence-si04` — dependency failures prevented verification
-- `fix-service-intelligence-service-intelligence-si03` — regression blocked by missing Vite; dependency restoration failed with ENOTEMPTY
-- `fix-service-intelligence-service-intelligence-si01` — focused tests blocked by missing dependencies; both restoration attempts failed
-- `fix-settings-active-sessions-as-02` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-settings-active-sessions-as-04` — missing dependencies and ENOTEMPTY restoration failures prevented regression verification
-- `fix-settings-active-sessions-as-03` — dependency restoration failures prevented regression execution and typechecking
-- `fix-settings-active-sessions-as-11` — dependency restoration failed; required tests could not execute
-- `fix-settings-active-sessions-as-06` — required tests blocked by missing dependencies and failed dependency restoration; translation key remains absent
-- `fix-settings-active-sessions-as-05` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-settings-fleet-setup-fs013` — missing Vite dependencies prevented regression verification
-- `fix-settings-helix-helix-03` — Required tests blocked by missing dependencies; restoration failed with EBUSY
-- `fix-settings-helix-helix-02` — required regression blocked by missing dependencies and EBUSY during restoration
-- `fix-settings-helix-helix-08` — verification blocked by missing dependencies and restore errors
-- `fix-settings-helix-helix-07` — focused test blocked by missing dependencies and failed restoration
-- `fix-settings-privacy-privacy-05` — focused verification blocked by missing Vite and failed dependency restoration
-- `fix-settings-privacy-privacy-02` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-settings-privacy-privacy-01` — dependency restoration failed; focused regressions could not execute
-- `fix-settings-two-factor-auth-tfa-05` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-settings-two-factor-auth-tfa-03` — shared dependency failures prevented required test execution
-- `fix-sharing-share-card-sc09` — dependency failures prevented verification
-- `fix-sharing-shared-drive-f05` — verification blocked by missing dependencies and EPERM during restoration
-- `fix-sharing-shared-drive-f02` — focused tests blocked by missing dependencies and failed dependency restoration
-- `fix-sharing-shared-drive-f01` — dependency failures prevented test execution and verification
-- `fix-telemetry-signal-correlation-sc-01` — verification blocked by missing dependencies and failed restoration (ENOTEMPTY)
-- `fix-telemetry-signal-change-points-scp002` — Missing Vitest and dependency restoration ENOTEMPTY blocked verification
-- `fix-telemetry-signal-deadband-f002` — Missing dependencies prevent required test execution; restoration blocked by EPERM
-- `fix-system-my-activity-ma-03` — verification blocked by missing dependencies and failed restoration
-- `fix-system-my-activity-ma-06` — Required behavior remains unverified after retry; the assigned focused checks did not produce a passing result.
-- `fix-system-search-ss02` — Required tests blocked by missing Go and frontend dependency restoration failure
-- `fix-system-search-ss03` — palette alignment requires prohibited shared-component edits; required checks blocked by missing Vite and Go
-- `fix-system-search-ss10` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-system-state-machine-debugger-f02` — required Vitest and TypeScript checks blocked by missing dependencies; restoration failed with ENOTEMPTY and EBUSY
-- `fix-system-state-machine-debugger-f03` — Missing dependencies prevent regression verification; restoration failed
-- `fix-system-state-machine-debugger-f05` — dependency filesystem failures blocked regression execution
-- `fix-system-state-machine-debugger-f06` — missing dependencies block tests and browser verification
-- `fix-system-state-machine-debugger-f08` — Dependency failures prevented verification
-- `fix-system-state-machine-debugger-f11` — Dependency failures prevented regression execution and typecheck verification
-- `fix-system-system-status-ss-001` — required tests blocked by incomplete dependencies
-- `fix-system-system-status-ss-002` — missing local dependencies prevented verification
-- `fix-system-system-status-ss-003` — missing dependencies prevented required test execution
-- `fix-system-system-status-ss-010` — dependency restoration failed; required regression could not execute
-- `fix-system-system-status-ss-019` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-system-system-status-ss-011` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-system-tesla-api-usage-tu01` — verification blocked by missing Vite dependencies and ENOENT during restoration
-- `fix-system-tesla-api-usage-tu02` — required tests blocked by missing Vitest; dependency restoration failed with ENOTEMPTY
-- `fix-system-tesla-api-usage-tu03` — missing dependencies prevented verification
-- `fix-system-tesla-api-usage-tu07` — verification blocked by missing vite and vite-plugin-pwa dependencies
-- `fix-system-tesla-api-usage-tu09` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-system-tesla-api-usage-tu05` — dependency failures prevent regression verification
-- `fix-telemetry-live-signal-monitor-lsm-f03` — dependency corruption blocks tests, TypeScript and Edge verification
-- `fix-telemetry-signal-correlation-sc-02` — targeted verification blocked by missing dependencies and failed dependency restoration
-- `fix-telemetry-signal-correlation-sc-05` — Missing dependencies block regression and TypeScript validation; restoration failed with ENOTEMPTY
-- `fix-telemetry-signal-correlation-sc-07` — missing dependency files prevent required test verification
-- `fix-telemetry-signal-correlation-sc-06` — missing dependencies block verification; canonical translation integration pending outside assigned scope
-- `fix-telemetry-signal-correlation-sc-04` — missing validation dependencies and required catalog entries outside assigned scope
-- `fix-telemetry-signal-deadband-f005` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-telemetry-signal-diff-sd-01` — required tests blocked by missing Vite dependencies; restoration failed with EPERM
-- `fix-telemetry-signal-diff-sd-02` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-telemetry-signal-diff-sd-03` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-telemetry-signal-diff-sd-07` — canonical copy requires separate catalog owner; focused tests blocked by missing Vite dependencies
-- `fix-telemetry-signal-diff-sd-08` — targeted tests blocked by missing Vite dependencies
-- `fix-telemetry-signal-diff-sd-11` — focused verification blocked by missing Vite dependencies and failed dependency restoration
-- `fix-telemetry-signal-diff-sd-12` — Retry did not reach a passing verification; see task-specific notes in state.json.
-- `fix-watch-watch-face-f01` — existing implementation could not be verified because frontend dependencies and Go toolchain are unavailable
-- `fix-watch-watch-face-f06` — dependency restoration failed; focused tests could not execute
-- `fix-watch-watch-face-f10` — missing dependencies prevented verification
-- `fix-model-trust-mobile-regression-fixture` — missing dependencies prevent scoped test verification; restoration failed twice with ENOENT
-- `fix-feature-flag-delete-result-feedback` — Required tests and typecheck blocked by dependency restoration failures
-- `fix-governance-run-cache-invalidation` — focused tests blocked by incomplete dependencies and failed restoration
-- `fix-ownership-shared-quality-labels` — Retry did not reach a passing verification; see task-specific notes in state.json.
+The 295-item snapshot is categorized below using the latest recorded retry/checkpoint, not the first historical failure. Categories describe recorded evidence, not confirmed production bugs. The 110 historical/incomplete records do not prove a current dependency or toolchain outage: current catalog, lint, typecheck, build and Go gates pass. Their acceptance still needs reconciliation with current regression results. No item status was changed by this classification.
+
+| Recorded reason category | Items |
+| --- | ---: |
+| Historical tooling or incomplete verification record | 110 |
+| Source, mutation or interaction state assertions | 81 |
+| Redesign disclosure or metric presentation assertions | 68 |
+| Locale, formatting or copy assertions | 16 |
+| Fixture or chart contract mismatch | 9 |
+| Ambiguous text or role queries | 7 |
+| Domain or UI assertions requiring diagnosis | 4 |
+| **Total** | **295** |
+
+#### Historical tooling or incomplete verification record (110)
+
+- `fix-admin-feedback-queue-fq005`: Historical record: Required wiring is outside permitted scope: FeedbackQueuePage does not pass canStart, and shared AIFeedbackQueueTriage has no canStart prop; conditional unmounting hides retained advice
+- `fix-admin-fleet-telemetry-coverage-f04`: Historical record: validation exceeded time box
+- `fix-admin-gas-price-auto-poll-gas-03`: Historical record: Focused npx vitest run and direct runner retry stalled without output; stopped both, verification incomplete
+- `fix-admin-gas-price-auto-poll-gas-05`: Historical record: verification commands stalled without output
+- `fix-admin-vehicle-cost-f03`: Historical record: Exact upper-bound filtering requires backend edits explicitly forbidden by the prompt: handler accepts only since and both SQL paths lack an upper bound
+- `fix-admin-ingest-xray-xray-01`: Historical record: display requires out-of-scope changes; focused verification stalled
+- `fix-admin-live-signal-inspector-lsi-06`: Historical record: frontend regression tests stalled before producing output
+- `fix-admin-redis-signal-viewer-f01`: Historical record: scoped tests stalled without output; behavior verification incomplete
+- `fix-admin-redis-signal-viewer-f03`: Historical record: scoped tests blocked before collection by external generated-catalog failure
+- `fix-admin-redis-signal-viewer-f09`: Historical record: focused test verification incomplete within time box; local tools exist, so broken dependencies are not established
+- `fix-admin-redis-signal-viewer-f06`: Historical record: shared-type edit prohibition blocks typed adapter alignment
+- `fix-admin-slow-queries-sq-002`: Historical record: regression and browser verification blocked by unresponsive commands
+- `fix-admin-vehicle-cost-f06`: Historical record: browser layout verification and final catalog check incomplete within time box
+- `fix-advanced-behavioral-sentinel-bs003`: Historical record: Focused regressions did not finish within time box
+- `fix-advanced-charging-forensics-cf-03`: Historical record: scoped tests blocked by external catalog validation; Edge layout checks timed out
+- `fix-advanced-emergency-resilience-er-f03`: Historical record: targeted tests blocked before collection by external locale-battery.json catalog preflight failure
+- `fix-advanced-emergency-resilience-er-f05`: Historical record: focused verification blocked by external i18n catalog startup failure
+- `fix-advanced-emergency-resilience-er-f06`: Historical record: command execution unavailable; verification blocked
+- `fix-advanced-federated-learning-fl003`: Historical record: verification blocked by stalled test and catalog commands
+- `fix-advanced-federated-learning-fl005`: Historical record: validation runners stalled without output
+- `fix-advanced-twin-lab-f04`: Historical record: external catalog validation blocked test startup
+- `fix-advanced-twin-lab-f05`: Historical record: runtime verification blocked
+- `fix-analytics-analytics-f05`: Historical record: required frontend regressions blocked by external i18n catalog startup failure
+- `fix-analytics-analytics-f07`: Historical record: Required validation blocked by unavailable/stalled PowerShell execution
+- `fix-analytics-analytics-f10`: Historical record: required tests stalled without output; completion unverified
+- `fix-analytics-analytics-f11`: Historical record: missing dependencies block tests, catalog regeneration/check and typecheck; restoration failed twice
+- `fix-analytics-drive-archetypes-da-003`: Historical record: Targeted Vitest and TypeScript stalled without verification results, including direct Vitest execution
+- `fix-analytics-drive-calendar-dc01`: Historical record: Required regression blocked before collection by external i18n catalog validation
+- `fix-analytics-drive-calendar-dc05`: Historical record: command execution stalled without output, blocking regression tests and catalog regeneration/check
+- `fix-analytics-fleet-compare-f08`: Historical record: verification exceeded time box; initial test startup failed on external catalog drift, regenerated --check and scoped test retry did not finish
+- `fix-analytics-fleet-compare-f09`: Historical record: focused Vitest stalled without output for 120 seconds via both npx and direct local invocation; verification blocked
+- `fix-analytics-lifetime-stats-ls-03`: Historical record: focused regression execution stalled without output
+- `fix-analytics-lifetime-stats-ls-04`: Historical record: weekday identity absent from assigned component; verification blocked by external catalog drift
+- `fix-analytics-mileage-f02`: Historical record: required test startup stalled; browser verification blocked by onboarding redirect
+- `fix-analytics-statistics-stat-qa-03`: Historical record: prerequisite state hook/key bounds support missing outside assigned scope
+- `fix-analytics-statistics-stat-qa-06`: Historical record: required tests blocked by external i18n catalog startup failure
+- `fix-analytics-timeline-tl-05`: Historical record: focused tests blocked before collection by external i18n catalog validation
+- `fix-analytics-true-cost-tc-qa-01`: Historical record: targeted tests blocked by external generated-catalog startup failure
+- `fix-analytics-true-cost-tc-qa-06`: Historical record: required full-file verification incomplete
+- `fix-analytics-true-cost-tc-qa-02`: Historical record: required Vitest verification stalled within time box
+- `fix-analytics-weekly-digest-wd-qa-01`: Historical record: required regression validation could not complete because command execution stalled
+- `fix-analytics-weekly-digest-wd-qa-02`: Historical record: regression verification stalled without results
+- `fix-analytics-year-review-f08`: Historical record: required frontend verification blocked by external generated-catalog startup failure
+- `fix-automations-automation-list-al-s01`: Historical record: required frontend tests blocked before collection by external generated i18n catalog drift
+- `fix-automations-automation-list-al-s07`: Historical record: focused regression execution blocked by external i18n catalog validation
+- `fix-automations-automation-list-al-s08`: Historical record: required verification blocked by unavailable PowerShell
+- `fix-automations-automations-list-f01`: Historical record: required frontend regression blocked by external i18n startup failure
+- `fix-automations-automation-list-al-s03`: Historical record: recovery test failed; four-file verification incomplete within time box
+- `fix-automations-automations-list-f08`: Historical record: missing existing duplicate/export contracts and builder draft handoff outside assigned scope
+- `fix-automations-automation-history-ahqa-08`: Historical record: scoped Vitest execution stalled without output
+- `fix-battery-battery-degradation-bd-01`: Historical record: shared energy-type alignment remains incomplete and prohibited by prompt
+- `fix-battery-battery-degradation-bd-02`: Historical record: frontend verification blocked by external generated-i18n startup failure and stalled checks
+- `fix-battery-battery-passport-f04`: Historical record: tests blocked before collection by external generated-i18n validation failure
+- `fix-battery-battery-passport-f07`: Historical record: validation runners stalled without results
+- `fix-battery-cells-bc-qa-008`: Historical record: required frontend tests blocked before collection by external generated i18n catalog validation
+- `fix-battery-charge-advisor-ca-s05`: Historical record: complete energy filtering requires prohibited backend edits; test execution blocked by unavailable PowerShell
+- `fix-battery-charge-advisor-ca-s10`: Historical record: focused Vitest verification blocked by nonresponsive shell
+- `fix-battery-power-flow-dashboard-f01`: Historical record: required server changes prohibited by web-only rule
+- `fix-battery-sleep-efficiency-q01`: Historical record: required backend filtering conflicts with explicit web-only edit restriction
+- `fix-battery-energy-flow-f03`: Historical record: Required Vitest blocked before test execution by external generated-catalog validation
+- `fix-battery-energy-flow-f05`: Historical record: verification incomplete within time box; page test visibility assertion failed
+- `fix-battery-power-flow-dashboard-f06`: Historical record: validation stalled without test output using both npx and the direct local Vitest runner; stopped both processes
+- `fix-battery-projected-range-prange-qa-006`: Historical record: focused test stalled; catalog freshness check failed
+- `fix-battery-sleep-efficiency-q08`: Historical record: scoped tests blocked by external generated-i18n catalog startup failure; no tests executed
+- `fix-battery-sleep-efficiency-q14`: Historical record: focused tests blocked by external generated-catalog startup failure
+- `fix-battery-vampire-drain-vd05`: Historical record: scoped verification stalled without output
+- `fix-battery-vampire-drain-vd06`: Historical record: tests stalled and browser checks blocked
+- `fix-charging-charge-interruption-f3`: Historical record: focused regression blocked by catalog validation; retries exceeded remaining time
+- `fix-charging-charging-detail-f04`: Historical record: external catalog startup failure prevented test execution
+- `fix-charging-charging-detail-f05`: Historical record: required suite blocked by catalog drift; isolated suite has two unrelated distance failures
+- `fix-charging-charging-detail-f09`: Historical record: verification incomplete due to external catalog drift and time box
+- `fix-charging-charging-heatmap-chh003`: Historical record: verification blocked by external i18n catalog startup failure
+- `fix-charging-charging-heatmap-chh004`: Historical record: scoped regression execution blocked by external i18n catalog startup failure
+- `fix-charging-tesla-charging-history-th02`: Historical record: required tests stalled without output
+- `fix-charging-tesla-charging-history-th03`: Historical record: focused tests could not execute: shell startup failure and direct runner stalled
+- `fix-charging-tesla-charging-history-th04`: Historical record: targeted Vitest blocked by external catalog validation; behavior unverified
+- `fix-charging-tesla-charging-history-th07`: Historical record: validation blocked by PowerShell startup timeout and unresponsive catalog command
+- `fix-charging-tesla-charging-sessions-f02`: Historical record: Backend GET lacks date-bound support outside allowed scope; focused tests stalled
+- `fix-charging-tesla-charging-sessions-f03`: Historical record: focused Vitest verification stalled without results
+- `fix-charging-charging-list-cl14`: Historical record: focused tests blocked by external i18n catalog startup failure
+- `fix-charging-charging-list-cl16`: Historical record: verification exceeded timebox
+- `fix-charging-charging-thermal-tax-ctt-h01`: Historical record: CHECKPOINT 2026-10-15: thermal-tax page + modernization suites passed (5 files, 42 tests); individual item acceptance remains open.
+- `fix-charging-charging-thermal-tax-ctt-h03`: Historical record: CHECKPOINT 2026-10-15: thermal-tax page + modernization suites passed (5 files, 42 tests); individual item acceptance remains open.
+- `fix-charging-charging-thermal-tax-ctt-s05`: Historical record: CHECKPOINT 2026-10-15: thermal-tax page + modernization suites passed (5 files, 42 tests); individual item acceptance remains open.
+- `fix-charging-cost-analysis-ca04`: Historical record: CHECKPOINT 2026-10-15: full cost-analysis area passed (17 files, 280 tests); individual item acceptance remains open.
+- `fix-charging-cost-analysis-ca08`: Historical record: CHECKPOINT 2026-10-15: full cost-analysis area passed (17 files, 280 tests); individual item acceptance remains open.
+- `fix-charging-cost-analysis-ca06`: Historical record: CHECKPOINT 2026-10-15: full cost-analysis area passed (17 files, 280 tests); individual item acceptance remains open.
+- `fix-charging-cost-analysis-ca13`: Historical record: CHECKPOINT 2026-10-15: full cost-analysis area passed (17 files, 280 tests); individual item acceptance remains open.
+- `fix-charging-smart-charge-sc-f04`: Historical record: targeted tests stalled without output
+- `fix-charging-smart-charge-sc-f08`: Historical record: external i18n catalog startup failure prevented regression verification
+- `fix-charging-smart-charge-sc-f10`: Historical record: command execution unavailable; required test and browser verification blocked
+- `fix-charging-smart-charge-sc-f06`: Historical record: Attempt 1: timeout after 25 minutes (changes left on disk) Attempt 2: timeout after 25 minutes (changes left on disk)
+- `fix-charging-tesla-charging-sessions-f12`: Historical record: focused Vitest run stalled without output
+- `fix-charging-tesla-charging-sessions-f07`: Historical record: targeted tests blocked by external i18n startup failure
+- `fix-dashboard-glance-f02`: Historical record: scoped Vitest stalled; no test results or exit code
+- `fix-dashboard-glance-f04`: Historical record: scoped tests stalled and onboarding redirects blocked browser verification
+- `fix-dashboard-quick-stats-qs-004`: Historical record: verification blocked by external generated-i18n startup failure
+- `fix-dashboard-quick-stats-qs-002`: Historical record: scoped verification stalled without output; no test exit status available
+- `fix-dashcam-dashcam-intelligence-dc002`: Historical record: verification blocked by command execution timeouts
+- `fix-dashcam-dashcam-intelligence-dc012`: Historical record: command execution unavailable; required regeneration and tests unverified
+- `fix-dashcam-dashcam-intelligence-dc014`: Historical record: Scoped test and browser verification incomplete within time limit
+- `fix-dashcam-dashcam-intelligence-dc011`: Historical record: regression and catalog check incomplete within time box; external TypeScript failures
+- `fix-diagnostics-root-cause-intelligence-rc04`: Historical record: scoped test execution stalled without output
+- `fix-diagnostics-service-evidence-pack-sep-source-004`: Historical record: dependencies broken: targeted Vitest and direct runner stalled without output; verification could not complete
+- `fix-dashcam-dashcam-intelligence-dc015`: Historical record: Required focused Vitest command stalled without output; verification remains incomplete
+- `fix-diagnostics-anomaly-dashboard-f01`: Historical record: required verification blocked by PowerShell startup timeouts and stalled commands
+- `fix-diagnostics-anomaly-dashboard-f03`: Historical record: required frontend verification blocked by external i18n catalog startup failure
+- `fix-diagnostics-remaining-useful-life-rul-01`: Historical record: focused regression verification incomplete
+- `fix-diagnostics-remaining-useful-life-rul-03`: Historical record: Required scoped tests stalled without output using both npx and direct local Vitest; verification incomplete
+- `fix-diagnostics-root-cause-intelligence-rc06`: Historical record: required regression blocked by unavailable/unresponsive PowerShell
+
+#### Source, mutation or interaction state assertions (81)
+
+- `fix-automations-automations-list-f03`: Retry failed: automation selected suites have 12 failures across AutomationListPage (2), AutomationsListPage (7), and RoutineWizard (3). Examples: active-refetch never reaches expected state, malformed catalog payload fails to reject as expected, no Active row text, and RoutineWizard expected section heading is replaced by the current empty-state explanation.
+- `fix-automations-automations-list-f05`: Retry failed: automation selected suites have 12 failures across AutomationListPage (2), AutomationsListPage (7), and RoutineWizard (3). Examples: active-refetch never reaches expected state, malformed catalog payload fails to reject as expected, no Active row text, and RoutineWizard expected section heading is replaced by the current empty-state explanation.
+- `fix-automations-automation-list-al-s04`: Retry failed: automation selected suites have 12 failures across AutomationListPage (2), AutomationsListPage (7), and RoutineWizard (3). Examples: active-refetch never reaches expected state, malformed catalog payload fails to reject as expected, no Active row text, and RoutineWizard expected section heading is replaced by the current empty-state explanation.
+- `fix-automations-automation-list-al-s06`: Retry failed: automation selected suites have 12 failures across AutomationListPage (2), AutomationsListPage (7), and RoutineWizard (3). Examples: active-refetch never reaches expected state, malformed catalog payload fails to reject as expected, no Active row text, and RoutineWizard expected section heading is replaced by the current empty-state explanation.
+- `fix-charging-charging-thermal-tax-ctt-s01`: Retry verification failed 2026-10-15: required charging heatmap regression command ran, but the two ChargingHeatmapPage suites contain 10 failing assertions about unavailable/missing-summary card wrappers (suite total 341 passed/44 failed). Underlying helper/grid tests pass; reported first errors are `toHaveAttribute` receiving null for missing metric state and unable to find visible `Avg Duration` in summary.
+- `fix-charging-smart-charge-sc-f01`: Retry verification failed 2026-10-15: required charging heatmap regression command ran, but the two ChargingHeatmapPage suites contain 10 failing assertions about unavailable/missing-summary card wrappers (suite total 341 passed/44 failed). Underlying helper/grid tests pass; reported first errors are `toHaveAttribute` receiving null for missing metric state and unable to find visible `Avg Duration` in summary.
+- `fix-charging-tesla-charging-sessions-f15`: Retry verification failed 2026-10-15: TeslaChargingSessionsPage.test.tsx reports 16 failures. Representative exact errors: cannot find “Updating.”, “Data unavailable”, or `[data-testid="stale-refresh-warning"]` in scoped/unavailable/retained cases.
+- `fix-diagnostics-service-evidence-pack-sep-source-009`: Retry failed: ServiceEvidencePackPage.test.tsx has 9 failures; snapshot timestamp and source details are not visible on the summary face.
+- `fix-diagnostics-anomaly-dashboard-f05`: Retry failed: AnomalyTimelineCard.test.tsx has 17 failures; authoritative readings/units (for example 0.5 km and -4.5 km/h) are not present in the visible card text.
+- `fix-diagnostics-root-cause-intelligence-rc05`: Retry failed: rootCauseIntelligence.test.ts has 3 failures; expected leads/concurrent classification differs and expected 300000 ms is 420000 ms.
+- `fix-diagnostics-service-evidence-pack-sep-source-006`: Retry failed: rootCauseIntelligence.test.ts has 3 failures; expected leads/concurrent classification differs and expected 300000 ms is 420000 ms.
+- `fix-exports-exports-ex03`: Retry failed: ExportsPage.test.tsx has 15 failures across 41 tests. Breakage includes missing accessible export-row names/checkboxes, reversed sort order, and retained/error/paused states not exposing expected summary text or null-value placeholders.
+- `fix-exports-exports-ex05`: Retry failed: ExportsPage.test.tsx has 15 failures across 41 tests. Breakage includes missing accessible export-row names/checkboxes, reversed sort order, and retained/error/paused states not exposing expected summary text or null-value placeholders.
+- `fix-exports-exports-ex07`: Retry failed: ExportsPage.test.tsx has 15 failures across 41 tests. Breakage includes missing accessible export-row names/checkboxes, reversed sort order, and retained/error/paused states not exposing expected summary text or null-value placeholders.
+- `fix-fleet-ops-fleet-operations-f01`: Retry failed: FleetOperationsPage.test.tsx has 7 failures; direct assertions cannot find Maintenance cost in the brief face, and Fleet-wide/cost summary expectations differ from current summary rendering.
+- `fix-home-energy-whole-home-energy-f06`: Retry failed: EnergyFlowChart.test.tsx has 7 failures; accessible/unknown measurements do not match expected unrounded numeric/sign display arrays.
+- `fix-maps-navigation-route-nav-qa-005`: RETRY FAILED | NavigationRoutePage.test.tsx: 10 failures across retained refresh/recovery, route metrics, empty sections, measured zero coordinates, heading cardinal and independent-source availability assertions. Existing UI assertions diverge after modernization; individual failing test names in run output from 2026-10-16.
+- `fix-notifications-archived-f08`: Retry failed: InboxBody.test.tsx has 8 failures; archived mode severity/details and responsive dialog assertions do not match current brief/dialog rendering.
+- `fix-notifications-channels-nc011`: Retry failed: ChannelFormModal.test.tsx has 3 failures; create-mode tests cannot find the URL label in the modal.
+- `fix-notifications-channels-nc013`: Retry failed: ChannelFormModal.test.tsx has 3 failures; create-mode URL validation/label assertions fail because the URL label is not found.
+- `fix-notifications-channels-nc014`: Retry failed: ChannelFormModal.test.tsx has 3 failures; create-mode URL validation/label assertions fail because the URL label is not found.
+- `fix-notifications-channels-nc015`: Retry failed: ChannelFormModal.test.tsx has 3 failures; create-mode URL validation/label assertions fail because the URL label is not found.
+- `fix-notifications-notification-health-nh-02`: Retry failed: NotificationHealthPanels.continuation.test.tsx has 18 failures; stale warning, fatigue denominators and full table grouping assertions differ from rendered output.
+- `fix-notifications-notification-health-nh-04`: Retry failed: NotificationHealthPanels.continuation.test.tsx has 18 failures; expected fatigue caption “of 1 rules” and other labels are not found.
+- `fix-notifications-notification-health-nh-07`: Retry failed: NotificationHealthPanels.continuation.test.tsx has 18 failures; composite fatigue/grouping and retained-detail assertions differ from current output.
+- `fix-notifications-notification-health-nh-09`: Retry failed: NotificationHealthPanels.continuation.test.tsx has 18 failures; section population and source-retention assertions fail.
+- `fix-notifications-notification-health-nh-11`: Retry failed: NotificationHealthPanels.continuation.test.tsx has 18 failures; full grouping/denominator and retained-detail assertions fail.
+- `fix-ownership-model-trust-mt03`: Retry failed: ModelTrustPage.test.tsx has 5 failures; tests expect portfolio band and selected-model score details on the summary face.
+- `fix-ownership-warranty-command-wc-08`: Retry failed: WarrantyCommandPage.test.tsx has 19 failures; coverage/claim editor labels are unavailable in current test flow before assertions.
+- `fix-ownership-warranty-command-wc-04`: Retry failed: WarrantyCommandPage.test.tsx has 19 failures; battery retention/headroom details fail their existing page assertions.
+- `fix-ownership-warranty-command-wc-03`: Retry failed: WarrantyCommandPage.test.tsx has 19 failures; mobile details/action coverage does not reach expected editor labels.
+- `fix-ownership-warranty-command-wc-01`: Retry failed: WarrantyCommandPage.test.tsx has 19 failures; draft-scope cases cannot find coverage/claim editor labels in the current flow.
+- `fix-power-user-grafana-panel-f01`: Retry failed: GrafanaPanelPage.test.tsx cannot find Bundled builder catalog – all entries in the static catalog evidence section; 1 failure.
+- `fix-resale-vault-warranty-resale-vault-f09`: Retry failed: useVaultEvidence.test.tsx has 5 lifecycle failures: active first read is reported as not loading, paused first read does not remain pending, and successful empty/zero data expectations disagree with the combined hook state.
+- `fix-resale-vault-warranty-resale-vault-f11`: Retry failed: WarrantyResaleVaultPage.test.tsx has 13 failures; signing-key actions stay disabled in automatic-generation, rotation, and stale vehicle-scope cases.
+- `fix-resale-vault-warranty-resale-vault-f10`: Retry failed: WarrantyResaleVaultPage.test.tsx has 13 failures; signing-key actions stay disabled in rotation and stale vehicle-scope cases.
+- `fix-resale-vault-warranty-resale-vault-f01`: Retry failed: WarrantyResaleVaultPage.test.tsx has 13 failures; signing-key recovery actions remain disabled after automatic key generation rejects.
+- `fix-resale-vault-warranty-resale-vault-f02`: Retry failed: WarrantyResaleVaultPage.test.tsx has 13 failures; signing-key recovery actions remain disabled through stale vehicle scope changes.
+- `fix-service-intelligence-service-intelligence-si11`: Retry failed: CommunicationsCatalogPanel.test.tsx has 7 failures in translated provider/catalog labels and rendering.
+- `fix-service-intelligence-service-intelligence-si09`: Retry failed: service-intelligence selected suites have 12 failures across CommunicationsCatalogPanel (7), CommunicationsPanel (3), EvidenceLimitationsPanel (1), and WarrantyPanel (1).
+- `fix-service-intelligence-service-intelligence-si08`: Retry failed: service-intelligence selected suites have 12 failures across communications catalog/panel, evidence limitations, and WarrantyPanel assertions.
+- `fix-service-intelligence-service-intelligence-si06`: Retry failed: CommunicationsCatalogPanel.test.tsx has 7 failures in translated provider/catalog labels and rendering.
+- `fix-service-intelligence-service-intelligence-si04`: Retry failed: WarrantyPanel.test.tsx has 1 failure in its focused warranty assertion; related suite reports 12 failures total.
+- `fix-service-intelligence-service-intelligence-si03`: Retry failed: WarrantyPanel.test.tsx has 1 failure in its focused warranty assertion; related suite reports 12 failures total.
+- `fix-service-intelligence-service-intelligence-si01`: Retry failed: CommunicationsPanel.test.tsx has 3 failures in communications status/detail assertions.
+- `fix-settings-active-sessions-as-11`: Retry failed: useSessions.test.tsx does not observe isRefetching=true in the active-refresh case (line 220); 1 failure.
+- `fix-settings-active-sessions-as-06`: Retry failed: same useSessions.test.tsx active-refresh case does not observe isRefetching=true; 1 failure.
+- `fix-settings-active-sessions-as-05`: Retry failed: same useSessions.test.tsx active-refresh case does not observe isRefetching=true; 1 failure.
+- `fix-settings-fleet-setup-fs013`: Retry failed: useSettings.authRecovery.test.tsx historical-view/sudo replay expects {auth_url}; actual response differs (deep-equality mismatch at line 105).
+- `fix-settings-helix-helix-03`: Retry failed: AISettings.test.tsx has 7 failures; tests expect data-testid ai-settings-unsaved but the current component does not render it.
+- `fix-settings-helix-helix-02`: Retry failed: AISettings.test.tsx has 7 failures; tests expect data-testid ai-settings-unsaved but the current component does not render it.
+- `fix-settings-helix-helix-07`: Retry failed: AIUsageCard.test.tsx has 5 failures; tests expect three dash values and visible Last updated metadata on the brief face.
+- `fix-settings-privacy-privacy-05`: Retry failed: PrivacyPage.test.tsx has 9 failures, including legacy KPI/detail assertions and missing Deployment policy unavailable copy in unknown/failure scenarios.
+- `fix-settings-privacy-privacy-02`: Retry failed: PrivacyPage.test.tsx has 9 failures, including expected date-range explanation and a four-entry panel where only three render.
+- `fix-settings-two-factor-auth-tfa-05`: Retry failed: useTotpEnrollmentFlow.test.tsx has 8 stale-lifecycle failures after status mode changes during pending work; confirm/dialog state differs from close/reset expectations.
+- `fix-settings-two-factor-auth-tfa-03`: Retry failed: useTotpEnrollmentFlow.test.tsx has 8 stale-lifecycle failures; stale completion after a status mode change interferes with the newer flow expected state.
+- `fix-telemetry-signal-correlation-sc-01`: Retry failed: SignalCorrelationPage.test.tsx has 10 failures in the correlation page assertions.
+- `fix-telemetry-signal-change-points-scp002`: Retry failed: TelemetrySummaryBrief.test.tsx has 20 failures; the brief face no longer exposes the source/date/metric fields asserted directly by these tests.
+- `fix-telemetry-signal-deadband-f002`: Retry failed: TelemetrySummaryBrief.test.tsx has 20 failures; direct brief-face source/date/metric assertions are missing.
+- `fix-system-my-activity-ma-06`: Retry verification failed 2026-10-15: src/types/admin.test.ts has 5 failures: doorClosed/isSentryActive/allWindowsClosed return null for expected booleans; buildSentryBuckets returns 2023-12-31 instead of 2024-01-01; findLastLockChange returns 01:00Z instead of 00:00Z. These do not validate the listed DTO reconciliation.
+- `fix-system-state-machine-debugger-f02`: Retry failed: state-machine focused suites have 23 failures. FSMTimelineChart has 2 failures (exact-bound memoization returned undefined and expected series markers are missing); both StateMachineDebuggerPage suites fail fetching/paused unresolved-transition and skeleton assertions.
+- `fix-system-state-machine-debugger-f03`: Retry failed: StateMachineDebuggerPage suites fail fetching/paused unresolved-transition assertions and skeleton assertions; 13 page assertions fail across the two test files.
+- `fix-system-state-machine-debugger-f05`: Retry failed: StateMachineDebuggerPage suites fail fetching/paused unresolved-transition assertions and skeleton assertions; 13 page assertions fail across the two test files.
+- `fix-system-state-machine-debugger-f06`: Retry failed: StateMachineDebuggerPage suites fail fetching/paused unresolved-transition assertions and skeleton assertions; 13 page assertions fail across the two test files.
+- `fix-system-state-machine-debugger-f11`: Retry failed: StateMachineDebuggerPage suites fail fetching/paused unresolved-transition assertions and skeleton assertions; 13 page assertions fail across the two test files.
+- `fix-telemetry-live-signal-monitor-lsm-f03`: Retry failed: LiveSignalTail.test.tsx has 2 failures in retained/live signal tail behavior.
+- `fix-telemetry-signal-correlation-sc-02`: Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts.
+- `fix-telemetry-signal-correlation-sc-05`: Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts.
+- `fix-telemetry-signal-correlation-sc-07`: Retry failed: SignalCorrelationPage.test.tsx has 10 failures in the page source/range assertions.
+- `fix-telemetry-signal-correlation-sc-06`: Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts.
+- `fix-telemetry-signal-deadband-f005`: Retry failed: SignalDeadbandPage.test.tsx has 3 failures in deadband page assertions.
+- `fix-telemetry-signal-diff-sd-01`: Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions.
+- `fix-telemetry-signal-diff-sd-02`: Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions.
+- `fix-telemetry-signal-diff-sd-03`: Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions.
+- `fix-telemetry-signal-diff-sd-07`: Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions.
+- `fix-telemetry-signal-diff-sd-08`: Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions.
+- `fix-telemetry-signal-diff-sd-11`: Retry failed: SignalDiffBreakdown.test.tsx has one failure in diff breakdown output.
+- `fix-telemetry-signal-diff-sd-12`: Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions.
+- `fix-model-trust-mobile-regression-fixture`: RETRY FAILED | ModelTrustPage.test.tsx: 5 failures remain, including mobile details/actions and financial history/calibration assertions; required mobile fixture behavior is not verified.
+- `fix-feature-flag-delete-result-feedback`: RETRY FAILED | FeatureFlagsPage.test.tsx: 7 failures in save/drawer pending/rejection handling, edit mode and partial audit-source state. useFeatureFlags.test.tsx passes.
+- `fix-governance-run-cache-invalidation`: RETRY FAILED | useOwnership.test.tsx: governance run-cache invalidation test fails its requirement to preserve cache and avoid refetch on failed mutation.
+
+#### Redesign disclosure or metric presentation assertions (68)
+
+- `fix-analytics-analytics-f12`: Retry failed: AnalyticsPage.test.tsx has 6 failures for partial-source/load state copy and Analytics/Statistics suites include collapsed-brief details missing on the face.
+- `fix-analytics-statistics-stat-qa-08`: Retry failed: StatisticsPage.test.tsx has 48 failures; mixed-window, CO2 methodology and other source/context details are expected on the card face but are behind Review details.
+- `fix-battery-battery-degradation-bd-03`: Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.
+- `fix-battery-battery-degradation-bd-05`: Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.
+- `fix-battery-battery-degradation-bd-06`: Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.
+- `fix-battery-battery-degradation-bd-07`: Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.
+- `fix-battery-battery-degradation-bd-08`: Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.
+- `fix-battery-battery-degradation-bd-09`: Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.
+- `fix-battery-battery-degradation-bd-10`: Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.
+- `fix-battery-battery-degradation-bd-11`: Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.
+- `fix-battery-battery-degradation-bd-13`: Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.
+- `fix-battery-energy-flow-f01`: Retry verification failed 2026-10-15: EnergyFlowPage.test.tsx has 9 failures. Representative error: cannot find “Shared source total” in the collapsed summary; 5 focused files total 311 passed / 56 failed. `workspaceScope`, `useDriving`, and Go race packages pass.
+- `fix-battery-vampire-drain-vd08`: Retry verification failed 2026-10-15: VampireDrainPage.test.tsx has 5 failures. Representative exact error: cannot find “After unplug” in the page review surface; tests also cannot find “Tonight: unknown”, expected stale warning, and retained metrics in collapsed brief. Go race packages pass.
+- `fix-charging-tesla-charging-history-th05`: Retry verification failed 2026-10-15: TeslaChargingHistoryPage and __tests__/TeslaChargingHistoryPage report 18 failing assertions. Representative exact errors: cannot find expected localized date text “31. Jan. 2024, 16:30”; summary details/status text and absent-metric card selectors are not found under the current shared Review details brief.
+- `fix-charging-tesla-charging-history-th06`: Retry verification failed 2026-10-15: TeslaChargingHistoryPage and __tests__/TeslaChargingHistoryPage report 18 failing assertions. Representative exact errors: cannot find expected localized date text “31. Jan. 2024, 16:30”; summary details/status text and absent-metric card selectors are not found under the current shared Review details brief.
+- `fix-charging-tesla-charging-history-th08`: Retry verification failed 2026-10-15: TeslaChargingHistoryPage and __tests__/TeslaChargingHistoryPage report 18 failing assertions. Representative exact errors: cannot find expected localized date text “31. Jan. 2024, 16:30”; summary details/status text and absent-metric card selectors are not found under the current shared Review details brief.
+- `fix-charging-tesla-charging-history-th10`: Retry verification failed 2026-10-15: TeslaChargingHistoryPage and __tests__/TeslaChargingHistoryPage report 18 failing assertions. Representative exact errors: cannot find expected localized date text “31. Jan. 2024, 16:30”; summary details/status text and absent-metric card selectors are not found under the current shared Review details brief.
+- `fix-charging-tesla-charging-history-th12`: Retry verification failed 2026-10-15: TeslaChargingHistoryPage and __tests__/TeslaChargingHistoryPage report 18 failing assertions. Representative exact errors: cannot find expected localized date text “31. Jan. 2024, 16:30”; summary details/status text and absent-metric card selectors are not found under the current shared Review details brief.
+- `fix-explore-explore-f02`: Retry failed: ExplorePage.test.tsx has 14 failures. Paused/unknown fleet tests cannot find Vehicles or expected data-state markers; built-in details assertions cannot find scope/source text. Current page brief renders a reduced summary face with details behind Review details.
+- `fix-explore-explore-f03`: Retry failed: ExplorePage.test.tsx has 14 failures. Paused/unknown fleet tests cannot find Vehicles or expected data-state markers; built-in details assertions cannot find scope/source text. Current page brief renders a reduced summary face with details behind Review details.
+- `fix-explore-explore-f04`: Retry failed: ExplorePage.test.tsx has 14 failures. Paused/unknown fleet tests cannot find Vehicles or expected data-state markers; built-in details assertions cannot find scope/source text. Current page brief renders a reduced summary face with details behind Review details.
+- `fix-explore-explore-f06`: Retry failed: ExplorePage.test.tsx has 14 failures. Paused/unknown fleet tests cannot find Vehicles or expected data-state markers; built-in details assertions cannot find scope/source text. Current page brief renders a reduced summary face with details behind Review details.
+- `fix-home-energy-whole-home-energy-f10`: Retry failed: KpiSummary.test.tsx has 3 failures; planning horizon, modeled recommendation and essential-source status are expected on the brief face but are currently hidden in Review details.
+- `fix-notifications-archived-f01`: Retry failed: ArchivedPage.test.tsx has 2 failures: active-lookup loading assertion is missing and confirmed zero severity count is not found on the collapsed summary face.
+- `fix-notifications-archived-f05`: Retry failed: ArchivedPage.test.tsx and InboxBody.test.tsx fail 10 cases; severity/count details and archived semantics are asserted on the card face, and archived activation dialog remains open in one case.
+- `fix-ownership-insurance-telematics-f01`: Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures, including missing Recorded bounds/percentile metrics from direct summary-card-face queries; details are behind Review details.
+- `fix-ownership-insurance-telematics-f04`: Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures, including missing Recorded bounds/percentile metrics from direct summary-card-face queries; details are behind Review details.
+- `fix-ownership-insurance-telematics-f07`: Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures; locale/timezone date assertions read summary metadata that is no longer on the card face.
+- `fix-ownership-insurance-telematics-f08`: Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures; direct summary-card assertions cannot find values and source bounds in the collapsed brief.
+- `fix-ownership-insurance-telematics-f09`: Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures; direct summary-card assertions cannot find localized source details in the collapsed brief.
+- `fix-ownership-insurance-telematics-f15`: Retry failed: InsuranceTelematicsPage.test.tsx has 22 failures; direct summary-card assertions cannot find source measure details in the collapsed brief.
+- `fix-ownership-model-trust-mt05`: Retry failed: ModelTrustPage.test.tsx has 5 failures; locale/timezone and raw score details are queried from the collapsed summary face.
+- `fix-ownership-tariff-lab-tl10`: Retry failed: TariffLabPage.test.tsx has 32 failures; assertions expect former summary content such as Not computed and Source returned on the card face.
+- `fix-ownership-tariff-lab-tl08`: Retry failed: TariffLabPage.test.tsx has 32 failures; assertions expect former summary labels/status on the card face.
+- `fix-ownership-tariff-lab-tl05`: Retry failed: TariffLabPage.test.tsx has 32 failures; retained source/publication metadata is queried from the collapsed summary face.
+- `fix-ownership-tariff-lab-tl04`: Retry failed: TariffLabPage.test.tsx has 32 failures; assertions expect former summary content and status on the card face.
+- `fix-ownership-tariff-lab-tl02`: Retry failed: TariffLabPage.test.tsx has 32 failures; summary currency/economics assertions query the collapsed card face.
+- `fix-ownership-tariff-lab-tl01`: Retry failed: TariffLabPage.test.tsx has 32 failures; mobile-field assertions query former summary content without opening Review details.
+- `fix-ownership-tariff-lab-tl09`: Retry failed: OwnershipBrief.test.tsx has 14 failures; direct brief assertions cannot find recorded bounds and quality details before opening Review details.
+- `fix-ownership-tariff-lab-tl07`: Retry failed: OwnershipBrief.test.tsx has 14 failures; direct brief assertions cannot find date/freshness details before opening Review details.
+- `fix-science-science-lab-sci-009`: Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.
+- `fix-science-science-lab-sci-008`: Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.
+- `fix-science-science-lab-sci-007`: Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.
+- `fix-science-science-lab-sci-006`: Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.
+- `fix-science-science-lab-sci-005`: Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.
+- `fix-science-science-lab-sci-003`: Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.
+- `fix-science-science-lab-sci-004`: Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.
+- `fix-science-science-lab-sci-002`: Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.
+- `fix-science-science-lab-sci-001`: Retry failed: ScienceLabPage.test.tsx has 41 failures; saved locale/date, source trust, and evidence details are queried directly from the collapsed Evidence at a glance brief. Representative output is only summary metrics until Review details is opened.
+- `fix-settings-active-sessions-as-02`: Retry failed: SessionsSummaryCards.test.tsx has 2 failures: expected IP 10.2.2.2 and four data-operational-metric wrappers are absent from the current summary face.
+- `fix-settings-helix-helix-08`: Retry failed: HelixStatusStrip.test.tsx has 12 failures; direct card-face assertions cannot find Provider, Source available, and related summary fields in current collapsed brief rendering.
+- `fix-settings-privacy-privacy-01`: Retry failed: PrivacyPage.test.tsx has 9 failures, including persistence feedback/layout assertions; suite still expects former card-face metrics and status.
+- `fix-sharing-share-card-sc09`: Retry failed: ShareCardPage.test.tsx has 1 failure; retained background-failure state expects visible Cached text in the collapsed brief.
+- `fix-sharing-shared-drive-f05`: Retry failed: SharedDrivePage.test.tsx has 13 failures; exact speed text is duplicated and several SI/date/metric assertions expect former card-face values.
+- `fix-sharing-shared-drive-f02`: Retry failed: SharedDrivePage.test.tsx has 13 failures; SI/date/metric assertions expect former card-face values and exact text is duplicated.
+- `fix-sharing-shared-drive-f01`: Retry failed: SharedDrivePage.test.tsx has 13 failures; SI/date/metric assertions expect former card-face values and exact text is duplicated.
+- `fix-system-search-ss02`: Retry verification failed 2026-10-15: `api/types.test.ts` passes and `go test -race ./internal/api/search` passes; `useSearch.test.tsx` passes. `SearchPage.test.tsx` remains 5/?? failed: its legacy summary/card assertions expect hidden fields in the collapsed OperationalBrief (3 results under Top match; Total results/Top match cards for empty or paused data; retained query/facet scope wording in collapsed summary). The current UI exposes those details in the Review details disclosure; coverage/missing-data assertions need migration to that contract.
+- `fix-system-search-ss03`: Retry verification failed 2026-10-15: `api/types.test.ts` passes and `go test -race ./internal/api/search` passes; `useSearch.test.tsx` passes. `SearchPage.test.tsx` remains 5/?? failed: its legacy summary/card assertions expect hidden fields in the collapsed OperationalBrief (3 results under Top match; Total results/Top match cards for empty or paused data; retained query/facet scope wording in collapsed summary). The current UI exposes those details in the Review details disclosure; coverage/missing-data assertions need migration to that contract.
+- `fix-system-search-ss10`: Retry verification failed 2026-10-15: `api/types.test.ts` passes and `go test -race ./internal/api/search` passes; `useSearch.test.tsx` passes. `SearchPage.test.tsx` remains 5/?? failed: its legacy summary/card assertions expect hidden fields in the collapsed OperationalBrief (3 results under Top match; Total results/Top match cards for empty or paused data; retained query/facet scope wording in collapsed summary). The current UI exposes those details in the Review details disclosure; coverage/missing-data assertions need migration to that contract.
+- `fix-system-state-machine-debugger-f08`: Retry failed: state-machine focused suites have 23 failures; FSMOperationalBrief tests expect source bounds/freshness on the card face, while the shared brief now collapses details.
+- `fix-system-tesla-api-usage-tu01`: Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.
+- `fix-system-tesla-api-usage-tu02`: Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.
+- `fix-system-tesla-api-usage-tu03`: Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.
+- `fix-system-tesla-api-usage-tu07`: Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.
+- `fix-system-tesla-api-usage-tu09`: Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.
+- `fix-system-tesla-api-usage-tu05`: Retry verification failed 2026-10-15: focused Tesla usage suite required 66 tests; TeslaApiUsageHistory.test.tsx failed 6 contract assertions and TeslaApiUsageCard.test.tsx failed 9. The failures are old direct card-face assertions for status/value/date/source details that are now inside the shared Review details brief; TeslaApiUsagePage and RangePicker test files passed. Exact failing tests: retained raw selected totals/category evidence; observed history/cycle/category values; successful zero totals; retained paused zero evidence/recovery; successful empty evidence/recovery; saved locale/timezone boundaries (2 modes); saved timezone mode changes; missing cycle date placeholders (invalid, empty, null, undefined); four billable categories/zero history; concise status/card link. See focused test output and final Vitest JSON in the OS temp directory.
+- `fix-telemetry-signal-correlation-sc-04`: Retry failed: CorrelationStatStrip.test.tsx has 21 failures; detail metrics and labels are asserted directly on the collapsed brief face.
+- `fix-ownership-shared-quality-labels`: Retry failed: OwnershipBrief.test.tsx has 14 failures; quality/status detail assertions such as Future failures are hidden until Review details is opened.
+
+#### Locale, formatting or copy assertions (16)
+
+- `fix-charging-charging-heatmap-chh006`: Retry verification failed 2026-10-15: focused charging set 341 passed / 44 failed. ChargingHeatmap page tests fail 10 KPI assertions: expected data-operational-metric/value cards (including Avg Duration) while the current informational brief omits card wrappers for unavailable metrics; example TypeError is `.toHaveAttribute` received null.
+- `fix-dashcam-dashcam-intelligence-dc016`: Retry failed: EventEvidencePanel.test.tsx has 1 localization regression; saved descriptor text with quotes/ampersand is not found after language change. RedactionEditor and eventDetection suites pass.
+- `fix-diagnostics-remaining-useful-life-rul-04`: Retry failed: RemainingUsefulLifePage.test.tsx has 15 failures; localized battery labels are missing from expected Health forecast headings and source-status assertions.
+- `fix-diagnostics-remaining-useful-life-rul-05`: Retry failed: RemainingUsefulLifePage.test.tsx has 15 failures; localized battery labels and independent source details fail page assertions.
+- `fix-diagnostics-root-cause-intelligence-rc01`: Retry failed: RootCauseIntelligencePage.test.tsx has 12 failures; paused-state test cannot find its expected data-state marker and effect values are not in the expected display format.
+- `fix-fleet-ops-fleet-operations-f03`: Retry failed: helpers.test.ts has 1 failure; view-model timezone expected Asia/Tokyo but received America/Los_Angeles.
+- `fix-fleet-ops-fleet-operations-f05`: Retry failed: helpers.test.ts has 1 failure; view-model timezone expected Asia/Tokyo but received America/Los_Angeles.
+- `fix-home-energy-whole-home-energy-f07`: Retry failed: EnergyFlowChart.test.tsx has 7 failures; accessible tooltip/table units and percent/power formatter outputs differ from expected values.
+- `fix-notifications-archived-f12`: Retry failed: InboxBody.test.tsx has 8 failures; an exact metric format mismatch (expected 1,250 ms, rendered 1,250.00 ms) and archived details/dialog assertions fail.
+- `fix-notifications-channels-nc002`: Retry failed: ChannelProvidersPanel.test.tsx cannot find translated provider label Courriel; 1 failure.
+- `fix-system-my-activity-ma-03`: Retry verification failed 2026-10-15: MyActivityPage.test.tsx cannot resolve its legacy KPI-card assertions for unavailable initial data; expected “Total actions” data-metric cards are replaced by one informational no-metrics state. The full test also had missing Last active text in the empty activity case.
+- `fix-system-system-status-ss-001`: Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.
+- `fix-system-system-status-ss-002`: Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.
+- `fix-system-system-status-ss-003`: Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.
+- `fix-system-system-status-ss-010`: Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.
+- `fix-system-system-status-ss-019`: Retry failed: SystemStatusPage.test.tsx has one failure; recovery still renders the informational empty state, contrary to the test expectation that no status region remains.
+
+#### Fixture or chart contract mismatch (9)
+
+- `fix-diagnostics-root-cause-intelligence-rc08`: Retry failed: ServiceEvidencePackPage.test.tsx has 9 failures; graph swatch lookup returns undefined and expected Last updated metadata is absent from the summary face.
+- `fix-diagnostics-service-evidence-pack-sep-source-007`: Retry failed: ServiceEvidencePackPage.test.tsx has 9 failures; graph swatch lookup returns undefined and snapshot timestamp is not visible on the summary face.
+- `fix-intelligence-packs-intelligence-pack-marketplace-f04`: Retry failed: SandboxPreviewPanel.test.tsx has 7 failures, all charts throw Recharts “Could not find Recharts context” from the test render.
+- `fix-intelligence-packs-intelligence-pack-marketplace-f13`: Retry failed: SandboxPreviewPanel.test.tsx has 7 failures, all charts throw Recharts “Could not find Recharts context” from the test render.
+- `fix-intelligence-packs-intelligence-pack-marketplace-f14`: Retry failed: SandboxPreviewPanel.test.tsx has 7 failures, all charts throw Recharts “Could not find Recharts context” from the test render.
+- `fix-notifications-notification-health-nh-12`: Retry failed: NotificationLatencyPanel.test.tsx has 25 failures; expected notification-chart-data is absent and empty Apdex neutrality queries return null.
+- `fix-notifications-notification-health-nh-13`: Retry failed: NotificationLatencyPanel.test.tsx has 25 failures; expected notification-chart-data is absent and empty Apdex neutrality queries return null.
+- `fix-notifications-notification-health-nh-14`: Retry failed: NotificationLatencyPanel.test.tsx has 25 failures; expected notification-chart-data is absent and empty Apdex neutrality queries return null.
+- `fix-notifications-notification-health-nh-15`: Retry failed: NotificationLatencyPanel.test.tsx has 25 failures; expected notification-chart-data is absent and empty Apdex neutrality queries return null.
+
+#### Ambiguous text or role queries (7)
+
+- `fix-ownership-model-trust-mt04`: Retry failed: ModelTrustPage.test.tsx has 5 failures; draft preservation/entry tests cannot find summary detail values and use duplicate Close button queries.
+- `fix-settings-active-sessions-as-04`: Retry failed: ActiveSessionsPage.test.tsx has 2 failures because exact IP text 10.0.0.2 appears more than once; the getByText query is ambiguous.
+- `fix-settings-active-sessions-as-03`: Retry failed: ActiveSessionsPage.test.tsx has 2 failures because exact IP text 10.0.0.2 appears more than once; the getByText query is ambiguous.
+- `fix-system-system-status-ss-011`: Retry failed: StatusHero.test.tsx has 5 failures; healthy state has no expected shadow marker, and degraded/unhealthy queries find multiple status roles.
+- `fix-watch-watch-face-f01`: Retry failed: WatchFacePage.test.tsx has 2 failures because expected “Cached vehicle data” and “Historical vehicle data” text is duplicated between visible content and tooltip accessible text; getByText is ambiguous.
+- `fix-watch-watch-face-f06`: Retry failed: WatchFacePage.test.tsx has 2 failures because expected “Cached vehicle data” and “Historical vehicle data” text is duplicated between visible content and tooltip accessible text; getByText is ambiguous.
+- `fix-watch-watch-face-f10`: Retry failed: WatchFacePage.test.tsx has 2 failures because expected “Cached vehicle data” and “Historical vehicle data” text is duplicated between visible content and tooltip accessible text; getByText is ambiguous.
+
+#### Domain or UI assertions requiring diagnosis (4)
+
+- `fix-charging-charging-curve-f08`: CHECKPOINT 2026-10-15: charging-curve helper + page selector suites passed (2 files, 91 tests); broader curve cluster remains open.
+- `fix-charging-charging-curve-f05`: CHECKPOINT 2026-10-15: charging-curve helper + page selector suites passed (2 files, 91 tests); broader curve cluster remains open.
+- `fix-charging-charging-curve-f04`: CHECKPOINT 2026-10-15: charging-curve helper + page selector suites passed (2 files, 91 tests); broader curve cluster remains open.
+- `fix-charging-powershare-ps-f05`: CHECKPOINT 2026-10-15: Powershare helpers/constants/runtime/stop-reason suites pass (85 tests); trend card remains open.
+
