@@ -49,7 +49,7 @@ export function VehicleOperationalBrief({
 
   return (
     <div className={className} data-source-period-kind={period.kind} data-source-retained={retained || undefined}>
-      <OperationalBrief compact testId={id}
+      <OperationalBrief compact variant={embedded ? 'embedded' : 'standalone'} testId={id}
         eyebrow={t('vehicleSystems.brief.eyebrow', 'Vehicle systems evidence')}
         title={embedded
           ? t('vehicleSystems.brief.sectionSummary', '{{section}} evidence', { section: title ?? period.label })

@@ -367,6 +367,21 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
   environment; Playwright is present in the repository but browser binaries
   are not exposed as a callable browser session.
 
+### UI simplification: vehicle-systems nested brief correction (2026-10-15)
+
+- The vehicle-systems wrapper's existing `embedded` prop only altered its
+  title; it did not pass `variant="embedded"` to the underlying
+  `OperationalBrief`. The wrapper now forwards the surface mode, and a
+  regression proves the embedded marker is present with no standalone
+  surface. The new focused regression passes **1/1**. No user-facing copy or
+  catalog keys changed.
+- The existing complete `VehicleOperationalBrief.test.tsx` file reports nine
+  assertions that predate the simplification contract (including expected
+  missing-metric placeholders and on-card metadata/status); its other
+  assertions include the new regression. Record these for full-suite repair.
+- Repository lint and `tsc --noEmit` pass after the change. The full build is
+  running before this small UI group is committed.
+
 ### Phase 6 group: system checkpoint (2026-10-15)
 
 - Closed the verified command and export follow-ups: CommandsPage passed 15/15, CommandWorkspace passed 10/10, and DataExportPage passed 72/72. The export fallback now localizes its unavailable-vehicle sentence through `t()` and the split catalog check passed after adding the English key.

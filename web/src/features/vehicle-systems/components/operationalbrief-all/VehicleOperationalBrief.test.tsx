@@ -109,6 +109,15 @@ describe('real vehicle OperationalBrief and numeric bridge', () => {
     expect(metrics[0].rawValue).toBe(280);
   });
 
+  it('removes its own surface when embedded in a vehicle-systems section', () => {
+    const view = render(<VehicleOperationalBrief embedded id="embedded-vehicle-brief"
+      title="Climate evidence" metrics={[{ metricId: 'count', occurrenceId: 'rows', label: 'Rows', rawValue: 4 }]}
+      period={period} />);
+
+    expect(view.container.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(view.container.querySelector('[data-operational-brief-surface="standalone"]')).not.toBeInTheDocument();
+  });
+
   it('keeps mixed-source reasons and rich links inside the real drawer and restores the trigger', async () => {
     const metrics: StatMetric[] = [{
       metricId: 'count', occurrenceId: 'rows', label: 'Returned rows', rawValue: 0,
