@@ -61,7 +61,10 @@
         "stale": "Limited evidence",
         "guessed": "Estimated",
         "missing": "Missing"
-      }
+      },
+      "details": "Details",
+      "overviewDetails": "Overview details",
+      "keyNumbers": "Energy and cost"
     },
     "road": {
       "title": "Possible road-surface anomalies",
@@ -339,6 +342,10 @@
     "elevationNet": "Net elevation",
     "powerSummary": "Power summary",
     "minMovingSpeed": "Min moving speed",
-    "tirePressureRange": "{{wheel}} pressure range"
+    "tirePressureRange": "{{wheel}} pressure range",
+    "routeNotRecorded": "Route path not recorded",
+    "energyUsed": "Energy used",
+    "distanceVsAverage": "distance vs your average",
+    "durationVsAverage": "duration vs your average"
   }
 }

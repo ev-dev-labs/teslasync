@@ -1,3 +1,4 @@
+import type React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { useChartSync } from '@/components/charts';
@@ -18,7 +19,11 @@ vi.mock('../drive-detail', () => {
     return <Text data-testid={name} data-sync-id={sync?.syncId ?? ''} data-sync-method={sync?.syncMethod ?? ''}>{name}</Text>;
   });
   return {
-    HeroGauges: leaf('hero'),
+    // The Overview hero renders the embedded route map it is handed.
+    HeroGauges: vi.fn(function HeroProbe(props: { map?: React.ReactNode }) {
+      const sync = useChartSync();
+      return <div><Text data-testid="hero" data-sync-id={sync?.syncId ?? ''}>hero</Text>{props.map}</div>;
+    }),
     JourneyDetailsPanel: leaf('journey-panel'),
     RouteMapSection: leaf('map'),
     MoreDetailsPanel: leaf('energy-panel'),
@@ -42,15 +47,17 @@ vi.mock('../drive-detail', () => {
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.unstubAllGlobals());
 
+// Journey and route live inside the Overview hero (#journey / #route anchors
+// belong to HeroGauges), so they are no longer separate report sections.
 const sectionIds = [
-  'overview', 'journey', 'route', 'energy-evidence', 'cost-estimate',
+  'overview', 'energy-evidence', 'cost-estimate',
   'fsd-evidence', 'silent-counter', 'telemetry', 'battery-trace', 'speed-distribution',
   'power-trace', 'elevation-trace', 'temperature-trace', 'tire-trace', 'speed-insights',
   'physics-debrief', 'physics-ledger', 'coaching', 'gear-theater', 'road-analysis', 'why-ended',
 ];
 
 describe('live drive report layout preservation', () => {
-  it('retains all 21 section targets, complete jump links and panel reading order at each responsive band', () => {
+  it('retains all 19 section targets, complete jump links and panel reading order at each responsive band', () => {
     const harness = installResizeHarness();
     const fixture = reportFixture();
     const { container } = render(<DriveReportContent {...fixture}
@@ -59,7 +66,7 @@ describe('live drive report layout preservation', () => {
     expect(sections.map(section => section.id)).toEqual(sectionIds);
     const nav = screen.getByRole('navigation', { name: 'Drive report sections' });
     expect(within(nav).getAllByRole('link').map(link => link.getAttribute('href')))
-      .toEqual(['#overview', '#journey', '#route', '#energy', '#telemetry', '#supervised', '#physics', '#diagnostics']);
+      .toEqual(['#overview', '#energy', '#telemetry', '#supervised', '#physics', '#diagnostics']);
     for (const link of within(nav).getAllByRole('link')) {
       const href = link.getAttribute('href');
       expect(href && container.querySelector(href)).toBeInTheDocument();
@@ -89,6 +96,7 @@ describe('live drive report layout preservation', () => {
     expect(hero?.chartData).toBe(fixture.data.chartData);
     expect(hero?.meaningful).toBe(true);
     const map = vi.mocked(RouteMapSection).mock.calls.at(-1)?.[0];
+    expect(map?.embedded).toBe(true);
     expect(map?.drive).toBe(fixture.data.drive);
     expect(map?.trail).toBe(fixture.data.trail);
     expect(map?.startPos).toBe(fixture.data.startPos);
@@ -142,8 +150,10 @@ describe('live drive report layout preservation', () => {
       data={{ ...fixture.data, drive: null, stats: null, chartData: [], routeSource: [], trail: [], speedSegments: [], speedHistData: [] }}
       meaningful={false} />);
     expect(Array.from(container.querySelectorAll('section[id]')).map(section => section.id)).toEqual(sectionIds);
+    // One Overview placeholder covers the merged journey and route hero.
     expect(screen.getByText('No Overview data is available for this drive.')).toBeVisible();
-    expect(screen.getByText('No Route data is available for this drive.')).toBeVisible();
+    expect(screen.queryByText('No Route data is available for this drive.')).toBeNull();
+    expect(screen.queryByTestId('map')).toBeNull();
     expect(screen.getByText('No SOC data is available for this drive.')).toBeVisible();
     expect(screen.getByTestId('road-panel')).toBeVisible();
     expect(vi.mocked(RoadAnomalyPanel).mock.calls.at(-1)?.[0].driveId).toBe('42');

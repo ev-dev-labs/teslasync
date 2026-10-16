@@ -28,7 +28,8 @@ vi.mock('@/api/hooks/useDriving', () => ({
 vi.mock('@/api/hooks/useAnalytics', () => ({
   useFsdInsightsForDrive: () => ({ data: { drive_analytics: { contributing_drives: null } } }),
 }));
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async () => ({
+  ...await vi.importActual<typeof import('@/components/motion')>('@/components/motion'),
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 vi.mock('@/hooks/useChartExport', () => ({
@@ -97,8 +98,9 @@ describe('Continuous drive report with real summary, journey, energy, cost and c
     const navigation = screen.getByRole('navigation', { name: 'Drive report sections' });
     expect(within(navigation).getByRole('link', { name: 'Overview' })).toHaveAttribute('href', '#overview');
     expect(within(navigation).getByRole('link', { name: 'Energy and cost' })).toHaveAttribute('href', '#energy');
+    // Journey and route anchors live inside the Overview hero for a recorded drive.
     for (const id of [
-      'journey', 'route', 'overview', 'energy-evidence', 'cost-estimate',
+      ...(record === 'recorded' ? ['journey', 'route'] : []), 'overview', 'energy-evidence', 'cost-estimate',
       'fsd-evidence', 'silent-counter', 'telemetry', 'battery-trace', 'speed-distribution',
       'power-trace', 'elevation-trace', 'temperature-trace', 'tire-trace', 'physics', 'physics-ledger',
       'gear-theater', 'road-analysis', 'why-ended',
@@ -118,24 +120,32 @@ describe('Continuous drive report with real summary, journey, energy, cost and c
         expect(sampleEvidence.getByRole('rowheader', { name: series })).toBeVisible();
       }
     }
-    const route = screen.getByTestId('drive-detail-route');
-    expect(screen.getByTestId('drive-detail-summary').compareDocumentPosition(route) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    if (record === 'recorded') {
+      const route = screen.getByTestId('drive-detail-route');
+      expect(screen.getByTestId('drive-detail-summary')).toContainElement(route);
+    }
     expect(container.querySelector('#energy-evidence')!.compareDocumentPosition(screen.getByTestId('drive-detail-evidence')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('owns each aggregate fact once and replaces repeated blocks with separate source drilldowns', () => {
     show();
     expect(screen.getAllByTestId('drive-detail-summary')).toHaveLength(1);
-    expect(within(screen.getByTestId('drive-detail-summary')).getByRole('group', { name: 'Drive summary' })).toBeInTheDocument();
+    expect(within(screen.getByTestId('drive-detail-summary')).getByRole('group', { name: 'Energy and cost' })).toBeInTheDocument();
     expect(screen.getByTestId('drive-detail-route')).toHaveAttribute('id', 'route');
     expect(screen.getByTestId('drive-detail-evidence').querySelector('#telemetry')).not.toBeNull();
-    for (const label of ['Distance', 'Duration', 'Average speed', 'Maximum speed', 'Consumption', 'Energy consumed', 'Energy recovered', 'Trip cost']) {
+    // Distance and duration are the journey leg's values (labelled for assistive tech).
+    expect(within(screen.getByTestId('journey-sequence')).getAllByText(/^Distance/)).toHaveLength(1);
+    expect(within(screen.getByTestId('journey-sequence')).getAllByText(/^Duration/)).toHaveLength(1);
+    for (const label of ['Average speed', 'Maximum speed', 'Consumption', 'Energy consumed', 'Energy recovered', 'Trip cost']) {
       expect(screen.getAllByText(label)).toHaveLength(1);
     }
     expect(screen.queryByText('Net consumption')).toBeNull();
     expect(screen.queryByText('Net Consumption')).toBeNull();
-    expect(screen.getAllByText(/Persisted drive aggregate/)).toHaveLength(3);
-    expect(screen.getByRole('table', { name: 'Drive timeline' })).toBeInTheDocument();
+    // The Overview's energy-source note lives in its details drawer, not on the card face.
+    expect(screen.getAllByText(/Persisted drive aggregate/)).toHaveLength(2);
+    fireEvent.click(within(screen.getByTestId('drive-canonical-summary')).getByRole('button', { name: 'Details' }));
+    expect(within(screen.getByRole('dialog')).getByText('Persisted drive aggregate')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Drive timeline' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Energy and range evidence' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Cost and savings' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Home → Office' })).toBeInTheDocument();
@@ -160,8 +170,8 @@ describe('Continuous drive report with real summary, journey, energy, cost and c
     state.drive = driveFixture({ energyUsedWh: 0, regenEnergyWh: null, avgPowerW: null, startBatteryPct: 0, endBatteryPct: null });
     Object.assign(state.drive, { telemetry: null, positions: null });
     show();
-    expect(screen.getByText('Battery: 0.00%')).toBeInTheDocument();
-    expect(screen.getByText('Battery: —')).toBeInTheDocument();
+    expect(screen.getByText('Battery 0.00%')).toBeInTheDocument();
+    expect(screen.getByText('Battery —')).toBeInTheDocument();
     expect(screen.queryByText(/NaN|Infinity/)).toBeNull();
     expect(screen.getByTestId('drive-cost-estimate')).toBeInTheDocument();
     expect(screen.getByTestId('drive-energy-evidence')).toBeInTheDocument();
@@ -171,8 +181,10 @@ describe('Continuous drive report with real summary, journey, energy, cost and c
     state.drive = null;
     show();
     expect(screen.getAllByText(/This drive could not be found/)).toHaveLength(1);
-    expect(screen.getByText('No Route data is available for this drive.')).toBeInTheDocument();
-    for (const testId of ['drive-detail-summary', 'drive-detail-route', 'drive-detail-evidence']) {
+    // The Overview placeholder covers the merged journey and route hero.
+    expect(screen.getByText('No Overview data is available for this drive.')).toBeInTheDocument();
+    expect(screen.queryByTestId('drive-detail-route')).toBeNull();
+    for (const testId of ['drive-detail-summary', 'drive-detail-evidence']) {
       expect(screen.getAllByTestId(testId)).toHaveLength(1);
     }
     expect(screen.getAllByTestId('evidence-leaf').length).toBeGreaterThan(2);

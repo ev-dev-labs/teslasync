@@ -1,8 +1,8 @@
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Info } from 'lucide-react';
+import { Button, Drawer, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { Delta } from '@/components/data-display';
-import type { StatMetric, StatPeriod } from '@/components/data-display/stat-reference';
-import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useDrivingStats } from '@/api/hooks/useDriving';
@@ -10,12 +10,13 @@ import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 
-import { convertDistanceFromSI, convertDistanceToSI, convertSpeedFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import type { Direction, MetricUnit } from '@/lib/metricSemantics';
 import type { DriveDetail } from '@/types/driving';
 import type { ChartDataPoint, DriveStats } from './types';
 import { driveEnergyEvidence } from './energyEvidence';
 import { driveOdometerEvidence } from './odometerEvidence';
+import { JourneySequence } from './JourneySequence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type SummaryMetric = {
@@ -24,17 +25,25 @@ type SummaryMetric = {
   formattedValue?: string; description?: string;
 };
 
-/** Recorded basics first; sample extrema remain in the evidence charts. */
-export function HeroGauges({ drive, stats, chartData, meaningful = true }: {
+/**
+ * Drive Overview: one hero surface (route map + the journey told in order with
+ * its key energy numbers), then one evenly sized grid for the remaining
+ * metrics. Each value appears once; per-field sources live in the details
+ * drawer, not on the card face. Presentation only — calculations unchanged.
+ */
+export function HeroGauges({ drive, stats, chartData, meaningful = true, map }: {
   drive: DriveDetail;
   stats: DriveStats;
   chartData?: ChartDataPoint[];
   meaningful?: boolean;
+  /** Route map rendered in the hero's map cell (RouteMapSection, embedded). */
+  map?: ReactNode;
 }) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
-  const { formatEnergyCost, pricingState, costPerKwh } = useFormatting();
+  const { formatEnergyCost, pricingState } = useFormatting();
   const query = useDrivingStats(drive.vehicleId != null ? String(drive.vehicleId) : undefined);
   const state = useDataState(query, { provenance: 'historical' });
   const fleet = state.data;
@@ -136,102 +145,102 @@ export function HeroGauges({ drive, stats, chartData, meaningful = true }: {
     },
     ...rows.filter((row) => row.key === 'consumption'),
   ];
-  const performance = rows.filter((row) =>
-    row.key === 'average-speed' || row.key === 'maximum-speed' || row.key === 'battery-rate');
-  const recordPeriod: StatPeriod = {
-    kind: 'event', eventId: String(drive.id), start: drive.startTs,
-    end: drive.endTs ?? null, label: t('driveDetail.heroGauges', 'Drive summary'),
-    provenance: t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history'),
-  };
-  const canonicalMetric = (row: SummaryMetric): StatMetric => {
-    let metricId: StatMetric['metricId'] = 'number';
-    let rawValue: number | null = row.value;
-    switch (row.key) {
-      case 'drive-cost':
-        metricId = 'currency';
-        rawValue = energyWh != null && costPerKwh != null ? energyWh / 1000 * costPerKwh : null;
-        break;
-      case 'distance': metricId = 'distance'; rawValue = meaningful ? distance : null; break;
-      case 'duration': metricId = 'duration'; rawValue = row.value != null ? row.value * 60 : null; break;
-      case 'average-speed': metricId = 'speed'; rawValue = meaningful ? finite(drive.avgSpeedMps) : null; break;
-      case 'maximum-speed': metricId = 'speed'; rawValue = meaningful ? finite(drive.maxSpeedMps) : null; break;
-      case 'consumption': metricId = 'efficiency'; rawValue = consumption != null && distance != null && distance > 0 ? consumption / distance : null; break;
-      case 'drive-energy': metricId = 'energy'; rawValue = energyWh; break;
-      case 'battery-change': metricId = 'percent'; rawValue = finite(drive.startBatteryPct) ?? finite(drive.endBatteryPct); break;
-      case 'odometer': metricId = 'distance'; rawValue = odometer.start != null || odometer.end != null
-        ? convertDistanceToSI(odometer.start ?? odometer.end ?? 0, unitPrefs.distance) : null; break;
-      case 'battery-rate': metricId = 'rate'; break;
-    }
-    return {
-      metricId, occurrenceId: row.key, label: row.label, rawValue,
-      description: row.description ?? t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history'),
-      display: { formatter: () => ({
-        value: row.formattedValue ?? (row.value != null ? fmtNumber(row.value) : '—'),
-        unit: row.unit,
-      }) },
-      context: row.key === 'battery-change'
-        ? t('driveDetail.brief.batteryEndpoints', 'Recorded battery endpoints: {{start}}% → {{end}}%; an absent endpoint remains unknown.', {
-          start: finite(drive.startBatteryPct) != null ? fmtNumber(drive.startBatteryPct!) : '—',
-          end: finite(drive.endBatteryPct) != null ? fmtNumber(drive.endBatteryPct!) : '—',
-        })
-        : row.key === 'odometer' ? t('driveDetail.brief.odometerSource', 'Odometer endpoints use {{source}} evidence; missing endpoints are not zero.', { source: odometerSource })
-          : row.key === 'battery-rate' ? t('driveDetail.brief.batteryRateBasis', 'Recorded battery percentage-point change divided by positive measured distance, per 100 {{unit}}.', { unit: unitPrefs.distance })
-            : undefined,
-      comparison: row.key === 'battery-change' && finite(drive.endBatteryPct) != null
-        ? { metricId: 'percent', rawValue: drive.endBatteryPct!, period: recordPeriod,
-          label: t('driveDetail.brief.endBattery', 'Recorded end battery') }
-        : row.key === 'odometer' && odometer.end != null
-          ? { metricId: 'distance', rawValue: convertDistanceToSI(odometer.end, unitPrefs.distance), period: recordPeriod,
-            label: drive.endTs == null ? t('driveDetail.brief.latestOdometer', 'Latest observed odometer') : t('driveDetail.brief.endOdometer', 'Recorded end odometer') }
-          : undefined,
-      comparisonContent: row.value != null && row.baseline != null
-        ? <Delta metric={{ direction: row.direction, unit: row.metricUnit }}
-          current={row.value} previous={row.baseline} display="percent" comparedTo={row.comparedTo} /> : undefined,
-    };
-  };
-  const basicMetrics = basics.map(canonicalMetric);
-  const performanceMetrics = performance.map(canonicalMetric);
+  const byKey = (key: string) => [...basics, ...rows].find((row) => row.key === key)!;
+  const withUnit = (value: string, unit: string) => (!unit ? value : unit === '%' ? `${value}%` : `${value} ${unit}`);
+  const display = (row: SummaryMetric) => (row.formattedValue != null
+    ? row.key === 'odometer' ? withUnit(row.formattedValue, row.unit) : row.formattedValue
+    : row.value != null ? withUnit(fmtNumber(row.value), row.unit) : '—');
+  const comparison = (row: SummaryMetric, comparedTo = row.comparedTo) => (row.value != null && row.baseline != null
+    ? <Delta metric={{ direction: row.direction, unit: row.metricUnit }}
+      current={row.value} previous={row.baseline} display="percent" comparedTo={comparedTo} />
+    : null);
+  const stat = (row: SummaryMetric) => (
+    <div key={row.key} className="min-w-0" data-overview-metric={row.key}>
+      <Text as="dt" variant="caption" className="break-words">{row.label}</Text>
+      <Text as="dd" variant="body" weight="semibold" color="primary" className="tabular-nums">{display(row)}</Text>
+      {comparison(row) ? <dd className="mt-0.5">{comparison(row)}</dd> : null}
+    </div>
+  );
+  const distanceRow = byKey('distance');
+  const durationRow = byKey('duration');
+  // Key numbers sit under the journey; the grid holds the remaining metrics.
+  const keyNumbers = [byKey('drive-energy'), byKey('consumption'), byKey('drive-cost')]
+    .map((row) => row.key === 'drive-energy' ? { ...row, label: t('driveDetail.energyUsed', 'Energy used') } : row);
+  const gridMetrics = [byKey('average-speed'), byKey('maximum-speed'), byKey('battery-rate'), byKey('odometer')];
+  const odometerRow = byKey('odometer');
+  const details: Array<{ id: string; label: string; value: ReactNode }> = [
+    { id: 'source', label: t('driveDetail.report.source', 'Source and method'), value: t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history') },
+    { id: 'score', label: t('driveDetail.report.recordedScore', 'Recorded score'), value: score != null ? fmtNumber(score) : '—' },
+    { id: 'energy', label: t('driveDetail.energyUsed', 'Energy used'), value: byKey('drive-energy').description },
+    { id: 'cost', label: t('driveDetail.report.driveCost', 'Drive cost'), value: byKey('drive-cost').description },
+    { id: 'battery', label: t('driveDetail.report.batteryChange', 'Battery change'), value: t('driveDetail.brief.batteryEndpoints', 'Recorded battery endpoints: {{start}}% → {{end}}%; an absent endpoint remains unknown.', {
+      start: finite(drive.startBatteryPct) != null ? fmtNumber(drive.startBatteryPct!) : '—',
+      end: finite(drive.endBatteryPct) != null ? fmtNumber(drive.endBatteryPct!) : '—',
+    }) },
+    { id: 'odometer', label: odometerRow.label, value: t('driveDetail.brief.odometerSource', 'Odometer endpoints use {{source}} evidence; missing endpoints are not zero.', { source: odometerSource }) },
+    { id: 'battery-rate', label: byKey('battery-rate').label, value: t('driveDetail.brief.batteryRateBasis', 'Recorded battery percentage-point change divided by positive measured distance, per 100 {{unit}}.', { unit: unitPrefs.distance }) },
+    ...(drive.energyUsedWh == null && consumption != null ? [{
+      id: 'consumption', label: t('driveDetail.consumption', 'Consumption'),
+      value: t('driveDetail.report.consumptionEstimate', 'Consumption uses estimated energy; see energy evidence for assumptions.'),
+    }] : []),
+  ];
+  const overviewTitle = t('driveDetail.report.overview', 'Overview');
+
   return (
     <FadeIn>
-      <GlassPanel className="p-4 sm:p-5" data-testid="drive-canonical-summary">
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-          <PanelTitle className="mb-0">{t('driveDetail.report.overview', 'Overview')}</PanelTitle>
-          <Text as="p" variant="caption">
-            {t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history')}
-          </Text>
-          <Text as="p" variant="caption">
-            {t('driveDetail.report.recordedScore', 'Recorded score')}: {score != null ? fmtNumber(score) : '—'}
-          </Text>
+      <GlassPanel className="overflow-hidden p-0" data-testid="drive-canonical-summary">
+        <header className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4 sm:px-5">
+          <PanelTitle className="mb-0">{overviewTitle}</PanelTitle>
+          <Button type="button" variant="ghost" size="sm" aria-haspopup="dialog" aria-expanded={detailsOpen}
+            icon={<Info className="h-4 w-4" aria-hidden="true" />} onClick={() => setDetailsOpen(true)}>
+            {t('driveDetail.report.details', 'Details')}
+          </Button>
+        </header>
+        <div className="space-y-3 px-4 sm:px-5 [&:empty]:hidden">
+          {state.fatalError ? (
+            <div aria-label={t('driveDetail.report.baselines', 'Vehicle baselines')}>
+              <QueryError error={state.fatalError} onRetry={() => void query.refetch()} />
+            </div>
+          ) : null}
+          <StaleRefreshWarning state={state} label={t('driveDetail.report.baselines', 'Vehicle baselines')} />
+          {pricingState?.fatalError ? (
+            <QueryError error={pricingState.fatalError} onRetry={pricingState.retry ?? undefined} />
+          ) : null}
+          {pricingState ? <StaleRefreshWarning state={pricingState} label={t('nav.settings', 'Settings')} /> : null}
         </div>
-        {state.fatalError ? (
-          <div aria-label={t('driveDetail.report.baselines', 'Vehicle baselines')}>
-            <QueryError error={state.fatalError} onRetry={() => void query.refetch()} />
+        {/* Hero: map (~60%) beside the journey panel; stacked map-first on mobile. */}
+        <div className="mt-4 grid border-t border-[var(--border-subtle)] lg:grid-cols-[minmax(0,3fr)_minmax(300px,2fr)]" data-testid="drive-overview-hero">
+          <div id="route" data-testid="drive-detail-route" className="min-w-0 scroll-mt-24">{map}</div>
+          <div id="journey" className="flex min-w-0 scroll-mt-24 flex-col gap-4 border-t border-[var(--border-subtle)] p-4 sm:p-5 lg:border-s lg:border-t-0">
+            <JourneySequence drive={drive}
+              distance={display(distanceRow)} duration={display(durationRow)}
+              comparisons={[
+                comparison(distanceRow, t('driveDetail.distanceVsAverage', 'distance vs your average')),
+                comparison(durationRow, t('driveDetail.durationVsAverage', 'duration vs your average')),
+              ]} />
+            <dl role="group" aria-label={t('driveDetail.report.keyNumbers', 'Energy and cost')}
+              className="grid grid-cols-3 gap-3 border-t border-[var(--border-subtle)] pt-4">
+              {keyNumbers.map(stat)}
+            </dl>
           </div>
-        ) : null}
-        <StaleRefreshWarning state={state} label={t('driveDetail.report.baselines', 'Vehicle baselines')} />
-        {pricingState?.fatalError ? (
-          <QueryError error={pricingState.fatalError} onRetry={pricingState.retry ?? undefined} />
-        ) : null}
-        {pricingState ? <StaleRefreshWarning state={pricingState} label={t('nav.settings', 'Settings')} /> : null}
-        <div role="group" aria-label={t('driveDetail.heroGauges', 'Drive summary')}>
-          <NestedDrivingBrief variant="embedded" metrics={basicMetrics}
-            title={t('driveDetail.heroGauges', 'Drive summary')}
-            description={t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history')}
-            period={recordPeriod}
-            retained={state.refreshError != null || pricingState?.refreshError != null} />
         </div>
-        <div className="mt-5 border-t border-[var(--border-subtle)] pt-4">
-          <NestedDrivingBrief variant="embedded" metrics={performanceMetrics}
-            title={t('driveDetail.report.performance', 'Performance and comparisons')}
-            description={t('driveDetail.report.summarySource', 'Recorded drive details · comparisons use this vehicle’s history')}
-            period={recordPeriod} retained={state.refreshError != null} />
-        </div>
-        {drive.energyUsedWh == null && consumption != null ? (
-          <Text as="p" variant="caption" className="mt-3">
-            {t('driveDetail.report.consumptionEstimate', 'Consumption uses estimated energy; see energy evidence for assumptions.')}
-          </Text>
-        ) : null}
+        {/* Remaining metrics: one grid, the same column count on every row. */}
+        <dl role="group" aria-label={t('driveDetail.report.performance', 'Performance and comparisons')}
+          className="grid grid-cols-2 gap-4 border-t border-[var(--border-subtle)] p-4 sm:p-5 lg:grid-cols-4" data-testid="drive-overview-grid">
+          {gridMetrics.map(stat)}
+        </dl>
       </GlassPanel>
+      <Drawer open={detailsOpen} onClose={() => setDetailsOpen(false)}
+        title={t('driveDetail.report.overviewDetails', 'Overview details')}>
+        <dl className="space-y-3">
+          {details.map((item) => (
+            <div key={item.id} className="min-w-0">
+              <Text as="dt" variant="label">{item.label}</Text>
+              <Text as="dd" variant="bodySm" color="secondary" className="break-words">{item.value ?? '—'}</Text>
+            </div>
+          ))}
+        </dl>
+      </Drawer>
     </FadeIn>
   );
 }

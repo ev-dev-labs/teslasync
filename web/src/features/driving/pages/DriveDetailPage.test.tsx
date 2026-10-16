@@ -111,7 +111,8 @@ vi.mock('../components/drive-detail', async () => {
       driveQuery: synthesiseDriveQuery(hookState.current),
     }),
     DriveDetailSkeleton: () => <div data-testid="drive-skeleton" />,
-    HeroGauges: stub('hero-gauges'),
+    // The Overview hero renders the embedded route map it is handed.
+    HeroGauges: ({ map }: { map?: ReactNode }) => <div data-testid="hero-gauges">{map}</div>,
     DrivePhysicsDebriefPanel: stub('physics-debrief'),
     DriveTimeline: stub('drive-timeline'),
     DriveStatCards: stub('stat-cards'),
@@ -320,7 +321,6 @@ const ALWAYS_ON_SECTIONS = [
   'fsd-panel',
   'silent-counter',
   'route-map',
-  'journey-details',
   'overview-chart',
   'soc-chart',
   'elevation-chart',
@@ -370,7 +370,7 @@ describe('DriveDetailPage', () => {
 
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
     expect(screen.queryByTestId('drive-skeleton')).toBeNull()
-    expect(screen.getByRole('region', { name: 'Route' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument()
   })
 
   it('uses source readiness rather than the aggregate loading flag', () => {
@@ -396,7 +396,7 @@ describe('DriveDetailPage', () => {
     expect(screen.getByText('Refresh paused')).toBeInTheDocument()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
     expect(screen.queryByTestId('drive-skeleton')).toBeNull()
-    expect(screen.getByRole('region', { name: 'Route' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Drive detail' }))
     expect(refetch).toHaveBeenCalledOnce()
 
@@ -468,7 +468,7 @@ describe('DriveDetailPage', () => {
     expect(fsdRefetch).toHaveBeenCalledOnce()
     expect(driveRefetch).not.toHaveBeenCalled()
     expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Route' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument()
 
     rerenderPage()
     expect(screen.queryByText(/could not be loaded/)).toBeNull()
@@ -506,7 +506,7 @@ describe('DriveDetailPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Drive detail' })).toBeInTheDocument()
     expect(screen.queryByTestId('hero-gauges')).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
-    expect(screen.getByText('No Route data is available for this drive.')).toBeInTheDocument()
+    expect(screen.getByText('No Overview data is available for this drive.')).toBeInTheDocument()
   })
 
   it('surfaces the query error without hiding independent evidence or report shells', () => {
@@ -523,8 +523,8 @@ describe('DriveDetailPage', () => {
     expect(screen.queryByTestId('hero-gauges')).toBeNull()
     expect(screen.queryByTestId('drive-timeline')).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
-    expect(screen.getByText('No Route data is available for this drive.')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Route' })).toBeInTheDocument()
+    expect(screen.getByText('No Overview data is available for this drive.')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument()
     expect(screen.getByTestId('drive-ledger-compact')).toBeInTheDocument()
     expect(screen.queryByTestId('drive-skeleton')).toBeNull()
   })
@@ -549,9 +549,8 @@ describe('DriveDetailPage', () => {
     }
     renderPage()
 
-    // Sections survive…
-    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
-    expect(screen.getByTestId('journey-details')).toBeInTheDocument()
+    // Sections survive… (the journey and route live inside the Overview hero)
+    expect(screen.getByTestId('hero-gauges')).toContainElement(screen.getByTestId('route-map'))
     // …the page-level error surface never fires…
     expect(screen.queryByText("Can't reach server")).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
@@ -658,8 +657,7 @@ describe('DriveDetailPage', () => {
       expect(screen.getByTestId(id)).toBeInTheDocument()
     }
     // …while the always-on sections (which self-gate internally) still render.
-    expect(screen.getByTestId('journey-details')).toBeInTheDocument()
-    expect(screen.getByTestId('route-map')).toBeInTheDocument()
+    expect(screen.getByTestId('hero-gauges')).toContainElement(screen.getByTestId('route-map'))
     expect(screen.getByTestId('why-ended')).toBeInTheDocument()
     // With no addresses the title falls back to the generic label.
     expect(screen.getByRole('heading', { level: 1, name: 'Drive detail' })).toBeInTheDocument()
@@ -770,12 +768,13 @@ describe('DriveDetailPage', () => {
   it.each([
     { name: 'missing record', loaded: false },
     { name: 'retained rich record', loaded: true },
-  ])('preserves all twenty-one report anchors and eight jump destinations for $name', ({ loaded }) => {
+  ])('preserves all nineteen report sections and six jump destinations for $name', ({ loaded }) => {
     hookState.current = loaded ? loadedState() : emptyState()
     const { container } = renderPage()
 
+    // Journey and route are anchors inside the Overview hero, not report sections.
     const sectionIds = [
-      'overview', 'journey', 'route', 'energy-evidence', 'cost-estimate',
+      'overview', 'energy-evidence', 'cost-estimate',
       'fsd-evidence', 'silent-counter', 'telemetry', 'battery-trace',
       'speed-distribution', 'power-trace', 'elevation-trace', 'temperature-trace',
       'tire-trace', 'speed-insights', 'physics-debrief', 'physics-ledger',
@@ -784,10 +783,10 @@ describe('DriveDetailPage', () => {
     for (const id of sectionIds) {
       expect(container.querySelector(`section#${id}`)).toBeInTheDocument()
     }
-    expect(container.querySelectorAll('section[id][aria-label]')).toHaveLength(21)
+    expect(container.querySelectorAll('section[id][aria-label]')).toHaveLength(19)
     const navigation = screen.getByRole('navigation', { name: 'Drive report sections' })
     expect(Array.from(navigation.querySelectorAll('a'), link => link.getAttribute('href'))).toEqual([
-      '#overview', '#journey', '#route', '#energy', '#telemetry', '#supervised', '#physics', '#diagnostics',
+      '#overview', '#energy', '#telemetry', '#supervised', '#physics', '#diagnostics',
     ])
     expect(screen.getByTestId('drive-ledger-compact')).toBeInTheDocument()
     expect(screen.getByTestId('gear-theater')).toBeInTheDocument()

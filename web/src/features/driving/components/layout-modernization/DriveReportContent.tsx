@@ -7,7 +7,7 @@ import { DriveDetailSection } from '../drive-detail/DriveDetailSection';
 import {
   HeroGauges, DrivePhysicsDebriefPanel, SupervisedDrivingPanel, GearTheaterPanel,
   SilentCounterPanel, DriveLedgerCompactPanel, MoreDetailsPanel, CostSavingsPanel,
-  RouteMapSection, JourneyDetailsPanel, DriveOverviewChart, SocChart, ElevationChart,
+  RouteMapSection, DriveOverviewChart, SocChart, ElevationChart,
   TemperatureSection, SpeedHistogramChart, PowerProfileChart, TirePressureSection,
   WhyEndedPanel, RoadAnomalyPanel,
 } from '../drive-detail';
@@ -44,7 +44,9 @@ export function DriveReportContent({
     ?? t('driveDetail.title', 'Drive detail');
   // Preserve the established jump-link order, including energy before
   // telemetry. The supervised panels still precede telemetry in source order.
-  const navigation = ['overview', 'journey', 'route', 'energy', 'telemetry', 'supervised', 'physics', 'diagnostics'];
+  // Journey and route live inside the Overview hero (#journey / #route remain
+  // valid anchors there), so they are not separate stops.
+  const navigation = ['overview', 'energy', 'telemetry', 'supervised', 'physics', 'diagnostics'];
   return (
     <>
       <nav aria-label={t('driveDetail.report.sections', 'Drive report sections')} data-print-hide
@@ -57,21 +59,12 @@ export function DriveReportContent({
         ))}
       </nav>
       <DriveDetailSection id="overview" testId="drive-detail-summary" title={label('overview')} available={available}>
-        {drive && stats ? <HeroGauges drive={drive} stats={stats} chartData={chartData} meaningful={meaningful} /> : null}
+        {drive && stats ? (
+          <HeroGauges drive={drive} stats={stats} chartData={chartData} meaningful={meaningful}
+            map={<RouteMapSection embedded drive={drive} trail={trail} startPos={startPos} endPos={endPos}
+              centerPos={centerPos} speedSegments={speedSegments} routePoints={routeSource} fsdEvidence={fsdInsight?.evidence} />} />
+        ) : null}
       </DriveDetailSection>
-      <PreservedPanelGrid label={t('driveDetail.journeyDetails', 'Journey details')} items={[
-        { id: 'journey', size: 'half', content: (
-          <DriveDetailSection id="journey" title={label('journey')} available={drive != null}>
-            {drive ? <JourneyDetailsPanel drive={drive} /> : null}
-          </DriveDetailSection>
-        ) },
-        { id: 'route', size: 'half', content: (
-          <DriveDetailSection id="route" testId="drive-detail-route" title={label('route')} available={drive != null}>
-            {drive ? <RouteMapSection drive={drive} trail={trail} startPos={startPos} endPos={endPos}
-              centerPos={centerPos} speedSegments={speedSegments} routePoints={routeSource} fsdEvidence={fsdInsight?.evidence} /> : null}
-          </DriveDetailSection>
-        ) },
-      ]} />
       <div id="energy" className="min-w-0 scroll-mt-24">
         <PreservedPanelGrid label={label('energy')} items={[
           { id: 'energy-evidence', size: 'half', content: (

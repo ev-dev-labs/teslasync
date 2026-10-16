@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { DrivingStats } from '@/types/driving';
@@ -38,7 +38,21 @@ vi.mock('@/hooks/useFormatting', () => ({
     formatEnergyCost: (kwh: number) => `$${(kwh * 0.12).toFixed(2)}`,
   }),
 }));
-vi.mock('@/components/motion', () => ({ FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> }));
+vi.mock('@/components/motion', async () => ({
+  ...await vi.importActual<typeof import('@/components/motion')>('@/components/motion'),
+  FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+// The journey sequence owns places, times and batteries (tested on its own);
+// here it only needs to surface the leg values HeroGauges hands it.
+vi.mock('./JourneySequence', () => ({
+  JourneySequence: ({ distance, duration, comparisons }: { distance: ReactNode; duration: ReactNode; comparisons?: ReactNode[] }) => (
+    <ol data-testid="journey-sequence">
+      <li data-overview-metric="distance"><span>Distance</span> {distance}</li>
+      <li data-overview-metric="duration"><span>Duration</span> {duration}</li>
+      <li>{comparisons}</li>
+    </ol>
+  ),
+}));
 const fleet: DrivingStats = {
   totalDrives: 10, totalDistanceKm: 300, totalDurationS: 18000, avgEfficiencyWhKm: 180,
   avgSpeedKmh: 60, topSpeedKmh: 144, regenRatio: 0.1, regenEnergyWh: 10000, co2SavedKg: 0,
@@ -47,45 +61,67 @@ beforeEach(() => {
   state.refetch.mockClear();
   Object.assign(state, { distance: 'km', speed: 'km/h', data: fleet, error: null, deltas: [], translations: {} });
 });
-const reading = (label: string) => screen.getByText(label).closest('[data-operational-metric]')?.textContent;
+const reading = (label: string) => screen.getByText(label).closest('[data-overview-metric]')?.textContent;
+const openDetails = () => {
+  fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+  return screen.getByRole('dialog');
+};
+const detail = (dialog: HTMLElement, label: string) =>
+  within(dialog).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent;
 
-describe('Canonical drive overview', () => {
+describe('Drive overview hero and grid', () => {
   it.each([
     ['aggregate', { start_odometer_m: 120000000, end_odometer_m: 120040000 }, 'persisted', 'Persisted drive aggregate'],
     ['sampled', {}, 'sampled', 'Recorded telemetry samples'],
     ['mixed', { start_odometer_m: 120000000 }, 'odometerMixed', 'Recorded endpoints with telemetry fallback'],
-  ] as const)('localizes %s odometer provenance without changing the adapter enum', (source, endpoints, key, label) => {
+  ] as const)('localizes %s odometer provenance in the details drawer without changing the adapter enum', (source, endpoints, key, label) => {
     const drive = driveFixture(endpoints);
     const stats = statsFixture();
     state.translations[`driveDetail.report.${key}`] = `Localized: ${label}`;
     render(<HeroGauges drive={drive} stats={stats} />);
-    expect(reading('Odometer (from → to)')).toContain(`Odometer endpoints use Localized: ${label} evidence; missing endpoints are not zero.`);
-    expect(reading('Odometer (from → to)')).not.toContain(`use ${source} evidence`);
+    // Sources stay off the card face.
+    expect(screen.queryByText(/Odometer endpoints use/)).toBeNull();
+    const dialog = openDetails();
+    expect(detail(dialog, 'Odometer (from → to)')).toBe(`Odometer endpoints use Localized: ${label} evidence; missing endpoints are not zero.`);
+    expect(detail(dialog, 'Odometer (from → to)')).not.toContain(`use ${source} evidence`);
     expect(driveOdometerEvidence(drive, stats, 'km').source).toBe(source);
   });
 
-  it('puts cost and recorded endpoint odometers in the primary summary before performance comparisons', () => {
-    const { container } = render(<HeroGauges drive={driveFixture({ start_odometer_m: 120000000, end_odometer_m: 120040000 })} stats={statsFixture()} />);
+  it('lays out one hero (map beside the journey and key numbers) above one even metric grid', () => {
+    render(<HeroGauges drive={driveFixture({ start_odometer_m: 120000000, end_odometer_m: 120040000 })} stats={statsFixture()}
+      map={<div data-testid="map" />} />);
+    const hero = screen.getByTestId('drive-overview-hero');
+    expect(hero).toHaveClass('lg:grid-cols-[minmax(0,3fr)_minmax(300px,2fr)]');
+    expect(hero.children[0]).toContainElement(screen.getByTestId('map'));
+    expect(hero.children[0]).toHaveAttribute('id', 'route');
+    expect(hero.children[1]).toHaveAttribute('id', 'journey');
+    expect(within(hero.children[1] as HTMLElement).getByTestId('journey-sequence')).toBeInTheDocument();
+
+    const keyNumbers = screen.getByRole('group', { name: 'Energy and cost' });
+    expect(Array.from(keyNumbers.querySelectorAll('[data-overview-metric]'), (cell) => cell.getAttribute('data-overview-metric')))
+      .toEqual(['drive-energy', 'consumption', 'drive-cost']);
+    expect(reading('Energy used')).toContain('8.00 kWh');
     expect(reading('Drive cost')).toContain('$0.96');
-    expect(reading('Odometer (from → to)')).toContain('120,000.00 → 120,040.00');
+
+    const grid = screen.getByTestId('drive-overview-grid');
+    expect(grid).toHaveClass('grid-cols-2', 'lg:grid-cols-4');
+    expect(Array.from(grid.querySelectorAll('[data-overview-metric]'), (cell) => cell.getAttribute('data-overview-metric')))
+      .toEqual(['average-speed', 'maximum-speed', 'battery-rate', 'odometer']);
+    expect(reading('Odometer (from → to)')).toContain('120,000.00 → 120,040.00 km');
     expect(screen.queryByText('Start odometer')).toBeNull();
-    expect(screen.queryByText('End odometer')).toBeNull();
-    expect(container.querySelectorAll('[data-operational-metric="odometer"]')).toHaveLength(1);
-    const primaryMetrics = screen.getByRole('group', { name: 'Drive summary' }).querySelectorAll('[data-operational-metric]');
-    expect(primaryMetrics).toHaveLength(7);
-    expect(screen.getByRole('group', { name: 'Drive summary' }).querySelector('[role="list"]'))
-      .toHaveClass('rounded-shape-md', 'border-[var(--border-subtle)]', 'bg-[var(--border-subtle)]');
-    for (const metric of primaryMetrics) {
-      expect(metric).toHaveClass('bg-[var(--surface-2)]');
-      expect(metric.querySelector('[class~="border"]')).toBeNull();
+  });
+
+  it('keeps one heading and moves per-field sources into a single details drawer', () => {
+    const { container } = render(<HeroGauges drive={driveFixture()} stats={statsFixture()} />);
+    expect(screen.getByText('Overview')).toBeInTheDocument();
+    for (const stacked of ['Drive summary', 'Performance and comparisons']) {
+      expect(screen.queryByRole('heading', { name: stacked })).toBeNull();
     }
-    for (const key of ['average-speed', 'maximum-speed', 'battery-rate']) {
-      expect(container.querySelector(`[data-operational-metric="${key}"]`)).not.toHaveClass('border');
-    }
-    expect(reading('Battery change')).toContain('80.00% → 70.00%');
-    expect(reading('Drive energy')).toContain('8.00 kWh');
-    expect(container.textContent).toContain('Configured-rate estimate, not a charging invoice');
-    expect(screen.getByText('Drive cost').compareDocumentPosition(screen.getByText('Average speed')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(0);
+    expect(container.textContent).not.toContain('Configured-rate estimate, not a charging invoice');
+    const dialog = openDetails();
+    expect(detail(dialog, 'Drive cost')).toBe('Configured-rate estimate, not a charging invoice');
+    expect(detail(dialog, 'Energy used')).toBe('Persisted drive aggregate');
   });
 
   it('shows unknown cost and odometers without turning missing evidence into free driving or zero mileage', () => {
@@ -103,20 +139,20 @@ describe('Canonical drive overview', () => {
 
   it.each([
     [82.6, '82.60'], [0, '0.00'], [null, '—'], [NaN, '—'], [Infinity, '—'],
-  ] as const)('shows the recorded score %s once without inventing a grade or estimate', (score, expected) => {
+  ] as const)('shows the recorded score %s once, in the details drawer, without inventing a grade', (score, expected) => {
     render(<HeroGauges drive={driveFixture({ score })} stats={statsFixture()} />);
-    expect(screen.getAllByText(`Recorded score: ${expected}`)).toHaveLength(1);
+    expect(screen.queryByText(/Recorded score/)).toBeNull();
+    const dialog = openDetails();
+    expect(detail(dialog, 'Recorded score')).toBe(expected);
     expect(screen.queryByText(/NaN|Infinity/)).toBeNull();
   });
 
-  it('renders each canonical metric once, without neon or arbitrary relative gauges', () => {
+  it('renders each metric once, without neon or arbitrary relative gauges', () => {
     const { container } = render(<HeroGauges drive={driveFixture()} stats={statsFixture()} />);
-    for (const label of ['Distance', 'Duration', 'Average speed', 'Maximum speed', 'Consumption', 'Battery use per 100 km']) {
+    for (const label of ['Distance', 'Duration', 'Average speed', 'Maximum speed', 'Consumption', 'Energy used', 'Drive cost', 'Battery use per 100 km']) {
       expect(screen.getAllByText(label)).toHaveLength(1);
     }
     expect(container.querySelector('[class*="gradient"], [class*="text-neon"]')).toBeNull();
-    expect(container.querySelector('[data-operational-value] svg')).toBeNull();
-    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(2);
     expect(container.querySelector('[role="progressbar"]')).toBeNull();
     expect(reading('Distance')).toContain('40.00');
     expect(reading('Maximum speed')).toContain('108.00');
@@ -125,10 +161,10 @@ describe('Canonical drive overview', () => {
     expect(reading('Battery use per 100 km')).toContain('25.0');
   });
 
-  it('compares SI-derived distance and duration against this vehicle’s actual mean', () => {
+  it('compares SI-derived distance and duration against this vehicle’s actual mean, naming each', () => {
     render(<HeroGauges drive={driveFixture()} stats={statsFixture()} />);
-    expect(state.deltas.find((row) => row.current === 40)?.previous).toBe(30);
-    expect(state.deltas.find((row) => row.current === 30)?.previous).toBe(30);
+    expect(state.deltas.find((row) => row.current === 40)).toMatchObject({ previous: 30, comparedTo: 'distance vs your average' });
+    expect(state.deltas.find((row) => row.current === 30)).toMatchObject({ previous: 30, comparedTo: 'duration vs your average' });
   });
 
   it('compares maximum speed to the record, not an average and marks consumption lower-better', () => {
@@ -144,7 +180,7 @@ describe('Canonical drive overview', () => {
     expect(reading('Maximum speed')).toContain('67.11');
     expect(reading('Consumption')).toContain('321.87');
     expect(screen.getByText('Battery use per 100 mi')).toBeInTheDocument();
-    expect(state.deltas[0].previous).toBeCloseTo(18.641, 2);
+    expect(state.deltas.find((row) => row.comparedTo === 'distance vs your average')?.previous).toBeCloseTo(18.641, 2);
   });
 
   it('does not create distance/duration baselines for a zero-count vehicle history', () => {
@@ -178,10 +214,11 @@ describe('Canonical drive overview', () => {
     expect(reading('Battery use per 100 km')).toContain('—');
   });
 
-  it('labels consumption based on estimated energy and never duplicates the energy total', () => {
+  it('notes estimated consumption in the details drawer and never duplicates the energy total', () => {
     render(<HeroGauges drive={driveFixture({ energyUsedWh: null })} stats={statsFixture()} />);
-    expect(screen.getByText(/Consumption uses estimated energy/)).toBeInTheDocument();
     expect(screen.queryByText('Energy consumed')).toBeNull();
+    const dialog = openDetails();
+    expect(within(dialog).getByText(/Consumption uses estimated energy/)).toBeInTheDocument();
   });
 
   it('does not leak non-finite SI aggregates into user-visible numbers', () => {

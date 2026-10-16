@@ -40,7 +40,7 @@
  * `fireEvent` (repo convention — `@testing-library/user-event` is not installed).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import { RouteMapSection } from './RouteMapSection';
@@ -213,6 +213,7 @@ interface RenderOpts {
   speedSegments?: SpeedSegment[];
   routePoints?: RoutePoint[];
   fsdEvidence?: FsdEvidenceInterval[];
+  embedded?: boolean;
 }
 
 function renderSection(opts: RenderOpts = {}) {
@@ -226,6 +227,7 @@ function renderSection(opts: RenderOpts = {}) {
       speedSegments={opts.speedSegments as never}
       routePoints={opts.routePoints}
       fsdEvidence={opts.fsdEvidence}
+      embedded={opts.embedded}
     />,
   );
 }
@@ -258,10 +260,49 @@ describe('RouteMapSection — saved date preferences', () => {
   });
 });
 
+/* ── ENDPOINTS WITHOUT A RECORDED PATH ─────────────────────────────────────── */
+describe('RouteMapSection — start/end pins when the route path is not recorded', () => {
+  it('joins both recorded endpoints with a dashed straight line and says the path was not recorded', () => {
+    renderSection({ drive: makeDrive({ positions: [] }), trail: [], speedSegments: [] });
+    expect(screen.getByRole('region', { name: 'Route map' })).toHaveAttribute('data-route-mode', 'endpoints');
+    expect(screen.getByTestId('map-container')).toBeInTheDocument();
+    const pins = screen.getAllByTestId('circle-marker');
+    expect(pins.map((pin) => pin.getAttribute('data-center'))).toEqual(['[47.6,-122.33]', '[47.44,-122.3]']);
+    expect(within(pins[0]).getByText('Start')).toBeInTheDocument();
+    expect(within(pins[1]).getByText('End')).toBeInTheDocument();
+    const line = screen.getByTestId('polyline');
+    expect(line).toHaveAttribute('data-count', '2');
+    expect(screen.getByTestId('route-not-recorded')).toHaveTextContent('Route path not recorded');
+    expect(screen.queryByText('No route data available for this drive')).toBeNull();
+  });
+
+  it('shows the single recorded endpoint without inventing a line', () => {
+    renderSection({ drive: makeDrive({ positions: [], endLat: null, endLon: null }), trail: [], speedSegments: [] });
+    expect(screen.getAllByTestId('circle-marker')).toHaveLength(1);
+    expect(screen.queryByTestId('polyline')).toBeNull();
+    expect(screen.getByTestId('route-not-recorded')).toBeInTheDocument();
+  });
+
+  it('ignores the (0, 0) no-fix placeholder as an endpoint', () => {
+    renderSection({ drive: makeDrive({ positions: [], startLat: 0, startLon: 0, endLat: 0, endLon: 0 }), trail: [], speedSegments: [] });
+    expect(screen.getByText('No route data available for this drive')).toBeInTheDocument();
+    expect(screen.queryByTestId('map-container')).toBeNull();
+  });
+
+  it('renders only the map body, without its own panel heading, when embedded in the hero', () => {
+    renderSection({ drive: makeDrive({ positions: [] }), trail: [], speedSegments: [], embedded: true });
+    expect(screen.getByTestId('drive-route-map')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Route' })).toBeNull();
+    expect(screen.getByTestId('route-not-recorded')).toBeInTheDocument();
+  });
+});
+
 /* ── EMPTY / NULL-SAFETY ───────────────────────────────────────────────────── */
 describe('RouteMapSection — empty + null-safety', () => {
-  it('renders the no-route placeholder (never a blank map) when the trail is empty', () => {
-    renderSection({ drive: makeDrive({ positions: [] }), trail: [], speedSegments: [] });
+  const noCoordinates = { positions: [], startLat: null, startLon: null, endLat: null, endLon: null };
+
+  it('renders the no-route placeholder only when there are no coordinates at all', () => {
+    renderSection({ drive: makeDrive(noCoordinates), trail: [], speedSegments: [] });
 
     expect(screen.getByText('No route data available for this drive')).toBeInTheDocument();
     // No leaflet container and no viewport side effects when there is nothing to plot.
@@ -275,7 +316,7 @@ describe('RouteMapSection — empty + null-safety', () => {
   it('tolerates an undefined trail and speedSegments without throwing (?? [] hardening)', () => {
     // A partial hook shape must degrade to the empty state, not crash on .length/.map.
     expect(() =>
-      renderSection({ drive: makeDrive({ positions: [] }), trail: undefined, speedSegments: undefined }),
+      renderSection({ drive: makeDrive(noCoordinates), trail: undefined, speedSegments: undefined }),
     ).not.toThrow();
 
     expect(screen.getByText('No route data available for this drive')).toBeInTheDocument();
