@@ -13498,10 +13498,10 @@
       "web\\src\\lib\\__tests__\\dateFormat.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si11 | regression tests and typecheck blocked by missing dependencies; restoration failed | done so far: updated all six assigned files with preference-aware seconds rendering and focused regressions Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si11 | tests and typecheck blocked by missing dependencies; restoration failed with ENOTEMPTY and EBUSY | done so far: inspected existing preference-aware seconds rendering and regressions in all six assigned files; preserved source unchanged",
+    "Notes": "Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si11 | regression tests and typecheck blocked by missing dependencies; restoration failed | done so far: updated all six assigned files with preference-aware seconds rendering and focused regressions Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si11 | tests and typecheck blocked by missing dependencies; restoration failed with ENOTEMPTY and EBUSY | done so far: inspected existing preference-aware seconds rendering and regressions in all six assigned files; preserved source unchanged Retry failed: CommunicationsCatalogPanel.test.tsx has 7 failures in translated provider/catalog labels and rendering.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13540,10 +13540,10 @@
       "web\\src\\features\\service-intelligence\\components\\WarrantyPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si09 | Required verification blocked by missing dependencies and failed restoration | done so far: Changed web/src/features/service-intelligence/components/RecallFindingCard.tsx, web/src/features/service-intelligence/pages/ServiceIntelligencePage.test.tsx, web/src/api/hooks/useServiceIntelligence.test.tsx; independently render warnings and add preservation regressions Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si09 | Required verification blocked by missing dependencies and failed restoration | done so far: confirmed existing independent warning rendering and preservation regressions; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si09 | Required verification blocked by missing dependencies and failed restoration | done so far: Changed web/src/features/service-intelligence/components/RecallFindingCard.tsx, web/src/features/service-intelligence/pages/ServiceIntelligencePage.test.tsx, web/src/api/hooks/useServiceIntelligence.test.tsx; independently render warnings and add preservation regressions Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si09 | Required verification blocked by missing dependencies and failed restoration | done so far: confirmed existing independent warning rendering and preservation regressions; no source changes Retry failed: service-intelligence selected suites have 12 failures across CommunicationsCatalogPanel (7), CommunicationsPanel (3), EvidenceLimitationsPanel (1), and WarrantyPanel (1).",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13581,10 +13581,10 @@
       "web\\src\\features\\service-intelligence\\components\\CommunicationsCatalogPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si08 | regression tests and TypeScript blocked by missing dependencies | done so far: updated four assigned components and three assigned regression test files Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si08 | missing dependencies block regression tests and TypeScript; restoration failed | done so far: reviewed and preserved existing four-component implementation and three regression files; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si08 | regression tests and TypeScript blocked by missing dependencies | done so far: updated four assigned components and three assigned regression test files Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si08 | missing dependencies block regression tests and TypeScript; restoration failed | done so far: reviewed and preserved existing four-component implementation and three regression files; no source changes Retry failed: service-intelligence selected suites have 12 failures across communications catalog/panel, evidence limitations, and WarrantyPanel assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13600,10 +13600,10 @@
       "web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si06 | Dependency failures and Edge navigation timeouts prevented required verification | done so far: updated all six assigned files with responsive mobile targets and regression assertions Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si06 | Required verification blocked by missing dependencies and unresponsive existing dev server | done so far: confirmed prior responsive implementation and regression assertions in all six assigned files; no changes made",
+    "Notes": "Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si06 | Dependency failures and Edge navigation timeouts prevented required verification | done so far: updated all six assigned files with responsive mobile targets and regression assertions Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si06 | Required verification blocked by missing dependencies and unresponsive existing dev server | done so far: confirmed prior responsive implementation and regression assertions in all six assigned files; no changes made Retry failed: CommunicationsCatalogPanel.test.tsx has 7 failures in translated provider/catalog labels and rendering.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13615,10 +13615,10 @@
       "web\\src\\features\\service-intelligence\\components\\WarrantyPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si04 | dependency failures prevented verification | done so far: updated web\\src\\features\\service-intelligence\\components\\WarrantyPanel.tsx and web\\src\\features\\service-intelligence\\components\\WarrantyPanel.test.tsx Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si04 | dependency failures prevented verification | done so far: inspected existing WarrantyPanel implementation and regression tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si04 | dependency failures prevented verification | done so far: updated web\\src\\features\\service-intelligence\\components\\WarrantyPanel.tsx and web\\src\\features\\service-intelligence\\components\\WarrantyPanel.test.tsx Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si04 | dependency failures prevented verification | done so far: inspected existing WarrantyPanel implementation and regression tests; no source changes Retry failed: WarrantyPanel.test.tsx has 1 failure in its focused warranty assertion; related suite reports 12 failures total.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13631,10 +13631,10 @@
       "web\\src\\features\\service-intelligence\\components\\WarrantyPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si03 | focused tests blocked by missing dependencies and EPERM during restoration | done so far: updated WarrantyPanel.tsx, useServiceIntelligence.ts, and WarrantyPanel.test.tsx; regression execution unverified Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si03 | regression blocked by missing Vite; dependency restoration failed with ENOTEMPTY | done so far: existing conversion, raw-kilometer documentation and focused regression inspected; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si03 | focused tests blocked by missing dependencies and EPERM during restoration | done so far: updated WarrantyPanel.tsx, useServiceIntelligence.ts, and WarrantyPanel.test.tsx; regression execution unverified Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si03 | regression blocked by missing Vite; dependency restoration failed with ENOTEMPTY | done so far: existing conversion, raw-kilometer documentation and focused regression inspected; no source changes Retry failed: WarrantyPanel.test.tsx has 1 failure in its focused warranty assertion; related suite reports 12 failures total.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13649,10 +13649,10 @@
       "web\\src\\features\\service-intelligence\\components\\ClaimDraftPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si02 | Missing dependencies prevented test and TypeScript verification | done so far: updated the three assigned source files and both assigned test files Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si02 | Missing dependencies prevent test and TypeScript verification; restoration failed with ENOTEMPTY/ENOENT | done so far: inspected existing implementation and regression coverage; no files changed",
+    "Notes": "Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si02 | Missing dependencies prevented test and TypeScript verification | done so far: updated the three assigned source files and both assigned test files Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si02 | Missing dependencies prevent test and TypeScript verification; restoration failed with ENOTEMPTY/ENOENT | done so far: inspected existing implementation and regression coverage; no files changed Focused service-intelligence regression suites passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -13666,10 +13666,10 @@
       "web\\src\\features\\service-intelligence\\pages\\ServiceIntelligencePage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si01 | verification blocked by missing dependencies and failed restoration | done so far: updated CommunicationsPanel.tsx, ServiceIntelligencePage.tsx, CommunicationsPanel.test.tsx, ServiceIntelligencePage.test.tsx with unknown-source handling, record retention, local retry and regressions Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si01 | focused tests blocked by missing dependencies; both restoration attempts failed | done so far: inspected existing implementation and regressions; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-service-intelligence-service-intelligence-si01 | verification blocked by missing dependencies and failed restoration | done so far: updated CommunicationsPanel.tsx, ServiceIntelligencePage.tsx, CommunicationsPanel.test.tsx, ServiceIntelligencePage.test.tsx with unknown-source handling, record retention, local retry and regressions Attempt 2: FAILED | fix-service-intelligence-service-intelligence-si01 | focused tests blocked by missing dependencies; both restoration attempts failed | done so far: inspected existing implementation and regressions; no source files changed Retry failed: CommunicationsPanel.test.tsx has 3 failures in communications status/detail assertions.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
