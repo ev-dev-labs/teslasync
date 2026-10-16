@@ -10740,10 +10740,10 @@
       "web\\src\\features\\exports\\pages\\ExportsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-exports-exports-ex03 | validation blocked by missing dependencies and non-rendering dev application | done so far: updated web/src/features/exports/pages/ExportsPage.tsx, web/src/features/exports/pages/ExportsPage.test.tsx, web/src/features/exports/components/ExportKpiBand.tsx Attempt 2: FAILED | fix-exports-exports-ex03 | validation blocked by missing dependencies, locked dependency file and non-rendering dev application | done so far: inspected existing implementation and tests; no source changes",
+    "Notes": "Attempt 1: FAILED | fix-exports-exports-ex03 | validation blocked by missing dependencies and non-rendering dev application | done so far: updated web/src/features/exports/pages/ExportsPage.tsx, web/src/features/exports/pages/ExportsPage.test.tsx, web/src/features/exports/components/ExportKpiBand.tsx Attempt 2: FAILED | fix-exports-exports-ex03 | validation blocked by missing dependencies, locked dependency file and non-rendering dev application | done so far: inspected existing implementation and tests; no source changes Retry failed: ExportsPage.test.tsx has 15 failures across 41 tests. Breakage includes missing accessible export-row names/checkboxes, reversed sort order, and retained/error/paused states not exposing expected summary text or null-value placeholders.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10772,10 +10772,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: ExportsPage.test.tsx has 15 failures across 41 tests. Breakage includes missing accessible export-row names/checkboxes, reversed sort order, and retained/error/paused states not exposing expected summary text or null-value placeholders.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10802,10 +10802,10 @@
       "web\\src\\features\\exports\\pages\\ExportsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-exports-exports-ex07 | verification blocked by missing dependencies | done so far: updated web\\src\\features\\exports\\pages\\ExportsPage.tsx and web\\src\\features\\exports\\pages\\ExportsPage.test.tsx with embedded variant and preservation regression Attempt 2: FAILED | fix-exports-exports-ex07 | verification blocked by missing dependencies and failed restoration | done so far: confirmed existing embedded variant and toolbar/scroll/pagination/fields/actions regression; no source files changed",
+    "Notes": "Attempt 1: FAILED | fix-exports-exports-ex07 | verification blocked by missing dependencies | done so far: updated web\\src\\features\\exports\\pages\\ExportsPage.tsx and web\\src\\features\\exports\\pages\\ExportsPage.test.tsx with embedded variant and preservation regression Attempt 2: FAILED | fix-exports-exports-ex07 | verification blocked by missing dependencies and failed restoration | done so far: confirmed existing embedded variant and toolbar/scroll/pagination/fields/actions regression; no source files changed Retry failed: ExportsPage.test.tsx has 15 failures across 41 tests. Breakage includes missing accessible export-row names/checkboxes, reversed sort order, and retained/error/paused states not exposing expected summary text or null-value placeholders.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
