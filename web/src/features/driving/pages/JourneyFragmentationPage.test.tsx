@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
@@ -406,7 +407,7 @@ describe('JourneyFragmentationPage', () => {
     expect(within(composition).getAllByRole('region')).toEqual([brief]);
     expect(within(composition).getAllByText(explanation)).toHaveLength(2);
     expect(within(brief).getByText('Elapsed composition')).toBeInTheDocument();
-    expect(within(brief).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Returned evidence');
     expect(within(brief).getByText(provenance)).toBeInTheDocument();
     expect(elapsedValues()).toEqual(['90 min', '30 min', '1']);
 
@@ -568,7 +569,7 @@ describe('JourneyFragmentationPage', () => {
     // Loading never fabricates a reading, not even a placeholder value.
     expect(metricValue('Observed journeys')).toBeNull();
     expect(elapsedBrief()).toHaveAttribute('aria-busy', 'true');
-    expect(within(elapsedBrief()).getByText('Loading source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Loading source');
     expect(elapsedValues()).toEqual([]);
     expect(elapsedBrief().querySelectorAll('[data-operational-metric]')).toHaveLength(3);
   });
@@ -582,7 +583,7 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.queryByText('No data available')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(metricValue('Observed journeys')).toBe('—');
-    expect(within(elapsedBrief()).getByText('Source unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Source unavailable');
     expect(elapsedValues()).toEqual(['—', '—', '—']);
   });
 
@@ -594,7 +595,7 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.getAllByText('No data available').length).toBeGreaterThanOrEqual(5);
     expect(metricValue('Observed journeys')).toBe('0');
     expect(metricValue('Linked pairs')).toBe('0');
-    expect(within(elapsedBrief()).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Returned evidence');
     expect(elapsedValues()).toEqual(['0 min', '0 min', '0']);
     expect(screen.queryByText('Drive evidence is not available yet.')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
@@ -617,7 +618,7 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.getByText('Observed window')).toBeInTheDocument();
     expect(metricValue('Linked pairs')).toBe('0');
     expect(elapsedValues()).toEqual(['90 min', '0 min', '0']);
-    expect(within(elapsedBrief()).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Returned evidence');
   });
 
   it('keeps all shells visible and labels a thin observed window', () => {
@@ -772,7 +773,7 @@ describe('JourneyFragmentationPage', () => {
     expect(metricValue('Observed journeys')).toBe('—');
     expect(screen.queryByText('Loading')).not.toBeInTheDocument();
     expect(elapsedBrief()).not.toHaveAttribute('aria-busy');
-    expect(within(elapsedBrief()).getByText('Source unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Source unavailable');
     expect(elapsedValues()).toEqual(['—', '—', '—']);
     expect(screen.getAllByText('The initial evidence query is paused; no empty result is inferred.').length).toBeGreaterThan(1);
     expectOneRecoveryControl();
@@ -836,7 +837,7 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.queryByText('Retained evidence')).not.toBeInTheDocument();
     expect(elapsedValues()).toEqual(elapsed);
-    expect(within(elapsedBrief()).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Returned evidence');
     expect(within(elapsedBrief()).queryByText('Retained source')).not.toBeInTheDocument();
   });
 
@@ -857,7 +858,7 @@ describe('JourneyFragmentationPage', () => {
     expect(metricValue('Observed journeys')).toBe('0');
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(elapsedValues()).toEqual(['0 min', '0 min', '0']);
-    expect(within(elapsedBrief()).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Returned evidence');
   });
 
   it('preserves exact gap boundaries, chronological grouping and the unchanged capped query', () => {

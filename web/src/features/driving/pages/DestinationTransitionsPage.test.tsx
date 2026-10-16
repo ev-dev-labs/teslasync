@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -526,7 +527,7 @@ describe('DestinationTransitionsPage', () => {
     for (const id of qualityBriefIds) {
       const brief = screen.getByTestId(id);
       expect(brief).toHaveAttribute('aria-busy', 'true');
-      expect(within(brief).getByText('Loading source')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(brief, 'Loading source');
       expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
       expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
     }
@@ -542,7 +543,7 @@ describe('DestinationTransitionsPage', () => {
     for (const id of qualityBriefIds) {
       const brief = screen.getByTestId(id);
       expect(brief).not.toHaveAttribute('aria-busy');
-      expect(within(brief).getByText('Source unavailable')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(brief, 'Source unavailable');
       expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
       expect(within(brief).queryByText('Not reached')).not.toBeInTheDocument();
     }
@@ -625,7 +626,7 @@ describe('DestinationTransitionsPage', () => {
     view.rerenderPage();
     qualityBriefIds.forEach((id, index) => {
       const brief = screen.getByTestId(id);
-      expect(within(brief).getByText('Returned evidence')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(brief, 'Returned evidence');
       expect(Array.from(brief.querySelectorAll('[data-operational-value]'), node => node.textContent)).toEqual(before[index]);
     });
     expect(screen.queryByText('Retained source')).not.toBeInTheDocument();

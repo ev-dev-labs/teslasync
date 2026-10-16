@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -124,7 +125,7 @@ describe('maps OperationalBrief source contract', () => {
     expect(container.querySelector('[data-operational-metric="speed"]')).toHaveAttribute('data-value-state', 'value');
     expect(container.querySelector('[data-operational-metric="heading"]')).toHaveAttribute('data-value-state', 'missing');
     expect(within(band).getByText('0.00 km/h')).toBeInTheDocument();
-    expect(within(band).getByText('Retained source data')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(band, 'Retained source data');
     expect(within(band).getAllByText(scope).length).toBeGreaterThan(0);
   });
 
@@ -195,13 +196,13 @@ describe('maps OperationalBrief source contract', () => {
     const { container } = renderBrief(false, [{ label: sourceLabel, state: inactiveState }], undefined, unknownMetrics);
     const band = screen.getByRole('region', { name: 'Vehicle status' });
     expect(band).not.toHaveAttribute('aria-busy');
-    expect(within(band).getByText('Source data unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(band, 'Source data unavailable');
     expect(within(band).getByText('Measured speed')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(3);
     expect(container.querySelector('[data-operational-metric="speed"]')).toHaveAttribute('data-value-state', 'missing');
     expect(container.querySelector('[data-operational-metric="speed"] [data-operational-value]')).toHaveTextContent('—');
     expect(within(band).queryByText('0.00 km/h')).not.toBeInTheDocument();
-    expect(within(band).queryByText('Loading source data')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(band, 'Loading source data', { absent: true });
     fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Vehicle status details' });
     expect(within(drawer).queryByText('0.00 km/h')).not.toBeInTheDocument();
@@ -212,7 +213,7 @@ describe('maps OperationalBrief source contract', () => {
     const { container } = renderBrief(undefined, [{ label: sourceLabel, state: deriveDataState({ isPending: true }) }]);
     const band = screen.getByRole('region', { name: 'Vehicle status' });
     expect(band).toHaveAttribute('aria-busy', 'true');
-    expect(within(band).getByText('Loading source data')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(band, 'Loading source data');
     expect(within(band).getByText('Measured speed')).toBeInTheDocument();
     expect(within(band).getAllByText(scope).length).toBeGreaterThan(0);
     expect(container.querySelector('[data-operational-value]')).toBeNull();

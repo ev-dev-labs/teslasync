@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -190,7 +191,7 @@ describe('DB health canonical summary preservation', () => {
     });
     expect(screen.getByTestId('db-health-summary-1')).toHaveTextContent('Retained source');
     expect(screen.getByTestId('db-health-summary-1').querySelector('[data-operational-value]')).toHaveTextContent('185');
-    expect(screen.getByTestId('db-health-summary-2')).toHaveTextContent('Source unavailable');
+    assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-2'), 'Source unavailable', { contains: true });
     expect(container.querySelector('[data-operational-metric="db-pool-usage"]')).toHaveAttribute('data-value-state', 'missing');
   });
 

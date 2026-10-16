@@ -151,7 +151,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " DONE | fix-admin-fleet-telemetry-coverage-f07 | no change needed: existing formatter wiring and regression tests cover saved locale/timezone, day boundaries, and invalid or missing timestamps",
+    "Notes": " DONE | fix-admin-fleet-telemetry-coverage-f07 | no change needed: existing formatter wiring and regression tests cover saved locale/timezone, day boundaries, and invalid or missing timestamps | 2026-10-16 triage group 10 bulk disclosure receipt: features/admin/components/statstrip-coverage-flags-secrets/CoverageOperationalBrief.test.tsx: 8 passed / 1 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1021,7 +1021,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-advanced-twin-lab-f01 | focused tests stalled; verification incomplete | done so far: updated TwinLabPage.tsx and TwinLabPage.test.tsx with collision-free naming and regression coverage DONE | fix-advanced-twin-lab-f01 | no change needed: implementation and regression coverage already present; test execution blocked by runner startup",
+    "Notes": " Attempt 1: FAILED | fix-advanced-twin-lab-f01 | focused tests stalled; verification incomplete | done so far: updated TwinLabPage.tsx and TwinLabPage.test.tsx with collision-free naming and regression coverage DONE | fix-advanced-twin-lab-f01 | no change needed: implementation and regression coverage already present; test execution blocked by runner startup | 2026-10-16 triage group 10 bulk disclosure receipt: features/advanced-intelligence/pages/TwinLabPage.test.tsx: 37 passed / 7 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1036,7 +1036,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 1,
-    "Notes": " DONE | fix-advanced-twin-lab-f03 | no change needed: requested behavior and regression coverage already exist",
+    "Notes": " DONE | fix-advanced-twin-lab-f03 | no change needed: requested behavior and regression coverage already exist | 2026-10-16 triage group 10 bulk disclosure receipt: features/advanced-intelligence/pages/TwinLabPage.test.tsx: 37 passed / 7 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1051,7 +1051,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-advanced-twin-lab-f07 | targeted tests could not complete | done so far: updated web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx and web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx DONE | fix-advanced-twin-lab-f07 | no change needed: implementation and required coverage already exist; test execution stalled",
+    "Notes": " Attempt 1: FAILED | fix-advanced-twin-lab-f07 | targeted tests could not complete | done so far: updated web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx and web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx DONE | fix-advanced-twin-lab-f07 | no change needed: implementation and required coverage already exist; test execution stalled | 2026-10-16 triage group 10 bulk disclosure receipt: features/advanced-intelligence/pages/TwinLabPage.test.tsx: 37 passed / 7 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1066,7 +1066,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/advanced-intelligence/pages/TwinLabPage.test.tsx: 37 passed / 7 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "f2f2b98a94",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1081,7 +1081,7 @@
     "Status": "failed",
     "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-advanced-twin-lab-f04 | focused tests stalled without output | done so far: updated web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx, added regression in web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx Attempt 2: FAILED | fix-advanced-twin-lab-f04 | focused tests stalled without output on both attempts | done so far: confirmed existing semantic panel change and focused constraint regression; no files changed Attempt 1: FAILED | fix-advanced-twin-lab-f04 | external catalog validation blocked test startup | done so far: semantic panel fix and focused constraint regression already present in TwinScenarioForm.tsx and TwinLabPage.test.tsx Attempt 2: FAILED | fix-advanced-twin-lab-f04 | external catalog validation blocked test startup | done so far: existing semantic panel fix and native-constraint regression confirmed in web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx, web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx",
+    "Notes": " Attempt 1: FAILED | fix-advanced-twin-lab-f04 | focused tests stalled without output | done so far: updated web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx, added regression in web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx Attempt 2: FAILED | fix-advanced-twin-lab-f04 | focused tests stalled without output on both attempts | done so far: confirmed existing semantic panel change and focused constraint regression; no files changed Attempt 1: FAILED | fix-advanced-twin-lab-f04 | external catalog validation blocked test startup | done so far: semantic panel fix and focused constraint regression already present in TwinScenarioForm.tsx and TwinLabPage.test.tsx Attempt 2: FAILED | fix-advanced-twin-lab-f04 | external catalog validation blocked test startup | done so far: existing semantic panel fix and native-constraint regression confirmed in web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx, web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx | 2026-10-16 triage group 10 bulk disclosure receipt: features/advanced-intelligence/pages/TwinLabPage.test.tsx: 37 passed / 7 failed; Current failure: TwinLabPage restrained source adoption keeps all six sections and unknown baseline before explicit simulation — AssertionError: expected  to have a length of 4 but got +0     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1389:20)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1156:15)     at Proxy.methodWrapper (file:///D:/repos/teslasync/web/node_modules/chai/index.js:1700:25)     at D:/repos/teslasync/web/src/features/advanced-intelligence/pages/TwinLabPa. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -1096,7 +1096,7 @@
     "Status": "failed",
     "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-advanced-twin-lab-f05 | runtime verification blocked; time box exceeded | done so far: updated web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx and web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx; scoped lint passed Attempt 2: FAILED | fix-advanced-twin-lab-f05 | dependency restoration blocked by locked esbuild executable; Edge navigation timed out | done so far: inspected existing mobile sizing and regression tests; no source changes Attempt 1: FAILED | fix-advanced-twin-lab-f05 | shell initialization blocked test execution; browser verification unavailable | done so far: inspected existing mobile sizing and regression tests in TwinScenarioForm.tsx and TwinLabPage.test.tsx; no source changes Attempt 2: FAILED | fix-advanced-twin-lab-f05 | runtime verification blocked | done so far: inspected and preserved existing fixes in web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx and web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx; attempted scoped tests, TypeScript and Edge verification; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-advanced-twin-lab-f05 | runtime verification blocked; time box exceeded | done so far: updated web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx and web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx; scoped lint passed Attempt 2: FAILED | fix-advanced-twin-lab-f05 | dependency restoration blocked by locked esbuild executable; Edge navigation timed out | done so far: inspected existing mobile sizing and regression tests; no source changes Attempt 1: FAILED | fix-advanced-twin-lab-f05 | shell initialization blocked test execution; browser verification unavailable | done so far: inspected existing mobile sizing and regression tests in TwinScenarioForm.tsx and TwinLabPage.test.tsx; no source changes Attempt 2: FAILED | fix-advanced-twin-lab-f05 | runtime verification blocked | done so far: inspected and preserved existing fixes in web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx and web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.test.tsx; attempted scoped tests, TypeScript and Edge verification; no source changes | 2026-10-16 triage group 10 bulk disclosure receipt: features/advanced-intelligence/pages/TwinLabPage.test.tsx: 37 passed / 7 failed; Current failure: TwinLabPage restrained source adoption keeps all six sections and unknown baseline before explicit simulation — AssertionError: expected  to have a length of 4 but got +0     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1389:20)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1156:15)     at Proxy.methodWrapper (file:///D:/repos/teslasync/web/node_modules/chai/index.js:1700:25)     at D:/repos/teslasync/web/src/features/advanced-intelligence/pages/TwinLabPa. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -2984,7 +2984,7 @@
     "Status": "failed",
     "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-01 | verification blocked within 20-minute timebox | done so far: updated handler.go, dtos.go, calculations.go, handler_test.go, BatteryDegradationPage.tsx, BatteryDegradationStats.tsx, and BatteryDegradationPage.test.tsx; availability handling and regression coverage persisted Attempt 2: FAILED | fix-battery-battery-degradation-bd-01 | verification blocked by external catalog startup failure and unavailable Go toolchain | done so far: inspected and preserved prior availability implementation and regression coverage; no files changed Attempt 1: reported DONE but no changed files were found Attempt 2: FAILED | fix-battery-battery-degradation-bd-01 | shared energy-type alignment remains incomplete and prohibited by prompt | done so far: preserved existing backend/frontend availability implementation and regression coverage; required page tests and Go race tests passed; no files changed",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-01 | verification blocked within 20-minute timebox | done so far: updated handler.go, dtos.go, calculations.go, handler_test.go, BatteryDegradationPage.tsx, BatteryDegradationStats.tsx, and BatteryDegradationPage.test.tsx; availability handling and regression coverage persisted Attempt 2: FAILED | fix-battery-battery-degradation-bd-01 | verification blocked by external catalog startup failure and unavailable Go toolchain | done so far: inspected and preserved prior availability implementation and regression coverage; no files changed Attempt 1: reported DONE but no changed files were found Attempt 2: FAILED | fix-battery-battery-degradation-bd-01 | shared energy-type alignment remains incomplete and prohibited by prompt | done so far: preserved existing backend/frontend availability implementation and regression coverage; required page tests and Go race tests passed; no files changed | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3004,7 +3004,7 @@
     "Status": "failed",
     "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-02 | required tests could not complete within time box | done so far: updated all seven assigned files with evidence denominators, unavailable-score handling, preserved shells and counts, and regression tests Attempt 2: FAILED | fix-battery-battery-degradation-bd-02 | required verification blocked by missing Go and stalled Vitest | done so far: inspected existing implementation and regression coverage; verified scoped source patterns and Health route; no files changed Attempt 1: timeout after 25 minutes (changes left on disk) Attempt 2: FAILED | fix-battery-battery-degradation-bd-02 | frontend verification blocked by external generated-i18n startup failure and stalled checks | done so far: inspected existing implementation and regression coverage; Go race tests passed; no files changed",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-02 | required tests could not complete within time box | done so far: updated all seven assigned files with evidence denominators, unavailable-score handling, preserved shells and counts, and regression tests Attempt 2: FAILED | fix-battery-battery-degradation-bd-02 | required verification blocked by missing Go and stalled Vitest | done so far: inspected existing implementation and regression coverage; verified scoped source patterns and Health route; no files changed Attempt 1: timeout after 25 minutes (changes left on disk) Attempt 2: FAILED | fix-battery-battery-degradation-bd-02 | frontend verification blocked by external generated-i18n startup failure and stalled checks | done so far: inspected existing implementation and regression coverage; Go race tests passed; no files changed | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3024,7 +3024,7 @@
     "Status": "failed",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-03 | frontend regression execution blocked by test startup stalls | done so far: changed internal\\api\\batterydegradation\\handler.go, internal\\api\\batterydegradation\\dtos.go, internal\\api\\batterydegradation\\calculations.go, internal\\api\\batterydegradation\\handler_test.go, web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx, web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx, web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx; Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-03 | required verification blocked by test startup stalls and unavailable Go executable | done so far: confirmed existing thermal availability wiring, neutral unknown risk, and focused regressions; no files changed Attempt 1: FAILED | fix-battery-battery-degradation-bd-03 | frontend regression verification blocked by startup stalls and alternate-loader config error | done so far: confirmed existing thermal availability fix and regressions; Go race tests passed; no files changed | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-03 | frontend regression execution blocked by test startup stalls | done so far: changed internal\\api\\batterydegradation\\handler.go, internal\\api\\batterydegradation\\dtos.go, internal\\api\\batterydegradation\\calculations.go, internal\\api\\batterydegradation\\handler_test.go, web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx, web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx, web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx; Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-03 | required verification blocked by test startup stalls and unavailable Go executable | done so far: confirmed existing thermal availability wiring, neutral unknown risk, and focused regressions; no files changed Attempt 1: FAILED | fix-battery-battery-degradation-bd-03 | frontend regression verification blocked by startup stalls and alternate-loader config error | done so far: confirmed existing thermal availability fix and regressions; Go race tests passed; no files changed | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes. | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3044,7 +3044,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " DONE | fix-battery-battery-degradation-bd-04 | no change needed: requested severity mapping and evidence guards already exist with focused regressions; test execution blocked by local tooling",
+    "Notes": " DONE | fix-battery-battery-degradation-bd-04 | no change needed: requested severity mapping and evidence guards already exist with focused regressions; test execution blocked by local tooling | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3064,7 +3064,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-05 | verification blocked by external catalog/type errors and missing race-test compiler | done so far: implemented backend prediction contract, page/stats consumers, and regression tests in all seven expected files Attempt 2: FAILED | fix-battery-battery-degradation-bd-05 | runtime verification blocked: Vitest stalled and Go unavailable | done so far: inspected existing fit-validity, crossing-status, signed/fractional evidence contract and regression tests; no changes made | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-05 | verification blocked by external catalog/type errors and missing race-test compiler | done so far: implemented backend prediction contract, page/stats consumers, and regression tests in all seven expected files Attempt 2: FAILED | fix-battery-battery-degradation-bd-05 | runtime verification blocked: Vitest stalled and Go unavailable | done so far: inspected existing fit-validity, crossing-status, signed/fractional evidence contract and regression tests; no changes made | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes. | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3084,7 +3084,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-06 | frontend regression and TypeScript validation blocked by missing dependencies and failed restoration | done so far: updated all seven assigned files with baseline/estimator evidence and regressions; scoped Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-06 | required verification blocked by missing dependencies, locked Rollup binary, and unavailable Go runtime | done so far: confirmed existing nominal-baseline evidence, observed-estimator distinction, BD-C01 disclaimer, and focused regressions; no source changes | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-06 | frontend regression and TypeScript validation blocked by missing dependencies and failed restoration | done so far: updated all seven assigned files with baseline/estimator evidence and regressions; scoped Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-06 | required verification blocked by missing dependencies, locked Rollup binary, and unavailable Go runtime | done so far: confirmed existing nominal-baseline evidence, observed-estimator distinction, BD-C01 disclaimer, and focused regressions; no source changes | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes. | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3104,7 +3104,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-07 | frontend regression unverified within time box | done so far: changed all seven expected files; observation provenance implemented; backend race tests passed; frontend regressions added Attempt 2: FAILED | fix-battery-battery-degradation-bd-07 | required regressions blocked by missing frontend dependencies and C compiler | done so far: inspected existing observation provenance implementation and regressions; no source changes | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-07 | frontend regression unverified within time box | done so far: changed all seven expected files; observation provenance implemented; backend race tests passed; frontend regressions added Attempt 2: FAILED | fix-battery-battery-degradation-bd-07 | required regressions blocked by missing frontend dependencies and C compiler | done so far: inspected existing observation provenance implementation and regressions; no source changes | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes. | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3124,7 +3124,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-08 | validation blocked by unavailable Go and broken frontend dependencies | done so far: updated all five assigned implementation files and both regression test files Attempt 2: FAILED | fix-battery-battery-degradation-bd-08 | frontend verification blocked by broken dependencies; restoration attempts failed | done so far: existing metric fixes and regressions preserved; backend race tests passed; no source changes | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-08 | validation blocked by unavailable Go and broken frontend dependencies | done so far: updated all five assigned implementation files and both regression test files Attempt 2: FAILED | fix-battery-battery-degradation-bd-08 | frontend verification blocked by broken dependencies; restoration attempts failed | done so far: existing metric fixes and regressions preserved; backend race tests passed; no source changes | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes. | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3144,7 +3144,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-09 | frontend test execution blocked by dependencies and time limit | done so far: history contract, retained-baseline labels, timestamps, English copy and regression tests implemented; backend race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-09 | required tests blocked by missing frontend dependencies and C compiler | done so far: confirmed existing retained-baseline labels, nullable range/odometer history, sample timestamps and regression coverage | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-09 | frontend test execution blocked by dependencies and time limit | done so far: history contract, retained-baseline labels, timestamps, English copy and regression tests implemented; backend race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-09 | required tests blocked by missing frontend dependencies and C compiler | done so far: confirmed existing retained-baseline labels, nullable range/odometer history, sample timestamps and regression coverage | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes. | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3164,7 +3164,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-10 | verification blocked by missing Go and broken frontend dependencies | done so far: changed internal\\api\\batterydegradation\\handler.go, internal\\api\\batterydegradation\\handler_test.go, web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx, web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx Attempt 2: FAILED | fix-battery-battery-degradation-bd-10 | required verification blocked by missing Go and broken frontend dependencies | done so far: corrected internal\\api\\batterydegradation\\handler_test.go to preserve the live estimator without expecting a fabricated history sample | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-10 | verification blocked by missing Go and broken frontend dependencies | done so far: changed internal\\api\\batterydegradation\\handler.go, internal\\api\\batterydegradation\\handler_test.go, web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx, web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx Attempt 2: FAILED | fix-battery-battery-degradation-bd-10 | required verification blocked by missing Go and broken frontend dependencies | done so far: corrected internal\\api\\batterydegradation\\handler_test.go to preserve the live estimator without expecting a fabricated history sample | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes. | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3184,7 +3184,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-11 | missing frontend dependencies and C compiler prevent required validation | done so far: updated all five assigned implementation files and both regression test files; scoped backend tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-11 | required validation blocked by missing Vitest, npm ENOTEMPTY errors, and unavailable Go toolchain | done so far: inspected and preserved existing implementation and focused regressions; no source edits | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-11 | missing frontend dependencies and C compiler prevent required validation | done so far: updated all five assigned implementation files and both regression test files; scoped backend tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-11 | required validation blocked by missing Vitest, npm ENOTEMPTY errors, and unavailable Go toolchain | done so far: inspected and preserved existing implementation and focused regressions; no source edits | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes. | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3216,7 +3216,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "245abe2a86",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3236,7 +3236,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-13 | frontend verification blocked within time box | done so far: updated all seven expected files; added date-boundary and month-key tests; scoped Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-13 | required tests blocked by missing frontend dependencies and GCC; dependency restoration failed | done so far: inspected prior implementation and regression coverage; preserved all source files unchanged | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes.",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-13 | frontend verification blocked within time box | done so far: updated all seven expected files; added date-boundary and month-key tests; scoped Go race tests passed Attempt 2: FAILED | fix-battery-battery-degradation-bd-13 | required tests blocked by missing frontend dependencies and GCC; dependency restoration failed | done so far: inspected prior implementation and regression coverage; preserved all source files unchanged | Retry verification failed 2026-10-15: BatteryDegradationPage.test.tsx has 42 failing assertions (date preference, unknown/invalid health, capacity/source, prediction and retained-source cases). Representative exact assertion: `expect(element).toHaveTextContent()` fails in the America/Los_Angeles calendar-day case; multiple cases cannot locate the old `[data-operational-metric]` wrappers inside the collapsed shared brief. Race Go package test passes. | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed; Current failure: BatteryDegradationPage — date-preference boundary preserves calendar days while rendering observation instants in America/Los_Angeles — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Start: 31. Dez. 2022; Received:   Battery degradation evidenceReview detailsCurrent SOH91.00%Estimated capacity72.5 kWhDegradation rate2.10%/yrObservation duration2y 6m     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@v. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3256,7 +3256,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-14 | Required tests could not execute because frontend dependencies are incomplete and Go is unavailable | done so far: updated web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx, web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx, web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx DONE | fix-battery-battery-degradation-bd-14 | no change needed: requested retained-trust forwarding and regression coverage already exist; execution checks blocked by missing dependencies and Go",
+    "Notes": " Attempt 1: FAILED | fix-battery-battery-degradation-bd-14 | Required tests could not execute because frontend dependencies are incomplete and Go is unavailable | done so far: updated web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx, web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx, web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx DONE | fix-battery-battery-degradation-bd-14 | no change needed: requested retained-trust forwarding and regression coverage already exist; execution checks blocked by missing dependencies and Go | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3276,7 +3276,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "6131976c82",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3298,7 +3298,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "75d1f6bb21",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -3318,7 +3318,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/battery/pages/BatteryDegradationPage.test.tsx: 84 passed / 41 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "8e23f8b59f",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7378,7 +7378,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DepartureForecastPage.test.tsx: 27 passed / 15 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "7933ef85d6",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7396,7 +7396,7 @@
     "Status": "done",
     "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-departure-forecast-df02 | frame API lacks passive state support and shared edits are forbidden | done so far: inspected assigned components and frame API; attempted targeted tests; no files changed Attempt 2: FAILED | fix-driving-departure-forecast-df02 | frame API still lacks passive placeholders and shared edits are forbidden | done so far: read contracts, inspected all assigned files and frame implementations, attempted covering tests; no files changed Attempt 1: FAILED | fix-driving-departure-forecast-df02 | frame API lacks passive state support and shared edits are forbidden | done so far: read contracts, inspected assigned components and frame implementation, attempted targeted tests; no files changed Attempt 2: FAILED | fix-driving-departure-forecast-df02 | frame API lacks passive placeholders and shared edits are forbidden | done so far: read contracts and conventions, inspected assigned components and frame implementations, attempted targeted tests; no files changed || FINISH: done | departure forecast tests 42/42",
+    "Notes": " Attempt 1: FAILED | fix-driving-departure-forecast-df02 | frame API lacks passive state support and shared edits are forbidden | done so far: inspected assigned components and frame API; attempted targeted tests; no files changed Attempt 2: FAILED | fix-driving-departure-forecast-df02 | frame API still lacks passive placeholders and shared edits are forbidden | done so far: read contracts, inspected all assigned files and frame implementations, attempted covering tests; no files changed Attempt 1: FAILED | fix-driving-departure-forecast-df02 | frame API lacks passive state support and shared edits are forbidden | done so far: read contracts, inspected assigned components and frame implementation, attempted targeted tests; no files changed Attempt 2: FAILED | fix-driving-departure-forecast-df02 | frame API lacks passive placeholders and shared edits are forbidden | done so far: read contracts and conventions, inspected assigned components and frame implementations, attempted targeted tests; no files changed || FINISH: done | departure forecast tests 42/42 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DepartureForecastPage.test.tsx: 27 passed / 15 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "d7346276c0",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7415,7 +7415,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DepartureForecastPage.test.tsx: 27 passed / 15 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "160d301904",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7431,7 +7431,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DepartureForecastPage.test.tsx: 27 passed / 15 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "9776e493ca",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7448,7 +7448,7 @@
     "Status": "done",
     "WorkAttempts": 2,
     "InfraAttempts": 1,
-    "Notes": " Attempt 1: FAILED | fix-driving-departure-forecast-df05 | verification blocked by missing dependencies; catalog integration requires shared owner | done so far: anchor disclosure, snapshot-relative methodology, and focused regression implemented in all four expected files Attempt 2: FAILED | fix-driving-departure-forecast-df05 | verification blocked by missing dependencies and locked Rollup binary; catalog integration requires shared owner | done so far: preserved existing anchor disclosure, snapshot-relative methodology, and focused regression in all four expected files Attempt 1: FAILED | fix-driving-departure-forecast-df05 | verification blocked by external generated-i18n startup failure; no tests executed | done so far: preserved existing anchor disclosure, snapshot-relative methodology, and focused regression in all four expected files Attempt 2: FAILED | fix-driving-departure-forecast-df05 | verification blocked by PowerShell startup timeouts | done so far: preserved existing frozen-clock invariant, model-anchor disclosure, snapshot-relative methodology, and focused regression in all four expected files || FINISH: done | departure forecast tests 42/42",
+    "Notes": " Attempt 1: FAILED | fix-driving-departure-forecast-df05 | verification blocked by missing dependencies; catalog integration requires shared owner | done so far: anchor disclosure, snapshot-relative methodology, and focused regression implemented in all four expected files Attempt 2: FAILED | fix-driving-departure-forecast-df05 | verification blocked by missing dependencies and locked Rollup binary; catalog integration requires shared owner | done so far: preserved existing anchor disclosure, snapshot-relative methodology, and focused regression in all four expected files Attempt 1: FAILED | fix-driving-departure-forecast-df05 | verification blocked by external generated-i18n startup failure; no tests executed | done so far: preserved existing anchor disclosure, snapshot-relative methodology, and focused regression in all four expected files Attempt 2: FAILED | fix-driving-departure-forecast-df05 | verification blocked by PowerShell startup timeouts | done so far: preserved existing frozen-clock invariant, model-anchor disclosure, snapshot-relative methodology, and focused regression in all four expected files || FINISH: done | departure forecast tests 42/42 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DepartureForecastPage.test.tsx: 27 passed / 15 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "d7346276c0",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7465,7 +7465,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-departure-forecast-df06 | validation blocked by missing dependencies and locked dependency files | done so far: updated all four assigned files with timezone provenance disclosure and regression coverage Attempt 2: FAILED | fix-driving-departure-forecast-df06 | required tests blocked by missing dependencies; restoration failed with ENOTEMPTY | done so far: inspected existing implementation and regression coverage; no source changes Attempt 1: FAILED | fix-driving-departure-forecast-df06 | dependencies broken: local Vitest entrypoint and executable missing; required test run could not complete | done so far: inspected existing changes in all four assigned files; timezone provenance and locale, DST, day-boundary, and invalid/missing-date regression coverage are present; no source or dependency changes made || FINISH: done | departure forecast tests 42/42",
+    "Notes": " Attempt 1: FAILED | fix-driving-departure-forecast-df06 | validation blocked by missing dependencies and locked dependency files | done so far: updated all four assigned files with timezone provenance disclosure and regression coverage Attempt 2: FAILED | fix-driving-departure-forecast-df06 | required tests blocked by missing dependencies; restoration failed with ENOTEMPTY | done so far: inspected existing implementation and regression coverage; no source changes Attempt 1: FAILED | fix-driving-departure-forecast-df06 | dependencies broken: local Vitest entrypoint and executable missing; required test run could not complete | done so far: inspected existing changes in all four assigned files; timezone provenance and locale, DST, day-boundary, and invalid/missing-date regression coverage are present; no source or dependency changes made || FINISH: done | departure forecast tests 42/42 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DepartureForecastPage.test.tsx: 27 passed / 15 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "d7346276c0",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7484,7 +7484,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DepartureForecastPage.test.tsx: 27 passed / 15 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "e7a65858f3",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7502,7 +7502,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-departure-forecast-df08 | checks blocked by missing/locked dependencies; canonical copy entries pending outside scope | done so far: updated four assigned presenters and DepartureForecastPage.test.tsx; preserved model and data; scoped audit passed Attempt 2: FAILED | fix-driving-departure-forecast-df08 | tests and TypeScript blocked by missing dependencies; canonical translations pending outside scope | done so far: corrected DepartureForecastMethodology.tsx opportunity entry and strengthened DepartureForecastPage.test.tsx regression assertion || FINISH: done | departure forecast tests 42/42",
+    "Notes": " Attempt 1: FAILED | fix-driving-departure-forecast-df08 | checks blocked by missing/locked dependencies; canonical copy entries pending outside scope | done so far: updated four assigned presenters and DepartureForecastPage.test.tsx; preserved model and data; scoped audit passed Attempt 2: FAILED | fix-driving-departure-forecast-df08 | tests and TypeScript blocked by missing dependencies; canonical translations pending outside scope | done so far: corrected DepartureForecastMethodology.tsx opportunity entry and strengthened DepartureForecastPage.test.tsx regression assertion || FINISH: done | departure forecast tests 42/42 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DepartureForecastPage.test.tsx: 27 passed / 15 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "d7346276c0",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7517,7 +7517,7 @@
     "Status": "done",
     "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f01 | validation did not finish within time box | done so far: updated DestinationTransitionProfilePlot.tsx and DestinationTransitionsPage.test.tsx; regression execution remains unverified Attempt 2: FAILED | fix-driving-destination-transitions-f01 | focused regression execution stalled and remains unverified | done so far: inspected and preserved prior implementation and regressions; no new edits Attempt 1: timeout after 25 minutes (changes left on disk) Attempt 2: FAILED | fix-driving-destination-transitions-f01 | shell startup blocked validation | done so far: inspected and preserved DestinationTransitionProfilePlot.tsx and DestinationTransitionsPage.test.tsx changes covering host controllers, standalone URL compatibility, metadata/export ownership, null gaps, and populated-data regressions || FINISH: done | destination transitions tests 57/57",
+    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f01 | validation did not finish within time box | done so far: updated DestinationTransitionProfilePlot.tsx and DestinationTransitionsPage.test.tsx; regression execution remains unverified Attempt 2: FAILED | fix-driving-destination-transitions-f01 | focused regression execution stalled and remains unverified | done so far: inspected and preserved prior implementation and regressions; no new edits Attempt 1: timeout after 25 minutes (changes left on disk) Attempt 2: FAILED | fix-driving-destination-transitions-f01 | shell startup blocked validation | done so far: inspected and preserved DestinationTransitionProfilePlot.tsx and DestinationTransitionsPage.test.tsx changes covering host controllers, standalone URL compatibility, metadata/export ownership, null gaps, and populated-data regressions || FINISH: done | destination transitions tests 57/57 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "27d731d30e",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7532,7 +7532,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "c66b981c87",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7547,7 +7547,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk) DONE | fix-driving-destination-transitions-f03 | no change needed: implementation and required regression coverage already exist; test execution blocked by missing external dependencies",
+    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk) DONE | fix-driving-destination-transitions-f03 | no change needed: implementation and required regression coverage already exist; test execution blocked by missing external dependencies | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7562,7 +7562,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f04 | dependency failures prevented test verification | done so far: updated web\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx and web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx DONE | fix-driving-destination-transitions-f04 | no change needed: requested behavior and test coverage already exist; execution blocked by missing dependencies and a locked Rollup binary",
+    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f04 | dependency failures prevented test verification | done so far: updated web\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx and web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx DONE | fix-driving-destination-transitions-f04 | no change needed: requested behavior and test coverage already exist; execution blocked by missing dependencies and a locked Rollup binary | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7577,7 +7577,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f05 | missing dependencies and locked Rollup binary prevent verification | done so far: updated web\\src\\features\\driving\\components\\destination-transitions\\TopTransitionMatrix.tsx and web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx DONE | fix-driving-destination-transitions-f05 | no change needed: implementation and requested coverage already present; test execution blocked by missing Vite dependencies",
+    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f05 | missing dependencies and locked Rollup binary prevent verification | done so far: updated web\\src\\features\\driving\\components\\destination-transitions\\TopTransitionMatrix.tsx and web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx DONE | fix-driving-destination-transitions-f05 | no change needed: implementation and requested coverage already present; test execution blocked by missing Vite dependencies | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7592,7 +7592,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f06 | dependency failures blocked verification | done so far: updated methodology roles and added regression in web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsMethodology.tsx, web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx DONE | fix-driving-destination-transitions-f06 | no change needed: requested roles and regression already present; test execution blocked by missing dependencies",
+    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f06 | dependency failures blocked verification | done so far: updated methodology roles and added regression in web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsMethodology.tsx, web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx DONE | fix-driving-destination-transitions-f06 | no change needed: requested roles and regression already present; test execution blocked by missing dependencies | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7607,7 +7607,7 @@
     "Status": "done",
     "WorkAttempts": 2,
     "InfraAttempts": 1,
-    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f07 | dependency and browser blockers prevented verification | done so far: updated web/src/features/driving/components/destination-transitions/DestinationTransitionsQueryStatus.tsx and web/src/features/driving/pages/DestinationTransitionsPage.test.tsx Attempt 2: FAILED | fix-driving-destination-transitions-f07 | dependency and browser blockers prevented verification | done so far: preserved existing component and regression tests; no new changes Attempt 1: FAILED | fix-driving-destination-transitions-f07 | shell unavailable; required test and browser verification blocked | done so far: preserved existing fix and regression tests in web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsQueryStatus.tsx, web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx Attempt 2: FAILED | fix-driving-destination-transitions-f07 | shell commands produced no output; required tests and Edge layout verification blocked | done so far: preserved existing responsive retry fix, fetching busy/disabled state, source refetch, and regression tests in web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsQueryStatus.tsx, web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx || FINISH: done | destination transitions tests 57/57",
+    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f07 | dependency and browser blockers prevented verification | done so far: updated web/src/features/driving/components/destination-transitions/DestinationTransitionsQueryStatus.tsx and web/src/features/driving/pages/DestinationTransitionsPage.test.tsx Attempt 2: FAILED | fix-driving-destination-transitions-f07 | dependency and browser blockers prevented verification | done so far: preserved existing component and regression tests; no new changes Attempt 1: FAILED | fix-driving-destination-transitions-f07 | shell unavailable; required test and browser verification blocked | done so far: preserved existing fix and regression tests in web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsQueryStatus.tsx, web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx Attempt 2: FAILED | fix-driving-destination-transitions-f07 | shell commands produced no output; required tests and Edge layout verification blocked | done so far: preserved existing responsive retry fix, fetching busy/disabled state, source refetch, and regression tests in web\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionsQueryStatus.tsx, web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx || FINISH: done | destination transitions tests 57/57 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "27d731d30e",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7622,7 +7622,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 1,
-    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f08 | missing test dependencies; restoration failed with ENOENT | done so far: updated web\\src\\features\\driving\\components\\destination-transitions\\DestinationContinuityMetrics.tsx and added regression in web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx Attempt 2: FAILED | fix-driving-destination-transitions-f08 | missing test dependencies; restoration unsuccessful | done so far: confirmed existing preference-aware tolerance rendering and km/mi regression preserving raw 250-meter operand; no source edits Attempt 1: FAILED | fix-driving-destination-transitions-f08 | verification blocked: PowerShell startup timed out; focused test retry produced no output for six minutes and was stopped | done so far: confirmed existing preference-aware distance rendering and km/mi regression retain raw 250-meter operand; no files edited || FINISH: done | destination transitions tests 57/57",
+    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f08 | missing test dependencies; restoration failed with ENOENT | done so far: updated web\\src\\features\\driving\\components\\destination-transitions\\DestinationContinuityMetrics.tsx and added regression in web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx Attempt 2: FAILED | fix-driving-destination-transitions-f08 | missing test dependencies; restoration unsuccessful | done so far: confirmed existing preference-aware tolerance rendering and km/mi regression preserving raw 250-meter operand; no source edits Attempt 1: FAILED | fix-driving-destination-transitions-f08 | verification blocked: PowerShell startup timed out; focused test retry produced no output for six minutes and was stopped | done so far: confirmed existing preference-aware distance rendering and km/mi regression retain raw 250-meter operand; no files edited || FINISH: done | destination transitions tests 57/57 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "27d731d30e",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7639,7 +7639,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "FINISH: done | saved-locale formatting; tests pass",
+    "Notes": "FINISH: done | saved-locale formatting; tests pass | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "3129bc9979",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7656,7 +7656,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "FINISH: done | destination transitions tests 57/57",
+    "Notes": "FINISH: done | destination transitions tests 57/57 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "27d731d30e",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7671,7 +7671,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "4161d3b532",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -7686,7 +7686,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f12 | verification blocked by missing dependencies and EPERM during restoration | done so far: updated web\\src\\features\\driving\\components\\destination-transitions\\OriginConcentrationPlot.tsx and added regression in web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx DONE | fix-driving-destination-transitions-f12 | no change needed: requested fallback and focused regression already exist; test execution blocked by missing dependencies",
+    "Notes": " Attempt 1: FAILED | fix-driving-destination-transitions-f12 | verification blocked by missing dependencies and EPERM during restoration | done so far: updated web\\src\\features\\driving\\components\\destination-transitions\\OriginConcentrationPlot.tsx and added regression in web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx DONE | fix-driving-destination-transitions-f12 | no change needed: requested fallback and focused regression already exist; test execution blocked by missing dependencies | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/DestinationTransitionsPage.test.tsx: 45 passed / 12 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9531,7 +9531,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-journey-fragmentation-jf-01 | validation stalled within 20-minute time box | done so far: page, local section types, affected children and regression tests updated; verification incomplete DONE | fix-driving-journey-fragmentation-jf-01 | no change needed: requested implementation and coverage already present; test execution blocked by external missing dependencies",
+    "Notes": " Attempt 1: FAILED | fix-driving-journey-fragmentation-jf-01 | validation stalled within 20-minute time box | done so far: page, local section types, affected children and regression tests updated; verification incomplete DONE | fix-driving-journey-fragmentation-jf-01 | no change needed: requested implementation and coverage already present; test execution blocked by external missing dependencies | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/JourneyFragmentationPage.test.tsx: 9 passed / 22 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9546,7 +9546,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-journey-fragmentation-jf-02 | missing and locked dependencies prevented verification | done so far: updated web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx and web\\src\\features\\driving\\pages\\JourneyFragmentationPage.test.tsx Attempt 2: FAILED | fix-driving-journey-fragmentation-jf-02 | missing dependencies and locked Rollup binary prevent verification | done so far: inspected existing implementation and regression coverage; no source changes Attempt 1: timeout after 25 minutes (changes left on disk) || FINISH: done | tests pass",
+    "Notes": " Attempt 1: FAILED | fix-driving-journey-fragmentation-jf-02 | missing and locked dependencies prevented verification | done so far: updated web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx and web\\src\\features\\driving\\pages\\JourneyFragmentationPage.test.tsx Attempt 2: FAILED | fix-driving-journey-fragmentation-jf-02 | missing dependencies and locked Rollup binary prevent verification | done so far: inspected existing implementation and regression coverage; no source changes Attempt 1: timeout after 25 minutes (changes left on disk) || FINISH: done | tests pass | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/JourneyFragmentationPage.test.tsx: 9 passed / 22 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "6e225c6f7a",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9577,7 +9577,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/JourneyFragmentationPage.test.tsx: 9 passed / 22 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "fc8003a47d",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9592,7 +9592,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-journey-fragmentation-jf-06 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx and web\\src\\features\\driving\\pages\\JourneyFragmentationPage.test.tsx DONE | fix-driving-journey-fragmentation-jf-06 | no change needed: canonical labels and focused regressions already exist; test execution blocked by missing Vitest",
+    "Notes": " Attempt 1: FAILED | fix-driving-journey-fragmentation-jf-06 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx and web\\src\\features\\driving\\pages\\JourneyFragmentationPage.test.tsx DONE | fix-driving-journey-fragmentation-jf-06 | no change needed: canonical labels and focused regressions already exist; test execution blocked by missing Vitest | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/JourneyFragmentationPage.test.tsx: 9 passed / 22 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9607,7 +9607,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/JourneyFragmentationPage.test.tsx: 9 passed / 22 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "82519946e4",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9622,7 +9622,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/JourneyFragmentationPage.test.tsx: 9 passed / 22 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "825b189da2",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9637,7 +9637,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-journey-fragmentation-jf-09 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx and web\\src\\features\\driving\\pages\\JourneyFragmentationPage.test.tsx DONE | fix-driving-journey-fragmentation-jf-09 | no change needed: requested implementation and regression already present; verification blocked by missing dependencies",
+    "Notes": " Attempt 1: FAILED | fix-driving-journey-fragmentation-jf-09 | dependency failures prevented regression verification | done so far: updated web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx and web\\src\\features\\driving\\pages\\JourneyFragmentationPage.test.tsx DONE | fix-driving-journey-fragmentation-jf-09 | no change needed: requested implementation and regression already present; verification blocked by missing dependencies | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/JourneyFragmentationPage.test.tsx: 9 passed / 22 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9804,7 +9804,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "bd58970e95",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9821,7 +9821,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk) || FINISH: done | SegmentsPage tests 34/34",
+    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk) || FINISH: done | SegmentsPage tests 34/34 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "7fa5f50ec3",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9836,7 +9836,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-04 | missing dependencies block tests and browser verification; restoration failed with EBUSY | done so far: updated web/src/features/driving/pages/SegmentsPage.tsx and web/src/features/driving/pages/SegmentsPage.test.tsx Attempt 2: FAILED | fix-driving-segments-seg-qa-04 | missing dependencies block tests and browser verification; restoration failed with ENOENT and EBUSY | done so far: inspected and preserved existing SegmentsPage.tsx and SegmentsPage.test.tsx changes; no source edits || FINISH: done | SegmentsPage tests 34/34",
+    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-04 | missing dependencies block tests and browser verification; restoration failed with EBUSY | done so far: updated web/src/features/driving/pages/SegmentsPage.tsx and web/src/features/driving/pages/SegmentsPage.test.tsx Attempt 2: FAILED | fix-driving-segments-seg-qa-04 | missing dependencies block tests and browser verification; restoration failed with ENOENT and EBUSY | done so far: inspected and preserved existing SegmentsPage.tsx and SegmentsPage.test.tsx changes; no source edits || FINISH: done | SegmentsPage tests 34/34 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "7fa5f50ec3",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9851,7 +9851,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " DONE | fix-driving-segments-seg-qa-05 | no change needed: existing full-column contained-scroll presentation preserves all six fields, tableId, and accessible A/B actions",
+    "Notes": " DONE | fix-driving-segments-seg-qa-05 | no change needed: existing full-column contained-scroll presentation preserves all six fields, tableId, and accessible A/B actions | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9868,7 +9868,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "FINISH: done | SegmentsPage tests 34/34",
+    "Notes": "FINISH: done | SegmentsPage tests 34/34 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "7fa5f50ec3",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9883,7 +9883,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-07 | verification blocked by missing dependencies and locked binaries | done so far: updated web\\src\\features\\driving\\pages\\SegmentsPage.tsx and web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx Attempt 2: FAILED | fix-driving-segments-seg-qa-07 | verification blocked by missing Vite dependencies and locked Rollup binary | done so far: inspected existing SegmentsPage implementation and tests; preserved prior changes; no source edits || FINISH: done | SegmentsPage tests 34/34",
+    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-07 | verification blocked by missing dependencies and locked binaries | done so far: updated web\\src\\features\\driving\\pages\\SegmentsPage.tsx and web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx Attempt 2: FAILED | fix-driving-segments-seg-qa-07 | verification blocked by missing Vite dependencies and locked Rollup binary | done so far: inspected existing SegmentsPage implementation and tests; preserved prior changes; no source edits || FINISH: done | SegmentsPage tests 34/34 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "7fa5f50ec3",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9898,7 +9898,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-08 | verification blocked by incomplete dependencies and failed restoration | done so far: updated web/src/features/driving/pages/SegmentsPage.tsx and web/src/features/driving/pages/SegmentsPage.test.tsx Attempt 2: FAILED | fix-driving-segments-seg-qa-08 | verification blocked by missing Vite and TypeScript dependencies | done so far: inspected inherited SegmentsPage.tsx and SegmentsPage.test.tsx; requested implementation and scenario coverage already present; no files changed || FINISH: done | SegmentsPage tests 34/34",
+    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-08 | verification blocked by incomplete dependencies and failed restoration | done so far: updated web/src/features/driving/pages/SegmentsPage.tsx and web/src/features/driving/pages/SegmentsPage.test.tsx Attempt 2: FAILED | fix-driving-segments-seg-qa-08 | verification blocked by missing Vite and TypeScript dependencies | done so far: inspected inherited SegmentsPage.tsx and SegmentsPage.test.tsx; requested implementation and scenario coverage already present; no files changed || FINISH: done | SegmentsPage tests 34/34 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "7fa5f50ec3",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9913,7 +9913,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "096a525806",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9928,7 +9928,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-10 | Required regression could not run because test dependencies are unavailable | done so far: updated web\\src\\features\\driving\\pages\\SegmentsPage.tsx and web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx Attempt 2: FAILED | fix-driving-segments-seg-qa-10 | Required regression blocked by missing test dependencies; restoration failed with ENOENT | done so far: confirmed prior implementation and regression are present; no source changes || FINISH: done | SegmentsPage tests 34/34",
+    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-10 | Required regression could not run because test dependencies are unavailable | done so far: updated web\\src\\features\\driving\\pages\\SegmentsPage.tsx and web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx Attempt 2: FAILED | fix-driving-segments-seg-qa-10 | Required regression blocked by missing test dependencies; restoration failed with ENOENT | done so far: confirmed prior implementation and regression are present; no source changes || FINISH: done | SegmentsPage tests 34/34 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "7fa5f50ec3",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9943,7 +9943,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-11 | missing dependencies prevented verification | done so far: updated web\\src\\features\\driving\\pages\\SegmentsPage.tsx and web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx with full-data alternatives and coverage Attempt 2: FAILED | fix-driving-segments-seg-qa-11 | missing dependencies prevented verification | done so far: inspected existing full-data alternatives and edge-case coverage; no source changes || FINISH: done | SegmentsPage tests 34/34",
+    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-11 | missing dependencies prevented verification | done so far: updated web\\src\\features\\driving\\pages\\SegmentsPage.tsx and web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx with full-data alternatives and coverage Attempt 2: FAILED | fix-driving-segments-seg-qa-11 | missing dependencies prevented verification | done so far: inspected existing full-data alternatives and edge-case coverage; no source changes || FINISH: done | SegmentsPage tests 34/34 | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "7fa5f50ec3",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -9958,7 +9958,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-12 | focused test blocked by missing Vite dependencies | done so far: updated web\\src\\features\\driving\\pages\\SegmentsPage.tsx and web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx DONE | fix-driving-segments-seg-qa-12 | no change needed: source wiring and focused regression already exist; verification blocked by missing Vite dependencies",
+    "Notes": " Attempt 1: FAILED | fix-driving-segments-seg-qa-12 | focused test blocked by missing Vite dependencies | done so far: updated web\\src\\features\\driving\\pages\\SegmentsPage.tsx and web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx DONE | fix-driving-segments-seg-qa-12 | no change needed: source wiring and focused regression already exist; verification blocked by missing Vite dependencies | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/SegmentsPage.test.tsx: 30 passed / 4 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10196,7 +10196,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-trip-planner-tp01 | scoped tests did not finish within time box | done so far: updated web/src/features/driving/pages/TripPlannerPage.tsx and web/src/features/driving/pages/TripPlannerPage.test.tsx; changes remain unverified Attempt 2: FAILED | fix-driving-trip-planner-tp01 | scoped tests blocked by missing Vite and dependency restoration failures | done so far: inspected and preserved previous TripPlannerPage.tsx and TripPlannerPage.test.tsx changes; no new source edits || FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass",
+    "Notes": " Attempt 1: FAILED | fix-driving-trip-planner-tp01 | scoped tests did not finish within time box | done so far: updated web/src/features/driving/pages/TripPlannerPage.tsx and web/src/features/driving/pages/TripPlannerPage.test.tsx; changes remain unverified Attempt 2: FAILED | fix-driving-trip-planner-tp01 | scoped tests blocked by missing Vite and dependency restoration failures | done so far: inspected and preserved previous TripPlannerPage.tsx and TripPlannerPage.test.tsx changes; no new source edits || FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/TripPlannerPage.test.tsx: 46 passed / 16 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "34f240df80",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10211,7 +10211,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-trip-planner-tp02 | verification blocked by missing dependencies and locked binaries | done so far: updated web\\src\\features\\driving\\pages\\TripPlannerPage.tsx and web\\src\\features\\driving\\pages\\TripPlannerPage.test.tsx Attempt 2: FAILED | fix-driving-trip-planner-tp02 | verification blocked by missing dependencies and locked Rollup binary | done so far: inspected existing implementation and lifecycle coverage; no source files changed || FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass",
+    "Notes": " Attempt 1: FAILED | fix-driving-trip-planner-tp02 | verification blocked by missing dependencies and locked binaries | done so far: updated web\\src\\features\\driving\\pages\\TripPlannerPage.tsx and web\\src\\features\\driving\\pages\\TripPlannerPage.test.tsx Attempt 2: FAILED | fix-driving-trip-planner-tp02 | verification blocked by missing dependencies and locked Rollup binary | done so far: inspected existing implementation and lifecycle coverage; no source files changed || FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/TripPlannerPage.test.tsx: 46 passed / 16 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "34f240df80",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10226,7 +10226,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-trip-planner-tp03 | external dependency failure blocked regression execution | done so far: updated web\\src\\features\\driving\\pages\\TripPlannerPage.tsx and web\\src\\features\\driving\\pages\\TripPlannerPage.test.tsx DONE | fix-driving-trip-planner-tp03 | no change needed: implementation and focused regressions already exist; test execution blocked by missing Vite dependencies",
+    "Notes": " Attempt 1: FAILED | fix-driving-trip-planner-tp03 | external dependency failure blocked regression execution | done so far: updated web\\src\\features\\driving\\pages\\TripPlannerPage.tsx and web\\src\\features\\driving\\pages\\TripPlannerPage.test.tsx DONE | fix-driving-trip-planner-tp03 | no change needed: implementation and focused regressions already exist; test execution blocked by missing Vite dependencies | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/TripPlannerPage.test.tsx: 46 passed / 16 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10241,7 +10241,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-trip-planner-tp04 | test dependencies unavailable and canonical disclosure copy pending | done so far: updated TripPlannerPage.tsx and TripPlannerPage.test.tsx with evidence handling, disclosure, and focused regressions Attempt 2: FAILED | fix-driving-trip-planner-tp04 | test dependencies unavailable and canonical disclosure copy pending | done so far: inspected and preserved existing evidence handling, disclosure, and focused regressions; no source changes || FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass",
+    "Notes": " Attempt 1: FAILED | fix-driving-trip-planner-tp04 | test dependencies unavailable and canonical disclosure copy pending | done so far: updated TripPlannerPage.tsx and TripPlannerPage.test.tsx with evidence handling, disclosure, and focused regressions Attempt 2: FAILED | fix-driving-trip-planner-tp04 | test dependencies unavailable and canonical disclosure copy pending | done so far: inspected and preserved existing evidence handling, disclosure, and focused regressions; no source changes || FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/TripPlannerPage.test.tsx: 46 passed / 16 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "34f240df80",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10256,7 +10256,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-driving-trip-planner-tp05 | dependency failures prevented verification | done so far: updated web/src/features/driving/pages/TripPlannerPage.tsx, web/src/features/driving/pages/TripPlannerPage.test.tsx with numeric contract corrections and regression coverage Attempt 2: FAILED | fix-driving-trip-planner-tp05 | dependency failures prevented required test verification | done so far: confirmed existing correction and regression coverage; no source files changed || FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass",
+    "Notes": " Attempt 1: FAILED | fix-driving-trip-planner-tp05 | dependency failures prevented verification | done so far: updated web/src/features/driving/pages/TripPlannerPage.tsx, web/src/features/driving/pages/TripPlannerPage.test.tsx with numeric contract corrections and regression coverage Attempt 2: FAILED | fix-driving-trip-planner-tp05 | dependency failures prevented required test verification | done so far: confirmed existing correction and regression coverage; no source files changed || FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/TripPlannerPage.test.tsx: 46 passed / 16 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "34f240df80",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10273,7 +10273,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass",
+    "Notes": "FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/TripPlannerPage.test.tsx: 46 passed / 16 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "34f240df80",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10290,7 +10290,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass",
+    "Notes": "FINISH: done | verified in code; TripPlanner/TripCopilotCard/AddressInput tests pass | 2026-10-16 triage group 10 bulk disclosure receipt: features/driving/pages/TripPlannerPage.test.tsx: 46 passed / 16 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "34f240df80",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10842,7 +10842,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-fleet-ops-fleet-operations-f01 | verification blocked by missing and locked dependencies | done so far: implementation and regression tests saved in all nine assigned files; temporary validation copy removed Attempt 2: FAILED | fix-fleet-ops-fleet-operations-f01 | verification blocked by missing dependencies and Windows filesystem errors | done so far: inspected all nine assigned files; preserved previous implementation and regression tests; no source changes Retry failed: FleetOperationsPage.test.tsx has 7 failures; direct assertions cannot find Maintenance cost in the brief face, and Fleet-wide/cost summary expectations differ from current summary rendering.",
+    "Notes": "Attempt 1: FAILED | fix-fleet-ops-fleet-operations-f01 | verification blocked by missing and locked dependencies | done so far: implementation and regression tests saved in all nine assigned files; temporary validation copy removed Attempt 2: FAILED | fix-fleet-ops-fleet-operations-f01 | verification blocked by missing dependencies and Windows filesystem errors | done so far: inspected all nine assigned files; preserved previous implementation and regression tests; no source changes Retry failed: FleetOperationsPage.test.tsx has 7 failures; direct assertions cannot find Maintenance cost in the brief face, and Fleet-wide/cost summary expectations differ from current summary rendering. | 2026-10-16 triage group 10 bulk disclosure receipt: features/fleet-ops/pages/FleetOperationsPage.test.tsx: 37 passed / 7 failed; Current failure: FleetOperationsPage keeps cost-center records and independently known totals when allocation dependencies have not resolved — TestingLibraryElementError: Unable to find an element with the text: Maintenance cost: —. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.  Ignored nodes: comments, script, style <div   aria-labelledby=\":rnc:-title\"   class=\"rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] text-[var(--text-primary)] shadow-pane. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10858,7 +10858,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " DONE | fix-fleet-ops-fleet-operations-f02 | no change needed: requested behavior and focused regression already exist; test startup blocked by missing external dependency",
+    "Notes": " DONE | fix-fleet-ops-fleet-operations-f02 | no change needed: requested behavior and focused regression already exist; test startup blocked by missing external dependency | 2026-10-16 triage group 10 bulk disclosure receipt: features/fleet-ops/pages/FleetOperationsPage.test.tsx: 37 passed / 7 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -10971,7 +10971,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-fleet-ops-fleet-operations-f09 | Missing dependencies prevented test and TypeScript verification; restoration failed | done so far: updated ReservationPanel.tsx, FleetOperationsPage.tsx, FleetOperationsPage.test.tsx, src/i18n/en.json and src/i18n/en/locale-fleet-ops.json DONE | fix-fleet-ops-fleet-operations-f09 | no change needed: requested copy and regression already implemented; verification blocked by missing Vitest",
+    "Notes": " Attempt 1: FAILED | fix-fleet-ops-fleet-operations-f09 | Missing dependencies prevented test and TypeScript verification; restoration failed | done so far: updated ReservationPanel.tsx, FleetOperationsPage.tsx, FleetOperationsPage.test.tsx, src/i18n/en.json and src/i18n/en/locale-fleet-ops.json DONE | fix-fleet-ops-fleet-operations-f09 | no change needed: requested copy and regression already implemented; verification blocked by missing Vitest | 2026-10-16 triage group 10 bulk disclosure receipt: features/fleet-ops/pages/FleetOperationsPage.test.tsx: 37 passed / 7 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15326,7 +15326,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-01 | verification blocked by missing dependencies and failed restoration | done so far: changed web\\src\\lib\\workspaceScope.ts, web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx, web\\src\\lib\\__tests__\\workspaceScope.test.ts, web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-01 | verification blocked by missing dependencies and failed restoration (ENOTEMPTY) | done so far: confirmed existing route, bounded history requests, cancellation, cache keys, and range tests; no source changes Retry failed: SignalCorrelationPage.test.tsx has 10 failures in the correlation page assertions.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-01 | verification blocked by missing dependencies and failed restoration | done so far: changed web\\src\\lib\\workspaceScope.ts, web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx, web\\src\\lib\\__tests__\\workspaceScope.test.ts, web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-01 | verification blocked by missing dependencies and failed restoration (ENOTEMPTY) | done so far: confirmed existing route, bounded history requests, cancellation, cache keys, and range tests; no source changes Retry failed: SignalCorrelationPage.test.tsx has 10 failures in the correlation page assertions. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalCorrelationPage.test.tsx: 12 passed / 10 failed; Current failure: SignalCorrelationPage canonical summary and unchanged controls names independent A/B coverage with asymmetric gaps (detrend: false) — Error: expect(element).toHaveTextContent()  Expected element to have text content:   from 12 raw points Received:   Correlation metricsReview detailsPeak correlation-0.800Best lag-60 sSignificanceRealEffective samples8     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1156:15). No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15413,7 +15413,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-change-points-scp002 | Missing dependencies and Windows file locks blocked verification | done so far: updated TelemetrySummaryBrief.tsx and TelemetrySummaryBrief.test.tsx with metadata handling and regression tests Attempt 2: FAILED | fix-telemetry-signal-change-points-scp002 | Missing Vitest and dependency restoration ENOTEMPTY blocked verification | done so far: inspected existing metadata handling and regression tests; preserved both source files unchanged Retry failed: TelemetrySummaryBrief.test.tsx has 20 failures; the brief face no longer exposes the source/date/metric fields asserted directly by these tests.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-change-points-scp002 | Missing dependencies and Windows file locks blocked verification | done so far: updated TelemetrySummaryBrief.tsx and TelemetrySummaryBrief.test.tsx with metadata handling and regression tests Attempt 2: FAILED | fix-telemetry-signal-change-points-scp002 | Missing Vitest and dependency restoration ENOTEMPTY blocked verification | done so far: inspected existing metadata handling and regression tests; preserved both source files unchanged Retry failed: TelemetrySummaryBrief.test.tsx has 20 failures; the brief face no longer exposes the source/date/metric fields asserted directly by these tests. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.test.tsx: 3 passed / 19 failed; Current failure: Telemetry compact OperationalBrief contract uses saved locale and timezone across day boundaries without losing exact evidence in either surface — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Requested: 2026-01-02T07:59:59.123Z → 2026-01-02T08:00:00.456Z Received:   Signal evidenceReview detailsSignal rate1.234567 /sCoefficient-0,8123Lag-120 s     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/di. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -15428,7 +15428,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-deadband-f002 | Missing dependencies blocked targeted tests; restoration failed | done so far: updated web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx and web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.test.tsx Attempt 2: FAILED | fix-telemetry-signal-deadband-f002 | Missing dependencies prevent required test execution; restoration blocked by EPERM | done so far: inspected existing implementation and regression tests; preserved prior changes; no source edits Retry failed: TelemetrySummaryBrief.test.tsx has 20 failures; direct brief-face source/date/metric assertions are missing.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-deadband-f002 | Missing dependencies blocked targeted tests; restoration failed | done so far: updated web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx and web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.test.tsx Attempt 2: FAILED | fix-telemetry-signal-deadband-f002 | Missing dependencies prevent required test execution; restoration blocked by EPERM | done so far: inspected existing implementation and regression tests; preserved prior changes; no source edits Retry failed: TelemetrySummaryBrief.test.tsx has 20 failures; direct brief-face source/date/metric assertions are missing. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.test.tsx: 3 passed / 19 failed; Current failure: Telemetry compact OperationalBrief contract uses saved locale and timezone across day boundaries without losing exact evidence in either surface — Error: expect(element).toHaveTextContent()  Expected element to have text content:   Requested: 2026-01-02T07:59:59.123Z → 2026-01-02T08:00:00.456Z Received:   Signal evidenceReview detailsSignal rate1.234567 /sCoefficient-0,8123Lag-120 s     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/di. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16487,7 +16487,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-02 | Page verification blocked by missing dependencies; catalog registration outside scope | done so far: updated both assigned source files and both test files; 32 library tests passed Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-02 | targeted verification blocked by missing dependencies and failed dependency restoration | done so far: inspected existing implementation and covering tests; no source changes Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-02 | Page verification blocked by missing dependencies; catalog registration outside scope | done so far: updated both assigned source files and both test files; 32 library tests passed Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-02 | targeted verification blocked by missing dependencies and failed dependency restoration | done so far: inspected existing implementation and covering tests; no source changes Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalCorrelationPage.test.tsx: 12 passed / 10 failed; Current failure: SignalCorrelationPage canonical summary and unchanged controls names independent A/B coverage with asymmetric gaps (detrend: false) — Error: expect(element).toHaveTextContent()  Expected element to have text content:   from 12 raw points Received:   Correlation metricsReview detailsPeak correlation-0.800Best lag-60 sSignificanceRealEffective samples8     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1156:15). No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16504,7 +16504,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-05 | Missing dependencies prevented regression execution and TypeScript validation; dependency restoration failed | done so far: updated SignalCorrelationPage.tsx, signalCorrelation.ts, SignalCorrelationPage.test.tsx, and signalCorrelation.test.ts with named independent coverage and focused regressions Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-05 | Missing dependencies block regression and TypeScript validation; restoration failed with ENOTEMPTY | done so far: confirmed existing named independent A/B coverage and focused regressions; no source files changed Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-05 | Missing dependencies prevented regression execution and TypeScript validation; dependency restoration failed | done so far: updated SignalCorrelationPage.tsx, signalCorrelation.ts, SignalCorrelationPage.test.tsx, and signalCorrelation.test.ts with named independent coverage and focused regressions Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-05 | Missing dependencies block regression and TypeScript validation; restoration failed with ENOTEMPTY | done so far: confirmed existing named independent A/B coverage and focused regressions; no source files changed Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalCorrelationPage.test.tsx: 12 passed / 10 failed; Current failure: SignalCorrelationPage canonical summary and unchanged controls names independent A/B coverage with asymmetric gaps (detrend: false) — Error: expect(element).toHaveTextContent()  Expected element to have text content:   from 12 raw points Received:   Correlation metricsReview detailsPeak correlation-0.800Best lag-60 sSignificanceRealEffective samples8     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1156:15). No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16519,7 +16519,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-07 | dependency failures prevented test and TypeScript verification | done so far: updated web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx and web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-07 | missing dependency files prevent required test verification | done so far: inspected existing implementation and regression coverage; no source changes Retry failed: SignalCorrelationPage.test.tsx has 10 failures in the page source/range assertions.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-07 | dependency failures prevented test and TypeScript verification | done so far: updated web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx and web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-07 | missing dependency files prevent required test verification | done so far: inspected existing implementation and regression coverage; no source changes Retry failed: SignalCorrelationPage.test.tsx has 10 failures in the page source/range assertions. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalCorrelationPage.test.tsx: 12 passed / 10 failed; Current failure: SignalCorrelationPage canonical summary and unchanged controls names independent A/B coverage with asymmetric gaps (detrend: false) — Error: expect(element).toHaveTextContent()  Expected element to have text content:   from 12 raw points Received:   Correlation metricsReview detailsPeak correlation-0.800Best lag-60 sSignificanceRealEffective samples8     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1156:15). No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16536,7 +16536,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/components/statstrip-correlation/CorrelationStatStrip.test.tsx: 0 passed / 21 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "0afa226c34",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16553,7 +16553,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-06 | verification blocked by missing dependencies; canonical translation integration pending | done so far: updated the four assigned files with screening qualifications, methodology disclosures, and focused regressions Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-06 | missing dependencies block verification; canonical translation integration pending outside assigned scope | done so far: inspected and preserved existing qualifications and regressions in all four assigned files; attempted dependency restoration and required tests; no source changes Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-06 | verification blocked by missing dependencies; canonical translation integration pending | done so far: updated the four assigned files with screening qualifications, methodology disclosures, and focused regressions Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-06 | missing dependencies block verification; canonical translation integration pending outside assigned scope | done so far: inspected and preserved existing qualifications and regressions in all four assigned files; attempted dependency restoration and required tests; no source changes Retry failed: SignalCorrelationPage.test.tsx and signalCorrelation.test.ts have 11 failures across page source/range and calculation contracts. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalCorrelationPage.test.tsx: 12 passed / 10 failed; Current failure: SignalCorrelationPage canonical summary and unchanged controls names independent A/B coverage with asymmetric gaps (detrend: false) — Error: expect(element).toHaveTextContent()  Expected element to have text content:   from 12 raw points Received:   Correlation metricsReview detailsPeak correlation-0.800Best lag-60 sSignificanceRealEffective samples8     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1156:15). No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16570,7 +16570,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-04 | missing test/compiler dependencies and required catalog entries | done so far: updated both assigned source files and both test files; calculations preserved; scoped audit clean Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-04 | missing validation dependencies and required catalog entries outside assigned scope | done so far: existing implementation and covering tests reviewed; scoped audit clean; no source changes Retry failed: CorrelationStatStrip.test.tsx has 21 failures; detail metrics and labels are asserted directly on the collapsed brief face.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-correlation-sc-04 | missing test/compiler dependencies and required catalog entries | done so far: updated both assigned source files and both test files; calculations preserved; scoped audit clean Attempt 2: FAILED | fix-telemetry-signal-correlation-sc-04 | missing validation dependencies and required catalog entries outside assigned scope | done so far: existing implementation and covering tests reviewed; scoped audit clean; no source changes Retry failed: CorrelationStatStrip.test.tsx has 21 failures; detail metrics and labels are asserted directly on the collapsed brief face. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/components/statstrip-correlation/CorrelationStatStrip.test.tsx: 0 passed / 21 failed; Current failure: Correlation canonical summary preservation shows an unknown zero-lag marker without losing the signed peak ('insufficient', null) — Error: expect(element).toHaveTextContent()  Expected element to have text content:   at zero lag: — Received:   Peak correlation-0,8123     at Proxy.__VITEST_EXTEND_ASSERTION__ (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1888:12)     at Proxy.<anonymous> (file:///D:/repos/teslasync/web/node_modules/@vitest/expect/dist/index.js:1156:15)     at Proxy.methodWrapper (file:///D:/repos/teslasync/web/node_modules/chai/index. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16634,7 +16634,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-01 | verification blocked by missing dependencies and failed restoration | done so far: trust-state wiring and regression tests added in all four assigned files Attempt 2: FAILED | fix-telemetry-signal-diff-sd-01 | required tests blocked by missing Vite dependencies; restoration failed with EPERM | done so far: inspected existing trust-state wiring and regression coverage in all four assigned files; no source changes Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-01 | verification blocked by missing dependencies and failed restoration | done so far: trust-state wiring and regression tests added in all four assigned files Attempt 2: FAILED | fix-telemetry-signal-diff-sd-01 | required tests blocked by missing Vite dependencies; restoration failed with EPERM | done so far: inspected existing trust-state wiring and regression coverage in all four assigned files; no source changes Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalDiffPage.test.tsx: 49 passed / 8 failed; Current failure: SignalDiffPage forwards paused sources as unknown, not loading or resolved empty — TestingLibraryElementError: Unable to find an element with the text: Changed signals. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.  Ignored nodes: comments, script, style <body>   <div>     <div       class=\"space-y-3 sm:space-y-4 min-w-0\"       data-role=\"page-container\"     >       <header         class=\"relative flex flex-col. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16651,7 +16651,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions.",
+    "Notes": "Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalDiffPage.test.tsx: 49 passed / 8 failed; Current failure: SignalDiffPage forwards paused sources as unknown, not loading or resolved empty — TestingLibraryElementError: Unable to find an element with the text: Changed signals. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.  Ignored nodes: comments, script, style <body>   <div>     <div       class=\"space-y-3 sm:space-y-4 min-w-0\"       data-role=\"page-container\"     >       <header         class=\"relative flex flex-col. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16670,7 +16670,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions.",
+    "Notes": "Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalDiffPage.test.tsx: 49 passed / 8 failed; Current failure: SignalDiffPage forwards paused sources as unknown, not loading or resolved empty — TestingLibraryElementError: Unable to find an element with the text: Changed signals. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.  Ignored nodes: comments, script, style <body>   <div>     <div       class=\"space-y-3 sm:space-y-4 min-w-0\"       data-role=\"page-container\"     >       <header         class=\"relative flex flex-col. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16685,7 +16685,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalDiffPage.test.tsx: 49 passed / 8 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "0c6c630650",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16702,7 +16702,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalDiffPage.test.tsx: 49 passed / 8 failed. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "98e5d366bb",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16732,7 +16732,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-07 | canonical catalog requires separate owner; focused tests blocked by missing rollup | done so far: updated web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx and web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-diff-sd-07 | canonical copy requires separate catalog owner; focused tests blocked by missing Vite dependencies | done so far: strengthened web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx regression; preserved existing page changes and populated-data cases Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-07 | canonical catalog requires separate owner; focused tests blocked by missing rollup | done so far: updated web\\src\\features\\telemetry\\pages\\SignalDiffPage.tsx and web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx Attempt 2: FAILED | fix-telemetry-signal-diff-sd-07 | canonical copy requires separate catalog owner; focused tests blocked by missing Vite dependencies | done so far: strengthened web\\src\\features\\telemetry\\pages\\SignalDiffPage.test.tsx regression; preserved existing page changes and populated-data cases Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalDiffPage.test.tsx: 49 passed / 8 failed; Current failure: SignalDiffPage forwards paused sources as unknown, not loading or resolved empty — TestingLibraryElementError: Unable to find an element with the text: Changed signals. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.  Ignored nodes: comments, script, style <body>   <div>     <div       class=\"space-y-3 sm:space-y-4 min-w-0\"       data-role=\"page-container\"     >       <header         class=\"relative flex flex-col. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16747,7 +16747,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-08 | targeted tests blocked by missing Vite dependency | done so far: updated web/src/features/telemetry/pages/SignalDiffPage.tsx and web/src/features/telemetry/pages/SignalDiffPage.test.tsx; implementation and regression coverage saved, verification incomplete Attempt 2: FAILED | fix-telemetry-signal-diff-sd-08 | targeted tests blocked by missing Vite dependencies | done so far: confirmed existing implementation and regression coverage; no source files changed Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions.",
+    "Notes": "Attempt 1: FAILED | fix-telemetry-signal-diff-sd-08 | targeted tests blocked by missing Vite dependency | done so far: updated web/src/features/telemetry/pages/SignalDiffPage.tsx and web/src/features/telemetry/pages/SignalDiffPage.test.tsx; implementation and regression coverage saved, verification incomplete Attempt 2: FAILED | fix-telemetry-signal-diff-sd-08 | targeted tests blocked by missing Vite dependencies | done so far: confirmed existing implementation and regression coverage; no source files changed Retry failed: SignalDiffPage.test.tsx has 9 failures in signal-diff page assertions. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalDiffPage.test.tsx: 49 passed / 8 failed; Current failure: SignalDiffPage forwards paused sources as unknown, not loading or resolved empty — TestingLibraryElementError: Unable to find an element with the text: Changed signals. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.  Ignored nodes: comments, script, style <body>   <div>     <div       class=\"space-y-3 sm:space-y-4 min-w-0\"       data-role=\"page-container\"     >       <header         class=\"relative flex flex-col. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -16781,7 +16781,7 @@
     "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions.",
+    "Notes": "Retry failed: SignalDiffPage.test.tsx and SignalDiffBreakdown.test.tsx have 10 failures, including unavailable breakdown data and page detail assertions. | 2026-10-16 triage group 10 bulk disclosure receipt: features/telemetry/pages/SignalDiffPage.test.tsx: 49 passed / 8 failed; Current failure: SignalDiffPage forwards paused sources as unknown, not loading or resolved empty — TestingLibraryElementError: Unable to find an element with the text: Changed signals. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.  Ignored nodes: comments, script, style <body>   <div>     <div       class=\"space-y-3 sm:space-y-4 min-w-0\"       data-role=\"page-container\"     >       <header         class=\"relative flex flex-col. No acceptance status change; 34-file comparison resolves 25 existing failures with zero new failing identities.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },

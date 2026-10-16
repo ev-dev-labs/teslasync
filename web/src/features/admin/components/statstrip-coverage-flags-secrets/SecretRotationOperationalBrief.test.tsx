@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -78,7 +79,7 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     expect(summary()).toHaveAttribute('aria-busy', 'true');
     expectMissing();
     expect(metricValues()).toEqual([]);
-    expect(summary()).toHaveTextContent('Loading source');
+    assertOperationalBriefDisclosure(summary(), 'Loading source', { contains: true });
     expect(summary()).toHaveTextContent('Fetch time not supplied');
     expect(screen.queryByText(/tracked credentials have unknown severity/)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -128,7 +129,7 @@ describe('SecretRotationOperationalBrief trust and recovery', () => {
     const client = renderBrief();
     await waitFor(() => expect(client.getQueryState(queryKey)?.status).toBe('error'));
     expectMissing();
-    expect(summary()).toHaveTextContent('Source unavailable');
+    assertOperationalBriefDisclosure(summary(), 'Source unavailable', { contains: true });
     const status = within(summary()).getByText('Source unavailable');
     expect(status).toHaveClass('text-[var(--semantic-warning)]');
     expect(screen.getAllByRole('alert')).toHaveLength(1);

@@ -22,6 +22,7 @@
  *     is genuinely exercised.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -1058,7 +1059,7 @@ describe('TripPlannerPage — retained source scope', () => {
     });
     const view = renderPage();
     expect(screen.getByRole('button', { name: 'Planning...' })).toBeDisabled();
-    expect(within(screen.getByRole('region', { name: 'Trip summary' })).getByText('Loading source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Trip summary' }), 'Loading source');
     mockUsePlanTrip.mockReturnValue({
       ...mockUsePlanTrip(), isPaused: true,
     });

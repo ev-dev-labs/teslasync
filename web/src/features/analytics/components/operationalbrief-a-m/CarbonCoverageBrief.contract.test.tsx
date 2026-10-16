@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -102,7 +103,7 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
     expect(view.analysis.curve.source.payloadPresent).toBe(false);
     expectCounts(view.band, unknownCounts);
     expect(display.formatNumber).not.toHaveBeenCalled();
-    expect(within(view.band).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(view.band, 'Returned evidence');
     expect(view.band.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy');
     expect(within(view.band).getByText('Unknown')).toBeInTheDocument();
     expect(within(view.band).queryByText(/Missing backend\/model clock-hours:/)).not.toBeInTheDocument();
@@ -113,7 +114,7 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
     const view = show({ curve: [] });
     expect(view.analysis.curve.source.payloadPresent).toBe(true);
     expectCounts(view.band, zeroCounts);
-    expect(within(view.band).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(view.band, 'Returned evidence');
     expect(within(view.band).getByText(/Missing backend\/model clock-hours: 00:00, 01:00/)).toBeInTheDocument();
     expectUnchanged(view);
   });
@@ -190,7 +191,7 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
   ])('retains exact array counts and retry during $caseId', ({ overrides, message }) => {
     const view = show({ curve: mixedCurve }, overrides);
     expectCounts(view.band, [6, 2, 2, 2, 1]);
-    expect(within(view.band).getByText('Retained evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(view.band, 'Retained evidence');
     expect(within(view.band).getByText(message)).toBeInTheDocument();
     fireEvent.click(within(view.band).getByRole('button', { name: 'Retry' }));
     expect(view.onRetry).toHaveBeenCalledTimes(1);
@@ -201,12 +202,12 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
     const overrides = { fetchStatus: 'paused' as const };
     const malformed = show({ curve: null }, overrides);
     expectCounts(malformed.band, unknownCounts);
-    expect(within(malformed.band).getByText('Retained evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(malformed.band, 'Retained evidence');
     expectUnchanged(malformed);
     malformed.unmount();
     const empty = show({ curve: [] }, overrides);
     expectCounts(empty.band, zeroCounts);
-    expect(within(empty.band).getByText('Retained evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(empty.band, 'Retained evidence');
     expectUnchanged(empty);
   });
 

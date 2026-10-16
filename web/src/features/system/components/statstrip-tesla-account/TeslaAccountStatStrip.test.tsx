@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -158,7 +159,7 @@ describe('Tesla account canonical summary source preservation', () => {
     expect(container).toHaveTextContent('freshness is unknown');
     rerender(<TeslaAccountStatStrip profile={null} fetchedAt={null} hasData={false}
       loading={false} error={new Error('profile unavailable')} retained={false} onRetry={retry} />);
-    expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Source unavailable');
+    assertOperationalBriefDisclosure(screen.getByTestId('tesla-account-summary'), 'Source unavailable', { contains: true });
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'missing')).toBe(true);
     expect(container).not.toHaveTextContent('Never synced');
@@ -184,7 +185,7 @@ describe('Tesla account canonical summary source preservation', () => {
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     rerender(<TeslaAccountStatStrip profile={PROFILE} fetchedAt={PROFILE.fetched_at} hasData
       loading retained error={new Error('profile read failed')} onRetry={retry} />);
-    expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(screen.getByTestId('tesla-account-summary'), 'Retained source data', { contains: true });
     expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Showing retained measurements');
     expect(screen.getByTestId('tesla-account-summary')).not.toHaveAttribute('aria-busy', 'true');
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);

@@ -1,0 +1,155 @@
+/**
+ * Conservative migration of repeated card-face status assertions.
+ * Dry-run by default. --write applies edits; --failures limits the input files
+ * to a retained triage index. --report writes the complete review inventory.
+ * Never edits values, test names/counts, fixtures, or assertions in waitFor.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import ts from 'typescript';
+
+const helper = 'assertOperationalBriefDisclosure';
+const moduleName = '@/test/operationalBriefAssertions';
+const statuses = new Set([
+  'Retained evidence', 'Returned evidence', 'Loading source', 'Source unavailable',
+  'Evidence unresolved', 'Retained source evidence', 'Available source readings',
+  'Loading source evidence', 'Source readings unavailable', 'Retained source data',
+  'Returned source data', 'Loading source data', 'Source data unavailable',
+  'Retained statistics', 'Returned statistics', 'Loading statistics',
+  'Statistics unavailable', 'Refresh paused', 'Refreshing',
+]);
+
+const callNamed = (node, name) => ts.isCallExpression(node) &&
+  ts.isIdentifier(node.expression) && node.expression.text === name;
+
+function unsafeAncestor(node) {
+  for (let ancestor = node.parent; ancestor; ancestor = ancestor.parent) {
+    if (callNamed(ancestor, 'waitFor') || callNamed(ancestor, 'waitForElementToBeRemoved')) return true;
+  }
+  return false;
+}
+
+function hasNonRenderingBriefDouble(tree) {
+  let found = false;
+  function inspect(node) {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.expression.getText(tree) === 'vi' && node.expression.name.text === 'mock' &&
+      node.arguments[0] && ts.isStringLiteral(node.arguments[0]) && node.arguments[0].text.startsWith('@/components/data-display')) {
+      function checkMock(child) {
+        if (ts.isPropertyAssignment(child) && child.name.getText(tree) === 'OperationalBrief') {
+          // A wrapper that forwards into the real brief still exercises the drawer.
+          // A prop-capture stub must retain its own original contract assertions.
+          if (!/<(?:[A-Za-z_$][\w$]*\.)?OperationalBrief\b/.test(child.initializer.getText(tree))) found = true;
+        }
+        ts.forEachChild(child, checkMock);
+      }
+      ts.forEachChild(node, checkMock);
+    }
+    ts.forEachChild(node, inspect);
+  }
+  inspect(tree);
+  return found;
+}
+
+export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx') {
+  const tree = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const nonRenderingBriefDouble = hasNonRenderingBriefDouble(tree);
+  const edits = [];
+  const deferred = [];
+  function visit(node) {
+    if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) {
+      ts.forEachChild(node, visit);
+      return;
+    }
+    const matcher = node.expression.name.text;
+    if (matcher !== 'toBeInTheDocument' && matcher !== 'toHaveTextContent') {
+      ts.forEachChild(node, visit);
+      return;
+    }
+    let expectation = node.expression.expression;
+    const absent = ts.isPropertyAccessExpression(expectation) && expectation.name.text === 'not';
+    if (absent) expectation = expectation.expression;
+    if (!callNamed(expectation, 'expect') || expectation.arguments.length !== 1) return;
+    const argument = expectation.arguments[0];
+    let scope;
+    let text;
+    const contains = matcher === 'toHaveTextContent';
+    if (contains) {
+      scope = argument;
+      text = node.arguments[0];
+    } else if (ts.isCallExpression(argument) && ts.isPropertyAccessExpression(argument.expression) &&
+      ['getByText', 'queryByText'].includes(argument.expression.name.text) &&
+      callNamed(argument.expression.expression, 'within')) {
+      scope = argument.expression.expression.arguments[0];
+      text = argument.arguments[0];
+      // Query options can change exactness or the selected element. Review them manually.
+      if (argument.arguments.length !== 1) return;
+    }
+    if (!scope || !text || !ts.isStringLiteral(text) || !statuses.has(text.text)) return;
+    const scopeText = scope.getText(tree);
+    const line = tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1;
+    const original = node.getText(tree);
+    let reason;
+    if (nonRenderingBriefDouble) reason = 'Non-rendering OperationalBrief mock: preserve the wrapper prop contract';
+    else if (unsafeAncestor(node)) reason = 'Polling assertion: migrate the wait and interaction together';
+    else if (text.text === 'Refresh paused' || text.text === 'Refreshing') reason = 'Shared source-state label: confirm which panel owns the assertion';
+    else if (/dialog|drawer|notice|warning|status\b/i.test(scopeText)) reason = 'Existing dialog or source-notice scope: inspect manually';
+    else if (/getByText|queryByText|findByText/.test(scopeText)) reason = 'Text node is not a proven evidence-card scope';
+    else if (!/brief|band|strip|summary|kpi/i.test(scopeText)) reason = 'Scope is not identified as an evidence card: inspect manually';
+    if (reason) deferred.push({ line, original, reason });
+    else {
+      const options = [absent ? 'absent: true' : '', contains ? 'contains: true' : ''].filter(Boolean);
+      const replacement = `${helper}(${scopeText}, ${text.getText(tree)}${options.length ? `, { ${options.join(', ')} }` : ''})`;
+      edits.push({ start: node.getStart(tree), end: node.end, line, original, replacement });
+    }
+  }
+  visit(tree);
+  let output = source;
+  for (const edit of edits.toSorted((a, b) => b.start - a.start)) {
+    output = output.slice(0, edit.start) + edit.replacement + output.slice(edit.end);
+  }
+  if (edits.length && !source.includes(`from '${moduleName}'`)) {
+    const newline = source.includes('\r\n') ? '\r\n' : '\n';
+    // Keep any file-level docblock or Vitest directives ahead of imports.
+    const firstImport = tree.statements.find(ts.isImportDeclaration);
+    const at = firstImport ? firstImport.getStart(tree) : 0;
+    output = output.slice(0, at) + `import { ${helper} } from '${moduleName}';${newline}` + output.slice(at);
+  }
+  return { output, edits, deferred };
+}
+
+function allTests(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const full = path.join(dir, entry.name);
+    return entry.isDirectory() ? allTests(full) : /\.test\.tsx?$/.test(entry.name) ? [full] : [];
+  });
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  const value = name => args.includes(name) ? args[args.indexOf(name) + 1] : undefined;
+  const root = fileURLToPath(new URL('../', import.meta.url));
+  const failures = value('--failures');
+  const files = failures
+    ? [...new Set(JSON.parse(fs.readFileSync(path.resolve(failures), 'utf8')).map(row => path.resolve(root, row.file)))].sort()
+    : allTests(path.join(root, 'src')).sort();
+  const inventory = [];
+  for (const file of files) {
+    const result = migrateBriefDisclosureTests(fs.readFileSync(file, 'utf8'), file);
+    if (!result.edits.length && !result.deferred.length) continue;
+    inventory.push({ file: path.relative(root, file).replaceAll('\\', '/'), edits: result.edits, deferred: result.deferred });
+    if (args.includes('--write') && result.edits.length) fs.writeFileSync(file, result.output);
+  }
+  const summary = {
+    mode: args.includes('--write') ? 'write' : 'dry-run',
+    files: inventory.filter(row => row.edits.length).length,
+    assertions: inventory.reduce((sum, row) => sum + row.edits.length, 0),
+    deferred: inventory.reduce((sum, row) => sum + row.deferred.length, 0),
+  };
+  const report = value('--report');
+  if (report) fs.writeFileSync(path.resolve(report), JSON.stringify({ summary, inventory }, null, 2) + '\n');
+  console.log(JSON.stringify(summary));
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main();

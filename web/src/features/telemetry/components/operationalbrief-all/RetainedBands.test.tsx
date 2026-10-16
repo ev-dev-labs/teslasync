@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -31,7 +32,7 @@ describe('Retained telemetry bands and actual Review drawer', () => {
   it('retains the disconnected tail, fractional raw rate, capacity and type denominators', () => {
     render(<LiveMonitorKpiBand connected={false} rate={1.234567} bufferCount={50}
       bufferMax={200} uniqueSignals={17} numericCount={33} categoricalCount={17} />);
-    expect(screen.getByTestId('live-monitor-summary')).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(screen.getByTestId('live-monitor-summary'), 'Retained source data', { contains: true });
     expect(vi.mocked(useOperationalMetrics).mock.lastCall?.[0].map(metric => metric.rawValue))
       .toEqual(['Disconnected', 1.234567, 50, 17, 33, 17]);
     const drawer = review('live-monitor-summary');
@@ -71,7 +72,7 @@ describe('Retained telemetry bands and actual Review drawer', () => {
         earliest: '2026-01-02T00:00:00Z', latest: '2026-01-02T01:30:00Z' }} />);
     const brief = screen.getByTestId('signal-log-summary');
     expect(brief).not.toHaveAttribute('aria-busy', 'true');
-    expect(brief).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(brief, 'Retained source data', { contains: true });
     expect(brief).toHaveTextContent('2026-01-05T00:00:00Z');
     expect(vi.mocked(useOperationalMetrics).mock.lastCall?.[0].map(metric => metric.rawValue))
       .toEqual([1250, 3, 1000, 200, 50, 5400]);

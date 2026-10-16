@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -165,7 +166,7 @@ describe('DataQualityPage source-status contract', () => {
     expectSections();
     const brief = screen.getByTestId('normalization-coverage-summary');
     expect(brief).toHaveAttribute('aria-busy', 'true');
-    expect(brief).toHaveTextContent('Loading source');
+    assertOperationalBriefDisclosure(brief, 'Loading source', { contains: true });
     expect(brief).not.toHaveTextContent('Refreshing source');
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });

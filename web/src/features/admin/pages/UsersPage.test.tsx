@@ -25,6 +25,7 @@
  * true integration signal.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -386,7 +387,7 @@ describe('UsersPage', () => {
     hoisted.state.status = makeStatusQuery({ isError: true, error: new Error('status refresh failed') })
     hoisted.state.candidates = makeCandidatesQuery({ isError: true, error: new Error('candidate refresh failed') })
     renderPage()
-    expect(screen.getByTestId('subjects-operational-brief')).toHaveTextContent('Retained evidence')
+    assertOperationalBriefDisclosure(screen.getByTestId('subjects-operational-brief'), 'Retained evidence', { contains: true })
     expect(kpiValue('Available subjects')).toBe('2')
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
     const drawer = screen.getByRole('dialog')

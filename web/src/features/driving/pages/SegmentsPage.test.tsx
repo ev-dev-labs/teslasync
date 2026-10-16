@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -428,7 +429,7 @@ describe('SegmentsPage pagination', () => {
     view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
     expect(screen.getByRole('table')).toHaveTextContent('0.00s');
     expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
-    expect(within(screen.getByTestId('segment-ghost-brief')).getByText('Loading source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('segment-ghost-brief'), 'Loading source');
 
     state.ghostFetchStatus = 'paused';
     view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
@@ -436,7 +437,7 @@ describe('SegmentsPage pagination', () => {
     expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Not enough shared telemetry to align these two attempts.')).not.toBeInTheDocument();
     expect(screen.getByTestId('segment-ghost-brief')).toBeInTheDocument();
-    expect(within(screen.getByTestId('segment-ghost-brief')).getByText('Source unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('segment-ghost-brief'), 'Source unavailable');
     expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Retry unavailable sources: Ghost Race/ }));
     expect(state.ghostRefetch).toHaveBeenCalledTimes(1);

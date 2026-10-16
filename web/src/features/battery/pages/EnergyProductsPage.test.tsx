@@ -34,6 +34,7 @@
  * i18n is stubbed so visible copy is the English fallback.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -686,8 +687,7 @@ describe('resourceIcon', () => {
       expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
       expect(notice).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
       expect(notice).not.toHaveTextContent(/offline|failed/i);
-      expect(within(screen.getByRole('region', { name: 'Energy summary' }))
-        .getByText('Retained source evidence')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Energy summary' }), 'Retained source evidence');
       expect(screen.getByText('Time-Based Control')).toBeInTheDocument();
       expect(screen.getByText('5.00 kW')).toBeInTheDocument();
       expect(screen.getByText('Home Powerwall')).toBeInTheDocument();

@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -121,7 +122,7 @@ describe('Vehicle ingest canonical summary preservation', () => {
       .toEqual([undefined, undefined, undefined, undefined, null, null]);
     rerender(<VehicleCostStatStrip totals={totals} vehicleCount={3} windowDays={30}
       loading retained refreshError={new Error('retained ingest refresh failed')} error={null} onRetry={retry} />);
-    expect(screen.getByTestId('vehicle-cost-summary')).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(screen.getByTestId('vehicle-cost-summary'), 'Retained source data', { contains: true });
     expect(screen.getByTestId('vehicle-cost-summary')).toHaveTextContent('Showing retained measurements');
     expect(screen.getByTestId('vehicle-cost-summary')).not.toHaveAttribute('aria-busy', 'true');
     expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);

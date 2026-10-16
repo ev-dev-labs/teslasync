@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { Children, isValidElement, type ReactNode } from 'react';
@@ -411,7 +412,7 @@ describe('SignalCorrelationPage canonical summary and unchanged controls', () =>
     fireEvent.change(screen.getByLabelText('Signal A'), { target: { value: 'BatteryLevel' } });
     fireEvent.change(screen.getByLabelText('Signal B'), { target: { value: 'CabinTemperature' } });
     const strip = screen.getByTestId('signal-correlation-summary');
-    expect(strip).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(strip, 'Retained source data', { contains: true });
     expect(strip).toHaveTextContent('CabinTemperature leads');
     expect(strip).toHaveTextContent('from 12 raw points');
     const overlayProps = mocks.charts.mock.calls.map(([props]) => props as ChartContainerProps)
@@ -491,12 +492,12 @@ describe('SignalCorrelationPage canonical summary and unchanged controls', () =>
     expect(strip).toHaveTextContent('No relationship');
     failure = new Error('refresh unavailable');
     fireEvent.click(screen.getByRole('switch', { name: 'Correlate changes, not levels' }));
-    expect(strip).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(strip, 'Retained source data', { contains: true });
     expect(strip).toHaveTextContent('from 12 raw points');
     failure = null;
     fireEvent.click(screen.getByRole('switch', { name: 'Correlate changes, not levels' }));
     expect(strip).toHaveTextContent('Queried snapshot');
-    expect(strip).not.toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(strip, 'Retained source data', { absent: true, contains: true });
     expect(screen.queryByText('refresh unavailable')).not.toBeInTheDocument();
     expect(retry).not.toHaveBeenCalled();
   });

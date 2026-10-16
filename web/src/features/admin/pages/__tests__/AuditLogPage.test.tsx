@@ -19,6 +19,7 @@
  * Network is never touched: the four `useOperatorConfidence` hooks are mocked
  * and driven per-test.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -239,7 +240,7 @@ describe('AuditLogPage — degraded data sources', () => {
     mockUseAuditActions.mockReturnValue(makeQuery({ isLoading: true, isFetching: true }));
     const { container } = renderPage();
     const strip = screen.getByTestId('admin-audit-summary');
-    expect(strip).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(strip, 'Retained source data', { contains: true });
     expect(strip).toHaveTextContent('Showing retained measurements');
     expect(metricValue('Entries shown')).toBe('0');
     expect(metricValue('Categories')).toBe('2');

@@ -22,6 +22,7 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * slice tests.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -886,7 +887,7 @@ describe('BatteryHealthPage · design-system consistency', () => {
       expect(summaryMetricValue('Full Charge Complete')).toBe('Yes');
       expect(summaryMetricValue('State of Health')).toContain('96');
       const summary = screen.getByRole('region', { name: 'Battery health summary metrics' });
-      expect(within(summary).queryByText('Retained source evidence')).not.toBeInTheDocument();
+      assertOperationalBriefDisclosure(summary, 'Retained source evidence', { absent: true });
       expect(thermalMetricValue('Module Temp (Max)')).toContain('32');
       const thermal = screen.getByRole('region', { name: 'Thermal monitoring and capacity comparison' });
       fireEvent.click(within(thermal).getByRole('button', { name: 'Refresh' }));

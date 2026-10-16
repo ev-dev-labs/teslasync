@@ -23,6 +23,7 @@
  * so visible copy is the English fallback with {{placeholder}} interpolation.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -425,7 +426,7 @@ describe('SignalDiffPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(mockRefetch).toHaveBeenCalledTimes(1);
     const brief = screen.getByTestId('signal-diff-page-summary');
-    expect(brief).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(brief, 'Retained source data', { contains: true });
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(drawer).toHaveTextContent('All returned changed rows before name and category filters.');

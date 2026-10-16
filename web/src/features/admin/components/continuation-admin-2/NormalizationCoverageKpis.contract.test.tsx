@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -52,7 +53,7 @@ describe('NormalizationCoverageKpis actual refresh contract', () => {
     render(<MemoryRouter><NormalizationCoverageKpis {...BASE} normalization={undefined}
       hasSnapshot={false} sourceStatus="initial" isRefreshing={false} loading /></MemoryRouter>);
     const brief = screen.getByTestId('normalization-coverage-summary');
-    expect(brief).toHaveTextContent('Loading source');
+    assertOperationalBriefDisclosure(brief, 'Loading source', { contains: true });
     expect(brief).not.toHaveTextContent('Refreshing source');
     expect(brief).toHaveAttribute('aria-busy', 'true');
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);

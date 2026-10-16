@@ -127,6 +127,55 @@ Five failed System items now meet their exact implementation and regression acce
 
 Next: apply a reusable, conservative codemod in bulk to repeated pre-redesign disclosure assertions, review every generated change and compare affected-suite failures against the controlled baseline. BatteryDegradationPage's 42-case queue remains open.
 
+### Repair group 10: reviewed bulk disclosure codemod (2026-10-16)
+
+Before applying: the reusable TypeScript-AST codemod `web/scripts/migrate-brief-disclosure-tests.mjs` identifies **67 assertions in 34 files**. It preserves positive/negative and exact/substring matcher intent, every measured-value assertion, fixture, test name and test count. It leaves **85** polling, existing-dialog, generic source-state and unproven-scope assertions for manual review; no test is skipped. Review rejected ambiguous “Refresh paused”/“Refreshing” assertions that belong to source notices or controls. The assertion utility requires exactly one real evidence card, opens its actual Review details action, checks its drawer header, then closes it; wrong positive/negative assertions and missing/ambiguous scopes must fail. Six codemod checks and six real-drawer helper cases pass before rollout.
+
+Pre-apply file inventory (assertions per file):
+
+- `src/features/admin/components/continuation-admin-2/NormalizationCoverageKpis.contract.test.tsx` — 1
+- `src/features/admin/components/statstrip-audit-vehicle-cost/VehicleCostStatStrip.test.tsx` — 1
+- `src/features/admin/components/statstrip-coverage-flags-secrets/CoverageOperationalBrief.test.tsx` — 1
+- `src/features/admin/components/statstrip-coverage-flags-secrets/SecretRotationOperationalBrief.test.tsx` — 2
+- `src/features/admin/pages/DataQualityPage.contract.test.tsx` — 1
+- `src/features/admin/pages/UsersPage.test.tsx` — 1
+- `src/features/admin/pages/__tests__/AuditLogPage.test.tsx` — 1
+- `src/features/advanced-intelligence/pages/TwinLabPage.test.tsx` — 1
+- `src/features/analytics/components/operationalbrief-a-m/CarbonCoverageBrief.contract.test.tsx` — 5
+- `src/features/battery/pages/BatteryDegradationPage.test.tsx` — 3
+- `src/features/battery/pages/BatteryHealthPage.test.tsx` — 1
+- `src/features/battery/pages/EnergyProductsPage.test.tsx` — 1
+- `src/features/battery/pages/ProjectedRangePage.test.tsx` — 1
+- `src/features/driving/pages/DepartureForecastPage.test.tsx` — 2
+- `src/features/driving/pages/DestinationTransitionsPage.test.tsx` — 3
+- `src/features/driving/pages/JourneyFragmentationPage.test.tsx` — 8
+- `src/features/driving/pages/SegmentsPage.test.tsx` — 2
+- `src/features/driving/pages/TripPlannerPage.test.tsx` — 1
+- `src/features/fleet-ops/pages/FleetOperationsPage.test.tsx` — 1
+- `src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx` — 4
+- `src/features/maps/pages/MapOverviewPage.test.tsx` — 1
+- `src/features/resale-vault/components/operationalbrief-all/VaultSummaryBrief.test.tsx` — 2
+- `src/features/system/components/statstrip-db-health/DBHealthSummary.test.tsx` — 1
+- `src/features/system/components/statstrip-tesla-account/TeslaAccountStatStrip.test.tsx` — 2
+- `src/features/system/pages/TeslaAccountPage.test.tsx` — 3
+- `src/features/telemetry/components/LiveMonitorKpiBand.test.tsx` — 1
+- `src/features/telemetry/components/operationalbrief-all/AnalysisBriefs.test.tsx` — 2
+- `src/features/telemetry/components/operationalbrief-all/RetainedBands.test.tsx` — 2
+- `src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.test.tsx` — 4
+- `src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.test.tsx` — 1
+- `src/features/telemetry/pages/SignalCorrelationPage.test.tsx` — 3
+- `src/features/telemetry/pages/SignalDiffPage.test.tsx` — 1
+- `src/features/telemetry/pages/SignalEntropyPage.test.tsx` — 2
+- `src/features/telemetry/pages/SignalExplorerPage.test.tsx` — 1
+
+Fresh four-worker baseline: **576 passed / 381 failed across 957 tests in 34 files**. The first bulk rerun revealed two newly failing cases in CoverageOperationalBrief's non-rendering prop-capture stub. Restored that single rewrite, preserved its original assertions, and added a codemod guard/regression for such mocks; wrappers forwarding the real component remain eligible. Final rollout: **66 assertions in 33 files**; CoverageOperationalBrief remains in the comparison batch but is deferred unchanged. The post-review dry run reports **0 remaining eligible rewrites / 86 deferred assertions**. Deferred means unchanged assertions awaiting review, never skipped tests.
+
+Final affected-suite/helper result: **607 passed / 356 failed across 963 tests in 35 files**, including six new helper cases. Exact identity comparison: **25 existing failures resolved, zero new failing identities, no original tests removed or skipped**. Cumulative existing failures resolved in groups 1-10: **267**, plus 24 Vitest regression cases. Seven codemod checks also pass under Node's test runner. Each generated rewrite preserves its literal, scope and positive/negative or exact/substring intent. The helper checks the actual drawer header and fails wrong assertions or missing/ambiguous scopes; it does not synthesize values. Typecheck and all touched-file/tooling ESLint checks pass.
+
+Full local review and verification artifacts: `.runner/gates/disclosure-codemod-plan.json`, `disclosure-codemod-applied.json`, `disclosure-codemod-post-review.json`, `disclosure-bulk-before.json`, `disclosure-bulk-final.json`. Remaining 356 failures in this batch still require context, unavailable-metric, fixture or behavior work; a lower aggregate is not presented as complete repair. Refreshed matching Phase 6 records with per-file pass/fail counts and the current exact diagnostic for still-failed items; acceptance totals remain **989 done / 287 failed / 0 pending / 0 excluded**. No production code, package files or catalog keys changed in this group.
+
+Concurrent changes to shared UI files and a DataFreshness rename appeared after the area runs. This commit isolates the codemod/helper/tests and this receipt from those unrelated staged/working changes, including additional edits in TeslaAccountPage.test.tsx. The reported checks describe their recorded run; they are not a verification claim for the concurrent UI changes.
+
 ## Current UI simplification checkpoint
 
 Working on `ui/simplification`. Rows 0-4 are complete and pushed; row 5 (charging) is in progress; row 6 (remaining features) is in progress. Shared dashboard headers cluster controls at the right, the freshness dot is the per-widget refresh action, hover-only expand controls sit to its left without reserving header width, and widget content avoids nested summary scroll areas. Climate no longer repeats an inner title; title-equal metric captions are hidden. Both StatStrip and OperationalBrief distribute metric rows evenly with `maxPerRow`. Captured Edge screenshots at 375px, 768px, and 1440px are committed under `docs/ui-simplification/`; the Battery widget freshness control measures the same 16px inset as its title at all three sizes. Focused shared/dashboard suites pass 111/111; focused vehicle suites pass 239/239 across seven files. Split catalog check, full lint, typecheck, and build pass on the last shared checkpoint (CSS parser and startup bundle warnings remain). Rows 5-7 and the full Vitest suite remain outstanding.

@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -336,7 +337,7 @@ describe('TwinLabPage restrained source adoption', () => {
     state.mutation.error = new Error('simulation unavailable');
     renderPage();
     expectSections();
-    expect(screen.getByTestId('advanced-intelligence-twin-brief')).toHaveTextContent('Source unavailable');
+    assertOperationalBriefDisclosure(screen.getByTestId('advanced-intelligence-twin-brief'), 'Source unavailable', { contains: true });
     expect(card('Range-effect uncertainty comparison')).toHaveTextContent("Can't reach server");
     expect(card('Sensitivity drivers')).toHaveTextContent('Intelligence evidence could not be loaded.');
     expect(screen.getByText('simulation unavailable')).toBeInTheDocument();

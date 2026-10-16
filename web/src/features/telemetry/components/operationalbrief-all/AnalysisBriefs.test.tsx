@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ComponentType, ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -186,7 +187,7 @@ describe.each(cases)('$testId actual raw analysis adoption', testCase => {
     selectSignals(testCase);
     H.error = new Error('history unavailable');
     view.rerender(<Page />);
-    expect(brief).toHaveTextContent('Source unavailable');
+    assertOperationalBriefDisclosure(brief, 'Source unavailable', { contains: true });
     expect([...brief.querySelectorAll('[data-operational-value]')].every(value => value.textContent === '—')).toBe(true);
   });
 
@@ -200,7 +201,7 @@ describe.each(cases)('$testId actual raw analysis adoption', testCase => {
     H.error = new Error('refresh failed'); H.fetching = true;
     view.rerender(<Page />);
     const brief = screen.getByTestId(testCase.testId);
-    expect(brief).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(brief, 'Retained source data', { contains: true });
     expect(brief).not.toHaveAttribute('aria-busy', 'true');
     expect([...brief.querySelectorAll('[data-operational-value]')].map(value => value.textContent)).toEqual(before);
     expect(brief).toHaveTextContent(`${samples[0]!.ts} → ${samples.at(-1)!.ts}`);

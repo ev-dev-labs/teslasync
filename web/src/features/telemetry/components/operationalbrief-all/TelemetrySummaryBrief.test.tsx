@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { StatMetric } from '@/components/data-display';
@@ -182,7 +183,7 @@ describe('Telemetry compact OperationalBrief contract', () => {
     });
     expect(screen.getByTestId('brief')).toHaveTextContent('Last successful response: 2026-01-03T00:00:00Z');
     expect(screen.getByTestId('brief')).toHaveTextContent('Refresh failed; last successful measurement retained');
-    expect(screen.getByTestId('brief')).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(screen.getByTestId('brief'), 'Retained source data', { contains: true });
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(3);
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Last successful response: 2026-01-03T00:00:00Z');
@@ -258,7 +259,7 @@ describe('Telemetry compact OperationalBrief contract', () => {
       metrics={metrics} testId="brief" scope="24h overlap" provenance="History"
       loading retained unavailable />);
     expect(screen.getByTestId('brief')).not.toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByTestId('brief')).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(screen.getByTestId('brief'), 'Retained source data', { contains: true });
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(3);
   });
 
@@ -268,7 +269,7 @@ describe('Telemetry compact OperationalBrief contract', () => {
     expect(screen.getByTestId('brief')).not.toHaveTextContent('On track');
     rerender(<TelemetrySummaryBrief title="Signal evidence" description="Independent returned evidence"
       metrics={[]} testId="brief" scope="Unknown coverage" provenance="History" unavailable />);
-    expect(screen.getByTestId('brief')).toHaveTextContent('Source unavailable');
+    assertOperationalBriefDisclosure(screen.getByTestId('brief'), 'Source unavailable', { contains: true });
   });
 
   it('keeps long source identities and incomplete bounds as muted, wrapping metadata in both surfaces', () => {
@@ -293,7 +294,7 @@ describe('Telemetry compact OperationalBrief contract', () => {
     'preserves caller-owned freshness without inventing source metadata: %s',
     message => {
       setup({ retained: true, sourceStatus: 'stale', freshness: <span>{message}</span> });
-      expect(screen.getByTestId('brief')).toHaveTextContent('Retained source data');
+      assertOperationalBriefDisclosure(screen.getByTestId('brief'), 'Retained source data', { contains: true });
       expect(screen.getByTestId('brief')).toHaveTextContent(message);
       fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
       expect(screen.getByRole('dialog')).toHaveTextContent(message);

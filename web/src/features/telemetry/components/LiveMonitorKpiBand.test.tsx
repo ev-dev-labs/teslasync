@@ -23,6 +23,7 @@
  * OperationalBrief render for real; only preference providers are isolated.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
@@ -150,7 +151,7 @@ describe('LiveMonitorKpiBand — connection state', () => {
 
     expect(screen.getByText('Disconnected')).toBeInTheDocument();
     expect(screen.queryByText('Connected')).toBeNull();
-    expect(screen.getByTestId('live-monitor-summary')).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(screen.getByTestId('live-monitor-summary'), 'Retained source data', { contains: true });
     expect(container.querySelector('[data-operational-metric="connection"]')).toHaveAttribute('data-value-state', 'value');
     expect(container.querySelector('.lucide-wifi')).toBeNull();
   });

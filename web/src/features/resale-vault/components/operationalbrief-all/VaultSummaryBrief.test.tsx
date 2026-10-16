@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { deriveDataState } from '@/api/dataState';
@@ -52,13 +53,13 @@ describe('VaultSummaryBrief retained evidence and real drawer', () => {
     const retained = source({ data: [], isError: true, error: new Error('refresh failed') });
     const { rerender } = render(<VaultSummaryBrief {...props} sources={[retained]} />);
     const brief = screen.getByTestId('vault-test-brief');
-    expect(within(brief).getByText('Retained evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained evidence');
     expect(brief.querySelector('[data-operational-metric="records"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="capacity"]')).toHaveAttribute('data-value-state', 'missing');
     expect(within(brief).getByText('0')).toBeInTheDocument();
     rerender(<VaultSummaryBrief {...props} sources={[source({ data: [], isSuccess: true })]} />);
     expect(within(brief).getByText('Evidence available')).toBeInTheDocument();
-    expect(within(brief).queryByText('Retained evidence')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained evidence', { absent: true });
     expect(within(brief).getByText('0')).toBeInTheDocument();
   });
 

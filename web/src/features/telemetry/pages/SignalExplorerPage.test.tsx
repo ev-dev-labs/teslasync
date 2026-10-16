@@ -20,6 +20,7 @@
  * `useRealtimeEvents`; framer-motion and i18n are stubbed for determinism.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
@@ -312,7 +313,7 @@ describe('SignalExplorerPage', () => {
     expect(screen.getAllByText('80.1').length).toBeGreaterThan(0);
     expect(screen.queryByText(/Failed to load data/)).toBeNull();
     const brief = screen.getByTestId('signal-explorer-summary');
-    expect(brief).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(brief, 'Retained source data', { contains: true });
     const requestsBeforeReview = mockedRequest.mock.calls.length;
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');

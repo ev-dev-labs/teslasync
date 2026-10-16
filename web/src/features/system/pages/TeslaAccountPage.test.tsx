@@ -35,6 +35,7 @@
  * computed via the SAME `@/lib/dateFormat` helpers the page uses, so the
  * suite is immune to the runner's locale / timezone.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, fireEvent, within, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -318,7 +319,7 @@ describe('TeslaAccountPage — populated', () => {
     ]);
     expect(refreshButtons()).toHaveLength(2);
     expect(refreshButtons().every((button) => !button.hasAttribute('disabled'))).toBe(true);
-    expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(screen.getByTestId('tesla-account-summary'), 'Retained source data', { contains: true });
     expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Showing retained measurements');
     expect([...screen.getByTestId('tesla-account-summary').querySelectorAll('[data-operational-metric]')]
       .every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
@@ -810,7 +811,7 @@ describe('TeslaAccountPage — restrained adoption', () => {
       expect(within(panel('Profile')).getByText(PROFILE.full_name)).toBeInTheDocument();
       expect(within(panel('Account details')).getByText(PROFILE.email)).toBeInTheDocument();
       expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
-      expect(kpiBand()).toHaveTextContent('Retained source data');
+      assertOperationalBriefDisclosure(kpiBand(), 'Retained source data', { contains: true });
       expect(kpiBand()).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
       fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
       expect(query.refetch).toHaveBeenCalledOnce();
@@ -883,7 +884,7 @@ describe('TeslaAccountPage — restrained adoption', () => {
     expect(within(panel('Sync')).getByText(formatDateTime(FETCHED_AT, datePreferences))).toBeInTheDocument();
     expect(within(panel('Account details')).getByText(PROFILE.email)).toBeInTheDocument();
     expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
-    expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(screen.getByTestId('tesla-account-summary'), 'Retained source data', { contains: true });
     expect(refreshButtons()).toHaveLength(2);
   });
 

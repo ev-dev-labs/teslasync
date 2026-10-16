@@ -23,6 +23,7 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * page tests.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -693,8 +694,7 @@ describe('ProjectedRangePage · mile units', () => {
       expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
       expect(notice).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
       expect(notice).not.toHaveTextContent(/offline|failed/i);
-      expect(within(screen.getByRole('region', { name: 'Range summary metrics' }))
-        .getByText('Retained source evidence')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Range summary metrics' }), 'Retained source evidence');
       expect(metricValue('Battery')).toContain('72');
       expect(screen.getByText('177.50 Wh/km')).toBeInTheDocument();
       expect(screen.getByText('Range Factors')).toBeInTheDocument();

@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -179,7 +180,7 @@ describe('Correlation canonical summary preservation', () => {
     const { container } = setup({ loading: true, retained: true,
       errorA: new Error('A unavailable'), errorB: new Error('B unavailable'),
       onRetryA: retryA, onRetryB: retryB });
-    expect(screen.getByTestId('signal-correlation-summary')).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(screen.getByTestId('signal-correlation-summary'), 'Retained source data', { contains: true });
     expect(screen.getByTestId('signal-correlation-summary')).toHaveTextContent('Showing retained measurements');
     expect(screen.getByTestId('signal-correlation-summary')).not.toHaveAttribute('aria-busy', 'true');
     expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);

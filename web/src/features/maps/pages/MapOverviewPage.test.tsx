@@ -29,6 +29,7 @@
  * would hand to leaflet so we can assert on them.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
@@ -647,7 +648,7 @@ describe('MapOverviewPage modernization preservation', () => {
     onlineManager.setOnline(false)
     renderPage({ client })
     const band = await screen.findByRole('region', { name: 'Vehicle status' })
-    expect(within(band).getByText('Loading source data')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(band, 'Loading source data')
     expect(within(band).queryByText('Source data unavailable')).toBeNull()
     expect(screen.getAllByText('Refresh paused').length).toBeGreaterThan(0)
     expect(screen.queryByText('No location history found.')).toBeNull()

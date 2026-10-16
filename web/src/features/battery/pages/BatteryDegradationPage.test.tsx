@@ -28,6 +28,7 @@
  *   - a11y + interaction: labelled region landmarks, the projection chart image
  *     label, without a duplicate vehicle-scope combobox.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -551,7 +552,7 @@ describe('BatteryDegradationPage — loading', () => {
     expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
     expect(kpiRegion().querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(kpiRegion().querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
-    expect(kpiRegion()).toHaveTextContent('Loading source evidence');
+    assertOperationalBriefDisclosure(kpiRegion(), 'Loading source evidence', { contains: true });
     expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
     // The gauge verdict badge is withheld while its skeleton stands in.
     expect(screen.queryByText('Excellent')).toBeNull();
@@ -575,8 +576,8 @@ describe('BatteryDegradationPage — stats source trust', () => {
     const view = renderPage();
     for (const id of statsIds) {
       const brief = screen.getByTestId(id);
-      expect(brief).toHaveTextContent('Retained source evidence');
-      expect(brief).not.toHaveTextContent('Available source readings');
+      assertOperationalBriefDisclosure(brief, 'Retained source evidence', { contains: true });
+      assertOperationalBriefDisclosure(brief, 'Available source readings', { absent: true, contains: true });
       expect(brief).not.toHaveAttribute('aria-busy', 'true');
     }
     expect(metricValue(kpiRegion(), 'Estimated capacity')).toBe('72.5 kWh');

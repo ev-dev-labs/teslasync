@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { Children, isValidElement, type ComponentProps, type ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -255,7 +256,7 @@ describe('SignalEntropyPage preservation and presentation', () => {
     H.historyError = error; H.paused = paused; H.fetching = !paused;
     view.rerender(<SignalEntropyPage />);
     expectSections();
-    expect(screen.getByTestId('signal-entropy-summary')).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(screen.getByTestId('signal-entropy-summary'), 'Retained source data', { contains: true });
     expect(latestMetrics().map(metric => metric.rawValue)).toEqual(beforeMetrics);
     expect(latestChart('Rolling information density').data).toEqual(beforeRolling);
     expect(latestChart('Rolling information density').error).toBeNull();
@@ -279,7 +280,7 @@ describe('SignalEntropyPage preservation and presentation', () => {
     view.rerender(<SignalEntropyPage />); expectSections();
     expect(latestChart('Rolling information density').error).toEqual(H.historyError);
     expect(latestChart('Quantile bin distribution').error).toEqual(H.historyError);
-    expect(screen.getByTestId('signal-entropy-summary')).toHaveTextContent('Source unavailable');
+    assertOperationalBriefDisclosure(screen.getByTestId('signal-entropy-summary'), 'Source unavailable', { contains: true });
     fireEvent.click(screen.getAllByRole('button', { name: /retry/i })[0]!);
     expect(H.historyRetry).toHaveBeenCalledOnce();
   });

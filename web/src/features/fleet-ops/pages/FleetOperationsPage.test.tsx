@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -563,7 +564,7 @@ describe('FleetOperationsPage', () => {
     expect(screen.getByText('Utilization forecast may be out of date')).toBeInTheDocument();
     expect(screen.getByText('Moderate history.')).toBeInTheDocument();
     const brief = screen.getByTestId('fleet-operations-summary');
-    expect(brief).toHaveTextContent('Retained source data');
+    assertOperationalBriefDisclosure(brief, 'Retained source data', { contains: true });
     const forecastMetric = brief.querySelector('[data-operational-metric="forecast"]');
     expect(forecastMetric).toHaveAttribute('data-value-state', 'value');
     expect(forecastMetric?.querySelector('[data-operational-value]')).toHaveTextContent('20');

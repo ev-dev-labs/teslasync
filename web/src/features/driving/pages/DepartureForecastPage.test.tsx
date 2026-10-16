@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   fireEvent,
@@ -678,7 +679,7 @@ describe('DepartureForecastPage', () => {
     h.history = query({ data: weekdayCommute(12) });
     view.rerenderPage();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-    expect(within(screen.getByTestId('departure-kpis')).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('departure-kpis'), 'Returned evidence');
     expectEverySection();
   });
 
@@ -896,7 +897,7 @@ describe('DepartureForecastPage', () => {
     view.rerenderPage();
     expect(screen.queryByTestId('departure-refresh-error')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(within(screen.getByTestId('departure-kpis')).getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('departure-kpis'), 'Returned evidence');
     expectEverySection();
   });
 
