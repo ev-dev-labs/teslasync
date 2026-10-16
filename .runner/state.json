@@ -11478,10 +11478,10 @@
       "web\\src\\features\\maps\\pages\\NavigationRoutePage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-maps-navigation-route-nav-qa-005 | tests blocked by missing Vite; dependency restoration blocked by locked Rollup binary | done so far: updated web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx and web\\src\\features\\maps\\pages\\NavigationRoutePage.test.tsx Attempt 2: FAILED | fix-maps-navigation-route-nav-qa-005 | tests blocked by missing Vite; dependency restoration blocked by locked Rollup binary | done so far: inspected and preserved previous NavigationRoutePage.tsx and NavigationRoutePage.test.tsx implementation; no new source changes",
+    "Notes": " Attempt 1: FAILED | fix-maps-navigation-route-nav-qa-005 | tests blocked by missing Vite; dependency restoration blocked by locked Rollup binary | done so far: updated web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx and web\\src\\features\\maps\\pages\\NavigationRoutePage.test.tsx Attempt 2: FAILED | fix-maps-navigation-route-nav-qa-005 | tests blocked by missing Vite; dependency restoration blocked by locked Rollup binary | done so far: inspected and preserved previous NavigationRoutePage.tsx and NavigationRoutePage.test.tsx implementation; no new source changes RETRY FAILED | NavigationRoutePage.test.tsx: 10 failures across retained refresh/recovery, route metrics, empty sections, measured zero coordinates, heading cardinal and independent-source availability assertions. Existing UI assertions diverge after modernization; individual failing test names in run output from 2026-10-16.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20377,10 +20377,10 @@
       "web\\src\\features\\ownership\\pages\\ModelTrustPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-model-trust-mobile-regression-fixture | missing dependencies prevent scoped test verification | done so far: updated web/src/features/ownership/pages/ModelTrustPage.test.tsx allocation and observer fixture; preserved behavior assertions Attempt 2: FAILED | fix-model-trust-mobile-regression-fixture | missing dependencies prevent scoped test verification; restoration failed twice with ENOENT | done so far: inspected and preserved inherited allocation and ResizeObserver fixture and all behavior assertions",
+    "Notes": " Attempt 1: FAILED | fix-model-trust-mobile-regression-fixture | missing dependencies prevent scoped test verification | done so far: updated web/src/features/ownership/pages/ModelTrustPage.test.tsx allocation and observer fixture; preserved behavior assertions Attempt 2: FAILED | fix-model-trust-mobile-regression-fixture | missing dependencies prevent scoped test verification; restoration failed twice with ENOENT | done so far: inspected and preserved inherited allocation and ResizeObserver fixture and all behavior assertions RETRY FAILED | ModelTrustPage.test.tsx: 5 failures remain, including mobile details/actions and financial history/calibration assertions; required mobile fixture behavior is not verified.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20516,10 +20516,10 @@
       "web\\src\\features\\admin\\pages\\FeatureFlagsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-feature-flag-delete-result-feedback | Required tests and typecheck blocked by missing dependencies | done so far: updated hook, page, and both test files; verified result helper with 16 assertions Attempt 2: FAILED | fix-feature-flag-delete-result-feedback | Required tests and typecheck blocked by dependency restoration failures | done so far: inspected existing hook/page fix and regression cases; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-feature-flag-delete-result-feedback | Required tests and typecheck blocked by missing dependencies | done so far: updated hook, page, and both test files; verified result helper with 16 assertions Attempt 2: FAILED | fix-feature-flag-delete-result-feedback | Required tests and typecheck blocked by dependency restoration failures | done so far: inspected existing hook/page fix and regression cases; no source changes RETRY FAILED | FeatureFlagsPage.test.tsx: 7 failures in save/drawer pending/rejection handling, edit mode and partial audit-source state. useFeatureFlags.test.tsx passes.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -20530,11 +20530,11 @@
       "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-departure-chart-complete-instant-labels | regression execution and typecheck blocked by missing dependencies; restore failed | done so far: changed web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx, web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.test.tsx, web\\src\\i18n\\en.json, web\\src\\i18n\\en\\locale-charging.json Attempt 2: FAILED | fix-departure-chart-complete-instant-labels | regression and typecheck blocked by missing dependencies; two restoration attempts failed | done so far: inspected and preserved prior implementation and regression; no source changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-departure-chart-complete-instant-labels | regression execution and typecheck blocked by missing dependencies; restore failed | done so far: changed web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx, web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.test.tsx, web\\src\\i18n\\en.json, web\\src\\i18n\\en\\locale-charging.json Attempt 2: FAILED | fix-departure-chart-complete-instant-labels | regression and typecheck blocked by missing dependencies; two restoration attempts failed | done so far: inspected and preserved prior implementation and regression; no source changes DONE | fix-departure-chart-complete-instant-labels | Required page/hook regression suite passes in grouped verification on 2026-10-16.",
+    "Commit": "8e78b0af92",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -20544,11 +20544,11 @@
       "web\\src\\features\\charging\\pages\\ChargeDepartureAlignmentPage.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-departure-accessible-number-formatting | dependency failures prevented test and TypeScript verification | done so far: updated web/src/features/charging/pages/ChargeDepartureAlignmentPage.tsx and web/src/features/charging/pages/ChargeDepartureAlignmentPage.test.tsx Attempt 2: FAILED | fix-departure-accessible-number-formatting | missing dependencies and ENOTEMPTY restoration failures prevented verification | done so far: existing page implementation and regression tests inspected; no source changes made",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-departure-accessible-number-formatting | dependency failures prevented test and TypeScript verification | done so far: updated web/src/features/charging/pages/ChargeDepartureAlignmentPage.tsx and web/src/features/charging/pages/ChargeDepartureAlignmentPage.test.tsx Attempt 2: FAILED | fix-departure-accessible-number-formatting | missing dependencies and ENOTEMPTY restoration failures prevented verification | done so far: existing page implementation and regression tests inspected; no source changes made DONE | fix-departure-accessible-number-formatting | Required page/hook regression suite passes in grouped verification on 2026-10-16.",
+    "Commit": "8e78b0af92",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -20575,11 +20575,11 @@
       "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-browser-push-readiness-states | dependency failures prevented test and type verification | done so far: readiness and recovery changes plus synthetic tests saved in the three assigned production files and three focused test files Attempt 2: FAILED | fix-browser-push-readiness-states | dependency failures prevented test and type verification | done so far: readiness fixes and synthetic tests saved in web/src/api/hooks/usePush.ts, web/src/api/hooks/usePush.test.tsx, web/src/features/notifications/components/BrowserPushChannelCard.tsx, web/src/features/notifications/components/BrowserPushChannelCard.test.tsx, web/src/hooks/__tests__/useWebPush.test.ts",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-browser-push-readiness-states | dependency failures prevented test and type verification | done so far: readiness and recovery changes plus synthetic tests saved in the three assigned production files and three focused test files Attempt 2: FAILED | fix-browser-push-readiness-states | dependency failures prevented test and type verification | done so far: readiness fixes and synthetic tests saved in web/src/api/hooks/usePush.ts, web/src/api/hooks/usePush.test.tsx, web/src/features/notifications/components/BrowserPushChannelCard.tsx, web/src/features/notifications/components/BrowserPushChannelCard.test.tsx, web/src/hooks/__tests__/useWebPush.test.ts DONE | fix-browser-push-readiness-states | Required page/hook regression suite passes in grouped verification on 2026-10-16.",
+    "Commit": "8e78b0af92",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -20620,10 +20620,10 @@
       "web\\src\\api\\hooks\\useOwnership.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-governance-run-cache-invalidation | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\api\\hooks\\useOwnership.ts and extended web\\src\\api\\hooks\\useOwnership.test.tsx Attempt 2: FAILED | fix-governance-run-cache-invalidation | focused tests blocked by incomplete dependencies and failed restoration | done so far: existing hook fix and matching, unrelated-key, mounted-reader, and failure assertions confirmed; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-governance-run-cache-invalidation | verification blocked by missing dependencies and failed restoration | done so far: updated web\\src\\api\\hooks\\useOwnership.ts and extended web\\src\\api\\hooks\\useOwnership.test.tsx Attempt 2: FAILED | fix-governance-run-cache-invalidation | focused tests blocked by incomplete dependencies and failed restoration | done so far: existing hook fix and matching, unrelated-key, mounted-reader, and failure assertions confirmed; no source changes RETRY FAILED | useOwnership.test.tsx: governance run-cache invalidation test fails its requirement to preserve cache and avoid refetch on failed mutation.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
