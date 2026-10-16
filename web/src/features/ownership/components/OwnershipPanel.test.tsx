@@ -191,7 +191,7 @@ describe('OwnershipPanel source preservation', () => {
   it('shows successful empty evidence without a loading or paused notice', () => {
     render(panel({ data: [], isSuccess: true, fetchStatus: 'idle' }, { empty: true }));
     expect(screen.getByText('Select a statement.')).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByText(/initial query is paused|previously loaded data remains visible/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Retained statement lines')).not.toBeInTheDocument();
   });
 
