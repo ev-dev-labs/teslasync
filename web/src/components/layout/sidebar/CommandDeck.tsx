@@ -12,9 +12,9 @@
  *   the secondary panel with a Back button, and following a link closes
  *   the drawer.
  *
- * Selection and both icon-width preferences persist; the secondary
- * panel starts closed. The primary rail still highlights the section
- * holding the current page for orientation.
+ * Selection, the secondary panel's open state and both icon-width
+ * preferences persist across reloads. While the panel is closed the
+ * primary rail highlights the section holding the current page.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -63,21 +63,36 @@ export interface CommandDeckProps {
 
 const DECK_VIEW_STORAGE_KEY = 'teslasync-deck-view'
 
-function readStoredView(sections: readonly { title: string }[], activeSectionTitle?: string): DeckSelection {
+function readStoredView(): DeckSelection | null {
   try {
     const stored = window.localStorage.getItem(DECK_VIEW_STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored) as DeckSelection | null
       if (parsed?.kind === 'suggested' || parsed?.kind === 'favorites') {
-        return parsed
+        return { kind: parsed.kind }
       }
-      if (parsed?.kind === 'section' && sections.some(section => section.title === parsed.title)) {
-        return parsed
+      if (parsed?.kind === 'section' && typeof parsed.title === 'string') {
+        return { kind: 'section', title: parsed.title }
       }
     }
   } catch {
-    // Storage may be disabled or hold a stale section; default below.
+    // Storage may be disabled or hold a malformed value; default below.
   }
+  return null
+}
+
+/**
+ * Sections arrive asynchronously (vehicle count, auth mode, persona), so a
+ * stored section is kept as-is and only resolved against the current list
+ * at render time; a section missing on first paint is restored once it loads.
+ */
+function resolveView(
+  view: DeckSelection | null,
+  sections: readonly { title: string }[],
+  activeSectionTitle?: string,
+): DeckSelection {
+  if (view?.kind === 'suggested' || view?.kind === 'favorites') return view
+  if (view?.kind === 'section' && sections.some(section => section.title === view.title)) return view
   return activeSectionTitle && sections.some(section => section.title === activeSectionTitle)
     ? { kind: 'section', title: activeSectionTitle }
     : { kind: 'suggested' }
@@ -114,7 +129,8 @@ export function CommandDeck({
   const safeCollections = collections ?? []
   const { reduce, durationMs } = useMotionPreference()
 
-  const [view, setView] = useState<DeckSelection>(() => readStoredView(sections ?? [], activeSectionTitle))
+  const [selectedView, setView] = useState<DeckSelection | null>(readStoredView)
+  const view = resolveView(selectedView, safeSections, activeSectionTitle)
   const [mobileLevel, setMobileLevel] = useState<'rail' | 'panel'>('rail')
   const railRefs = useRef(new Map<string, HTMLButtonElement | null>())
   const previousPath = useRef(pathname)
@@ -128,12 +144,13 @@ export function CommandDeck({
   }, [pathname, activeSectionTitle, safeSections])
 
   useEffect(() => {
+    if (!selectedView) return
     try {
-      window.localStorage.setItem(DECK_VIEW_STORAGE_KEY, JSON.stringify(view))
+      window.localStorage.setItem(DECK_VIEW_STORAGE_KEY, JSON.stringify(selectedView))
     } catch {
       // Storage may be disabled; the view still works for the session.
     }
-  }, [view])
+  }, [selectedView])
 
   const railItemRef = useCallback((key: string, el: HTMLButtonElement | null) => {
     if (el) railRefs.current.set(key, el)

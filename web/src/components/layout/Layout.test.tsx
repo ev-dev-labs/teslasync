@@ -598,6 +598,7 @@ describe('Layout — unified sidebar wiring', () => {
       pinnedItems: Array<{ to: string }>
       recentItems: Array<{ to: string }>
       panelCollapsed: boolean
+      panelOpen: boolean
       onTogglePanelCollapsed: () => void
       onPanelOpenChange: (open: boolean) => void
     }
@@ -627,6 +628,26 @@ describe('Layout — unified sidebar wiring', () => {
     expect(screen.getByTestId('command-deck').closest('[data-presentation-mode]')).toHaveStyle({
       '--shell-sidebar-width': '76px',
     })
+  })
+
+  it('restores the secondary panel open state after a reload', async () => {
+    const first = renderLayout('/')
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    expect(unifiedProps().panelOpen).toBe(false)
+    act(() => unifiedProps().onPanelOpenChange(true))
+    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('1')
+    first.unmount()
+
+    const second = renderLayout('/')
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    expect(unifiedProps().panelOpen).toBe(true)
+    act(() => unifiedProps().onPanelOpenChange(false))
+    expect(localStorage.getItem('teslasync-deck-panel-open')).toBe('0')
+    second.unmount()
+
+    renderLayout('/')
+    expect(await screen.findByTestId('command-deck')).toBeInTheDocument()
+    expect(unifiedProps().panelOpen).toBe(false)
   })
 
   it('shrinks the docked secondary rail to icons and persists that width preference', async () => {

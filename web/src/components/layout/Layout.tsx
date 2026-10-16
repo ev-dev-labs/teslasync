@@ -753,8 +753,22 @@ export default function Layout() {
       // Storage may be disabled; the toggle still works for the session.
     }
   }, [deckRailCollapsed])
-  // Open state is session-only; the secondary icon-width preference persists.
-  const [deckPanelOpen, setDeckPanelOpen] = useState(false)
+  // Secondary panel open state and icon-width preference both persist so a
+  // reload restores the navigation exactly as the user left it.
+  const [deckPanelOpen, setDeckPanelOpen] = useState(() => {
+    try {
+      return window.localStorage.getItem('teslasync-deck-panel-open') === '1'
+    } catch {
+      return false
+    }
+  })
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('teslasync-deck-panel-open', deckPanelOpen ? '1' : '0')
+    } catch {
+      // The panel still opens and closes for the session.
+    }
+  }, [deckPanelOpen])
   const [deckPanelCollapsed, setDeckPanelCollapsed] = useState(() => {
     try {
       return window.localStorage.getItem('teslasync-deck-panel-collapsed') === '1'

@@ -587,6 +587,27 @@ describe('CommandDeck', () => {
     expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Driving"}')
   })
 
+  it('restores a stored section once late-loading sections include it, without overwriting it', () => {
+    window.localStorage.setItem('teslasync-deck-view', '{"kind":"section","title":"Driving"}')
+    const sections = makeSections()
+    const props = baseProps({ pathname: '/drives', activeSectionTitle: 'Home', panelOpen: true })
+    const { rerender } = render(
+      <MemoryRouter initialEntries={['/drives']}>
+        <CommandDeck {...props} sections={sections.filter(section => section.title !== 'Driving')} />
+      </MemoryRouter>,
+    )
+    expect(desktopRail().getByRole('button', { name: 'Home, 1 pages' })).toHaveAttribute('aria-expanded', 'true')
+    expect(window.localStorage.getItem('teslasync-deck-view')).toBe('{"kind":"section","title":"Driving"}')
+
+    rerender(
+      <MemoryRouter initialEntries={['/drives']}>
+        <CommandDeck {...props} sections={sections} />
+      </MemoryRouter>,
+    )
+    expect(desktopRail().getByRole('button', { name: 'Driving, 3 pages' })).toHaveAttribute('aria-expanded', 'true')
+    expect(secondaryPanel().getByRole('link', { name: 'Drives' })).toHaveAttribute('aria-current', 'page')
+  })
+
   it('replaces a retired search preference with the current section', () => {
     window.localStorage.setItem('teslasync-deck-view', '{"kind":"search"}')
     renderControlledDeck({ pathname: '/drives', activeSectionTitle: 'Driving' })
