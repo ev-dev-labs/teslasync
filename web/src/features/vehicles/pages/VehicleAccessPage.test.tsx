@@ -58,7 +58,10 @@ vi.mock('react-i18next', () => {
   };
   const t = (key: string, second?: unknown, third?: unknown): string => {
     if (typeof second === 'string') {
-      return interpolate(second, third as Record<string, unknown> | undefined);
+      const bag = third as Record<string, unknown> | undefined;
+      const count = bag?.count;
+      const plural = count === 1 ? bag?.defaultValue_one : bag?.defaultValue_other;
+      return interpolate(typeof plural === 'string' ? plural : second, bag);
     }
     if (second && typeof second === 'object') {
       const bag = second as Record<string, unknown>;
@@ -240,6 +243,10 @@ function renderPage() {
 /** The KPI band is the sole ARIA region — scope numeric assertions to it so
  *  metric values don't collide with counts elsewhere on the page. */
 const kpiRegion = () => screen.getByRole('region', { name: 'Access summary' });
+const reviewKpis = () => {
+  fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+  return within(screen.getByRole('dialog'));
+};
 
 const populatedDrivers: VehicleDriver[] = [
   makeDriver({ id: 1, share_user_id: 1001, driver_name: 'Ada Lovelace', driver_email: 'ada@example.com', role: 'driver' }),
@@ -592,7 +599,7 @@ describe('VehicleAccessPage — independent summary trust', () => {
     const roles = screen.getByRole('region', { name: 'Driver roles' });
     expect(within(roles).getByText('Refresh paused')).toBeInTheDocument();
     expect(within(roles).queryByText('No drivers yet')).not.toBeInTheDocument();
-    expect(kpiRegion().querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+    expect(reviewKpis().getByText('1 empty field is hidden.')).toBeInTheDocument();
     fireEvent.click(within(roles).getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledTimes(1);
   });
@@ -627,9 +634,9 @@ describe('VehicleAccessPage — independent summary trust', () => {
     renderPage();
     const brief = kpiRegion();
     expect(brief).not.toHaveAttribute('aria-busy');
-    expect(within(brief).getByText('Partial source coverage')).toBeInTheDocument();
+    expect(reviewKpis().getByText('Partial source coverage')).toBeInTheDocument();
     expect(within(brief).getByText('2')).toBeInTheDocument();
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    expect(reviewKpis().getByText('3 empty fields are hidden.')).toBeInTheDocument();
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
   });
 
@@ -641,7 +648,7 @@ describe('VehicleAccessPage — independent summary trust', () => {
     expect(brief).not.toHaveAttribute('aria-busy');
     expect(within(brief).getByText('5')).toBeInTheDocument();
     expect(within(brief).getByText('3')).toBeInTheDocument();
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+    expect(reviewKpis().getByText('1 empty field is hidden.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy invite link' })).toBeInTheDocument();
   });
 
@@ -650,8 +657,8 @@ describe('VehicleAccessPage — independent summary trust', () => {
     mockInvitations.mockReturnValue(makeQuery({ isError: true, error: new Error('invitation load failed') }));
     renderPage();
     const brief = kpiRegion();
-    expect(within(brief).getByText('Source unavailable')).toBeInTheDocument();
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(reviewKpis().getByText('Source unavailable')).toBeInTheDocument();
+    expect(reviewKpis().getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(within(brief).queryByText('0')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh drivers' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh invitations' })).toBeInTheDocument();

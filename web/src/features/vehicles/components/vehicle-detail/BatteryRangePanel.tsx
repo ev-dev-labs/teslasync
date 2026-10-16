@@ -59,7 +59,7 @@ export function BatteryRangePanel({ state, sourceQuery }: BatteryRangePanelProps
             size={140}
           />
         </div>
-        <OperationalBrief compact testId="vehicle-live-overview-summary"
+          <OperationalBrief compact variant="embedded" testId="vehicle-live-overview-summary"
           className="w-full min-w-0 flex-1" {...summary.brief}
           eyebrow={t('vehicles.detail.overview', 'Live overview')}
           title={t('vehicles.detail.brief.overviewTitle', 'Range and charging')}

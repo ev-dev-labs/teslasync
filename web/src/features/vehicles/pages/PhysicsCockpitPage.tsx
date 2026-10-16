@@ -122,6 +122,7 @@ export default function PhysicsCockpitPage() {
         emptyContent={pendingContent(cockpitState, cockpitQuery)}
       >
         <VehicleEvidenceBrief refreshFailed={cockpitState.refreshError != null}
+          variant="embedded"
           id="physics-cockpit-readings"
           title={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')}
           description={t('vehicles.physicsCockpit.briefDescription', 'Independently reported cockpit measurements; a missing field is unknown, not zero.')}
@@ -147,6 +148,7 @@ export default function PhysicsCockpitPage() {
         >
         {heartbeat && <>
           <VehicleEvidenceBrief refreshFailed={heartbeatState.refreshError != null} id="physics-heartbeat-readings"
+            variant="embedded"
             title={t('vehicles.physicsCockpit.heartbeatBrief', 'Trip-meter evidence')}
             description={heartbeat.honesty}
             status={heartbeatState.status}
@@ -184,6 +186,7 @@ export default function PhysicsCockpitPage() {
         >
         {cockpit?.park ? <>
           <VehicleEvidenceBrief refreshFailed={cockpitState.refreshError != null} id="physics-park-readings"
+            variant="embedded"
             title={t('vehicles.physicsCockpit.parkBrief', 'Park accounting evidence')}
             description={cockpit.park.honesty}
             status={cockpitState.status}

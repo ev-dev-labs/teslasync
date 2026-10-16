@@ -14,6 +14,7 @@ import {
   PanelTitle,
   Text,
   Icon,
+  IconButton,
   type BadgeProps,
   type Column,
 } from '@/components/ui';
@@ -337,17 +338,13 @@ export default function VehicleAccessPage() {
                   <Badge variant="neutral">{fmtInt(driversList.length)}</Badge>
                 )}
               </div>
-              <Button
-                variant="ghost"
-                onClick={() => vehicleId && refreshDrivers.mutate(vehicleId)}
-                loading={refreshDrivers.isPending}
+              <IconButton
+                icon={<Icon icon={RefreshCw} />}
+                label={t('vehicleAccess.drivers.refresh', 'Refresh drivers')}
                 aria-label={t('vehicleAccess.drivers.refresh', 'Refresh drivers')}
-                wrapLabel
-                className="min-h-11 min-w-11 md:min-h-10"
-              >
-                <Icon icon={RefreshCw} />
-                <span className="hidden sm:inline">{t('vehicleAccess.refresh', 'Refresh')}</span>
-              </Button>
+                busy={refreshDrivers.isPending}
+                onClick={() => { if (vehicleId) refreshDrivers.mutate(vehicleId); }}
+              />
             </div>
 
             {!driversState.hasData && !driversState.fatalError ? (
@@ -363,9 +360,14 @@ export default function VehicleAccessPage() {
                 resourceName={t('vehicleAccess.drivers.resource', 'Drivers')}
               />
             ) : driversList.length === 0 ? (
-              <EmptyState /* no-action: transient empty state — surfaces when Tesla has no shared drivers; user can Refresh above */
+              <EmptyState
                 icon={<Icon icon={Users} size="xl" />}
                 message={t('vehicleAccess.drivers.empty', 'No drivers found. Refresh to sync from Tesla.')}
+                action={{
+                  label: t('common.refresh', 'Refresh'),
+                  onClick: () => { if (vehicleId) refreshDrivers.mutate(vehicleId); },
+                  loading: refreshDrivers.isPending,
+                }}
               />
             ) : (
               <DataTable
@@ -405,17 +407,13 @@ export default function VehicleAccessPage() {
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => vehicleId && refreshInvitations.mutate(vehicleId)}
-                loading={refreshInvitations.isPending}
+              <IconButton
+                icon={<Icon icon={RefreshCw} />}
+                label={t('vehicleAccess.invitations.refresh', 'Refresh invitations')}
                 aria-label={t('vehicleAccess.invitations.refresh', 'Refresh invitations')}
-                wrapLabel
-                className="min-h-11 min-w-11 md:min-h-10"
-              >
-                <Icon icon={RefreshCw} />
-                <span className="hidden sm:inline">{t('vehicleAccess.refresh', 'Refresh')}</span>
-              </Button>
+                busy={refreshInvitations.isPending}
+                onClick={() => { if (vehicleId) refreshInvitations.mutate(vehicleId); }}
+              />
               <Button
                 onClick={() => vehicleId && createInvitation.mutate(vehicleId)}
                 loading={createInvitation.isPending}
@@ -442,9 +440,14 @@ export default function VehicleAccessPage() {
               resourceName={t('vehicleAccess.invitations.resource', 'Invitations')}
             />
           ) : invitationsList.length === 0 ? (
-            <EmptyState /* no-action: transient empty state — surfaces before any invitation is created; user can Invite Driver above */
+            <EmptyState
               icon={<Icon icon={Mail} size="xl" />}
               message={t('vehicleAccess.invitations.empty', 'No invitations yet. Create one to share vehicle access.')}
+              action={{
+                label: t('vehicleAccess.invitations.createBtn', 'Invite driver'),
+                onClick: () => { if (vehicleId) createInvitation.mutate(vehicleId); },
+                loading: createInvitation.isPending,
+              }}
             />
           ) : (
             <DataTable

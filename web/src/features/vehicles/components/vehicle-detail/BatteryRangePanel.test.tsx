@@ -16,7 +16,7 @@
 //   4. a11y: every decorative lucide icon is marked aria-hidden.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { fireEvent, render, screen, within, cleanup } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import type { VehicleState } from '@/api/types'
 
@@ -58,8 +58,13 @@ vi.mock('react-i18next', async () => {
           typeof fallbackOrOpts === 'object' && fallbackOrOpts !== null
             ? (fallbackOrOpts as Record<string, unknown>)
             : (maybeOpts as Record<string, unknown> | undefined)
-        if (opts && typeof opts.defaultValue === 'string') return opts.defaultValue as string
-        let out = fallback ?? key
+        const count = opts?.count
+        const pluralFallback = count === 1 && typeof opts?.defaultValue_one === 'string'
+          ? opts.defaultValue_one
+          : count !== 1 && typeof opts?.defaultValue_other === 'string'
+            ? opts.defaultValue_other
+            : undefined
+        let out = typeof pluralFallback === 'string' ? pluralFallback : fallback ?? key
         if (opts) {
           for (const [k, v] of Object.entries(opts)) {
             out = out.replace(`{{${k}}}`, String(v))
@@ -170,12 +175,14 @@ describe('BatteryRangePanel — range metrics', () => {
     expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(3)
   })
 
-  it('renders an em dash when a range value is missing', () => {
+  it('hides a missing range value and retains its reason in the details drawer', () => {
     render(<BatteryRangePanel state={makeState({ rated_range: undefined })} />)
 
     expect(mockFormatDistance).not.toHaveBeenCalledWith(undefined)
-    // The Rated Range card body falls back to the formatter's em dash.
-    expect(screen.getByText('Rated range').closest('[data-operational-metric]')).toHaveTextContent('—')
+    expect(screen.queryByText('Rated range')).toBeNull()
+    const brief = screen.getByTestId('vehicle-live-overview-summary')
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('1 empty field is hidden.')
   })
 })
 
@@ -184,7 +191,8 @@ describe('BatteryRangePanel — charging state', () => {
     render(<BatteryRangePanel state={makeState({ is_charging: true, charge_rate: 48 })} />)
 
     expect(mockFormatDistance).toHaveBeenCalledWith(48)
-    expect(screen.getByText('0.05 km/h')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('0.05 km/h')
   })
 
   it('shows "Not Charging" when idle and never formats the charge rate', () => {
@@ -202,7 +210,8 @@ describe('BatteryRangePanel — charging state', () => {
       />,
     )
 
-    expect(screen.getByText('Full in 1.50h')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('Full in 1.50h')
   })
 
   it('omits the subtitle when charging but the ETA is zero', () => {
@@ -234,6 +243,6 @@ describe('BatteryRangePanel — accessibility', () => {
     // Navigation + MapPin + BatteryCharging and the shared review action are decorative; the gauge's own
     // <svg> is intentionally NOT hidden (it carries the visible readout).
     const hidden = container.querySelectorAll('svg[aria-hidden="true"]')
-    expect(hidden).toHaveLength(4)
+    expect(hidden).toHaveLength(1)
   })
 })

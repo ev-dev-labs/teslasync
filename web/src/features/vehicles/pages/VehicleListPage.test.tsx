@@ -422,6 +422,12 @@ function briefMetric(label: string): HTMLElement {
   return tile as HTMLElement;
 }
 
+function fleetBriefDetails() {
+  const brief = screen.getByTestId('fleet-operational-brief');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  return within(screen.getByRole('dialog'));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
@@ -480,7 +486,7 @@ describe('VehicleListPage — happy path', () => {
     // 3 registered vehicles: V3 has no snapshot and cannot be judged ready or
     // not ready.
     expect(within(readinessMetric as HTMLElement).getByText('2/2')).toBeInTheDocument();
-    expect(within(readinessMetric as HTMLElement).getByText(
+    expect(fleetBriefDetails().getByText(
       /Based on 2 of 3 vehicles with a current battery reading/,
     )).toBeInTheDocument();
     expect(within(posture).getByText('Live utilization')).toBeInTheDocument();
@@ -488,7 +494,7 @@ describe('VehicleListPage — happy path', () => {
     expect(within(posture).getByText('100.00%')).toBeInTheDocument();
     expect(within(posture).getByText('Software posture')).toBeInTheDocument();
     expect(within(posture).getByText('2 versions')).toBeInTheDocument();
-    expect(within(posture).getByText(
+    expect(fleetBriefDetails().getByText(
       'Based on 2 of 3 vehicles with a current software reading.',
     )).toBeInTheDocument();
     expect(within(posture).getByText('Service attention')).toBeInTheDocument();
@@ -498,7 +504,7 @@ describe('VehicleListPage — happy path', () => {
     const header = document.querySelector('header') as HTMLElement;
     expect(within(header).getByText('just now')).toBeInTheDocument();
     expect(within(posture).queryByRole('button', { name: /Source: / })).toBeNull();
-    expect(within(posture).getByText('Historical')).toBeInTheDocument();
+    expect(fleetBriefDetails().getByText('Historical')).toBeInTheDocument();
 
     // Every vehicle gets a card, each with its derived status badge.
     const grid = cardGrid();
@@ -1092,7 +1098,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
 
     // Pending live state stays neutral instead of briefly classifying every
     // registered vehicle as offline or reporting zero-valued fleet KPIs.
-    expect(screen.getByText('Resolving live state')).toBeInTheDocument();
+    expect(within(screen.getByTestId('fleet-operational-brief')).getByRole('button', { name: 'Review details' })).toBeInTheDocument();
     expect(screen.queryByText('3 vehicle unavailable')).not.toBeInTheDocument();
     expect(screen.queryByText('0 / 0')).not.toBeInTheDocument();
     // Every card still renders, each with the null-safe no-live-data placeholder.
@@ -1238,9 +1244,9 @@ describe('VehicleListPage — loading, error & empty states', () => {
     renderPage();
 
     const posture = screen.getByTestId('fleet-operational-brief');
-    expect(within(briefMetric('Live utilization')).getByText('—')).toBeInTheDocument();
-    expect(within(briefMetric('Departure ready')).getByText('—')).toBeInTheDocument();
-    expect(within(briefMetric('Live state available')).getByText('—')).toBeInTheDocument();
+    expect(within(posture).queryByText('Live utilization')).toBeNull();
+    expect(within(posture).queryByText('Departure ready')).toBeNull();
+    expect(within(posture).queryByText('Live state available')).toBeNull();
     expect(within(posture).queryByText('0%')).toBeNull();
     expect(within(posture).queryByText('0/3')).toBeNull();
   });
@@ -1252,8 +1258,8 @@ describe('VehicleListPage — loading, error & empty states', () => {
     renderPage();
 
     const posture = screen.getByTestId('fleet-operational-brief');
-    expect(within(briefMetric('Live utilization')).getByText('—')).toBeInTheDocument();
-    expect(within(briefMetric('Departure ready')).getByText('—')).toBeInTheDocument();
+    expect(within(posture).queryByText('Live utilization')).toBeNull();
+    expect(within(posture).queryByText('Departure ready')).toBeNull();
     expect(within(posture).queryByText('0%')).toBeNull();
   });
 
@@ -1266,7 +1272,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     // Only V1 has a fresh reading; it is charging ⇒ 1/1 covered = 100 %.
     expect(within(briefMetric('Live utilization')).getByText('100.00%')).toBeInTheDocument();
     expect(within(briefMetric('Departure ready')).getByText('1/1')).toBeInTheDocument();
-    expect(within(briefMetric('Departure ready')).getByText(
+    expect(fleetBriefDetails().getByText(
       /Based on 1 of 3 vehicles with a current battery reading/,
     )).toBeInTheDocument();
   });
@@ -1279,8 +1285,8 @@ describe('VehicleListPage — loading, error & empty states', () => {
     );
     renderPage();
 
-    expect(within(briefMetric('Live state available')).getByText('—')).toBeInTheDocument();
-    expect(within(briefMetric('Live utilization')).getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Live state available')).toBeNull();
+    expect(screen.queryByText('Live utilization')).toBeNull();
   });
 
   it('uses the same fresh-only population for software numerator and denominator', () => {
@@ -1289,12 +1295,9 @@ describe('VehicleListPage — loading, error & empty states', () => {
     );
     renderPage();
 
-    const software = within(briefMetric('Software posture'));
-    expect(software.getByText('—')).toBeInTheDocument();
-    expect(software.queryByText('2 versions')).toBeNull();
-    expect(software.getByText(
-      'Based on 0 of 3 vehicles with a current software reading.',
-    )).toBeInTheDocument();
+    expect(screen.queryByText('Software posture')).toBeNull();
+    expect(screen.queryByText('2 versions')).toBeNull();
+    expect(fleetBriefDetails().getByText(/empty fields are hidden/)).toBeInTheDocument();
   });
 
   it('does not raise a current low-battery alert from retained state', async () => {
@@ -1457,10 +1460,9 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(within(batteryPanel).getByText(/Last known: 80\.00% \(10m ago\) — not currently verified/))
       .toBeInTheDocument();
     expect(within(batteryPanel).queryByText(/Live battery readings have not arrived/)).toBeNull();
-    expect(within(briefMetric('Departure ready')).getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Departure ready')).toBeNull();
     const summary = screen.getByTestId('fleet-current-summary');
-    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]')).toBeNull();
     expect(screen.queryByRole('progressbar', { name: 'Charging' })).toBeNull();
     const warning = screen.getAllByTestId('stale-refresh-warning')
       .find(node => node.textContent?.includes('Live vehicle state'));
@@ -1583,18 +1585,17 @@ describe('VehicleListPage — loading, error & empty states', () => {
     );
     renderPage();
 
-    const posture = screen.getByTestId('fleet-operational-brief');
     // "unavailable" (we could not resolve it) — NOT "offline" (the car said so).
-    expect(within(posture).getByText('3 vehicle unavailable')).toBeInTheDocument();
-    expect(within(posture).getByText(
+    expect(fleetBriefDetails().getByText('3 vehicle unavailable')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getAllByText(
       'Live state could not be resolved. Verify connectivity before issuing commands.',
-    )).toBeInTheDocument();
+    ).length).toBeGreaterThan(0);
     // Nothing anywhere classifies the fleet's operational status.
     expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
     expect(screen.queryByRole('progressbar', { name: 'Online' })).toBeNull();
     // …and no derived KPI reports a zero as if it were a measurement.
-    expect(within(briefMetric('Live state available')).getByText('—')).toBeInTheDocument();
-    expect(within(briefMetric('Live utilization')).getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Live state available')).toBeNull();
+    expect(screen.queryByText('Live utilization')).toBeNull();
   });
 
   it('keeps missing, failed and resolved distinct in one batch', () => {
@@ -1616,7 +1617,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
 
     // Coverage is disclosed on the derived KPI rather than diluted into it.
     expect(within(briefMetric('Departure ready')).getByText('1/1')).toBeInTheDocument();
-    expect(within(briefMetric('Departure ready')).getByText(
+    expect(fleetBriefDetails().getByText(
       /Based on 1 of 3 vehicles with a current battery reading/,
     )).toBeInTheDocument();
   });
@@ -1654,10 +1655,8 @@ describe('VehicleListPage — field and independent source qualification', () =>
     }] }));
     renderPage();
     const summary = screen.getByTestId('fleet-current-summary');
-    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]'))
-      .toHaveAttribute('data-value-state', 'missing');
-    expect(summary.querySelector('[data-operational-metric="fleet-total-range"]'))
-      .toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelector('[data-operational-metric="fleet-average-battery"]')).toBeNull();
+    expect(summary.querySelector('[data-operational-metric="fleet-total-range"]')).toBeNull();
     const grid = cardGrid();
     // Battery, range, odometer and charger power stay unknown (other fields may also show placeholders).
     expect(within(grid).getAllByText('—').length).toBeGreaterThanOrEqual(4);
@@ -1803,11 +1802,10 @@ describe('VehicleListPage — field and independent source qualification', () =>
   it('does not claim zero service work or fleet-ready status while work orders are pending', () => {
     mockFleetWorkOrders.mockReturnValue(qr({ isPending: true, isLoading: true }));
     renderPage();
-    expect(briefMetric('Service attention')).toHaveAttribute('data-value-state', 'missing');
-    expect(within(briefMetric('Service attention')).queryByText('0 open')).toBeNull();
-    expect(screen.getByText('Review recommended')).toBeInTheDocument();
+    expect(screen.queryByText('Service attention')).toBeNull();
+    expect(screen.queryByText('0 open')).toBeNull();
+    expect(fleetBriefDetails().getByText('Review recommended')).toBeInTheDocument();
     expect(screen.queryByText('Fleet ready')).toBeNull();
-    fireEvent.click(within(screen.getByTestId('fleet-operational-brief')).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText(/Unknown urgent work orders remain open/)).toBeInTheDocument();
     expect(within(drawer).queryByText(/0 open work orders were evaluated/)).toBeNull();
@@ -1821,7 +1819,7 @@ describe('VehicleListPage — field and independent source qualification', () =>
     }));
     renderPage();
     expect(within(briefMetric('Service attention')).getByText('1 open')).toBeInTheDocument();
-    expect(within(briefMetric('Service attention')).getByText(/1 loaded of 101 source records; offset 0, limit 100/)).toBeInTheDocument();
+    expect(fleetBriefDetails().getAllByText(/1 loaded of 101 source records; offset 0, limit 100/).length).toBeGreaterThan(0);
     const warning = screen.getAllByTestId('stale-refresh-warning')
       .find((element) => element.textContent?.includes('Fleet work orders may be out of date'));
     if (!warning) throw new Error('Missing retained work-order warning');
@@ -1829,7 +1827,6 @@ describe('VehicleListPage — field and independent source qualification', () =>
     expect(refetch).toHaveBeenCalledOnce();
     expect(within(cardGrid()).getByText('Model 3 Alpha')).toBeInTheDocument();
     expect(screen.queryByText('Fleet ready')).toBeNull();
-    fireEvent.click(within(screen.getByTestId('fleet-operational-brief')).getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog')).getAllByText(/1 loaded of 101 source records/).length).toBeGreaterThan(0);
     expect(within(screen.getByRole('dialog')).getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0);
   });

@@ -32,14 +32,16 @@ pm run build` passed (one existing CSS parse warning and a non-failing startup-J
 | 1 | `components/ui/IconButton.tsx`, shared tooltip, button | shared | IconButton | n/a | done | n/a | n/a | none | 1 | done |
 | 2 | shared widget header and freshness primitives | dashboard | WidgetShell | n/a | done | done | n/a | known polling cadences supplied by eight polling widgets; other shell data is manual | 2 | done |
 | 3 | `features/dashboard/widgets/**` | dashboard | all dashboard widgets | done | done | done | done | Quick Nav is static; shared header retouch and embedded overview brief verified | 2 | done |
-| 4 | `features/vehicles/**` | vehicle routes | evidence cards and repeated actions | in progress | in progress | in progress | in progress | per row | 1 | in progress |
+| 4 | `features/vehicles/**` | vehicle routes | evidence cards and repeated actions | done | done | done | done | per row | 2 | done |
 | 5 | `features/charging/**` | charging routes | evidence cards and nested panels | todo | todo | todo | todo | per row | 0 | todo |
 | 6 | remaining `features/*/**` | all remaining routes | evidence cards, repeated actions, nested cards | todo | todo | todo | todo | per row | 0 | todo |
 | 7 | grep exit check, full gates and browser/e2e | app-wide | leftovers / summary | verify | verify | verify | verify | confirm | 0 | todo |
 
-Exit-check inventory: `rg -n '<(OperationalBrief|DashboardSourceBrief|ChargingSummaryBrief|VehicleEvidenceBrief)' web/src` and review each enclosing card, section surface, or widget for `variant="embedded"` or removal of the outer surface. Check tile row caps with `rg -n 'maxPerRow|data-max-per-row' web/src`; six-tile groups should use three per row and short rows must remain balanced.
+Exit-check inventory: `rg -n '<(OperationalBrief|DashboardSourceBrief|ChargingSummaryBrief|VehicleEvidenceBrief)' web/src` and review each enclosing card, section surface, or widget for `variant="embedded"` or removal of the outer surface. Check tile row caps with `rg -n 'maxPerRow|data-max-per-row' web/src`; six-tile groups should use three per row and short rows must remain balanced. Trace composed component parents for every brief and similar card, not only its immediate JSX file. Validate every metric grid's `maxPerRow` cap and balanced rows; six tiles should render 3 + 3, with no orphan tile row.
 
 ## Progress checkpoints
+
+- Row 4 complete: vehicle evidence panels, Tesla Physics, Vehicle List, vehicle detail, access, and cockpit summaries use the shared evidence-card patterns; missing values and drawer-only details are reflected in the regression assertions. The seven focused vehicle suites pass 239/239. Split catalog check, lint, typecheck, and production build pass. Browser screenshots at 375px, 768px, and desktop remain unavailable because this session has no in-app browser tool.
 
 - Row 1 complete: added IconButton with caller-provided accessible label, tooltip, variants, route-link mode, busy/disabled behavior and menu ARIA props. Focused suite passed 3/3; standalone typecheck, full lint, and production build passed. No catalog key was needed because every label is passed in by the caller.
 

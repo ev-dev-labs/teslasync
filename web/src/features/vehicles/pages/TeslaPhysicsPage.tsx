@@ -29,6 +29,7 @@ export default function TeslaPhysicsPage() {
     <LayoutCard title={slug ? t('teslaOnly.workbench.summary', 'Evidence at a glance') : t('teslaOnly.whereToStart', 'Where to start')}>
       {!slug && <Text as="p" variant="bodySm">{t('teslaOnly.hubGuide', 'Choose a focused investigation. Each section explains its measurements, interpretation limits, related evidence, and optional timestamp-level drilldowns. Start by checking source coverage.')}</Text>}
       <VehicleEvidenceBrief id="tesla-physics-evidence-summary" refreshFailed={physics.state.refreshError != null}
+        variant="embedded"
         title={t('teslaOnly.returnedEvidence', 'Returned evidence')}
         description={t('teslaOnly.zeroScope', 'A zero means no finding in the returned evidence, not proof that nothing happened outside the observed window.')}
         status={summaryStatus}

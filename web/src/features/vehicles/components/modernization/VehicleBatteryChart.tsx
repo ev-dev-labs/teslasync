@@ -55,7 +55,7 @@ export function VehicleBatteryChart({ state, height: heightOverride }: { state: 
           tone={batteryLevel == null ? 'neutral' : batteryLevel > 60 ? 'success' : batteryLevel > 25 ? 'warning' : 'danger'}
           size={100} className="w-32 shrink-0" />
         <div className="min-w-0 flex-1 basis-48">
-          <OperationalBrief compact testId="vehicle-battery-readouts"
+          <OperationalBrief compact variant="embedded" testId="vehicle-battery-readouts"
             eyebrow={t('vehicles.evidenceBrief.eyebrow', 'Vehicle evidence')}
             title={t('vehicles.detail.batteryReadouts', 'Returned battery readouts')}
             description={t('vehicles.detail.batteryReadoutContext', 'Battery and rated range from the supplied vehicle-state snapshot; the retained gauge and bar plot keep their original chart semantics.')}

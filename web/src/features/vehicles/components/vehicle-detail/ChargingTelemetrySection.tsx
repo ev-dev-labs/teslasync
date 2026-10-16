@@ -42,7 +42,7 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
         {t('vehicles.detail.chargingTelemetry', 'Charging telemetry')}
       </PanelTitle>
       {chargingTelemetry ? (
-        <OperationalBrief compact testId="vehicle-charging-telemetry-brief"
+        <OperationalBrief compact variant="embedded" testId="vehicle-charging-telemetry-brief"
           eyebrow={t('vehicles.evidenceBrief.eyebrow', 'Vehicle evidence')}
           title={t('vehicles.detail.chargingSnapshotTitle', 'Returned charging measurements')}
           description={t('vehicles.detail.chargingSnapshotDescription', 'Independent charging snapshot; source refresh warnings remain in the surrounding panel. Range-addition rate is not vehicle speed.')}
@@ -55,9 +55,11 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
             <Activity className="h-4 w-4" aria-hidden="true" /><Zap className="h-4 w-4" aria-hidden="true" />
           </span>{context}</>} />
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        <EmptyState
+          variant="informational"
           icon={<Zap className="h-8 w-8" aria-hidden="true" />}
           message={t('vehicles.detail.noChargingTelemetry', 'No charging telemetry available')}
+          description={t('vehicles.detail.chargingTelemetryAppears', 'Charging telemetry will appear when the vehicle reports a charging session.')}
         />
       )}
     </GlassPanel>

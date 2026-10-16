@@ -14,12 +14,14 @@ interface VehicleEvidenceBriefProps {
   provenance: string;
   freshness?: ReactNode;
   loading?: boolean;
+  variant?: 'standalone' | 'embedded';
   /** True only when retained data follows an actual refresh error (not a pause). */
   refreshFailed?: boolean;
 }
 
 export function VehicleEvidenceBrief({
   id, title, description, metrics: sourceMetrics, status, scope, provenance, freshness, loading, refreshFailed = false,
+  variant = 'standalone',
 }: VehicleEvidenceBriefProps) {
   const { t } = useTranslation();
   const bridgedMetrics = useOperationalMetrics(sourceMetrics);
@@ -40,7 +42,7 @@ export function VehicleEvidenceBrief({
     unavailable: t('vehicles.evidenceBrief.status.unavailable', 'No source data'),
     initialFailure: t('vehicles.evidenceBrief.status.initialFailure', 'Source unavailable'),
   };
-  return <OperationalBrief compact testId={id}
+  return <OperationalBrief compact variant={variant} testId={id}
     eyebrow={t('vehicles.evidenceBrief.eyebrow', 'Vehicle evidence')}
     title={title} description={description}
     statusLabel={labels[status]}

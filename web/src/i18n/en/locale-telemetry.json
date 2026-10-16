@@ -851,6 +851,7 @@
     "batteryLevel": "Battery level",
     "chargeRate": "Charge rate",
     "noChargingTelemetry": "No charging telemetry available",
+    "chargingTelemetryAppears": "Charging telemetry will appear when the vehicle reports a charging session.",
     "mediaNav": "Media & navigation",
     "shiftState": "Shift state",
     "power": "Power",

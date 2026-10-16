@@ -313,7 +313,12 @@ describe('PhysicsCockpitPage', () => {
     expect(screen.getByText('0 km/h')).toBeVisible();
     expect(screen.getByText('Confirmed park')).toBeVisible();
     expect(screen.getByText(certificate.rules)).toBeVisible();
-    expect(screen.getAllByText('Retained after refresh failure')).toHaveLength(3);
+    for (const id of ['physics-cockpit-readings', 'physics-heartbeat-readings', 'physics-park-readings']) {
+      const brief = screen.getByTestId(id);
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      expect(within(screen.getByRole('dialog')).getByText('Retained after refresh failure')).toBeInTheDocument();
+      fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Close' })[0]);
+    }
 
     h.cockpitError = null;
     h.heartbeatError = null;
@@ -374,15 +379,22 @@ describe('PhysicsCockpitPage', () => {
     renderPage();
     expect(screen.getByText('Tesla physics cockpit')).toBeInTheDocument();
     expect(screen.getByText('Disconnected')).toBeInTheDocument();
-    expect(screen.getByText(/398\.00 V/)).toBeInTheDocument();
-    expect(screen.getByText('FSD trip meter — not an engagement flag')).toBeInTheDocument();
-    expect(screen.getByText('No trip-meter tick in the recent window')).toBeInTheDocument();
-    expect(screen.getByText('Confirmed park')).toBeInTheDocument();
-    expect(screen.getByText('Sentry')).toBeInTheDocument();
-    expect(screen.getByText('Preconditioning reported, not counted')).toBeInTheDocument();
-    const caveat = screen.getByText(cockpit.honesty);
-    expect(caveat).toBeVisible();
-    expect(caveat.closest('[data-role="page-header"]')).toBeNull();
+    for (const id of ['physics-cockpit-readings', 'physics-heartbeat-readings', 'physics-park-readings']) {
+      const brief = screen.getByTestId(id);
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const drawer = within(screen.getAllByRole('dialog').at(-1)!);
+      if (id === 'physics-cockpit-readings') {
+        expect(drawer.getByText(/398\.00 V/)).toBeInTheDocument();
+      } else if (id === 'physics-heartbeat-readings') {
+        expect(drawer.getByText('No trip-meter tick in the recent window')).toBeInTheDocument();
+        expect(drawer.queryByText(/Last tick/)).toBeNull();
+      } else {
+        expect(drawer.getByText('Confirmed park')).toBeInTheDocument();
+        expect(drawer.getByText('Sentry')).toBeInTheDocument();
+        expect(drawer.getByText('Preconditioning reported, not counted')).toBeInTheDocument();
+      }
+      fireEvent.click(drawer.getAllByRole('button', { name: 'Close' }).at(-1)!);
+    }
   });
 
   it('keeps real zero speed numeric and reviews independently reported pack measurements', () => {
@@ -468,9 +480,13 @@ describe('PhysicsCockpitPage', () => {
     expect(screen.queryByText('0 km/h')).not.toBeInTheDocument();
     const brief = screen.getByTestId('physics-cockpit-readings');
     for (const id of ['battery', 'pack', 'current', 'energy', 'trip', 'speed']) {
-      expect(brief.querySelector(`[data-operational-metric="cockpit-${id}"]`)).toHaveAttribute('data-value-state', 'missing');
+      expect(brief.querySelector(`[data-operational-metric="cockpit-${id}"]`)).toBeNull();
     }
-    expect(screen.getByText('FSD trip meter — not an engagement flag')).toBeVisible();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getAllByRole('dialog').at(-1)).toHaveTextContent('6 empty fields are hidden.');
+    const heartbeat = screen.getByTestId('physics-heartbeat-readings');
+    fireEvent.click(within(heartbeat).getByRole('button', { name: 'Review details' }));
+    expect(screen.queryByText('FSD trip meter - not an engagement flag')).toBeNull();
   });
 
   it('preserves nullable rejection and certificate arrays without normalizing the exported evidence', () => {

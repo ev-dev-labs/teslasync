@@ -8,9 +8,16 @@ import { VehicleEvidenceBrief } from './VehicleEvidenceBrief';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string, values?: Record<string, unknown>) =>
-      Object.entries(values ?? {}).reduce((text, [name, value]) =>
-        text.replaceAll(`{{${name}}}`, String(value)), fallback ?? key),
+    t: (key: string, fallback?: string, values?: Record<string, unknown>) => {
+      const count = values?.count
+      const pluralFallback = count === 1 && typeof values?.defaultValue_one === 'string'
+        ? values.defaultValue_one
+        : count !== 1 && typeof values?.defaultValue_other === 'string'
+          ? values.defaultValue_other
+          : fallback ?? key
+      return Object.entries(values ?? {}).reduce((text, [name, value]) =>
+        text.replaceAll(`{{${name}}}`, String(value)), pluralFallback)
+    },
   }),
 }));
 vi.mock('@/hooks/useFormatting', () => ({
@@ -46,6 +53,11 @@ function renderBrief(status: DataStatus = 'ok') {
   return render(briefElement(status));
 }
 
+function openDetails(brief: HTMLElement) {
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog');
+}
+
 describe('VehicleEvidenceBrief raw operational bridge', () => {
   it('retains numeric raw inputs, signed specialist units, real zero counts and missing states', () => {
     const { result } = renderHook(() => useOperationalMetrics(metrics));
@@ -73,12 +85,12 @@ describe('VehicleEvidenceBrief raw operational bridge', () => {
     renderBrief('stale');
     const brief = screen.getByTestId('test-evidence');
     expect(brief).toHaveAttribute('data-operational-brief');
-    expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
-    expect(brief.querySelector('[data-operational-metric="energy"]')).toHaveAttribute('data-value-state', 'missing');
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
+    expect(brief.querySelector('[data-operational-metric="energy"]')).toBeNull();
+    const drawer = openDetails(brief);
+    expect(within(drawer).getByText('Retained source snapshots')).toBeInTheDocument();
+    expect(within(drawer).getByText('1 empty field is hidden.')).toBeInTheDocument();
     expect(within(drawer).getByText('Latest independently reported speed')).toBeInTheDocument();
-    expect(within(drawer).getByText('Not reported by the source')).toBeInTheDocument();
+    expect(within(drawer).queryByText('Not reported by the source')).not.toBeInTheDocument();
     expect(within(drawer).getByText('-1.25 A')).toBeInTheDocument();
     expect(within(drawer).getByText('0/4')).toBeInTheDocument();
   });
@@ -98,9 +110,11 @@ describe('VehicleEvidenceBrief raw operational bridge', () => {
     render(briefElement(state.status, unknownMetrics, false));
     const brief = screen.getByTestId('test-evidence');
     expect(brief).not.toHaveAttribute('aria-busy');
-    expect(within(brief).getByText('Pending')).toBeInTheDocument();
-    expect(within(brief).queryByText('Loading source')).not.toBeInTheDocument();
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
+    const drawer = openDetails(brief);
+    expect(within(drawer).getByText('Pending')).toBeInTheDocument();
+    expect(within(drawer).queryByText('Loading source')).not.toBeInTheDocument();
+    expect(within(drawer).getByText('4 empty fields are hidden.')).toBeInTheDocument();
     expect(within(brief).queryByText(/failure|unavailable/i)).not.toBeInTheDocument();
     expect(within(brief).queryByText('0.00 mph')).not.toBeInTheDocument();
   });
@@ -111,18 +125,19 @@ describe('VehicleEvidenceBrief raw operational bridge', () => {
       { metricId: 'count', occurrenceId: 'records', label: 'Returned records', rawValue: state.data?.length },
     ]));
     const brief = screen.getByTestId('test-evidence');
-    expect(within(brief).getByText('Source returned')).toBeInTheDocument();
     expect(brief).not.toHaveAttribute('aria-busy');
     expect(brief.querySelector('[data-value-state="value"]')).toBeInTheDocument();
     expect(within(brief).getByText('0')).toBeInTheDocument();
+    expect(within(openDetails(brief)).getByText('Source returned')).toBeInTheDocument();
   });
 
   it('keeps an authoritatively empty source distinct from a pending source', () => {
     const state = deriveDataState({ data: [], isSuccess: true }, { unavailable: true });
     render(briefElement(state.status, []));
     const brief = screen.getByTestId('test-evidence');
-    expect(within(brief).getByText('No source data')).toBeInTheDocument();
-    expect(within(brief).queryByText('Pending')).not.toBeInTheDocument();
+    const drawer = openDetails(brief);
+    expect(within(drawer).getByText('No source data')).toBeInTheDocument();
+    expect(within(drawer).queryByText('Pending')).not.toBeInTheDocument();
     expect(brief).not.toHaveAttribute('aria-busy');
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
   });
@@ -140,16 +155,15 @@ describe('VehicleEvidenceBrief raw operational bridge', () => {
       expect(state.refreshError != null).toBe(cause === 'failed');
       const { rerender } = render(briefElement(state.status, state.data));
       const brief = screen.getByTestId('test-evidence');
-      expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
       expect(within(brief).queryByText(/failure/i)).not.toBeInTheDocument();
       expect(within(brief).getByText('0.00 mph')).toBeInTheDocument();
       expect(brief).not.toHaveAttribute('aria-busy');
+      expect(within(openDetails(brief)).getByText('Retained source snapshots')).toBeInTheDocument();
 
       const recovered = deriveDataState({ data: metrics, isSuccess: true });
       rerender(briefElement(recovered.status, recovered.data));
-      expect(within(brief).getByText('Source returned')).toBeInTheDocument();
-      expect(within(brief).queryByText('Retained source snapshots')).not.toBeInTheDocument();
       expect(within(brief).getByText('0.00 mph')).toBeInTheDocument();
+      expect(within(openDetails(brief)).getByText('Source returned')).toBeInTheDocument();
     },
   );
 });
