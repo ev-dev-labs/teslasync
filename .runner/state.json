@@ -11219,10 +11219,10 @@
       "web\\src\\features\\intelligence-packs\\components\\PackDetailModal.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f01 | Missing dependencies prevented regression execution and TypeScript verification | done so far: updated web\\src\\features\\intelligence-packs\\hooks\\usePackVerification.ts, web\\src\\features\\intelligence-packs\\components\\PackDetailModal.tsx, added web\\src\\features\\intelligence-packs\\components\\__tests__\\PackEnvelopeIdentity.test.tsx Attempt 2: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f01 | Missing dependencies and locked Rollup native module prevented regression execution and TypeScript verification | done so far: inspected prior implementation and colocated regression; no source changes made",
+    "Notes": "Attempt 1: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f01 | Missing dependencies prevented regression execution and TypeScript verification | done so far: updated web\\src\\features\\intelligence-packs\\hooks\\usePackVerification.ts, web\\src\\features\\intelligence-packs\\components\\PackDetailModal.tsx, added web\\src\\features\\intelligence-packs\\components\\__tests__\\PackEnvelopeIdentity.test.tsx Attempt 2: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f01 | Missing dependencies and locked Rollup native module prevented regression execution and TypeScript verification | done so far: inspected prior implementation and colocated regression; no source changes made Focused intelligence-pack regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11236,10 +11236,10 @@
       "web\\src\\features\\intelligence-packs\\lib\\__tests__\\packRepository.test.ts"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f07 | tests and typecheck blocked by missing dependencies; npm ci failed ENOTEMPTY | done so far: updated kvStore.ts, packRepository.ts and both focused test files with error propagation and regressions Attempt 2: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f07 | verification blocked by missing dependencies and EBUSY during restoration | done so far: confirmed existing error propagation and regression tests in all four expected files; no source edits",
+    "Notes": "Attempt 1: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f07 | tests and typecheck blocked by missing dependencies; npm ci failed ENOTEMPTY | done so far: updated kvStore.ts, packRepository.ts and both focused test files with error propagation and regressions Attempt 2: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f07 | verification blocked by missing dependencies and EBUSY during restoration | done so far: confirmed existing error propagation and regression tests in all four expected files; no source edits Focused intelligence-pack regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11269,10 +11269,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused intelligence-pack regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11289,10 +11289,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused intelligence-pack regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11306,10 +11306,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused intelligence-pack regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11321,10 +11321,10 @@
       "web\\src\\features\\intelligence-packs\\components\\__tests__\\SandboxPreviewPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f04 | verification blocked by missing dependencies and Windows file locks | done so far: updated web\\src\\features\\intelligence-packs\\components\\SandboxPreviewPanel.tsx and web\\src\\features\\intelligence-packs\\components\\__tests__\\SandboxPreviewPanel.test.tsx Attempt 2: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f04 | verification blocked by missing dependencies and Windows file locks | done so far: inspected and preserved prior implementation and tests; attempted dependency restoration and reran required tests",
+    "Notes": "Attempt 1: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f04 | verification blocked by missing dependencies and Windows file locks | done so far: updated web\\src\\features\\intelligence-packs\\components\\SandboxPreviewPanel.tsx and web\\src\\features\\intelligence-packs\\components\\__tests__\\SandboxPreviewPanel.test.tsx Attempt 2: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f04 | verification blocked by missing dependencies and Windows file locks | done so far: inspected and preserved prior implementation and tests; attempted dependency restoration and reran required tests Retry failed: SandboxPreviewPanel.test.tsx has 7 failures, all charts throw Recharts “Could not find Recharts context” from the test render.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11354,10 +11354,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused intelligence-pack regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11370,10 +11370,10 @@
       "web\\src\\features\\intelligence-packs\\components\\__tests__\\badges.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f10 | validation blocked by missing Vite and TypeScript dependencies | done so far: updated PublisherFingerprintDisplay.tsx, CatalogCard.tsx, and badges.test.tsx with signature-state handling and regression coverage Attempt 2: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f10 | required test blocked by missing Vitest and dependency restoration EBUSY | done so far: existing signature-state handling and regression coverage inspected; no source changes made",
+    "Notes": "Attempt 1: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f10 | validation blocked by missing Vite and TypeScript dependencies | done so far: updated PublisherFingerprintDisplay.tsx, CatalogCard.tsx, and badges.test.tsx with signature-state handling and regression coverage Attempt 2: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f10 | required test blocked by missing Vitest and dependency restoration EBUSY | done so far: existing signature-state handling and regression coverage inspected; no source changes made Focused intelligence-pack regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11417,10 +11417,10 @@
       "web\\src\\features\\intelligence-packs\\components\\__tests__\\SandboxPreviewPanel.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f13 | verification blocked by missing dependencies and locked Rollup module | done so far: updated SandboxPreviewPanel.tsx and SandboxPreviewPanel.test.tsx with palette consumption and focused regression coverage Attempt 2: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f13 | Required test blocked: Vitest missing; dependency restoration failed with locked Rollup module (EPERM), then ENOENT | done so far: confirmed existing palette consumption and populated-series regression coverage; no source changes made",
+    "Notes": "Attempt 1: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f13 | verification blocked by missing dependencies and locked Rollup module | done so far: updated SandboxPreviewPanel.tsx and SandboxPreviewPanel.test.tsx with palette consumption and focused regression coverage Attempt 2: FAILED | fix-intelligence-packs-intelligence-pack-marketplace-f13 | Required test blocked: Vitest missing; dependency restoration failed with locked Rollup module (EPERM), then ENOENT | done so far: confirmed existing palette consumption and populated-series regression coverage; no source changes made Retry failed: SandboxPreviewPanel.test.tsx has 7 failures, all charts throw Recharts “Could not find Recharts context” from the test render.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11443,10 +11443,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "failed",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Retry failed: SandboxPreviewPanel.test.tsx has 7 failures, all charts throw Recharts “Could not find Recharts context” from the test render.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -11463,10 +11463,10 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": "Focused intelligence-pack regression suite passed.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
