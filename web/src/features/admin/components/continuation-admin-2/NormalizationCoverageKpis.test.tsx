@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -63,7 +64,7 @@ describe('NormalizationCoverageKpis', () => {
     expect(screen.getByTestId('normalization-coverage-summary')).toHaveAttribute('aria-busy', 'true');
     rerender(<MemoryRouter><NormalizationCoverageKpis {...props} loading hasSnapshot retained /></MemoryRouter>);
     expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
-    expect(screen.getByTestId('normalization-coverage-summary')).toHaveTextContent('Retained source');
+    assertOperationalBriefDisclosure(screen.getByTestId('normalization-coverage-summary'), 'Retained source', { contains: true });
   });
   it('opens the shared Review details drawer with the coverage scope still present', () => {
     render(<MemoryRouter><NormalizationCoverageKpis normalization={undefined} fields={[]}

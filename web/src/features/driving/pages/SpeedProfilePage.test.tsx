@@ -34,6 +34,7 @@
  * web/package.json) — interactions use fireEvent, consistent with the other
  * page tests.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -1011,7 +1012,7 @@ describe('SpeedProfilePage source-unit and insight regressions', () => {
       drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: DRIVES }));
       view.rerenderPage();
       expectLabels();
-      expect(within(screen.getByTestId('speed-profile-brief')).getByText('Source available')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(screen.getByTestId('speed-profile-brief'), 'Source available');
       expect(card().getByText('10.80 km/h')).toBeInTheDocument();
       expect(card().getByText('120.00')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();

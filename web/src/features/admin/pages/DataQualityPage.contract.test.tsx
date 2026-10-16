@@ -125,7 +125,7 @@ describe('DataQualityPage source-status contract', () => {
     expect(screen.queryByText('Feature not supported')).not.toBeInTheDocument();
     expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
     expect(container.querySelector('[data-data-state="unavailable"]')).toBeNull();
-    expect(screen.getByTestId('normalization-coverage-summary')).toHaveTextContent('Retained source');
+    assertOperationalBriefDisclosure(screen.getByTestId('normalization-coverage-summary'), 'Retained source', { contains: true });
     expect(screen.getByRole('table', { name: 'Per-field quality and provenance' })).toHaveTextContent('VehicleSpeed');
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry unavailable sources' })).toBeInTheDocument();
@@ -155,7 +155,7 @@ describe('DataQualityPage source-status contract', () => {
     expectSections();
     expect(screen.queryByText('Feature not supported')).not.toBeInTheDocument();
     expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
-    expect(screen.getByTestId('normalization-coverage-summary')).toHaveTextContent('Retained source');
+    assertOperationalBriefDisclosure(screen.getByTestId('normalization-coverage-summary'), 'Retained source', { contains: true });
     expect(screen.getByRole('table', { name: 'Per-field quality and provenance' })).toHaveTextContent('VehicleSpeed');
     expect(screen.getByRole('button', { name: 'Retry unavailable sources' })).toBeInTheDocument();
   });

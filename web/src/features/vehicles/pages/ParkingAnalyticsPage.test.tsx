@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -303,7 +304,7 @@ describe('ParkingAnalyticsPage', () => {
     render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
 
     const brief = screen.getByTestId('parking-summary');
-    expect(brief).toHaveTextContent('Retained source');
+    assertOperationalBriefDisclosure(brief, 'Retained source', { contains: true });
     expect(brief).not.toHaveTextContent('Partial source coverage');
     const warning = screen.getByTestId('stale-refresh-warning');
     fireEvent.click(within(warning).getByRole('button'));

@@ -8,6 +8,7 @@
  * render for real.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
@@ -374,7 +375,7 @@ describe('TariffLabPage — publication retention', () => {
       await waitFor(() => expect(replay.requests).toHaveLength(1));
       act(() => replay.requests[0].reject(new Error('initial replay unavailable')));
       await waitFor(() => expect(card('Arbitrage summary')).toHaveTextContent('Source unavailable'));
-      expect(card('Arbitrage summary')).not.toHaveTextContent('Retained source');
+      assertOperationalBriefDisclosure(card('Arbitrage summary'), 'Retained source', { absent: true, contains: true });
       expect(replayValues().every(metric => metric.state === 'missing')).toBe(true);
       expect(screen.getByText('initial replay unavailable')).toBeVisible();
       expect(screen.getByRole('button', { name: 'Replay load against plans' })).toBeEnabled();

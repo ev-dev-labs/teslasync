@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -287,7 +288,7 @@ describe('ArrivalReliabilityPage', () => {
         refresh === 'failed' ? 'Retained source' : 'Refresh paused',
       )).toBeVisible();
       for (const brief of briefs().slice(1)) {
-        expect(within(brief).getAllByText('Retained source').length).toBeGreaterThan(0);
+        assertOperationalBriefDisclosure(brief, 'Retained source', { allMatches: true });
         expect(within(brief).queryByText('Returned evidence')).toBeNull();
       }
       const warning = refresh === 'failed'
@@ -312,7 +313,7 @@ describe('ArrivalReliabilityPage', () => {
         view.rerenderPage();
         expect(quantities()).toEqual(original);
         for (const brief of briefs().slice(1)) {
-          expect(within(brief).getAllByText('Retained source').length).toBeGreaterThan(0);
+          assertOperationalBriefDisclosure(brief, 'Retained source', { allMatches: true });
         }
         expect(screen.getAllByRole('alert')).toHaveLength(1);
         expect(screen.getByRole('button', { name: 'Updating…' })).toBeDisabled();
@@ -327,7 +328,7 @@ describe('ArrivalReliabilityPage', () => {
       expect(screen.queryByRole('alert')).toBeNull();
       expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
       for (const brief of briefs().slice(1)) {
-        expect(within(brief).getAllByText('Returned evidence').length).toBeGreaterThan(0);
+        assertOperationalBriefDisclosure(brief, 'Returned evidence', { allMatches: true });
       }
     },
   );

@@ -42,6 +42,7 @@
  * {{placeholder}} interpolation applied.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
@@ -428,15 +429,11 @@ function renderPage() {
   return { qc, ...render(buildTree(qc)) };
 }
 
-// Both the header action and the freshness chip expose the accessible name
-// "Refresh"; the header button is the only one whose visible text is
-// "Refresh" (the chip shows a relative timestamp).
+/** Scope the page command, keeping it distinct from the source-refresh dot. */
 function getHeaderRefresh(): HTMLElement {
-  const match = screen
-    .getAllByRole('button', { name: /^Refresh$/i })
-    .find((b) => b.textContent?.trim() === 'Refresh');
-  if (!match) throw new Error('header Refresh button not found');
-  return match;
+  const commands = document.querySelector<HTMLElement>('[data-role="page-header"] [data-action-group="secondary"]');
+  if (!commands) throw new Error('Page refresh command group not found');
+  return within(commands).getByRole('button', { name: /^Refresh$/i });
 }
 
 beforeEach(() => {
@@ -1142,8 +1139,8 @@ describe('NavigationRoutePage — heading cardinal (edge hardening)', () => {
       renderPage();
       await screen.findByText('No location snapshots recorded yet.');
       const brief = screen.getByRole('region', { name: 'Route metrics' });
-      expect(within(brief).getByText('Independent sources incomplete')).toBeInTheDocument();
-      expect(within(brief).queryByText('Source data available')).not.toBeInTheDocument();
+      assertOperationalBriefDisclosure(brief, 'Independent sources incomplete');
+      assertOperationalBriefDisclosure(brief, 'Source data available', { absent: true });
       expect(within(brief).getByText('5.00 km')).toBeInTheDocument();
     });
 

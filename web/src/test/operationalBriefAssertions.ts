@@ -13,18 +13,20 @@ function oneBrief(target: Element | null) {
 export function assertOperationalBriefDisclosure(
   target: Element | null,
   expected: string,
-  options: { absent?: boolean; contains?: boolean } = {},
+  options: { absent?: boolean; contains?: boolean; allMatches?: boolean; region?: 'drawer' } = {},
 ) {
   const brief = oneBrief(target);
   expect(screen.queryByRole('dialog'), 'Finish any open interaction before inspecting evidence').not.toBeInTheDocument();
   fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
   const dialog = screen.getByRole('dialog');
   try {
-    const header = dialog.querySelector<HTMLElement>('[data-drawer-header]');
+    const header = options.region === 'drawer' ? dialog : dialog.querySelector<HTMLElement>('[data-drawer-header]');
     if (!header) throw new Error('The real evidence drawer must expose its header');
     if (options.contains) {
       if (options.absent) expect(header).not.toHaveTextContent(expected);
       else expect(header).toHaveTextContent(expected);
+    } else if (options.allMatches) {
+      expect(within(header).getAllByText(expected).length).toBeGreaterThan(0);
     } else if (options.absent) {
       expect(within(header).queryByText(expected)).not.toBeInTheDocument();
     } else {

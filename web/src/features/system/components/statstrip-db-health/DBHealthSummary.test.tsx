@@ -80,7 +80,7 @@ describe('DB health canonical summary preservation', () => {
     });
     expect(screen.getByTestId('db-health-summary-0').querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(screen.getByTestId('db-health-summary-0')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByTestId('db-health-summary-1')).toHaveTextContent('Retained source');
+    assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-1'), 'Retained source', { contains: true });
     expect(screen.getByTestId('db-health-summary-1')).toHaveTextContent('185');
     expect(screen.getByTestId('db-health-summary-2')).toHaveTextContent('Source loaded');
     expect(screen.getByTestId('db-health-summary-2').querySelector('[data-operational-value]')).toHaveTextContent('20.00%');
@@ -189,7 +189,7 @@ describe('DB health canonical summary preservation', () => {
       expect(brief).not.toHaveTextContent(formatDateTime(timestamp, { locale: 'en-US', tz: 'UTC' }));
       expect(brief).not.toHaveTextContent('2030');
     });
-    expect(screen.getByTestId('db-health-summary-1')).toHaveTextContent('Retained source');
+    assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-1'), 'Retained source', { contains: true });
     expect(screen.getByTestId('db-health-summary-1').querySelector('[data-operational-value]')).toHaveTextContent('185');
     assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-2'), 'Source unavailable', { contains: true });
     expect(container.querySelector('[data-operational-metric="db-pool-usage"]')).toHaveAttribute('data-value-state', 'missing');

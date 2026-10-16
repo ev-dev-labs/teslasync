@@ -454,7 +454,7 @@ describe('SegmentsPage pagination', () => {
     expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
     expect(screen.getByText('Dead heat')).toBeInTheDocument();
     const brief = screen.getByTestId('segment-ghost-brief');
-    expect(within(brief).getByText('Source available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Source available');
     expect(within(brief).getAllByText('0:00')).toHaveLength(2);
     expect(screen.getAllByText('Not enough shared telemetry to align these two attempts.')).toHaveLength(2);
 
@@ -462,8 +462,8 @@ describe('SegmentsPage pagination', () => {
     view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(screen.getByText('Dead heat')).toBeInTheDocument();
-    expect(within(brief).getByText('Retained source')).toBeInTheDocument();
-    expect(within(brief).queryByText('Source available')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained source');
+    assertOperationalBriefDisclosure(brief, 'Source available', { absent: true });
     expect(within(brief).getAllByText('0:00')).toHaveLength(2);
     fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
     expect(state.ghostRefetch).toHaveBeenCalledTimes(2);
@@ -471,8 +471,8 @@ describe('SegmentsPage pagination', () => {
     view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.getByText('Dead heat')).toBeInTheDocument();
-    expect(within(brief).getByText('Source available')).toBeInTheDocument();
-    expect(within(brief).queryByText('Retained source')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Source available');
+    assertOperationalBriefDisclosure(brief, 'Retained source', { absent: true });
   });
 
   it.each(['failed', 'paused'] as const)('preserves ghost metrics and one shared notice during a %s refresh and recovery', (refresh) => {
@@ -495,13 +495,13 @@ describe('SegmentsPage pagination', () => {
     const view = renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Open leaderboard for Route 1' }));
     const brief = screen.getByTestId('segment-ghost-brief');
-    expect(within(brief).getByText('Source available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Source available');
 
     state.ghostError = refresh === 'failed' ? new Error('ghost refresh failed') : null;
     state.ghostFetchStatus = refresh === 'paused' ? 'paused' : 'idle';
     view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
-    expect(within(brief).getByText('Retained source')).toBeInTheDocument();
-    expect(within(brief).queryByText('Source available')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Retained source');
+    assertOperationalBriefDisclosure(brief, 'Source available', { absent: true });
     expect(within(brief).getByText('1:01')).toBeInTheDocument();
     expect(within(brief).getByText('1:02')).toBeInTheDocument();
     expect(within(brief).getByText('Won by 0:01')).toBeInTheDocument();
@@ -516,8 +516,8 @@ describe('SegmentsPage pagination', () => {
     state.ghostError = null;
     state.ghostFetchStatus = 'idle';
     view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
-    expect(within(brief).getByText('Source available')).toBeInTheDocument();
-    expect(within(brief).queryByText('Retained source')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Source available');
+    assertOperationalBriefDisclosure(brief, 'Retained source', { absent: true });
     expect(within(brief).getByText('1:01')).toBeInTheDocument();
     expect(within(brief).getByText('1:02')).toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();

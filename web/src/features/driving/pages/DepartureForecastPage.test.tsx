@@ -913,7 +913,7 @@ describe('DepartureForecastPage', () => {
     expect(screen.getByTestId('departure-refresh-error')).toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
-    expect(within(screen.getByTestId('departure-kpis')).getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(screen.getByTestId('departure-kpis'), 'Retained source');
   });
 
   it('shows no prior-only peak, horizon, or marker for empty history', () => {

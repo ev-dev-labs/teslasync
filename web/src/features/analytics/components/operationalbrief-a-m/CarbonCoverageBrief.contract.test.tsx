@@ -60,7 +60,7 @@ function show(intensity: unknown, overrides: Partial<CarbonQueryLike> = {},
     states={{ intensity: state, period: state, lifetime: state, recommendation: state }} /></MemoryRouter>);
   const band = screen.getByTestId('carbon-curve-coverage');
   expect(within(band).getByRole('heading', { name: 'Curve source accounting and completeness' })).toBeInTheDocument();
-  expect(within(band).getAllByText('Built-in, admin-editable static 24-hour model').length).toBeGreaterThan(0);
+  assertOperationalBriefDisclosure(band, 'Built-in, admin-editable static 24-hour model', { allMatches: true, region: 'drawer' });
   expect(within(band).getByRole('button', { name: 'Review details' })).toBeEnabled();
   expect(band.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
   return { ...view, band, state, analysis, originalAnalysis, onRetry };

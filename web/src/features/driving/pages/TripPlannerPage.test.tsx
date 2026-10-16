@@ -940,7 +940,7 @@ describe('TripPlannerPage — retained source scope', () => {
     const view = renderPage();
     planWith(makePlan());
     const summary = screen.getByRole('region', { name: 'Trip summary' });
-    expect(within(summary).getByText('Source available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'Source available');
     nextPlan = null;
     fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
     mockUsePlanTrip.mockReturnValue({
@@ -949,7 +949,7 @@ describe('TripPlannerPage — retained source scope', () => {
     view.rerenderPage();
 
     expect(within(summary).getByText('Cached · refresh failed')).toBeInTheDocument();
-    expect(within(summary).queryByText('Source available')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'Source available', { absent: true });
     expect(screen.queryByTestId('trip-inputs-changed')).not.toBeInTheDocument();
     expect(within(summary).getByText('100.00 km')).toBeInTheDocument();
     expect(within(summary).getByText(/Current SOC: 80% · Min Arrival SOC: 20%/)).toBeInTheDocument();
@@ -965,7 +965,7 @@ describe('TripPlannerPage — retained source scope', () => {
     nextPlan = makePlan({ route: { total_distance_m: 200_000 } });
     view.rerenderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Plan Trip' }));
-    expect(within(summary).getByText('Source available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'Source available');
     expect(within(summary).queryByText('Cached · refresh failed')).not.toBeInTheDocument();
     expect(within(summary).getByText('200.00 km')).toBeInTheDocument();
   });
@@ -1081,7 +1081,7 @@ describe('TripPlannerPage — retained source scope', () => {
       },
     }));
     const summary = screen.getByRole('region', { name: 'Trip summary' });
-    expect(within(summary).getByText('Source available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(summary, 'Source available');
     expect(within(summary).getByText('0.00 km')).toBeInTheDocument();
     expect(within(summary).getAllByText('0m')).toHaveLength(3);
     expect(within(summary).getByText('0.00 kWh')).toBeInTheDocument();

@@ -31,7 +31,7 @@ describe('NormalizationCoverageKpis actual refresh contract', () => {
   it('does not infer refreshing from retained measurements or loading on a populated source', () => {
     render(<MemoryRouter><NormalizationCoverageKpis {...BASE} sourceStatus="stale" retained loading /></MemoryRouter>);
     const brief = screen.getByTestId('normalization-coverage-summary');
-    expect(brief).toHaveTextContent('Retained source');
+    assertOperationalBriefDisclosure(brief, 'Retained source', { contains: true });
     expect(brief).not.toHaveTextContent('Refreshing source');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
   });

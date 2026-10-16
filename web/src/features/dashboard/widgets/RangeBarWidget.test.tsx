@@ -40,6 +40,7 @@
  * freshness/refresh chip renders without a Settings provider. A `<MemoryRouter>`
  * wraps every render because `EmptyState` reaches for `<Link>`.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -259,7 +260,7 @@ describe('RangeBarWidget — actual source comparison brief', () => {
     const first = renderWidget(FULL);
     const brief = screen.getByTestId('dashboard-range-comparison-brief');
     expect(brief).toHaveAttribute('data-operational-brief');
-    expect(within(brief).getByText('Source available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Source available');
     expect(within(brief).getByText('0.00 mi')).toBeInTheDocument();
     expect(capturedBrief.metrics).toEqual([
       expect.objectContaining({ key: 'range-secondary-distance', rawValue: 0, valueState: 'value' }),

@@ -29,6 +29,7 @@
  *     QueryError role="alert").
  *   - refresh wiring: the accessible freshness control refetches system health.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -212,7 +213,7 @@ describe('SystemHealthWidget — actual pool source Brief', () => {
     setup({ health, db, pool: makeQuery({ data: makePool({ inUse: 100, goroutines: 0, memoryMB: 0 }), refetch: poolRetry }) });
     const view = renderWidget({ cols: 3, rows: 4 });
     let brief = screen.getByTestId('system-health-pool-operational-brief');
-    expect(within(brief).getByText('Source available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(brief, 'Source available');
     expect(within(brief).queryByText('Retained readings')).not.toBeInTheDocument();
     expect(within(brief).getByText('100/25')).toBeInTheDocument();
     expect(captured.metrics.map(metric => metric.rawValue)).toEqual([100, 0]);

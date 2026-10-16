@@ -51,6 +51,15 @@ describe('evidence disclosure assertion utility', () => {
       .toThrow(/exactly one evidence card/);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  it('preserves an at-least-one assertion for context shown in more than one drawer section', () => {
+    render(<OperationalBrief title="Source accounting" testId="context"
+      description="Built-in, admin-editable static 24-hour model"
+      scope={<span>Built-in, admin-editable static 24-hour model</span>} metrics={[]} />);
+    assertOperationalBriefDisclosure(screen.getByTestId('context'), 'Built-in, admin-editable static 24-hour model',
+      { region: 'drawer', allMatches: true });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
 
 describe('unavailable operational metric assertion', () => {

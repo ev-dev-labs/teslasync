@@ -607,7 +607,7 @@ describe('DestinationTransitionsPage', () => {
     expect(screen.queryByTestId('destination-transitions-initial-pause')).not.toBeInTheDocument();
     qualityBriefIds.forEach((id, index) => {
       const brief = screen.getByTestId(id);
-      expect(within(brief).getByText('Retained source')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(brief, 'Retained source');
       expect(brief).not.toHaveAttribute('aria-busy');
       expect(Array.from(brief.querySelectorAll('[data-operational-value]'), node => node.textContent)).toEqual(before[index]);
     });

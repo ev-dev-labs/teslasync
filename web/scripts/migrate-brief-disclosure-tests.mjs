@@ -19,6 +19,11 @@ const statuses = new Set([
   'Returned source data', 'Loading source data', 'Source data unavailable',
   'Retained statistics', 'Returned statistics', 'Loading statistics',
   'Statistics unavailable', 'Refresh paused', 'Refreshing',
+  'Source available', 'Source data available', 'Independent sources incomplete', 'Retained source',
+]);
+const contexts = new Set([
+  'Observed history window',
+  'Built-in, admin-editable static 24-hour model',
 ]);
 
 const callNamed = (node, name) => ts.isCallExpression(node) &&
@@ -53,7 +58,7 @@ function hasNonRenderingBriefDouble(tree) {
   return found;
 }
 
-export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx') {
+export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx', options = {}) {
   const tree = ts.createSourceFile(filename, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const nonRenderingBriefDouble = hasNonRenderingBriefDouble(tree);
   const edits = [];
@@ -64,7 +69,7 @@ export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx
       return;
     }
     const matcher = node.expression.name.text;
-    if (matcher !== 'toBeInTheDocument' && matcher !== 'toHaveTextContent') {
+    if (!['toBeInTheDocument', 'toHaveTextContent', 'toBeGreaterThan'].includes(matcher)) {
       ts.forEachChild(node, visit);
       return;
     }
@@ -72,22 +77,30 @@ export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx
     const absent = ts.isPropertyAccessExpression(expectation) && expectation.name.text === 'not';
     if (absent) expectation = expectation.expression;
     if (!callNamed(expectation, 'expect') || expectation.arguments.length !== 1) return;
-    const argument = expectation.arguments[0];
+    let argument = expectation.arguments[0];
     let scope;
     let text;
     const contains = matcher === 'toHaveTextContent';
+    const allMatches = matcher === 'toBeGreaterThan';
+    if (allMatches) {
+      if (absent || !node.arguments[0] || !ts.isNumericLiteral(node.arguments[0]) || node.arguments[0].text !== '0' ||
+        !ts.isPropertyAccessExpression(argument) || argument.name.text !== 'length') return;
+      argument = argument.expression;
+    }
     if (contains) {
       scope = argument;
       text = node.arguments[0];
     } else if (ts.isCallExpression(argument) && ts.isPropertyAccessExpression(argument.expression) &&
-      ['getByText', 'queryByText'].includes(argument.expression.name.text) &&
+      (allMatches ? ['getAllByText'] : ['getByText', 'queryByText']).includes(argument.expression.name.text) &&
       callNamed(argument.expression.expression, 'within')) {
       scope = argument.expression.expression.arguments[0];
       text = argument.arguments[0];
       // Query options can change exactness or the selected element. Review them manually.
       if (argument.arguments.length !== 1) return;
     }
-    if (!scope || !text || !ts.isStringLiteral(text) || !statuses.has(text.text)) return;
+    if (!scope || !text || !ts.isStringLiteral(text)) return;
+    const context = options.contexts && contexts.has(text.text);
+    if (!statuses.has(text.text) && !context) return;
     const scopeText = scope.getText(tree);
     const line = tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1;
     const original = node.getText(tree);
@@ -100,8 +113,9 @@ export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx
     else if (!/brief|band|strip|summary|kpi/i.test(scopeText)) reason = 'Scope is not identified as an evidence card: inspect manually';
     if (reason) deferred.push({ line, original, reason });
     else {
-      const options = [absent ? 'absent: true' : '', contains ? 'contains: true' : ''].filter(Boolean);
-      const replacement = `${helper}(${scopeText}, ${text.getText(tree)}${options.length ? `, { ${options.join(', ')} }` : ''})`;
+      const flags = [absent ? 'absent: true' : '', contains ? 'contains: true' : '',
+        allMatches ? 'allMatches: true' : '', context ? "region: 'drawer'" : ''].filter(Boolean);
+      const replacement = `${helper}(${scopeText}, ${text.getText(tree)}${flags.length ? `, { ${flags.join(', ')} }` : ''})`;
       edits.push({ start: node.getStart(tree), end: node.end, line, original, replacement });
     }
   }
@@ -116,6 +130,12 @@ export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx
     const firstImport = tree.statements.find(ts.isImportDeclaration);
     const at = firstImport ? firstImport.getStart(tree) : 0;
     output = output.slice(0, at) + `import { ${helper} } from '${moduleName}';${newline}` + output.slice(at);
+  } else if (edits.length) {
+    const existing = tree.statements.find(node => ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text === moduleName);
+    const bindings = existing?.importClause?.namedBindings;
+    if (bindings && ts.isNamedImports(bindings) && !bindings.elements.some(element => element.name.text === helper)) {
+      output = output.slice(0, bindings.getStart(tree) + 1) + ` ${helper},` + output.slice(bindings.getStart(tree) + 1);
+    }
   }
   return { output, edits, deferred };
 }
@@ -181,7 +201,9 @@ export function migrateMissingMetricTests(source, filename = 'example.test.tsx')
     const existing = tree.statements.find(node => ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text === moduleName);
     if (existing?.importClause?.namedBindings && ts.isNamedImports(existing.importClause.namedBindings)) {
       const bindings = existing.importClause.namedBindings;
-      output = output.slice(0, bindings.getStart(tree) + 1) + ' assertOperationalMetricUnavailable,' + output.slice(bindings.getStart(tree) + 1);
+      if (!bindings.elements.some(element => element.name.text === 'assertOperationalMetricUnavailable')) {
+        output = output.slice(0, bindings.getStart(tree) + 1) + ' assertOperationalMetricUnavailable,' + output.slice(bindings.getStart(tree) + 1);
+      }
     } else {
       const newline = source.includes('\r\n') ? '\r\n' : '\n';
       const firstImport = tree.statements.find(ts.isImportDeclaration);
@@ -210,7 +232,7 @@ function main() {
   const inventory = [];
   for (const file of files) {
     const migrate = args.includes('--missing-metrics') ? migrateMissingMetricTests : migrateBriefDisclosureTests;
-    const result = migrate(fs.readFileSync(file, 'utf8'), file);
+    const result = migrate(fs.readFileSync(file, 'utf8'), file, { contexts: args.includes('--contexts') });
     if (!result.edits.length && !result.deferred.length) continue;
     inventory.push({ file: path.relative(root, file).replaceAll('\\', '/'), edits: result.edits, deferred: result.deferred });
     if (args.includes('--write') && result.edits.length) fs.writeFileSync(file, result.output);

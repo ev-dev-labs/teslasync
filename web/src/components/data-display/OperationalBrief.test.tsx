@@ -22,6 +22,22 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('OperationalBrief', () => {
+  it('retains the source eyebrow only in the real details drawer', () => {
+    render(<OperationalBrief eyebrow="Observed history window" title="Journey evidence"
+      description="Returned history context" statusLabel="Returned evidence" metrics={[]} />);
+    expect(screen.queryByText('Observed history window')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('Observed history window')).toBeInTheDocument();
+  });
+
+  it('does not duplicate the title as the drawer eyebrow', () => {
+    render(<OperationalBrief eyebrow="Journey evidence" title="Journey evidence"
+      description="Returned history context" statusLabel="Returned evidence" metrics={[]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).queryByText('Journey evidence')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByRole('heading', { name: 'Journey evidence details' })).toBeInTheDocument();
+  });
+
   it('balances metric rows so six items render as three plus three and four items never orphan one', () => {
     const metrics = Array.from({ length: 6 }, (_, index) => ({
       key: `metric-${index}`,
@@ -192,7 +208,7 @@ describe('OperationalBrief', () => {
     const drawer = screen.getByRole('dialog', { name: 'Absent context details' });
     const header = drawer.querySelector('[data-drawer-header]');
     expect(header).toHaveTextContent('Absent context detailsUnknownNo metadata supplied.');
-    expect(header?.textContent).toBe('Absent context detailsUnknownNo metadata supplied.');
+    expect(header?.textContent).toBe('EvidenceAbsent context detailsUnknownNo metadata supplied.');
     expect(within(drawer).getByText('Not scored')).toBeVisible();
     expect(within(drawer).getByText('No current attention items.')).toBeVisible();
   });

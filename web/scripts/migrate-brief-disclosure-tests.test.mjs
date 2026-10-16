@@ -102,3 +102,23 @@ expect(metricValue(band, 'Capacity')).toBe('—');`;
   assert.match(result.output, /import \{ assertOperationalMetricUnavailable, assertOperationalBriefDisclosure \}/);
   assert.equal(migrateMissingMetricTests(result.output).output, result.output);
 });
+
+test('moves only approved source contexts and preserves the at-least-one matcher', () => {
+  const source = `expect(within(summary).getByText('Observed history window')).toBeInTheDocument();
+expect(within(band).getAllByText('Built-in, admin-editable static 24-hour model').length).toBeGreaterThan(0);
+expect(within(band).getByText('0.00 kWh')).toBeInTheDocument();`;
+  assert.equal(migrate(source).edits.length, 0);
+  const result = migrate(source, 'context.test.tsx', { contexts: true });
+  assert.equal(result.edits.length, 2);
+  assert.match(result.output, /'Observed history window', \{ region: 'drawer' \}/);
+  assert.match(result.output, /allMatches: true, region: 'drawer'/);
+  assert.ok(result.output.includes("expect(within(band).getByText('0.00 kWh')).toBeInTheDocument();"));
+});
+
+test('merges a new status helper with an existing unavailable helper import', () => {
+  const source = `import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+expect(within(summary).getByText('Source available')).toBeInTheDocument();`;
+  const result = migrate(source);
+  assert.match(result.output, /import \{ assertOperationalBriefDisclosure, assertOperationalMetricUnavailable \}/);
+  assert.equal(migrate(result.output).output, result.output);
+});

@@ -31,6 +31,7 @@
  *   - refresh: activating the freshness control invokes the query refetch.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -412,7 +413,7 @@ describe('ChargeStatusWidget — refresh wiring', () => {
       expect(within(brief).getByText('—')).toBeInTheDocument();
       expect(brief.querySelector('[data-operational-metric="charge-status-battery"]')).toHaveAttribute('data-value-state', 'value');
       expect(brief.querySelector('[data-operational-metric="charge-status-range"]')).toHaveAttribute('data-value-state', 'missing');
-      expect(within(brief).getByText('Source available')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(brief, 'Source available');
       expect(screen.getByText('Unknown')).toBeInTheDocument();
       expect(screen.queryByText('Not charging')).not.toBeInTheDocument();
       expect(screen.queryByTestId('dashboard-charge-status-charging-brief')).not.toBeInTheDocument();

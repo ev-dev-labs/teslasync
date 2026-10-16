@@ -38,6 +38,7 @@
  * widget is rendered inside a MemoryRouter because the shared feedback
  * components it composes may reach for router context.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -507,7 +508,7 @@ describe('ChargingScheduleWidget — populated (full size)', () => {
     }));
     rerender(<MemoryRouter><ChargingScheduleWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
     const recoveredBrief = screen.getByTestId('dashboard-charging-schedule-context-brief');
-    expect(within(recoveredBrief).getByText('Source available')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(recoveredBrief, 'Source available');
     expect(within(recoveredBrief).getByText('64%')).toBeInTheDocument();
     expect(within(recoveredBrief).getByText('Not charging')).toBeInTheDocument();
     expect(screen.getByText('Charging schedule unavailable')).toBeInTheDocument();

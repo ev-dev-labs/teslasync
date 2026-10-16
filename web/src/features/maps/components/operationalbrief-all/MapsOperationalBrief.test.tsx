@@ -228,7 +228,7 @@ describe('maps OperationalBrief source contract', () => {
   ] as const)('keeps independent metrics and prior receipts when another source is %s', (_case, otherState) => {
     renderBrief(false, [{ label: sourceLabel, state }, { label: 'Route history', state: otherState }]);
     const band = screen.getByRole('region', { name: 'Vehicle status' });
-    expect(within(band).getByText('Independent sources incomplete')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(band, 'Independent sources incomplete');
     expect(within(band).getByText('0.00 km/h')).toBeInTheDocument();
     const receipt = `${sourceLabel}: Received Oct 6, 2026, 08:00 PM (not observation or last visit)`;
     expect(within(band).getByText(receipt)).toBeInTheDocument();

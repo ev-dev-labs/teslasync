@@ -33,6 +33,7 @@
  * hooks are stubbed so the freshness chip renders without a Settings provider.
  * A `<MemoryRouter>` wraps every render because `EmptyState` renders a `<Link>`.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -219,7 +220,7 @@ describe('ClimateControlPanelWidget — source brief', () => {
     expect(cells.map(cell => cell.querySelector('[data-operational-value]')?.textContent)).toEqual([
       '0°C', '-10°C', '0', 'Off',
     ]);
-    expect(brief).toHaveTextContent('Source available');
+    assertOperationalBriefDisclosure(brief, 'Source available', { contains: true });
     expect(brief).toHaveTextContent('Vehicle 7');
     expect(brief).toHaveTextContent('continuous recording coverage is not established');
     expect(brief).toHaveTextContent('not a velocity measurement');

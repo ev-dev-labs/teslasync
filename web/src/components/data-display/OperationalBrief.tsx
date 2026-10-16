@@ -128,6 +128,7 @@ function renderMetadata(value: ReactNode): ReactNode {
 }
 
 export function OperationalBrief({
+  eyebrow,
   title,
   description,
   statusLabel,
@@ -277,6 +278,7 @@ export function OperationalBrief({
         open={detailsOpen}
         onClose={() => setDetailsOpen(false)}
         title={t('operations.detailTitle', '{{title}} details', { title })}
+        eyebrow={eyebrow !== title ? eyebrow : undefined}
         description={description}
         headerMeta={
           <>

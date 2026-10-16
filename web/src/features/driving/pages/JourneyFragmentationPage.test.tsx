@@ -321,8 +321,7 @@ function thresholdHistory(): Drive[] {
 
 function expectPersistentAnalyticalShells() {
   expect(screen.getAllByTestId('analytical-shell')).toHaveLength(13);
-  expect(within(screen.getByRole('region', { name: 'Journey evidence and summary' }))
-    .getByText('Observed history window')).toBeInTheDocument();
+  assertOperationalBriefDisclosure(screen.getByRole('region', { name: 'Journey evidence and summary' }), 'Observed history window', { region: 'drawer' });
   [
     'Chain-length distribution',
     'Stopover-gap distribution',
@@ -677,7 +676,7 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
     expect(elapsedValues()).toEqual(['90 min', '30 min', '1']);
-    expect(within(elapsedBrief()).getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Retained source');
     expect(screen.getAllByRole('button', { name: /^(Retry|Refresh)$/ })).toHaveLength(1);
   });
 
@@ -819,7 +818,7 @@ describe('JourneyFragmentationPage', () => {
     expect(chartPayloads()).toEqual(payloads);
     expect(metricValue('Observed journeys')).toBe(observedJourneys);
     expect(elapsedValues()).toEqual(elapsed);
-    expect(within(elapsedBrief()).getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Retained source');
     expect(screen.getAllByRole('button', { name: /^(Retry|Refresh)$/ })).toHaveLength(1);
     expect(screen.getAllByText('Retained source').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
@@ -838,7 +837,7 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.queryByText('Retained evidence')).not.toBeInTheDocument();
     expect(elapsedValues()).toEqual(elapsed);
     assertOperationalBriefDisclosure(elapsedBrief(), 'Returned evidence');
-    expect(within(elapsedBrief()).queryByText('Retained source')).not.toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Retained source', { absent: true });
   });
 
   it('retains an authoritative empty result through refresh failure and recovery', () => {
@@ -849,7 +848,7 @@ describe('JourneyFragmentationPage', () => {
     expectPersistentAnalyticalShells();
     expect(metricValue('Observed journeys')).toBe('0');
     expect(elapsedValues()).toEqual(['0 min', '0 min', '0']);
-    expect(within(elapsedBrief()).getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(elapsedBrief(), 'Retained source');
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByText('No returned drive rows are available for this vehicle yet.')).toBeInTheDocument();

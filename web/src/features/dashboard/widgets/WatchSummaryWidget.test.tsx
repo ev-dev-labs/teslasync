@@ -41,6 +41,7 @@
  * `convertDistanceFromSI` / `convertTempFromSI` all run for real, so assertions
  * exercise the true rendered DOM.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -445,7 +446,7 @@ describe('WatchSummaryWidget — standard layout', () => {
       });
       const { container, rerender } = renderWidget({ cols: 2, rows: 2 }, 7);
       let brief = screen.getByTestId('dashboard-watch-measurements-brief');
-      expect(within(brief).getByText('Source available')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(brief, 'Source available');
       expect(brief.querySelector('[data-data-status="ok"]')).toBeTruthy();
       expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
       expect(screen.getByText('Offline')).toBeInTheDocument();

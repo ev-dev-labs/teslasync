@@ -28,6 +28,7 @@
  * suite) so the page runs end-to-end without a network. i18n is stubbed to
  * return the English `defaultValue` with `{{var}}` interpolation.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -606,7 +607,7 @@ describe('DBHealthPage — hardening', () => {
       const { container } = renderPage();
       expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
       expect(screen.getByTestId('db-health-summary-0')).toHaveTextContent('Source loaded');
-      expect(screen.getByTestId('db-health-summary-1')).toHaveTextContent('Retained source');
+      assertOperationalBriefDisclosure(screen.getByTestId('db-health-summary-1'), 'Retained source', { contains: true });
       expect(screen.getByTestId('db-health-summary-2')).toHaveTextContent('Source loaded');
       expect(metricValue('Migration')).toBe('185');
       expect(metricValue('Total DB size')).toBe('360.00 MB');

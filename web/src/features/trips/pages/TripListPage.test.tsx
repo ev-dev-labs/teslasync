@@ -37,6 +37,7 @@
  *   - formatDuration: in-progress, invalid/negative, whole-hour, minute-only,
  *     and the "1h 60m" rounding regression are each rendered correctly.
  */
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -480,7 +481,7 @@ describe('TripListPage — populated (km) KPIs + wiring', () => {
     renderPage();
     const kpi = statsRegion();
     expect(cardValue(kpi, 'Total Distance')).toBe(`${fmtInt(convertDistanceFromSI(TOTAL_DIST_M, 'km'))} km`);
-    expect(within(kpi).getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(kpi, 'Retained source');
     expect(screen.getByRole('button', { name: 'CSV' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled();
     fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));

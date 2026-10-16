@@ -34,6 +34,7 @@
  * used only for native keyboard activation; URL/filter events use `fireEvent`.
  */
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -617,7 +618,7 @@ describe('SearchPage restrained migration', () => {
     const summary = screen.getByRole('region', { name: 'Search summary' });
     expect(summary).toHaveTextContent('for “model”');
     expect(summary).not.toHaveTextContent('for “roadster”');
-    expect(summary).toHaveTextContent('Retained source');
+    assertOperationalBriefDisclosure(summary, 'Retained source', { contains: true });
   });
 
   it('handles a null response without crashing or dropping the query and AI controls', async () => {
@@ -713,7 +714,7 @@ describe('SearchPage restrained migration', () => {
       const summary = screen.getByRole('region', { name: 'Search summary' });
       expect(summary).toHaveTextContent('for “model” · result types: Drives');
       expect(summary).not.toHaveTextContent('result types: Drives, Vehicles');
-      expect(summary).toHaveTextContent('Retained source');
+      assertOperationalBriefDisclosure(summary, 'Retained source', { contains: true });
       expect(screen.getByText('Requested: “roadster” · types: Drives, Vehicles')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Open retained drive' })).toHaveAttribute('href', '/drive/21');
       expect(metricCard('Active filters')).toHaveTextContent('2');
