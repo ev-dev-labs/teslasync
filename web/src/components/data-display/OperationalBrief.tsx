@@ -154,11 +154,10 @@ export function OperationalBrief({
   const [detailsOpen, setDetailsOpen] = useState(false)
   const primaryAttention = attention[0]
   const metricStates = metrics.map(metricState)
-  const visibleMetrics = loading ? metrics : metrics.filter((_, index) => metricStates[index] === 'value')
+  const visibleMetrics = metrics.filter((metric, index) => (metric.loading ?? loading) || metricStates[index] === 'value')
   const resolvedMaxPerRow = maxPerRow ?? metricColumns ?? 3
   const metricRows = metricBanks(visibleMetrics, resolvedMaxPerRow)
-  const emptyMetrics = !loading && metrics.length > 0 && visibleMetrics.length === 0
-    && metricStates.every((state) => state === metricStates[0])
+  const emptyMetrics = metrics.length > 0 && visibleMetrics.length === 0
   const hiddenMetricCount = metrics.length - visibleMetrics.length
   const resolvedNarrative: OperationalNarrative = narrative ?? {
     whatChanged: description,

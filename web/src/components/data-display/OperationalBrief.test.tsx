@@ -286,6 +286,55 @@ describe('OperationalBrief', () => {
     expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
 
+  it.each([
+    { sharedLoading: false, sourceLoading: true, pending: true },
+    { sharedLoading: true, sourceLoading: false, pending: false },
+    { sharedLoading: false, sourceLoading: undefined, pending: false },
+  ])('keeps an unmeasured independent source honest for shared=$sharedLoading source=$sourceLoading', ({ sharedLoading, sourceLoading, pending }) => {
+    render(<OperationalBrief eyebrow="Sources" title="Independent reading"
+      description="One independently loaded source." statusLabel="Source state" loading={sharedLoading}
+      metrics={[{ key: 'reading', label: 'Reading', value: '-', detail: 'Source has no measurement yet.',
+        valueState: 'missing', loading: sourceLoading }]} />);
+    const summary = screen.getByRole('region', { name: 'Independent reading' });
+    const metric = summary.querySelector('[data-operational-metric="reading"]');
+    if (pending) {
+      expect(metric).toBeInTheDocument();
+      expect(metric?.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+      expect(within(summary).queryByText('No metric values are available yet.')).not.toBeInTheDocument();
+    } else {
+      expect(metric).not.toBeInTheDocument();
+      expect(within(summary).getByText('No metric values are available yet.')).toBeVisible();
+    }
+    expect(summary.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+    expect(within(summary).queryByText('-', { exact: true })).not.toBeInTheDocument();
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Independent reading details' });
+    expect(within(drawer).getByText('Reading')).toBeVisible();
+    if (pending) expect(drawer.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+    else expect(within(drawer).getByText('1 empty field is hidden.')).toBeVisible();
+    expect(within(drawer).queryByText('-', { exact: true })).not.toBeInTheDocument();
+  });
+
+  it('explains an entirely unavailable group with mixed missing and invalid readings', () => {
+    render(<OperationalBrief eyebrow="Evidence" title="Unavailable readings"
+      description="Unreported and invalid source values." statusLabel="Unavailable"
+      metrics={[
+        { key: 'missing', label: 'Unreported count', value: '-', detail: 'Not provided', valueState: 'missing' },
+        { key: 'invalid', label: 'Invalid count', value: '-', detail: 'Invalid source value', valueState: 'invalid' },
+      ]} />);
+    const summary = screen.getByRole('region', { name: 'Unavailable readings' });
+    expect(within(summary).getByText('No metric values are available yet.')).toBeVisible();
+    expect(within(summary).getByText('Unreported count')).toBeVisible();
+    expect(within(summary).getByText('Invalid count')).toBeVisible();
+    expect(summary.querySelector('[data-operational-metric]')).not.toBeInTheDocument();
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Unavailable readings details' });
+    expect(within(drawer).getByText('No metric values are available yet.')).toBeVisible();
+    expect(within(drawer).getByText('2 empty fields are hidden.')).toBeVisible();
+    expect(within(drawer).queryByText('-', { exact: true })).not.toBeInTheDocument();
+    expect(within(drawer).queryByText('0', { exact: true })).not.toBeInTheDocument();
+  });
+
   it('hides empty metric rows in details and reports the count in a full sentence', () => {
     render(<OperationalBrief eyebrow="Evidence" title="Partial readings"
       description="Available source readings." statusLabel="Partial"

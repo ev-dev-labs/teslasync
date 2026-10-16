@@ -24,7 +24,9 @@ vi.mock('react-i18next', () => ({
         'operations.detailTitle': 'Einzelheiten zu {{title}}',
         'common.close': translated.close,
       };
-      return (labels[key] ?? fallback).replace(
+      const countedFallback = options?.count === 1
+        ? options.defaultValue_one ?? fallback : options?.defaultValue_other ?? fallback;
+      return String(labels[key] ?? countedFallback).replace(
         /\{\{\s*(\w+)\s*\}\}/g,
         (_, name: string) => String(options?.[name] ?? ''),
       );
@@ -71,7 +73,7 @@ function details() {
 }
 
 describe('OperationalBrief accessible source publication', () => {
-  it('preserves translated metric names, rich source context and actionable links in both surfaces', () => {
+  it('preserves translated metric links on the card and rich source context in details', () => {
     const metrics = format([{
       metricId: 'count', occurrenceId: 'confirmed', rawValue: 0,
       label: translated.label,
@@ -93,6 +95,9 @@ describe('OperationalBrief accessible source publication', () => {
       const queries = within(surface);
       expect(queries.getByText(translated.label)).toBeVisible();
       expect(queries.getByRole('link', { name: valueName })).toHaveAttribute('href', '/evidence/confirmed');
+    };
+    const checkContext = (surface: HTMLElement) => {
+      const queries = within(surface);
       expect(queries.getByRole('link', { name: 'Den vollständigen Quelldatensatz überprüfen' }))
         .toHaveAttribute('href', '/evidence/source-record');
       expect(queries.getByText('Vollständiger Quellenkontext').tagName).toBe('STRONG');
@@ -100,15 +105,19 @@ describe('OperationalBrief accessible source publication', () => {
       expect(queries.getByText('Nur bestätigte Vorgänge aus der angegebenen Quelle.')).toBeVisible();
     };
     checkSurface(summary());
+    expect(within(summary()).queryByText('Vollständiger Quellenkontext')).not.toBeInTheDocument();
     const review = within(summary()).getByRole('button', { name: translated.review });
-    expect(review).toHaveClass('whitespace-normal', 'max-w-full', 'min-h-11', 'md:min-h-9');
-    expect(review.querySelector('span:last-child')).toHaveClass('break-words');
+    expect(review).toHaveAccessibleName(translated.review);
+    expect(review).not.toHaveTextContent(translated.review);
+    expect(document.getElementById(review.getAttribute('aria-describedby') ?? ''))
+      .toHaveTextContent(translated.review);
     fireEvent.click(review);
     const dialog = details();
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(dialog).toHaveAccessibleDescription(baseProps.description);
     expect(dialog).toHaveAccessibleName(`Einzelheiten zu ${translated.title}`);
     checkSurface(dialog);
+    checkContext(dialog);
   });
 
   it('traps keyboard focus around real metric links and restores the review opener on Escape', () => {
@@ -188,61 +197,74 @@ describe('OperationalBrief accessible source publication', () => {
       }]),
     }));
     const region = summary();
-    expect(within(region).getByText(status)).toBeVisible();
-    expect(within(region).getByText(freshness)).toBeVisible();
-    expect(within(region).getByText('Selected source only')).toBeVisible();
-    const item = within(region).getByRole('listitem');
-    expect(item).toHaveTextContent(provenance);
-    expect(item).toHaveAttribute('data-value-state', raw === null ? 'missing' : 'value');
+    expect(within(region).queryByText(status)).not.toBeInTheDocument();
+    expect(within(region).queryByText(freshness)).not.toBeInTheDocument();
+    expect(within(region).queryByText('Selected source only')).not.toBeInTheDocument();
+    expect(region).not.toHaveTextContent(provenance);
+    const item = region.querySelector('[data-operational-metric]');
     if (loading) {
       expect(region).toHaveAttribute('aria-busy', 'true');
-      expect(item.querySelector('[data-operational-value]')).toBeNull();
+      expect(item).toHaveAttribute('data-value-state', 'missing');
+      expect(item?.querySelector('[data-operational-value]')).toBeNull();
     } else {
       expect(region).not.toHaveAttribute('aria-busy');
+      if (raw === null) {
+        expect(item).not.toBeInTheDocument();
+        expect(within(region).getByText('No metric values are available yet.')).toBeVisible();
+      } else {
+        expect(item).toHaveAttribute('data-value-state', 'value');
+        expect(item).toHaveTextContent(String(raw));
+      }
     }
     fireEvent.click(within(region).getByRole('button', { name: translated.review }));
     const dialog = details();
     expect(within(dialog).getByText(status)).toBeVisible();
+    expect(within(dialog).getByText(freshness)).toBeVisible();
+    expect(within(dialog).getByText('Selected source only')).toBeVisible();
     expect(within(dialog).getAllByText(provenance).length).toBeGreaterThanOrEqual(1);
     expect(within(dialog).getByText('Not scored')).toBeVisible();
     expect(within(dialog).getByText('No supporting records were supplied.')).toBeVisible();
     if (raw === null) {
-      expect(within(dialog).getByText('No confirmed measurement supplied')).toBeVisible();
+      if (loading) expect(within(dialog).getByText('No confirmed measurement supplied')).toBeVisible();
+      else expect(within(dialog).getByText('1 empty field is hidden.')).toBeVisible();
       expect(within(dialog).queryByText('0', { exact: true })).not.toBeInTheDocument();
     }
   });
 
-  it('distinguishes measured zero from missing and invalid values through accessible links and explanations', () => {
+  it('keeps measured zero actionable while reporting omitted missing and invalid readings', () => {
     const cases = [
       { key: 'zero', raw: 0, label: 'Measured zero', state: 'value', value: '0', reason: undefined },
       { key: 'missing', raw: null, label: 'Missing observation', state: 'missing', value: '—', reason: 'Source did not supply this observation' },
       { key: 'invalid', raw: NaN, label: 'Invalid observation', state: 'invalid', value: '—', reason: 'Expected a finite numeric measurement' },
     ] as const;
-    render(brief({
-      metrics: format(cases.map((entry) => ({
+    const metrics = format(cases.map((entry) => ({
         metricId: 'count', occurrenceId: entry.key, rawValue: entry.raw,
         label: entry.label, href: `/evidence/${entry.key}`,
         missingReason: entry.key === 'missing' ? entry.reason : undefined,
         context: `Source record: ${entry.key}`,
-      }))),
-    }));
+      })));
+    expect(metrics.map(metric => metric.valueState)).toEqual(cases.map(entry => entry.state));
+    render(brief({ metrics }));
     const items = within(summary()).getAllByRole('listitem');
-    cases.forEach((entry, index) => {
-      expect(items[index]).toHaveAttribute('data-value-state', entry.state);
-      expect(items[index]).toHaveTextContent(`Source record: ${entry.key}`);
-    });
-    const checkValues = (surface: HTMLElement) => cases.forEach((entry) => {
-      const accessibleName = `${entry.label}: ${entry.value}${entry.reason ? `; ${entry.reason}` : ''}`;
-      const link = within(surface).getByRole('link', { name: accessibleName });
-      expect(link).toHaveAttribute('href', `/evidence/${entry.key}`);
-      expect(link).toHaveTextContent(entry.value);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toHaveAttribute('data-value-state', 'value');
+    const checkValues = (surface: HTMLElement) => {
+      const link = within(surface).getByRole('link', { name: 'Measured zero: 0' });
+      expect(link).toHaveAttribute('href', '/evidence/zero');
+      expect(link).toHaveTextContent('0');
       expect(link).not.toHaveAttribute('aria-hidden');
-      if (entry.reason) expect(within(surface).getByText(entry.reason)).toBeVisible();
-      expect(within(surface).getByText(`Source record: ${entry.key}`)).toBeVisible();
-    });
+      for (const entry of cases.slice(1)) {
+        expect(within(surface).queryByText(entry.label)).not.toBeInTheDocument();
+        expect(within(surface).queryByRole('link', { name: new RegExp(entry.label) })).not.toBeInTheDocument();
+        expect(within(surface).queryByText(`Source record: ${entry.key}`)).not.toBeInTheDocument();
+      }
+    };
     checkValues(summary());
     fireEvent.click(within(summary()).getByRole('button', { name: translated.review }));
-    checkValues(details());
+    const dialog = details();
+    checkValues(dialog);
+    expect(within(dialog).getByText('Source record: zero')).toBeVisible();
+    expect(within(dialog).getByText('2 empty fields are hidden.')).toBeVisible();
   });
 
   it('does not publish a suppressed loading measurement through Review details', () => {
