@@ -63,6 +63,13 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
   const channelsState = useDataState(channels)
   const localState = deriveDataState({ data: state }, { provenance: 'inferred' })
   const retry = () => { void vehicles.refetch(); void rules.refetch(); void channels.refetch() }
+  const successfulQueryTimestamps = [vehicles.dataUpdatedAt, rules.dataUpdatedAt, channels.dataUpdatedAt]
+    .filter((timestamp): timestamp is number => typeof timestamp === 'number' && timestamp > 0)
+  // The checklist depends on all three sources, so its freshness follows the oldest
+  // successful read rather than the newest one.
+  const updatedAt = successfulQueryTimestamps.length > 0
+    ? Math.min(...successfulQueryTimestamps)
+    : 0
   const dataState = {
     ...combineDataStates([localState, vehiclesState, rulesState, channelsState]),
     data: state,
@@ -114,7 +121,16 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
   // ── Hidden / dismissed state — small footprint with restart affordance ──
   if (hidden) {
     return (
-      <WidgetShell title={title} icon={icon} dataState={dataState}>
+      <WidgetShell
+        title={title}
+        icon={icon}
+        dataState={dataState}
+        updatedAt={updatedAt}
+        isFetching={vehicles.isFetching || rules.isFetching || channels.isFetching}
+        isStale={vehicles.isStale || rules.isStale || channels.isStale}
+        isError={vehicles.isError || rules.isError || channels.isError}
+        onRefresh={retry}
+      >
         <EmptyState
           icon={<Sparkles className="h-5 w-5" />}
           title={
@@ -152,7 +168,17 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
   )
 
   return (
-    <WidgetShell title={title} icon={icon} actions={headerActions} dataState={dataState}>
+    <WidgetShell
+      title={title}
+      icon={icon}
+      actions={headerActions}
+      dataState={dataState}
+      updatedAt={updatedAt}
+      isFetching={vehicles.isFetching || rules.isFetching || channels.isFetching}
+      isStale={vehicles.isStale || rules.isStale || channels.isStale}
+      isError={vehicles.isError || rules.isError || channels.isError}
+      onRefresh={retry}
+    >
       <div className="flex flex-col h-full gap-4">
         {/* Progress header */}
         <div className="space-y-2">

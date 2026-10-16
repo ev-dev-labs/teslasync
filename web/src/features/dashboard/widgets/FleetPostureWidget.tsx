@@ -4,7 +4,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDataState } from '@/hooks/useDataState';
 import { combineDataStates } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
-import { Button } from '@/components/ui';
+import { INTERVALS } from '@/lib/constants';
 import { FleetOperationsBrief } from '../components/FleetOperationsBrief';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
@@ -44,8 +44,12 @@ export default function FleetPostureWidget({ vehicleId }: WidgetProps) {
   return (
     <WidgetShell
       dataState={dataState}
+      updatedAt={fleetStates.dataUpdatedAt ?? 0}
+      isFetching={vehiclesQuery.isFetching || fleetStates.isFetching}
+      isStale={vehiclesQuery.isStale || fleetStates.isStale || entries.some((entry) => entry.stale)}
+      isError={vehiclesQuery.isError || fleetStates.isError}
+      refreshIntervalMs={INTERVALS.STANDARD}
       onRefresh={retry}
-      actions={<Button type="button" variant="ghost" size="sm" onClick={retry} disabled={dataState.isRefreshing}>{t('common.refresh', 'Refresh')}</Button>}
       help={{
         i18nKey: 'dashboard.fleetPosture.help',
         defaultValue: 'Verified live-state coverage and evidence age across your fleet.',

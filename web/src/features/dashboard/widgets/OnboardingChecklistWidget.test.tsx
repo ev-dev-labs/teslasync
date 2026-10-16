@@ -181,6 +181,19 @@ beforeEach(() => {
 });
 
 describe('OnboardingChecklistWidget — prerequisite trust and reactive hierarchy', () => {
+  it('exposes one freshness refresh for its prerequisite queries', () => {
+    const refetches = [vi.fn(), vi.fn(), vi.fn()];
+    Object.values(queries).forEach((mock, index) => mock.mockReturnValue({
+      data: [],
+      dataUpdatedAt: 1_000 + index,
+      refetch: refetches[index],
+    }));
+    renderWidget();
+    const refresh = screen.getByRole('button', { name: /^Refresh data/ });
+    fireEvent.click(refresh);
+    refetches.forEach((refetch) => expect(refetch).toHaveBeenCalledOnce());
+  });
+
   it.each([1, 2, 4])('keeps task CTAs usable with unresolved server prerequisites at %i columns', (cols) => {
     queries.vehicles.mockReturnValue({ data: undefined, isPending: true, refetch: vi.fn() });
     render(<MemoryRouter><OnboardingChecklistWidget size={{ cols, rows: 2 }} /></MemoryRouter>);

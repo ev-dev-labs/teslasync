@@ -135,7 +135,7 @@ describe('FleetPostureWidget', () => {
     state.fleet.isError = true;
     render(<MemoryRouter><FleetPostureWidget size={{ cols: 2, rows: 3 }} /></MemoryRouter>);
     expect(screen.getByTestId('fleet-posture-taxonomy')).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('button', { name: /^Refresh/i })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/i }));
     expect(state.vehicles.refetch).toHaveBeenCalledOnce();
     expect(state.fleet.refetch).toHaveBeenCalledOnce();
   });
