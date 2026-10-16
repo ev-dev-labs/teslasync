@@ -124,6 +124,17 @@ function metric(label: string | RegExp): HTMLElement {
   if (!match) throw new Error(`Missing canonical stat: ${label}`);
   return match;
 }
+function expectMissingMetric(label: string) {
+  expect(screen.queryByText(label, { selector: '[data-operational-metric] > :first-child' })).not.toBeInTheDocument();
+}
+function expectMetricDetail(label: string, text: string) {
+  const brief = metric(label).closest<HTMLElement>('[data-operational-brief]')!;
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  expect(within(within(dialog).getByRole('group', { name: label })).getByText(text)).toBeInTheDocument();
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+
 function group(container: HTMLElement, id: string): HTMLElement {
   const match = container.querySelector<HTMLElement>(`[data-climate-group="${id}"]`);
   if (!match) throw new Error(`Missing climate group: ${id}`);
@@ -151,12 +162,12 @@ afterEach(() => {
 });
 
 describe('Climate live modernization — no real API or vehicle commands', () => {
-  it('retains every group, 21 system/efficiency stats plus score/delta, both chart IDs and all series', () => {
+  it('retains every group, 22 system/efficiency stats plus score/delta, both chart IDs and all series', () => {
     const { container } = mountPage();
     expect(Array.from(container.querySelectorAll('[data-climate-group]'))
       .map(node => node.getAttribute('data-climate-group'))).toEqual(outline);
     expect(container.querySelectorAll('[data-card-grid]')).toHaveLength(1);
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(23);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(24);
     expect(screen.getAllByTestId('embedded-chart').map(node =>
       node.getAttribute('data-chart-key'))).toEqual(['climate-temp-history', 'climate-hvac-history']);
     expect(Array.from(container.querySelectorAll('[data-series]')).map(node =>
@@ -175,7 +186,7 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     expect(screen.getByTestId('climate-ai-props')).toHaveAttribute('data-target', '21');
     expect(screen.getByTestId('climate-ai-props')).toHaveAttribute('data-vehicle', '42');
     expect(within(metric('HVAC power')).getByText('Off')).toBeInTheDocument();
-    expect(within(group(container, 'climate-systems')).getByText('AC on/off: On')).toBeInTheDocument();
+    expect(within(metric('AC on/off')).getByText('On')).toBeInTheDocument();
     expect(within(metric('Fan speed')).getByText('2.5')).toBeInTheDocument();
     expect(within(metric('Avg fan speed')).getByText('5.00')).toBeInTheDocument();
     expect(within(metric('Peak fan speed')).getByText('6.00')).toBeInTheDocument();
@@ -200,7 +211,7 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     expect(points[0].driverTempSetting).toBeCloseTo(69.8);
     expect(snapshot.insideTemp).toBe(22);
     expect(screen.getByTestId('climate-ai-props')).toHaveAttribute('data-cabin', '22');
-    expect(screen.getByText('Near target')).toBeInTheDocument();
+    expectMetricDetail('Temp delta', 'Near target');
   });
 
   it('keeps locale/precision reactivity and unrounded threshold semantics', () => {
@@ -211,7 +222,7 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     expect(screen.getByText('+1,23°C')).toBeInTheDocument();
     act(() => setGlobalPrecision(0));
     expect(screen.getByText('+1°C')).toBeInTheDocument();
-    expect(screen.getByText('Above target')).toBeInTheDocument();
+    expectMetricDetail('Temp delta', 'Above target');
     expect(screen.queryByText('Near target')).not.toBeInTheDocument();
   });
 
@@ -347,10 +358,10 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
       hvacPower: null, isAcOn: null, batteryHeater: null,
     });
     view.rerender(ui());
-    expect(within(metric('Passenger setting')).getByText('—')).toBeInTheDocument();
-    expect(within(metric('Fan speed')).getByText('—')).toBeInTheDocument();
-    expect(within(metric('HVAC power')).getByText('—')).toBeInTheDocument();
-    expect(within(metric('Battery heater')).getByText('—')).toBeInTheDocument();
+    expectMissingMetric('Passenger setting');
+    expectMissingMetric('Fan speed');
+    expectMissingMetric('HVAC power');
+    expectMissingMetric('Battery heater');
     expect(within(group(view.container, 'climate-systems')).queryByText(/Showing retained measurements/))
       .not.toBeInTheDocument();
     expect(within(group(view.container, 'climate-comfort')).queryByText('100.00')).not.toBeInTheDocument();
@@ -365,9 +376,9 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     latest({});
     historical([]);
     const { container } = mountPage();
-    expect(within(metric('HVAC power')).getByText('—')).toBeInTheDocument();
-    expect(within(metric('Fan speed')).getByText('—')).toBeInTheDocument();
-    expect(within(metric('Battery heater')).getByText('—')).toBeInTheDocument();
+    expectMissingMetric('HVAC power');
+    expectMissingMetric('Fan speed');
+    expectMissingMetric('Battery heater');
     const comfort = within(group(container, 'climate-comfort'));
     expect(comfort.queryByText('Comfortable')).not.toBeInTheDocument();
     expect(comfort.queryByText('Poor')).not.toBeInTheDocument();

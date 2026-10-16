@@ -300,6 +300,8 @@ export function OperationalBrief({
             ) : visibleMetrics.map((metric) => (
               <div
                 key={metric.key}
+                role="group"
+                aria-label={metric.label}
                 className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
                 <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-3">

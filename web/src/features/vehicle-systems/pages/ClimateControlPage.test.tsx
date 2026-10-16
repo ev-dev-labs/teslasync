@@ -76,18 +76,6 @@ vi.mock('@/components/ui', async (importOriginal) => {
   };
 });
 
-// i18n stub: echo the fallback when present, else the key (the page's keys are
-// the English strings themselves), so assertions target rendered English.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, fallback?: unknown) =>
-      typeof fallback === 'string' ? fallback : key,
-    i18n: { language: 'en', changeLanguage: vi.fn() },
-  }),
-  Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  initReactI18next: { type: '3rdParty', init: () => undefined },
-}));
-
 // Flippable temperature preference so one file exercises both the metric (°C)
 // and imperial (°F) display-conversion branches. Hoisted so the settings
 // factory can close over it.
@@ -345,6 +333,26 @@ function card(label: string): HTMLElement {
   return wrapper;
 }
 
+/** Unknown measurements are omitted; only fixture-proven readings may be asserted. */
+function expectReading(label: string, expected: string) {
+  if (expected === '—') {
+    expect(screen.queryByText(label, { selector: metricLabelSelector })).not.toBeInTheDocument();
+  } else {
+    expect(within(card(label)).getByText(expected)).toBeInTheDocument();
+  }
+}
+function withMetricDetail(label: string, check: (detail: HTMLElement) => void, scope = document.body) {
+  const tile = within(scope).getByText(label, { selector: metricLabelSelector });
+  const brief = tile.closest<HTMLElement>('[data-operational-brief]')!;
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  const dialog = screen.getByRole('dialog');
+  check(within(dialog).getByRole('group', { name: label }));
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+function expectMetricDetail(label: string, text: string, scope = document.body) {
+  withMetricDetail(label, detail => expect(within(detail).getByText(text)).toBeInTheDocument(), scope);
+}
+
 function group(id: string): HTMLElement {
   const wrapper = document.querySelector<HTMLElement>(`[data-climate-group="${id}"]`);
   if (!wrapper) throw new Error(`Climate group not found: ${id}`);
@@ -464,9 +472,9 @@ describe('climate efficiency measurement evidence', () => {
       history: speeds.map((fanSpeed, id) => climate({ id, fanSpeed, isAcOn: undefined })),
     });
     renderPage();
-    expect(within(card('Avg fan speed')).getByText(average)).toBeInTheDocument();
-    expect(within(card('Peak fan speed')).getByText(peak)).toBeInTheDocument();
-    expect(within(card('AC on/off · On')).getByText('—')).toBeInTheDocument();
+    expectReading('Avg fan speed', average);
+    expectReading('Peak fan speed', peak);
+    expectReading('AC on/off · On', '—');
   });
 
   it.each([
@@ -482,15 +490,14 @@ describe('climate efficiency measurement evidence', () => {
       history: states.map((isAcOn, id) => climate({ id, isAcOn, fanSpeed: undefined })),
     });
     renderPage();
-    expect(within(card('Avg fan speed')).getByText('—')).toBeInTheDocument();
-    expect(within(card('Peak fan speed')).getByText('—')).toBeInTheDocument();
-    const acCard = within(card('AC on/off · On'));
-    expect(acCard.getByText(expected)).toBeInTheDocument();
+    expectReading('Avg fan speed', '—');
+    expectReading('Peak fan speed', '—');
+    expectReading('AC on/off · On', expected);
     const known = states.filter(state => typeof state === 'boolean').length;
     const on = states.filter(state => state === true).length;
-    expect(acCard.getByText(
-      `Known on-state samples: ${on} / Known-state samples: ${known} · Unknown: ${states.length - known}`,
-    )).toBeInTheDocument();
+    if (known > 0) expectMetricDetail('AC on/off · On',
+      `Known on-state samples: ${on} / Known-state samples: ${known} · Unknown: ${states.length - known}`);
+    else expect(within(group('climate-efficiency')).getByText('No metric values are available yet.')).toBeInTheDocument();
   });
 
   it('excludes malformed AC values instead of treating truthiness as a measurement', () => {
@@ -507,9 +514,7 @@ describe('climate efficiency measurement evidence', () => {
     expect(within(card('Peak fan speed')).getByText('0.00')).toBeInTheDocument();
     const acCard = within(card('AC on/off · On'));
     expect(acCard.getByText('0.00%')).toBeInTheDocument();
-    expect(acCard.getByText(
-      'Known on-state samples: 0 / Known-state samples: 1 · Unknown: 2',
-    )).toBeInTheDocument();
+    expectMetricDetail('AC on/off · On', 'Known on-state samples: 0 / Known-state samples: 1 · Unknown: 2');
   });
 
   it('reports unknown-only malformed states without substituting measured off', () => {
@@ -519,11 +524,9 @@ describe('climate efficiency measurement evidence', () => {
         Object.assign(climate({ id }), { isAcOn })),
     });
     renderPage();
-    const acCard = within(card('AC on/off · On'));
-    expect(acCard.getByText('—')).toBeInTheDocument();
-    expect(acCard.getByText(
-      'Known on-state samples: 0 / Known-state samples: 0 · Unknown: 6',
-    )).toBeInTheDocument();
+    expectReading('AC on/off · On', '—');
+    expect(within(group('climate-efficiency')).queryByText('0.00%')).not.toBeInTheDocument();
+    expect(within(card('Avg fan speed')).getByText('5.00')).toBeInTheDocument();
   });
 
   it('keeps the known-state sample share independent of irregular elapsed durations', () => {
@@ -539,9 +542,7 @@ describe('climate efficiency measurement evidence', () => {
     renderPage();
     const acCard = within(card('AC on/off · On'));
     expect(acCard.getByText('66.67%')).toBeInTheDocument();
-    expect(acCard.getByText(
-      'Known on-state samples: 2 / Known-state samples: 3 · Unknown: 1',
-    )).toBeInTheDocument();
+    expectMetricDetail('AC on/off · On', 'Known on-state samples: 2 / Known-state samples: 3 · Unknown: 1');
     expect(screen.queryByText('AC on time')).not.toBeInTheDocument();
   });
 });
@@ -553,14 +554,14 @@ it('keeps temperature-delta classification raw while locale and precision change
   install({ latest, history: HISTORY });
   const view = renderPage();
   expect(within(card('Temp delta')).getByText('+1.23°C')).toBeInTheDocument();
-  expect(screen.getByText('Above target')).toBeInTheDocument();
+  expectMetricDetail('Temp delta', 'Above target');
   try {
     act(() => setGlobalLocale('de-DE'));
     expect(within(card('Temp delta')).getByText('+1,23°C')).toBeInTheDocument();
-    expect(screen.getByText('Above target')).toBeInTheDocument();
+    expectMetricDetail('Temp delta', 'Above target');
     act(() => setGlobalPrecision(0));
     expect(within(card('Temp delta')).getByText('+1°C')).toBeInTheDocument();
-    expect(screen.getByText('Above target')).toBeInTheDocument();
+    expectMetricDetail('Temp delta', 'Above target');
     expect(screen.queryByText('Near target')).not.toBeInTheDocument();
     expect(latest.insideTemp).toBe(22.2345);
     expect(latest.driverTempSetting).toBe(21);
@@ -724,7 +725,7 @@ describe('ClimateControlPage — active HVAC (happy path)', () => {
     renderPage();
 
     expect(within(card('HVAC power')).getByText('On')).toBeInTheDocument();
-    expect(within(card('HVAC power')).getByText('AC on/off: On')).toBeInTheDocument();
+    expectReading('AC on/off', 'On');
     expect(within(card('Fan speed')).getByText('5')).toBeInTheDocument();
     // heatStyle(2) → "Medium" for the steering-wheel heat level.
     expect(within(card('Steering wheel heat level')).getByText('Medium')).toBeInTheDocument();
@@ -756,8 +757,8 @@ describe('ClimateControlPage — active HVAC (happy path)', () => {
     // inside 22, set 21 → |Δ|=1 → score 90, delta +1, near target, excellent.
     expect(within(overview).getByText('90.00')).toBeInTheDocument();
     expect(within(overview).getByText('+1.00°C')).toBeInTheDocument();
-    expect(within(overview).getByText('Near target')).toBeInTheDocument();
-    expect(within(overview).getByText('Excellent')).toBeInTheDocument();
+    expectMetricDetail('Temp delta', 'Near target');
+    expectMetricDetail('Comfort score', 'Excellent', group('climate-comfort'));
 
     // efficiency: avg fan 5.0, peak 6.0, AC-on 50%, comfort 90%.
     expect(within(efficiency).getByText('5.00')).toBeInTheDocument();
@@ -805,16 +806,17 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0);
   });
 
-  it('renders placeholders (never a blank panel) when latest resolves empty', () => {
+  it('explains unavailable measurements without fabricating values when latest resolves empty', () => {
     install({ latest: undefined, history: [] });
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'Climate systems' })).toBeInTheDocument();
     // Missing measurements are unknown, not observed off/zero values.
-    expect(within(card('HVAC power')).getByText('—')).toBeInTheDocument();
-    expect(within(card('Fan speed')).getByText('—')).toBeInTheDocument();
-    expect(within(card('HVAC power')).queryByText('Off')).not.toBeInTheDocument();
-    expect(within(card('Fan speed')).queryByText('0')).not.toBeInTheDocument();
+    expectReading('HVAC power', '—');
+    expectReading('Fan speed', '—');
+    expect(within(group('climate-systems')).queryByText('Off')).not.toBeInTheDocument();
+    expect(within(group('climate-systems')).queryByText('0')).not.toBeInTheDocument();
+    expect(within(group('climate-systems')).getByText('No metric values are available yet.')).toBeInTheDocument();
     // Gauges + charts + table show their own empty states.
     const overview = group('climate-temperature');
     expect(within(overview).getByText('Inside temp')).toBeInTheDocument();
@@ -858,7 +860,7 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     renderPage();
 
     expect(within(card('HVAC power')).getByText('Off')).toBeInTheDocument();
-    expect(within(card('HVAC power')).getByText('AC on/off: Off')).toBeInTheDocument();
+    expectReading('AC on/off', 'Off');
     expect(within(card('Fan speed')).getByText('0')).toBeInTheDocument();
     expect(within(card('Passenger setting')).getByText('0.00°C')).toBeInTheDocument();
   });
@@ -879,9 +881,9 @@ describe('ClimateControlPage — independent HVAC and AC states', () => {
     renderPage();
 
     expect(within(group('climate-status')).getByText(banner)).toBeInTheDocument();
-    expect(within(card('HVAC power')).getByText(power)).toBeInTheDocument();
-    expect(within(card('HVAC power')).getByText(`AC on/off: ${ac}`)).toBeInTheDocument();
-    expect(within(card('HVAC power')).queryByText(/\d+\s*(W|kW)\b/)).not.toBeInTheDocument();
+    expectReading('HVAC power', power);
+    expectReading('AC on/off', ac);
+    expect(within(group('climate-systems')).queryByText(/\d+\s*(W|kW)\b/)).not.toBeInTheDocument();
     const props = presentationSpies.table.mock.lastCall![0];
     const acColumn = props.columns.find(column => column.key === 'isAcOn')!;
     expect(acColumn.header).toBe('AC on/off');
@@ -969,7 +971,7 @@ describe('ClimateControlPage — heatStyle rounding (regression)', () => {
     // 2.6 → 3 → "High"; subtitle rounds too (Level 3).
     const swCard = card('Steering wheel heat level');
     expect(within(swCard).getByText('High')).toBeInTheDocument();
-    expect(within(swCard).getByText('Level 3')).toBeInTheDocument();
+    expectMetricDetail('Steering wheel heat level', 'Level 3');
     // Front-right seat heater 1.6 → 2 → "Medium (2/3)".
     const seatHeaters = screen.getByRole('heading', { name: 'Seat heaters' }).closest('[data-card]')!;
     expect(within(seatHeaters).getAllByText('Medium (2/3)').length).toBeGreaterThan(0);
@@ -1024,7 +1026,7 @@ describe('ClimateControlPage — heatStyle rounding (regression)', () => {
 
     const steering = card('Steering wheel heat level');
     expect(within(steering).getByText(label)).toBeInTheDocument();
-    expect(within(steering).getByText(`Level ${index}`)).toBeInTheDocument();
+    expectMetricDetail('Steering wheel heat level', `Level ${index}`);
     expect(latest.hvacSteeringWheelHeatLevel).toBe(raw);
   });
 });
@@ -1106,15 +1108,21 @@ describe('ClimateControlPage — independent charging source registry', () => {
       install({ latest: climate(), history: HISTORY });
       const { container } = renderPage();
 
-      expect(card('Fan speed').querySelector('svg')).toHaveClass(typography.color.secondary);
-      expect(card('Overheat protection').querySelector('svg')).toHaveClass(typography.color.secondary);
+      withMetricDetail('Fan speed', detail => {
+        expect(detail.querySelector('svg')).toHaveClass(typography.color.secondary);
+        expect(detail.querySelector('svg')?.closest('[aria-hidden]')).toHaveAttribute('aria-hidden', 'true');
+      });
+      withMetricDetail('Overheat protection', detail => {
+        expect(detail.querySelector('svg')).toHaveClass(typography.color.secondary);
+        expect(detail.querySelector('svg')?.closest('[aria-hidden]')).toHaveAttribute('aria-hidden', 'true');
+      });
       const hotSeat = within(group('climate-seats')).getByText('High (3/3)').parentElement!;
       expect(hotSeat.querySelector('svg')).toHaveClass(neonColorMap.red.text);
       expect(hotSeat.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
       expect(container.querySelector('[class*="text-cyan-400"], [class*="text-amber-400"], [class*="text-red-400"]'))
         .not.toBeInTheDocument();
       expect(screen.getByText('Refresh').closest('button')).toHaveClass('min-h-11', 'min-w-11');
-      expect(within(card('HVAC power')).queryByText(/\d+\s*(W|kW)\b/)).not.toBeInTheDocument();
+      expect(within(group('climate-systems')).queryByText(/\d+\s*(W|kW)\b/)).not.toBeInTheDocument();
     });
 
     it('provides exact chronological temperature and HVAC alternatives with unknown AC gaps and measured zero', () => {

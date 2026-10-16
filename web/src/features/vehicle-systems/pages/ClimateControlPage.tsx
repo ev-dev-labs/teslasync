@@ -971,8 +971,12 @@ export default function ClimateControlPage() {
                     className={typography.color.secondary}
                   />
                 }
-                subtitle={`${t('climate.page.acOnOff', 'AC on/off')}: ${latest?.isAcOn == null
-                  ? '—' : latest.isAcOn ? t('common.on', 'On') : t('common.off', 'Off')}`}
+              />
+              <MetricCard
+                label={t('climate.page.acOnOff', 'AC on/off')}
+                value={typeof latest?.isAcOn !== 'boolean' ? '—' : latest.isAcOn ? t('common.on', 'On') : t('common.off', 'Off')}
+                color="cyan"
+                icon={<Icon icon={Wind} size="lg" className={typography.color.secondary} />}
               />
 
               <MetricCard

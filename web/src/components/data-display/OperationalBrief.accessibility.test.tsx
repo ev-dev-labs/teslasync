@@ -116,8 +116,9 @@ describe('OperationalBrief accessible source publication', () => {
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(dialog).toHaveAccessibleDescription(baseProps.description);
     expect(dialog).toHaveAccessibleName(`Einzelheiten zu ${translated.title}`);
-    checkSurface(dialog);
-    checkContext(dialog);
+    const metricGroup = within(dialog).getByRole('group', { name: translated.label });
+    checkSurface(metricGroup);
+    checkContext(metricGroup);
   });
 
   it('traps keyboard focus around real metric links and restores the review opener on Escape', () => {

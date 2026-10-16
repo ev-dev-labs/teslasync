@@ -51,37 +51,9 @@ import { setGlobalPrecision } from '@/lib/numberFormat';
 import * as dateFormatting from '@/hooks/useDateFormat';
 import { formatDateTime } from '@/lib/dateFormat';
 
-// ── i18n stub: resolve the string fallback (or an options-bag defaultValue) and
-//    interpolate {{var}} placeholders so assertions read on human copy. ────────
-vi.mock('react-i18next', () => {
-  const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
-    if (!vars) return str;
-    let s = str;
-    for (const [k, v] of Object.entries(vars)) {
-      s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v));
-    }
-    return s;
-  };
-  const t = (key: string, second?: unknown, third?: unknown): string => {
-    if (typeof second === 'string') {
-      return interpolate(second, third && typeof third === 'object' ? (third as Record<string, unknown>) : undefined);
-    }
-    if (second && typeof second === 'object') {
-      const bag = second as Record<string, unknown>;
-      const tpl = typeof bag.defaultValue === 'string' ? bag.defaultValue : key;
-      return interpolate(tpl, bag);
-    }
-    return key;
-  };
-  return {
-    useTranslation: () => ({ t, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-    Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
-    initReactI18next: { type: '3rdParty', init: () => undefined },
-  };
-});
-
 // ── motion primitives: render children verbatim (strip animation). ──
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/motion')>(),
   FadeIn: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 
@@ -381,6 +353,38 @@ function kpiValue(label: string): string {
   return value.textContent ?? '';
 }
 
+const mediaKpiIds = {
+  'Unique tracks': 'media-unique-tracks',
+  'Top source': 'media-top-source',
+  'Avg volume': 'media-average-volume',
+  'Volume step': 'media-volume-step',
+} as const;
+
+function expectMissingKpi(label: keyof typeof mediaKpiIds) {
+  expect(statsRegion().querySelector(`[data-operational-metric="${mediaKpiIds[label]}"]`))
+    .not.toBeInTheDocument();
+}
+
+function expectPendingKpi(label: keyof typeof mediaKpiIds) {
+  const metric = statsRegion().querySelector(`[data-operational-metric="${mediaKpiIds[label]}"]`);
+  expect(metric).toBeInTheDocument();
+  expect(metric?.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+  expect(metric?.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+}
+
+function statsDetails() {
+  fireEvent.click(within(statsRegion()).getByRole('button', { name: 'Review details' }));
+  return screen.getByRole('dialog');
+}
+
+function expectStatsMetadata(...texts: string[]) {
+  const dialog = statsDetails();
+  const header = dialog.querySelector('[data-drawer-header]');
+  if (!(header instanceof HTMLElement)) throw new Error('Missing listening stats details header');
+  for (const text of texts) expect(within(header).getByText(text)).toBeVisible();
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+}
+
 /** Non-spacer <tbody> rows of the playback-history table. */
 function bodyRows(): HTMLElement[] {
   const table = screen.getByRole('table', { name: 'Playback history' });
@@ -416,10 +420,10 @@ describe('MediaPlayerPage — no vehicle selected', () => {
     expect(screen.getByText('Select a vehicle to view sources')).toBeInTheDocument();
     expect(screen.getByText('Select a vehicle to view playback history')).toBeInTheDocument();
 
-    // KPIs collapse to honest placeholders, not stale numbers.
-    expect(kpiValue('Unique tracks')).toBe('—');
-    expect(kpiValue('Top source')).toBe('—');
-    expect(kpiValue('Avg volume')).toBe('—');
+    // Unavailable readings are omitted instead of publishing stale or fabricated values.
+    expectMissingKpi('Unique tracks');
+    expectMissingKpi('Top source');
+    expectMissingKpi('Avg volume');
 
     // Both queries are scoped to the empty vehicle (disabled upstream).
     expect(mockMedia).toHaveBeenCalledWith('');
@@ -443,7 +447,7 @@ describe('MediaPlayerPage — loading', () => {
     expect(screen.queryByText('No volume data for this period')).not.toBeInTheDocument();
     expect(screen.queryByText('No playback history for this period')).not.toBeInTheDocument();
     expect(statsRegion()).toHaveAttribute('aria-busy', 'true');
-    expect(within(statsRegion()).getByText('Loading source')).toBeInTheDocument();
+    expectStatsMetadata('Loading source');
     expect(statsRegion().querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(statsRegion().querySelector('[data-operational-value]')).not.toBeInTheDocument();
   });
@@ -593,10 +597,10 @@ describe('MediaPlayerPage — paused initial sources', () => {
     ]) {
       expect(screen.queryByText(message)).not.toBeInTheDocument();
     }
-    expect(kpiValue('Unique tracks')).toBe('—');
-    expect(kpiValue('Avg volume')).toBe('—');
+    expectMissingKpi('Unique tracks');
+    expectMissingKpi('Avg volume');
     expect(statsRegion()).not.toHaveAttribute('aria-busy');
-    expect(within(statsRegion()).getByText('Evidence unresolved')).toBeInTheDocument();
+    expectStatsMetadata('Evidence unresolved');
     expect(within(statsRegion()).queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByTestId('linear-gauge')).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
@@ -627,7 +631,7 @@ describe('MediaPlayerPage — paused initial sources', () => {
     expect(screen.getByText('No playback history for this period')).toBeInTheDocument();
     expect(kpiValue('Unique tracks')).toBe('0');
     expect(statsRegion()).not.toHaveAttribute('aria-busy');
-    expect(within(statsRegion()).getByText('Returned evidence')).toBeInTheDocument();
+    expectStatsMetadata('Returned evidence');
     expect(within(nowPlayingRegion()).getByText('Now Song')).toBeInTheDocument();
   });
 });
@@ -685,8 +689,8 @@ describe('MediaPlayerPage — missing, invalid and measured audio readings', () 
       renderPage();
 
       expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', 'null');
-      expect(kpiValue('Volume step')).toBe('—');
-      expect(kpiValue('Avg volume')).toBe('—');
+      expectMissingKpi('Volume step');
+      expectMissingKpi('Avg volume');
       expect(screen.getByText('—/—')).toBeInTheDocument();
       expect(screen.getByText('No volume data for this period')).toBeInTheDocument();
       expect(screen.queryByTestId('volume-chart')).not.toBeInTheDocument();
@@ -757,8 +761,9 @@ describe('MediaPlayerPage — error with no data', () => {
     // Page-level banner shows the first (media) error message.
     expect(screen.getByText('Failed to load data: boom')).toBeInTheDocument();
     expect(statsRegion()).not.toHaveAttribute('aria-busy');
-    expect(within(statsRegion()).getByText('Source unavailable')).toBeInTheDocument();
-    expect(within(statsRegion()).getAllByText('This source is unavailable').length).toBeGreaterThan(0);
+    expectStatsMetadata('Source unavailable');
+    expect(within(statsRegion()).getByText('No metric values are available yet.')).toBeVisible();
+    expect(statsRegion().querySelector('[data-operational-value]')).not.toBeInTheDocument();
 
     // Now-playing + volume + source + history each render a Retry CTA.
     const retries = screen.getAllByRole('button', { name: 'Retry' });
@@ -1090,10 +1095,17 @@ describe('MediaPlayerPage — independent retained source recovery', () => {
     renderPage();
 
     expect(statsRegion()).not.toHaveAttribute('aria-busy');
-    expect(within(statsRegion()).getByText('Returned evidence')).toBeInTheDocument();
-    expect(kpiValue('Unique tracks')).toBe(loadingSource === 'history' ? '—' : '3');
-    expect(kpiValue('Avg volume')).toBe(loadingSource === 'history' ? '—' : '6');
-    expect(kpiValue('Volume step')).toBe(loadingSource === 'latest' ? '—' : '0.50');
+    expectStatsMetadata('Returned evidence');
+    if (loadingSource === 'history') {
+      expectPendingKpi('Unique tracks');
+      expectPendingKpi('Top source');
+      expectPendingKpi('Avg volume');
+      expect(kpiValue('Volume step')).toBe('0.50');
+    } else {
+      expect(kpiValue('Unique tracks')).toBe('3');
+      expect(kpiValue('Avg volume')).toBe('6');
+      expectPendingKpi('Volume step');
+    }
   });
 
   it('retains successful empty history and a zero live step through refresh failure and recovery', () => {
@@ -1107,14 +1119,14 @@ describe('MediaPlayerPage — independent retained source recovery', () => {
     const view = render(ui());
     expect(kpiValue('Unique tracks')).toBe('0');
     expect(kpiValue('Volume step')).toBe('0.00');
-    expect(kpiValue('Top source')).toBe('—');
-    expect(kpiValue('Avg volume')).toBe('—');
+    expectMissingKpi('Top source');
+    expectMissingKpi('Avg volume');
 
     mockMedia.mockReturnValue(makeQuery({ data: zero, error: new Error('Live refresh failed'), isError: true }));
     mockHistory.mockReturnValue(makeQuery({ data: [], error: new Error('History refresh failed'), isError: true }));
     view.rerender(ui());
     expect(statsRegion()).not.toHaveAttribute('aria-busy');
-    expect(within(statsRegion()).getAllByText('Retained evidence').length).toBeGreaterThan(0);
+    expectStatsMetadata('Retained evidence');
     expect(within(statsRegion()).queryByRole('alert')).not.toBeInTheDocument();
     expect(kpiValue('Unique tracks')).toBe('0');
     expect(kpiValue('Volume step')).toBe('0.00');
@@ -1123,34 +1135,54 @@ describe('MediaPlayerPage — independent retained source recovery', () => {
     mockMedia.mockReturnValue(makeQuery({ data: zero }));
     mockHistory.mockReturnValue(makeQuery({ data: [] }));
     view.rerender(ui());
-    expect(within(statsRegion()).getByText('Returned evidence')).toBeInTheDocument();
+    expectStatsMetadata('Returned evidence');
     expect(statsRegion().parentElement).not.toHaveAttribute('data-source-retained');
     expect(kpiValue('Unique tracks')).toBe('0');
     expect(kpiValue('Volume step')).toBe('0.00');
   });
 
   it.each(['history', 'latest'] as const)('keeps returned metrics when only %s is unavailable', (unavailableSource) => {
-    const failed = makeQuery({ isError: true, error: new Error('Independent source failed') });
+    const retry = vi.fn();
+    const failed = makeQuery({ isError: true, error: new Error('Independent source failed'), refetch: retry });
     if (unavailableSource === 'history') mockHistory.mockReturnValue(failed);
     else mockMedia.mockReturnValue(failed);
     renderPage();
 
-    expect(within(statsRegion()).getByText('Returned evidence')).toBeInTheDocument();
-    expect(within(statsRegion()).getByText('Not a live-state observation')).toBeInTheDocument();
-    expect(kpiValue('Unique tracks')).toBe(unavailableSource === 'history' ? '—' : '3');
-    expect(kpiValue('Top source')).toBe(unavailableSource === 'history' ? '—' : 'Spotify');
-    expect(kpiValue('Avg volume')).toBe(unavailableSource === 'history' ? '—' : '6');
-    expect(kpiValue('Volume step')).toBe(unavailableSource === 'latest' ? '—' : '0.50');
-    for (const id of ['media-unique-tracks', 'media-top-source', 'media-average-volume']) {
-      const metric = statsRegion().querySelector(`[data-operational-metric="${id}"]`);
-      expect(metric).toHaveTextContent(unavailableSource === 'history' ? 'This source is unavailable' : 'Partial evidence');
-      expect(metric).not.toHaveTextContent('Latest media snapshot');
+    expectStatsMetadata('Returned evidence');
+    expectStatsMetadata('Not a live-state observation');
+    if (unavailableSource === 'history') {
+      expectMissingKpi('Unique tracks');
+      expectMissingKpi('Top source');
+      expectMissingKpi('Avg volume');
+      expect(kpiValue('Volume step')).toBe('0.50');
+    } else {
+      expect(kpiValue('Unique tracks')).toBe('3');
+      expect(kpiValue('Top source')).toBe('Spotify');
+      expect(kpiValue('Avg volume')).toBe('6');
+      expectMissingKpi('Volume step');
     }
-    const step = statsRegion().querySelector('[data-operational-metric="media-volume-step"]');
-    expect(step).toHaveTextContent('Latest media snapshot');
-    expect(step).not.toHaveTextContent('Partial evidence');
-    if (unavailableSource === 'latest') expect(step).toHaveTextContent('This source is unavailable');
-    else expect(step).not.toHaveTextContent('This source is unavailable');
+    const dialog = statsDetails();
+    for (const label of ['Unique tracks', 'Top source', 'Avg volume']) {
+      const metric = within(dialog).queryByRole('group', { name: label });
+      if (unavailableSource === 'history') expect(metric).not.toBeInTheDocument();
+      else {
+        expect(metric).toHaveTextContent('Partial evidence');
+        expect(metric).not.toHaveTextContent('Latest media snapshot');
+      }
+    }
+    const step = within(dialog).queryByRole('group', { name: 'Volume step' });
+    if (unavailableSource === 'latest') expect(step).not.toBeInTheDocument();
+    else {
+      expect(step).toHaveTextContent('Latest media snapshot');
+      expect(step).not.toHaveTextContent('Partial evidence');
+    }
+    expect(within(dialog).getByText(unavailableSource === 'history'
+      ? '3 empty fields are hidden.' : '1 empty field is hidden.')).toBeVisible();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    const failedRegion = unavailableSource === 'history'
+      ? screen.getByRole('region', { name: 'Volume over time' }) : nowPlayingRegion();
+    fireEvent.click(within(failedRegion).getAllByRole('button', { name: 'Retry' })[0]);
+    expect(retry).toHaveBeenCalledOnce();
   });
 
   it('preserves the user sort and every retained history row when live metadata alone recovers', () => {
@@ -1224,7 +1256,7 @@ describe('MediaPlayerPage — independent retained source recovery', () => {
       },
     }));
     view.rerender(ui());
-    expect(kpiValue('Volume step')).toBe('—');
+    expectMissingKpi('Volume step');
     expect(within(nowPlayingRegion()).getByText('Unknown status')).toBeInTheDocument();
     expect(within(nowPlayingRegion()).queryByRole('progressbar', { name: 'Playback progress' }))
       .not.toBeInTheDocument();
@@ -1268,6 +1300,6 @@ describe('MediaPlayerPage — restrained source presentation', () => {
     expect(screen.queryByTestId('volume-chart')).not.toBeInTheDocument();
     expect(screen.queryByRole('progressbar', { name: 'Playback progress' })).not.toBeInTheDocument();
     expect(within(statsRegion()).getByText('Unique tracks')).toBeInTheDocument();
-    expect(within(statsRegion()).getByText('Loading source')).toBeInTheDocument();
+    expectStatsMetadata('Loading source');
   });
 });
