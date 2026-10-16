@@ -116,48 +116,6 @@ describe('<SignalConfigModal>', () => {
       initialIntervals: { VehicleSpeed: 0, ChargeState: 300 },
     })
 
-    describe('Fleet Setup cadence serialization', () => {
-      const input = { vins: ['fixture'], fields: ['VehicleSpeed', 'Gear'] }
-
-      it('omits missing intervals without fabricating measured zero', () => {
-        expect(fleetTelemetrySubscribeBody(input)).toEqual(input)
-      })
-
-      it('preserves master zero through explicit field overrides and keeps mixed cadences', () => {
-        const overrides = { Gear: 30 }
-        expect(fleetTelemetrySubscribeBody({
-          ...input, interval_seconds: 0, field_intervals: overrides,
-        })).toEqual({ ...input, field_intervals: { VehicleSpeed: 0, Gear: 30 } })
-        expect(overrides).toEqual({ Gear: 30 })
-      })
-
-      it('preserves an explicit per-field zero with a positive master', () => {
-        expect(fleetTelemetrySubscribeBody({
-          ...input, interval_seconds: +37, field_intervals: { Gear: 0 },
-        })).toEqual({ ...input, interval_seconds: 37, field_intervals: { Gear: 0 } })
-      })
-
-      it.each([NaN, Infinity, -Infinity, -1, 0.5, 1.5, Number.MAX_SAFE_INTEGER + 1])(
-        'reports unsupported/invalid cadence %s instead of changing or dropping it',
-        (interval) => {
-          expect(() => fleetTelemetrySubscribeBody({ ...input, interval_seconds: interval })).toThrow(/unsupported telemetry interval/)
-          expect(() => fleetTelemetrySubscribeBody({ ...input, field_intervals: { Gear: interval } })).toThrow(/unsupported telemetry interval/)
-        },
-      )
-
-      it('does not treat malformed JSON values as measured zero or missing input', () => {
-        for (const raw of ['null', '""', '"5"', 'false']) {
-          const interval: number = JSON.parse(raw)
-          expect(() => fleetTelemetrySubscribeBody({ ...input, interval_seconds: interval })).toThrow(/unsupported telemetry interval/)
-          expect(() => fleetTelemetrySubscribeBody({ ...input, field_intervals: { Gear: interval } })).toThrow(/unsupported telemetry interval/)
-        }
-      })
-
-      it('reports unsupported master zero when explicit fields are absent', () => {
-        expect(() => fleetTelemetrySubscribeBody({ vins: ['fixture'], interval_seconds: 0 }))
-          .toThrow(/requires explicit fields/)
-      })
-    })
     expect(intervalSelect('VehicleSpeed')).toHaveValue('0')
     expect(intervalSelect('Gear')).toHaveValue('30')
     expect(intervalSelect('ChargeState')).toHaveValue('300')
@@ -168,6 +126,49 @@ describe('<SignalConfigModal>', () => {
       { name: 'Gear', interval: 30 },
       { name: 'ChargeState', interval: 300 },
     ])
+  })
+
+  describe('Fleet Setup cadence serialization', () => {
+    const input = { vins: ['fixture'], fields: ['VehicleSpeed', 'Gear'] }
+
+    it('omits missing intervals without fabricating measured zero', () => {
+      expect(fleetTelemetrySubscribeBody(input)).toEqual(input)
+    })
+
+    it('preserves master zero through explicit field overrides and keeps mixed cadences', () => {
+      const overrides = { Gear: 30 }
+      expect(fleetTelemetrySubscribeBody({
+        ...input, interval_seconds: 0, field_intervals: overrides,
+      })).toEqual({ ...input, field_intervals: { VehicleSpeed: 0, Gear: 30 } })
+      expect(overrides).toEqual({ Gear: 30 })
+    })
+
+    it('preserves an explicit per-field zero with a positive master', () => {
+      expect(fleetTelemetrySubscribeBody({
+        ...input, interval_seconds: +37, field_intervals: { Gear: 0 },
+      })).toEqual({ ...input, interval_seconds: 37, field_intervals: { Gear: 0 } })
+    })
+
+    it.each([NaN, Infinity, -Infinity, -1, 0.5, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+      'reports unsupported/invalid cadence %s instead of changing or dropping it',
+      (interval) => {
+        expect(() => fleetTelemetrySubscribeBody({ ...input, interval_seconds: interval })).toThrow(/unsupported telemetry interval/)
+        expect(() => fleetTelemetrySubscribeBody({ ...input, field_intervals: { Gear: interval } })).toThrow(/unsupported telemetry interval/)
+      },
+    )
+
+    it('does not treat malformed JSON values as measured zero or missing input', () => {
+      for (const raw of ['null', '""', '"5"', 'false']) {
+        const interval: number = JSON.parse(raw)
+        expect(() => fleetTelemetrySubscribeBody({ ...input, interval_seconds: interval })).toThrow(/unsupported telemetry interval/)
+        expect(() => fleetTelemetrySubscribeBody({ ...input, field_intervals: { Gear: interval } })).toThrow(/unsupported telemetry interval/)
+      }
+    })
+
+    it('reports unsupported master zero when explicit fields are absent', () => {
+      expect(() => fleetTelemetrySubscribeBody({ vins: ['fixture'], interval_seconds: 0 }))
+        .toThrow(/requires explicit fields/)
+    })
   })
 
   it('restores saved mixed cadences on reopen and clears search without resetting edits on rerender', () => {
