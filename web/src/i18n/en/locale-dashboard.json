@@ -2776,7 +2776,7 @@
       "avgEfficiency": "Avg efficiency",
       "costPerDist": "Cost / {{unit}}",
       "energyConsumed": "Energy consumed",
-      "noData": "No analytics data",
+      "noDataMessage": "No analytics readings are available yet. They appear after the analytics source returns data.",
       "summary": {
         "costHelp": "Recorded cost divided by positive measured distance, retained as source currency per metre; missing operands or zero distance cannot define a rate.",
         "description": "Fleet-wide analytics using the hook’s default source window. Exact bounds and completeness are not supplied; optional trend arrays retain their own source coverage.",

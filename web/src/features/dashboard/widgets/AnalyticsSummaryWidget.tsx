@@ -134,9 +134,10 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
             align="center"
           />
         ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+          <EmptyState
+            variant="informational"
             icon={<BarChart3 className="h-5 w-5" />}
-            message={t('widget.analyticsSummary.noData', 'No analytics data')}
+            message={t('widget.analyticsSummary.noDataMessage', 'No analytics readings are available yet. They appear after the analytics source returns data.')}
             className="py-4"
           />
         )}
@@ -186,9 +187,10 @@ export default function AnalyticsSummaryWidget({ size }: WidgetProps) {
           )}
         </div>
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        <EmptyState
+          variant="informational"
           icon={<BarChart3 className="h-5 w-5" />}
-          message={t('widget.analyticsSummary.noData', 'No analytics data')}
+          message={t('widget.analyticsSummary.noDataMessage', 'No analytics readings are available yet. They appear after the analytics source returns data.')}
           className="py-8"
         />
       )}

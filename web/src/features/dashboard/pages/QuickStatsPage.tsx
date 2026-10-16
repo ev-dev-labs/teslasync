@@ -151,6 +151,7 @@ export default function QuickStatsPage() {
       <FadeIn>
         <Section id="quick-stats-metrics" title={t('quickStats.kpis', 'Fleet metrics')}>
           <DashboardSourceBrief
+            variant="standalone"
             metrics={metrics}
             state={analyticsState}
             eyebrow={t('quickStats.summary.eyebrow', 'Fleet rollup')}

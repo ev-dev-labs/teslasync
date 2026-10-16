@@ -41934,7 +41934,7 @@
       "widget.analyticsSummary.avgEfficiency",
       "widget.analyticsSummary.costPerDist",
       "widget.analyticsSummary.energyConsumed",
-      "widget.analyticsSummary.noData",
+      "widget.analyticsSummary.noDataMessage",
       "widget.analyticsSummary.summary.costHelp",
       "widget.analyticsSummary.summary.description",
       "widget.analyticsSummary.summary.distanceHelp",

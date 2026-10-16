@@ -354,6 +354,7 @@ export default function GlancePage() {
               className="min-w-0"
             >
               <DashboardSourceBrief
+                variant="standalone"
                 metrics={overviewMetrics}
                 state={stateTrust}
                 eyebrow={t('glance.summary.eyebrow', 'Vehicle telemetry')}

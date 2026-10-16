@@ -216,8 +216,10 @@ describe('AnalyticsSummaryWidget', () => {
     expect(within(brief).getByText('150.00 Wh/km')).toBeInTheDocument();
     expect(within(brief).getByText('200.00 kWh')).toBeInTheDocument();
     expect(within(brief).getByText('$0.25')).toBeInTheDocument();
-    expect(within(brief).getByText('Fleet-wide · default analytics window')).toBeInTheDocument();
-    expect(within(brief).getAllByText(/Exact bounds and completeness are not supplied/).length).toBeGreaterThan(0);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Analytics operating summary details' });
+    expect(within(details).getByText('Fleet-wide · default analytics window')).toBeInTheDocument();
+    expect(within(details).getAllByText(/Exact bounds and completeness are not supplied/).length).toBeGreaterThan(0);
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveTextContent('Data may be stale');
     expect(warning).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
@@ -237,7 +239,7 @@ describe('AnalyticsSummaryWidget', () => {
     expect(screen.getByText('0.00 km')).toBeInTheDocument();
     expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
     expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
-    expect(screen.queryByText('No analytics data')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No analytics readings are available yet/)).not.toBeInTheDocument();
   });
   it('renders the four KPI cards with km-unit conversions + currency formatting', () => {
     renderWidget();
@@ -306,8 +308,9 @@ describe('AnalyticsSummaryWidget', () => {
     analyticsMock.mockReturnValue(makeQuery({ data: undefined }));
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.getByText('No analytics data')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No analytics readings are available yet. They appear after the analytics source returns data.')).toBeInTheDocument();
+    expect(screen.getByText('No analytics readings are available yet. They appear after the analytics source returns data.')?.closest('[role="status"]'))
+      .toHaveAttribute('data-variant', 'informational');
     expect(screen.queryByText(/km$/)).not.toBeInTheDocument();
   });
 
@@ -323,7 +326,7 @@ describe('AnalyticsSummaryWidget', () => {
     expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByTestId('analytics-summary-operational-brief')).not.toBeInTheDocument();
     expect(screen.queryByText('1,000.00 km')).not.toBeInTheDocument();
-    expect(screen.queryByText('No analytics data')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No analytics readings are available yet/)).not.toBeInTheDocument();
     // No KPI content while loading.
     expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
   });
@@ -347,7 +350,7 @@ describe('AnalyticsSummaryWidget', () => {
     renderWidget();
 
     expect(screen.getByText('Analytics summary')).toBeInTheDocument();
-    expect(screen.getByText('No analytics data')).toBeInTheDocument();
+    expect(screen.getByText('No analytics readings are available yet. They appear after the analytics source returns data.')).toBeInTheDocument();
     expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
   });
 
@@ -363,7 +366,10 @@ describe('AnalyticsSummaryWidget', () => {
     // Both missing efficiency and energy default to zero measurements.
     expect(screen.queryByText('0.00')).not.toBeInTheDocument();
     // totalCost missing → costPerDist 0 → "—".
-    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.queryByText('-')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('analytics-summary-operational-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('refreshes the summary when the freshness control is activated', () => {

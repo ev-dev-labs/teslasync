@@ -17800,6 +17800,7 @@
       "energyConsumed": "Energy consumed",
       "costPerDist": "Cost / {{unit}}",
       "noData": "No analytics data",
+      "noDataMessage": "No analytics readings are available yet. They appear after the analytics source returns data.",
       "title": "Analytics summary",
       "summary": {
         "eyebrow": "Fleet analytics",

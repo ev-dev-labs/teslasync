@@ -16,10 +16,12 @@ interface DashboardSourceBriefProps {
   freshness?: ReactNode;
   loading?: boolean;
   testId: string;
+  variant?: 'standalone' | 'embedded';
 }
 
 export function DashboardSourceBrief({
   metrics, state, eyebrow, title, description, scope, freshness, loading, testId,
+  variant = 'embedded',
 }: DashboardSourceBriefProps) {
   const { t } = useTranslation();
   const operationalMetrics = useOperationalMetrics(metrics);
@@ -35,6 +37,7 @@ export function DashboardSourceBrief({
   return (
     <OperationalBrief
       compact
+      variant={variant}
       testId={testId}
       eyebrow={eyebrow}
       title={title}

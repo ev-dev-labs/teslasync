@@ -63,7 +63,31 @@ export interface OperationalBriefProps {
   showRange?: boolean
   /** Dense layout for pages where the evidence grid follows a compact page header. */
   compact?: boolean
+  /** Render without a surface when this brief is already inside a card or widget. */
+  variant?: 'standalone' | 'embedded'
   loading?: boolean
+}
+
+function BriefSurface({
+  variant,
+  className,
+  children,
+}: {
+  variant: 'standalone' | 'embedded'
+  className?: string
+  children: ReactNode
+}) {
+  if (variant === 'embedded') {
+    return <div data-operational-brief-surface="embedded" className={cn('min-w-0', className)}>{children}</div>
+  }
+  return (
+    <GlassPanel
+      data-operational-brief-surface="standalone"
+      className={cn('overflow-hidden border-[var(--border-default)] bg-[var(--surface-1)] shadow-e1', className)}
+    >
+      {children}
+    </GlassPanel>
+  )
 }
 
 const TONE_TEXT: Record<OperationalTone, string> = {
@@ -114,6 +138,7 @@ export function OperationalBrief({
   testId,
   showRange = false,
   compact = false,
+  variant = 'standalone',
   loading = false,
 }: OperationalBriefProps) {
   const { t } = useTranslation()
@@ -143,13 +168,8 @@ export function OperationalBrief({
   return (
     <>
       <section aria-labelledby={titleId} data-testid={testId} data-operational-brief aria-busy={loading || undefined}>
-        <GlassPanel
-          className={cn(
-            'overflow-hidden border-[var(--border-default)] bg-[var(--surface-1)] shadow-e1',
-            className,
-          )}
-        >
-          <div className={cn(compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
+        <BriefSurface variant={variant} className={className}>
+          <div className={cn(variant === 'embedded' ? 'min-w-0' : compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
             <div className="flex min-w-0 items-center justify-between gap-2">
               <PanelTitle id={titleId} className={cn('min-w-0 flex-1 truncate', compact ? 'text-base' : undefined)} title={title}>{title}</PanelTitle>
               {showRange && scope && <span className="shrink-0 rounded-full border border-[var(--border-subtle)] px-2 py-0.5 text-xs text-[var(--text-muted)]">{scope}</span>}
@@ -204,7 +224,7 @@ export function OperationalBrief({
             </div>
 
             {primaryAttention && (
-              <div className={cn('flex flex-col rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] sm:flex-row sm:items-center', compact ? 'mt-2 gap-2 p-2.5' : 'mt-4 gap-3 p-3')}>
+              <div className={cn('flex min-w-0 flex-col border-t border-[var(--border-subtle)] pt-3 sm:flex-row sm:items-center', compact ? 'mt-2 gap-2' : 'mt-4 gap-3')}>
                 <Icons.alertCircle
                   className={cn(
                     'h-4 w-4 shrink-0',
@@ -236,7 +256,7 @@ export function OperationalBrief({
               </div>
             )}
           </div>
-        </GlassPanel>
+        </BriefSurface>
       </section>
 
       <Drawer

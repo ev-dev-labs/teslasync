@@ -71,12 +71,12 @@ describe('DashboardSourceBrief with the actual renderer and raw bridge', () => {
     expect(captured.metrics.map(metric => metric.valueState)).toEqual(['value', 'value', 'value', 'value']);
     const brief = screen.getByTestId('source-brief');
     expect(brief).toHaveAttribute('data-operational-brief');
-    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
     expect(within(brief).getByText('1,000.00 mi')).toBeInTheDocument();
     expect(within(brief).getByText('32.00°F')).toBeInTheDocument();
     expect(within(brief).getByText('0')).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Retained readings')).toBeInTheDocument();
     expect(within(drawer).getByText('250.00 kWh')).toBeInTheDocument();
     expect(within(drawer).getByText('Source metres')).toBeInTheDocument();
     expect(within(drawer).getAllByText(/independent source windows/).length).toBeGreaterThan(0);
@@ -96,8 +96,10 @@ describe('DashboardSourceBrief with the actual renderer and raw bridge', () => {
     expect(captured.metrics.map(metric => metric.rawValue)).toEqual([null, Number.NaN, 1.5, 0]);
     expect(captured.metrics.map(metric => metric.valueState)).toEqual(['missing', 'invalid', 'invalid', 'value']);
     const brief = screen.getByTestId('source-brief');
-    expect(within(brief).getAllByText('—')).toHaveLength(3);
+    expect(within(brief).queryByText('-')).not.toBeInTheDocument();
     expect(within(brief).getByText('0')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('3 empty fields are hidden.')).toBeInTheDocument();
   });
 
   it('retains labels and raw states while the loading presentation suppresses numeric announcements', () => {

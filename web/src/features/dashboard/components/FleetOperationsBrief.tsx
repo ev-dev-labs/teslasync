@@ -177,6 +177,7 @@ export function FleetOperationsBrief({
     >
       <OperationalBrief
         compact
+        variant="embedded"
         testId="fleet-posture-operational-brief"
         eyebrow={t('dashboard.fleetPosture.summary.eyebrow', 'Fleet evidence')}
         title={t('dashboard.fleetPosture.summary.title', 'Fleet operating posture')}

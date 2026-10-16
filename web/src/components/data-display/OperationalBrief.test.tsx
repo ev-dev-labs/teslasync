@@ -239,6 +239,17 @@ describe('OperationalBrief', () => {
     expect(within(drawer).getByText('Both drives include measured energy.')).toBeVisible();
   });
 
+  it('removes its raised surface and inner padding when embedded in a widget', () => {
+    render(<OperationalBrief variant="embedded" compact eyebrow="Fleet" title="Embedded summary"
+      description="Embedded source context." statusLabel="Available"
+      metrics={[{ key: 'distance', label: 'Distance', value: '42 mi', detail: 'Measured distance.' }]} />);
+    const region = screen.getByRole('region', { name: 'Embedded summary' });
+    const surface = region.querySelector('[data-operational-brief-surface="embedded"]');
+    expect(surface).toBeInTheDocument();
+    expect(surface).not.toHaveClass('border', 'bg-[var(--surface-1)]', 'shadow-e1');
+    expect(surface?.firstElementChild).not.toHaveClass('p-3', 'sm:p-4');
+  });
+
   it('replaces a fully empty metric row with a sentence and metric chips', () => {
     render(<OperationalBrief eyebrow="Charging" title="Charging options"
       description="Current option estimates." statusLabel="No prices"
