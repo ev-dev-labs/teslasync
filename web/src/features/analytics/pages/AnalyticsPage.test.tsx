@@ -266,6 +266,15 @@ describe('AnalyticsPage', () => {
     expect(document.title).toContain('Fleet analytics');
   });
 
+  it('renders analytics evidence briefs without a nested surface', async () => {
+    renderPage();
+    await screen.findByTestId('tab-overview');
+
+    const brief = screen.getByText('Overview brief').closest('[data-operational-brief]');
+    expect(brief?.querySelector('[data-operational-brief-surface="embedded"]')).toBeInTheDocument();
+    expect(brief?.querySelector('[data-operational-brief-surface="standalone"]')).toBeNull();
+  });
+
   it('threads the pending query state to the hero band and the active tab', () => {
     // Never-resolving request keeps the query in its loading state.
     mockedRequest.mockReturnValue(new Promise(() => {}));

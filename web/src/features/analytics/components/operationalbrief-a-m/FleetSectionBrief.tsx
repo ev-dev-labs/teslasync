@@ -22,6 +22,7 @@ export function FleetSectionBrief({ query, title, description, metrics, scope }:
   return (
     <OperationalBrief
       compact
+      variant="embedded"
       metrics={operationalMetrics}
       loading={loading}
       eyebrow={t('analytics.title', 'Fleet analytics')}
