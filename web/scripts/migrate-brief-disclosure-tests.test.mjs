@@ -162,3 +162,23 @@ expect(metricValue('Capacity')).toBe('—');`;
 expect(metricValue('Capacity')).toBe('—');`;
   assert.equal(migrateMissingMetricTests(global).output, global);
 });
+
+
+test('requires opt-in for global positive statuses and retains the strict single-brief scope', () => {
+  const source = "expect(screen.getByText('Retained evidence')).toBeInTheDocument();";
+  assert.equal(migrate(source).output, source);
+  const result = migrate(source, 'global.test.tsx', { globalStatuses: true });
+  assert.equal(result.edits.length, 1);
+  assert.ok(result.output.includes("assertOperationalBriefDisclosure(document.body, 'Retained evidence')"));
+  assert.equal(migrate(result.output, 'global.test.tsx', { globalStatuses: true }).edits.length, 0);
+});
+
+test('preserves global negative, polling, generic pause and unrelated copy assertions', () => {
+  const source = `expect(screen.queryByText('Retained evidence')).not.toBeInTheDocument();
+await waitFor(() => expect(screen.getByText('Retained evidence')).toBeInTheDocument());
+expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+expect(screen.getByText('Source failed: offline')).toBeInTheDocument();`;
+  const result = migrate(source, 'global.test.tsx', { globalStatuses: true });
+  assert.equal(result.output, source);
+  assert.equal(result.deferred.length, 2);
+});

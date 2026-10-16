@@ -180,7 +180,7 @@ describe('maps OperationalBrief source contract', () => {
   it('shows initial loading from source status while preserving labels, scope and retry', () => {
     const onRetry = vi.fn();
     const { container } = renderBrief(true, [{ label: sourceLabel, state: deriveDataState({ isPending: true }) }], onRetry);
-    expect(screen.getByText('Loading source data')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Loading source data');
     expect(screen.getByRole('region', { name: 'Vehicle status' })).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByText('Measured speed')).toBeInTheDocument();
     expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
@@ -332,7 +332,7 @@ describe('maps OperationalBrief source contract', () => {
   it.each([null, Number.NaN, Number.POSITIVE_INFINITY, 8.64e15 + 1])('keeps an absent or invalid receipt %s explicitly unknown', (updatedAt) => {
     renderBrief(false, [{ label: sourceLabel, state: { ...state, updatedAt } }]);
     expect(screen.getByText(`${sourceLabel}: Receipt time unknown`)).toBeInTheDocument();
-    expect(screen.getByText('Retained source data')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source data');
     expect(screen.getByText('0.00 km/h')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog', { name: 'Vehicle status details' })).getByText(`${sourceLabel}: Receipt time unknown`)).toBeInTheDocument();

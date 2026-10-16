@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -117,7 +118,7 @@ describe('settings summaries use the real compact Brief and raw bridge', () => {
     expect(container.querySelector('[data-operational-metric="zero"] [data-operational-value]')).toHaveTextContent('0')
     expect(container.querySelector('[data-operational-metric="missing"]')).toHaveAttribute('data-value-state', 'missing')
     expect(container.querySelector('[data-operational-metric="invalid"]')).toHaveAttribute('data-value-state', 'invalid')
-    expect(screen.getByText('Retained source')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(document.body, 'Retained source')
   })
 
   it('marks the loading Brief busy without asserting default source values', () => {

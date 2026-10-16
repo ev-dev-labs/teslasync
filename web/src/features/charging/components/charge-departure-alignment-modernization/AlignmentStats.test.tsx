@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ComponentProps, PropsWithChildren } from 'react';
 import { createInstance, type i18n } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
@@ -98,7 +99,7 @@ describe('AlignmentStats derived summary semantics', () => {
 
   it('keeps unavailable history unknown rather than inventing zero counts or measured values', () => {
     const { container } = render(<AlignmentStats {...props({ summary: undefined })} />, { wrapper: Harness });
-    expect(screen.getByText('Source unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Source unavailable');
     expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
     expect(metric(container, 'alignment-paired')).toHaveTextContent('of — ended charges');
     expect(metric(container, 'alignment-misaligned-rate')).toHaveTextContent('— of — paired sessions');
@@ -152,13 +153,13 @@ describe('AlignmentStats derived summary semantics', () => {
     const retry = vi.fn();
     const initial = props({ summary: undefined, loading: true });
     const { container, rerender } = render(<AlignmentStats {...initial} />, { wrapper: Harness });
-    expect(screen.getByText('Loading source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Loading source');
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     rerender(<AlignmentStats {...props({
       loading: true, retained: true,
       historyContext: <a href="#charging-source" onClick={retry}>Review retained history</a>,
     })} />);
-    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source');
     expect(container.querySelector('[data-retained]')).toHaveAttribute('data-retained', 'true');
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(4);
     expect(metric(container, 'alignment-avg-dwell')).toHaveTextContent('1h 15m');

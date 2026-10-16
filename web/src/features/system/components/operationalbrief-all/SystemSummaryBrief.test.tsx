@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -50,7 +51,7 @@ describe('system source summaries use the real raw bridge and review drawer', ()
   it('retains each measurement and textual context through a background source failure', () => {
     const { container } = render(<MemoryRouter><SystemSummaryBrief {...props} retained
       textMetrics={[{ key: 'type', label: 'Most exported', value: 'drives', detail: 'By count' }]} /></MemoryRouter>);
-    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source');
     expect(container.querySelector('[data-operational-metric="count"] [data-operational-value]')).toHaveTextContent('0');
     expect(screen.getByText('By count')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
@@ -69,6 +70,6 @@ describe('system source summaries use the real raw bridge and review drawer', ()
     rerender(<MemoryRouter><SystemSummaryBrief {...props} available={false}
       metrics={measurements.map(metric => ({ ...metric, rawValue: null }))} /></MemoryRouter>);
     expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
-    expect(screen.getByText('Source unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Source unavailable');
   });
 });

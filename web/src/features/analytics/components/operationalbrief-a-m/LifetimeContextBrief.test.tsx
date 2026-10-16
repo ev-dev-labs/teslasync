@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -138,7 +139,7 @@ describe('LifetimeContextBrief efficiency preferences', () => {
       const { container } = render(brief({ data: {
         ...stats, earth_circumferences: 0, moon_trips: 0, trees_equivalent: 0, homes_equivalent_days: 0,
       }, isSuccess: true }));
-      expect(screen.getByText('Returned evidence')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(document.body, 'Returned evidence');
       expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
       expect(container.querySelector('[data-empty-state]')).toBeNull();
     });
@@ -154,7 +155,7 @@ describe('LifetimeContextBrief efficiency preferences', () => {
       expect(screen.getByText('Refreshing retained evidence')).toBeInTheDocument();
       expect(screen.getByText('250.00%')).toBeInTheDocument();
       rerender(brief({ data: stats, isSuccess: true, dataUpdatedAt: 7200000 }));
-      expect(screen.getByText('Returned evidence')).toBeInTheDocument();
+      assertOperationalBriefDisclosure(document.body, 'Returned evidence');
       expect(screen.getByText('Loaded 0 minutes ago')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Erneut versuchen' })).not.toBeInTheDocument();
     });

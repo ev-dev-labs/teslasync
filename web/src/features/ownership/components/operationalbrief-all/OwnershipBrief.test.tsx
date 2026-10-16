@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import type { StatMetric } from '@/components/data-display';
@@ -253,7 +254,7 @@ describe('OwnershipBrief real OperationalBrief and numeric bridge', () => {
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     rerender(<OwnershipBrief title="Storage evidence" description="Returned catalog" scope="Database catalog"
       source={{ data: {}, fetchStatus: 'paused' }} metrics={metrics} />);
-    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source');
     expect(container.querySelector('[data-operational-metric="zero"]')).toHaveTextContent('0 B');
   });
 
@@ -275,7 +276,7 @@ describe('OwnershipBrief real OperationalBrief and numeric bridge', () => {
     rerender(<OwnershipBrief title="Tariff evidence" description="Recorded tariff"
       scope="Recorded tariff scope" source={{ isPending: true, isLoading: true, fetchStatus: 'fetching' }} metrics={[]} />);
     expect(screen.queryByText('Source paused')).not.toBeInTheDocument();
-    expect(screen.getByText('Loading source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Loading source');
     expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
     rerender(<OwnershipBrief title="Tariff evidence" description="Recorded tariff"
       scope="Recorded tariff scope" source={{ data: {}, isSuccess: true, fetchStatus: 'idle' }} metrics={metrics} />);

@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ReactNode } from 'react';
 import { fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -262,7 +263,7 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
     const { rerender } = render(<AnalysisBrief {...baseProps} query={{
       error: new Error('Initial failure'), isError: true,
     }} />, { wrapper: Wrapper });
-    expect(screen.getByText('Source unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Source unavailable');
     expect(screen.getByText('Intelligence evidence could not be loaded.')).toBeInTheDocument();
     expect(screen.getByTestId('analysis-state')).not.toHaveAttribute('aria-busy');
     rerender(<AnalysisBrief {...baseProps} hasResult metrics={[]} query={{ data: [], isSuccess: true }}

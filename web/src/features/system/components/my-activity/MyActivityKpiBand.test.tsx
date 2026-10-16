@@ -10,6 +10,7 @@
 // 'Default' without any i18n setup. The component pulls in no router / query
 // context, so a bare render() is sufficient.
 
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
@@ -112,7 +113,7 @@ describe('MyActivityKpiBand', () => {
     // aria-busy flips true and a polite live region announces the load.
     const region = screen.getByRole('region', { name: /Activity summary/i });
     expect(region).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByText('Loading source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Loading source');
 
     // Exactly CARD_COUNT skeleton placeholders are shown.
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);

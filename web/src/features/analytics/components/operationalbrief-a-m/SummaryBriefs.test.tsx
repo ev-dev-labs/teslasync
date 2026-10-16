@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -115,7 +116,7 @@ describe('real analytics summary OperationalBrief contracts', () => {
     expect(screen.getByText('12,000 km')).toBeInTheDocument();
     expect(screen.getByText('31.00 km')).toBeInTheDocument();
     expect(screen.getByText('11,315 km')).toBeInTheDocument();
-    expect(screen.getByText('Retained evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained evidence');
     expect(screen.getByText('Recorded lifetime · trailing 30-day average · annual projection · trailing 7 / 365 days'))
       .toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
@@ -150,7 +151,7 @@ describe('real analytics summary OperationalBrief contracts', () => {
     expect(container.querySelector('[data-operational-metric="budget-used"]')).toHaveAttribute('data-value-state', 'value');
     expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
     expect(screen.getByText('0.00 km')).toBeInTheDocument();
-    expect(screen.getByText('Retained evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained evidence');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(within(screen.getByRole('dialog')).getByText('At least this much is present; older term drives may be absent')).toBeInTheDocument();
   });
@@ -193,7 +194,7 @@ describe('real analytics summary OperationalBrief contracts', () => {
     const { container } = render(<MemoryRouter><LifetimeContextBrief mode={mode} stats={lifetime}
       loading={false} error={new Error('refresh failed')} onRetry={vi.fn()} /></MemoryRouter>);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(count);
-    expect(screen.getByText('Retained evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained evidence');
     expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(count);
     if (mode === 'funfacts') expect(screen.getByText('250.00%')).toBeInTheDocument();
     if (mode === 'activity') {

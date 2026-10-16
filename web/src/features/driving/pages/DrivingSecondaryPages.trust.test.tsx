@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ReactNode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -132,7 +133,7 @@ describe.each(surfaces)('$title retained source trust', ({ Component, sections, 
       expect(metricItem?.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
       expect(metricItem?.querySelector('[data-operational-value]')).not.toHaveTextContent(/^0(?:\s|$)/);
     }
-    expect(screen.getByText('Source unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Source unavailable');
     expect(screen.queryByText('Returned evidence')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Retry/ }).length).toBeGreaterThan(0);
   });

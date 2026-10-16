@@ -618,7 +618,7 @@ describe('SpeedProfilePage', () => {
     const view = renderPage();
     expectOutline();
     expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
-    expect(screen.getAllByText('Loading source').length).toBeGreaterThan(0);
+    assertOperationalBriefDisclosure(document.body, 'Loading source', { allMatches: true });
     expect(screen.getByTestId(source === 'profile' ? 'scatter' : 'bar-chart')).toBeInTheDocument();
 
     mock.mockReturnValue(makeQuery({ fetchStatus: 'paused', refetch }));

@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -90,7 +91,7 @@ describe('real carbon and archetype raw bridge and retained drawers', () => {
     const { container } = render(<MemoryRouter><CarbonEvidenceBrief analysis={analysis}
       display={carbonDisplay} states={{ period: state, intensity: carbonState(), lifetime: carbonState(), recommendation: carbonState() }} /></MemoryRouter>);
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(screen.getByText('Retained evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained evidence');
     expect(screen.getByText('2.50 kWh')).toBeInTheDocument();
     expect(screen.getByText('-0.10 kg CO₂')).toBeInTheDocument();
     expect(screen.getByText(/2026-01-01T00:00:00Z – 2026-07-01T00:00:00Z · UTC/)).toBeInTheDocument();

@@ -65,7 +65,7 @@ describe('VaultSummaryBrief retained evidence and real drawer', () => {
 
   it('keeps paused refresh evidence without presenting it as a fresh reading', () => {
     render(<VaultSummaryBrief {...props} sources={[source({ data: [], fetchStatus: 'paused' })]} />);
-    expect(screen.getByText('Retained evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained evidence');
     expect(screen.getByText('0')).toBeInTheDocument();
   });
 

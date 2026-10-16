@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   fireEvent,
@@ -559,7 +560,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
-    expect(screen.getByText('Source readings unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Source readings unavailable');
     expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
   });
 
@@ -580,7 +581,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(container.querySelectorAll('[role="status"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(
       0,
     );
-    expect(screen.getByText('Loading source evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Loading source evidence');
     expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
   });
 
@@ -653,7 +654,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
-    expect(screen.getByText('Source readings unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Source readings unavailable');
     expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
   });
 
@@ -862,7 +863,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
     }
     const paused = screen.getByTestId('sleep-initial-paused');
-    expect(screen.getByText('Source readings unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Source readings unavailable');
     expect(screen.queryByText('Loading source evidence')).not.toBeInTheDocument();
     expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
     expect(paused).toHaveTextContent('No drain or sleep-health conclusion is available.');
@@ -892,7 +893,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
     expect(warning).toHaveTextContent('Previously loaded data remains visible.');
-    expect(screen.getByText('Retained source evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source evidence');
     expect(screen.queryByTestId('sleep-refresh-error')).not.toBeInTheDocument();
     expect(screen.queryByTestId('sleep-initial-paused')).not.toBeInTheDocument();
     expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0);
@@ -953,14 +954,14 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(within(projection).getByText('0.00%/hr')).toBeInTheDocument();
     expect(within(projection).getByText('4 on · 5 off')).toBeInTheDocument();
     expect(screen.queryByText('Sentry comparison unavailable')).not.toBeInTheDocument();
-    expect(screen.getByText('Available source readings')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Available source readings');
   });
 
   it('clears retained status after refresh recovery without losing source evidence or scope', () => {
     const data = fullyPopulatedData();
     mockSleep.mockReturnValue(queryResult({ data, isError: true, isSuccess: false, error: new Error('refresh failed') }));
     const rendered = renderPage();
-    expect(screen.getByText('Retained source evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source evidence');
     expect(screen.getByTestId('sleep-refresh-error')).toBeInTheDocument();
     expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
 
@@ -971,7 +972,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
 
     mockSleep.mockReturnValue(queryResult({ data }));
     rendered.rerenderPage();
-    expect(screen.getByText('Available source readings')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Available source readings');
     expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
     expect(screen.queryByTestId('sleep-refresh-error')).not.toBeInTheDocument();
     expect(screen.getByText('54.75 kWh')).toBeInTheDocument();

@@ -79,6 +79,7 @@ export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx
     if (!callNamed(expectation, 'expect') || expectation.arguments.length !== 1) return;
     let argument = expectation.arguments[0];
     let scope;
+    let globalScope = false;
     let text;
     const contains = matcher === 'toHaveTextContent';
     const allMatches = matcher === 'toBeGreaterThan';
@@ -92,8 +93,10 @@ export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx
       text = node.arguments[0];
     } else if (ts.isCallExpression(argument) && ts.isPropertyAccessExpression(argument.expression) &&
       (allMatches ? ['getAllByText'] : ['getByText', 'queryByText']).includes(argument.expression.name.text) &&
-      callNamed(argument.expression.expression, 'within')) {
-      scope = argument.expression.expression.arguments[0];
+      (callNamed(argument.expression.expression, 'within') ||
+        (options.globalStatuses && !absent && argument.expression.expression.getText(tree) === 'screen'))) {
+      globalScope = argument.expression.expression.getText(tree) === 'screen';
+      scope = globalScope ? argument.expression.expression : argument.expression.expression.arguments[0];
       text = argument.arguments[0];
       // Query options can change exactness or the selected element. Review them manually.
       if (argument.arguments.length !== 1) return;
@@ -101,7 +104,7 @@ export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx
     if (!scope || !text || !ts.isStringLiteral(text)) return;
     const context = options.contexts && contexts.has(text.text);
     if (!statuses.has(text.text) && !context) return;
-    const scopeText = scope.getText(tree);
+    const scopeText = globalScope ? 'document.body' : scope.getText(tree);
     const line = tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1;
     const original = node.getText(tree);
     let reason;
@@ -110,7 +113,7 @@ export function migrateBriefDisclosureTests(source, filename = 'example.test.tsx
     else if (text.text === 'Refresh paused' || text.text === 'Refreshing') reason = 'Shared source-state label: confirm which panel owns the assertion';
     else if (/dialog|drawer|notice|warning|status\b/i.test(scopeText)) reason = 'Existing dialog or source-notice scope: inspect manually';
     else if (/getByText|queryByText|findByText/.test(scopeText)) reason = 'Text node is not a proven evidence-card scope';
-    else if (!/brief|band|strip|summary|kpi/i.test(scopeText)) reason = 'Scope is not identified as an evidence card: inspect manually';
+    else if (!globalScope && !/brief|band|strip|summary|kpi/i.test(scopeText)) reason = 'Scope is not identified as an evidence card: inspect manually';
     if (reason) deferred.push({ line, original, reason });
     else {
       const flags = [absent ? 'absent: true' : '', contains ? 'contains: true' : '',
@@ -266,7 +269,7 @@ function main() {
   const inventory = [];
   for (const file of files) {
     const migrate = args.includes('--missing-metrics') ? migrateMissingMetricTests : migrateBriefDisclosureTests;
-    const result = migrate(fs.readFileSync(file, 'utf8'), file, { contexts: args.includes('--contexts') });
+    const result = migrate(fs.readFileSync(file, 'utf8'), file, { contexts: args.includes('--contexts'), globalStatuses: args.includes('--global-statuses') });
     if (!result.edits.length && !result.deferred.length) continue;
     inventory.push({ file: path.relative(root, file).replaceAll('\\', '/'), edits: result.edits, deferred: result.deferred });
     if (args.includes('--write') && result.edits.length) fs.writeFileSync(file, result.output);

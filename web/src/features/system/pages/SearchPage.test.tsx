@@ -599,7 +599,7 @@ describe('SearchPage restrained migration', () => {
     expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open retained coast run' })).toBeInTheDocument();
     expect(metricCard('Total results')).toHaveTextContent('1');
-    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source');
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     installSearch({ hits: [makeHit('drive', 21)] });
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));

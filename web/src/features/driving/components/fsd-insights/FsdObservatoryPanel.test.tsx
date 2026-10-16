@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import type { ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -240,7 +241,7 @@ describe('FsdObservatoryPanel', () => {
     expect(screen.getAllByText('0.0 km')).toHaveLength(3);
     expect(screen.getByText('No completed drives in this period to journal.')).toBeInTheDocument();
     expect(screen.getByText('Not enough repeated routes yet for a commute story.')).toBeInTheDocument();
-    expect(screen.getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Returned evidence');
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
   });
 
@@ -256,7 +257,7 @@ describe('FsdObservatoryPanel', () => {
     );
 
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source');
     expect(screen.getByLabelText('Historical')).toHaveAttribute('data-data-status', 'stale');
     const brief = screen.getByRole('region', { name: 'Reset-safe counter quantities' });
     for (const value of ['14.0 km', '1.0 km', '5.0 km', '1']) {
@@ -269,21 +270,21 @@ describe('FsdObservatoryPanel', () => {
 
     const refreshing = deriveDataState({ data: insights, isFetching: true, refetch: retry }, { provenance: 'historical' });
     rerender(<MemoryRouter><FsdObservatoryPanel insights={insights} state={{ ...readyState, isLoading: true }} dataState={refreshing} /></MemoryRouter>);
-    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source');
     expect(screen.getByRole('table', { name: 'Stitched journal' })).toBeInTheDocument();
 
     const recovered = deriveDataState({ data: insights, isSuccess: true, refetch: retry }, { provenance: 'historical' });
     rerender(<MemoryRouter><FsdObservatoryPanel insights={insights} state={readyState} dataState={recovered} /></MemoryRouter>);
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
-    expect(screen.getByText('Returned evidence')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Returned evidence');
     expect(screen.getByLabelText('Historical')).toHaveAttribute('data-data-status', 'ok');
     expect(screen.getByRole('table', { name: 'Commute stories' })).toBeInTheDocument();
   });
 
   it('keeps legacy retained data visible when a refresh error is passed', () => {
     renderPanel(<FsdObservatoryPanel insights={fsdInsights()} state={{ ...readyState, error: new Error('Refresh failed') }} />);
-    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source');
     expect(screen.getByRole('table', { name: 'Stitched journal' })).toBeInTheDocument();
   });
 
@@ -294,7 +295,7 @@ describe('FsdObservatoryPanel', () => {
     renderPanel(<FsdObservatoryPanel insights={undefined} state={readyState} dataState={dataState} />);
     expect(dataState.refreshError).toBeNull();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
-    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source');
     expect(screen.getByRole('table', { name: 'Stitched journal' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Commute stories' })).toBeInTheDocument();
   });

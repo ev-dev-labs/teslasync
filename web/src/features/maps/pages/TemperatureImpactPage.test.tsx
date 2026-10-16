@@ -29,7 +29,7 @@
  *   - out-of-range clamping (bug fix): extreme temps land in the nearest EDGE
  *     bucket, not the middle one.
  */
-import { assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
+import { assertOperationalBriefDisclosure, assertOperationalMetricUnavailable } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, screen, within, fireEvent, type RenderResult } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -357,7 +357,7 @@ describe('TemperatureImpactPage — measured values and preserved alternatives',
     expect(within(rows[1]).getByText('0.00 Wh/km')).toBeInTheDocument();
     expect(within(rows[1]).getByText('0.00 km')).toBeInTheDocument();
     expect(within(rows[2]).getAllByText('—')).toHaveLength(3);
-    expect(screen.getByText('Independent sources incomplete')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Independent sources incomplete');
     expect(missing.efficiency_wh_km).toBeNull();
   });
 
@@ -417,7 +417,7 @@ describe('TemperatureImpactPage — measured values and preserved alternatives',
     mockTempImpact.mockReturnValue(query);
     const view = renderPage();
     expect(kpiValue('Total data points')).toBe('0');
-    expect(screen.getByText('Source data unavailable')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Source data unavailable');
     expect(screen.getAllByText('No drive data available yet')).toHaveLength(6);
 
     mockTempImpact.mockReturnValue(makeQuery({ data: Object.assign(fullData(), { points: null }) }));
@@ -440,7 +440,7 @@ describe('TemperatureImpactPage — measured values and preserved alternatives',
       </MemoryRouter>,
     );
     expect(kpiValue('Avg efficiency')).toBe('192.00 Wh/km');
-    expect(screen.getByText('Retained source data')).toBeInTheDocument();
+    assertOperationalBriefDisclosure(document.body, 'Retained source data');
     expect(within(screen.getByRole('table')).getByText('30.00 km')).toBeInTheDocument();
   });
 });

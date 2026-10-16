@@ -1,3 +1,4 @@
+import { assertOperationalBriefDisclosure } from '@/test/operationalBriefAssertions';
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -219,7 +220,7 @@ describe('Tesla usage selected history', () => {
   it('retains raw selected totals and category evidence with the real review drawer on refresh failure', () => {
     useHistory.mockReturnValue({ data: { points: [point], total: { ...point } }, isLoading: false, error: new Error('background refresh'), refetch: vi.fn() })
     const { container } = render(<MemoryRouter><TeslaApiUsageHistory /></MemoryRouter>)
-    expect(screen.getByText('Retained source')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(document.body, 'Retained source')
     expect(container.querySelector('[data-operational-metric="api-requests"] [data-operational-value]')).toHaveTextContent('1,550')
     expect(screen.getByTestId('breakdown')).toHaveTextContent('Commands: 1,000 · $1.0000')
     expect(screen.getByRole('combobox', { name: 'Group by' })).toBeInTheDocument()
@@ -305,7 +306,7 @@ describe('Tesla usage selected history', () => {
       expect(screen.getByTestId('breakdown')).toHaveTextContent('Commands: 0 · $0.0000')
       expect(screen.getByTestId('distribution')).toHaveTextContent('No observed Tesla billable traffic')
       expect(chartContainer.mock.calls[1][0].empty).toBe(points.length === 0)
-      expect(screen.getByText('Source available')).toBeInTheDocument()
+      assertOperationalBriefDisclosure(document.body, 'Source available')
     },
   )
 
@@ -313,12 +314,12 @@ describe('Tesla usage selected history', () => {
     const data = { points: [], total: { ...point, signals: 0, commands: 0, data_requests: 0, wakes: 0, estimated_usd: 0 } }
     useHistory.mockReturnValue({ data, isLoading: false, fetchStatus: 'paused', error: null, refetch: vi.fn() })
     const { rerender } = render(<TeslaApiUsageHistory />)
-    expect(screen.getByText('Retained source')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(document.body, 'Retained source')
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true')
     expect(screen.getByTestId('breakdown')).toHaveTextContent('Commands: 0 · $0.0000')
     useHistory.mockReturnValue({ data, isLoading: false, fetchStatus: 'idle', error: null, refetch: vi.fn() })
     rerender(<TeslaApiUsageHistory />)
-    expect(screen.getByText('Source available')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(document.body, 'Source available')
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
   })
 
@@ -327,11 +328,11 @@ describe('Tesla usage selected history', () => {
     const refetch = vi.fn()
     useHistory.mockReturnValue({ data, isLoading: false, error: null, refetch })
     const { rerender } = render(<TeslaApiUsageHistory />)
-    expect(screen.getByText('Source available')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(document.body, 'Source available')
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
     useHistory.mockReturnValue({ data, isLoading: false, error: new Error('refresh failed'), refetch })
     rerender(<TeslaApiUsageHistory />)
-    expect(screen.getByText('Retained source')).toBeInTheDocument()
+    assertOperationalBriefDisclosure(document.body, 'Retained source')
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Usage history could not be loaded. Try again.')
     expect(screen.getByTestId('distribution')).toHaveTextContent('No observed Tesla billable traffic')
     expect(screen.getByTestId('trend')).toHaveTextContent('No observed Tesla billable traffic')
