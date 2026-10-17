@@ -64,3 +64,5 @@ time | phase | running | done | pending | failed | blocked | commits pushed in l
 2026-10-17 11:41 | wave2 7/16 integrated | +homeenergy 32 (149/149 folder, 1 UI-only -0 prod fix), automations 29 (574/574 folder), diagnostics 37 (208/208); cumulative 1006; 9 running | none
 2026-10-17 12:10 | wave2 13/16 integrated | +settings 103 (1060/1060 folder, testid prod fix), vehicles 222 (1523+4skip folder), notifications 134 (1268/1268, n-interp prod fix), ownership 88 (583/583, focus prod fix), advintel 111 (671/671), system 76 (138/138); cumulative 1740; 3 running | none
 2026-10-17 14:02 | wave2 16/16 integrated | +telemetry 146 (418/418), battery 171 (1214+14known), driving 219 (3350+3known); wave2 total 1464; cumulative 2276; row 19 (/live two-mode) added to plan | none
+2026-10-17 14:10 | cleanup + full suite | 15 worktrees + 16 branches removed; teslasync-wt-system husk locked by live handle (empty, unregistered, retry later); full suite alone running | husk
+2026-10-17 14:20 | post-wave2 suite: 55246/1700 | -1463 (1464 resolved + 1 flake); 220 files green; 1 new fail = TeslaPhysicsPage load flake (67/67 solo); starting row 19 /live | none

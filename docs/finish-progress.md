@@ -372,6 +372,10 @@ Wave-2 shared/catalog follow-ups (all DEFERRED with tests pinning observed behav
 
 Gates per pick: touched-file or whole-folder suites re-run green in the main checkout + child-attested ESLint/tsc; full `tsc`/build/catalog follow with the post-integration full suite below.
 
+### Post-wave-2 full suite (2026-10-17)
+
+Full suite alone after all 16 wave-2 picks: **55,246 passed / 1,700 failed** (was 53,783 / 3,163; Δ −1,463 vs 1,464 resolved = 1 flake). Failed files 328 (was 547); 220 files went green. The single newly-failing file (`vehicles TeslaPhysicsPage`, 1 fail) is a load flake: untouched by the vehicles commit and 67/67 green in isolation. Remaining: deferred i18n trio (489), wave-1 leftovers (admin/dashboard/charging/analytics partials), untouched small folders, system/diagnostics partials, and the documented pre-existing blocks. Report: `.runner/gates/vitest-full-20261017c.json` (local only).
+
 ## Current UI simplification checkpoint
 
 Working on `ui/simplification`. Rows 0-4 are complete and pushed; row 5 (charging) is in progress; row 6 (remaining features) is in progress. Shared dashboard headers cluster controls at the right, the freshness dot is the per-widget refresh action, hover-only expand controls sit to its left without reserving header width, and widget content avoids nested summary scroll areas. Climate no longer repeats an inner title; title-equal metric captions are hidden. Both StatStrip and OperationalBrief distribute metric rows evenly with `maxPerRow`. Captured Edge screenshots at 375px, 768px, and 1440px are committed under `docs/ui-simplification/`; the Battery widget freshness control measures the same 16px inset as its title at all three sizes. Focused shared/dashboard suites pass 111/111; focused vehicle suites pass 239/239 across seven files. Split catalog check, full lint, typecheck, and build pass on the last shared checkpoint (CSS parser and startup bundle warnings remain). Rows 5-7 and the full Vitest suite remain outstanding.
