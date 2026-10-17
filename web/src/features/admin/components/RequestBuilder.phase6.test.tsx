@@ -146,8 +146,8 @@ describe('phase6 accessible body feedback and raw diagnostics', () => {
 
   it('associates the localized visible label, required state and schema hint with the real textarea', () => {
     mount(bodyEndpoint);
-    const body = screen.getByRole('textbox', { name: 'Request body' });
-    expect(screen.getByLabelText('Request body')).toBe(body);
+    const body = screen.getByRole('textbox', { name: 'Request body required' });
+    expect(screen.getByLabelText(/Request body/)).toBe(body);
     expect(body).toBeRequired();
     expect(body).toHaveValue(JSON.stringify({ distance_m: 42, enabled: false }, null, 2));
     expect(description(body)).toContain('"distance_m"');
@@ -159,7 +159,7 @@ describe('phase6 accessible body feedback and raw diagnostics', () => {
     'keeps the exact invalid diagnostic body %s after explicit confirmation',
     rawBody => {
       const { onSend } = mount(bodyEndpoint);
-      const body = screen.getByLabelText('Request body');
+      const body = screen.getByRole('textbox', { name: 'Request body required' });
       fireEvent.change(body, { target: { value: rawBody } });
       expect(body).toHaveAttribute('aria-invalid', 'true');
       expect(description(body)).not.toBe('');
@@ -174,7 +174,7 @@ describe('phase6 accessible body feedback and raw diagnostics', () => {
 
   it('clears JSON syntax feedback without converting or rewriting raw SI values and whitespace', () => {
     const { onSend } = mount(bodyEndpoint);
-    const body = screen.getByLabelText('Request body');
+    const body = screen.getByRole('textbox', { name: 'Request body required' });
     fireEvent.change(body, { target: { value: '{' } });
     expect(description(body)).toContain('Invalid JSON');
     const rawBody = ' { "distance_m": 1234.567, "duration_s": 61, "energy_wh": 500, "enabled": false }\n';
@@ -186,8 +186,8 @@ describe('phase6 accessible body feedback and raw diagnostics', () => {
 
   it('shows required-body feedback while leaving empty negative requests confirmable', () => {
     const { onSend } = mount(bodyEndpoint);
-    fireEvent.change(screen.getByLabelText('Request body'), { target: { value: '' } });
-    expect(description(screen.getByLabelText('Request body'))).toContain('Required by the API specification');
+    fireEvent.change(screen.getByRole('textbox', { name: 'Request body required' }), { target: { value: '' } });
+    expect(description(screen.getByRole('textbox', { name: 'Request body required' }))).toContain('Required by the API specification');
     confirm();
     expect(onSend).toHaveBeenCalledWith('/diagnostic', 'POST', undefined, {});
   });
@@ -216,7 +216,7 @@ describe('phase6 accessible body feedback and raw diagnostics', () => {
   it('resets request body, defaults and confirmation on endpoint change without resetting the local API key', () => {
     const { rerender, onSend } = mount(bodyEndpoint);
     fireEvent.change(screen.getByLabelText('X-API-Key'), { target: { value: 'fixture-key' } });
-    fireEvent.change(screen.getByLabelText('Request body'), { target: { value: '{' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Request body required' }), { target: { value: '{' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     const next = endpoint({ parameters: [{ ...endpoint().parameters[0], default: '7' }] });
     rerender(<RequestBuilder endpoint={next} onSend={onSend} loading={false} />);
@@ -258,7 +258,7 @@ describe('phase6 OpenAPI constraint preservation', () => {
     expect(parsed.parameters[0]).toMatchObject({ required: true, type: 'integer', default: '0', schema });
     expect(parsed.requestBody).toMatchObject({ required: true, example: false, schema: spec.components?.schemas?.Body });
     mount(parsed);
-    expect(screen.getByLabelText('Request body')).toHaveValue('false');
+    expect(screen.getByRole('textbox', { name: 'Request body required' })).toHaveValue('false');
   });
 
   it.each([false, 0, '', null])('preserves explicit falsy JSON example %s rather than replacing it with a schema example', example => {

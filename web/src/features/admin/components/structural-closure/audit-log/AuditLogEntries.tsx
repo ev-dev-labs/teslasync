@@ -95,6 +95,7 @@ export function AuditLogEntries({ controller }: Props) {
               <DataTable
                 tableId="admin:audit-log"
                 enableValueFilters={false}
+                searchable
                 columns={columns}
                 mobileColumns={['action', 'success', 'ts']}
                 data={rows}

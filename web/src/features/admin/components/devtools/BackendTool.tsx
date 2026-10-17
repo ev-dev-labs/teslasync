@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
 import { Play } from 'lucide-react'
 import { Button, Badge } from '@/components/ui'
+import { getErrorMessage } from '@/lib/errorMessage'
 import { ToolCard } from './ToolCard'
 import { ResultPanel } from './ResultPanel'
 import { apiFetch } from './helpers'
@@ -36,14 +37,9 @@ export function BackendTool({
   const result = mutation.data
   const rawError: unknown = mutation.error ?? result?.error
   const hasError = mutation.isError || Boolean(rawError)
-  const errorText =
-    rawError instanceof Error && rawError.message.trim() !== ''
-      ? rawError.message
-      : typeof rawError === 'string' && rawError.trim() !== ''
-        ? rawError
-        : hasError
-          ? t('devtools.backendTool.requestFailed', 'Request failed')
-          : undefined
+  const errorText = hasError
+    ? getErrorMessage(rawError, t('devtools.backendTool.requestFailed', 'Request failed'))
+    : undefined
 
   return (
     <ToolCard icon={icon} color={color} title={title} description={description}>

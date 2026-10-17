@@ -106,6 +106,7 @@ function TagGroup({
         <Text size="xs" weight="semibold" color="secondary" className="flex-1 tracking-wider">
           {tag}
         </Text>
+        {' '}
         <Text size="2xs" color="muted" mono>{endpoints.length}</Text>
       </UiButton>
       {open && (
@@ -128,6 +129,7 @@ function TagGroup({
                   title={ep.summary}
                 >
                   <MethodBadge method={ep.method} />
+                  {' '}
                   <Text size="xs" color="secondary" mono className="truncate">
                     {ep.path}
                   </Text>

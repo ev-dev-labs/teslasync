@@ -286,7 +286,9 @@ describe('phase6 rejected request consumers', () => {
     }), { wrapper })
     fireEvent.click(screen.getByRole('button', { name: 'Run' }))
     await waitFor(() => expect(screen.getByText('Failed')).toBeTruthy())
-    expect(screen.getByRole('alert').textContent).toBe(error instanceof Error ? error.message : error)
+    expect(screen.getByRole('alert').textContent).toBe(
+      error instanceof Error || error instanceof DOMException ? error.message : error,
+    )
     expect(screen.queryByText('Success')).toBeNull()
   })
 

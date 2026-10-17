@@ -160,7 +160,7 @@ describe('AuditLogEntries phase6 independent contracts', () => {
       expect.stringMatching(/\/api\/v1\/admin\/audit-log\?/),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    fireEvent.click(screen.getByRole('button', { name: /Expand row/ }));
     expect(screen.getByRole('group', { name: 'Before' })).toHaveTextContent('"locked": false');
     expect(screen.getByRole('group', { name: 'After' })).toHaveTextContent('with all evidence preserved');
     await exportAs('JSON');
@@ -176,7 +176,7 @@ describe('AuditLogEntries phase6 independent contracts', () => {
     H.rows = [ROW, { ...ROW, id: 18, actor: 'another@example.test', action: 'unlock' }];
     mount();
     await screen.findByText('another@example.test');
-    fireEvent.change(screen.getByRole('textbox', { name: /search/i }), { target: { value: ROW.actor } });
+    fireEvent.change(screen.getByRole('searchbox', { name: /search/i }), { target: { value: ROW.actor } });
     await waitFor(() => expect(screen.queryByText('another@example.test')).not.toBeInTheDocument());
     await exportAs('JSON');
     await waitFor(() => expect(downloadJSON).toHaveBeenCalledWith(expect.any(String), [ROW]));
@@ -204,19 +204,21 @@ describe('AuditLogEntries phase6 independent contracts', () => {
     await screen.findByText(ROW.actor);
     expect(screen.getByText('Use “Expand row” to view complete entry details.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Details' })).not.toBeInTheDocument();
-    const expand = screen.getByRole('button', { name: 'Expand row' });
+    const expand = screen.getByRole('button', { name: /Expand row/ });
     expect(expand).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(expand);
-    expect(screen.getByRole('button', { name: 'Collapse row' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /Collapse row/ })).toHaveAttribute('aria-expanded', 'true');
     const detail = container.querySelector('dl')!;
     expect(detail.closest('.hidden')).toBeNull();
-    for (const value of [ROW.actor, ROW.category, ROW.entity_type, '#0', ROW.ip, ROW.user_agent, ROW.trace_id, ROW.row_hash, ROW.prev_row_hash]) {
+    for (const value of [ROW.actor, '#0', ROW.ip, ROW.user_agent, ROW.trace_id, ROW.row_hash, ROW.prev_row_hash]) {
       expect(within(detail as HTMLElement).getByText(value ?? '', { exact: true })).toBeInTheDocument();
     }
+    // Category and entity type share the value 'vehicle'; both fields render it.
+    expect(within(detail as HTMLElement).getAllByText('vehicle', { exact: true })).toHaveLength(2);
     expect(within(detail as HTMLElement).getByText(/Complete detail/)).toHaveTextContent('with multiple lines');
     expect(screen.getByRole('group', { name: 'Before' })).toHaveTextContent('"locked": false');
     expect(screen.getByRole('group', { name: 'After' })).toHaveTextContent('with all evidence preserved');
-    fireEvent.click(screen.getByRole('button', { name: 'Collapse row' }));
+    fireEvent.click(screen.getByRole('button', { name: /Collapse row/ }));
     expect(screen.queryByRole('group', { name: 'Before' })).not.toBeInTheDocument();
   });
 
@@ -225,7 +227,7 @@ describe('AuditLogEntries phase6 independent contracts', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     const { container } = mount();
     await screen.findByText(ROW.actor);
-    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    fireEvent.click(screen.getByRole('button', { name: /Expand row/ }));
     const trace = within(container.querySelector('dl') as HTMLElement).getByText(ROW.trace_id ?? '');
     fireEvent.click(within(trace.parentElement as HTMLElement).getByRole('button'));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(ROW.trace_id));
@@ -276,7 +278,7 @@ describe('AuditLogEntries phase6 independent contracts', () => {
   it('keeps populated rows, expansion and export after a retained refresh failure', async () => {
     const { client } = mount();
     await screen.findByText(ROW.actor);
-    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    fireEvent.click(screen.getByRole('button', { name: /Expand row/ }));
     const success = H.request.getMockImplementation()!;
     H.request.mockImplementation(async (path, init) => {
       if (path.startsWith('/admin/audit-log?')) throw new ApiError('Refresh unavailable', 500);

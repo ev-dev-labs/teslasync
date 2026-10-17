@@ -130,6 +130,7 @@ describe('BackendTool', () => {
     expect(bodyBuilder).toHaveBeenCalledTimes(1)
     expect(mockedRequest).toHaveBeenCalledWith('/dev-tools/resubscribe', {
       method: 'POST',
+      requiresLiveMode: true,
       body: JSON.stringify({ vin: '5YJ', force: true }),
     })
   })
@@ -141,7 +142,10 @@ describe('BackendTool', () => {
     clickRun()
 
     await waitFor(() =>
-      expect(mockedRequest).toHaveBeenCalledWith('/dev-tools/purge', { method: 'DELETE' }),
+      expect(mockedRequest).toHaveBeenCalledWith('/dev-tools/purge', {
+        method: 'DELETE',
+        requiresLiveMode: true,
+      }),
     )
   })
 

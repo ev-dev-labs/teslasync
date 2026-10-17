@@ -80,7 +80,10 @@ describe('DiskForecastPage semantic and mobile adoption', () => {
     expect(table.closest('[data-grid-frame]')).toHaveAttribute('data-grid-variant', 'embedded')
     const row = within(table).getByText(LONG_NAME).closest('tr')
     expect(row).not.toBeNull()
-    fireEvent.click(within(row!).getByRole('button', { name: 'Expand row' }))
+    // Row expansion names now carry the row label; the row scope keeps the query exact.
+    const expand = within(row!).getByRole('button', { name: /Expand row/ })
+    expect(expand).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(expand)
 
     const details = table.querySelector('dl')
     expect(details).not.toBeNull()
@@ -96,7 +99,9 @@ describe('DiskForecastPage semantic and mobile adoption', () => {
     expect(detail.getByText('100.00 MB/d')).toBeInTheDocument()
     expect(detail.getByText('5.00')).toBeInTheDocument()
     expect(detail.getByText('Critical')).toBeInTheDocument()
-    fireEvent.click(within(row!).getByRole('button', { name: 'Collapse row' }))
+    const collapse = within(row!).getByRole('button', { name: /Collapse row/ })
+    expect(collapse).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(collapse)
     expect(table.querySelector('dl')).toBeNull()
   })
 
@@ -224,6 +229,13 @@ function summaryValue(label: string): string {
   return node?.querySelector('[data-operational-value]')?.textContent ?? ''
 }
 
+/** Opens the summary Brief's Review-details drawer; context and hidden counts live there. */
+async function openSummaryDrawer() {
+  const summary = screen.getByTestId('disk-forecast-summary')
+  fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+  return screen.findByRole('dialog', { name: 'Fleet disk summary details' })
+}
+
 beforeEach(() => {
   mockedRequest.mockReset()
 })
@@ -276,7 +288,8 @@ describe('DiskForecastPage', () => {
     expect(summaryValue('Before compression')).toBe('3.00 GB')
     expect(summary.getByText('After compression')).toBeInTheDocument()
     expect(summaryValue('After compression')).toBe('1.50 GB')
-    expect(summary.getAllByText('Compressed chunks only; not a share of current disk usage.')).toHaveLength(2)
+    // Compression basis moved from the face to the Review-details drawer (asserted at the end).
+    expect(summary.queryByText('Compressed chunks only; not a share of current disk usage.')).not.toBeInTheDocument()
     expect(summary.queryByText(/% of total/)).not.toBeInTheDocument()
 
     // Daily growth is summed across all rows.
@@ -290,6 +303,10 @@ describe('DiskForecastPage', () => {
     expect([...strip.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-operational-metric')))
       .toEqual(['total-disk', 'uncompressed', 'compressed', 'daily-growth', 'largest-table', 'soonest-quota'])
     expect(strip.querySelectorAll('[data-value-state="value"]')).toHaveLength(6)
+
+    const drawer = await openSummaryDrawer()
+    expect(within(drawer).getAllByText('Compressed chunks only; not a share of current disk usage.')).toHaveLength(2)
+    expect(within(drawer).queryByText(/% of total/)).not.toBeInTheDocument()
   })
 
   it('keeps growth values readable when the bar is green', async () => {
@@ -395,8 +412,9 @@ describe('DiskForecastPage', () => {
     ).toBeInTheDocument()
     // 503 is a graceful "not wired" state — never a red error panel.
     expect(screen.queryByText("Can't reach server")).toBeNull()
-    expect(summaryValue('Total disk')).toBe('—')
-    expect(screen.getByTestId('disk-forecast-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(6)
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument()
+    const drawer = await openSummaryDrawer()
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.')
   })
 
   it('renders an error state (and no fabricated totals) on a non-503 failure', async () => {
@@ -408,8 +426,9 @@ describe('DiskForecastPage', () => {
       expect(screen.getAllByText("Can't reach server").length).toBeGreaterThan(0),
     )
     // The KPI band must not lie with "0 B" totals when the fetch failed.
-    expect(summaryValue('Total disk')).toBe('—')
-    expect(screen.getByTestId('disk-forecast-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(6)
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument()
+    const drawer = await openSummaryDrawer()
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.')
     // A hard failure is distinct from the 503 not-configured state.
     expect(screen.queryByText('Feature not supported')).toBeNull()
   })
@@ -427,16 +446,17 @@ describe('DiskForecastPage', () => {
 
     // Detail table + KPI placeholders degrade gracefully.
     expect(screen.getByText('No hypertables')).toBeInTheDocument()
-    expect(screen.getByText('No data')).toBeInTheDocument()
     // A missing estimate cannot establish whether a quota is configured.
     expect(screen.getAllByText('No quota estimate available').length).toBeGreaterThan(0)
     expect(screen.queryByText('No quota configured')).not.toBeInTheDocument()
-    // Totals collapse to "0 B" rather than vanishing.
+    // Totals collapse to "0 B" rather than vanishing; unknown largest/soonest are omitted.
     expect(summaryValue('Total disk')).toBe('0 B')
     expect(summaryValue('Growth (per day)')).toBe('0 B/d')
-    expect(summaryValue('Largest table')).toBe('—')
-    expect(summaryValue('Soonest quota')).toBe('—')
+    expect(screen.getByTestId('disk-forecast-summary').querySelector('[data-operational-metric="largest-table"]')).toBeNull()
+    expect(screen.getByTestId('disk-forecast-summary').querySelector('[data-operational-metric="soonest-quota"]')).toBeNull()
     expect(screen.getByTestId('disk-forecast-summary').querySelectorAll('[data-value-state="value"]')).toHaveLength(4)
+    const drawer = await openSummaryDrawer()
+    expect(drawer).toHaveTextContent('2 empty fields are hidden.')
   })
 
   it('preserves full hypertable names in summary cards and detail views', async () => {
@@ -448,8 +468,9 @@ describe('DiskForecastPage', () => {
       expect(summaryValue('Largest table')).toBe('3.00 GB'),
     )
 
-    const band = screen.getByRole('region', { name: 'Fleet disk summary' })
-    expect(within(band).getAllByText(LONG_NAME)).toHaveLength(2)
+    // Full identities moved from summary cards to the Review-details drawer.
+    const drawer = await openSummaryDrawer()
+    expect(within(drawer).getAllByText(LONG_NAME)).toHaveLength(2)
     expect(screen.getAllByText(LONG_NAME).length).toBeGreaterThan(2)
   })
 
@@ -504,12 +525,14 @@ describe('DiskForecastPage', () => {
     renderPage()
 
     await waitFor(() => expect(summaryValue('Total disk')).toBe('1.00 GB'))
-    expect(screen.getAllByText('No quota estimate available')).toHaveLength(2)
+    expect(screen.getAllByText('No quota estimate available')).toHaveLength(1)
     expect(screen.getByText('An estimate may be absent when there is no measurable growth. Missing estimates do not establish whether a quota is configured.')).toBeInTheDocument()
     expect(screen.queryByText('No quota configured')).not.toBeInTheDocument()
     expect(screen.queryByText(/HYPERTABLE_QUOTA_BYTES/)).not.toBeInTheDocument()
-    expect(summaryValue('Soonest quota')).toBe('—')
+    expect(screen.getByTestId('disk-forecast-summary').querySelector('[data-operational-metric="soonest-quota"]')).toBeNull()
     expect(within(screen.getByRole('table', { name: 'Hypertables' })).getByText('OK')).toBeInTheDocument()
+    const drawer = await openSummaryDrawer()
+    expect(drawer).toHaveTextContent('1 empty fields are hidden.')
   })
 
   it.each(['paused', 'unresolved'] as const)('keeps cold %s sections pending rather than authoritatively empty', (state) => {
@@ -674,8 +697,9 @@ describe('DiskForecastPage no-snapshot notice causality', () => {
       expect(body).toHaveClass('text-[var(--text-secondary)]')
       expect(body.closest('[data-data-state]')).toBeNull()
     }
-    expect(summaryValue('Total disk')).toBe('—')
-    expect(screen.getByTestId('disk-forecast-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(6)
+    expect(screen.getByText('No metric values are available yet.')).toBeInTheDocument()
+    const drawer = await openSummaryDrawer()
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.')
     expect(screen.queryByText('No hypertables')).not.toBeInTheDocument()
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument()
   })

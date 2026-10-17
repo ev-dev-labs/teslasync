@@ -191,8 +191,15 @@ function selectVehicle(id = '1') {
   });
 }
 
+/** Opens the Brief's Review-details drawer; status, context and hidden counts live there. */
+async function openBriefDrawer() {
+  const brief = screen.getByTestId('live-signals-operational-brief');
+  fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+  return screen.findByRole('dialog', { name: 'Snapshot metrics details' });
+}
+
 describe('LiveSignalInspectorPage — empty fleet', () => {
-  it('shows a per-section "pick a vehicle" affordance in every data panel and disables refresh', () => {
+  it('shows a per-section "pick a vehicle" affordance in every data panel and disables refresh', async () => {
     mockedUseVehicles.mockReturnValue({ data: [], isLoading: false });
     renderPage();
 
@@ -209,13 +216,15 @@ describe('LiveSignalInspectorPage — empty fleet', () => {
     // Refresh is inert until a vehicle drives the query.
     expect(screen.getByRole('button', { name: 'Refresh live snapshot' })).toBeDisabled();
 
-    // KPI band always renders; freshest age collapses to the em-dash.
+    // KPI band always renders; unknown values are omitted from the face.
     const kpi = within(screen.getByRole('region', { name: 'Snapshot summary' }));
     expect(kpi.getByText('Total signals')).toBeInTheDocument();
-    expect(kpi.getAllByText('—')).toHaveLength(6);
+    expect(kpi.getByText('No metric values are available yet.')).toBeInTheDocument();
     const brief = screen.getByTestId('live-signals-operational-brief');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
+    // The six unknown fields are counted in the Review-details drawer.
+    const drawer = await openBriefDrawer();
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.');
   });
 
   it('leaves the live query disabled when no vehicle exists', () => {
@@ -252,18 +261,16 @@ describe('LiveSignalInspectorPage — ready state', () => {
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
     expect(brief.querySelector('[data-operational-metric="freshest"] [data-operational-value]')).toHaveTextContent('101ms');
-    for (const caption of ['Fresh in-process', 'Past 2-min window', 'Redis, unknown age', 'Newest value age']) {
-      expect(brief).toHaveTextContent(caption);
-    }
     const review = within(brief).getByRole('button', { name: 'Review details' });
     review.focus();
     expect(review).toHaveFocus();
     fireEvent.click(review);
     const drawer = await screen.findByRole('dialog', { name: 'Snapshot metrics details' });
+    for (const caption of ['Source layer unknown.', 'Past 2-min window', 'Redis, unknown age', 'Newest value age']) {
+      expect(drawer).toHaveTextContent(caption);
+    }
     expect(drawer).toHaveTextContent('Snapshot only; no historical query window or completeness guarantee is supplied.');
-    expect(drawer).toHaveTextContent('Redis, unknown age');
     expect(drawer).toHaveTextContent('Fields in the returned snapshot, before table filters');
-    expect(drawer).toHaveTextContent('Newest value age');
     fireEvent.keyDown(drawer, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Snapshot metrics details' })).toBeNull());
     expect(screen.getByText('a1')).toBeInTheDocument();
@@ -337,7 +344,7 @@ describe('LiveSignalInspectorPage — loading / empty states', () => {
     expect(brief.querySelector('[data-operational-value]')).toBeNull();
   });
 
-  it('shows the empty-cache affordance when the snapshot has no signals', () => {
+  it('shows the empty-cache affordance when the snapshot has no signals', async () => {
     setLive({ data: { vehicle_id: 1, count: 0, signals: {} }, dataUpdatedAt: Date.now() });
     renderPage();
     selectVehicle('1');
@@ -351,10 +358,13 @@ describe('LiveSignalInspectorPage — loading / empty states', () => {
     expect(screen.getByText('No live signals to categorise yet.')).toBeInTheDocument();
     const brief = screen.getByTestId('live-signals-operational-brief');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
     for (const key of ['total', 'live', 'stale', 'legacy', 'numeric']) {
       expect(brief.querySelector(`[data-operational-metric="${key}"] [data-operational-value]`)).toHaveTextContent('0');
     }
+    // The single unknown field (freshest age) is counted in the drawer.
+    expect(brief.querySelector('[data-operational-metric="freshest"]')).toBeNull();
+    const drawer = await openBriefDrawer();
+    expect(drawer).toHaveTextContent('1 empty fields are hidden.');
   });
 
   it('distinguishes an initially paused live request from an empty Redis snapshot', () => {
@@ -369,14 +379,15 @@ describe('LiveSignalInspectorPage — loading / empty states', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps an unreported snapshot unknown rather than treating derived empty rows as measured zero', () => {
+  it('keeps an unreported snapshot unknown rather than treating derived empty rows as measured zero', async () => {
     setLive({ data: { vehicle_id: 1, count: 0 }, dataUpdatedAt: Date.now() });
     renderPage();
     const brief = screen.getByTestId('live-signals-operational-brief');
-    expect(brief).toHaveTextContent('No snapshot supplied');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Refresh live snapshot' })).toBeEnabled();
+    const drawer = await openBriefDrawer();
+    expect(drawer).toHaveTextContent('No snapshot supplied');
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.');
   });
 });
 
@@ -439,22 +450,22 @@ describe('LiveSignalInspectorPage — fleet prerequisite', () => {
 });
 
 describe('LiveSignalInspectorPage — error handling', () => {
-  it('shows a retryable error only when there is no snapshot to fall back to', () => {
+  it('shows a retryable error only when there is no snapshot to fall back to', async () => {
     setLive({ isError: true, error: new Error('boom') });
     renderPage();
     selectVehicle('1');
 
     // The generic network branch of <QueryError> renders per data section.
     expect(screen.getAllByText("Can't reach server").length).toBeGreaterThan(0);
-    const brief = screen.getByTestId('live-signals-operational-brief');
-    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    const drawer = await openBriefDrawer();
+    expect(drawer).toHaveTextContent('6 empty fields are hidden.');
 
     const retryButtons = screen.getAllByRole('button', { name: 'Retry' });
     fireEvent.click(retryButtons[0]);
     expect(refetch).toHaveBeenCalled();
   });
 
-  it('keeps the last snapshot visible when a background poll errors (regression)', () => {
+  it('keeps the last snapshot visible when a background poll errors (regression)', async () => {
     // A dropped 1 s poll flips isError while `data` is retained. The page must
     // keep rendering the snapshot rather than blanking to a full error.
     setLive({
@@ -470,9 +481,10 @@ describe('LiveSignalInspectorPage — error handling', () => {
     expect(screen.getByText('hello')).toBeInTheDocument();
     // No section collapsed to the error affordance.
     const brief = screen.getByTestId('live-signals-operational-brief');
-    expect(brief).toHaveTextContent('Retained snapshot');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
     expect(brief.querySelector('[data-operational-metric="total"] [data-operational-value]')).toHaveTextContent('7');
+    const drawer = await openBriefDrawer();
+    expect(drawer).toHaveTextContent('Retained snapshot');
     expect(screen.queryByText("Can't reach server")).toBeNull();
     const breakdowns = within(screen.getByRole('region', { name: 'Signal breakdowns' }));
     expect(breakdowns.getAllByTestId('source-layer-badge')).toHaveLength(4);
@@ -485,7 +497,7 @@ describe('LiveSignalInspectorPage — error handling', () => {
     expect(screen.getByText('hello')).toBeInTheDocument();
   });
 
-  it('keeps all three retained-empty source explanations during a failed poll', () => {
+  it('keeps all three retained-empty source explanations during a failed poll', async () => {
     setLive({
       data: { vehicle_id: 1, count: 0, signals: {} },
       isError: true,
@@ -501,9 +513,11 @@ describe('LiveSignalInspectorPage — error handling', () => {
     expect(screen.queryByText("Can't reach server")).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(3);
     const brief = screen.getByTestId('live-signals-operational-brief');
-    expect(brief).toHaveTextContent('Retained empty snapshot');
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
-    expect(brief.querySelector('[data-operational-metric="freshest"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(brief.querySelector('[data-operational-metric="freshest"]')).toBeNull();
+    const drawer = await openBriefDrawer();
+    expect(drawer).toHaveTextContent('Retained empty snapshot');
+    expect(drawer).toHaveTextContent('1 empty fields are hidden.');
   });
 });
 
@@ -524,7 +538,7 @@ describe('LiveSignalInspectorPage — accessibility landmarks', () => {
 });
 
 describe('LiveSignalInspectorPage — restrained source presentation', () => {
-  it('labels global SSE separately and keeps the REST snapshot when the wire is disconnected', () => {
+  it('labels global SSE separately and keeps the REST snapshot when the wire is disconnected', async () => {
     vi.mocked(useLiveConnection).mockReturnValue({
       status: 'disconnected',
       lastMessageAt: null,
@@ -539,7 +553,8 @@ describe('LiveSignalInspectorPage — restrained source presentation', () => {
     expect(screen.getAllByText('Live signal endpoint · layered L1 / L2 / stale state').length).toBeGreaterThan(0);
     expect(screen.getByText('a1')).toBeInTheDocument();
     expect(screen.getByText('hello')).toBeInTheDocument();
-    expect(screen.getByTestId('live-signals-operational-brief')).toHaveTextContent('Snapshot loaded');
+    const drawer = await openBriefDrawer();
+    expect(drawer).toHaveTextContent('Snapshot loaded');
     expect(screen.getByRole('combobox', { name: 'Vehicle' })).toHaveValue('1');
   });
 
@@ -570,14 +585,24 @@ describe('LiveSignalInspectorPage — restrained source presentation', () => {
     expect(screen.getByRole('region', { name: 'Snapshot summary' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Signal breakdowns' })).toBeInTheDocument();
     for (const name of ['Source layers', 'Signal kinds', 'Live snapshot']) {
-      expect(screen.getByRole('heading', { name })).toBeInTheDocument();
+      // Charts render an sr-only accessible title mirroring the panel name;
+      // exactly one VISIBLE section heading must exist per panel.
+      const visible = screen
+        .getAllByRole('heading', { name })
+        .filter((heading) => !heading.classList.contains('sr-only'));
+      expect(visible).toHaveLength(1);
     }
     const title = screen.getByRole('heading', { name: 'Live snapshot' });
     expect(title.querySelector('svg')).toHaveClass(typography.color.muted);
     expect(title.querySelector('svg')).not.toHaveClass('text-cyan-300');
-    const table = screen.getByRole('table');
+    // Charts render their own accessible data tables; the snapshot table is
+    // the one carrying the signal columnheaders.
+    const table = screen.getAllByRole('table').find((candidate) =>
+      within(candidate).queryByRole('columnheader', { name: 'Signal' }),
+    );
+    expect(table).toBeDefined();
     for (const name of ['Signal', 'Value', 'Kind', 'Source', 'Last update']) {
-      expect(within(table).getByRole('columnheader', { name })).toBeInTheDocument();
+      expect(within(table!).getByRole('columnheader', { name })).toBeInTheDocument();
     }
     expect(screen.getByText('c1')).toBeInTheDocument();
     expect(screen.getByText('hello')).toBeInTheDocument();

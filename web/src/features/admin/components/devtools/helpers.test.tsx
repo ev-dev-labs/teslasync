@@ -4,8 +4,8 @@
  * Covers EVERY export of ./helpers with behavioural, multi-facet assertions —
  * never a smoke check and never the real network:
  *
- *   apiFetch            — path/method/body forwarding, Error vs non-Error
- *                         failure normalisation to `{ error }`.
+ *   apiFetch            — path/method/body forwarding, requiresLiveMode on
+ *                         unsafe writes, rejection propagation (no `{ error }`).
  *   useVehicleOptions   — react-query hook: option mapping, display_name→vin
  *                         fallback, empty-data null-safety.
  *   rgbToHsl            — achromatic (black/white/grey) + the three primary
@@ -20,7 +20,8 @@
  *                         empty-array ok:true contract + malformed inputs.
  *   pickString          — key precedence, empty-string skip, number coercion,
  *                         no-match empty string.
- *   getRelativeTime     — s/m/h/d buckets, future via abs(), invalid-Date guard.
+ *   getRelativeTime     — delegation to shared formatRelative (signed
+ *                         direction, invalid-Date em-dash).
  *
  * Network is mocked at the @/api/client boundary (repo convention — see
  * api/hooks/useEnergy.test.tsx / __tests__/useFleetTelemetry.test.tsx). The
@@ -28,10 +29,13 @@
  * deterministic regardless of when the suite runs.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import i18n from 'i18next'
+import { formatRelative } from '@/lib/dateFormat'
+import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat'
 import type { Vehicle } from '@/api/types'
 
 vi.mock('@/api/client', async () => {
@@ -80,8 +84,24 @@ function vehicle(overrides: Partial<Vehicle>): Vehicle {
   }
 }
 
+const originalLocale = getGlobalLocale()
+
+beforeAll(async () => {
+  await i18n.init({
+    lng: 'en',
+    fallbackLng: 'en',
+    resources: { en: { translation: {} } },
+    interpolation: { escapeValue: false },
+  })
+})
+
 beforeEach(() => {
   requestMock.mockReset()
+  setGlobalLocale('en-US')
+})
+
+afterEach(() => {
+  setGlobalLocale(originalLocale)
 })
 
 /* ─── apiFetch ────────────────────────────────────────────────────────── */
@@ -105,29 +125,28 @@ describe('apiFetch', () => {
 
     expect(requestMock).toHaveBeenCalledWith('/dev-tools/register-partner', {
       method: 'POST',
+      requiresLiveMode: true,
       body: JSON.stringify({ domain: 'example.com' }),
     })
     // No body key should be present when the caller omits the body arg.
     await apiFetch('public-key', 'DELETE')
     expect(requestMock).toHaveBeenLastCalledWith('/dev-tools/public-key', {
       method: 'DELETE',
+      requiresLiveMode: true,
     })
   })
 
-  it('normalises an Error rejection into an { error } payload instead of throwing', async () => {
-    requestMock.mockRejectedValue(new Error('upstream 500'))
+  it('propagates an Error rejection instead of normalising it into an { error } payload', async () => {
+    const failure = new Error('upstream 500')
+    requestMock.mockRejectedValue(failure)
 
-    const result = await apiFetch('generate-keypair', 'POST')
-
-    expect(result).toEqual({ error: 'upstream 500' })
+    await expect(apiFetch('generate-keypair', 'POST')).rejects.toBe(failure)
   })
 
-  it('falls back to a generic message when a non-Error value is thrown', async () => {
+  it('propagates a non-Error rejection value unchanged', async () => {
     requestMock.mockRejectedValue('boom-string')
 
-    const result = await apiFetch('fleet-status', 'POST')
-
-    expect(result).toEqual({ error: 'Request failed' })
+    await expect(apiFetch('fleet-status', 'POST')).rejects.toBe('boom-string')
   })
 })
 
@@ -212,8 +231,9 @@ describe('describeCron', () => {
     expect(describeCron(['0', '0', '*', '*', '1'])).toBe('At 00:00 on Mon')
   })
 
-  it('echoes the raw dow token when it is out of the Sun–Sat range', () => {
-    expect(describeCron(['0', '0', '*', '*', '9'])).toBe('At 00:00 on 9')
+  it('rejects a dow token outside the Sun–Sat range instead of echoing it raw', () => {
+    expect(describeCron(['0', '0', '*', '*', '9'])).toBe('Invalid cron expression')
+    expect(describeCron(['0', '0', '*', '*', '7'])).toBe('Invalid cron expression')
   })
 })
 
@@ -368,14 +388,19 @@ describe('getRelativeTime', () => {
 
   it('buckets the delta into seconds, minutes, hours, and days', () => {
     const now = Date.now()
-    expect(getRelativeTime(new Date(now - 5_000))).toBe('5s ago')
-    expect(getRelativeTime(new Date(now - 5 * 60_000))).toBe('5m ago')
-    expect(getRelativeTime(new Date(now - 3 * 3_600_000))).toBe('3h ago')
-    expect(getRelativeTime(new Date(now - 2 * 86_400_000))).toBe('2d ago')
+    // The shared formatter labels the first past minute "just now".
+    expect(getRelativeTime(new Date(now - 5_000))).toBe('just now')
+    for (const delta of [5 * 60_000, 3 * 3_600_000, 2 * 86_400_000]) {
+      const date = new Date(now - delta)
+      expect(getRelativeTime(date)).toBe(formatRelative(date))
+      expect(getRelativeTime(date)).toContain(' ago')
+    }
   })
 
-  it('uses the absolute delta so a future timestamp still reads "ago"', () => {
-    expect(getRelativeTime(new Date(Date.now() + 45_000))).toBe('45s ago')
+  it('keeps a future timestamp future instead of reading "ago"', () => {
+    const date = new Date(Date.now() + 45_000)
+    expect(getRelativeTime(date)).toBe(formatRelative(date))
+    expect(getRelativeTime(date)).toBe('in 45s')
   })
 
   it('returns an em-dash for an invalid Date instead of "NaN…"', () => {

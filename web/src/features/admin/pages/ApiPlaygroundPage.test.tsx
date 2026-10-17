@@ -313,10 +313,14 @@ describe('ApiPlaygroundPage', () => {
     expect(spec).toHaveAttribute('data-operational-brief')
     expect(history).toHaveAttribute('data-operational-brief')
     expect(history.querySelector('[data-operational-metric="recent"]')).toHaveAttribute('data-value-state', 'value')
-    expect(history.querySelector('[data-operational-metric="latency"]')).toHaveAttribute('data-value-state', 'missing')
-    expect(history).toHaveTextContent('not server-wide traffic')
+    // Unknown latency is omitted from the face and counted in the drawer.
+    expect(history.querySelector('[data-operational-metric="latency"]')).toBeNull()
     fireEvent.click(within(spec).getByRole('button', { name: 'Review details' }))
-    expect(screen.getByRole('dialog')).toHaveTextContent('loaded API specification')
+    expect(await screen.findByRole('dialog', { name: 'API specification details' })).toHaveTextContent('loaded API specification')
+    fireEvent.click(within(history).getByRole('button', { name: 'Review details' }))
+    const historyDrawer = await screen.findByRole('dialog', { name: 'Recent local requests details' })
+    expect(historyDrawer).toHaveTextContent('not server-wide traffic')
+    expect(historyDrawer).toHaveTextContent('1 empty fields are hidden.')
     expect(screen.getByRole('complementary', { name: 'Endpoint explorer' })).toBeInTheDocument()
   })
 
@@ -335,8 +339,11 @@ describe('ApiPlaygroundPage', () => {
     const specSummary = screen.getByTestId('api-playground-spec-summary')
     expect(specSummary).toHaveAttribute('aria-busy', 'true')
     expect(specSummary.querySelector('[data-operational-value]')).toBeNull()
-    expect(region.querySelectorAll('[data-operational-metric]')).toHaveLength(6)
+    // 4 loading spec skeletons + known history count; unknown latency is omitted.
+    expect(region.querySelectorAll('[data-operational-metric]')).toHaveLength(5)
     expect(screen.getByTestId('api-playground-history-summary')).toHaveTextContent('0')
+    fireEvent.click(within(screen.getByTestId('api-playground-history-summary')).getByRole('button', { name: 'Review details' }))
+    expect(await screen.findByRole('dialog', { name: 'Recent local requests details' })).toHaveTextContent('1 empty fields are hidden.')
 
     // Resolve so the query settles and teardown is clean.
     resolve(EMPTY_SPEC_YAML)
@@ -370,7 +377,10 @@ describe('ApiPlaygroundPage', () => {
     expect(within(region).getByText('1')).toBeInTheDocument() // write ops (unique)
     expect(within(region).getByText('Read (GET)')).toBeInTheDocument()
     expect(within(region).getByText('API groups')).toBeInTheDocument()
-    expect(within(region).getByText('Avg latency')).toBeInTheDocument()
+    // Unknown latency is omitted from the face and counted in the history drawer.
+    expect(within(region).queryByText('Avg latency')).toBeNull()
+    fireEvent.click(within(screen.getByTestId('api-playground-history-summary')).getByRole('button', { name: 'Review details' }))
+    expect(await screen.findByRole('dialog', { name: 'Recent local requests details' })).toHaveTextContent('1 empty fields are hidden.')
 
     // Tag groups + endpoint rows from the parser.
     expect(screen.getByText('Vehicles')).toBeInTheDocument()
@@ -409,8 +419,13 @@ describe('ApiPlaygroundPage', () => {
     // The spec is unknown, while the separate, empty local request history is a known zero.
     const region = kpiRegion()
     expect(within(region).getByText('Total endpoints')).toBeInTheDocument()
-    expect(within(region).getAllByText('—')).toHaveLength(5)
+    expect(within(region).queryByText('—')).toBeNull()
+    expect(within(region).getByText('No metric values are available yet.')).toBeInTheDocument()
     expect(within(region).getByText('0')).toBeInTheDocument()
+    fireEvent.click(within(screen.getByTestId('api-playground-spec-summary')).getByRole('button', { name: 'Review details' }))
+    expect(await screen.findByRole('dialog', { name: 'API specification details' })).toHaveTextContent('4 empty fields are hidden.')
+    fireEvent.click(within(screen.getByTestId('api-playground-history-summary')).getByRole('button', { name: 'Review details' }))
+    expect(await screen.findByRole('dialog', { name: 'Recent local requests details' })).toHaveTextContent('1 empty fields are hidden.')
   })
 
   it('sends a selected GET request and renders the response + history', async () => {
@@ -670,11 +685,16 @@ describe('ApiPlaygroundPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Yes, send' }))
     await screen.findByText('409 Conflict')
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/vehicles/$&/example?search=a%20%26%20b', {
-      method, credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'X-API-Key': 'test-only-key' },
-      body: '{"energy_wh":2500,"active":false}',
-    })
+    const [calledUrl, calledOpts] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(calledUrl).toBe('/api/v1/vehicles/$&/example?search=a%20%26%20b')
+    expect(calledOpts.method).toBe(method)
+    expect(calledOpts.credentials).toBe('same-origin')
+    expect(calledOpts.body).toBe('{"energy_wh":2500,"active":false}')
+    // Transport headers ship as a Headers instance; values and key set stay exact.
+    const sentHeaders = new Headers(calledOpts.headers)
+    expect(sentHeaders.get('Content-Type')).toBe('application/json')
+    expect(sentHeaders.get('X-API-Key')).toBe('test-only-key')
+    expect(Array.from(sentHeaders.keys()).sort()).toEqual(['content-type', 'x-api-key'])
     expect(screen.getByRole('region', { name: 'Response body' })).toHaveTextContent('"error": "example conflict"')
     const saved = JSON.parse(sessionStorage.getItem('teslasync-api-playground-history') ?? '[]') as HistoryEntry[]
     expect(saved).toHaveLength(20)

@@ -132,6 +132,7 @@ describe('InfrastructureSection phase6 fixed connectivity ping semantics', () =>
     await waitFor(() => {
       expect(requestMock).toHaveBeenCalledExactlyOnceWith('/dev-tools/mqtt-test', {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify({ topic, message }),
       })
       expect(mqttCard().querySelector('pre')).toHaveTextContent('"connected": true')
@@ -203,6 +204,7 @@ describe('InfrastructureSection phase6 fixed connectivity ping semantics', () =>
     expect(within(mqttCard()).queryByRole('alert')).not.toBeInTheDocument()
     expect(requestMock).toHaveBeenNthCalledWith(2, '/dev-tools/mqtt-test', {
       method: 'POST',
+      requiresLiveMode: true,
       body: JSON.stringify({ topic: 'synthetic/retry', message: 'synthetic payload' }),
     })
   })
